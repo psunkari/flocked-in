@@ -1,0 +1,58 @@
+
+body, html {
+  font-family: Verdana,Tahoma,Arial,Helvetica,"Bitstream Vera Sans",sans-serif;
+  background-color: white;
+  margin: 0px !important;
+  padding: 0px !important;
+  overflow: auto;
+  height: 100%;
+}
+
+#aligntable {
+  width: 100%;
+  height: 90%;
+}
+
+#outer {
+  width: 35ex;
+  border: 1px solid #C3D9FF;
+  padding: 3px;
+  -moz-border-radius: 4px;
+  -webkit-border-radius: 4px;
+}
+
+#logintable {
+  font-size: smaller;
+}
+
+#inner {
+  border: 1px solid #C3D9FF;
+  background-color: #E8EEFA;
+  text-align: center;
+  padding: 3px;
+}
+
+#passlabel, #userlabel, #rememberfield {
+  text-align: right;
+}
+
+#logintitle {
+  font-size: 18px;
+  font-weight: bold;
+  line-height: 2em;
+  padding: 1em 0;
+}
+
+#loginhelp {
+  padding-top: 2em;
+  font-size: 0.7em;
+}
+
+#footer {
+  font-size: 0.7em;
+}
+
+#submitbox {
+  text-align: right;
+}
+

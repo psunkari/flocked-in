@@ -1,0 +1,13 @@
+syntax: glob
+
+# Local Configuration
+twistd.pid
+twisted/plugins/dropin.cache
+
+# Compiled Python
+*.pyc
+
+# Others
+*.swp
+*~
+*.komodoproject
