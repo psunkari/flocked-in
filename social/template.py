@@ -26,3 +26,21 @@ def render(request, path, **kw):
     def _errback(err):
         request.processingFailed(err)
     d.addCallbacks(_callback, _errback)
+
+
+def _renderDef(path, dfn, **kw):
+    template = _collection.get_template(path)
+    definition = template.get_def(dfn)
+    return definition.render(**kw)
+
+
+def renderDef(request, path, dfn, **kw):
+    d = threads.deferToThread(_renderDef, path, dfn, **kw)
+
+    def _callback(text):
+        request.setHeader('content-length', str(len(text)))
+        request.write(text)
+        request.finish()
+    def _errback(err):
+        request.processingFailed(err)
+    d.addCallbacks(_callback, _errback)

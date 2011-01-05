@@ -3,12 +3,12 @@ from twisted.application import internet, service
 from twisted.web import server
 from twisted.cred.portal import Portal
 
-from social.service import Service
+from social.root import RootResource
 from social.auth import AuthWrapper, AuthRealm
 from social.auth import UserPasswordChecker, UserSessionChecker, AuthTokenChecker
 from social import Config
 
-root = Service().root()
+root = RootResource()
 
 checkers = [UserSessionChecker(), UserPasswordChecker(), AuthTokenChecker()]
 wrapper = AuthWrapper(Portal(AuthRealm(root), checkers))

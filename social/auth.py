@@ -35,7 +35,11 @@ class SigninForm(resource.Resource):
     isLeaf = True
 
     def render_GET(self, request):
-        render(request, "signin.html")
+        args = {"query": ""};
+        if request.args.has_key("_r"):
+            args["query"] = "?_r=" + request.args["_r"][0]
+
+        render(request, "signin.mako", **args)
         return server.NOT_DONE_YET
 
 
@@ -73,16 +77,13 @@ class UserPassword(object):
         self.username = domain + "/u/" + user
         self.password = md5(password)
         self.request  = request
-        log.msg(self.username + ":" + self.password)
-
 
 class UserPasswordChecker():
     credentialInterfaces = [IUserPassword]
 
     def _authenticate(self, username, password):
-        d = Db.get(username, "users", "PasswordHash")
+        d = Db.get(username, "userauth", "PasswordHash")
         def checkPassword(result):
-            log.msg("Result: ", result)
             column = result.column;
             if column.value != password:
                 raise LoginFailed()
@@ -101,10 +102,12 @@ class UserPasswordChecker():
             return cred.username
         d.addCallback(setCookie)
 
-        redirectURL = "/"
-        if cred.request.args.has_key("_r"):
-            redirectURL = cred.request.args["_r"]
-        d.addCallback(lambda x: (x, redirectURL))
+        def addRedirectURL(username):
+            redirectURL = "/"
+            if cred.request.args.has_key("_r"):
+                redirectURL = cred.request.args["_r"][0]
+            return (username, redirectURL)
+        d.addCallback(addRedirectURL)
 
         return d
 
@@ -236,9 +239,12 @@ class AuthWrapper(object):
 
             if issubclass(failure, LoginFailed):
                 return util.Redirect("/signin?_e=InvalidCredentials")
-            elif issubclass(failure, Unauthorized) and request.path != "/":
+            elif issubclass(failure, Unauthorized) and request.path[0:5] == "/ajax":
                 return resource.ErrorPage(401, http.RESPONSES[401], "You are not authorized to view this page")
-            return util.Redirect("/signin")
+            elif request.path != "/signout" and request.path != "/":
+                return util.Redirect("/signin?_r=" + request.path)
+            else:
+                return util.Redirect("/signin")
         d.addErrback(errorDuringSignin)
 
         return util.DeferredResource(d)
