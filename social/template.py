@@ -17,7 +17,15 @@ def _render(path, **kw):
 
 
 def render(request, path, **kw):
-    d = threads.deferToThread(_render, path, **kw)
+    args = kw
+    args["noscript"] = False
+    if request.args.has_key("noscript"):
+        args["noscript"] = True
+    else:
+        args["noscriptUrl"] = request.path + "?noscript=1" \
+                              if request.path == request.uri \
+                              else request.uri + "&noscript=1"
+    d = threads.deferToThread(_render, path, **args)
 
     def _callback(text):
         request.setHeader('content-length', str(len(text)))
@@ -26,6 +34,7 @@ def render(request, path, **kw):
     def _errback(err):
         request.processingFailed(err)
     d.addCallbacks(_callback, _errback)
+    return d
 
 
 def _renderDef(path, dfn, **kw):
@@ -38,9 +47,8 @@ def renderDef(request, path, dfn, **kw):
     d = threads.deferToThread(_renderDef, path, dfn, **kw)
 
     def _callback(text):
-        request.setHeader('content-length', str(len(text)))
         request.write(text)
-        request.finish()
     def _errback(err):
         request.processingFailed(err)
     d.addCallbacks(_callback, _errback)
+    return d

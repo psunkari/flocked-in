@@ -1,6 +1,7 @@
 
 import os
 import ConfigParser
+import gettext
 
 from telephus.protocol  import ManagedCassandraClientFactory
 from telephus.client    import CassandraClient
@@ -18,5 +19,7 @@ _factory = ManagedCassandraClientFactory(_keyspace)
 reactor.connectTCP(_dbhost, int(_dbport), _factory)
 Db = CassandraClient(_factory)
 
+_ = gettext.gettext
+__ = gettext.ngettext
 
-__all__ = [Config, Db]
+__all__ = [Config, Db, _, __]

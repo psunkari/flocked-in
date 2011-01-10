@@ -1,4 +1,6 @@
 
+from urllib                     import quote_plus, unquote_plus
+
 from zope.interface             import Interface, Attribute, implements
 from twisted.cred.portal        import IRealm, Portal
 from twisted.cred.credentials   import ICredentials
@@ -9,7 +11,7 @@ from twisted.python             import log, components
 
 from social                     import Config, Db
 from social.template            import render
-from social.utils               import md5
+from social.utils               import md5, toUserKey
 
 #
 # IAuthInfo: Interface with which data is stored the session.
@@ -73,8 +75,7 @@ class IUserPassword(ICredentials):
 class UserPassword(object):
     implements(IUserPassword)
     def __init__(self, username, password, request):
-        user, domain = username.split("@")
-        self.username = domain + "/u/" + user
+        self.username = toUserKey(username)
         self.password = md5(password)
         self.request  = request
 
@@ -105,7 +106,7 @@ class UserPasswordChecker():
         def addRedirectURL(username):
             redirectURL = "/"
             if cred.request.args.has_key("_r"):
-                redirectURL = cred.request.args["_r"][0]
+                redirectURL = unquote_plus(cred.request.args["_r"][0])
             return (username, redirectURL)
         d.addCallback(addRedirectURL)
 
@@ -242,7 +243,7 @@ class AuthWrapper(object):
             elif issubclass(failure, Unauthorized) and request.path[0:5] == "/ajax":
                 return resource.ErrorPage(401, http.RESPONSES[401], "You are not authorized to view this page")
             elif request.path != "/signout" and request.path != "/":
-                return util.Redirect("/signin?_r=" + request.path)
+                return util.Redirect("/signin?_r=" + quote_plus(request.uri))
             else:
                 return util.Redirect("/signin")
         d.addErrback(errorDuringSignin)

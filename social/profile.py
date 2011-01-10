@@ -1,5 +1,5 @@
 
-from twisted.web            import resource, server
+from twisted.web            import resource, server, http
 from twisted.python         import log
 from twisted.internet       import defer
 
@@ -16,30 +16,50 @@ class ProfileResource(resource.Resource):
         self.isAjax = isAjax
 
     def render_GET(self, request):
+        d = self._render(request)
+        def errback(err):
+            log.err(err)
+            request.setResponseCode(500)
+            request.finish()
+        d.addErrback(errback)
+        return server.NOT_DONE_YET
+
+    @defer.inlineCallbacks
+    def _render(self, request):
         authinfo = request.getSession(IAuthInfo)
         currentuser = authinfo.username
 
         if len(request.postpath) == 3 and request.postpath[1] == 'u':
             userkey = "/".join(request.postpath)
+        elif len(request.postpath) != 0:
+            request.redirect("/profile")
+            request.finish()
+            return
         else:
-            userkey = currentuser;
+            userkey = currentuser
 
-        d1 = defer.maybeDeferred(getUserRelation, currentuser, userkey)
-        d2 = Db.get_slice(userkey, "users")
-        dl = defer.DeferredList([d1, d2], 0, 1, 1)
+        # Get the relation with logged in user and the user information
+        d1 = Db.get_slice(userkey, "users")
+        d2 = defer.maybeDeferred(getUserRelation, currentuser, userkey)
 
-        def callback(results):
-            if not results[0][0] or not results[1][0]:
-                return error.InternalServerError();
+        userinfoCol = yield d1
+        userinfo = utils.supercolumnsToDict(userinfoCol)
+        relation = yield d2
+        detail = request.args['d'][0] if request.args.has_key('d') else 'notes'
 
-            userinfo = utils.supercolumnsToDict(results[1][1])
-            args = {"relation": results[0][1], "userinfo": userinfo,
-                    "userkey": userkey, "currentuser": currentuser}
+        args = {"relation": relation, "userinfo": userinfo,
+                "userkey": userkey, "currentuser": currentuser,
+                "detail": detail}
 
-            if not self.isAjax:
-                render(request, "profile.mako", **args)
-            else:
-                renderDef(request, "profile.mako", "userProfileBlock", **args)
+        # Send the first block: Summary
+        if self.isAjax:
+            yield renderDef(request, "profile.mako", "summary", **args)
+            yield renderDef(request, "profile.mako", "tabs", **args)
+            yield renderDef(request, "profile.mako", "content", **args)
 
-        dl.addCallback(callback)
-        return server.NOT_DONE_YET
+        if self.isAjax:
+            request.finish()
+
+        # This is not an ajax request, render the whole page!
+        if not self.isAjax:
+            yield render(request, "profile.mako", **args)

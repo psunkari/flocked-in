@@ -12,8 +12,11 @@ class _ActualRoot(resource.Resource):
         self.isAjax = isAjax
 
     def render_GET(self, request):
-        render(request, "index.mako")
-        return server.NOT_DONE_YET
+        if not self.isAjax:
+            render(request, "index.mako")
+            return server.NOT_DONE_YET
+        else:
+            return ""
 
 
 class RootResource(resource.Resource):
@@ -23,7 +26,7 @@ class RootResource(resource.Resource):
         self._profile = ProfileResource()
 
     def getChildWithDefault(self, path, request):
-        if path == "":
+        if path == "" or path == "feed":
             return self._root
         elif path == "profile":
             return self._profile
@@ -35,6 +38,6 @@ class RootResource(resource.Resource):
 
 class AjaxResource(RootResource):
     def __init__(self):
-        self._root = resource.NoResource("Page not found")
+        self._root = _ActualRoot(True)
         self._ajax = resource.NoResource("Page not found")
         self._profile = ProfileResource(True)

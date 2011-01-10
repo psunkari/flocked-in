@@ -163,3 +163,42 @@ body {
     color: gray;
     padding: 0 8px 0 0;
 }
+
+#profile-tabs {
+    background-color: #E8EEFA;
+    border-bottom: 1px solid #3d85c6;
+    height: 20px;
+    line-height: 20px;
+    font-weight: bold;
+    margin: 0 -15px;
+    padding: 0 15px;
+}
+#profile-tablinks {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    float: right;
+}
+#profile-tablinks li {
+    float: left;
+}
+#profile-tablinks a {
+    padding: 0 10px;
+    height: 20px;
+    color: #4d95d6;
+    text-decoration: none;
+    border-width: 1px;
+    border-style: solid;
+    border-color: transparent;
+    display: inline-block;
+}
+#profile-tablinks a:hover, #profile-tablinks a:active, #profile-tablinks a:focus {
+    background-color: white;
+}
+#profile-tablinks .selected {
+    margin-bottom: -1px;
+    border-width: 1px;
+    border-style: solid;
+    border-color: #3d85c6 #3d85c6 white;
+    background-color: white;
+}

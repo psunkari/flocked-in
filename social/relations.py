@@ -20,7 +20,7 @@ class UserRelation(object):
     type = 0x0
     groups = []
     tags = []
-    sites = []
+    friends = []
 
     def __init__(self, type):
         self.type = type

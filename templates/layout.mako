@@ -1,4 +1,4 @@
-<%! from gettext import gettext as _ %>
+<%! from social import utils, _, __ %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -7,6 +7,16 @@
 <head>
   <title>${self.title()}</title>
   <link rel="stylesheet" type="text/css" media="screen" href="/public/style/social.css"/>
+%if not noscript:
+  <noscript>
+    <meta http-equiv="refresh" content="0; URL=${noscriptUrl}"/>
+  </noscript>
+%else:
+  <script>
+    url = window.location.href.replace(/noscript=1&?/, "");
+    window.location.href = url.replace(/(\?|&)$/, '');
+  </script>
+%endif
 </head>
 
 <body>
@@ -55,12 +65,22 @@
           </ul>
         </div>
       </div>
-      <div id="centerbar">${self.centerBar()}</div>
-      <div id="rightbar">${self.rightBar()}</div>
+      <div id="centerbar">
+%if noscript:
+        ${self.centerBar()}
+%endif
+      </div>
+      <div id="rightbar">
+%if noscript:
+        ${self.rightBar()}
+%endif
+      </div>
     </div>
   </div>
 </body>
+%if not noscript:
 <script type="application/javascript" src="/public/scripts/jquery.js"></script>
 <script type="application/javascript" src="/public/scripts/jquery.address.js?state=/"></script>
 <script type="application/javascript" src="/public/scripts/social.js"></script>
+%endif
 </html>

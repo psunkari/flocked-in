@@ -26,33 +26,31 @@ def setup(client):
     #
     # Create and populate the "sites" column family
     #
-    sites = CfDef(KEYSPACE, 'sites', 'Super', 'BytesType', 'BytesType',
+    sites = CfDef(KEYSPACE, 'sites', 'Super', 'UTF8Type', 'UTF8Type',
                   'Information on domains, sites and enabled applications')
     yield client.system_add_column_family(sites)
 
     yield client.batch_insert('synovel.com', 'sites', {'SiteInfo': {
                                 'LicenseUsers': '20', 'CurrentUsers': '1'}})
-    yield client.batch_insert('medhas.org' , 'sites', {'SiteInfo': {
-                                'LicenseUsers': '20','CurrentUsers': '1'}})
-    yield client.batch_insert('synovel.com/social', 'sites', { 'SiteInfo': {
-                                'ParentSite': 'synovel.com' }})
-
     log.msg("Created column family: sites")
 
     #
     # Create and populate the "users" column family
     #
-    users = CfDef(KEYSPACE, 'users', 'Super', 'BytesType', 'BytesType',
+    users = CfDef(KEYSPACE, 'users', 'Super', 'UTF8Type', 'UTF8Type',
                   'User information - passwords, sessions and profile')
     yield client.system_add_column_family(users)
     yield client.batch_insert('synovel.com/u/prasad', 'users', {
                                 'basic': {
-                                    'Name': 'Prasad Sunkari',
-                                    'CurrentLocation': 'Hyderabad',
-                                    'Hometown': 'Hyderabad',
-                                    'Sex': 'M',
-                                    'Birthday': '19800817',
-                                    'Description': 'Just another Tom, Dick and Harry'
+                                    'name': 'Prasad Sunkari',
+                                    'jobTitle': 'Hacker',
+                                    'location': 'synovel.com/location/hyderabad',
+                                    'desc': 'Just another Tom, Dick and Harry',
+                                },
+                                'expertise': {
+                                    'Open Source': '',
+                                    'High Scalability': '',
+                                    'Twisted Python': ''
                                 },
                                 'languages': {
                                     'Telugu': 'srw',
@@ -60,39 +58,84 @@ def setup(client):
                                     'Hindi': 'rw'
                                 },
                                 'education': {
-                                    '2003:IIIT Hyderabad': 'Bachelors',
-                                    '1998:Sainik School Korukonda': 'Schooling'
+                                    '2003:IIIT Hyderabad': 'Graduation',
+                                    '1998:Sainik School Korukonda': 'High school'
                                 },
                                 'work': {
-                                    '201012:Enterprise Social': 'Next generation enterprise social software',
-                                    '200912:Web Client': 'The unfinished web based collaboration client',
-                                    '200706:Spicebird': 'Desktop collaboration client'
+                                    ':201012:Enterprise Social': 'Next generation enterprise social software',
+                                    '201012:200912:Web Client': 'The unfinished web based collaboration client',
+                                    '200912:200706:Spicebird': 'Desktop collaboration client'
                                 },
                                 'employers': {
-                                    '2007:2003:Tata Consultancy Services': 'Description of work at Tata Consultancy Services',
+                                    '2007:2003:Tata Consultancy Services': 'Describe the four years of work at TCS',
+                                },
+                                'contact': {
+                                    'mail': 'prasad@synovel.com',
+                                    'phone': '+914040044197',
+                                    'mobile': '+919848154689'
                                 },
                                 'interests': {
                                     "Cycling": "sports",
                                     "Trekking": "sports",
                                     "Open Source": "technology"
                                 },
-                                'contacts': {
-                                    'WorkMail': 'prasad@synovel.com',
-                                    'PersonalMail': 'prasad@medhas.org',
-                                    'WorkPhone': '+914040044197',
-                                    'MobilePhone': '+919848154689',
-                                    'Address_Line01': 'PVN Colony, Malkajgiri',
-                                    'Address_City': 'Hyderabad',
-                                    'Address_State': 'Andhra Pradesh',
-                                    'Address_Country': 'IN',
-                                    'Address_PostalCode': '500047',
+                                'personal': {
+                                    'mail': 'prasad@medhas.org',
+                                    'mobile': '+918008123208',
+                                    'hometown': 'in/hyderabad',
+                                    'birthday': '19800817',
+                                    'sex': 'M'
+                                }})
+    yield client.batch_insert('synovel.com/u/ashok', 'users', {
+                                'basic': {
+                                    'name': 'Ashok Gudibandla',
+                                    'jobTitle': 'Hacker',
+                                    'location': 'synovel.com/location/hyderabad',
+                                    'desc': 'Yet another Tom, Dick and Harry'
+                                },
+                                'expertise': {
+                                    'Sales': '',
+                                    'Marketing': '',
+                                    'Operations': ''
+                                },
+                                'languages': {
+                                    'Telugu': 'srw',
+                                    'English': 'srw'
+                                },
+                                'education': {
+                                    '2003:IIIT Hyderabad': 'Graduation'
+                                },
+                                'work': {
+                                    ':201101:CollabSuite Sales': 'Sales and marketing of CollabSuite',
+                                    '200908:200706:Spicebird': 'Desktop collaboration client'
+                                },
+                                'employers': {
+                                    '2007:2005:Tata Consultancy Services': 'Worked on Swecha July\'07',
+                                    '2005:2003:Mastek': 'Two years at Mastek'
+                                },
+                                'contact': {
+                                    'mail': 'ashok@synovel.com',
+                                    'phone': '+914040044197'
+                                },
+                                'interests': {
+                                    "Cycling": "sports",
+                                    "Trekking": "sports",
+                                    "Open Source": "technology"
+                                },
+                                'personal': {
+                                    'mail': 'gashok@gmail.com',
+                                    'mobile': '+919848887540',
+                                    'hometown': 'cities/in/guntur',
+                                    'currentcity': 'cities/in/hyderabad'
                                 }})
     log.msg("Created column family: users")
 
-    userauth = CfDef(KEYSPACE, 'userauth', 'Standard', 'BytesType', None,
+    userauth = CfDef(KEYSPACE, 'userauth', 'Standard', 'UTF8Type', None,
                      'User authentication and authorizaton information')
     yield client.system_add_column_family(userauth)
     yield client.batch_insert('synovel.com/u/prasad', 'userauth', {
+                                'PasswordHash': 'c246ad314ab52745b71bb00f4608c82a'})
+    yield client.batch_insert('synovel.com/u/ashok', 'userauth', {
                                 'PasswordHash': 'c246ad314ab52745b71bb00f4608c82a'})
     log.msg("Created column family: userauth")
 
