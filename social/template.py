@@ -1,8 +1,7 @@
 
 from mako.template      import Template
 from mako.lookup        import TemplateLookup
-from twisted.internet   import threads
-from twisted.python     import log
+from twisted.internet   import threads, defer
 
 
 _collection = TemplateLookup(directories=['templates'],
@@ -11,11 +10,12 @@ _collection = TemplateLookup(directories=['templates'],
                              collection_size=100)
 
 
-def _render(path, **kw):
+def _getTemplate(path, dfn=None):
     template = _collection.get_template(path)
-    return template.render(**kw)
+    return template if not dfn else template.get_def(dfn)
 
 
+@defer.inlineCallbacks
 def render(request, path, **kw):
     args = kw
     args["noscript"] = False
@@ -25,30 +25,23 @@ def render(request, path, **kw):
         args["noscriptUrl"] = request.path + "?noscript=1" \
                               if request.path == request.uri \
                               else request.uri + "&noscript=1"
-    d = threads.deferToThread(_render, path, **args)
 
-    def _callback(text):
+    try:
+        template = yield threads.deferToThread(_getTemplate, path)
+        text = template.render(**args)
+
         request.setHeader('content-length', str(len(text)))
         request.write(text)
         request.finish()
-    def _errback(err):
+    except Exception, err:
         request.processingFailed(err)
-    d.addCallbacks(_callback, _errback)
-    return d
 
 
-def _renderDef(path, dfn, **kw):
-    template = _collection.get_template(path)
-    definition = template.get_def(dfn)
-    return definition.render(**kw)
-
-
+@defer.inlineCallbacks
 def renderDef(request, path, dfn, **kw):
-    d = threads.deferToThread(_renderDef, path, dfn, **kw)
-
-    def _callback(text):
+    try:
+        template = yield threads.deferToThread(_getTemplate, path, dfn)
+        text = template.render(**kw)
         request.write(text)
-    def _errback(err):
+    except Exception, err:
         request.processingFailed(err)
-    d.addCallbacks(_callback, _errback)
-    return d
