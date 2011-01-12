@@ -1,4 +1,5 @@
 <%! from social import utils, _, __ %>
+<%! from social import relations as r %>
 
 <%inherit file="layout.mako"/>
 
@@ -7,44 +8,55 @@
     <div id="useravatar"></div>
     <div id="userprofile">
       <div id="titlebar">
-        <div id="title">${userinfo['basic']['name']}</div>
-        %if userinfo['basic'].has_key('jobTitle'):
-          ${'<div id="subtitle">' + userinfo['basic']['jobTitle'] + '</div>'}
+        <div id="title">
+          ${user['basic']['name']}
+          %if myKey != userKey:
+            %if relation._isFriend == r.REL_UNRELATED:
+              <input type="button" value="+ Add as Friend" onclick="post('/ajax/profile/connect', 'target=${userKey}')"/>
+            %elif relation._isFriend == r.REL_LOCAL_PENDING:
+              <input type="button" value="- Cancel Friend Request" onclick="post('/ajax/profile/disconnect', 'target=${userKey}')"/>
+            %elif relation._isFriend == r.REL_REMOTE_PENDING:
+              <input type="button" value="+ Accept Friend Request" onclick="post('/ajax/profile/connect', 'target=${userKey}')"/>
+            %endif
+          %endif
+        </div>
+        %if user['basic'].has_key('jobTitle'):
+          ${'<div id="subtitle">' + user['basic']['jobTitle'] + '</div>'}
         %endif
       </div>
       <div id="summary-block">
-        %if userinfo.has_key('work'):
+        %if user.has_key('work'):
           <%
-            keys = [x.split(':')[2] for x in userinfo['work'].keys()]
+            keys = [x.split(':')[2] for x in user['work'].keys()]
             length = len(keys)
           %>
           ${'<span id="summary-work" class="summary-item">' + __('Worked on %s', 'Worked on %s and %s', length) % ((keys[0]) if length == 1 else (keys[1], keys[0])) + '</span>'}
         %endif
-        %if userinfo.has_key('education'):
+        %if user.has_key('education'):
           <%
-            keys = [x.split(':')[1] for x in userinfo['education'].keys()]
+            keys = [x.split(':')[1] for x in user['education'].keys()]
             length = len(keys)
           %>
           ${'<span id="summary-education" class="summary-item">' + __('Studied at %s', 'Studied at %s and %s', length) % ((keys[0]) if length == 1 else (keys[1], keys[0])) + '</span>'}
         %endif
-        %if userinfo['personal'].has_key('currentCity'):
-          ${'<span id="summary-lives" class="summary-item">' + _('Lives in %s') % userinfo['personal']['currentCity'] + '</span>'}
+        %if user['personal'].has_key('currentCity'):
+          ${'<span id="summary-lives" class="summary-item">' + _('Lives in %s') % user['personal']['currentCity'] + '</span>'}
         %endif
-        %if userinfo['personal'].has_key('birthday'):
+        %if user['personal'].has_key('birthday'):
           <%
-            stamp = userinfo['personal']['birthday']  ## YYYYMMDD
+            stamp = user['personal']['birthday']  ## YYYYMMDD
             formatmap = {"year": stamp[0:4], "month": utils.monthName(int(stamp[4:6])), "day": stamp[6:]}
           %>
           ${'<span id="summary-born" class="summary-item">' + _('Born on %(month)s %(day)s, %(year)s') % formatmap + '</span>'}
         %endif
-        %if userinfo['contact'].has_key('mail'):
-          ${'<span id="summary-workmail" class="summary-item">' + userinfo['contact']['mail'] + '</span>'}
+        %if user['contact'].has_key('mail'):
+          ${'<span id="summary-workmail" class="summary-item">' + user['contact']['mail'] + '</span>'}
         %endif
-        %if userinfo['contact'].has_key('phone'):
-          ${'<span id="summary-phone" class="summary-item">' + userinfo['contact']['phone'] + '</span>'}
+        %if user['contact'].has_key('phone'):
+          ${'<span id="summary-phone" class="summary-item">' + user['contact']['phone'] + '</span>'}
         %endif
-        %if userinfo['contact'].has_key('mobile'):
-          ${'<span id="summary-mobile" class="summary-item">' + userinfo['contact']['mobile'] + '</span>'}
+        %if user['contact'].has_key('mobile'):
+          ${'<span id="summary-mobile" class="summary-item">' + user['contact']['mobile'] + '</span>'}
         %endif
       </div>
     </div>
@@ -62,23 +74,23 @@
 </%def>
 
 <%def name="contentInfo()">
-  %if userinfo.has_key('work'):
+  %if user.has_key('work'):
     <%
-      keys = sorted(userinfo['work'].keys(), reverse=True)
+      keys = sorted(user['work'].keys(), reverse=True)
     %>
     <div class="content-title"><h4>${_('Work at %s') % ('Synovel')}</h4></div>
     <dl id="content-workhere">
       %for key in keys:
         <%
           end, start, title = key.split(':')
-          sy, sm = int(start[0:4]), int(start[4:6])
-          args = {'sm': utils.monthName(sm, True), 'sy': sy}
+          sy, sm = start[0:4], start[4:6]
+          args = {'sm': utils.monthName(int(sm), True), 'sy': sy}
           duration = ''
           if len(end) == 0:
             duration = _('Started in %(sm)s %(sy)s') % args
           else:
-            ey, em = int(end[0:4]), int(end[4:6])
-            args['em'] = utils.monthName(em, True)
+            ey, em = end[0:4], end[4:6]
+            args['em'] = utils.monthName(int(em), True)
             args['ey'] = ey
             duration = _('%(sm)s %(sy)s &mdash; %(em)s %(ey)s') % args
         %>
@@ -86,16 +98,16 @@
         <dd>
           <ul>
             <li class="light">${duration}</li>
-            <li>${userinfo['work'][key]}</li>
+            <li>${user['work'][key]}</li>
           </ul>
         </dd>
       %endfor
     </dl>
   %endif
-  <div class="content-title"><h4>${_('Recommendations for %s') % userinfo['basic']['name']}</h4></div>
-  %if userinfo.has_key('employers'):
+  <div class="content-title"><h4>${_('Recommendations for %s') % user['basic']['name']}</h4></div>
+  %if user.has_key('employers'):
     <%
-      keys = sorted(userinfo['employers'].keys(), reverse=True)
+      keys = sorted(user['employers'].keys(), reverse=True)
     %>
     <div class="content-title"><h4>${_('Past Employment')}</h4></div>
     <dl id="content-workex">
@@ -108,15 +120,15 @@
         <dd>
           <ul>
             <li class="light">${duration}</li>
-            <li>${userinfo['employers'][key]}</li>
+            <li>${user['employers'][key]}</li>
           </ul>
         </dd>
       %endfor
     </dl>
   %endif
-  %if userinfo.has_key('education'):
+  %if user.has_key('education'):
     <%
-      keys = sorted(userinfo['education'].keys(), reverse=True)
+      keys = sorted(user['education'].keys(), reverse=True)
     %>
     <div class="content-title"><h4>${_('Education')}</h4></div>
     <dl id="content-education">
@@ -129,7 +141,7 @@
         <dd>
           <ul>
             <li class="light">${duration}</li>
-            <li>${userinfo['education'][key]}</li>
+            <li>${user['education'][key]}</li>
           </ul>
         </dd>
       %endfor

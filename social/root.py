@@ -1,8 +1,11 @@
 
 from twisted.web            import resource, server
+from twisted.internet       import defer
 
+from social                 import Db, utils
 from social.template        import render
 from social.profile         import ProfileResource
+from social.auth            import IAuthInfo
 
 
 class _ActualRoot(resource.Resource):
@@ -11,12 +14,22 @@ class _ActualRoot(resource.Resource):
     def __init__(self, isAjax=False):
         self.isAjax = isAjax
 
+    @defer.inlineCallbacks
+    def _render(self, request):
+        authinfo = request.getSession(IAuthInfo)
+        currentuser = authinfo.username
+        col = yield Db.get_slice(currentuser, "users")
+        myInfo = utils.supercolumnsToDict(col)
+
+        args = {"me": myInfo}
+        render(request, "index.mako", **args)
+
     def render_GET(self, request):
         if not self.isAjax:
-            render(request, "index.mako")
+            self._render(request)
             return server.NOT_DONE_YET
         else:
-            return ""
+            return ''
 
 
 class RootResource(resource.Resource):

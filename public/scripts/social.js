@@ -12,6 +12,12 @@ $.address.change(function(event) {
     $('#centerbar').load('/ajax' + event.value)
 })
 
+function post(url, data) {
+    $.post(url, data, function(data){
+        alert(data);
+    })
+}
+
 function BlockLoader() {
     objects = [];
 

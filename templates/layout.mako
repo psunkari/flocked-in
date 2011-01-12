@@ -32,7 +32,13 @@
   </div>
   <div id="menubar">
     <div id="menu" class="contents">
-      <div id="name" class="b left"><a href="#">Prasad Sunkari, Hacker</a></div>
+      <%
+        name = me['basic']['name']
+        if me['basic'].has_key('jobTitle'):
+          title = me['basic']['jobTitle']
+          name = _('%(name)s, %(title)s') % locals()
+      %>
+      <div id="name" class="b left"><a href="#">${name}</a></div>
       <div class="right">
         <ul id="menubar-links">
           <li><a href="/feed" class="ajax">${_("Home")}</a></li>

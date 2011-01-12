@@ -139,6 +139,10 @@ def setup(client):
                                 'PasswordHash': 'c246ad314ab52745b71bb00f4608c82a'})
     log.msg("Created column family: userauth")
 
+    connections = CfDef(KEYSPACE, 'connections', 'Standard', 'BytesType', None,
+                        'Established user connections')
+    yield client.system_add_column_family(connections)
+
     reactor.stop()
 
 
