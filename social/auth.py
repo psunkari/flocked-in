@@ -41,7 +41,8 @@ class SigninForm(resource.Resource):
         if request.args.has_key("_r"):
             args["query"] = "?_r=" + request.args["_r"][0]
 
-        render(request, "signin.mako", **args)
+        d = render(request, "signin.mako", **args)
+        d.addCallback(lambda x: request.finish())
         return server.NOT_DONE_YET
 
 

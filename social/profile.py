@@ -4,17 +4,15 @@ from twisted.python         import log
 from twisted.internet       import defer
 from telephus.cassandra     import ttypes
 
-from social.template        import render, renderDef
+from social.template        import render, renderDef, renderScriptBlock
 from social.relations       import Relation
 from social.auth            import IAuthInfo
-from social                 import Db, utils
+from social                 import Db, utils, base
 
 
-class ProfileResource(resource.Resource):
+class ProfileResource(base.BaseResource):
     isLeaf = True
-    isAjax = False
-    def __init__(self, isAjax=False):
-        self.isAjax = isAjax
+    resources = {}
 
     def _default(self):
         request.redirect("/profile")
@@ -73,39 +71,48 @@ class ProfileResource(resource.Resource):
 
     @defer.inlineCallbacks
     def _render(self, request):
-        authinfo = request.getSession(IAuthInfo)
-        myKey = authinfo.username
+        (layout, fp, script, args) = self._getBasicArgs(request)
 
-        if len(request.postpath) == 3 and request.postpath[1] == 'u':
-            userKey = "/".join(request.postpath)
-        elif len(request.postpath) != 0:
-            request.redirect("/profile")
+        myKey = args["myKey"]
+        userKey = "/".join(request.postpath) if len(request.postpath) > 0 else myKey
+        args["userKey"] = userKey
+
+        detail = request.args['dt'][0]\
+                 if request.args.has_key('dt') else 'notes'
+        args["detail"] = detail
+
+        cols = yield Db.multiget_slice([myKey, userKey], "users")
+        args["me"] = utils.supercolumnsToDict(cols[myKey])
+        if cols[userKey] and len(cols[userKey]):
+            args["user"] = utils.supercolumnsToDict(cols[userKey])
+        else:
+            request.redirect("/feed")
             request.finish()
             return
-        else:
-            userKey = myKey
 
-        # Get the user's profile information
-        cols = yield Db.multiget_slice([myKey, userKey], "users")
+        if layout and script:
+            yield render(request, "profile.mako", **args)
 
         relation = Relation(myKey, userKey)
-        userInfo = utils.supercolumnsToDict(cols[userKey])
-        myInfo = utils.supercolumnsToDict(cols[myKey])
-        detail = request.args['d'][0] if request.args.has_key('d') else 'notes'
+        args["relation"] = relation
+        wrap = not self._ajax
 
-        args = {"relation": relation, "user": userInfo, "me": myInfo,
-                "userKey": userKey, "myKey": myKey, "detail": detail}
+        yield relation.isFriend()
+        if script and fp:
+            yield self._clearAllBlocks(request)
+            yield renderScriptBlock(request, "profile.mako", "center_header",
+                                    wrap, "#center-header", "set", **args)
 
-        # Send the first block: Summary
-        if self.isAjax:
-            yield relation.isFriend()
-            yield renderDef(request, "profile.mako", "summary", **args)
-            yield renderDef(request, "profile.mako", "tabs", **args)
-            yield renderDef(request, "profile.mako", "content", **args)
+        if script:
+            yield renderScriptBlock(request, "profile.mako", "tabs", wrap,
+                                    "#center-contents", "set", **args)
+            yield renderScriptBlock(request, "profile.mako", "content", wrap,
+                                    "#center-contents", "append", **args)
 
-        if self.isAjax:
-            request.finish()
+        if script and layout:
+            request.write("</body></html>")
 
-        # This is not an ajax request, render the whole page!
-        if not self.isAjax:
+        if not script:
             yield render(request, "profile.mako", **args)
+
+        request.finish()

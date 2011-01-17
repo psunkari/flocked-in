@@ -3,7 +3,11 @@
 
 <%inherit file="layout.mako"/>
 
-<%def name="summary()">
+##
+## Functions for rendering content
+##
+
+<%def name="center_header()">
   <div id="profile-block">
     <div id="useravatar"></div>
     <div id="userprofile">
@@ -66,14 +70,23 @@
 <%def name="tabs()">
   <div id="profile-tabs">
     <ul id="profile-tablinks">
-      <li><a href="?d=notes" class="ajax">${_('Notes')}</a></li>
-      <li><a href="?d=info"  class="ajax">${_('Info')}</a></li>
-      <li><a href="?d=docs"  class="ajax">${_('Documents')}</a></li>
+      <%
+        profilePath = "/profile?"
+        if myKey != userKey:
+          profilePath = "/profile/%s?" % userKey
+      %>
+      %for item, name in [('notes', 'Notes'), ('info', 'Info'), ('docs', 'Documents')]:
+        %if detail == item:
+          <li><a href="${profilePath}dt=${item}" class="ajax selected">${_(name)}</a></li>
+        %else:
+          <li><a href="${profilePath}dt=${item}" class="ajax">${_(name)}</a></li>
+        %endif
+      %endfor
     </ul>
   </div>
 </%def>
 
-<%def name="contentInfo()">
+<%def name="content_info()">
   %if user.has_key('work'):
     <%
       keys = sorted(user['work'].keys(), reverse=True)
@@ -161,19 +174,23 @@
 <%def name="content()">
   <div id="profile-detail">
     %if detail == 'info':
-      ${contentInfo()}
+      ${content_info()}
     %endif
   </div>
 </%def>
 
-<%def name="title()">
-</%def>
 
-<%def name="rightBar()">
-</%def>
 
-<%def name="centerBar()">
-  ${summary()}
+
+
+
+##
+## Functions used for full page rendering
+## Javascript is not available in the client browser
+## Called from inside layout.mako
+##
+
+<%def name="center_contents()">
   ${tabs()}
-  ${content(detail)}
+  ${content()}
 </%def>

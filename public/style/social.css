@@ -39,7 +39,7 @@ body {
     margin-left: 10px;
     background: transparent url(/public/images/default-sitelogo.jpg) left center no-repeat;
 }
-#searchform {
+#search-container {
     padding: 1px;
     margin: 6px 10px 0;
     border: 1px solid #CCC;
@@ -184,6 +184,7 @@ body {
 }
 #profile-tablinks a {
     padding: 0 10px;
+    margin: 0 2px;
     height: 20px;
     color: #4d95d6;
     text-decoration: none;
@@ -191,14 +192,16 @@ body {
     border-style: solid;
     border-color: transparent;
     display: inline-block;
+    border-radius: 2px 2px 0 0;
 }
-#profile-tablinks a:hover, #profile-tablinks a:active, #profile-tablinks a:focus {
-    background-color: white;
+#profile-tablinks a:hover,
+#profile-tablinks a:active, #profile-tablinks a:focus {
+    border-color: #C3D9FF #C3D9FF transparent;
 }
 #profile-tablinks .selected {
     margin-bottom: -1px;
     border-width: 1px;
     border-style: solid;
-    border-color: #3d85c6 #3d85c6 white;
+    border-color: #3d85c6 #3d85c6 white !important;
     background-color: white;
 }

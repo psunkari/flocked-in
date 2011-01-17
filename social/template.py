@@ -1,7 +1,10 @@
 
+import json
+
 from mako.template      import Template
 from mako.lookup        import TemplateLookup
 from twisted.internet   import threads, defer
+from twisted.python     import log
 
 
 _collection = TemplateLookup(directories=['templates'],
@@ -18,23 +21,17 @@ def _getTemplate(path, dfn=None):
 @defer.inlineCallbacks
 def render(request, path, **kw):
     args = kw
-    args["noscript"] = False
-    if request.args.has_key("noscript"):
-        args["noscript"] = True
-    else:
-        args["noscriptUrl"] = request.path + "?noscript=1" \
+    if args.has_key("script") and args["script"]:
+        args["noscriptUrl"] = request.path + "?_ns=1" \
                               if request.path == request.uri \
-                              else request.uri + "&noscript=1"
+                              else request.uri + "&_ns=1"
 
-    try:
-        template = yield threads.deferToThread(_getTemplate, path)
-        text = template.render(**args)
-
-        request.setHeader('content-length', str(len(text)))
-        request.write(text)
-        request.finish()
-    except Exception, err:
-        request.processingFailed(err)
+    #try:
+    template = yield threads.deferToThread(_getTemplate, path)
+    text = template.render(**args)
+    request.write(text)
+    #except Exception, err:
+    #    request.processingFailed(err)
 
 
 @defer.inlineCallbacks
@@ -45,3 +42,32 @@ def renderDef(request, path, dfn, **kw):
         request.write(text)
     except Exception, err:
         request.processingFailed(err)
+
+
+@defer.inlineCallbacks
+def renderScriptBlock(request, path, dfn, tags=False, parent=None,
+                      method=None, last=False, css=None, scripts=None,
+                      handlers=None, **kw):
+    try:
+        template = yield threads.deferToThread(_getTemplate, path, dfn)
+        text = template.render(**kw)
+    except Exception, err:
+        request.processingFailed(err)
+
+    map = {"content": text, "node": parent, "method": method, "last": last,
+           "css": [], "js": [], "resources": {}, "handlers": handlers}
+
+    if css:
+        for id, url in css:
+            map["css"].append(id)
+            map["resources"]["id"] = url
+
+    if scripts:
+        for id, url in scripts:
+            map["js"].append(id)
+            map["resources"]["id"] = url
+
+    fmt = "<script type='application/javascript'>loader.load(%s);</script>\n"\
+          if tags else "loader.load(%s)\n"
+    text = fmt % json.dumps(map)
+    request.write(text)
