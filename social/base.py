@@ -27,3 +27,8 @@ class BaseResource(resource.Resource):
             request.write("clearAllBlocks();")
         else:
             request.write("<script type='application/javascript'>clearAllBlocks();</script>")
+
+    def request_GET(self, request):
+        self._clearAllBlocks()
+        request.finish()
+        return server.NOT_DONE_YET
