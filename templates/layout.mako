@@ -83,7 +83,7 @@
       %>
       <div id="name" class="b left"><a href="#">${name}</a></div>
       <div class="right">
-        <ul id="menubar-links">
+        <ul id="menubar-links" class="h-links">
           <li><a href="/feed" class="ajax">${_("Home")}</a></li>
           <li><a href="/profile" class="ajax">${_("My Profile")}</a></li>
           <li><a href="/signout">${_("Sign out")}</a></li>

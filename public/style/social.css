@@ -23,6 +23,18 @@ body {
     clear: both;
 }
 
+.h-links {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    display: inline-block;
+}
+
+.h-links li {
+    float: left;
+    display: block;
+}
+
 #topbar {
     height: 40px;
     padding: 2px 0 0 0;
@@ -69,14 +81,6 @@ body {
     max-width: 500px;
     overflow: hidden;
 }
-#menubar-links {
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
-}
-#menubar-links li {
-    float: left;
-}
 #menubar a {
     padding: 0 10px;
     height: 25px;
@@ -101,7 +105,7 @@ body {
     border-color: #CCC;
     border-width: 0 1px;
     min-height: 250px;
-    padding: 20px 15px;
+    padding: 15px;
     display: block;
 }
 #rightbar {
@@ -142,14 +146,15 @@ body {
     font-size: 16px;
 }
 
-#profile-block {
+#center-header {
     background-color: #E8EEFA;
-    margin: -20px -15px;
-    padding: 20px 15px;
-    min-height: 136px;
+    margin: -15px;
+    padding: 15px;
+    border-bottom: 1px solid #3d85c6;
 }
-#userprofile {
-    margin-left: 150px;
+
+#profile-block {
+    min-height: 130px;
 }
 #useravatar {
     height: 128px;
@@ -157,7 +162,7 @@ body {
     padding: 3px;
     border: 1px solid #C3D9FF;
     background-color: white;
-    float: left;
+    float: right;
 }
 .summary-item {
     color: gray;
@@ -172,15 +177,6 @@ body {
     font-weight: bold;
     margin: 0 -15px;
     padding: 0 15px;
-}
-#profile-tablinks {
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
-    float: right;
-}
-#profile-tablinks li {
-    float: left;
 }
 #profile-tablinks a {
     padding: 0 10px;

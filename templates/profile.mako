@@ -69,7 +69,7 @@
 
 <%def name="tabs()">
   <div id="profile-tabs">
-    <ul id="profile-tablinks">
+    <ul id="profile-tablinks" class="h-links">
       <%
         profilePath = "/profile?"
         if myKey != userKey:
