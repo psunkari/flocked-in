@@ -99,7 +99,7 @@ class ProfileResource(base.BaseResource):
 
         yield relation.isFriend()
         if script and fp:
-            yield self._clearAllBlocks(request)
+            self._clearAllBlocks(request)
             yield renderScriptBlock(request, "layout.mako", "left",
                                     wrap, "#leftbar", "set", **args)
             yield renderScriptBlock(request, "profile.mako", "center_header",
