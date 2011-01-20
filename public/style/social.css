@@ -13,27 +13,34 @@ body {
     background-color: transparent;
 }
 
-.left {
-    float: left;
-}
-.right {
-    float: right;
-}
-.clear {
-    clear: both;
-}
-
 .h-links {
     list-style-type: none;
     margin: 0;
     padding: 0;
     display: inline-block;
 }
-
 .h-links li {
     float: left;
     display: block;
 }
+.h-links a {
+    display: inline-block;
+}
+
+.v-links {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    display: block;
+}
+
+.clear {
+    clear: both;
+    display: block;
+}
+
+
+
 
 #topbar {
     height: 40px;
@@ -44,18 +51,21 @@ body {
     width: 60px;
     background: transparent url(/public/images/default-avatar-tb.jpg);
     border: 1px solid white;
+    float: left;
 }
 #sitelogo {
     height: 40px;
     width: 300px;
     margin-left: 10px;
     background: transparent url(/public/images/default-sitelogo.jpg) left center no-repeat;
+    float: left;
 }
 #search-container {
     padding: 1px;
     margin: 6px 10px 0;
     border: 1px solid #CCC;
     border-radius: 2px;
+    float: right;
 }
 #searchbox, #searchbutton {
     margin: 0;
@@ -70,6 +80,9 @@ body {
     width: 350px;
 }
 
+
+
+
 #menubar {
     background-color: #3d85c6;
     height: 25px;
@@ -80,45 +93,64 @@ body {
 #name {
     max-width: 500px;
     overflow: hidden;
+    float: left;
+}
+#menubar-links-wrapper {
+    float: right;
 }
 #menubar a {
     padding: 0 10px;
     height: 25px;
     color: white;
     text-decoration: none;
-    display: inline-block;
 }
 #name:hover, #name:focus, #name:active,
 #menubar-links a:hover, #menubar-links a:active, #menubar-links a:focus {
     background-color: #4d95d6;
 }
 
-#leftbar {
+
+
+
+#left {
     float: left;
-    width: 180px;
+    width: 0px;
     word-wrap: break-word;
     min-height: 250px;
 }
-#centerbar {
-    margin: 0 180px;
-    border-style: solid;
-    border-color: #CCC;
-    border-width: 0 1px;
-    min-height: 250px;
-    padding: 15px;
+.leftcol #left {width: 179px !important }
+
+#center-right {
+    margin-left: 179px;
     display: block;
 }
-#rightbar {
-    float: right;
-    width: 180px;
-    word-wrap: break-word;
+
+#center {
+    min-height: 250px;
+    float: left;
+    border-style: solid;
+    border-color: #C3D9FF;
+    border-width: 0 1px;
+    width: 980px;
 }
+.leftcol.rightcol #center { width: 620px !important; }
+.leftcol #center, .rightcol #center { width: 800px !important; }
+
+#right {
+    float: right;
+    word-wrap: break-word;
+    min-height: 250px;
+    width: 0px;
+}
+.rightcol #right { width: 179px !important }
+
+
+
 
 .sidemenu {
-    list-style-type: none;
-    margin: 0;
     padding: 2em 0 0;
 }
+
 .sidemenu a {
     padding: 4px 2px 3px 21px;
     display: block;
@@ -126,13 +158,20 @@ body {
     text-decoration: none;
     border-bottom: 1px solid transparent;
 }
+
 .sidemenu a:hover, .sidemenu a:active, .sidemenu a:focus {
     background-color: #F0F0FF;
     border-bottom: 1px solid #C4D7ED;
 }
+
 .sidemenu-selected {
     background-color: #C4D7ED;
 }
+
+
+
+
+
 
 #titlebar {
     margin: 0 0 5px 0;
@@ -148,14 +187,16 @@ body {
 
 #center-header {
     background-color: #E8EEFA;
-    margin: -15px;
     padding: 15px;
-    border-bottom: 1px solid #3d85c6;
+    border-bottom: 1px solid #C3D9FF;
+    margin-bottom: -21px;
 }
 
-#profile-block {
-    min-height: 130px;
-}
+
+
+
+
+
 #useravatar {
     height: 128px;
     width: 128px;
@@ -164,6 +205,7 @@ body {
     background-color: white;
     float: right;
 }
+
 .summary-item {
     color: gray;
     padding: 0 8px 0 0;
@@ -171,23 +213,21 @@ body {
 
 #profile-tabs {
     background-color: #E8EEFA;
-    border-bottom: 1px solid #3d85c6;
+    border-bottom: 1px solid #C3D9FF;
     height: 20px;
     line-height: 20px;
     font-weight: bold;
-    margin: 0 -15px;
     padding: 0 15px;
 }
 #profile-tablinks a {
     padding: 0 10px;
     margin: 0 2px;
     height: 20px;
-    color: #4d95d6;
+    color: #3D85C6;
     text-decoration: none;
-    border-width: 1px;
+    border-width: 1px 1px 0;
     border-style: solid;
     border-color: transparent;
-    display: inline-block;
     border-radius: 2px 2px 0 0;
 }
 #profile-tablinks a:hover,
@@ -196,8 +236,6 @@ body {
 }
 #profile-tablinks .selected {
     margin-bottom: -1px;
-    border-width: 1px;
-    border-style: solid;
-    border-color: #3d85c6 #3d85c6 white !important;
+    border-color: #C3D9FF #C3D9FF transparent !important;
     background-color: white;
 }

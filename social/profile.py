@@ -101,7 +101,7 @@ class ProfileResource(base.BaseResource):
         if script and fp:
             self._clearAllBlocks(request)
             yield renderScriptBlock(request, "layout.mako", "left",
-                                    wrap, "#leftbar", "set", **args)
+                                    wrap, "#left", "set", **args)
             yield renderScriptBlock(request, "profile.mako", "center_header",
                                     wrap, "#center-header", "set", **args)
 

@@ -15,7 +15,7 @@
 
 <%def name="left()">
   <div id="mymenu-container" class="sidemenu-container">
-    <ul id="mymenu" class="sidemenu">
+    <ul id="mymenu" class="v-links sidemenu">
       <li><a href="/feed" class="ajax">News Feed</a></li>
       <li><a href="/messages" class="ajax">Messages</a></li>
       <li><a href="/events" class="ajax">Events</a></li>
@@ -23,12 +23,12 @@
     </ul>
   </div>
   <div id="grpmenu-container" class="sidemenu-container">
-    <ul id="grpmenu" class="sidemenu">
+    <ul id="grpmenu" class="v-links sidemenu">
       <li><a href="/groups" class="ajax">Groups</a></li>
     </ul>
   </div>
   <div id="orgmenu-container" class="sidemenu-container">
-    <ul id="orgmenu" class="sidemenu">
+    <ul id="orgmenu" class="v-links sidemenu">
       <li><a href="/org" class="ajax">Company Feed</a></li>
       <li><a href="/people" class="ajax">Contacts</a></li>
     </ul>
@@ -50,21 +50,21 @@
   </script>
 %endif
 </head>
-<body>
+<body class="leftcol rightcol">
   <div id="topbar">
     <div id="top" class="contents">
       <!-- TODO: Avatar and Site Logo -->
-      <div id="avatar" class="left">
+      <div id="avatar">
         %if me.has_key('avatar'):
           <img src="${me['avatar']['small']}"/>
         %endif
       </div>
-      <div id="sitelogo" class="left">
+      <div id="sitelogo">
         %if org and org.has_key('basic'):
           <img src="${org['basic']['logo']}" alt="${org['basic']['name']}"/>
         %endif
       </div>
-      <div id="search-container" class="right">
+      <div id="search-container">
         <form id="search">
           <input type="text" id="searchbox"
                  placeholder="${_('Search people, messages and statuses...')}"/>
@@ -81,9 +81,9 @@
           title = me['basic']['jobTitle']
           name = _('%(name)s, %(title)s') % locals()
       %>
-      <div id="name" class="b left"><a href="#">${name}</a></div>
-      <div class="right">
-        <ul id="menubar-links" class="h-links">
+      <div id="name"><a href="#">${name}</a></div>
+      <div id="menubar-links-wrapper">
+        <ul class="h-links">
           <li><a href="/feed" class="ajax">${_("Home")}</a></li>
           <li><a href="/profile" class="ajax">${_("My Profile")}</a></li>
           <li><a href="/signout">${_("Sign out")}</a></li>
@@ -93,27 +93,29 @@
   </div>
   <div id="mainbar">
     <div id="main" class="contents">
-      <div id="leftbar">
+      <div id="left">
         %if not script:
           ${self.left()}
         %endif
       </div>
-      <div id="centerbar">
-        <div id="center-header">
+      <div id="center-right">
+        <div id="right">
           %if not script:
-            ${self.center_header()}
+            ${self.right()}
           %endif
         </div>
-        <div id="center-contents">
-          %if not script:
-            ${self.center_contents()}
-          %endif
+        <div id="center">
+          <div id="center-header">
+            %if not script:
+              ${self.center_header()}
+            %endif
+          </div>
+          <div id="center-contents">
+            %if not script:
+              ${self.center_contents()}
+            %endif
+          </div>
         </div>
-      </div>
-      <div id="rightbar">
-        %if not script:
-          ${self.right()}
-        %endif
       </div>
     </div>
   </div>
