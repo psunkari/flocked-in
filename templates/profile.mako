@@ -64,7 +64,7 @@
         %endif
       </div>
     </div>
-    <div class="clear"/>
+    <div class="clear"></div>
   </div>
 </%def>
 
