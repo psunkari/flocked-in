@@ -1,6 +1,10 @@
 
 $("a.ajax").live("click", function() {
-    $.address.value($(this).attr('href'));
+    if (this.hasAttribute('_ref'))
+        $.getScript('/ajax' + this.getAttribute('_ref'))
+    else if (this.hasAttribute('href'))
+        $.address.value($(this).attr('href'));
+
     return false;
 })
 
