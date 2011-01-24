@@ -39,6 +39,10 @@ body {
     display: block;
 }
 
+a.ajax {
+    cursor: pointer;
+}
+
 
 
 
@@ -70,6 +74,7 @@ body {
 #searchbox, #searchbutton {
     margin: 0;
     color: #999;
+    outline: 0px;
     border: 1px solid transparent;
     background-color: transparent;
 }
@@ -238,4 +243,43 @@ body {
     margin-bottom: -1px;
     border-color: #C3D9FF #C3D9FF transparent !important;
     background-color: white;
+}
+
+
+
+#sharebar-links li {
+    padding: 5px 5px 5px 0;
+    font-weight: bold;
+    color: #888;
+}
+#sharebar-links a {
+    display: inline-block;
+    padding: 5px;
+    margin: -5px -5px -5px 0;
+    color: #3D85C6;
+}
+#sharebar-links a:hover,
+#sharebar-links a:active, #sharebar-links a:focus {
+    color: #4d95d6;
+}
+#sharebar-links .selected {
+    color: black !important;
+}
+
+#sharebar .input-wrap {
+    background-color: white;
+    border: 1px solid #C3D9FF;
+    padding: 4px;
+    margin: 0 0 5px 0;
+}
+
+#sharebar input {
+    width: 100%;
+    border: none;
+    outline: 0px;
+    background-color: transparent;
+}
+
+#sharebar-actions {
+    float: right;
 }

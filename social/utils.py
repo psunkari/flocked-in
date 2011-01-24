@@ -1,4 +1,5 @@
 
+import uuid
 import hashlib
 import datetime
 from social import Db, _, __
@@ -30,6 +31,21 @@ def columnsToDict(columns):
     for item in columns:
         retval[item.name] = item.value
     return retval
+
+def getRequestArg(request, arg):
+    if request.args.has_key(arg):
+        return request.args[arg][0]
+    else:
+        return None
+
+def createACL(request):
+    return None
+
+def getRandomKey(prefix):
+    key = prefix + "/" + str(uuid.uuid1())
+    sha = hashlib.sha1()
+    sha.update(key)
+    return sha.hexdigest()
 
 
 #

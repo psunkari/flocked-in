@@ -23,20 +23,15 @@ unpack = lambda x: struct.unpack('!Q', x)[0]
 
 @defer.inlineCallbacks
 def setup(client):
-    #
-    # Create and populate the "sites" column family
-    #
+    # Information reg the domain/company
     sites = CfDef(KEYSPACE, 'sites', 'Super', 'UTF8Type', 'UTF8Type',
                   'Information on domains, sites and enabled applications')
     yield client.system_add_column_family(sites)
-
     yield client.batch_insert('synovel.com', 'sites', {'SiteInfo': {
                                 'LicenseUsers': '20', 'CurrentUsers': '1'}})
-    log.msg("Created column family: sites")
+    log.msg("Created sites")
 
-    #
-    # Create and populate the "users" column family
-    #
+    # User information
     users = CfDef(KEYSPACE, 'users', 'Super', 'UTF8Type', 'UTF8Type',
                   'User information - passwords, sessions and profile')
     yield client.system_add_column_family(users)
@@ -128,8 +123,9 @@ def setup(client):
                                     'hometown': 'cities/in/guntur',
                                     'currentcity': 'cities/in/hyderabad'
                                 }})
-    log.msg("Created column family: users")
+    log.msg("Created users")
 
+    # User authentication - passwords and sessions
     userauth = CfDef(KEYSPACE, 'userauth', 'Standard', 'UTF8Type', None,
                      'User authentication and authorizaton information')
     yield client.system_add_column_family(userauth)
@@ -137,11 +133,33 @@ def setup(client):
                                 'PasswordHash': 'c246ad314ab52745b71bb00f4608c82a'})
     yield client.batch_insert('synovel.com/u/ashok', 'userauth', {
                                 'PasswordHash': 'c246ad314ab52745b71bb00f4608c82a'})
-    log.msg("Created column family: userauth")
+    log.msg("Created userauth")
 
+    # Connections between users
     connections = CfDef(KEYSPACE, 'connections', 'Standard', 'BytesType', None,
                         'Established user connections')
     yield client.system_add_column_family(connections)
+    log.msg("Created connections")
+
+    # All items and responses to items
+    # Items include anything that can be shared, liked and commented upon.
+    # => Everything other than those that have special column families.
+    items = CfDef(KEYSPACE, 'items', 'Super', 'BytesType', 'BytesType',
+                  'All the items - mails, statuses, links, events etc;')
+    yield client.system_add_column_family(items)
+    log.msg("Created items")
+
+    # Index of all posts by a given user
+    userposts = CfDef(KEYSPACE, 'userposts', 'Standard', 'TimeUUIDType', None,
+                      'All items posted by a given user')
+    yield client.system_add_column_family(userposts)
+    log.msg("Created userposts")
+
+    # Index of all posts accessible to a given user/domain/company
+    feed = CfDef(KEYSPACE, 'feed', 'Standard', 'TimeUUIDType', None,
+                 'A feed of all the items - both user and company')
+    yield client.system_add_column_family(feed)
+    log.msg("Created feed")
 
     reactor.stop()
 

@@ -31,8 +31,8 @@ function post(url, data) {
 }
 
 function clearAllBlocks() {
-    $('#leftbar').html('');
-    $('#rightbar').html('');
+    $('#left').html('');
+    $('#right').html('');
     $('#center-header').html('');
     $('#center-contents').html('');
 }
@@ -159,9 +159,8 @@ ChunkLoader.prototype = {
                             cleanup, obj.parent || null);
 
         this._delayed.push(obj);
-        if (obj.isLast) {
+        if (obj.last) {
             this._loadResources(obj.js || [], this._runEventHandlers.bind(this));
-            this._delayed = [];
         }
     },
 
@@ -170,9 +169,10 @@ ChunkLoader.prototype = {
                 if (value.handlers) {
                     handlers = value.handlers;
                     if (handlers.onload)
-                        (value.onload)();
+                        eval(handlers.onload);
                 }
             }.bind(this))
+        this._delayed = [];
     }
 }
 loader = new ChunkLoader();
