@@ -28,6 +28,12 @@ class BaseResource(resource.Resource):
         else:
             request.write("<script type='application/javascript'>clearAllBlocks();</script>")
 
+    def _default(self, request):
+        if not self._ajax:
+            request.redirect("/feed")
+
+        request.finish()
+
     def request_GET(self, request):
         self._clearAllBlocks()
         request.finish()

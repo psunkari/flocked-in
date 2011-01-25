@@ -84,7 +84,7 @@ class UserPasswordChecker():
     credentialInterfaces = [IUserPassword]
 
     def _authenticate(self, username, password):
-        d = Db.get(username, "userauth", "PasswordHash")
+        d = Db.get(username, "userAuth", "PasswordHash")
         def checkPassword(result):
             column = result.column;
             if column.value != password:

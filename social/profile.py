@@ -14,19 +14,15 @@ class ProfileResource(base.BaseResource):
     isLeaf = True
     resources = {}
 
-    def _default(self):
-        request.redirect("/profile")
-        request.finish()
-
     @defer.inlineCallbacks
     def _connect(self, request):
-        if not request.args.has_key("target"):
-            self._default()
+        targetKey = utils.getRequestArg(request, "target")
+        if not targetKey:
+            self._default(request)
             return
 
         authinfo = request.getSession(IAuthInfo)
         myKey = authinfo.username
-        targetKey = request.args["target"][0]
 
         (myDomain, ign, myId) = myKey.partition("/u/")
         (targetDomain, ign, targetId) = targetKey.partition("/u/")
@@ -34,31 +30,60 @@ class ProfileResource(base.BaseResource):
         # TODO: In future support friendly domains
         # to allow the network span across multiple domains
         if myDomain != targetDomain:
-            self._default()
+            self._default(request)
             return
 
+        circles = request.args["circle"]\
+                  if request.args.has_key("circle") else ["__default__"]
+        circlesMap = dict([(circle, '') for circle in circles])
+
+        calls = None
         try:
-            result = yield Db.get(myKey, "connections", targetKey)
-            if result.column.value == "__local__":
-                d1 = Db.insert(myKey, "connections", "", targetKey)
-                d2 = Db.insert(targetKey, "connections", "", myKey)
-                yield d1
-                yield d2
+            yield Db.get(myKey, "connections", "__local__", targetKey)
+            d1 = Db.remove(myKey, "connections", "__local__", targetKey)
+            d2 = Db.remove(targetKey, "connections", "__remote__", myKey)
+            d3 = Db.batch_insert(myKey, "connections", {targetKey: circlesMap})
+            calls = defer.DeferredList([d1, d2, d3])
         except ttypes.NotFoundException:
-            d1 = Db.insert(myKey, "connections", "__remote__", targetKey)
-            d2 = Db.insert(targetKey, "connections", "__local__", myKey)
+            circlesMap["__remote__"] = ''
+            d1 = Db.batch_insert(myKey, "connections", {targetKey: circlesMap})
+            d2 = Db.insert(targetKey, "connections", "", "__local__", myKey)
+            calls = defer.DeferredList([d1, d2])
+
+        yield calls
+        request.finish()
+
+    @defer.inlineCallbacks
+    def _disconnect(self, request):
+        targetKey = utils.getRequestArg(request, "target")
+        if not targetKey:
+            self._default(request)
+            return
+
+        authinfo = request.getSession(IAuthInfo)
+        myKey = authinfo.username
+
+        try:
+            d1 = Db.remove(myKey, "connections", None, targetKey)
+            d2 = Db.remove(targetKey, "connections", None, myKey)
             yield d1
             yield d2
+        except ttypes.NotFoundException:
+            pass
+
+        request.finish()
 
     def render_POST(self, request):
-        done = False
         if len(request.postpath) == 1:
             action = request.postpath[0]
             if action == "connect":
-                self._connect(request)
-                return server.NOT_DONE_YET
+                d = self._connect(request)
+            elif action == "disconnect":
+                d = self._disconnect(request)
+            else:
+                self._default(request)
 
-        self._default()
+        return server.NOT_DONE_YET
 
     def render_GET(self, request):
         d = self._render(request)

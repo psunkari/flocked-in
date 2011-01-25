@@ -24,12 +24,6 @@ $.address.change(function(event) {
     oldPath = event.path
 })
 
-function post(url, data) {
-    $.post(url, data, function(data){
-        alert(data);
-    })
-}
-
 function clearAllBlocks() {
     $('#left').html('');
     $('#right').html('');

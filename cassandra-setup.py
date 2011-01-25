@@ -126,20 +126,46 @@ def setup(client):
     log.msg("Created users")
 
     # User authentication - passwords and sessions
-    userauth = CfDef(KEYSPACE, 'userauth', 'Standard', 'UTF8Type', None,
+    userAuth = CfDef(KEYSPACE, 'userAuth', 'Standard', 'UTF8Type', None,
                      'User authentication and authorizaton information')
-    yield client.system_add_column_family(userauth)
-    yield client.batch_insert('synovel.com/u/prasad', 'userauth', {
+    yield client.system_add_column_family(userAuth)
+    yield client.batch_insert('synovel.com/u/prasad', 'userAuth', {
                                 'PasswordHash': 'c246ad314ab52745b71bb00f4608c82a'})
-    yield client.batch_insert('synovel.com/u/ashok', 'userauth', {
+    yield client.batch_insert('synovel.com/u/ashok', 'userAuth', {
                                 'PasswordHash': 'c246ad314ab52745b71bb00f4608c82a'})
-    log.msg("Created userauth")
+    log.msg("Created userAuth")
 
     # Connections between users
-    connections = CfDef(KEYSPACE, 'connections', 'Standard', 'BytesType', None,
-                        'Established user connections')
+    connections = CfDef(KEYSPACE, 'connections', 'Super', 'BytesType',
+                        'BytesType', 'Established user connections')
     yield client.system_add_column_family(connections)
+
+    connectionsByTag = CfDef(KEYSPACE, 'connectionsByTag', 'Super', 'BytesType',
+                             'BytesType', 'User connections by type')
+    yield client.system_add_column_family(connectionsByTag)
     log.msg("Created connections")
+
+    # Subscriptions to changes by other people
+    subscriptions = CfDef(KEYSPACE, 'subscriptions', 'Standard', 'BytesType',
+                          None, 'User subscriptons')
+    yield client.system_add_column_family(subscriptions)
+
+    # Followers of a user
+    followers = CfDef(KEYSPACE, 'followers', 'Standard', 'BytesType',
+                      None, 'Followers of a user')
+    yield client.system_add_column_family(followers)
+    log.msg("Created subscriptions and followers")
+
+    # Groups
+    groups = CfDef(KEYSPACE, 'groups', 'Super', 'BytesType', 'BytesType',
+                   'Groups of users')
+    yield client.system_add_column_family(groups)
+    log.msg("Created groups")
+
+    # List of groups that a user is following
+    userGroups = CfDef(KEYSPACE, 'userGroups', 'Standard', 'BytesType', None,
+                       'List of groups that a user is a member of')
+    yield client.system_add_column_family(userGroups)
 
     # All items and responses to items
     # Items include anything that can be shared, liked and commented upon.
@@ -150,9 +176,9 @@ def setup(client):
     log.msg("Created items")
 
     # Index of all posts by a given user
-    userposts = CfDef(KEYSPACE, 'userposts', 'Standard', 'TimeUUIDType', None,
+    userItems = CfDef(KEYSPACE, 'userItems', 'Standard', 'TimeUUIDType', None,
                       'All items posted by a given user')
-    yield client.system_add_column_family(userposts)
+    yield client.system_add_column_family(userItems)
     log.msg("Created userposts")
 
     # Index of all posts accessible to a given user/domain/company

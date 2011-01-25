@@ -16,11 +16,11 @@
           ${user['basic']['name']}
           %if myKey != userKey:
             %if relation._isFriend == r.REL_UNRELATED:
-              <input type="button" value="+ Add as Friend" onclick="post('/ajax/profile/connect', 'target=${userKey}')"/>
+              <input type="button" value="+ Add as Friend" onclick="$.post('/ajax/profile/connect', 'target=${userKey}')"/>
             %elif relation._isFriend == r.REL_LOCAL_PENDING:
-              <input type="button" value="- Cancel Friend Request" onclick="post('/ajax/profile/disconnect', 'target=${userKey}')"/>
+              <input type="button" value="- Cancel Friend Request" onclick="$.post('/ajax/profile/disconnect', 'target=${userKey}')"/>
             %elif relation._isFriend == r.REL_REMOTE_PENDING:
-              <input type="button" value="+ Accept Friend Request" onclick="post('/ajax/profile/connect', 'target=${userKey}')"/>
+              <input type="button" value="+ Accept Friend Request" onclick="$.post('/ajax/profile/connect', 'target=${userKey}')"/>
             %endif
           %endif
         </div>
