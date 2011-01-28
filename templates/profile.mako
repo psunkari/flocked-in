@@ -1,7 +1,7 @@
 <%! from social import utils, _, __ %>
 <%! from social import relations as r %>
 
-<%inherit file="layout.mako"/>
+<%inherit file="base.mako"/>
 
 ##
 ## Functions for rendering content
@@ -198,7 +198,7 @@
 ##
 ## Functions used for full page rendering
 ## Javascript is not available in the client browser
-## Called from inside layout.mako
+## Called from inside base.mako
 ##
 
 <%def name="center_contents()">

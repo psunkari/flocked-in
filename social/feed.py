@@ -29,7 +29,7 @@ class FeedResource(base.BaseResource):
 
         if script and fp:
             self._clearAllBlocks(request)
-            yield renderScriptBlock(request, "layout.mako", "left",
+            yield renderScriptBlock(request, "base.mako", "nav_menu",
                                     wrap, "#left", "set", **args)
 
         if script:

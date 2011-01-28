@@ -1,6 +1,6 @@
 <%! from social import _, __ %>
 
-<%inherit file="layout.mako"/>
+<%inherit file="base.mako"/>
 
 <%def name="center_header()">
   <div class="titlebar">

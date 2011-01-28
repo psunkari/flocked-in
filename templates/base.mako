@@ -13,7 +13,7 @@
 <%def name="center_contents()">
 </%def>
 
-<%def name="left()">
+<%def name="nav_menu()">
   <div id="mymenu-container" class="sidemenu-container">
     <ul id="mymenu" class="v-links sidemenu">
       <li><a href="/feed" class="ajax">News Feed</a></li>
@@ -32,6 +32,35 @@
       <li><a href="/org" class="ajax">Company Feed</a></li>
       <li><a href="/people" class="ajax">People</a></li>
     </ul>
+  </div>
+</%def>
+
+<%def name="main_layout()">
+  <div id="main" class="contents">
+    <div id="left">
+      %if not script:
+        ${self.nav_menu()}
+      %endif
+    </div>
+    <div id="center-right">
+      <div id="right">
+        %if not script:
+          ${self.right()}
+        %endif
+      </div>
+      <div id="center">
+        <div id="center-header">
+          %if not script:
+            ${self.center_header()}
+          %endif
+        </div>
+        <div id="center-contents">
+          %if not script:
+            ${self.center_contents()}
+          %endif
+        </div>
+      </div>
+    </div>
   </div>
 </%def>
 
@@ -93,32 +122,7 @@
     </div>
   </div>
   <div id="mainbar">
-    <div id="main" class="contents">
-      <div id="left">
-        %if not script:
-          ${self.left()}
-        %endif
-      </div>
-      <div id="center-right">
-        <div id="right">
-          %if not script:
-            ${self.right()}
-          %endif
-        </div>
-        <div id="center">
-          <div id="center-header">
-            %if not script:
-              ${self.center_header()}
-            %endif
-          </div>
-          <div id="center-contents">
-            %if not script:
-              ${self.center_contents()}
-            %endif
-          </div>
-        </div>
-      </div>
-    </div>
+    ${self.main_layout()}
   </div>
 %if script:
   <script type="application/javascript" src="/public/scripts/jquery.js"></script>

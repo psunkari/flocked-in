@@ -1,1 +1,1 @@
-<%inherit file="layout.mako"/>
+<%inherit file="base.mako"/>
