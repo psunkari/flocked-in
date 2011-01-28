@@ -96,48 +96,67 @@ class ProfileResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _render(self, request):
-        (layout, fp, script, args) = self._getBasicArgs(request)
+        (appchange, script, args) = self._getBasicArgs(request)
 
         myKey = args["myKey"]
-        userKey = "/".join(request.postpath) if len(request.postpath) > 0 else myKey
-        args["userKey"] = userKey
-
-        detail = request.args['dt'][0]\
-                 if request.args.has_key('dt') else 'notes'
-        args["detail"] = detail
+        encodedUserKey = utils.getRequestArg(request, "id")
+        if not encodedUserKey:
+            raise errors.MissingParam()
+        else:
+            userKey = utils.decodeKey(encodedUserKey)
 
         cols = yield Db.multiget_slice([myKey, userKey], "users")
         args["me"] = utils.supercolumnsToDict(cols[myKey])
         if cols[userKey] and len(cols[userKey]):
             args["user"] = utils.supercolumnsToDict(cols[userKey])
         else:
-            request.redirect("/feed")
-            request.finish()
-            return
+            raise errors.UnknownUser()
 
-        if layout and script:
+        detail = utils.getRequestArg(request, "dt") or "notes"
+        args["detail"] = detail
+        args["userKey"] = userKey
+        args["encodedUserKey"] = encodedUserKey
+
+        # When scripts are enabled, updates are sent to the page as
+        # and when we get the required data from the database.
+
+        # When we are the landing page, we also render the page header
+        # and all updates are wrapped in <script> blocks.
+        landing = not self._ajax
+
+        # User entered the URL directly
+        # Render the header.  Other things will follow.
+        if script and landing:
             yield render(request, "profile.mako", **args)
 
+        # Start with displaying the template and navigation menu
+        if script and appchange:
+            yield renderScriptBlock(request, "profile.mako", "layout",
+                                    landing, "#mainbar", "set", **args)
+
+        # Prefetch some data about how I am related to the user.
+        # This is required in order to reliably filter our profile details
+        # that I don't have access to.
         relation = Relation(myKey, userKey)
         args["relation"] = relation
-        wrap = not self._ajax
-
         yield defer.DeferredList([relation.checkIsFriend(),
                                   relation.checkIsSubscribed()])
-        if script and fp:
-            self._clearAllBlocks(request)
-            yield renderScriptBlock(request, "base.mako", "nav_menu",
-                                    wrap, "#left", "set", **args)
-            yield renderScriptBlock(request, "profile.mako", "center_header",
-                                    wrap, "#center-header", "set", **args)
+
+        # Reload all user-depended blocks if the currently displayed user is
+        # not the same as the user for which new data is being requested.
+        newId = (utils.getRequestArg(request, "_cu") != userKey or appchange)
+        if script and newId:
+            yield renderScriptBlock(request, "profile.mako", "summary",
+                                    landing, "#summary", "set", **args)
+
 
         if script:
-            yield renderScriptBlock(request, "profile.mako", "tabs", wrap,
-                                    "#center-contents", "set", **args)
-            yield renderScriptBlock(request, "profile.mako", "content", wrap,
-                                    "#center-contents", "append", **args)
+            yield renderScriptBlock(request, "profile.mako", "tabs", landing,
+                                    "#profile-tabs", "set", **args)
+            yield renderScriptBlock(request, "profile.mako", "content", landing,
+                                    "#profile-content", "set", **args)
 
-        if script and layout:
+        if script and landing:
             request.write("</body></html>")
 
         if not script:

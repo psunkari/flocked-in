@@ -122,6 +122,9 @@ a.ajax {
 
 
 
+/*
+ * Content layout - controls single, two or three columns
+ */
 
 #left {
     float: left;
@@ -129,7 +132,7 @@ a.ajax {
     word-wrap: break-word;
     min-height: 250px;
 }
-.leftcol #left {width: 179px !important }
+.has-left #left {width: 179px !important }
 
 #center-right {
     margin-left: 179px;
@@ -144,8 +147,8 @@ a.ajax {
     border-width: 0 1px;
     width: 980px;
 }
-.leftcol.rightcol #center { width: 620px !important; }
-.leftcol #center, .rightcol #center { width: 800px !important; }
+.has-left.has-right #center { width: 620px !important; }
+.has-left #center, .has-right #center { width: 800px !important; }
 
 #right {
     float: right;
@@ -153,7 +156,7 @@ a.ajax {
     min-height: 250px;
     width: 0px;
 }
-.rightcol #right { width: 179px !important }
+.has-right #right { width: 179px !important }
 
 
 
@@ -196,13 +199,12 @@ a.ajax {
     font-size: 16px;
 }
 
-#center-header {
+.center-header {
     background-color: #E8EEFA;
     padding: 15px;
     border-bottom: 1px solid #C3D9FF;
     margin-bottom: -21px;
 }
-
 
 
 

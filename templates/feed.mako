@@ -2,11 +2,40 @@
 
 <%inherit file="base.mako"/>
 
-<%def name="center_header()">
-  <div class="titlebar">
-    <div id="title"><span class="middle title">${_("News Feed")}</span></div>
+<%def name="layout()">
+  <div class="contents has-left has-right">
+    <div id="left">
+      <div id="nav-menu">
+        ${self.nav_menu()}
+      </div>
+    </div>
+    <div id="center-right">
+      <div id="right">
+        <div id="home-notifications"></div>
+        <div id="home-events"></div>
+        <div id="home-todo"></div>
+      </div>
+      <div id="center">
+        <div class="center-header">
+          <div class="titlebar">
+            <div id="title"><span class="middle title">${_("News Feed")}</span></div>
+          </div>
+          <div id="share-block">
+            %if not script:
+              ${self.share_block()}
+            %endif
+        </div>
+        <div class="center-contents">
+          %if not script:
+            ${self.feed()}
+          %endif
+        </div>
+      </div>
+    </div>
   </div>
-  <div id="share-block">
+</%def>
+
+<%def name="share_block()">
   %if script:
     <div id="sharebar-tabs">
       <ul id="sharebar-links" class="h-links">
@@ -32,7 +61,6 @@
       </div>
     </form>
   %endif
-  </div>
 </%def>
 
 <%def name="share_status()">
@@ -58,4 +86,7 @@
   <div class="input-wrap">
     <input type="text" name="comment" placeholder="${_('Say something about this file')}"/>
   </div>
+</%def>
+
+<%def name="feed()">
 </%def>

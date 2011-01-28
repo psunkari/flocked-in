@@ -6,11 +6,7 @@
 <%def name="title()">
   ${_('Synovel SocialNet')}
 </%def>
-<%def name="right()">
-</%def>
-<%def name="center_header()">
-</%def>
-<%def name="center_contents()">
+<%def name="layout()">
 </%def>
 
 <%def name="nav_menu()">
@@ -35,35 +31,6 @@
   </div>
 </%def>
 
-<%def name="main_layout()">
-  <div id="main" class="contents">
-    <div id="left">
-      %if not script:
-        ${self.nav_menu()}
-      %endif
-    </div>
-    <div id="center-right">
-      <div id="right">
-        %if not script:
-          ${self.right()}
-        %endif
-      </div>
-      <div id="center">
-        <div id="center-header">
-          %if not script:
-            ${self.center_header()}
-          %endif
-        </div>
-        <div id="center-contents">
-          %if not script:
-            ${self.center_contents()}
-          %endif
-        </div>
-      </div>
-    </div>
-  </div>
-</%def>
-
 <html>
 <head>
   <title>${self.title()}</title>
@@ -80,7 +47,7 @@
   </script>
 %endif
 </head>
-<body class="leftcol rightcol">
+<body>
   <div id="topbar">
     <div id="top" class="contents">
       <!-- TODO: Avatar and Site Logo -->
@@ -115,14 +82,14 @@
       <div id="menubar-links-wrapper">
         <ul class="h-links">
           <li><a href="/feed" class="ajax">${_("Home")}</a></li>
-          <li><a href="/profile" class="ajax">${_("My Profile")}</a></li>
+          <li><a href="/profile?id=${utils.encodeKey(myKey)}" class="ajax">${_("My Profile")}</a></li>
           <li><a href="/signout">${_("Sign out")}</a></li>
         </ul>
       </div>
     </div>
   </div>
   <div id="mainbar">
-    ${self.main_layout()}
+    ${self.layout()}
   </div>
 %if script:
   <script type="application/javascript" src="/public/scripts/jquery.js"></script>

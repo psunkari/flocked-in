@@ -24,13 +24,6 @@ $.address.change(function(event) {
     oldPath = event.path
 })
 
-function clearAllBlocks() {
-    $('#left').html('');
-    $('#right').html('');
-    $('#center-header').html('');
-    $('#center-contents').html('');
-}
-
 // The .bind method from Prototype.js
 if (!Function.prototype.bind) {
   Function.prototype.bind = function(){

@@ -50,10 +50,14 @@ def getRandomKey(prefix):
     return sha.hexdigest()
 
 def encodeKey(key):
-    return base64.b64encode(key).strip('=')
+    return "xX" + base64.b64encode(key).strip('=')
 
 def decodeKey(key):
-    return base64.b64decode(key + ((length % 4) * '='))
+    if not key.startswith("xX"):
+        return key
+
+    length = len(key) - 2
+    return base64.b64decode(key[2:] + ((length % 4) * '='))
 
 #
 # Date and time formating utilities (format based on localizations)

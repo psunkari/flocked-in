@@ -15,31 +15,30 @@ class FeedResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _render(self, request):
-        (layout, fp, script, args) = self._getBasicArgs(request)
+        (appchange, script, args) = self._getBasicArgs(request)
 
         myKey = args["myKey"]
         col = yield Db.get_slice(myKey, "users")
         me = utils.supercolumnsToDict(col)
 
         args["me"] = me
-        wrap = not self._ajax
+        landing = not self._ajax
 
-        if layout and script:
+        if script and landing:
             yield render(request, "feed.mako", **args)
 
-        if script and fp:
-            self._clearAllBlocks(request)
-            yield renderScriptBlock(request, "base.mako", "nav_menu",
-                                    wrap, "#left", "set", **args)
+        if script and appchange:
+            yield renderScriptBlock(request, "feed.mako", "layout",
+                                    landing, "#mainbar", "set", **args)
 
         if script:
-            yield renderScriptBlock(request, "feed.mako", "center_header",
-                                    wrap, "#center-header", "set",
+            yield renderScriptBlock(request, "feed.mako", "share_block",
+                                    landing, "#share-block", "set",
                                     handlers={"onload": "$('#share-form').submit(function(){$.post('/ajax' + $(this).attr('_action'), $(this).serialize(), null, 'script'); return false;});"},
                                     **args)
             yield self._renderShareBlock(request, "status")
 
-        if script and layout:
+        if script and landing:
             request.write("</body></html>")
 
         if not script:
@@ -49,7 +48,7 @@ class FeedResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _renderShareBlock(self, request, type):
-        wrap = not self._ajax
+        landing = not self._ajax
         renderDef = "share_status"
 
         if type == "link":
@@ -58,15 +57,28 @@ class FeedResource(base.BaseResource):
             renderDef = "share_document"
 
         yield renderScriptBlock(request, "feed.mako", renderDef,
-                                wrap, "#sharebar", "set", True,
+                                landing, "#sharebar", "set", True,
                                 handlers={"onload": "$('#sharebar-links .selected').removeClass('selected'); $('#sharebar-link-%s').addClass('selected'); $('#share-form').attr('_action', '/feed/share/%s');" % (type, type)})
         request.finish()
 
     def render_GET(self, request):
-        if len(request.postpath) == 0:
-            self._render(request)
-        elif self._ajax and request.postpath[0] == "share":
-            self._renderShareBlock(request, request.postpath[1])
+        segmentCount = len(request.postpath)
+        d = None
+
+        if segmentCount == 0:
+            d = self._render(request)
+        elif segmentCount == 2 and request.postpath[0] == "share":
+            if self._ajax:
+                d = self._renderShareBlock(request, request.postpath[1])
+
+        if d:
+            def errback(err):
+                log.err(err)
+                request.setResponseCode(500)
+                request.finish()
+            d.addErrback(errback)
+        else:
+            request.finish()
 
         return server.NOT_DONE_YET
 
@@ -93,7 +105,6 @@ class FeedResource(base.BaseResource):
             meta["url"] = utils.getRequestArg(request, "url")
 
         key = utils.getRandomKey(userKey)
-        log.msg(key, meta)
         yield Db.batch_insert(key, "items", {'meta': meta})
 
         request.finish()
