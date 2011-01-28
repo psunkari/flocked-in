@@ -34,9 +34,15 @@ body {
     display: block;
 }
 
+.middle {
+    vertical-align: middle;
+}
 .clear {
     clear: both;
     display: block;
+}
+.hidden {
+    display: none !important;
 }
 
 a.ajax {
@@ -178,14 +184,14 @@ a.ajax {
 
 
 
-#titlebar {
+.titlebar {
     margin: 0 0 5px 0;
 }
-#title {
+.title {
     font-size: 20px;
     font-weight: bold;
 }
-#subtitle {
+.subtitle {
     color: gray;
     font-size: 16px;
 }
@@ -214,6 +220,10 @@ a.ajax {
 .summary-item {
     color: gray;
     padding: 0 8px 0 0;
+}
+
+.user-actions {
+    margin: 0 10px;
 }
 
 #profile-tabs {

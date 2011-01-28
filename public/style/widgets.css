@@ -1,0 +1,46 @@
+
+.button {
+    font-family: inherit;
+}
+
+.button {
+    border-width: 1px;
+    border-style: solid;
+    border-color: #CCC #888 #888 #CCC;
+    padding: 2px 8px;
+    margin: 0 5px 0 0;
+    background: #dbdbdb url(/public/images/ui.png) no-repeat right -384px;
+    outline: none;
+    cursor: pointer;
+}
+.button.default {
+    background-position: -1px -513px;
+    background-color: #3D85C6;
+    border-color: #204573;
+    padding: 2px 12px;
+    color: white;
+    font-weight: bold;
+}
+.button:active, .button:focus, .button:hover {
+    border-color: #204573;
+}
+.button:active {
+    background-image: none;
+}
+
+
+.button-set {
+    border-radius: 2px;
+}
+.button-set .button {
+    border-radius: 0;
+    margin: 0 -1px 0 0;
+}
+.button-set .button:last-child {
+    margin-left: 0;
+}
+
+.button.has-popup {
+    padding-right: 22px;
+    background: #dbdbdb url(/public/images/ui.png) no-repeat right -256px;
+}

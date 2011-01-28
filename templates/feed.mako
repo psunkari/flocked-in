@@ -3,8 +3,8 @@
 <%inherit file="layout.mako"/>
 
 <%def name="center_header()">
-  <div id="titlebar">
-    <div id="title">${_("News Feed")}</div>
+  <div class="titlebar">
+    <div id="title"><span class="middle title">${_("News Feed")}</span></div>
   </div>
   <div id="share-block">
   %if script:
@@ -24,9 +24,9 @@
       <div id="sharebar"></div>
       <div>
         <ul id="sharebar-actions" class="h-links">
-          <li><input type="button" class="share" value="${_('Everyone')}"></input></li>
-          <li><input type="button" class="privacy" value="${_('Everyone')}"></input></li>
-          <li><input type="submit" class="default-action" value="${_('Share')}"></input></li>
+          <li><input type="button" class="notify button has-popup" value="${_('Everyone')}"></input></li>
+          <li><input type="button" class="privacy button has-popup" value="${_('Everyone')}"></input></li>
+          <li><input type="submit" class="default button" value="${_('Share')}"></input></li>
         </ul>
         <span class="clear" style="display:block"></span>
       </div>

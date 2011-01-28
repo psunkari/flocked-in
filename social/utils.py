@@ -2,6 +2,8 @@
 import uuid
 import hashlib
 import datetime
+import base64
+
 from social import Db, _, __
 
 
@@ -47,6 +49,11 @@ def getRandomKey(prefix):
     sha.update(key)
     return sha.hexdigest()
 
+def encodeKey(key):
+    return base64.b64encode(key).strip('=')
+
+def decodeKey(key):
+    return base64.b64decode(key + ((length % 4) * '='))
 
 #
 # Date and time formating utilities (format based on localizations)

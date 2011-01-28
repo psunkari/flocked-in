@@ -17,6 +17,7 @@ REL_REPORTS         = 0x400
 REL_TEAM            = 0x800
 REL_LOCAL_PENDING   = 0x100
 REL_REMOTE_PENDING  = 0x200
+REL_SUBSCRIBED      = 0x400
 
 #
 # Determine how I am related to the other person.
@@ -35,15 +36,34 @@ class Relation(object):
         self.other = other
 
         self._fetchedFriendInfo = False
-        self._isFriend = REL_UNRELATED
-        self._isFriendTags = []
+        self.isFriend = REL_UNRELATED
+        self.isFriendTags = []
+
+        self._fetchedSubscriptionInfo = False
+        self.isSubscribed = REL_UNRELATED
+
 
     def isMe(self):
         return True if self.me == self.other else False
 
+    # Return REL_SUBSCRIBED or REL_UNRELATED
+    @defer.inlineCallbacks
+    def checkIsSubscribed(self):
+        if not self._fetchedSubscriptionInfo:
+            try:
+                if not self.isMe():
+                    result = yield Db.get(self.other, 'subscriptions', self.me)
+                    self.isSubscribed = REL_SUBSCRIBED
+            except ttypes.NotFoundException:
+                self.isSubscribed = REL_UNRELATED
+            finally:
+                self._fetchedSubscriptionInfo = True
+
+        defer.returnValue(self.isSubscribed)
+
     # Return REL_FRIEND, REL_REMOTE_PENDING, REL_LOCAL_PENDING or REL_UNRELATED
     @defer.inlineCallbacks
-    def isFriend(self, tag=None):
+    def checkIsFriend(self, tag=None):
         if not self._fetchedFriendInfo:
             try:
                 if not self.isMe():
@@ -51,21 +71,21 @@ class Relation(object):
                     cols = utils.supercolumnsToDict([result])
 
                     if cols[self.me].has_key("__local__"):
-                        self._isFriend = REL_LOCAL_PENDING
+                        self.isFriend = REL_LOCAL_PENDING
                     elif cols[self.me].has_key("__remote__"):
-                        self._isFriend = REL_REMOTE_PENDING
+                        self.isFriend = REL_REMOTE_PENDING
                     else:
-                        self._isFriend = REL_FRIEND
-                        self._isFriendTags = cols[self.me].keys()
+                        self.isFriend = REL_FRIEND
+                        self.isFriendTags = cols[self.me].keys()
             except ttypes.NotFoundException:
-                self._isFriend = REL_UNRELATED
+                self.isFriend = REL_UNRELATED
             finally:
                 self._fetchedFriendInfo = True
 
         if not tag:
-            defer.returnValue(self._isFriend)
+            defer.returnValue(self.isFriend)
         else:
-            retVal = REL_FRIEND if tag in self._isFriendTags else REL_UNRELATED
+            retVal = REL_FRIEND if tag in self.isFriendTags else REL_UNRELATED
             defer.returnValue(retVal)
 
     # Return REL_GROUP or REL_UNRELATED

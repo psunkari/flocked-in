@@ -122,7 +122,8 @@ class ProfileResource(base.BaseResource):
         args["relation"] = relation
         wrap = not self._ajax
 
-        yield relation.isFriend()
+        yield defer.DeferredList([relation.checkIsFriend(),
+                                  relation.checkIsSubscribed()])
         if script and fp:
             self._clearAllBlocks(request)
             yield renderScriptBlock(request, "layout.mako", "left",

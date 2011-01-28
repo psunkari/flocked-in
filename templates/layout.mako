@@ -30,7 +30,7 @@
   <div id="orgmenu-container" class="sidemenu-container">
     <ul id="orgmenu" class="v-links sidemenu">
       <li><a href="/org" class="ajax">Company Feed</a></li>
-      <li><a href="/people" class="ajax">Contacts</a></li>
+      <li><a href="/people" class="ajax">People</a></li>
     </ul>
   </div>
 </%def>
@@ -39,6 +39,7 @@
 <head>
   <title>${self.title()}</title>
   <link rel="stylesheet" type="text/css" media="screen" href="/public/style/social.css"/>
+  <link rel="stylesheet" type="text/css" media="screen" href="/public/style/widgets.css"/>
 %if script:
   <noscript>
     <meta http-equiv="refresh" content="0; URL=${noscriptUrl}"/>

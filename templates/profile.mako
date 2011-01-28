@@ -11,21 +11,13 @@
   <div id="profile-block">
     <div id="useravatar"></div>
     <div id="userprofile">
-      <div id="titlebar">
-        <div id="title">
-          ${user['basic']['name']}
-          %if myKey != userKey:
-            %if relation._isFriend == r.REL_UNRELATED:
-              <input type="button" value="+ Add as Friend" onclick="$.post('/ajax/profile/connect', 'target=${userKey}')"/>
-            %elif relation._isFriend == r.REL_LOCAL_PENDING:
-              <input type="button" value="- Cancel Friend Request" onclick="$.post('/ajax/profile/disconnect', 'target=${userKey}')"/>
-            %elif relation._isFriend == r.REL_REMOTE_PENDING:
-              <input type="button" value="+ Accept Friend Request" onclick="$.post('/ajax/profile/connect', 'target=${userKey}')"/>
-            %endif
-          %endif
+      <div class="titlebar">
+        <div>
+          <span class="middle title">${user['basic']['name']}</span>
+          ${user_actions()}
         </div>
         %if user['basic'].has_key('jobTitle'):
-          ${'<div id="subtitle">' + user['basic']['jobTitle'] + '</div>'}
+          <div class="subtitle">${user['basic']['jobTitle']}</div>
         %endif
       </div>
       <div id="summary-block">
@@ -66,6 +58,24 @@
     </div>
     <div class="clear"></div>
   </div>
+</%def>
+
+<%def name="user_actions()">
+  %if myKey != userKey:
+  <%
+    respond_cls = " hidden" if relation.isFriend != r.REL_REMOTE_PENDING else ""
+    add_cls     = " hidden" if relation.isFriend != r.REL_UNRELATED else ""
+    follow_cls  = " hidden" if relation.isFriend != r.REL_UNRELATED or relation.isSubscribed != r.REL_UNRELATED else ""
+    sent_cls    = " hidden" if relation.isFriend != r.REL_LOCAL_PENDING else ""
+    encodedKey  = utils.encodeKey(userKey)
+  %>
+  <ul id="user-actions-${encodedKey}" class="middle user-actions h-links">
+    <li><button class="button default${respond_cls}" onclick="$.post('/ajax/profile/connect', 'target=${userKey}')">Respond to Friend Request</button></li>
+    <li><button class="button disabled${sent_cls}">Friend request sent</button></li>
+    <li><button class="button default${add_cls}" onclick="$.post('/ajax/profile/connect', 'target=${userKey}')">Add as Friend</button></li>
+    <li><button class="button${follow_cls}" onclick="$.post('/ajax/profile/follow', 'target=${userKey}')">Follow User</button></li>
+  </ul>
+  %endif
 </%def>
 
 <%def name="tabs()">
