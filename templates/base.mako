@@ -42,8 +42,9 @@
   </noscript>
 %else:
   <script>
-    url = window.location.href.replace(/_ns=1&?/, "");
-    window.location.href = url.replace(/(\?|&)$/, '');
+    var date = new Date(); date.setDate(date.getDate() - 2);
+    document.cookie = "_ns=0;path=/;expires=" + date.toUTCString();
+    window.location.href = window.location.href;
   </script>
 %endif
 </head>

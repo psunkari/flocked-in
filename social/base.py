@@ -13,7 +13,8 @@ class BaseResource(resource.Resource):
         auth = request.getSession(IAuthInfo)
         myKey = auth.username
 
-        script = False if request.args.has_key('_ns') else True
+        script = False if request.args.has_key('_ns') or\
+                          request.getCookie('_ns') else True
         appchange = True if request.args.has_key('_fp') and self._ajax or\
                             not self._ajax and script else False
         args = {"myKey": myKey,

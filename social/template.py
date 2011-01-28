@@ -21,17 +21,21 @@ def _getTemplate(path, dfn=None):
 @defer.inlineCallbacks
 def render(request, path, **kw):
     args = kw
+
+    if request.args.has_key("_ns"):
+        request.addCookie("_ns", "1")
+
     if args.has_key("script") and args["script"]:
         args["noscriptUrl"] = request.path + "?_ns=1" \
                               if request.path == request.uri \
                               else request.uri + "&_ns=1"
 
-    #try:
-    template = yield threads.deferToThread(_getTemplate, path)
-    text = template.render(**args)
-    request.write(text)
-    #except Exception, err:
-    #    request.processingFailed(err)
+    try:
+        template = yield threads.deferToThread(_getTemplate, path)
+        text = template.render(**args)
+        request.write(text)
+    except Exception, err:
+        request.processingFailed(err)
 
 
 @defer.inlineCallbacks
