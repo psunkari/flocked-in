@@ -112,6 +112,14 @@
 
 <%def name="user_groups()">
   %if len(groups) > 0:
+  <div class="sidebar-chunk">
+    <div class="sidebar-title">${_("Followers")}</div>
+    <ul class="v-links">
+    %for group in groups:
+      <li><a class="ajax" href="/group?id=${utils.encodeKey(group)}">${rawGroupData[group]['name']}</a></li>
+    %endfor
+    </ul>
+  </div>
   %endif
 </%def>
 

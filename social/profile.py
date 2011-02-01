@@ -1,4 +1,6 @@
 
+from random                 import sample
+
 from twisted.web            import resource, server, http
 from twisted.python         import log
 from twisted.internet       import defer
@@ -198,12 +200,10 @@ class ProfileResource(base.BaseResource):
         usersToFetch = followers.union(subscriptions, commonFriends)\
                                 .difference(fetchedUsers)
         cols = yield Db.multiget_slice(usersToFetch, "users", super_column="basic")
-        log.msg("Raw Users: ", cols)
         rawUserData = {}
         for key, data in cols.items():
             if len(data) > 0:
                 rawUserData[key] = utils.columnsToDict(data)
-        log.msg("Parsed Users: ", rawUserData)
         args["rawUserData"] = rawUserData
 
         # List the users groups (and look for groups common with me)
@@ -211,6 +211,19 @@ class ProfileResource(base.BaseResource):
         myGroups = set(utils.columnsToDict(cols[userKey]).keys())
         userGroups = set(utils.columnsToDict(cols[userKey]).keys())
         commonGroups = myGroups.intersection(userGroups)
+        if len(userGroups) > 10:
+            userGroups = sample(userGroups, 10)
+        args["groups"] = userGroups
+        args["commonGroups"] = commonGroups
+
+        groupsToFetch = commonGroups.union(userGroups)
+        cols = yield Db.multiget_slice(groupsToFetch, "groups", super_column="basic")
+        rawGroupData = {}
+        for key, data in cols.items():
+            if len(data) > 0:
+                rawGroupData[key] = utils.columnsToDict(data)
+        args["rawGroupData"] = rawGroupData
+
 
         if script and newId:
             yield renderScriptBlock(request, "profile.mako", "user_subscriptions",
