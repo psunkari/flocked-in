@@ -44,11 +44,16 @@
   <script>
     var date = new Date(); date.setDate(date.getDate() - 2);
     document.cookie = "_ns=0;path=/;expires=" + date.toUTCString();
-    window.location.href = window.location.href;
+    url = window.location.href.replace(/_ns=1&?/, "");
+    window.location.href = url.replace(/(\?|&)$/, '');
   </script>
 %endif
 </head>
+%if script:
 <body>
+%else:
+<body class="noscript">
+%endif
   <div id="topbar">
     <div id="top" class="contents">
       <!-- TODO: Avatar and Site Logo -->
