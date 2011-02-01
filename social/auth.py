@@ -28,6 +28,10 @@ class AuthInfo(components.Adapter):
 
 components.registerAdapter(AuthInfo, server.Session, IAuthInfo)
 
+# Shortcut util to get username from the session.
+def getMyKey(request):
+    authinfo = request.getSession(IAuthInfo)
+    return authinfo.username
 
 
 #
@@ -84,7 +88,7 @@ class UserPasswordChecker():
     credentialInterfaces = [IUserPassword]
 
     def _authenticate(self, username, password):
-        d = Db.get(username, "userAuth", "PasswordHash")
+        d = Db.get(username, "userAuth", "passwordHash")
         def checkPassword(result):
             column = result.column;
             if column.value != password:

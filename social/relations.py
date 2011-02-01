@@ -17,7 +17,7 @@ REL_REPORTS         = 0x400
 REL_TEAM            = 0x800
 REL_LOCAL_PENDING   = 0x100
 REL_REMOTE_PENDING  = 0x200
-REL_SUBSCRIBED      = 0x400
+REL_FOLLOWER        = 0x400
 
 #
 # Determine how I am related to the other person.
@@ -39,27 +39,27 @@ class Relation(object):
         self.isFriend = REL_UNRELATED
         self.isFriendTags = []
 
-        self._fetchedSubscriptionInfo = False
-        self.isSubscribed = REL_UNRELATED
+        self._fetchedFollowingInfo = False
+        self.isFollower = REL_UNRELATED
 
 
     def isMe(self):
         return True if self.me == self.other else False
 
-    # Return REL_SUBSCRIBED or REL_UNRELATED
+    # Return REL_FOLLOWER if I am following the other user or REL_UNRELATED
     @defer.inlineCallbacks
-    def checkIsSubscribed(self):
-        if not self._fetchedSubscriptionInfo:
+    def checkIsFollowing(self):
+        if not self._fetchedFollowingInfo:
             try:
                 if not self.isMe():
-                    result = yield Db.get(self.other, 'subscriptions', self.me)
-                    self.isSubscribed = REL_SUBSCRIBED
+                    result = yield Db.get(self.other, 'followers', self.me)
+                    self.isFollower = REL_FOLLOWER
             except ttypes.NotFoundException:
-                self.isSubscribed = REL_UNRELATED
+                self.isFollower = REL_UNRELATED
             finally:
-                self._fetchedSubscriptionInfo = True
+                self._fetchedFollowingInfo = True
 
-        defer.returnValue(self.isSubscribed)
+        defer.returnValue(self.isFollower)
 
     # Return REL_FRIEND, REL_REMOTE_PENDING, REL_LOCAL_PENDING or REL_UNRELATED
     @defer.inlineCallbacks

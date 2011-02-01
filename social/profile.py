@@ -6,8 +6,7 @@ from telephus.cassandra     import ttypes
 
 from social.template        import render, renderDef, renderScriptBlock
 from social.relations       import Relation
-from social.auth            import IAuthInfo
-from social                 import Db, utils, base
+from social                 import Db, auth, utils, base
 
 
 class ProfileResource(base.BaseResource):
@@ -15,28 +14,47 @@ class ProfileResource(base.BaseResource):
     resources = {}
 
     @defer.inlineCallbacks
-    def _connect(self, request):
-        targetKey = utils.getRequestArg(request, "target")
-        if not targetKey:
-            self._default(request)
-            return
+    def _follow(self, request):
+        targetKey = yield utils.getValidUserKey(request, "id")
+        myKey = auth.getMyKey(request)
 
-        authinfo = request.getSession(IAuthInfo)
-        myKey = authinfo.username
+        d1 = Db.insert(myKey, "subscriptions", "", targetKey)
+        d2 = Db.insert(targetKey, "followers", "", myKey)
+        yield d1
+        yield d2
 
-        (myDomain, ign, myId) = myKey.partition("/u/")
-        (targetDomain, ign, targetId) = targetKey.partition("/u/")
+        request.finish()
 
-        # TODO: In future support friendly domains
-        # to allow the network span across multiple domains
-        if myDomain != targetDomain:
-            self._default(request)
-            return
+    def _unfollow(self, request):
+        targetKey = yield utils.getValidUserKey(request, "id")
+        myKey = auth.getMyKey(request)
 
+        try:
+            d1 = Db.remove(myKey, "subscriptions", targetKey)
+            d2 = Db.remove(targetKey, "followers", myKey)
+            yield d1
+            yield d2
+        except ttypes.NotFoundException:
+            pass
+
+        request.finish()
+
+    @defer.inlineCallbacks
+    def _friend(self, request):
+        targetKey = yield utils.getValidUserKey(request, "id")
+        myKey = auth.getMyKey(request)
+
+        if not utils.areFriendlyDomains(myKey, targetKey):
+            raise errors.NotAllowed()
+
+        # Circles are just tags that a user would set on his connections
         circles = request.args["circle"]\
                   if request.args.has_key("circle") else ["__default__"]
         circlesMap = dict([(circle, '') for circle in circles])
 
+        # Check if we have a request pending from this user.
+        # If yes, this just becomes accepting a local pending request
+        # Else create a friend request that will be pending on the target user
         calls = None
         try:
             yield Db.get(myKey, "connections", "__local__", targetKey)
@@ -54,14 +72,9 @@ class ProfileResource(base.BaseResource):
         request.finish()
 
     @defer.inlineCallbacks
-    def _disconnect(self, request):
-        targetKey = utils.getRequestArg(request, "target")
-        if not targetKey:
-            self._default(request)
-            return
-
-        authinfo = request.getSession(IAuthInfo)
-        myKey = authinfo.username
+    def _unfriend(self, request):
+        targetKey = yield utils.getValidUserKey(request, "id")
+        myKey = auth.getMyKey(request)
 
         try:
             d1 = Db.remove(myKey, "connections", None, targetKey)
@@ -76,10 +89,15 @@ class ProfileResource(base.BaseResource):
     def render_POST(self, request):
         if len(request.postpath) == 1:
             action = request.postpath[0]
-            if action == "connect":
-                d = self._connect(request)
-            elif action == "disconnect":
-                d = self._disconnect(request)
+            d = None
+            if action == "friend":
+                d = self._friend(request)
+            elif action == "unfriend":
+                d = self._unfriend(request)
+            elif action == "follow":
+                d = self._follow(request)
+            elif action == "unfollow":
+                d = self._unfollow(request)
             else:
                 self._default(request)
 
@@ -140,21 +158,65 @@ class ProfileResource(base.BaseResource):
         relation = Relation(myKey, userKey)
         args["relation"] = relation
         yield defer.DeferredList([relation.checkIsFriend(),
-                                  relation.checkIsSubscribed()])
+                                  relation.checkIsFollowing()])
 
         # Reload all user-depended blocks if the currently displayed user is
         # not the same as the user for which new data is being requested.
-        newId = (utils.getRequestArg(request, "_cu") != userKey or appchange)
+        newId = (request.getCookie('_cu') != userKey or appchange)
         if script and newId:
             yield renderScriptBlock(request, "profile.mako", "summary",
                                     landing, "#summary", "set", **args)
+            yield renderScriptBlock(request, "profile.mako", "user_subactions",
+                                    landing, "#user-subactions", "set", **args)
 
-
+        fetchedUsers = set()
         if script:
             yield renderScriptBlock(request, "profile.mako", "tabs", landing,
                                     "#profile-tabs", "set", **args)
             yield renderScriptBlock(request, "profile.mako", "content", landing,
                                     "#profile-content", "set", **args)
+
+        # List the user's subscriptions
+        cols = yield Db.get_slice(userKey, "subscriptions", count=11)
+        subscriptions = set(utils.columnsToDict(cols).keys())
+        args["subscriptions"] = subscriptions
+
+        # List the user's followers
+        cols = yield Db.get_slice(userKey, "followers", count=11)
+        followers = set(utils.columnsToDict(cols).keys())
+        args["followers"] = followers
+
+        # List the users friends (if allowed and look for common friends)
+        cols = yield Db.multiget_slice([myKey, userKey], "connections")
+        myFriends = set(utils.supercolumnsToDict(cols[myKey]).keys())
+        userFriends = set(utils.supercolumnsToDict(cols[userKey]).keys())
+        commonFriends = myFriends.intersection(userFriends)
+        args["commonFriends"] = commonFriends
+
+        # Fetch item data (name and avatar) for subscriptions, followers,
+        # user groups and common items.
+        usersToFetch = followers.union(subscriptions, commonFriends)\
+                                .difference(fetchedUsers)
+        cols = yield Db.multiget_slice(usersToFetch, "users", super_column="basic")
+        log.msg("Raw Users: ", cols)
+        rawUserData = {}
+        for key, data in cols.items():
+            if len(data) > 0:
+                rawUserData[key] = utils.columnsToDict(data)
+        log.msg("Parsed Users: ", rawUserData)
+        args["rawUserData"] = rawUserData
+
+        # List the users groups (and look for groups common with me)
+        cols = yield Db.multiget_slice([myKey, userKey], "groups")
+        myGroups = set(utils.columnsToDict(cols[userKey]).keys())
+        userGroups = set(utils.columnsToDict(cols[userKey]).keys())
+        commonGroups = myGroups.intersection(userGroups)
+
+        if script and newId:
+            yield renderScriptBlock(request, "profile.mako", "user_subscriptions",
+                                    landing, "#user-subscriptions", "set", **args)
+            yield renderScriptBlock(request, "profile.mako", "user_followers",
+                                    landing, "#user-followers", "set", **args)
 
         if script and landing:
             request.write("</body></html>")

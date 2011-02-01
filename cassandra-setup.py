@@ -130,9 +130,9 @@ def setup(client):
                      'User authentication and authorizaton information')
     yield client.system_add_column_family(userAuth)
     yield client.batch_insert('synovel.com/u/prasad', 'userAuth', {
-                                'PasswordHash': 'c246ad314ab52745b71bb00f4608c82a'})
+                                'passwordHash': 'c246ad314ab52745b71bb00f4608c82a'})
     yield client.batch_insert('synovel.com/u/ashok', 'userAuth', {
-                                'PasswordHash': 'c246ad314ab52745b71bb00f4608c82a'})
+                                'passwordHash': 'c246ad314ab52745b71bb00f4608c82a'})
     log.msg("Created userAuth")
 
     # Connections between users
@@ -146,12 +146,12 @@ def setup(client):
     log.msg("Created connections")
 
     # Subscriptions to changes by other people
-    subscriptions = CfDef(KEYSPACE, 'subscriptions', 'Standard', 'BytesType',
+    subscriptions = CfDef(KEYSPACE, 'subscriptions', 'Standard', 'UTF8Type',
                           None, 'User subscriptons')
     yield client.system_add_column_family(subscriptions)
 
     # Followers of a user
-    followers = CfDef(KEYSPACE, 'followers', 'Standard', 'BytesType',
+    followers = CfDef(KEYSPACE, 'followers', 'Standard', 'UTF8Type',
                       None, 'Followers of a user')
     yield client.system_add_column_family(followers)
     log.msg("Created subscriptions and followers")

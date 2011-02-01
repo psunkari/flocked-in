@@ -15,11 +15,31 @@
     </div>
     <div id="center-right">
       <div id="right">
-        <div id="user-me"></div>
-        <div id="user-groups"></div>
-        <div id="user-subscriptions"></div>
-        <div id="user-followers"></div>
-        <div id="user-actions"></div>
+        <div id="user-me">
+          %if not script:
+            ${self.user_me()}
+          %endif
+        </div>
+        <div id="user-groups">
+          %if not script:
+            ${self.user_groups()}
+          %endif
+        </div>
+        <div id="user-subscriptions">
+          %if not script:
+            ${self.user_subscriptions()}
+          %endif
+        </div>
+        <div id="user-followers">
+          %if not script:
+            ${self.user_followers()}
+          %endif
+        </div>
+        <div id="user-subactions">
+          %if not script:
+            ${self.user_subactions()}
+          %endif
+        </div>
       </div>
       <div id="center">
         <div id="summary" class="center-header">
@@ -48,6 +68,71 @@
 ##
 ## Functions for rendering content
 ##
+
+<%def name="user_me()">
+  %if myKey != userKey:
+  %if len(commonFriends) > 0:
+  <div class="sidebar-chunk">
+    <div class="sidebar-title">${_("Common Friends")}</div>
+    <ul class="v-links">
+    %for user in commonFriends:
+      <li><a class="ajax" href="/profile?id=${utils.encodeKey(user)}">${rawUserData[user]['name']}</a></li>
+    %endfor
+    </ul>
+  </div>
+  %endif
+  %endif
+</%def>
+
+<%def name="user_subscriptions()">
+  %if len(subscriptions) > 0:
+  <div class="sidebar-chunk">
+    <div class="sidebar-title">${_("Following")}</div>
+    <ul class="v-links">
+    %for user in subscriptions:
+      <li><a class="ajax" href="/profile?id=${utils.encodeKey(user)}">${rawUserData[user]['name']}</a></li>
+    %endfor
+    </ul>
+  </div>
+  %endif
+</%def>
+
+<%def name="user_followers()">
+  %if len(followers) > 0:
+  <div class="sidebar-chunk">
+    <div class="sidebar-title">${_("Followers")}</div>
+    <ul class="v-links">
+    %for user in followers:
+      <li><a class="ajax" href="/profile?id=${utils.encodeKey(user)}">${rawUserData[user]['name']}</a></li>
+    %endfor
+    </ul>
+  </div>
+  %endif
+</%def>
+
+<%def name="user_groups()">
+  %if len(groups) > 0:
+  %endif
+</%def>
+
+<%def name="user_subactions()">
+  %if myKey != userKey:
+  <div class="sidebar-chunk">
+  <%
+    remove_cls   = " hidden" if relation.isFriend != r.REL_FRIEND else ""
+    cancel_cls   = " hidden" if relation.isFriend != r.REL_LOCAL_PENDING else ""
+    unfollow_cls = " hidden" if relation.isFollower != r.REL_FOLLOWER else ""
+  %>
+  <ul id="user-subactions-${encodedUserKey}" class="middle user-subactions v-links">
+    <li><a href="/profile/unfriend?id=${encodedUserKey}" class="${remove_cls}" onclick="$.post('/ajax/profile/unfriend', 'id=${encodedUserKey}')">Remove as Friend</a></li>
+    <li><a href="/profile/unfriend?id=${encodedUserKey}" class="${cancel_cls}" onclick="$.post('/ajax/profile/unfriend', 'id=${encodedUserKey}')">Cancel Friend Request</a></li>
+    <li><a href="/profile/unfollow?id=${encodedUserKey}" class="${unfollow_cls}" onclick="$.post('/ajax/profile/unfollow', 'id=${encodedUserKey}')">Stop Following</a></li>
+    <li><a href="/profile/block?id=${encodedUserKey}" onclick="$.post('/ajax/profile/block', 'id=${encodedUserKey}')">Block User</a></li>
+    <li><a href="/profile/review?id=${encodedUserKey}" onclick="$.post('/ajax/profile/review', 'id=${encodedUserKey}')">Request Admin Review</a></li>
+  </ul>
+  </div>
+  %endif
+</%def>
 
 <%def name="summary()">
   <div id="useravatar"></div>
@@ -120,14 +205,14 @@
   <%
     respond_cls = " hidden" if relation.isFriend != r.REL_REMOTE_PENDING else ""
     add_cls     = " hidden" if relation.isFriend != r.REL_UNRELATED else ""
-    follow_cls  = " hidden" if relation.isFriend != r.REL_UNRELATED or relation.isSubscribed != r.REL_UNRELATED else ""
+    follow_cls  = " hidden" if relation.isFriend != r.REL_UNRELATED or relation.isFollower != r.REL_UNRELATED else ""
     sent_cls    = " hidden" if relation.isFriend != r.REL_LOCAL_PENDING else ""
   %>
   <ul id="user-actions-${encodedUserKey}" class="middle user-actions h-links">
-    <li><button class="button default${respond_cls}" onclick="$.post('/ajax/profile/connect', 'target=${encodedUserKey}')">Respond to Friend Request</button></li>
+    <li><button class="button default${respond_cls}" onclick="$.post('/ajax/profile/friend', 'id=${encodedUserKey}')">Respond to Friend Request</button></li>
     <li><button class="button disabled${sent_cls}">Friend request sent</button></li>
-    <li><button class="button default${add_cls}" onclick="$.post('/ajax/profile/connect', 'target=${encodedUserKey}')">Add as Friend</button></li>
-    <li><button class="button${follow_cls}" onclick="$.post('/ajax/profile/follow', 'target=${encodedUserKey}')">Follow User</button></li>
+    <li><button class="button default${add_cls}" onclick="$.post('/ajax/profile/friend', 'id=${encodedUserKey}')">Add as Friend</button></li>
+    <li><button class="button${follow_cls}" onclick="$.post('/ajax/profile/follow', 'id=${encodedUserKey}')">Follow User</button></li>
   </ul>
   %endif
 </%def>

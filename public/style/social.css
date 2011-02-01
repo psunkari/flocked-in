@@ -34,6 +34,14 @@ body {
     display: block;
 }
 
+a:link, a:visited {
+    color: #3d85c6;
+    text-decoration: none;
+}
+a:hover, a:active, a:focus {
+    text-decoration: underline;
+}
+
 .middle {
     vertical-align: middle;
 }
@@ -182,9 +190,26 @@ a.ajax {
     background-color: #C4D7ED;
 }
 
+.sidebar-title {
+    font-weight: bold;
+    margin: 0 10px 0 -10px;
+    padding: 5px 10px 2px 10px;
+    border-bottom: 1px solid #DBDBDB;
+}
 
+#right .sidebar-chunk {
+    padding: 15px 0 0 15px;
+}
 
-
+#right .v-links a {
+    padding: 2px 0;
+    display: block;
+}
+.user-subactions {
+    margin: 5px 10px 0 -10px;
+    padding: 5px 10px;
+    border-top: 1px solid #DBDBDB;
+}
 
 
 .titlebar {
