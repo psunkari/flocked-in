@@ -19,7 +19,7 @@ body {
     padding: 0;
     display: inline-block;
 }
-.h-links li {
+.h-links > li {
     float: left;
     display: block;
 }
@@ -31,6 +31,12 @@ body {
     list-style-type: none;
     margin: 0;
     padding: 0;
+    display: block;
+}
+.v-links li {
+    line-height: 20px;
+}
+.v-links a {
     display: block;
 }
 
@@ -174,7 +180,8 @@ a.ajax {
 }
 
 .sidemenu a {
-    padding: 4px 2px 3px 21px;
+    padding: 0 2px 0 21px;
+    line-height: 20px;
     display: block;
     color: #333;
     text-decoration: none;
@@ -202,7 +209,6 @@ a.ajax {
 }
 
 #right .v-links a {
-    padding: 2px 0;
     display: block;
 }
 .user-subactions {
@@ -251,6 +257,9 @@ a.ajax {
 
 .user-actions {
     margin: 0 10px;
+}
+.user-actions > .button {
+    margin-right: 6px;
 }
 
 #profile-tabs {
@@ -319,4 +328,15 @@ a.ajax {
 
 #sharebar-actions {
     float: right;
+}
+#sharebar-submit {
+    margin-left: 6px;
+    width: 55px;
+}
+#sharebar-acl {
+    width: 100px;
+}
+#sharebar-acl > .popup {
+    min-width: 90px;
+    padding: 5px;
 }

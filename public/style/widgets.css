@@ -1,25 +1,32 @@
 
 .button {
     font-family: inherit;
-}
-
-.button {
     border-width: 1px;
     border-style: solid;
     border-color: #CCC #888 #888 #CCC;
-    padding: 2px 8px;
-    margin: 0 5px 0 0;
-    background: #dbdbdb url(/public/images/ui.png) no-repeat right -384px;
-    outline: none;
+    background: #dbdbdb url(/public/images/ui.png) no-repeat right -256px;
     cursor: pointer;
 }
+.button-text {
+    display: block;
+    height: 20px;
+    line-height: 20px;
+    padding: 0 10px;
+}
+.button a {
+    color: inherit;
+    text-decoration: none;
+    display: block;
+}
 .button.default {
-    background-position: -1px -513px;
+    background-position: -1px -321px;
     background-color: #3D85C6;
     border-color: #204573;
-    padding: 2px 12px;
     color: white;
     font-weight: bold;
+}
+.default > .button-text {
+    padding: 0 12px;
 }
 .button:active, .button:focus, .button:hover {
     border-color: #204573;
@@ -28,19 +35,102 @@
     background-image: none;
 }
 
-
-.button-set {
-    border-radius: 2px;
-}
-.button-set .button {
-    border-radius: 0;
-    margin: 0 -1px 0 0;
-}
-.button-set .button:last-child {
-    margin-left: 0;
-}
-
 .button.has-popup {
+    background: #dbdbdb url(/public/images/ui.png) no-repeat right -192px;
+}
+.has-popup > .button-text {
+    display: block;
     padding-right: 22px;
-    background: #dbdbdb url(/public/images/ui.png) no-repeat right -256px;
+}
+.button-icon {
+    height: 16px;
+    width: 16px;
+    margin: 2px;
+}
+
+.popup {
+    display: none;
+    position: absolute;
+    background: white;
+    border-width: 1px 1px 2px;
+    border-color: #204573;
+    border-style: solid;
+    z-index: 4;
+}
+.button > .popup {
+    margin: 0 -1px;
+    min-width: 125%;
+}
+.noscript .has-popup:hover > .popup,
+.popup-open > .popup {
+    display: block;
+}
+
+.noscript .has-popup:hover,
+.popup-open {
+    position: relative;
+    background: white !important;
+    border-color: #204573 #204573 white !important;
+    z-index: 9;
+}
+
+.noscript .has-popup:hover .button-text,
+.popup-open .button-text {
+    background: white url(/public/images/ui.png) no-repeat right -128px;
+    position: relative;
+    padding-bottom: 1px;
+    margin-bottom: -1px;
+    z-index: 10;
+}
+
+.has-tooltip {
+    position: relative;
+}
+.tooltip {
+    display: none;
+    position: absolute;
+    margin: 0 -1px;
+}
+.tooltip.top {
+    bottom: 100%;
+}
+.tooltip.bottom {
+    top: 100%;
+}
+.tooltip.right {
+    right: 0;
+}
+.tooltip.left {
+    left: 0;
+}
+.tooltip-contents {
+    display: block;
+    white-space: pre;
+    background-color: #333;
+    padding: 5px;
+    color: white;
+}
+.has-tooltip:hover .tooltip {
+    display: block;
+}
+.popup-open .tooltip {
+    display: none !important;
+}
+
+.v-links .separator {
+    border: 0px none !important;
+}
+.popup li {
+    background: white;
+    color: inherit;
+    display: block;
+    padding: 0 5px;
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+.popup li:focus, .popup li:active, .popup li:hover {
+    text-decoration: none;
+    color: inherit;
+    border-color: #C3D9FF #A0B5D9 #A0B5D9 #C3D9FF;
+    background: #E8EEFA url(/public/images/ui.png) no-repeat left top;
 }

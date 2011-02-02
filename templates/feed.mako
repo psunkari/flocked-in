@@ -35,6 +35,28 @@
   </div>
 </%def>
 
+<%def name="acl_button(id)">
+  %if script:
+    <li class="acl-button button has-popup has-tooltip" id=${id} onclick="acl.updateGroupsList(this);popup.open(event, this)">
+      <input type="hidden" name="acl" value="company"/>
+      <span class="button-text">Company</span>
+      <div class="tooltip top right">
+        <span class="tooltip-contents">${_("Anyone working at my company")}</span>
+      </div>
+      <div class="popup" onclick="acl.update(event, this);">
+        <ul class="v-links">
+          <li value="public" info="${'Everyone'}">${_("Everyone")}</li>
+          <li value="company" info="${'Anyone working at my company'}">${_("Company")}</li>
+          <li value="friends" info="${'All my friends'}">${_("Friends")}</li>
+          <li id="${id}-groups" class="separator"></li>
+          <li id="${id}-groups-end" class="separator"></li>
+          <li value="custom">${_("Custom setting")}</li>
+        </ul>
+      </div>
+    </li>
+  %endif
+</%def>
+
 <%def name="share_block()">
   %if script:
     <div id="sharebar-tabs">
@@ -53,9 +75,8 @@
       <div id="sharebar"></div>
       <div>
         <ul id="sharebar-actions" class="h-links">
-          <li><input type="button" class="notify button has-popup" value="${_('Everyone')}"></input></li>
-          <li><input type="button" class="privacy button has-popup" value="${_('Everyone')}"></input></li>
-          <li><input type="submit" class="default button" value="${_('Share')}"></input></li>
+          ${acl_button("sharebar-acl")}
+          <li id="sharebar-submit" class="default button"><span class="button-text">${_('Share')}</span></li>
         </ul>
         <span class="clear" style="display:block"></span>
       </div>

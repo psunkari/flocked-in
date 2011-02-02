@@ -36,6 +36,8 @@ if (!Function.prototype.bind) {
   };
 }
 
+
+
 // Load the page in Chunks.
 // Takes the already loaded resource ids as argument.
 function ChunkLoader(resources) {
@@ -163,3 +165,49 @@ ChunkLoader.prototype = {
     }
 }
 loader = new ChunkLoader();
+
+
+
+// Popup manager: manager for menus and other types of popups
+var popup = {
+    _stack: [],
+
+    // Change the state of the given popup to open.
+    open: function(event, node) {
+        node = $(node);
+        node.parentsUntil(".popup-open").each(function(index, item) {
+            if (item === document.body)
+                popup.closeAll();
+        })
+
+        node.addClass("popup-open");
+        popup._stack.push(node)
+
+        event.stopPropagation();
+        event.preventDefault();
+    },
+
+    // Hide the popup that is on the top of the stack
+    close: function() {
+        node = popup._stack.pop();
+        if (node)
+            node.removeClass("popup-open");
+    },
+
+    // Close all popups.
+    closeAll: function() {
+        while((node = popup._stack.pop()))
+            node.removeClass("popup-open");
+    }
+}
+$(document).click(function(event) {
+    popup.closeAll();
+});
+
+
+
+
+// Handle access control related menus and dialog.
+var acl = {
+    updateGroupsList: function(target) {}
+}

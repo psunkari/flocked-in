@@ -217,10 +217,10 @@
     sent_cls    = " hidden" if relation.isFriend != r.REL_LOCAL_PENDING else ""
   %>
   <ul id="user-actions-${encodedUserKey}" class="middle user-actions h-links">
-    <li><button class="button default${respond_cls}" onclick="$.post('/ajax/profile/friend', 'id=${encodedUserKey}')">Respond to Friend Request</button></li>
-    <li><button class="button disabled${sent_cls}">Friend request sent</button></li>
-    <li><button class="button default${add_cls}" onclick="$.post('/ajax/profile/friend', 'id=${encodedUserKey}')">Add as Friend</button></li>
-    <li><button class="button${follow_cls}" onclick="$.post('/ajax/profile/follow', 'id=${encodedUserKey}')">Follow User</button></li>
+    <li class="button default${respond_cls}" onclick="$.post('/ajax/profile/friend', 'id=${encodedUserKey}')"><span class="button-text">Respond to Friend Request</span></li>
+    <li class="button disabled${sent_cls}"><span class="button-text">Friend request sent</span></li>
+    <li class="button default${add_cls}" onclick="$.post('/ajax/profile/friend', 'id=${encodedUserKey}')"><span class="button-text">Add as Friend</span></li>
+    <li class="button${follow_cls}" onclick="$.post('/ajax/profile/follow', 'id=${encodedUserKey}')"><span class="button-text">Follow User</span></li>
   </ul>
   %endif
 </%def>
