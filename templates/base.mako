@@ -98,9 +98,9 @@
     ${self.layout()}
   </div>
 %if script:
-  <script type="application/javascript" src="/public/scripts/jquery.js"></script>
-  <script type="application/javascript" src="/public/scripts/jquery.address.js?state=/"></script>
-  <script type="application/javascript" src="/public/scripts/social.js"></script>
+  <script type="text/javascript" src="/public/scripts/jquery.js"></script>
+  <script type="text/javascript" src="/public/scripts/jquery.address.js?state=/"></script>
+  <script type="text/javascript" src="/public/scripts/social.js"></script>
 %else:
 </body>
 </html>

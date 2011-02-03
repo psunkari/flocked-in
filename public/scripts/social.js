@@ -1,16 +1,17 @@
 
 $("a.ajax").live("click", function() {
-    if (this.hasAttribute('_ref'))
-        $.getScript('/ajax' + this.getAttribute('_ref'))
-    else if (this.hasAttribute('href'))
-        $.address.value($(this).attr('href'));
+    node = $(this)
+    if (node.attr('_ref'))
+        $.getScript('/ajax' + node.attr('_ref'))
+    else if (node.attr('href'))
+        $.address.value(node.attr('href'));
 
     return false;
-})
+});
 
 $(document).ajaxError(function(event, request, settings) {
     alert("Error fetching: " + settings.url);
-})
+});
 
 var oldPath = null;
 $.address.change(function(event) {
@@ -22,7 +23,7 @@ $.address.change(function(event) {
         $.getScript('/ajax' + event.value + tail);
     }
     oldPath = event.path
-})
+});
 
 // The .bind method from Prototype.js
 if (!Function.prototype.bind) {
@@ -140,7 +141,7 @@ ChunkLoader.prototype = {
     load: function(obj) {
         if (obj.hasOwnProperty("resources"))
             for (var rsrc in obj.resources)
-                this._resources[rsrc.id] = rsrc
+                this._resources[rsrc.id] = rsrc;
 
         var cleanup = obj.method == "set"? true: false;
         this._loadResources(obj.css || [],
@@ -160,7 +161,7 @@ ChunkLoader.prototype = {
                     if (handlers.onload)
                         eval(handlers.onload);
                 }
-            }.bind(this))
+            }.bind(this));
         this._delayed = [];
     }
 }
@@ -210,4 +211,4 @@ $(document).click(function(event) {
 // Handle access control related menus and dialog.
 var acl = {
     updateGroupsList: function(target) {}
-}
+};
