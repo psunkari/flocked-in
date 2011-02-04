@@ -38,19 +38,19 @@
 <%def name="acl_button(id)">
   %if script:
     <li class="acl-button button has-popup has-tooltip" id=${id} onclick="acl.updateGroupsList(this);popup.open(event, this)">
-      <input type="hidden" name="acl" value="company"/>
-      <span class="button-text">Company</span>
+      <input id="${id}-input" type="hidden" name="acl" value="company"/>
+      <span id="${id}-label" class="button-text">Company</span>
       <div class="tooltip top right">
-        <span class="tooltip-contents">${_("Anyone working at my company")}</span>
+        <span id="${id}-tooltip" class="tooltip-contents">${_("Anyone working at my company")}</span>
       </div>
-      <div class="popup" onclick="acl.update(event, this);">
+      <div class="popup" onclick="acl.updateACL(event, this.parentNode);">
         <ul class="v-links">
-          <li value="public" info="${'Everyone'}">${_("Everyone")}</li>
-          <li value="company" info="${'Anyone working at my company'}">${_("Company")}</li>
-          <li value="friends" info="${'All my friends'}">${_("Friends")}</li>
+          <li type="public" info="${'Everyone'}">${_("Everyone")}</li>
+          <li type="company" info="${'Anyone working at my company'}">${_("Company")}</li>
+          <li type="friends" info="${'All my friends'}">${_("Friends")}</li>
           <li id="${id}-groups" class="separator"></li>
           <li id="${id}-groups-end" class="separator"></li>
-          <li value="custom">${_("Custom setting")}</li>
+          <li type="custom">${_("Custom")}</li>
         </ul>
       </div>
     </li>
@@ -71,12 +71,12 @@
         %endfor
       </ul>
     </div>
-    <form id="share-form" method="post" autocomplete="off">
+    <form id="share-form" class="ajax" autocomplete="off" method="post">
       <div id="sharebar"></div>
       <div>
         <ul id="sharebar-actions" class="h-links">
           ${acl_button("sharebar-acl")}
-          <li id="sharebar-submit" class="default button"><span class="button-text">${_('Share')}</span></li>
+          <li id="sharebar-submit" class="default button" onclick="document.getElementById('share-form').submit();"><span class="button-text">${_('Share')}</span></li>
         </ul>
         <span class="clear" style="display:block"></span>
       </div>

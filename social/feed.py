@@ -33,9 +33,7 @@ class FeedResource(base.BaseResource):
 
         if script:
             yield renderScriptBlock(request, "feed.mako", "share_block",
-                                    landing, "#share-block", "set",
-                                    handlers={"onload": "$('#share-form').submit(function(){$.post('/ajax' + $(this).attr('_action'), $(this).serialize(), null, 'script'); return false;});"},
-                                    **args)
+                                    landing, "#share-block", "set", **args)
             yield self._renderShareBlock(request, "status")
 
         if script and landing:
@@ -58,7 +56,7 @@ class FeedResource(base.BaseResource):
 
         yield renderScriptBlock(request, "feed.mako", renderDef,
                                 landing, "#sharebar", "set", True,
-                                handlers={"onload": "$('#sharebar-links .selected').removeClass('selected'); $('#sharebar-link-%s').addClass('selected'); $('#share-form').attr('_action', '/feed/share/%s');" % (type, type)})
+                                handlers={"onload": "$('#sharebar-links .selected').removeClass('selected'); $('#sharebar-link-%s').addClass('selected'); $('#share-form').attr('action', '/feed/share/%s');" % (type, type)})
         request.finish()
 
     def render_GET(self, request):

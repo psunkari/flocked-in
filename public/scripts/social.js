@@ -9,6 +9,13 @@ $("a.ajax").live("click", function() {
     return false;
 });
 
+$('form.ajax').live("submit", function() {
+    var node = $(this);
+    $.post('/ajax' + node.attr('action'), node.serialize(), null, 'script');
+
+    return false;
+});
+
 $(document).ajaxError(function(event, request, settings) {
     alert("Error fetching: " + settings.url);
 });
@@ -175,6 +182,7 @@ var popup = {
 
     // Change the state of the given popup to open.
     open: function(event, node) {
+        evt = $.event.fix(event);
         node = $(node);
         node.parentsUntil(".popup-open").each(function(index, item) {
             if (item === document.body)
@@ -184,8 +192,8 @@ var popup = {
         node.addClass("popup-open");
         popup._stack.push(node)
 
-        event.stopPropagation();
-        event.preventDefault();
+        evt.stopPropagation();
+        evt.preventDefault();
     },
 
     // Hide the popup that is on the top of the stack
@@ -210,5 +218,25 @@ $(document).click(function(event) {
 
 // Handle access control related menus and dialog.
 var acl = {
-    updateGroupsList: function(target) {}
+    updateGroupsList: function(target) {
+        console.log("Updating groups list");
+    },
+
+    updateACL: function(event, parent) {
+        evt = $.event.fix(event);
+        target = $(evt.target);
+
+        value = target.attr("type");
+        if (value) {
+            stub = parent.id;
+            $("#" + stub + "-label").html(target.html());
+            $("#" + stub + "-tooltip").html(target.attr("info"));
+            $("#" + stub + "-input").attr("value", value);
+
+            popup.close();
+        }
+
+        evt.preventDefault();
+        evt.stopPropagation();
+    }
 };
