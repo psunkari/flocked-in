@@ -229,7 +229,7 @@ var acl = {
         value = target.attr("type");
         if (value) {
             stub = parent.id;
-            $("#" + stub + "-label").html(target.html());
+            $("#" + stub + "-content").html(target.html());
             $("#" + stub + "-tooltip").html(target.attr("info"));
             $("#" + stub + "-input").attr("value", value);
 

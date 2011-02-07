@@ -1,5 +1,6 @@
 <%! from social import _, __ %>
 
+<%namespace name="widgets" file="widgets.mako"/>
 <%inherit file="base.mako"/>
 
 <%def name="layout()">
@@ -37,12 +38,9 @@
 
 <%def name="acl_button(id)">
   %if script:
-    <li class="acl-button button has-popup has-tooltip" id=${id} onclick="acl.updateGroupsList(this);popup.open(event, this)">
+    <%widgets:popupButton id="${id}" classes="acl-button" value="${_('Company')}"
+                          tooltip="${_('Anyone working at my company')}">
       <input id="${id}-input" type="hidden" name="acl" value="company"/>
-      <span id="${id}-label" class="button-text">Company</span>
-      <div class="tooltip top right">
-        <span id="${id}-tooltip" class="tooltip-contents">${_("Anyone working at my company")}</span>
-      </div>
       <div class="popup" onclick="acl.updateACL(event, this.parentNode);">
         <ul class="v-links">
           <li type="public" info="${'Everyone'}">${_("Everyone")}</li>
@@ -53,7 +51,7 @@
           <li type="custom">${_("Custom")}</li>
         </ul>
       </div>
-    </li>
+    </%widgets:popupButton>
   %endif
 </%def>
 
@@ -75,8 +73,8 @@
       <div id="sharebar"></div>
       <div>
         <ul id="sharebar-actions" class="h-links">
-          ${acl_button("sharebar-acl")}
-          <li id="sharebar-submit" class="default button" onclick="document.getElementById('share-form').submit();"><span class="button-text">${_('Share')}</span></li>
+          <li>${acl_button("sharebar-acl")}</li>
+          <li>${widgets.button("sharebar-submit", "submit", "default", None, "Share")}</li>
         </ul>
         <span class="clear" style="display:block"></span>
       </div>
