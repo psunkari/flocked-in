@@ -105,3 +105,20 @@ def weekName(num, long=False):
     short = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     full = ['Sunday', 'Monday', 'Tuesday', 'Thursday', 'Friday', 'Saturday']
     return full[num-1] if long else short[num-1]
+
+@defer.inlineCallbacks
+def getFollowers(userKey, count=10):
+    cols = yield Db.get_slice(userKey, "followers", count=count)
+    log.msg(cols)
+    defer.returnValue(set(columnsToDict(cols).keys()))
+
+@defer.inlineCallbacks
+def getSubscriptions(userKey, count=10):
+    cols = yield Db.get_slice(userKey, "subscriptions", count=count)
+    defer.returnValue(set(columnsToDict(cols).keys()))
+
+@defer.inlineCallbacks
+def getFriends(userKey, count=10):
+    cols = yield Db.get_slice(userKey, "connections", count=count)
+    friends = set(supercolumnsToDict(cols).keys())
+    defer.returnValue(set(friends))

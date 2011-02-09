@@ -123,6 +123,46 @@ def setup(client):
                                     'hometown': 'cities/in/guntur',
                                     'currentcity': 'cities/in/hyderabad'
                                 }})
+    yield client.batch_insert('synovel.com/u/praveen', 'users', {
+                                'basic': {
+                                    'name': 'Praveen ',
+                                    'jobTitle': 'Hacker',
+                                    'location': 'synovel.com/location/hyderabad',
+                                    'desc': 'Yet another Tom, Dick and Harry'
+                                },
+                                'expertise': {
+                                    'Operations': ''
+                                },
+                                'languages': {
+                                    'Telugu': 'srw',
+                                    'English': 'srw'
+                                },
+                                'education': {
+                                    '2008:IIIT Hyderabad': 'Graduation'
+                                },
+                                'work': {
+                                    ':201012:calendar server': '--',
+                                    '201011:200807:Symprod': 'process management system'
+                                },
+                                'employers': {
+                                    '2010:2008:': 'EF',
+                                },
+                                'contact': {
+                                    'mail': 'praveen@synovel.com',
+                                    'phone': '+917702228336'
+                                },
+                                'interests': {
+                                    "Cycling": "sports",
+                                    "Trekking": "sports",
+                                    "Open Source": "technology"
+                                },
+                                'personal': {
+                                    'mail': 'praveen.pothana@gmail.com',
+                                    'mobile': '+917702228336',
+                                    'hometown': 'cities/in/vijayawada',
+                                    'currentcity': 'cities/in/hyderabad'
+                                }})
+
     log.msg("Created users")
 
     # User authentication - passwords and sessions
@@ -133,12 +173,20 @@ def setup(client):
                                 'passwordHash': 'c246ad314ab52745b71bb00f4608c82a'})
     yield client.batch_insert('synovel.com/u/ashok', 'userAuth', {
                                 'passwordHash': 'c246ad314ab52745b71bb00f4608c82a'})
+    yield client.batch_insert('synovel.com/u/praveen', 'userAuth', {
+                                'passwordHash': 'c246ad314ab52745b71bb00f4608c82a'})
+
     log.msg("Created userAuth")
 
     # Connections between users
     connections = CfDef(KEYSPACE, 'connections', 'Super', 'BytesType',
                         'BytesType', 'Established user connections')
     yield client.system_add_column_family(connections)
+    yield client.batch_insert("synovel.com/u/prasad", "connections", {
+                                "synovel.com/u/ashok":{"__default__":''}})
+
+    yield client.batch_insert("synovel.com/u/ashok", "connections", {
+                                "synovel.com/u/prasad":{"__default__":''}})
 
     connectionsByTag = CfDef(KEYSPACE, 'connectionsByTag', 'Super', 'BytesType',
                              'BytesType', 'User connections by type')
@@ -154,6 +202,9 @@ def setup(client):
     followers = CfDef(KEYSPACE, 'followers', 'Standard', 'UTF8Type',
                       None, 'Followers of a user')
     yield client.system_add_column_family(followers)
+    yield client.insert("synovel.com/u/praveen", "subscriptions", "", "synovel.com/u/prasad")
+    yield client.insert("synovel.com/u/prasad", "followers", "", "synovel.com/u/praveen")
+
     log.msg("Created subscriptions and followers")
 
     # Groups

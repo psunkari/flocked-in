@@ -1,5 +1,6 @@
 
 import time
+import uuid
 
 from twisted.internet   import defer
 from twisted.web        import server
@@ -8,6 +9,8 @@ from twisted.python     import log
 from social             import Db, utils, base
 from social.template    import render, renderDef, renderScriptBlock
 from social.auth        import IAuthInfo
+
+INFINITY=2147483647
 
 class FeedResource(base.BaseResource):
     isLeaf = True
@@ -45,18 +48,18 @@ class FeedResource(base.BaseResource):
         request.finish()
 
     @defer.inlineCallbacks
-    def _renderShareBlock(self, request, type):
+    def _renderShareBlock(self, request, typ):
         landing = not self._ajax
         renderDef = "share_status"
 
-        if type == "link":
+        if typ == "link":
             renderDef = "share_link"
-        elif type == "document":
+        elif typ == "document":
             renderDef = "share_document"
 
         yield renderScriptBlock(request, "feed.mako", renderDef,
                                 landing, "#sharebar", "set", True,
-                                handlers={"onload": "$('#sharebar-links .selected').removeClass('selected'); $('#sharebar-link-%s').addClass('selected'); $('#share-form').attr('action', '/feed/share/%s');" % (type, type)})
+                                handlers={"onload": "$('#sharebar-links .selected').removeClass('selected'); $('#sharebar-link-%s').addClass('selected'); $('#share-form').attr('action', '/feed/share/%s');" % (typ, typ)})
         request.finish()
 
     def render_GET(self, request):
@@ -81,7 +84,7 @@ class FeedResource(base.BaseResource):
         return server.NOT_DONE_YET
 
     @defer.inlineCallbacks
-    def _share(self, request, type):
+    def _share(self, request, typ):
         meta = {}
         target = utils.getRequestArg(request, "target")
         if target:
@@ -99,11 +102,25 @@ class FeedResource(base.BaseResource):
         if parent:
             meta["parent"] = parent
 
-        if type == "link":
+        if typ == "link":
             meta["url"] = utils.getRequestArg(request, "url")
+
 
         key = utils.getRandomKey(userKey)
         yield Db.batch_insert(key, "items", {'meta': meta})
+        yield Db.insert(userKey, "userItems", key, uuid.uuid1().bytes)
+
+        acl = utils.getRequestArg(request, "acl")
+        if acl in ["friends", "company", "public"]:
+            friends = yield utils.getFriends(userKey, count=INFINITY)
+            followers = yield utils.getFollowers(userKey, count=INFINITY)
+            fnf = friends.union(followers)
+            for fKey in fnf:
+                yield Db.insert(fKey, "feed", key, uuid.uuid1().bytes)
+        if acl in ["company", "public"]:
+            companyKey = userKey.split("/")[0]
+            yield Db.insert(companyKey, "feed", key, uuid.uuid1().bytes)
+
 
         request.finish()
 
