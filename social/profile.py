@@ -51,7 +51,8 @@ class ProfileResource(base.BaseResource):
 
         # Circles are just tags that a user would set on his connections
         circles = request.args["circle"]\
-                  if request.args.has_key("circle") else ["__default__"]
+                  if request.args.has_key("circle") else []
+        circles.append("__default__")
         circlesMap = dict([(circle, '') for circle in circles])
 
         # Check if we have a request pending from this user.
@@ -59,17 +60,16 @@ class ProfileResource(base.BaseResource):
         # Else create a friend request that will be pending on the target user
         calls = None
         try:
-            yield Db.get(myKey, "connections", "__local__", targetKey)
-            d1 = Db.remove(myKey, "connections", "__local__", targetKey)
-            d2 = Db.remove(targetKey, "connections", "__remote__", myKey)
+            yield Db.get(myKey, "pendingConnections", targetKey)
+            d1 = Db.remove(myKey, "pendingConnections", targetKey)
+            d2 = Db.remove(targetKey, "pendingConnections", myKey)
             d3 = Db.batch_insert(myKey, "connections", {targetKey: circlesMap})
             calls = defer.DeferredList([d1, d2, d3])
         except ttypes.NotFoundException:
-            circlesMap["__remote__"] = ''
-            d1 = Db.batch_insert(myKey, "connections", {targetKey: circlesMap})
-            d2 = Db.insert(targetKey, "connections", "", "__local__", myKey)
+            d1 = Db.insert(myKey, "pendingConnections", '0', targetKey)
+            d2 = Db.insert(targetKey, "pendingConnections", '1', myKey)
             calls = defer.DeferredList([d1, d2])
-
+        
         yield calls
         request.finish()
 

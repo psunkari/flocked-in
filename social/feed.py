@@ -9,8 +9,8 @@ from twisted.python     import log
 from social             import Db, utils, base
 from social.template    import render, renderDef, renderScriptBlock
 from social.auth        import IAuthInfo
+from social.constants import INFINITY
 
-INFINITY=2147483647
 
 class FeedResource(base.BaseResource):
     isLeaf = True

@@ -109,7 +109,6 @@ def weekName(num, long=False):
 @defer.inlineCallbacks
 def getFollowers(userKey, count=10):
     cols = yield Db.get_slice(userKey, "followers", count=count)
-    log.msg(cols)
     defer.returnValue(set(columnsToDict(cols).keys()))
 
 @defer.inlineCallbacks

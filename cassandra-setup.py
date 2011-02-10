@@ -191,6 +191,12 @@ def setup(client):
     connectionsByTag = CfDef(KEYSPACE, 'connectionsByTag', 'Super', 'BytesType',
                              'BytesType', 'User connections by type')
     yield client.system_add_column_family(connectionsByTag)
+
+    pendingConnections = CfDef(KEYSPACE, "pendingConnections", "Standard",
+                        "UTF8Type", None, "Pending Conncetion")
+    yield client.system_add_column_family(pendingConnections)
+
+
     log.msg("Created connections")
 
     # Subscriptions to changes by other people

@@ -3,7 +3,7 @@ from twisted.python     import log
 from twisted.internet   import defer
 from telephus.cassandra import ttypes
 
-from social import Db, utils
+from social import Db, utils, constants
 
 # Relation between two users - mainly used for authentication
 REL_UNRELATED       = 0x000
@@ -67,16 +67,21 @@ class Relation(object):
         if not self._fetchedFriendInfo:
             try:
                 if not self.isMe():
-                    result = yield Db.get(self.other, 'connections', None, self.me)
-                    cols = utils.supercolumnsToDict([result])
-
-                    if cols[self.me].has_key("__local__"):
-                        self.isFriend = REL_LOCAL_PENDING
-                    elif cols[self.me].has_key("__remote__"):
-                        self.isFriend = REL_REMOTE_PENDING
-                    else:
+                    try:
+                        result = yield Db.get_slice(self.other,
+                                                    'connections',
+                                                    super_column = self.me,
+                                                    count = constants.INFINITY)
+                        cols = utils.columnsToDict([result])
                         self.isFriend = REL_FRIEND
-                        self.isFriendTags = cols[self.me].keys()
+                        self.isFriendTags = cols.keys()
+                    except ttypes.NotFoundException:
+                        result = yield Db.get(self.other, "pendingConnections", self.me)
+                        cols = utils.columnsToDict([result])
+                        if cols[self.me] == '0':
+                            self.isFriend = REL_LOCAL_PENDING
+                        elif cols[self.me] == '1':
+                            self.isFriend = REL_REMOTE_PENDING
             except ttypes.NotFoundException:
                 self.isFriend = REL_UNRELATED
             finally:
