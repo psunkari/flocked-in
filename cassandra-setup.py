@@ -231,18 +231,36 @@ def setup(client):
                   'All the items - mails, statuses, links, events etc;')
     yield client.system_add_column_family(items)
     log.msg("Created items")
-
     # Index of all posts by a given user
     userItems = CfDef(KEYSPACE, 'userItems', 'Standard', 'TimeUUIDType', None,
                       'All items posted by a given user')
     yield client.system_add_column_family(userItems)
     log.msg("Created userposts")
 
+    # Index of posts by type
+    for itemType in ['status', 'link', 'document']:
+        columnFamily = "userItems_" + str(itemType)
+        userItemsType = CfDef(KEYSPACE, columnFamily, 'Standard',
+                            'TimeUUIDType', None,
+                            '%s items posted by a given user'%(itemType))
+        yield client.system_add_column_family(userItemsType)
+        log.msg("Created %s" %(columnFamily))
+
     # Index of all posts accessible to a given user/domain/company
     feed = CfDef(KEYSPACE, 'feed', 'Standard', 'TimeUUIDType', None,
                  'A feed of all the items - both user and company')
     yield client.system_add_column_family(feed)
     log.msg("Created feed")
+
+    #Index of feed by type
+    for itemType in ['status', 'link', 'document']:
+        columnFamily = "feed_" + str(itemType)
+        feedType = CfDef(KEYSPACE, columnFamily, 'Standard',
+                            'TimeUUIDType', None,
+                            'feed of %s items - both user and company'%(itemType))
+        yield client.system_add_column_family(feedType)
+        log.msg("Created %s" %(columnFamily))
+
 
     reactor.stop()
 

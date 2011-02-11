@@ -11,6 +11,35 @@ from social.template    import render, renderDef, renderScriptBlock
 from social.auth        import IAuthInfo
 from social.constants import INFINITY
 
+@defer.inlineCallbacks
+def getItems(userKey, count=10):
+
+    feedItems = yield Db.get_slice(userKey, "feed", count=count)
+    feedItems = utils.columnsToDict(feedItems)
+
+    items = yield Db.multiget_slice(feedItems.values(), "items", count=count)
+    itemsMap = utils.multiSuperColumnsToDict(items)
+
+    friends = yield utils.getFriends(userKey, count=INFINITY)
+    subscriptions = yield utils.getSubscriptions(userKey, count= INFINITY)
+
+    posters = [itemsMap[itemKey]["meta"]["owner"] for itemKey in itemsMap]
+    #TODO: get profile pic info also.
+    cols = yield Db.multiget_slice(posters, "users", super_column='basic',
+                                        count=INFINITY)
+    posterInfo = utils.multiColumnsToDict(cols)
+
+    displayItems = []
+    for itemKey in itemsMap:
+        meta = itemsMap[itemKey]["meta"]
+        acl = meta['acl']
+        poster = meta['owner']
+        if utils.checkAcl(userKey, acl, poster, friends, subscriptions):
+            #TODO: response items should also be returned along with each item.
+            comment = meta["comment"]
+            displayItems.append([comment, posterInfo[poster]["name"]])
+    defer.returnValue(displayItems)
+
 
 class FeedResource(base.BaseResource):
     isLeaf = True
@@ -38,14 +67,15 @@ class FeedResource(base.BaseResource):
             yield renderScriptBlock(request, "feed.mako", "share_block",
                                     landing, "#share-block", "set", **args)
             yield self._renderShareBlock(request, "status")
+            args["comments"]= yield getItems(myKey)
+            yield renderScriptBlock(request, "feed.mako", "feed", landing,
+                                    "#user-feed", "set", **args)
 
         if script and landing:
             request.write("</body></html>")
 
         if not script:
             yield render(request, "feed.mako", **args)
-
-        request.finish()
 
     @defer.inlineCallbacks
     def _renderShareBlock(self, request, typ):
@@ -60,7 +90,6 @@ class FeedResource(base.BaseResource):
         yield renderScriptBlock(request, "feed.mako", renderDef,
                                 landing, "#sharebar", "set", True,
                                 handlers={"onload": "$('#sharebar-links .selected').removeClass('selected'); $('#sharebar-link-%s').addClass('selected'); $('#share-form').attr('action', '/feed/share/%s');" % (typ, typ)})
-        request.finish()
 
     def render_GET(self, request):
         segmentCount = len(request.postpath)
@@ -77,7 +106,9 @@ class FeedResource(base.BaseResource):
                 log.err(err)
                 request.setResponseCode(500)
                 request.finish()
-            d.addErrback(errback)
+            def callback(response):
+                request.finish()
+            d.addCallbacks(callback, errback)
         else:
             request.finish()
 
@@ -105,22 +136,18 @@ class FeedResource(base.BaseResource):
         if typ == "link":
             meta["url"] = utils.getRequestArg(request, "url")
 
-
-        key = utils.getRandomKey(userKey)
-        yield Db.batch_insert(key, "items", {'meta': meta})
-        yield Db.insert(userKey, "userItems", key, uuid.uuid1().bytes)
-
         acl = utils.getRequestArg(request, "acl")
-        if acl in ["friends", "company", "public"]:
-            friends = yield utils.getFriends(userKey, count=INFINITY)
-            followers = yield utils.getFollowers(userKey, count=INFINITY)
-            fnf = friends.union(followers)
-            for fKey in fnf:
-                yield Db.insert(fKey, "feed", key, uuid.uuid1().bytes)
-        if acl in ["company", "public"]:
-            companyKey = userKey.split("/")[0]
-            yield Db.insert(companyKey, "feed", key, uuid.uuid1().bytes)
+        meta["acl"] = acl
 
+        itemKey = utils.getRandomKey(userKey)
+        yield Db.batch_insert(itemKey, "items", {'meta': meta})
+        yield Db.insert(userKey, "userItems", itemKey, uuid.uuid1().bytes)
+        yield Db.insert(userKey, "userItems_" + typ, itemKey, uuid.uuid1().bytes)
+
+        notifyUsers = yield utils.expandAcl(userKey, acl)
+        for key in notifyUsers:
+            yield Db.insert(key, "feed", itemKey, uuid.uuid1().bytes)
+            yield Db.insert(key, "feed_" + typ, itemKey, uuid.uuid1().bytes)
 
         request.finish()
 

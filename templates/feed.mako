@@ -25,8 +25,9 @@
             %if not script:
               ${self.share_block()}
             %endif
+          </div>
         </div>
-        <div class="center-contents">
+        <div id="user-feed" class="center-contents">
           %if not script:
             ${self.feed()}
           %endif
@@ -91,7 +92,7 @@
 
 <%def name="share_link()">
   <div class="input-wrap">
-    <input type="text" name="link" placeholder="${_('http://')}"/>
+    <input type="text" name="url" placeholder="${_('http://')}"/>
   </div>
   <div class="input-wrap">
     <input type="text" name="comment" placeholder="${_('Say something about this link')}"/>
@@ -108,4 +109,8 @@
 </%def>
 
 <%def name="feed()">
+% for comment, user in comments:
+    <span>${user}</span><br>
+    <span>${comment}</span><br>
+% endfor   
 </%def>

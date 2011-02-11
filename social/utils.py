@@ -8,6 +8,8 @@ from twisted.internet   import defer
 from twisted.python     import log
 
 from social             import Db, _, __
+from social.constants import INFINITY
+
 
 def md5(text):
     m = hashlib.md5()
@@ -19,7 +21,6 @@ def toUserKey(id):
     user, domain = id.split("@")
     return domain + '/u/' + user
 
-
 def supercolumnsToDict(supercolumns):
     retval = {}
     for item in supercolumns:
@@ -29,13 +30,25 @@ def supercolumnsToDict(supercolumns):
             retval[name][col.name] = col.value
     return retval
 
+def multiSuperColumnsToDict(superColumnsMap):
+    retval = {}
+    for key in superColumnsMap:
+        columns =  superColumnsMap[key]
+        retval[key] = supercolumnsToDict(columns)
+    return retval
+
+def multiColumnsToDict(columnsMap):
+    retval = {}
+    for key in columnsMap:
+        columns = columnsMap[key]
+        retval[key] = columnsToDict(columns)
+    return retval
 
 def columnsToDict(columns):
     retval = {}
     for item in columns:
         retval[item.column.name] = item.column.value
     return retval
-
 
 def getRequestArg(request, arg):
     if request.args.has_key(arg):
@@ -121,3 +134,29 @@ def getFriends(userKey, count=10):
     cols = yield Db.get_slice(userKey, "connections", count=count)
     friends = set(supercolumnsToDict(cols).keys())
     defer.returnValue(set(friends))
+
+def getCompanyKey(userKey):
+    return userKey.split("/")[0]
+
+@defer.inlineCallbacks
+def expandAcl(userKey, acl):
+    keys = set()
+    if acl in ["friends", "company", "public"]:
+        friends = yield getFriends(userKey, count=INFINITY)
+        keys = keys.union(friends)
+
+    if acl in ["company", "public"]:
+        companyKey = getCompanyKey(userKey)
+        followers = yield getFollowers(userKey, count=INFINITY)
+        keys = keys.union(followers)
+        keys = keys.union(set([companyKey]))
+    defer.returnValue(keys)
+
+def checkAcl(userKey, acl, owner, friends=None, subscriptions=None):
+
+    if acl == "public":
+        return True
+    if acl == "company":
+        return getCompanyKey(userKey) == getCompanyKey(owner)
+    if acl in ["friends"]:
+        return owner in friends if friends else False
