@@ -139,11 +139,16 @@ def getCompanyKey(userKey):
     return userKey.split("/")[0]
 
 @defer.inlineCallbacks
-def expandAcl(userKey, acl):
+def expandAcl(userKey, acl, userKey2=None):
     keys = set()
     if acl in ["friends", "company", "public"]:
         friends = yield getFriends(userKey, count=INFINITY)
-        keys = keys.union(friends)
+        if userKey2:
+            friends1 = yield getFriends(userKey2, count=INFINITY)
+            commonFriends = friends.intersection(friends1)
+            keys.union(commonFriends)
+        else:
+            keys = keys.union(friends)
 
     if acl in ["company", "public"]:
         companyKey = getCompanyKey(userKey)

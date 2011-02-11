@@ -109,8 +109,23 @@
 </%def>
 
 <%def name="feed()">
-% for comment, user in comments:
-    <span>${user}</span><br>
-    <span>${comment}</span><br>
+% for items in comments:
+    <% parentUserKey= items[0][2] %> 
+    <% parentItemId = items[0][3] %>
+    <% acl = items[0][4] %>
+    % for comment, url, user, itemKey, acl in items:
+        <span>${user}</span><br>
+        <span>${comment}</span><br>
+        % if url:
+            <a href=http://${url}>link</a>
+        % endif
+    % endfor
+        <form method="post" action="/feed/share/status" class="ajax">
+        <input type="text", name="comment"/> 
+        <input type="hidden", name="parent", value=${parentItemId}></input>
+        <input type="hidden", name="parentUserId", value=${parentUserKey}></input>
+        <input type="hidden", name="acl", value=${acl}></input>
+        ${widgets.button(None, type="submit", name="comment", value="comment")}<br/>
+    </form>
 % endfor   
 </%def>

@@ -6,7 +6,7 @@
 <%def name="button(id=None, type='button', classes='', name=None, value=None, tooltip=None)">
 %if name and value and type == "submit":
   <input class="button ${classes}" type="submit"
-         ${'' if not id else ('id="%s" ' % id)}name="${name}" value="{value}"/>
+         ${'' if not id else ('id="%s" ' % id)}name="${name}" value="${value}"/>
 %else:
   <button ${'' if not id else ('id="%s" ' % id)}type="${type}"
           class="button ${classes} ${'has-tooltip' if tooltip else ''}">

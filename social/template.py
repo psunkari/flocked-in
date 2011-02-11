@@ -1,5 +1,6 @@
 
 import json
+import traceback
 
 from mako.template      import Template
 from mako.lookup        import TemplateLookup
@@ -35,6 +36,7 @@ def render(request, path, **kw):
         text = template.render(**args)
         request.write(text)
     except Exception, err:
+        log.msg(traceback.print_exc())
         request.processingFailed(err)
 
 
@@ -45,6 +47,7 @@ def renderDef(request, path, dfn, **kw):
         text = template.render(**kw)
         request.write(text)
     except Exception, err:
+        log.msg(traceback.print_exc())
         request.processingFailed(err)
 
 
@@ -56,6 +59,7 @@ def renderScriptBlock(request, path, dfn, tags=False, parent=None,
         template = yield threads.deferToThread(_getTemplate, path, dfn)
         text = template.render(**kw)
     except Exception, err:
+        log.msg(traceback.print_exc())
         request.processingFailed(err)
 
     map = {"content": text, "node": parent, "method": method, "last": last,

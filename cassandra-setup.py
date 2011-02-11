@@ -231,6 +231,10 @@ def setup(client):
                   'All the items - mails, statuses, links, events etc;')
     yield client.system_add_column_family(items)
     log.msg("Created items")
+
+    responses = CfDef(KEYSPACE, 'responses', "Standard", 'TimeUUIDType', None,
+                    'index of all responses')
+    yield client.system_add_column_family(responses)
     # Index of all posts by a given user
     userItems = CfDef(KEYSPACE, 'userItems', 'Standard', 'TimeUUIDType', None,
                       'All items posted by a given user')
