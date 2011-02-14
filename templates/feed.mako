@@ -110,22 +110,62 @@
 
 <%def name="feed()">
 % for items in comments:
-    <% parentUserKey= items[0][2] %> 
+    <% parentUserKey= items[0][5] %> 
     <% parentItemId = items[0][3] %>
     <% acl = items[0][4] %>
-    % for comment, url, user, itemKey, acl in items:
-        <span>${user}</span><br>
-        <span>${comment}</span><br>
-        % if url:
-            <a href=http://${url}>link</a>
+    <div id=${parentItemId}>
+        <span>${items[0][2]}</span> 
+        % if items[0][6]:
+            <span>${items[0][6]}</span> 
         % endif
-    % endfor
-        <form method="post" action="/feed/share/status" class="ajax">
-        <input type="text", name="comment"/> 
-        <input type="hidden", name="parent", value=${parentItemId}></input>
-        <input type="hidden", name="parentUserId", value=${parentUserKey}></input>
-        <input type="hidden", name="acl", value=${acl}></input>
-        ${widgets.button(None, type="submit", name="comment", value="comment")}<br/>
-    </form>
-% endfor   
+        % if not items[0][7]:
+            <a href="feed/like?itemKey=${parentItemId}&parent=${parentItemId}" class="ajax" >like</a>
+        % else:
+            <a href="feed/unlike?itemKey=${parentItemId}&parent=${parentItemId}" class="ajax" >unlike</a>
+        % endif
+        <br/>
+        <span>${items[0][0]}</span>
+        % if items[0][1]:
+            <a href=http://${items[0][1]}>link</a>
+        % endif
+        <div id=${parentItemId}_comment>
+        % for comment, url, user, itemKey, acl, likedBy, unlike in items[1:]:
+            <span>${user}</span>
+                % if likedBy:
+                    <span>${likedBy}</span>
+                % endif
+                % if not unlike:
+                    <a href="feed/like?itemKey=${itemKey}&parent=${parentItemId}" class="ajax" >like</a>
+                % else: 
+                    <a href="feed/unlike?itemKey=${itemKey}&parent=${parentItemId}" class="ajax">unlike</a>
+                % endif
+                <br>
+                <span>${comment}</span><br>
+                % if url:
+                    <a href=http://${url}>link</a>
+                % endif
+        % endfor
+        </div>
+        <div id=${parentItemId}_form >
+        <form method="post" action="/feed/share/status" class="ajax" >
+            <input type="text" name="comment" value=""/> 
+            <input type="hidden" name="parent" value=${parentItemId}></input>
+            <input type="hidden" name="parentUserId" value="${parentUserKey}"></input>
+            <input type="hidden" name="acl" value=${acl}></input>
+            ${widgets.button(None, type="submit", name="comment", value="comment")}<br/>
+        </form>
+        </div>
+    </div>
+% endfor
 </%def>
+
+<%def name="updateComments()">
+<span>${item[2]}</span>
+<a href="feed/like?itemKey=${item[4]}&parent=${item[5]}" class="ajax" >like</a>
+<br>
+<span>${item[0]}</span><br>
+    % if item[1]:
+<a href=http://${item[1]}>link</a>
+    % endif
+</%def>
+

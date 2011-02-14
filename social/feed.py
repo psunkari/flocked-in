@@ -12,12 +12,24 @@ from social.auth        import IAuthInfo
 from social.constants import INFINITY
 
 @defer.inlineCallbacks
-def getItems(userKey, count=10):
+def getItems(userKey, itemKey = None, count=100):
+    def _generate_liked_text(userKey, likedBy):
+        log.msg(userKey, likedBy)
+        if likedBy:
+            if userKey in likedBy and len(likedBy) == 1:
+                return "you like this post", True
+            elif userKey in likedBy and len(likedBy) >1:
+                return "you and %s others like this post" %(len(likedBy)-1), True
+            else:
+                return "%s like this post" %(len(likedBy)), False
+        else:
+            return None, False
+
 
     feedItems = yield Db.get_slice(userKey, "feed", count=count)
     feedItems = utils.columnsToDict(feedItems)
-
-    items = yield Db.multiget_slice(feedItems.values(), "items", count=count)
+    itemKeys = [itemKey] if itemKey else feedItems.values()
+    items = yield Db.multiget_slice(itemKeys, "items", count=count)
     itemsMap = utils.multiSuperColumnsToDict(items)
 
     friends = yield utils.getFriends(userKey, count=INFINITY)
@@ -48,14 +60,22 @@ def getItems(userKey, count=10):
             items = []
             comment = meta["comment"]
             url = meta.get("url", None)
-            items.append([comment, url, posterInfo[owner]["name"], itemKey, acl])
+            unlike = False
+            likedBy = itemsMap[itemKey].get("likes", {}).keys()
+            liked_text, unlike = _generate_liked_text(userKey, likedBy)
+            items.append([comment, url, posterInfo[owner]["name"], itemKey,
+                            acl, owner, liked_text, unlike])
             for responseId in responseMap.get(itemKey, {}).values():
                 owner = responseDetails[responseId]["meta"]["owner"]
                 comment = responseDetails[responseId]["meta"]["comment"]
                 url = responseDetails[responseId]["meta"].get("url", None)
                 name = posterInfo[owner]["name"]
                 acl = responseDetails[responseId]["meta"]["acl"]
-                items.append([comment, url, name, responseId, acl])
+                likedBy = responseDetails[responseId].get("likes", {}).keys()
+
+                liked_text, unlike = _generate_liked_text(userKey, likedBy)
+                items.append([comment, url, name, responseId, acl,
+                                liked_text, unlike])
             displayItems.append(items)
 
     defer.returnValue(displayItems)
@@ -120,6 +140,13 @@ class FeedResource(base.BaseResource):
         elif segmentCount == 2 and request.postpath[0] == "share":
             if self._ajax:
                 d = self._renderShareBlock(request, request.postpath[1])
+        elif segmentCount ==1 and request.postpath[0] == "like":
+            if self._ajax:
+                d = self._setLike(request)
+
+        elif segmentCount ==1 and request.postpath[0] == 'unlike':
+            if self._ajax:
+                d = self._setUnlike(request)
 
         if d:
             def errback(err):
@@ -135,13 +162,42 @@ class FeedResource(base.BaseResource):
         return server.NOT_DONE_YET
 
     @defer.inlineCallbacks
+    def _setLike(self, request):
+        itemKey = utils.getRequestArg(request, "itemKey")
+        parent =  utils.getRequestArg(request, "parent")
+        userKey = request.getSession(IAuthInfo).username
+        yield Db.insert(itemKey, "items", '', userKey, "likes")
+        items = yield getItems(userKey, parent)
+        args ={"comments":items}
+        landing = not self._ajax
+        yield  renderScriptBlock(request, "feed.mako", "feed", landing,
+                            "#%s"%(parent), "set", **args)
+    @defer.inlineCallbacks
+    def _setUnlike(self, request):
+        itemKey = utils.getRequestArg(request, "itemKey")
+        parent =  utils.getRequestArg(request, "parent")
+        userKey = request.getSession(IAuthInfo).username
+        d1 = yield Db.remove(itemKey, "items", userKey, "likes")
+        items = yield getItems(userKey, parent)
+        args ={"comments":items}
+        landing = not self._ajax
+        yield  renderScriptBlock(request, "feed.mako", "feed", landing,
+                            "#%s"%(parent), "set", **args)
+
+
+
+    @defer.inlineCallbacks
     def _share(self, request, typ):
         meta = {}
         target = utils.getRequestArg(request, "target")
         if target:
             meta["target"] = target
 
-        userKey = request.getSession(IAuthInfo).username;
+        userKey = request.getSession(IAuthInfo).username
+        cols = yield Db.get(userKey, "users", "name", "basic")
+        username = utils.columnsToDict([cols])["name"]
+
+
         meta["owner"] = userKey
         meta["timestamp"] = "%s" % int(time.time() * 1000)
 
@@ -181,6 +237,12 @@ class FeedResource(base.BaseResource):
 
         if parent:
             yield Db.insert(parent, "responses", itemKey, uuid.uuid1().bytes)
+            url = utils.getRequestArg(request, "url")
+            args ={"item":(comment, url, username, acl, itemKey, parent)}
+            landing = not self._ajax
+            yield renderScriptBlock(request, "feed.mako", "updateComments", landing,
+                                    "#%s_comment"%(parent), "append", **args)
+
 
         request.finish()
 
@@ -190,6 +252,5 @@ class FeedResource(base.BaseResource):
             request.redirect("/feed")
             request.finish()
             return server.NOT_DONE_YET
-
         self._share(request, request.postpath[1])
         return server.NOT_DONE_YET
