@@ -14,7 +14,6 @@ from social.constants import INFINITY
 @defer.inlineCallbacks
 def getItems(userKey, itemKey = None, count=100):
     def _generate_liked_text(userKey, likedBy):
-        log.msg(userKey, likedBy)
         if likedBy:
             if userKey in likedBy and len(likedBy) == 1:
                 return "you like this post", True
@@ -25,8 +24,9 @@ def getItems(userKey, itemKey = None, count=100):
         else:
             return None, False
 
-
+    #TODO: get latest feed items first
     feedItems = yield Db.get_slice(userKey, "feed", count=count)
+    #TODO: use list instead of dict.
     feedItems = utils.columnsToDict(feedItems)
     itemKeys = [itemKey] if itemKey else feedItems.values()
     items = yield Db.multiget_slice(itemKeys, "items", count=count)
@@ -42,6 +42,7 @@ def getItems(userKey, itemKey = None, count=100):
         responseKeys.extend(responseMap[itemKey].values())
 
     responses = yield Db.multiget_slice(responseKeys, "items", count=count)
+    #use list instead of dict to retain the sorting order.
     responseDetails  = utils.multiSuperColumnsToDict(responses)
 
     posters = [itemsMap[itemKey]["meta"]["owner"] for itemKey in itemsMap]
@@ -185,7 +186,6 @@ class FeedResource(base.BaseResource):
                             "#%s"%(parent), "set", **args)
 
 
-
     @defer.inlineCallbacks
     def _share(self, request, typ):
         meta = {}
@@ -209,11 +209,13 @@ class FeedResource(base.BaseResource):
         if parent:
             meta["parent"] = parent
 
+        url = utils.getRequestArg(request, "url")
         if typ == "link":
-            meta["url"] = utils.getRequestArg(request, "url")
+            meta["url"] =  url
 
         acl = utils.getRequestArg(request, "acl")
         meta["acl"] = acl
+        landing = not self._ajax
 
         parentUserKey = utils.getRequestArg(request, "parentId")
 
@@ -237,13 +239,14 @@ class FeedResource(base.BaseResource):
 
         if parent:
             yield Db.insert(parent, "responses", itemKey, uuid.uuid1().bytes)
-            url = utils.getRequestArg(request, "url")
             args ={"item":(comment, url, username, acl, itemKey, parent)}
-            landing = not self._ajax
             yield renderScriptBlock(request, "feed.mako", "updateComments", landing,
                                     "#%s_comment"%(parent), "append", **args)
-
-
+        else:
+            args = {"comments": [[[comment, url, username, itemKey, acl,
+                                userKey, None, False]]]}
+            yield renderScriptBlock(request, "feed.mako", "feed", landing,
+                                   "#user-feed", "append", **args)
         request.finish()
 
     def render_POST(self, request):
