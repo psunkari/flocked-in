@@ -5,6 +5,7 @@ import uuid
 from twisted.internet   import defer
 from twisted.web        import server
 from twisted.python     import log
+from telephus.cassandra import ttypes
 
 from social             import Db, utils, base
 from social.template    import render, renderDef, renderScriptBlock
@@ -23,27 +24,34 @@ def getItems(userKey, itemKey = None, count=100):
                 return "%s like this post" %(len(likedBy)), False
         else:
             return None, False
+    """
+    1. get the list of itemKeys from "feed" CF in reverse Chronological order
+    2. get the details of item from "items" SCF
+    3. get the response-itemKey for all items (frm step1) in Chronological Order.
+    4. Get the details of response-itemKeys
+    5. check acl:
+        if user has access to the item add item, its responses to displayItems list;
+
+    """
 
     #TODO: get latest feed items first
-    feedItems = yield Db.get_slice(userKey, "feed", count=count)
-    #TODO: use list instead of dict.
-    feedItems = utils.columnsToDict(feedItems)
-    itemKeys = [itemKey] if itemKey else feedItems.values()
-    items = yield Db.multiget_slice(itemKeys, "items", count=count)
-    itemsMap = utils.multiSuperColumnsToDict(items)
+    feedItems = yield Db.get_slice(userKey, "feed", count=count, reverse=True)
+    feedItems = utils.columnsToDict(feedItems, ordered=True)
+    feedItemsKeys = [itemKey] if itemKey else feedItems.values()
+    items = yield Db.multiget_slice(feedItemsKeys, "items", count=count)
+    itemsMap = utils.multiSuperColumnsToDict(items, ordered = True)
 
     friends = yield utils.getFriends(userKey, count=INFINITY)
     subscriptions = yield utils.getSubscriptions(userKey, count= INFINITY)
 
-    cols = yield Db.multiget_slice(feedItems.values(), "responses")
-    responseMap = utils.multiColumnsToDict(cols)
+    cols = yield Db.multiget_slice(feedItemsKeys, "responses", count=INFINITY)
+    responseMap = utils.multiColumnsToDict(cols, ordered=True)
     responseKeys = []
     for itemKey in responseMap:
         responseKeys.extend(responseMap[itemKey].values())
 
     responses = yield Db.multiget_slice(responseKeys, "items", count=count)
-    #use list instead of dict to retain the sorting order.
-    responseDetails  = utils.multiSuperColumnsToDict(responses)
+    responseDetails  = utils.multiSuperColumnsToDict(responses, ordered=True)
 
     posters = [itemsMap[itemKey]["meta"]["owner"] for itemKey in itemsMap]
     posters.extend([responseDetails[itemKey]["meta"]["owner"] for itemKey in responseDetails])
@@ -53,7 +61,7 @@ def getItems(userKey, itemKey = None, count=100):
     posterInfo = utils.multiColumnsToDict(cols)
 
     displayItems = []
-    for itemKey in itemsMap:
+    for itemKey in feedItemsKeys:
         meta = itemsMap[itemKey]["meta"]
         acl = meta["acl"]
         owner = meta["owner"]
@@ -220,22 +228,31 @@ class FeedResource(base.BaseResource):
         parentUserKey = utils.getRequestArg(request, "parentId")
 
         itemKey = utils.getRandomKey(userKey)
+        timeuuid = uuid.uuid1().bytes
         yield Db.batch_insert(itemKey, "items", {'meta': meta})
-        yield Db.insert(userKey, "userItems", itemKey, uuid.uuid1().bytes)
-        yield Db.insert(userKey, "userItems_" + typ, itemKey, uuid.uuid1().bytes)
+        yield Db.insert(userKey, "userItems", itemKey, timeuuid)
+        yield Db.insert(userKey, "userItems_" + typ, itemKey, timeuuid)
         if not parent:
-            yield Db.insert(userKey, "feed", itemKey, uuid.uuid1().bytes)
+            yield Db.insert(userKey, "feed", itemKey, timeuuid)
+            yield Db.insert(userKey, "feed_"+typ, itemKey, timeuuid)
+            yield Db.insert(userKey, "feedReverseMap", timeuuid, itemKey)
 
 
 
         notifyUsers = yield utils.expandAcl(userKey, acl,  userKey2=parentUserKey)
         for key in notifyUsers:
             if parent:
-                yield Db.insert(key, "feed", parent, uuid.uuid1().bytes)
-                yield Db.insert(key, "feed_" + typ, parent, uuid.uuid1().bytes)
+                # if (key, parentId) is already in the feed dont insert it again.
+                try:
+                    cols = yield Db.get(key, "feedReverseMap", parent)
+                except ttypes.NotFoundException:
+                    yield Db.insert(key, "feed", parent, timeuuid)
+                    yield Db.insert(key, "feed_" + typ, parent, timeuuid)
+                    yield Db.insert(key, "feedReverseMap", timeuuid, parent)
             else:
-                yield Db.insert(key, "feed", itemKey, uuid.uuid1().bytes)
-                yield Db.insert(key, "feed_" + typ, itemKey, uuid.uuid1().bytes)
+                yield Db.insert(key, "feed", itemKey, timeuuid)
+                yield Db.insert(key, "feed_" + typ, itemKey, timeuuid)
+                yield Db.insert(key, "feedReverseMap", timeuuid, itemKey)
 
         if parent:
             yield Db.insert(parent, "responses", itemKey, uuid.uuid1().bytes)
@@ -246,7 +263,7 @@ class FeedResource(base.BaseResource):
             args = {"comments": [[[comment, url, username, itemKey, acl,
                                 userKey, None, False]]]}
             yield renderScriptBlock(request, "feed.mako", "feed", landing,
-                                   "#user-feed", "append", **args)
+                                   "#user-feed", "prepend", **args)
         request.finish()
 
     def render_POST(self, request):

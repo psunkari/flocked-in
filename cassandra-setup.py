@@ -265,6 +265,11 @@ def setup(client):
         yield client.system_add_column_family(feedType)
         log.msg("Created %s" %(columnFamily))
 
+    feedReverseMap = CfDef(KEYSPACE, 'feedReverseMap', 'Standard', 'UTF8Type', None,
+                            'feed reverse map')
+    yield client.system_add_column_family(feedReverseMap)
+    log.msg("Created feedReverseMap")
+
     invitations = CfDef(KEYSPACE, "invitations", 'Standard', 'UTF8Type',
                             None, "list of invitations")
     yield client.system_add_column_family(invitations)

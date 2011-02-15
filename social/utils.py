@@ -4,6 +4,8 @@ import hashlib
 import datetime
 import base64
 
+from ordereddict import OrderedDict
+
 from twisted.internet   import defer
 from twisted.python     import log
 
@@ -21,8 +23,8 @@ def toUserKey(id):
     user, domain = id.split("@")
     return domain + '/u/' + user
 
-def supercolumnsToDict(supercolumns):
-    retval = {}
+def supercolumnsToDict(supercolumns, ordered=False):
+    retval = OrderedDict() if ordered else {}
     for item in supercolumns:
         name = item.super_column.name
         retval[name] = {}
@@ -30,22 +32,22 @@ def supercolumnsToDict(supercolumns):
             retval[name][col.name] = col.value
     return retval
 
-def multiSuperColumnsToDict(superColumnsMap):
-    retval = {}
+def multiSuperColumnsToDict(superColumnsMap, ordered=False):
+    retval = OrderedDict() if ordered else {}
     for key in superColumnsMap:
         columns =  superColumnsMap[key]
-        retval[key] = supercolumnsToDict(columns)
+        retval[key] = supercolumnsToDict(columns, ordered=ordered)
     return retval
 
-def multiColumnsToDict(columnsMap):
-    retval = {}
+def multiColumnsToDict(columnsMap, ordered=False):
+    retval = OrderedDict() if ordered else {}
     for key in columnsMap:
         columns = columnsMap[key]
-        retval[key] = columnsToDict(columns)
+        retval[key] = columnsToDict(columns, ordered=ordered)
     return retval
 
-def columnsToDict(columns):
-    retval = {}
+def columnsToDict(columns, ordered = False):
+    retval = OrderedDict() if ordered else {}
     for item in columns:
         retval[item.column.name] = item.column.value
     return retval
