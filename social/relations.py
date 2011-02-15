@@ -68,19 +68,17 @@ class Relation(object):
             try:
                 if not self.isMe():
                     try:
-                        result = yield Db.get_slice(self.other,
-                                                    'connections',
-                                                    super_column = self.me,
-                                                    count = constants.INFINITY)
-                        cols = utils.columnsToDict([result])
+                        result = yield Db.get(self.me, 'connections',
+                                                super_column = self.other)
+                        cols = utils.supercolumnsToDict([result])
                         self.isFriend = REL_FRIEND
-                        self.isFriendTags = cols.keys()
+                        self.isFriendTags = cols[self.other].keys()
                     except ttypes.NotFoundException:
-                        result = yield Db.get(self.other, "pendingConnections", self.me)
+                        result = yield Db.get(self.me, "pendingConnections", self.other)
                         cols = utils.columnsToDict([result])
-                        if cols[self.me] == '0':
+                        if cols[self.other] == '0':
                             self.isFriend = REL_LOCAL_PENDING
-                        elif cols[self.me] == '1':
+                        elif cols[self.other] == '1':
                             self.isFriend = REL_REMOTE_PENDING
             except ttypes.NotFoundException:
                 self.isFriend = REL_UNRELATED

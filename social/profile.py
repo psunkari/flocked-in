@@ -60,16 +60,17 @@ class ProfileResource(base.BaseResource):
         # Else create a friend request that will be pending on the target user
         calls = None
         try:
-            yield Db.get(myKey, "pendingConnections", targetKey)
+            cols = yield Db.get(myKey, "pendingConnections", targetKey)
             d1 = Db.remove(myKey, "pendingConnections", targetKey)
             d2 = Db.remove(targetKey, "pendingConnections", myKey)
             d3 = Db.batch_insert(myKey, "connections", {targetKey: circlesMap})
+            d4 = Db.batch_insert(targetKey, "connections", {myKey: {'__default__':''}})
             calls = defer.DeferredList([d1, d2, d3])
         except ttypes.NotFoundException:
             d1 = Db.insert(myKey, "pendingConnections", '0', targetKey)
             d2 = Db.insert(targetKey, "pendingConnections", '1', myKey)
             calls = defer.DeferredList([d1, d2])
-        
+
         yield calls
         request.finish()
 
