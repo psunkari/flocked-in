@@ -15,6 +15,12 @@
         <div id="home-notifications"></div>
         <div id="home-events"></div>
         <div id="home-todo"></div>
+        <div id="invite-ppl">
+            <form method="post" action="/register" class="ajax">
+                <input type="text" name="emailId"/><br/>
+                <input type="submit" id="submit" value="${_('Submit')}"/>
+            </form>
+        </div>
       </div>
       <div id="center">
         <div class="center-header">

@@ -206,11 +206,22 @@ class AuthWrapper(object):
             if name == "signin":
                 return SigninForm()
 
+            if name == "register":
+                #inline import because of 'cyclic imports'.
+                #reorder the import to prevent cyclic imports
+                from social.register import RegisterResource
+                return RegisterResource()
+
             # Allow access to public/static files.
             # On production systems this should be handled by dedicated
             # static file servers - nginX maybe.
             elif name == "public":
                 return self.public
+
+        if request.method == "POST":
+            if name == "register":
+                from social.register import RegisterResource
+                return RegisterResource()
 
         request.postpath.insert(0, request.prepath.pop())
         return self._authorized(request)

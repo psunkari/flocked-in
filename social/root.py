@@ -7,13 +7,14 @@ from social.template        import render
 from social.profile         import ProfileResource
 from social.auth            import IAuthInfo
 from social.feed            import FeedResource
-
+from social.register import RegisterResource
 
 class RootResource(resource.Resource):
     def __init__(self):
         self._feed = FeedResource()
         self._ajax = AjaxResource()
         self._profile = ProfileResource()
+        self._register = RegisterResource()
 
     def getChildWithDefault(self, path, request):
         if path == "" or path == "feed":
@@ -22,6 +23,8 @@ class RootResource(resource.Resource):
             return self._profile
         elif path == "ajax":
             return self._ajax
+        elif path == "register":
+            return self._register
         else:
             return resource.NoResource("Page not found")
 
@@ -31,3 +34,4 @@ class AjaxResource(RootResource):
         self._feed = FeedResource(True)
         self._ajax = resource.NoResource("Page not found")
         self._profile = ProfileResource(True)
+        self._register = RegisterResource(True)

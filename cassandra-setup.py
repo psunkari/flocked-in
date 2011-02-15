@@ -265,6 +265,10 @@ def setup(client):
         yield client.system_add_column_family(feedType)
         log.msg("Created %s" %(columnFamily))
 
+    invitations = CfDef(KEYSPACE, "invitations", 'Standard', 'UTF8Type',
+                            None, "list of invitations")
+    yield client.system_add_column_family(invitations)
+
 
     reactor.stop()
 
