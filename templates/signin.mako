@@ -44,6 +44,10 @@
             </td>
           </tr>
           <tr>
+            <td>
+             <a href="/register/signup" >signup</a>
+             </td>
+          <tr>
             <td colspan="2" id="footer">
               ${_('&copy;2011 Synovel Software')}
               &nbsp;|&nbsp;

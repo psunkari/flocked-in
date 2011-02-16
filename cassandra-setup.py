@@ -24,12 +24,28 @@ unpack = lambda x: struct.unpack('!Q', x)[0]
 @defer.inlineCallbacks
 def setup(client):
     # Information reg the domain/company
-    sites = CfDef(KEYSPACE, 'sites', 'Super', 'UTF8Type', 'UTF8Type',
-                  'Information on domains, sites and enabled applications')
-    yield client.system_add_column_family(sites)
-    yield client.batch_insert('synovel.com', 'sites', {'SiteInfo': {
-                                'LicenseUsers': '20', 'CurrentUsers': '1'}})
-    log.msg("Created sites")
+    orgs = CfDef(KEYSPACE, 'orgs', 'Super', 'UTF8Type', 'UTF8Type',
+                  'Organization Information - name, avatar, admins...')
+    yield client.system_add_column_family(orgs)
+    yield client.batch_insert('synovel.com', 'orgs', {'SiteInfo': {
+                                'LicenseUsers': '20', 'CurrentUsers': '1'},
+                                            'meta':{'name': 'synovel.com'}
+                                            })
+    log.msg("Created orgs")
+
+
+    orgUsers = CfDef(KEYSPACE, 'orgUsers', 'Standard', 'UTF8Type', None,
+                        'organization-user map')
+    yield client.system_add_column_family(orgUsers)
+    yield client.insert('synovel.com', 'orgUsers', '', 'synovel.com/u/prasad')
+    yield client.insert('synovel.com', 'orgUsers', '', 'synovel.com/u/praveen')
+    yield client.insert('synovel.com', 'orgUsers', '', 'synovel.com/u/ashok')
+    log.msg("Created orgsUsers")
+
+    orgGroups = CfDef(KEYSPACE, "orgGroups", "Standard", 'UTF8Type', None,
+                        'organization-groups map')
+    yield client.system_add_column_family(orgGroups)
+    log.msg("Created orgsUsers")
 
     # User information
     users = CfDef(KEYSPACE, 'users', 'Super', 'UTF8Type', 'UTF8Type',
@@ -183,7 +199,7 @@ def setup(client):
                         'BytesType', 'Established user connections')
     yield client.system_add_column_family(connections)
     yield client.batch_insert("synovel.com/u/prasad", "connections", {
-                                "synovel.com/u/ashok":{"__default__":''}})
+                                "synovel.com/u/ashok":{"__default__":'', 'iiit':''}})
 
     yield client.batch_insert("synovel.com/u/ashok", "connections", {
                                 "synovel.com/u/prasad":{"__default__":''}})
