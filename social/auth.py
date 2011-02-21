@@ -258,15 +258,31 @@ class AuthWrapper(object):
 
         def errorDuringSignin(failure):
             failure = failure.trap(LoginFailed, Unauthorized)
+            if request.path[0:5] == "/ajax" and issubclass(failure, Unauthorized):
+                return resource.ErrorPage(401, http.RESPONSES[401], "You are not authorized to view this page")
+            elif request.path == "/signout":
+                return util.Redirect("/signin")
+
+            afterLogin = None
+            errorCode = None
+
+            rUrl = "/signin"
+            if request.path == "/signin":
+                afterLogin = utils.getRequestArg(request, "_r")
+            elif request.path != "/":
+                afterLogin = request.uri
 
             if issubclass(failure, LoginFailed):
-                return util.Redirect("/signin?_e=InvalidCredentials")
-            elif issubclass(failure, Unauthorized) and request.path[0:5] == "/ajax":
-                return resource.ErrorPage(401, http.RESPONSES[401], "You are not authorized to view this page")
-            elif request.path != "/signout" and request.path != "/":
-                return util.Redirect("/signin?_r=" + quote_plus(request.uri))
-            else:
-                return util.Redirect("/signin")
+                errorCode = "InvalidCredentials"
+
+            if afterLogin and errorCode:
+                rUrl = rUrl + "?_r=%s&_e=%s" % (afterLogin, errorCode)
+            elif afterLogin:
+                rUrl = rUrl + "?_r=%s" % (afterLogin)
+            elif errorCode:
+                rUrl = rUrl + "?_e=%s" % (errorCode)
+
+            return util.Redirect(rUrl)
         d.addErrback(errorDuringSignin)
 
         return util.DeferredResource(d)
