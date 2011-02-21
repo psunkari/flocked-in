@@ -89,10 +89,12 @@ class UserPasswordChecker():
     credentialInterfaces = [IUserPassword]
 
     def _authenticate(self, username, password):
-        d = Db.get_slice(username, "userAuth", ["passwordHash", "org", "user", "isAdmin"])
+        d = Db.get_slice(username, "userAuth",
+                         ["passwordHash", "org", "user", "isAdmin"])
         def checkPassword(result):
             cols = utils.columnsToDict(result)
-            if cols["passwordHash"] != password:
+            if not cols.has_key("passwordHash") or\
+                   cols["passwordHash"] != password:
                 raise LoginFailed()
             return cols
         def erred(error):
