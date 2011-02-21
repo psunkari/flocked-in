@@ -1,7 +1,9 @@
 #!/usr/bin/python
 
 import sys
-import struct
+import getopt
+import uuid
+import time
 
 from telephus.protocol import ManagedCassandraClientFactory
 from telephus.client import CassandraClient
@@ -9,7 +11,7 @@ from telephus.cassandra.ttypes import ColumnPath, ColumnParent, Column, SuperCol
 from twisted.internet import defer, reactor
 from twisted.python import log
 
-from social import Config
+from social import Config, utils
 
 
 HOST     = Config.get('Cassandra', 'Host')
@@ -17,41 +19,168 @@ PORT     = int(Config.get('Cassandra', 'Port'))
 KEYSPACE = Config.get('Cassandra', 'Keyspace')
 
 
-pack   = lambda x: struct.pack('!Q', x)
-unpack = lambda x: struct.unpack('!Q', x)[0]
-
-
 @defer.inlineCallbacks
-def setup(client):
-    # Information reg the domain/company
+def createColumnFamilies(client):
+    # Information about organizations. Includes meta data about the
+    # organization, list of admins and the logo.
     orgs = CfDef(KEYSPACE, 'orgs', 'Super', 'UTF8Type', 'UTF8Type',
                   'Organization Information - name, avatar, admins...')
     yield client.system_add_column_family(orgs)
-    yield client.batch_insert('synovel.com', 'orgs', {'SiteInfo': {
-                                'LicenseUsers': '20', 'CurrentUsers': '1'},
-                                            'meta':{'name': 'synovel.com'}
-                                            })
-    log.msg("Created orgs")
 
-
+    # List of users in the organization.
     orgUsers = CfDef(KEYSPACE, 'orgUsers', 'Standard', 'UTF8Type', None,
-                        'organization-user map')
+                        'List of users in an organization')
     yield client.system_add_column_family(orgUsers)
-    yield client.insert('synovel.com', 'orgUsers', '', 'synovel.com/u/prasad')
-    yield client.insert('synovel.com', 'orgUsers', '', 'synovel.com/u/praveen')
-    yield client.insert('synovel.com', 'orgUsers', '', 'synovel.com/u/ashok')
-    log.msg("Created orgsUsers")
 
+    # List of groups owned by the organization.  There will be other
+    # groups that are owned by various users in the organization.
     orgGroups = CfDef(KEYSPACE, "orgGroups", "Standard", 'UTF8Type', None,
-                        'organization-groups map')
+                        'List of groups owned by the organization')
     yield client.system_add_column_family(orgGroups)
-    log.msg("Created orgsUsers")
 
-    # User information
+
+    # Profile information for each user on the system.
     users = CfDef(KEYSPACE, 'users', 'Super', 'UTF8Type', 'UTF8Type',
-                  'User information - passwords, sessions and profile')
+                  'Information about the user - the user profile')
     yield client.system_add_column_family(users)
-    yield client.batch_insert('synovel.com/u/prasad', 'users', {
+
+    # Authentication information of the user.
+    # Key is the e-mail address - contains userKey, orgKey, password etc;
+    userAuth = CfDef(KEYSPACE, 'userAuth', 'Standard', 'UTF8Type', None,
+                     'Authentication information about the user')
+    yield client.system_add_column_family(userAuth)
+
+    # User sessions
+    sessions = CfDef(KEYSPACE, 'sessions', 'Super', 'BytesType', 'UTF8Type',
+                     'Session information for logged in users')
+    yield client.system_add_column_family(sessions)
+
+    # Invitations sent out by existing users
+    # Key is the e-mail of the recipient - contains inviteKey, sender's key etc;
+    invitations = CfDef(KEYSPACE, "invitations", 'Standard', 'UTF8Type', None,
+                        "List of invitations sent out by existing users")
+    yield client.system_add_column_family(invitations)
+
+
+    # Groups
+    groups = CfDef(KEYSPACE, 'groups', 'Super', 'BytesType', 'BytesType',
+                   'Groups of users')
+    yield client.system_add_column_family(groups)
+
+
+    # Connections between users
+    connections = CfDef(KEYSPACE, 'connections', 'Super', 'UTF8Type',
+                        'UTF8Type', 'Established user connections')
+    yield client.system_add_column_family(connections)
+
+    # Connections sorted by tags
+    connectionsByTag = CfDef(KEYSPACE, 'connectionsByTag', 'Super', 'UTF8Type',
+                             'UTF8Type', 'User connections by tag')
+    yield client.system_add_column_family(connectionsByTag)
+
+    # Connections that are yet to be accepted
+    pendingConnections = CfDef(KEYSPACE, "pendingConnections", "Standard",
+                        "UTF8Type", None, "Pending connections")
+    yield client.system_add_column_family(pendingConnections)
+
+    # List of users that a user is following
+    subscriptions = CfDef(KEYSPACE, 'subscriptions', 'Standard', 'UTF8Type',
+                          None, 'User subscriptons')
+    yield client.system_add_column_family(subscriptions)
+
+    # List of users that are following a user
+    followers = CfDef(KEYSPACE, 'followers', 'Standard', 'UTF8Type',
+                      None, 'Followers of a user')
+    yield client.system_add_column_family(followers)
+
+    # List of enterprise links
+    enterpriseLinks = CfDef(KEYSPACE, 'enterpriseLinks', 'Super', 'UTF8Type',
+                            'UTF8Type', 'Official connections amoung users')
+    yield client.system_add_column_family(enterpriseLinks)
+
+    # List of groups that a user is a member of
+    # groupKey => <subscribed>:<activityKey>
+    userGroups = CfDef(KEYSPACE, 'userGroups', 'Standard', 'UTF8Type', None,
+                       'List of groups that a user is a member of')
+    yield client.system_add_column_family(userGroups)
+
+    # List of members in a group
+    # userKey => <subscribed>:<activityKey>
+    groupMembers = CfDef(KEYSPACE, 'groupMembers', 'Standard', 'UTF8Type', None,
+                         'List of members in a group')
+    yield client.system_add_column_family(groupMembers)
+
+    # All items and responses to items
+    # Items include anything that can be shared, liked and commented upon.
+    #    => Everything other than those that have special column families.
+    items = CfDef(KEYSPACE, 'items', 'Super', 'UTF8Type', 'UTF8Type',
+                  'All the items - mails, statuses, links, events etc;')
+    yield client.system_add_column_family(items)
+
+    itemLikes = CfDef(KEYSPACE, 'itemLikes', 'Standard', 'UTF8Type', None,
+                      'List of likes per item')
+    yield client.system_add_column_family(itemLikes)
+
+    itemResponses = CfDef(KEYSPACE, 'itemResponses', 'Standard', 'TimeUUIDType',
+                          None, 'List of responses per item')
+    yield client.system_add_column_family(itemResponses)
+
+    # Index of all items by a given user
+    userItems = CfDef(KEYSPACE, 'userItems', 'Standard', 'TimeUUIDType', None,
+                      'All items by a given user')
+    yield client.system_add_column_family(userItems)
+
+    # Index of posts by type
+    for itemType in ['status', 'link', 'document']:
+        columnFamily = "userItems_" + str(itemType)
+        userItemsType = CfDef(KEYSPACE, columnFamily, 'Standard',
+                              'TimeUUIDType', None,
+                              '%s items posted by a given user'%(itemType))
+        yield client.system_add_column_family(userItemsType)
+
+    # Index of all posts accessible to a given user/group/organization
+    feed = CfDef(KEYSPACE, 'feed', 'Standard', 'TimeUUIDType', None,
+                 'A feed of all the items for user, group and organization')
+    yield client.system_add_column_family(feed)
+
+    # Index of feed by type
+    for itemType in ['status', 'link', 'document']:
+        columnFamily = "feed_" + str(itemType)
+        feedType = CfDef(KEYSPACE, columnFamily, 'Standard', 'TimeUUIDType',
+                         None, 'Feed of %s items'%(itemType))
+        yield client.system_add_column_family(feedType)
+
+    # Reverse map used for accessing a particular item in feed
+    feedReverseMap = CfDef(KEYSPACE, 'feedReverseMap', 'Standard', 'UTF8Type',
+                           None, 'Reverse map for accessing an item in feed')
+    yield client.system_add_column_family(feedReverseMap)
+
+
+@defer.inlineCallbacks
+def addSampleData(client):
+    # Create the organization
+    exampleKey = utils.getUniqueKey()
+    yield client.batch_insert(exampleKey, 'orgs', {
+                                'meta': {
+                                    'name': 'Example Software'
+                                },
+                                'domains': {
+                                    'synovel.com': '',
+                                    'example.org': ''
+                                }})
+
+    # List of users in the organization
+    prasadKey = utils.getUniqueKey()
+    praveenKey = utils.getUniqueKey()
+    ashokKey = utils.getUniqueKey()
+    yield client.batch_insert(exampleKey, 'orgUsers', {
+                                    prasadKey: '',
+                                    praveenKey: '',
+                                    ashokKey: ''
+                                })
+
+    # User profiles
+    yield client.batch_insert(prasadKey, 'users', {
                                 'basic': {
                                     'name': 'Prasad Sunkari',
                                     'jobTitle': 'Hacker',
@@ -97,7 +226,7 @@ def setup(client):
                                     'birthday': '19800817',
                                     'sex': 'M'
                                 }})
-    yield client.batch_insert('synovel.com/u/ashok', 'users', {
+    yield client.batch_insert(ashokKey, 'users', {
                                 'basic': {
                                     'name': 'Ashok Gudibandla',
                                     'jobTitle': 'Hacker',
@@ -139,7 +268,7 @@ def setup(client):
                                     'hometown': 'cities/in/guntur',
                                     'currentcity': 'cities/in/hyderabad'
                                 }})
-    yield client.batch_insert('synovel.com/u/praveen', 'users', {
+    yield client.batch_insert(praveenKey, 'users', {
                                 'basic': {
                                     'name': 'Praveen ',
                                     'jobTitle': 'Hacker',
@@ -157,11 +286,10 @@ def setup(client):
                                     '2008:IIIT Hyderabad': 'Graduation'
                                 },
                                 'work': {
-                                    ':201012:calendar server': '--',
-                                    '201011:200807:Symprod': 'process management system'
+                                    ':201012:calendar server': '',
                                 },
                                 'employers': {
-                                    '2010:2008:': 'EF',
+                                    '2010:2008:EF': 'Lots of exciting work there!',
                                 },
                                 'contact': {
                                     'mail': 'praveen@synovel.com',
@@ -179,126 +307,134 @@ def setup(client):
                                     'currentcity': 'cities/in/hyderabad'
                                 }})
 
-    log.msg("Created users")
-
-    # User authentication - passwords and sessions
-    userAuth = CfDef(KEYSPACE, 'userAuth', 'Standard', 'UTF8Type', None,
-                     'User authentication and authorizaton information')
-    yield client.system_add_column_family(userAuth)
-    yield client.batch_insert('synovel.com/u/prasad', 'userAuth', {
-                                'passwordHash': 'c246ad314ab52745b71bb00f4608c82a'})
-    yield client.batch_insert('synovel.com/u/ashok', 'userAuth', {
-                                'passwordHash': 'c246ad314ab52745b71bb00f4608c82a'})
-    yield client.batch_insert('synovel.com/u/praveen', 'userAuth', {
-                                'passwordHash': 'c246ad314ab52745b71bb00f4608c82a'})
-
-    log.msg("Created userAuth")
+    # User authentication
+    yield client.batch_insert('prasad@synovel.com', 'userAuth', {
+                                    'passwordHash': 'c246ad314ab52745b71bb00f4608c82a',
+                                    'org': exampleKey,
+                                    'user': prasadKey
+                                })
+    yield client.batch_insert('ashok@synovel.com', 'userAuth', {
+                                    'passwordHash': 'c246ad314ab52745b71bb00f4608c82a',
+                                    'org': exampleKey,
+                                    'user': ashokKey
+                                })
+    yield client.batch_insert('praveen@synovel.com', 'userAuth', {
+                                    'passwordHash': 'c246ad314ab52745b71bb00f4608c82a',
+                                    'org': exampleKey,
+                                    'user': praveenKey
+                                })
 
     # Connections between users
-    connections = CfDef(KEYSPACE, 'connections', 'Super', 'BytesType',
-                        'BytesType', 'Established user connections')
-    yield client.system_add_column_family(connections)
-    yield client.batch_insert("synovel.com/u/prasad", "connections", {
-                                "synovel.com/u/ashok":{"__default__":'', 'iiit':''}})
+    prasadToAshokKey = utils.getUniqueKey()
+    ashokToPrasadKey = utils.getUniqueKey()
+    yield client.batch_insert(prasadKey, "connections", {
+                                    ashokKey: {
+                                        "__default__": prasadToAshokKey
+                                    }})
+    yield client.batch_insert(ashokKey, "connections", {
+                                    prasadKey: {
+                                        "__default__": ashokToPrasadKey
+                                    }})
 
-    yield client.batch_insert("synovel.com/u/ashok", "connections", {
-                                "synovel.com/u/prasad":{"__default__":''}})
+    # Create activity items and insert into feeds and userItems
+    timeUUID = uuid.uuid1().bytes
+    timestamp = str(int(time.time()))
+    yield client.batch_insert(prasadToAshokKey, "items", {
+                                    "meta": {
+                                        "acl": "friends",
+                                        "owner": prasadKey,
+                                        "type": "activity",
+                                        "subtype": "connection",
+                                        "timestamp": timestamp,
+                                        "uuid": timeUUID
+                                    },
+                                    "data": {
+                                        "target": ashokKey
+                                    }})
+    yield client.insert(prasadKey, "userItems", prasadToAshokKey, timeUUID)
+    yield client.insert(prasadKey, "feed", prasadToAshokKey, timeUUID)
 
-    connectionsByTag = CfDef(KEYSPACE, 'connectionsByTag', 'Super', 'BytesType',
-                             'BytesType', 'User connections by type')
-    yield client.system_add_column_family(connectionsByTag)
+    timeUUID = uuid.uuid1().bytes
+    yield client.batch_insert(ashokToPrasadKey, "items", {
+                                    "meta": {
+                                        "acl": "friends",
+                                        "owner": ashokKey,
+                                        "type": "activity",
+                                        "subType": "connection",
+                                        "timestamp": timestamp,
+                                        "uuid": timeUUID
+                                    },
+                                    "data": {
+                                        "target": prasadKey
+                                    }})
+    yield client.insert(ashokKey, "userItems", ashokToPrasadKey, timeUUID)
+    yield client.insert(ashokKey, "feed", ashokToPrasadKey, timeUUID)
 
-    pendingConnections = CfDef(KEYSPACE, "pendingConnections", "Standard",
-                        "UTF8Type", None, "Pending Conncetion")
-    yield client.system_add_column_family(pendingConnections)
+    # Subscriptions
+    yield client.insert(praveenKey, "subscriptions", "", prasadKey)
+    yield client.insert(prasadKey, "followers", "", praveenKey)
 
-
-    log.msg("Created connections")
-
-    # Subscriptions to changes by other people
-    subscriptions = CfDef(KEYSPACE, 'subscriptions', 'Standard', 'UTF8Type',
-                          None, 'User subscriptons')
-    yield client.system_add_column_family(subscriptions)
-
-    # Followers of a user
-    followers = CfDef(KEYSPACE, 'followers', 'Standard', 'UTF8Type',
-                      None, 'Followers of a user')
-    yield client.system_add_column_family(followers)
-    yield client.insert("synovel.com/u/praveen", "subscriptions", "", "synovel.com/u/prasad")
-    yield client.insert("synovel.com/u/prasad", "followers", "", "synovel.com/u/praveen")
-
-    log.msg("Created subscriptions and followers")
-
-    # Groups
-    groups = CfDef(KEYSPACE, 'groups', 'Super', 'BytesType', 'BytesType',
-                   'Groups of users')
-    yield client.system_add_column_family(groups)
-    log.msg("Created groups")
-
-    # List of groups that a user is following
-    userGroups = CfDef(KEYSPACE, 'userGroups', 'Standard', 'BytesType', None,
-                       'List of groups that a user is a member of')
-    yield client.system_add_column_family(userGroups)
-
-    # All items and responses to items
-    # Items include anything that can be shared, liked and commented upon.
-    # => Everything other than those that have special column families.
-    items = CfDef(KEYSPACE, 'items', 'Super', 'BytesType', 'BytesType',
-                  'All the items - mails, statuses, links, events etc;')
-    yield client.system_add_column_family(items)
-    log.msg("Created items")
-
-    responses = CfDef(KEYSPACE, 'responses', "Standard", 'TimeUUIDType', None,
-                    'index of all responses')
-    yield client.system_add_column_family(responses)
-    # Index of all posts by a given user
-    userItems = CfDef(KEYSPACE, 'userItems', 'Standard', 'TimeUUIDType', None,
-                      'All items posted by a given user')
-    yield client.system_add_column_family(userItems)
-    log.msg("Created userposts")
-
-    # Index of posts by type
-    for itemType in ['status', 'link', 'document']:
-        columnFamily = "userItems_" + str(itemType)
-        userItemsType = CfDef(KEYSPACE, columnFamily, 'Standard',
-                            'TimeUUIDType', None,
-                            '%s items posted by a given user'%(itemType))
-        yield client.system_add_column_family(userItemsType)
-        log.msg("Created %s" %(columnFamily))
-
-    # Index of all posts accessible to a given user/domain/company
-    feed = CfDef(KEYSPACE, 'feed', 'Standard', 'TimeUUIDType', None,
-                 'A feed of all the items - both user and company')
-    yield client.system_add_column_family(feed)
-    log.msg("Created feed")
-
-    #Index of feed by type
-    for itemType in ['status', 'link', 'document']:
-        columnFamily = "feed_" + str(itemType)
-        feedType = CfDef(KEYSPACE, columnFamily, 'Standard',
-                            'TimeUUIDType', None,
-                            'feed of %s items - both user and company'%(itemType))
-        yield client.system_add_column_family(feedType)
-        log.msg("Created %s" %(columnFamily))
-
-    feedReverseMap = CfDef(KEYSPACE, 'feedReverseMap', 'Standard', 'UTF8Type', None,
-                            'feed reverse map')
-    yield client.system_add_column_family(feedReverseMap)
-    log.msg("Created feedReverseMap")
-
-    invitations = CfDef(KEYSPACE, "invitations", 'Standard', 'UTF8Type',
-                            None, "list of invitations")
-    yield client.system_add_column_family(invitations)
+    # Create activity items and insert subscriptions into feeds and userItems
+    praveenFollowingPrasadKey = utils.getUniqueKey()
+    timeUUID = uuid.uuid1().bytes
+    timestamp = str(int(time.time()))
+    yield client.batch_insert(praveenFollowingPrasadKey, "items", {
+                                    "meta": {
+                                        "acl": "friends",
+                                        "owner": praveenKey,
+                                        "type": "activity",
+                                        "subType": "following",
+                                        "timestamp": timestamp,
+                                        "uuid": timeUUID
+                                    },
+                                    "data": {
+                                        "target": prasadKey
+                                    }})
+    yield client.insert(praveenKey, "userItems", praveenFollowingPrasadKey, timeUUID)
+    yield client.insert(praveenKey, "feed", praveenFollowingPrasadKey, timeUUID)
 
 
-    reactor.stop()
+@defer.inlineCallbacks
+def truncateColumnFamilies(client):
+    for cf in ["orgs", "orgUsers", "orgGroups", "users", "userAuth",\
+               "sessions", "invitations", "groups", "connections",\
+               "connectionsByTag", "pendingConnections", "subscriptions",\
+               "followers", "enterpriseLinks", "userGroups", "groupMembers",\
+               "items", "itemLikes", "itemResponses", "userItems", "feed",\
+               "feedReverseMap", "userItems_status", "userItems_link",
+               "userItems_document", "feed_status", "feed_link", "feed_document"]:
+        yield client.truncate(cf)
 
 
 if __name__ == '__main__':
+    def usage():
+        print("Usage: cassandra-setup.py <-c|-d|-t>")
+
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "cdt:")
+        if len(opts) != 1:
+            raise Exception
+    except:
+        usage()
+        sys.exit(2)
+
     log.startLogging(sys.stdout)
 
     f = ManagedCassandraClientFactory(KEYSPACE)
     c = CassandraClient(f)
-    setup(c)
-    reactor.connectTCP(HOST, PORT, f)
-    reactor.run()
+
+    deferreds = [];
+    for (opt, val) in opts:
+        if opt == "-c":
+            deferreds.append(createColumnFamilies(c))
+        elif opt == "-d":
+            deferreds.append(addSampleData(c))
+        elif opt == "-t" and val == "yes-remove-all-the-data":
+            deferreds.append(truncateColumnFamilies(c))
+
+    if len(deferreds) > 0:
+        d = defer.DeferredList(deferreds)
+        d.addBoth(lambda x: reactor.stop())
+
+        reactor.connectTCP(HOST, PORT, f)
+        reactor.run()

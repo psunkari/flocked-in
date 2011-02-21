@@ -44,7 +44,7 @@ def getItems(userKey, itemKey = None, count=100):
     friends = yield utils.getFriends(userKey, count=INFINITY)
     subscriptions = yield utils.getSubscriptions(userKey, count= INFINITY)
 
-    cols = yield Db.multiget_slice(feedItemsKeys, "responses", count=INFINITY)
+    cols = yield Db.multiget_slice(feedItemsKeys, "itemResponses", count=INFINITY)
     responseMap = utils.multiColumnsToDict(cols, ordered=True)
     responseKeys = []
     for itemKey in responseMap:
@@ -255,7 +255,7 @@ class FeedResource(base.BaseResource):
                 yield Db.insert(key, "feedReverseMap", timeuuid, itemKey)
 
         if parent:
-            yield Db.insert(parent, "responses", itemKey, uuid.uuid1().bytes)
+            yield Db.insert(parent, "itemResponses", itemKey, uuid.uuid1().bytes)
             args ={"item":(comment, url, username, acl, itemKey, parent)}
             yield renderScriptBlock(request, "feed.mako", "updateComments", landing,
                                     "#%s_comment"%(parent), "append", **args)

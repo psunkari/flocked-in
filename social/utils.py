@@ -61,26 +61,22 @@ def getRequestArg(request, arg):
 
 @defer.inlineCallbacks
 def getValidUserKey(request, arg):
-    encodedKey = getRequestArg(request, arg)
-    try:
-        userKey = decodeKey(encodedKey)
-        col = yield Db.get(userKey, "userAuth", "passwordHash")
-        defer.returnValue(userKey)
-    except TypeError:
+    userKey = getRequestArg(request, arg)
+    if not userKey:
         raise errors.MissingParam()
+
+    try:
+        col = yield Db.get(userKey, "users", "name", "basic")
+        defer.returnValue(userKey)
     except Exception, e:
         log.err(e)
         raise errors.InvalidUser()
 
 
+# TODO
 def areFriendlyDomains(one, two):
-    domainOne = one.split("/", 1)[0]
-    domainTwo = two.split("/", 1)[0]
+    return True
 
-    if domainOne != domainTwo:
-        return False
-    else:
-        return True
 
 def createACL(request):
     return None
@@ -93,10 +89,19 @@ def getRandomKey(prefix):
     return sha.hexdigest()
 
 
+# XXX: We need something that can guarantee unique keys over trillion records.
+def getUniqueKey():
+    u = uuid.uuid1()
+    return base64.urlsafe_b64encode(u.bytes)[:-2]
+
+
+# Currently not being used.
+# Will be used if we choose to have raw bytes as keys in place of base64
 def encodeKey(key):
     return "xX" + base64.b64encode(key).strip('=')
 
-
+# Currently not being used.
+# Will be used if we choose to have raw bytes as keys in place of base64
 def decodeKey(key):
     if not key.startswith("xX"):
         return key

@@ -120,11 +120,7 @@ class ProfileResource(base.BaseResource):
         (appchange, script, args) = self._getBasicArgs(request)
 
         myKey = args["myKey"]
-        encodedUserKey = utils.getRequestArg(request, "id")
-        if not encodedUserKey:
-            raise errors.MissingParam()
-        else:
-            userKey = utils.decodeKey(encodedUserKey)
+        userKey = utils.getRequestArg(request, "id") or myKey
 
         cols = yield Db.multiget_slice([myKey, userKey], "users")
         args["me"] = utils.supercolumnsToDict(cols[myKey])
@@ -136,7 +132,6 @@ class ProfileResource(base.BaseResource):
         detail = utils.getRequestArg(request, "dt") or "notes"
         args["detail"] = detail
         args["userKey"] = userKey
-        args["encodedUserKey"] = encodedUserKey
 
         # When scripts are enabled, updates are sent to the page as
         # and when we get the required data from the database.

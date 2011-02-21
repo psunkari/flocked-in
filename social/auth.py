@@ -9,16 +9,17 @@ from twisted.web                import resource, util, http, server, static
 from twisted.internet           import defer, threads, reactor
 from twisted.python             import log, components
 
-from social                     import Config, Db
+from social                     import Config, Db, utils
 from social.template            import render
-from social.utils               import md5, toUserKey
 
 #
 # IAuthInfo: Interface with which data is stored the session.
 #            This is temporary and will actually move to memcached
 #
 class IAuthInfo(Interface):
-    username = Attribute("Username of the logged in user")
+    username = Attribute("User key")
+    organization = Attribute("Key of the user's organization")
+    isAdmin = Attribute("Flag to indicate if the user is an administrator")
 
 
 class AuthInfo(components.Adapter):
@@ -80,20 +81,20 @@ class IUserPassword(ICredentials):
 class UserPassword(object):
     implements(IUserPassword)
     def __init__(self, username, password, request):
-        self.username = toUserKey(username)
-        self.password = md5(password)
+        self.username = username
+        self.password = utils.md5(password)
         self.request  = request
 
 class UserPasswordChecker():
     credentialInterfaces = [IUserPassword]
 
     def _authenticate(self, username, password):
-        d = Db.get(username, "userAuth", "passwordHash")
+        d = Db.get_slice(username, "userAuth", ["passwordHash", "org", "user", "isAdmin"])
         def checkPassword(result):
-            column = result.column;
-            if column.value != password:
+            cols = utils.columnsToDict(result)
+            if cols["passwordHash"] != password:
                 raise LoginFailed()
-            return username
+            return cols
         def erred(error):
             log.err(error)
             raise Unauthorized()
@@ -102,10 +103,12 @@ class UserPasswordChecker():
 
     def requestAvatarId(self, cred):
         d = self._authenticate(cred.username, cred.password)
-        def setCookie(username):
+        def setCookie(auth):
             authinfo = cred.request.getSession(IAuthInfo)
-            authinfo.username = cred.username
-            return cred.username
+            authinfo.username = auth["user"]
+            authinfo.organization = auth["org"] if auth.has_key("org") else None
+            authinfo.isAdmin = auth["isAdmin"] if auth.has_key("isAdmin") else False
+            return authinfo.username
         d.addCallback(setCookie)
 
         def addRedirectURL(username):
