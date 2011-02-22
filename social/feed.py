@@ -121,7 +121,9 @@ class FeedResource(base.BaseResource):
             yield renderScriptBlock(request, "feed.mako", "share_block",
                                     landing, "#share-block", "set", **args)
             yield self._renderShareBlock(request, "status")
-            args["comments"]= yield getItems(myKey)
+
+        args["comments"] = yield getItems(myKey)
+        if script:
             yield renderScriptBlock(request, "feed.mako", "feed", landing,
                                     "#user-feed", "set", **args)
 
