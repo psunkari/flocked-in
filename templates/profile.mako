@@ -42,7 +42,7 @@
         </div>
       </div>
       <div id="center">
-        <div id="summary" class="center-header">
+        <div id="profile-summary" class="center-header">
           %if not script:
             ${self.summary()}
           %endif

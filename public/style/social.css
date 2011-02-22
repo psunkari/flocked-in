@@ -235,7 +235,6 @@ a.ajax {
     background-color: #E8EEFA;
     padding: 15px;
     border-bottom: 1px solid #C3D9FF;
-    margin-bottom: -21px;
 }
 
 
@@ -251,6 +250,9 @@ a.ajax {
     float: right;
 }
 
+#profile-summary {
+    margin-bottom: -21px;
+}
 .summary-item {
     color: gray;
     padding: 0 8px 0 0;
