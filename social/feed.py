@@ -55,6 +55,7 @@ def getItems(userKey, itemKey = None, count=100):
 
     posters = [itemsMap[itemKey]["meta"]["owner"] for itemKey in itemsMap]
     posters.extend([responseDetails[itemKey]["meta"]["owner"] for itemKey in responseDetails])
+    posters.extend([userKey])
     #TODO: get profile pic info also.
     cols = yield Db.multiget_slice(posters, "users", super_column='basic',
                                         count=INFINITY)
@@ -65,7 +66,12 @@ def getItems(userKey, itemKey = None, count=100):
         meta = itemsMap[itemKey]["meta"]
         acl = meta["acl"]
         owner = meta["owner"]
-        if utils.checkAcl(userKey, acl, owner, friends, subscriptions):
+        userCompKey = posterInfo[userKey]["org"]
+        ownerCompKey = posterInfo[owner]["org"]
+
+        if meta.get("type", None) in ["status", "link", "document"] \
+            and utils.checkAcl(userKey, acl, owner, friends,
+                                subscriptions, userCompKey, ownerCompKey):
             items = []
             comment = meta["comment"]
             url = meta.get("url", None)
@@ -86,7 +92,6 @@ def getItems(userKey, itemKey = None, count=100):
                 items.append([comment, url, name, responseId, acl,
                                 liked_text, unlike])
             displayItems.append(items)
-
     defer.returnValue(displayItems)
 
 
@@ -220,6 +225,8 @@ class FeedResource(base.BaseResource):
         url = utils.getRequestArg(request, "url")
         if typ == "link":
             meta["url"] =  url
+        if typ:
+            meta["type"] = typ
 
         acl = utils.getRequestArg(request, "acl")
         meta["acl"] = acl
@@ -227,7 +234,7 @@ class FeedResource(base.BaseResource):
 
         parentUserKey = utils.getRequestArg(request, "parentId")
 
-        itemKey = utils.getRandomKey(userKey)
+        itemKey = utils.getUniqueKey()
         timeuuid = uuid.uuid1().bytes
         yield Db.batch_insert(itemKey, "items", {'meta': meta})
         yield Db.insert(userKey, "userItems", itemKey, timeuuid)
