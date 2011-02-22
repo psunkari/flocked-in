@@ -186,6 +186,7 @@ def addSampleData(client):
                                     'jobTitle': 'Hacker',
                                     'location': 'synovel.com/location/hyderabad',
                                     'desc': 'Just another Tom, Dick and Harry',
+                                    'org': exampleKey
                                 },
                                 'expertise': {
                                     'Open Source': '',
@@ -231,7 +232,8 @@ def addSampleData(client):
                                     'name': 'Ashok Gudibandla',
                                     'jobTitle': 'Hacker',
                                     'location': 'synovel.com/location/hyderabad',
-                                    'desc': 'Yet another Tom, Dick and Harry'
+                                    'desc': 'Yet another Tom, Dick and Harry',
+                                    'org': exampleKey
                                 },
                                 'expertise': {
                                     'Sales': '',
@@ -273,7 +275,8 @@ def addSampleData(client):
                                     'name': 'Praveen ',
                                     'jobTitle': 'Hacker',
                                     'location': 'synovel.com/location/hyderabad',
-                                    'desc': 'Yet another Tom, Dick and Harry'
+                                    'desc': 'Yet another Tom, Dick and Harry',
+                                    'org': exampleKey
                                 },
                                 'expertise': {
                                     'Operations': ''

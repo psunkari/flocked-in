@@ -164,11 +164,15 @@ def expandAcl(userKey, acl, userKey2=None):
         keys = keys.union(set([companyKey]))
     defer.returnValue(keys)
 
-def checkAcl(userKey, acl, owner, friends=None, subscriptions=None):
+def checkAcl(userKey, acl, owner, friends=None, subscriptions=None,
+            userCompKey=None, ownerCompKey=None):
 
     if acl == "public":
         return True
     if acl == "company":
-        return getCompanyKey(userKey) == getCompanyKey(owner)
+        return (ownerCompKey and userCompKey) and ownerCompKey == userCompKey
     if acl in ["friends"]:
-        return owner in friends if friends else False
+        if userKey == owner:
+            return True
+        else:
+            return owner in friends if friends else False
