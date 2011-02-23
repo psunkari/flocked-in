@@ -163,7 +163,7 @@ class ProfileResource(base.BaseResource):
         newId = (request.getCookie('_cu') != userKey or appchange)
         if script and newId:
             yield renderScriptBlock(request, "profile.mako", "summary",
-                                    landing, "#summary", "set", **args)
+                                    landing, "#profile-summary", "set", **args)
             yield renderScriptBlock(request, "profile.mako", "user_subactions",
                                     landing, "#user-subactions", "set", **args)
 
