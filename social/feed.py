@@ -12,8 +12,83 @@ from social.template    import render, renderDef, renderScriptBlock
 from social.auth        import IAuthInfo
 from social.constants import INFINITY
 
+
 @defer.inlineCallbacks
-def getItems(userKey, itemKey = None, count=100):
+def deleteFromFeed(userKey, itemKey, parentKey, itemType):
+    cols = yield Db.get_slice(userKey,
+                              "feedItems",
+                              super_column=parentKey,
+                              reverse=True)
+    cols = utils.columnsToDict(cols)
+    for tuuid, val in cols.items():
+        if val.split(':')[2] == itemKey:
+            yield Db.remove(userKey, "feedItems", tuuid, parentKey)
+            yield Db.remove(userKey, "feed", tuuid)
+            yield Db.remove(userKey, "feed_"+itemType, tuuid)
+            break
+
+@defer.inlineCallbacks
+def deleteFromOthersFeed(userKey, itemKey,
+                         parentKey, itemType,
+                         acl, parentUserKey):
+
+    others = yield utils.expandAcl(userKey, acl, parentUserKey)
+    for key in others:
+        yield deleteFromFeed(key, itemKey, parentKey, itemType)
+
+@defer.inlineCallbacks
+def pushToOthersFeed(userKey, timeuuid, itemKey,
+                     parentKey, acl, responseType,
+                     itemType, parentUserKey):
+
+    others = yield utils.expandAcl(userKey, acl, parentUserKey)
+    for key in others:
+        yield pushToFeed(key, timeuuid,
+                         itemKey, parentKey,
+                         responseType, itemType)
+
+@defer.inlineCallbacks
+def pushToFeed(userKey, timeuuid, itemKey, parentKey, responseType, itemType):
+
+    # Caveat: assume itemKey as parentKey if parentKey is None
+    parentKey = itemKey if not parentKey else parentKey
+    yield Db.insert(userKey, "feed", parentKey, timeuuid)
+    yield Db.insert(userKey, "feed_"+itemType, parentKey, timeuuid)
+    yield  updateFeedResponses(userKey, parentKey,
+                               itemKey, timeuuid,
+                               itemType, responseType)
+
+
+@defer.inlineCallbacks
+def updateFeedResponses(userKey, parentKey,
+                        itemKey, timeuuid,
+                        itemType, responseType):
+
+    cols = yield Db.get_slice(userKey,
+                              "feedItems",
+                              super_column = parentKey,
+                              reverse=True)
+    cols = utils.columnsToDict(cols, ordered=True)
+    feedItemValue = ":".join([responseType, userKey, itemKey])
+    if len(cols) >= 6:
+        tmp, oldest = {}, None
+        for tuuid, val in cols.items():
+            tmp.setdefault(val.split(':')[0], []).append(tuuid)
+            oldest = tuuid
+        if len(tmp.get(responseType, [])) == 3:
+            oldest = tmp[responseType][2]
+        else:
+            # remove the oldest column (it can be any responseType!))
+            pass
+
+        yield Db.remove(userKey, "feedItems", oldest, parentKey)
+        yield Db.remove(userKey, "feed", oldest)
+        yield Db.remove(userKey, "feed_"+itemType, oldest)
+    yield Db.batch_insert(userKey, "feedItems", {parentKey:{timeuuid: feedItemValue}})
+
+
+@defer.inlineCallbacks
+def getItems(userKey, itemKey = None, count=10, start=''):
     def _generate_liked_text(userKey, likedBy):
         if likedBy:
             if userKey in likedBy and len(likedBy) == 1:
@@ -35,16 +110,22 @@ def getItems(userKey, itemKey = None, count=100):
     """
 
     #TODO: get latest feed items first
-    feedItems = yield Db.get_slice(userKey, "feed", count=count, reverse=True)
-    feedItems = utils.columnsToDict(feedItems, ordered=True)
-    feedItemsKeys = [itemKey] if itemKey else feedItems.values()
-    items = yield Db.multiget_slice(feedItemsKeys, "items", count=count)
+    if not itemKey:
+        feedItems = yield Db.get_slice(userKey, "feed", count=count,
+                                        start=start, reverse=True)
+        feedItems = utils.columnsToDict(feedItems, ordered=True)
+
+        #feedValues = [feedItems[supercolumn].values() for supercolumn in feedItems]
+        #feedItemKeys = [x[0].split(":")[2] for x in feedValues]
+    else:
+        feedItemKeys = [itemKey]
+    items = yield Db.multiget_slice(feedItemKeys, "items", count=count)
     itemsMap = utils.multiSuperColumnsToDict(items, ordered = True)
 
     friends = yield utils.getFriends(userKey, count=INFINITY)
     subscriptions = yield utils.getSubscriptions(userKey, count= INFINITY)
 
-    cols = yield Db.multiget_slice(feedItemsKeys, "itemResponses", count=INFINITY)
+    cols = yield Db.multiget_slice(feedItemKeys, "itemResponses", count=INFINITY)
     responseMap = utils.multiColumnsToDict(cols, ordered=True)
     responseKeys = []
     for itemKey in responseMap:
@@ -52,8 +133,11 @@ def getItems(userKey, itemKey = None, count=100):
 
     responses = yield Db.multiget_slice(responseKeys, "items", count=count)
     responseDetails  = utils.multiSuperColumnsToDict(responses, ordered=True)
+    posters = []
+    for itemKey in itemsMap:
+        posters.append(itemsMap[itemKey]["meta"]["owner"])
 
-    posters = [itemsMap[itemKey]["meta"]["owner"] for itemKey in itemsMap]
+    #posters = [itemsMap[itemKey]["meta"]["owner"] for itemKey in itemsMap]
     posters.extend([responseDetails[itemKey]["meta"]["owner"] for itemKey in responseDetails])
     posters.extend([userKey])
     #TODO: get profile pic info also.
@@ -62,7 +146,7 @@ def getItems(userKey, itemKey = None, count=100):
     posterInfo = utils.multiColumnsToDict(cols)
 
     displayItems = []
-    for itemKey in feedItemsKeys:
+    for itemKey in feedItemKeys:
         meta = itemsMap[itemKey]["meta"]
         acl = meta["acl"]
         owner = meta["owner"]
@@ -76,7 +160,9 @@ def getItems(userKey, itemKey = None, count=100):
             comment = meta["comment"]
             url = meta.get("url", None)
             unlike = False
-            likedBy = itemsMap[itemKey].get("likes", {}).keys()
+            cols = yield Db.get_slice(itemKey, "itemLikes")
+            cols = utils.columnsToDict(cols)
+            likedBy = cols.keys()
             liked_text, unlike = _generate_liked_text(userKey, likedBy)
             items.append([comment, url, posterInfo[owner]["name"], itemKey,
                             acl, owner, liked_text, unlike])
@@ -86,7 +172,10 @@ def getItems(userKey, itemKey = None, count=100):
                 url = responseDetails[responseId]["meta"].get("url", None)
                 name = posterInfo[owner]["name"]
                 acl = responseDetails[responseId]["meta"]["acl"]
-                likedBy = responseDetails[responseId].get("likes", {}).keys()
+
+                cols = yield Db.get_slice(responseId, "itemLikes")
+                cols = utils.columnsToDict(cols)
+                likedBy = cols.keys()
 
                 liked_text, unlike = _generate_liked_text(userKey, likedBy)
                 items.append([comment, url, name, responseId, acl,
@@ -179,28 +268,84 @@ class FeedResource(base.BaseResource):
     def _setLike(self, request):
         itemKey = utils.getRequestArg(request, "itemKey")
         parent =  utils.getRequestArg(request, "parent")
+        parentUserKey = utils.getRequestArg(request, "parentId")
         userKey = request.getSession(IAuthInfo).username
-        yield Db.insert(itemKey, "items", '', userKey, "likes")
+        typ = utils.getRequestArg(request, "type")
+        acl = utils.getRequestArg(request, "acl")
+        if not (typ and acl and parentUserKey):
+            cols = yield Db.get_slice(parent, "items",
+                                        ["type", "acl", "owner"],
+                                        super_column = "meta")
+            cols = utils.columnsToDict(cols)
+            typ = cols["type"]
+            acl = cols["acl"]
+            parentUserKey = cols["owner"]
+        timeuuid = uuid.uuid1().bytes
+        responseType = "L"
+        # 1. add user to Likes list
+        yield Db.insert(itemKey, "itemLikes", timeuuid, userKey)
+
+        # 2. add users to the followers list of parent item
+        yield Db.batch_insert(parent, "items", {"followers":{userKey:''}})
+
+        # 3. update user's feed, feedItems, feed_*
+        yield pushToFeed(userKey, timeuuid, itemKey, parent, responseType, typ)
+
+        # 4. update feed, feedItems, feed_* of user's followers/friends (based on acl)
+        yield pushToOthersFeed(userKey, timeuuid, itemKey,
+                               parent, acl, responseType,
+                               typ, parentUserKey)
+
+        # TODO: broadcast to followers of the items
+
+        # 5. render parent item
         items = yield getItems(userKey, parent)
         args ={"comments":items}
         landing = not self._ajax
         yield  renderScriptBlock(request, "feed.mako", "feed", landing,
                             "#%s"%(parent), "set", **args)
+
     @defer.inlineCallbacks
     def _setUnlike(self, request):
         itemKey = utils.getRequestArg(request, "itemKey")
         parent =  utils.getRequestArg(request, "parent")
+        parentUserKey = utils.getRequestArg(request, "parentId")
         userKey = request.getSession(IAuthInfo).username
-        d1 = yield Db.remove(itemKey, "items", userKey, "likes")
+
+        typ = utils.getRequestArg(request, "type")
+        acl = utils.getRequestArg(request, "acl")
+
+        if not (typ and acl and parentUserKey):
+            cols = yield Db.get_slice(parent, "items",
+                                      ["type", "acl", "owner"],
+                                      super_column = "meta")
+            cols = utils.columnsToDict(cols)
+            typ = cols["type"]
+            parentUserKey = cols["owner"]
+            acl = cols["acl"]
+        # 1. remove the user from likes list.
+        yield Db.remove(itemKey, "itemLikes", userKey)
+
+        # 2. Don't remove the user from followers list
+        #    (use can also become follower by responding to item,
+        #        so user can't be removed from followers list)
+
+        # 3. delete from user's feed, feedItems, feed_*
+        yield deleteFromFeed(userKey, itemKey, parent, typ)
+
+        # 4. delete from feed, feedItems, feed_* of user's friends/followers
+        yield deleteFromOthersFeed(userKey, itemKey, parent,
+                                   typ, acl, parentUserKey)
+        # 5. render parent item
         items = yield getItems(userKey, parent)
         args ={"comments":items}
         landing = not self._ajax
         yield  renderScriptBlock(request, "feed.mako", "feed", landing,
                             "#%s"%(parent), "set", **args)
 
-
     @defer.inlineCallbacks
     def _share(self, request, typ):
+
         meta = {}
         target = utils.getRequestArg(request, "target")
         if target:
@@ -219,6 +364,7 @@ class FeedResource(base.BaseResource):
             meta["comment"] = comment
 
         parent = utils.getRequestArg(request, "parent")
+        parent = parent if parent else ''
         if parent:
             meta["parent"] = parent
 
@@ -233,36 +379,62 @@ class FeedResource(base.BaseResource):
         landing = not self._ajax
 
         parentUserKey = utils.getRequestArg(request, "parentId")
-
+        meta["count"] = '0'
+        meta["responses"] = ''
         itemKey = utils.getUniqueKey()
         timeuuid = uuid.uuid1().bytes
-        yield Db.batch_insert(itemKey, "items", {'meta': meta})
-        yield Db.insert(userKey, "userItems", itemKey, timeuuid)
-        yield Db.insert(userKey, "userItems_" + typ, itemKey, timeuuid)
-        if not parent:
-            yield Db.insert(userKey, "feed", itemKey, timeuuid)
-            yield Db.insert(userKey, "feed_"+typ, itemKey, timeuuid)
-            yield Db.insert(userKey, "feedReverseMap", timeuuid, itemKey)
+        meta["uuid"] = timeuuid
+        followers = {userKey:''}
+        responseType = "C" if parent else "S"
+        feedItemValue = ":".join([responseType, userKey, itemKey])
 
+        # 1. add item to "items"
+        yield Db.batch_insert(itemKey, "items", {'meta': meta,
+                                                 'followers':followers})
 
+        # 2. update user's feed, feedItems, feed_typ
+        yield pushToFeed(userKey, timeuuid, itemKey, parent, responseType, typ)
 
-        notifyUsers = yield utils.expandAcl(userKey, acl,  userKey2=parentUserKey)
-        for key in notifyUsers:
-            if parent:
-                # if (key, parentId) is already in the feed dont insert it again.
-                try:
-                    cols = yield Db.get(key, "feedReverseMap", parent)
-                except ttypes.NotFoundException:
-                    yield Db.insert(key, "feed", parent, timeuuid)
-                    yield Db.insert(key, "feed_" + typ, parent, timeuuid)
-                    yield Db.insert(key, "feedReverseMap", timeuuid, parent)
-            else:
-                yield Db.insert(key, "feed", itemKey, timeuuid)
-                yield Db.insert(key, "feed_" + typ, itemKey, timeuuid)
-                yield Db.insert(key, "feedReverseMap", timeuuid, itemKey)
+        # 3. update user's followers/friends feed, feedItems, feed_typ
+        yield pushToOthersFeed(userKey, timeuuid, itemKey, parent, acl,
+                                responseType, typ, parentUserKey)
 
         if parent:
-            yield Db.insert(parent, "itemResponses", itemKey, uuid.uuid1().bytes)
+            #4.1.1 update count, followers, reponses of parent item
+            cols = yield Db.get_slice(parent, "items",
+                                        ['count', 'responses', 'owner'],
+                                        super_column='meta')
+            cols = utils.columnsToDict(cols)
+            count = int(cols["count"])
+            responses = cols["responses"]
+            parentOwner = cols["owner"]
+            delimiter = ',' if responses else ''
+            responses += delimiter + itemKey
+
+            if count %5 == 1:
+                count = yield Db.get_count(parent, "itemResponses")
+            parentMeta = {"count": str(count+1), "responses": responses }
+
+            yield Db.batch_insert(parent, "items", {"meta": parentMeta,
+                                                    "followers": followers})
+
+            # 4.1.2 add item as response to parent
+            yield Db.insert(parent, "itemResponses", itemKey, timeuuid)
+
+            if parentOwner != userKey:
+                # 4.1.3 update user's userItems, userItems_*
+                userItemValue = ":".join([itemKey, parent, parentOwner])
+                yield Db.insert(userKey, "userItems", userItemValue, timeuuid)
+                yield Db.insert(userKey, "userItems_" + typ, userItemValue, timeuuid)
+
+        else:
+            # 4.2 update user's userItems, userItems_*
+            userItemValue = ":".join([itemKey, "", ""])
+            yield Db.insert(userKey, "userItems", userItemValue, timeuuid)
+            yield Db.insert(userKey, "userItems_" + typ, userItemValue, timeuuid)
+
+        # 5. render the parent item
+        if parent:
             args ={"item":(comment, url, username, acl, itemKey, parent)}
             yield renderScriptBlock(request, "feed.mako", "updateComments", landing,
                                     "#%s_comment"%(parent), "append", **args)

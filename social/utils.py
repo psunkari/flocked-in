@@ -142,26 +142,28 @@ def getFriends(userKey, count=10):
     friends = set(supercolumnsToDict(cols).keys())
     defer.returnValue(set(friends))
 
+@defer.inlineCallbacks
 def getCompanyKey(userKey):
-    return userKey.split("/")[0]
+    cols = yield Db.get_slice(userKey, "users", ["org"], super_column="basic")
+    cols = columnsToDict(cols)
+    defer.returnValue(cols['org'])
 
 @defer.inlineCallbacks
-def expandAcl(userKey, acl, userKey2=None):
+def expandAcl(userKey, acl, parentUserKey=None):
     keys = set()
     if acl in ["friends", "company", "public"]:
         friends = yield getFriends(userKey, count=INFINITY)
-        if userKey2:
-            friends1 = yield getFriends(userKey2, count=INFINITY)
+        if parentUserKey:
+            friends1 = yield getFriends(parentUserKey, count=INFINITY)
             commonFriends = friends.intersection(friends1)
-            keys.union(commonFriends)
+            keys.update(commonFriends)
         else:
-            keys = keys.union(friends)
-
+            keys.update(friends)
     if acl in ["company", "public"]:
-        companyKey = getCompanyKey(userKey)
+        companyKey = yield getCompanyKey(userKey)
         followers = yield getFollowers(userKey, count=INFINITY)
-        keys = keys.union(followers)
-        keys = keys.union(set([companyKey]))
+        keys.update(followers)
+        keys.update(set([companyKey]))
     defer.returnValue(keys)
 
 def checkAcl(userKey, acl, owner, friends=None, subscriptions=None,

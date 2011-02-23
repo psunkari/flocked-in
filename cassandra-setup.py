@@ -20,6 +20,14 @@ KEYSPACE = Config.get('Cassandra', 'Keyspace')
 
 
 @defer.inlineCallbacks
+def dropKeyspace(client):
+    yield client.system_drop_keyspace(KEYSPACE)
+
+@defer.inlineCallbacks
+def createKeyspace(client):
+    yield client.system_create_keyspace(KEYSPACE)
+
+@defer.inlineCallbacks
 def createColumnFamilies(client):
     # Information about organizations. Includes meta data about the
     # organization, list of admins and the logo.
@@ -142,6 +150,9 @@ def createColumnFamilies(client):
     feed = CfDef(KEYSPACE, 'feed', 'Standard', 'TimeUUIDType', None,
                  'A feed of all the items for user, group and organization')
     yield client.system_add_column_family(feed)
+    feed_responses = CfDef(KEYSPACE, "feedItems", "Super", "UTF8Type",
+                    "TimeUUIDType", "feed of items grouped by root itemId")
+    yield client.system_add_column_family(feed_responses)
 
     # Index of feed by type
     for itemType in ['status', 'link', 'document']:
@@ -150,10 +161,6 @@ def createColumnFamilies(client):
                          None, 'Feed of %s items'%(itemType))
         yield client.system_add_column_family(feedType)
 
-    # Reverse map used for accessing a particular item in feed
-    feedReverseMap = CfDef(KEYSPACE, 'feedReverseMap', 'Standard', 'UTF8Type',
-                           None, 'Reverse map for accessing an item in feed')
-    yield client.system_add_column_family(feedReverseMap)
 
 
 @defer.inlineCallbacks
@@ -355,7 +362,8 @@ def addSampleData(client):
                                         "target": ashokKey
                                     }})
     yield client.insert(prasadKey, "userItems", prasadToAshokKey, timeUUID)
-    yield client.insert(prasadKey, "feed", prasadToAshokKey, timeUUID)
+    value = prasadToAshokKey
+    yield client.batch_insert(prasadKey, "feed", {timeUUID:value})
 
     timeUUID = uuid.uuid1().bytes
     yield client.batch_insert(ashokToPrasadKey, "items", {
@@ -371,7 +379,8 @@ def addSampleData(client):
                                         "target": prasadKey
                                     }})
     yield client.insert(ashokKey, "userItems", ashokToPrasadKey, timeUUID)
-    yield client.insert(ashokKey, "feed", ashokToPrasadKey, timeUUID)
+    value = ashokToPrasadKey
+    yield client.batch_insert(ashokKey, "feed", {timeUUID:value})
 
     # Subscriptions
     yield client.insert(praveenKey, "subscriptions", "", prasadKey)
@@ -381,6 +390,7 @@ def addSampleData(client):
     praveenFollowingPrasadKey = utils.getUniqueKey()
     timeUUID = uuid.uuid1().bytes
     timestamp = str(int(time.time()))
+    value =  praveenFollowingPrasadKey
     yield client.batch_insert(praveenFollowingPrasadKey, "items", {
                                     "meta": {
                                         "acl": "friends",
@@ -394,18 +404,19 @@ def addSampleData(client):
                                         "target": prasadKey
                                     }})
     yield client.insert(praveenKey, "userItems", praveenFollowingPrasadKey, timeUUID)
-    yield client.insert(praveenKey, "feed", praveenFollowingPrasadKey, timeUUID)
+    yield client.batch_insert(praveenKey, "feed", {timeUUID:value})
 
 
 @defer.inlineCallbacks
 def truncateColumnFamilies(client):
-    for cf in ["orgs", "orgUsers", "orgGroups", "users", "userAuth",\
-               "sessions", "invitations", "groups", "connections",\
-               "connectionsByTag", "pendingConnections", "subscriptions",\
-               "followers", "enterpriseLinks", "userGroups", "groupMembers",\
-               "items", "itemLikes", "itemResponses", "userItems", "feed",\
-               "feedReverseMap", "userItems_status", "userItems_link",
-               "userItems_document", "feed_status", "feed_link", "feed_document"]:
+    for cf in ["orgs", "orgUsers", "orgGroups", "users", "userAuth",
+               "sessions", "invitations", "groups", "connections",
+               "connectionsByTag", "pendingConnections", "subscriptions",
+               "followers", "enterpriseLinks", "userGroups", "groupMembers",
+               "items", "itemLikes", "itemResponses", "userItems", "feed",
+               "userItems_status", "userItems_link", "userItems_document",
+               "feed_status", "feed_link","feed_document", "feedItems"]:
+        log.msg(cf)
         yield client.truncate(cf)
 
 
