@@ -10,7 +10,7 @@ from telephus.cassandra import ttypes
 from social             import Db, utils, base
 from social.template    import render, renderDef, renderScriptBlock
 from social.auth        import IAuthInfo
-from social.constants import INFINITY
+from social.constants import INFINITY, MAXFEEDITEMS, MAXFEEDITEMSBYTYPE
 
 
 @defer.inlineCallbacks
@@ -64,26 +64,29 @@ def updateFeedResponses(userKey, parentKey,
                         itemKey, timeuuid,
                         itemType, responseType):
 
+    feedItemValue = ":".join([responseType, userKey, itemKey, ''])
+    tmp, oldest = {}, None
+
     cols = yield Db.get_slice(userKey,
                               "feedItems",
                               super_column = parentKey,
                               reverse=True)
     cols = utils.columnsToDict(cols, ordered=True)
-    feedItemValue = ":".join([responseType, userKey, itemKey])
-    if len(cols) >= 6:
-        tmp, oldest = {}, None
-        for tuuid, val in cols.items():
-            tmp.setdefault(val.split(':')[0], []).append(tuuid)
-            oldest = tuuid
-        if len(tmp.get(responseType, [])) == 3:
-            oldest = tmp[responseType][2]
-        else:
-            # remove the oldest column (it can be any responseType!))
-            pass
+    for tuuid, val in cols.items():
+        tmp.setdefault(val.split(':')[0], []).append(tuuid)
+        oldest = tuuid
 
+    totalItems = len(cols)
+    noOfItems = len(tmp.get(responseType, []))
+
+    if noOfItems == MAXFEEDITEMSBYTYPE:
+        oldest = tmp[responseType][noOfItems-1]
+
+    if noOfItems == MAXFEEDITEMSBYTYPE or totalItems == MAXFEEDITEMS:
         yield Db.remove(userKey, "feedItems", oldest, parentKey)
         yield Db.remove(userKey, "feed", oldest)
         yield Db.remove(userKey, "feed_"+itemType, oldest)
+
     yield Db.batch_insert(userKey, "feedItems", {parentKey:{timeuuid: feedItemValue}})
 
 
@@ -386,7 +389,6 @@ class FeedResource(base.BaseResource):
         meta["uuid"] = timeuuid
         followers = {userKey:''}
         responseType = "C" if parent else "S"
-        feedItemValue = ":".join([responseType, userKey, itemKey])
 
         # 1. add item to "items"
         yield Db.batch_insert(itemKey, "items", {'meta': meta,
