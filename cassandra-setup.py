@@ -35,6 +35,10 @@ def createColumnFamilies(client):
                   'Organization Information - name, avatar, admins...')
     yield client.system_add_column_family(orgs)
 
+    domainOrgMap = CfDef(KEYSPACE, "domainOrgMap", "Standard", "UTF8Type",
+                         None, 'map from domain to org key')
+    yield client.system_add_column_family(domainOrgMap)
+
     # List of users in the organization.
     orgUsers = CfDef(KEYSPACE, 'orgUsers', 'Standard', 'UTF8Type', None,
                         'List of users in an organization')
@@ -176,15 +180,23 @@ def addSampleData(client):
                                     'synovel.com': '',
                                     'example.org': ''
                                 }})
+    yield client.insert('synovel.com', 'domainOrgMap', '', exampleKey)
+    yield client.insert('example.org', 'domainOrgMap', '', exampleKey)
 
     # List of users in the organization
     prasadKey = utils.getUniqueKey()
     praveenKey = utils.getUniqueKey()
     ashokKey = utils.getUniqueKey()
+    abhiKey = utils.getUniqueKey()
+    rahulKey = utils.getUniqueKey()
+    sandeepKey = utils.getUniqueKey()
     yield client.batch_insert(exampleKey, 'orgUsers', {
                                     prasadKey: '',
                                     praveenKey: '',
-                                    ashokKey: ''
+                                    ashokKey: '',
+                                    abhiKey: '',
+                                    rahulKey: '',
+                                    sandeepKey:''
                                 })
 
     # User profiles
@@ -317,6 +329,141 @@ def addSampleData(client):
                                     'hometown': 'cities/in/vijayawada',
                                     'currentcity': 'cities/in/hyderabad'
                                 }})
+    yield client.batch_insert(rahulKey, 'users', {
+                                'basic': {
+                                    'name': 'Rahul',
+                                    'jobTitle': 'Hacker',
+                                    'location': 'synovel.com/location/hyderabad',
+                                    'desc': 'Just another Tom, Dick and Harry',
+                                    'org': exampleKey
+                                },
+                                'expertise': {
+                                    'Open Source': '',
+                                    'High Scalability': '',
+                                    'Twisted Python': ''
+                                },
+                                'languages': {
+                                    'Telugu': 'srw',
+                                    'English': 'srw',
+                                    'Hindi': 'rw'
+                                },
+                                'education': {
+                                    '2004:IIIT Hyderabad': 'Graduation',
+                                    '1998:Some School Hyderabad': 'High school'
+                                },
+                                'work': {
+                                    ':201012:Enterprise Social': 'Next generation enterprise social software',
+                                    '201012:200912:Web Client': 'The unfinished web based collaboration client',
+                                },
+                                'employers': {
+                                    '2007:2003:Tata Consultancy Services': 'Describe the four years of work at TCS',
+                                },
+                                'contact': {
+                                    'mail': 'rahul@synovel.com',
+                                    'phone': '+914040044197',
+                                    'mobile': '+918989898989'
+                                },
+                                'interests': {
+                                    "Wii": "sports",
+                                    "Open Source": "technology"
+                                },
+                                'personal': {
+                                    'mail': 'rahul@medhas.org',
+                                    'mobile': '+918989898989',
+                                    'hometown': 'in/hyderabad',
+                                    'birthday': '19800817',
+                                    'sex': 'M'
+                                }})
+
+    yield client.batch_insert(abhiKey, 'users', {
+                                'basic': {
+                                    'name': 'Abhi',
+                                    'jobTitle': 'Hacker',
+                                    'location': 'synovel.com/location/hyderabad',
+                                    'desc': 'Just another Tom, Dick and Harry',
+                                    'org': exampleKey
+                                },
+                                'expertise': {
+                                    'Open Source': '',
+                                    'High Scalability': '',
+                                    'Twisted Python': ''
+                                },
+                                'languages': {
+                                    'Telugu': 'srw',
+                                    'English': 'srw',
+                                    'Hindi': 'rw'
+                                },
+                                'education': {
+                                    '2008:IIT Madras': 'Graduation',
+                                    '2002:Some School Hyderabad': 'High school'
+                                },
+                                'work': {
+                                    '201012:200912:Web Client': 'The unfinished web based collaboration client',
+                                },
+                                'employers': {
+                                    '2008:2008: Google': 'Describe work at Google',
+                                },
+                                'contact': {
+                                    'mail': 'abhishek@synovel.com',
+                                    'phone': '+914040044197',
+                                    'mobile': '+919911223344'
+                                },
+                                'interests': {
+                                    "Cycling": "sports",
+                                    "Open Source": "technology"
+                                },
+                                'personal': {
+                                    'mail': 'abhishek@medhas.org',
+                                    'mobile': '+919911223344',
+                                    'hometown': 'in/hyderabad',
+                                    'birthday': '19860215',
+                                    'sex': 'M'
+                                }})
+    yield client.batch_insert(sandeepKey, 'users', {
+                                'basic': {
+                                    'name': 'Sandy',
+                                    'jobTitle': 'Hacker',
+                                    'location': 'synovel.com/location/hyderabad',
+                                    'desc': 'Just another Tom, Dick and Harry',
+                                    'org': exampleKey
+                                },
+                                'expertise': {
+                                    'Open Source': '',
+                                    'High Scalability': '',
+                                    'Twisted Python': ''
+                                },
+                                'languages': {
+                                    'Telugu': 'srw',
+                                    'English': 'srw',
+                                    'Hindi': 'rw'
+                                },
+                                'education': {
+                                    '2010: IIIT Hyderabad': 'Graduation',
+                                    '2004:Some School Hyderabad': 'High school'
+                                },
+                                'work': {
+                                    '201012:200912:Web Client': 'The unfinished web based collaboration client',
+                                },
+                                'employers': {
+                                    '2008:2008: Google': 'Describe work at Google',
+                                },
+                                'contact': {
+                                    'mail': 'sandeep@synovel.com',
+                                    'phone': '+914040044197',
+                                    'mobile': '+917755443311'
+                                },
+                                'interests': {
+                                    "Cycling": "sports",
+                                    "Open Source": "technology"
+                                },
+                                'personal': {
+                                    'mail': 'sandeep@medhas.org',
+                                    'mobile': '+917755443311',
+                                    'hometown': 'in/hyderabad',
+                                    'birthday': '19870715',
+                                    'sex': 'M'
+                                }})
+
 
     # User authentication
     yield client.batch_insert('prasad@synovel.com', 'userAuth', {
@@ -334,10 +481,28 @@ def addSampleData(client):
                                     'org': exampleKey,
                                     'user': praveenKey
                                 })
+    yield client.batch_insert('rahul@synovel.com', 'userAuth', {
+                                    'passwordHash': 'c246ad314ab52745b71bb00f4608c82a',
+                                    'org': exampleKey,
+                                    'user': rahulKey
+                                })
+    yield client.batch_insert('abhishek@synovel.com', 'userAuth', {
+                                    'passwordHash': 'c246ad314ab52745b71bb00f4608c82a',
+                                    'org': exampleKey,
+                                    'user': abhiKey
+                                })
+    yield client.batch_insert('sandeep@synovel.com', 'userAuth', {
+                                    'passwordHash': 'c246ad314ab52745b71bb00f4608c82a',
+                                    'org': exampleKey,
+                                    'user': sandeepKey
+                                })
+
 
     # Connections between users
     prasadToAshokKey = utils.getUniqueKey()
     ashokToPrasadKey = utils.getUniqueKey()
+    praveenToRahulKey = utils.getUniqueKey()
+    rahulToPraveenKey = utils.getUniqueKey()
     yield client.batch_insert(prasadKey, "connections", {
                                     ashokKey: {
                                         "__default__": prasadToAshokKey
@@ -345,6 +510,14 @@ def addSampleData(client):
     yield client.batch_insert(ashokKey, "connections", {
                                     prasadKey: {
                                         "__default__": ashokToPrasadKey
+                                    }})
+    yield client.batch_insert(rahulKey, "connections", {
+                                    praveenKey: {
+                                        "__default__": rahulToPraveenKey
+                                    }})
+    yield client.batch_insert(praveenKey, "connections", {
+                                    rahulKey: {
+                                        "__default__": praveenToRahulKey
                                     }})
 
     # Create activity items and insert into feeds and userItems
@@ -386,6 +559,48 @@ def addSampleData(client):
     yield client.insert(ashokKey, "feedItems",
                         "I:%s:%s:%s" % (ashokKey, ashokToPrasadKey, prasadKey),
                         timeUUID, ashokToPrasadKey)
+
+    timeUUID = uuid.uuid1().bytes
+    timestamp = str(int(time.time()))
+    yield client.batch_insert(praveenToRahulKey, "items", {
+                                    "meta": {
+                                        "acl": "friends",
+                                        "owner": praveenKey,
+                                        "type": "activity",
+                                        "subtype": "connection",
+                                        "timestamp": timestamp,
+                                        "uuid": timeUUID
+                                    },
+                                    "data": {
+                                        "target": rahulKey
+                                    }})
+    yield client.insert(praveenKey, "userItems", praveenToRahulKey, timeUUID)
+    yield client.insert(praveenKey, "feed", praveenToRahulKey, timeUUID)
+    yield client.insert(praveenKey, "feedItems",
+                                "I:%s:%s:%s" %(praveenKey, praveenToRahulKey, rahulKey),
+                                timeUUID, praveenToRahulKey)
+
+
+    timeUUID = uuid.uuid1().bytes
+    yield client.batch_insert(rahulToPraveenKey, "items", {
+                                    "meta": {
+                                        "acl": "friends",
+                                        "owner": rahulKey,
+                                        "type": "activity",
+                                        "subType": "connection",
+                                        "timestamp": timestamp,
+                                        "uuid": timeUUID
+                                    },
+                                    "data": {
+                                        "target": praveenKey
+                                    }})
+    yield client.insert(rahulKey, "userItems", rahulToPraveenKey, timeUUID)
+    yield client.insert(rahulKey, "feed", rahulToPraveenKey, timeUUID)
+    yield client.insert(rahulKey, "feedItems",
+                                "I:%s:%s:%s" %(rahulKey, rahulToPraveenKey, praveenKey),
+                                timeUUID, rahulToPraveenKey)
+
+
 
     # Subscriptions
     yield client.insert(praveenKey, "subscriptions", "", prasadKey)
