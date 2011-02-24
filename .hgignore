@@ -9,5 +9,8 @@ twisted/plugins/dropin.cache
 
 # Others
 *.swp
+*.rej
+*.orig
+*.bkp
 *~
 *.komodoproject
