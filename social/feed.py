@@ -10,7 +10,7 @@ from telephus.cassandra import ttypes
 from social             import Db, utils, base
 from social.template    import render, renderDef, renderScriptBlock
 from social.auth        import IAuthInfo
-from social.constants import INFINITY
+from social.constants import INFINITY, MAXFEEDITEMS, MAXFEEDITEMSBYTYPE
 
 
 @defer.inlineCallbacks
@@ -43,47 +43,56 @@ def pushToOthersFeed(userKey, timeuuid, itemKey,
 
     others = yield utils.expandAcl(userKey, acl, parentUserKey)
     for key in others:
-        yield pushToFeed(key, timeuuid,
-                         itemKey, parentKey,
-                         responseType, itemType)
+        yield pushToFeed(key, timeuuid,itemKey, parentKey,
+                         responseType, itemType, parentUserKey)
 
 @defer.inlineCallbacks
-def pushToFeed(userKey, timeuuid, itemKey, parentKey, responseType, itemType):
+def pushToFeed(userKey, timeuuid, itemKey, parentKey, responseType, itemType, convOwner=None):
 
     # Caveat: assume itemKey as parentKey if parentKey is None
     parentKey = itemKey if not parentKey else parentKey
+    convOwner = userKey if not convOwner else convOwner
     yield Db.insert(userKey, "feed", parentKey, timeuuid)
     yield Db.insert(userKey, "feed_"+itemType, parentKey, timeuuid)
-    yield  updateFeedResponses(userKey, parentKey,
-                               itemKey, timeuuid,
-                               itemType, responseType)
+    yield  updateFeedResponses(userKey, parentKey, itemKey, timeuuid,
+                               itemType, responseType, convOwner)
 
 
 @defer.inlineCallbacks
-def updateFeedResponses(userKey, parentKey,
-                        itemKey, timeuuid,
-                        itemType, responseType):
+def updateFeedResponses(userKey, parentKey, itemKey, timeuuid,
+                        itemType, responseType, convOwner):
+
+    feedItemValue = ":".join([responseType, userKey, itemKey, ''])
+    tmp, oldest = {}, None
 
     cols = yield Db.get_slice(userKey,
                               "feedItems",
                               super_column = parentKey,
                               reverse=True)
     cols = utils.columnsToDict(cols, ordered=True)
-    feedItemValue = ":".join([responseType, userKey, itemKey])
-    if len(cols) >= 6:
-        tmp, oldest = {}, None
-        for tuuid, val in cols.items():
+
+    for tuuid, val in cols.items():
+        rtype = val.split(':')[0]
+        if rtype != '!':
             tmp.setdefault(val.split(':')[0], []).append(tuuid)
             oldest = tuuid
-        if len(tmp.get(responseType, [])) == 3:
-            oldest = tmp[responseType][2]
-        else:
-            # remove the oldest column (it can be any responseType!))
-            pass
 
+    totalItems = len(cols)
+    noOfItems = len(tmp.get(responseType, []))
+
+    if noOfItems == MAXFEEDITEMSBYTYPE:
+        oldest = tmp[responseType][noOfItems-1]
+
+    if noOfItems == MAXFEEDITEMSBYTYPE or totalItems == MAXFEEDITEMS:
         yield Db.remove(userKey, "feedItems", oldest, parentKey)
         yield Db.remove(userKey, "feed", oldest)
         yield Db.remove(userKey, "feed_"+itemType, oldest)
+
+    if totalItems == 0 and responseType != 'I':
+        value = ":".join(["!", userKey, convOwner, ""])
+        tuuid = uuid.uuid1().bytes
+        yield Db.batch_insert(userKey, "feedItems", {parentKey:{tuuid:value}})
+
     yield Db.batch_insert(userKey, "feedItems", {parentKey:{timeuuid: feedItemValue}})
 
 
@@ -114,6 +123,9 @@ def getItems(userKey, itemKey = None, count=10, start=''):
         feedItems = yield Db.get_slice(userKey, "feed", count=count,
                                         start=start, reverse=True)
         feedItems = utils.columnsToDict(feedItems, ordered=True)
+
+        feedItemKeys = list(set(feedItems.values()))
+
 
         #feedValues = [feedItems[supercolumn].values() for supercolumn in feedItems]
         #feedItemKeys = [x[0].split(":")[2] for x in feedValues]
@@ -291,12 +303,12 @@ class FeedResource(base.BaseResource):
         yield Db.batch_insert(parent, "items", {"followers":{userKey:''}})
 
         # 3. update user's feed, feedItems, feed_*
-        yield pushToFeed(userKey, timeuuid, itemKey, parent, responseType, typ)
+        yield pushToFeed(userKey, timeuuid, itemKey, parent,
+                         responseType, typ, parentUserKey)
 
         # 4. update feed, feedItems, feed_* of user's followers/friends (based on acl)
-        yield pushToOthersFeed(userKey, timeuuid, itemKey,
-                               parent, acl, responseType,
-                               typ, parentUserKey)
+        yield pushToOthersFeed(userKey, timeuuid, itemKey, parent, acl,
+                                responseType,typ, parentUserKey)
 
         # TODO: broadcast to followers of the items
 
@@ -387,15 +399,15 @@ class FeedResource(base.BaseResource):
         timeuuid = uuid.uuid1().bytes
         meta["uuid"] = timeuuid
         followers = {userKey:''}
-        responseType = "C" if parent else "S"
-        feedItemValue = ":".join([responseType, userKey, itemKey])
+        responseType = "C" if parent else "I"
 
         # 1. add item to "items"
         yield Db.batch_insert(itemKey, "items", {'meta': meta,
                                                  'followers':followers})
 
         # 2. update user's feed, feedItems, feed_typ
-        yield pushToFeed(userKey, timeuuid, itemKey, parent, responseType, typ)
+        yield pushToFeed(userKey, timeuuid, itemKey, parent,
+                         responseType, typ, parentUserKey)
 
         # 3. update user's followers/friends feed, feedItems, feed_typ
         yield pushToOthersFeed(userKey, timeuuid, itemKey, parent, acl,
