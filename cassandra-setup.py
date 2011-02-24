@@ -528,7 +528,7 @@ def addSampleData(client):
                                         "acl": "friends",
                                         "owner": prasadKey,
                                         "type": "activity",
-                                        "subtype": "connection",
+                                        "subType": "connection",
                                         "timestamp": timestamp,
                                         "uuid": timeUUID
                                     },
@@ -567,7 +567,7 @@ def addSampleData(client):
                                         "acl": "friends",
                                         "owner": praveenKey,
                                         "type": "activity",
-                                        "subtype": "connection",
+                                        "subType": "connection",
                                         "timestamp": timestamp,
                                         "uuid": timeUUID
                                     },
@@ -625,7 +625,7 @@ def addSampleData(client):
     yield client.insert(praveenKey, "userItems", praveenFollowingPrasadKey, timeUUID)
     yield client.insert(praveenKey, "feed", praveenFollowingPrasadKey, timeUUID)
     yield client.insert(praveenKey, "feedItems",
-                        "X:%s:%s:%s" % (praveenKey, praveenFollowingPrasadKey, prasadKey),
+                        "I:%s:%s:%s" % (praveenKey, praveenFollowingPrasadKey, prasadKey),
                         timeUUID, praveenFollowingPrasadKey)
 
 

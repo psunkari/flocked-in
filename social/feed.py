@@ -2,6 +2,7 @@
 import time
 import uuid
 
+from ordereddict        import OrderedDict
 from twisted.internet   import defer
 from twisted.web        import server
 from twisted.python     import log
@@ -10,7 +11,7 @@ from telephus.cassandra import ttypes
 from social             import Db, utils, base
 from social.template    import render, renderDef, renderScriptBlock
 from social.auth        import IAuthInfo
-from social.constants import INFINITY, MAXFEEDITEMS, MAXFEEDITEMSBYTYPE
+from social.constants   import INFINITY, MAXFEEDITEMS, MAXFEEDITEMSBYTYPE
 
 
 @defer.inlineCallbacks
@@ -96,109 +97,80 @@ def updateFeedResponses(userKey, parentKey, itemKey, timeuuid,
     yield Db.batch_insert(userKey, "feedItems", {parentKey:{timeuuid: feedItemValue}})
 
 
-@defer.inlineCallbacks
-def getItems(userKey, itemKey = None, count=10, start=''):
-    def _generate_liked_text(userKey, likedBy):
-        if likedBy:
-            if userKey in likedBy and len(likedBy) == 1:
-                return "you like this post", True
-            elif userKey in likedBy and len(likedBy) >1:
-                return "you and %s others like this post" %(len(likedBy)-1), True
-            else:
-                return "%s like this post" %(len(likedBy)), False
-        else:
-            return None, False
-    """
-    1. get the list of itemKeys from "feed" CF in reverse Chronological order
-    2. get the details of item from "items" SCF
-    3. get the response-itemKey for all items (frm step1) in Chronological Order.
-    4. Get the details of response-itemKeys
-    5. check acl:
-        if user has access to the item add item, its responses to displayItems list;
-
-    """
-
-    #TODO: get latest feed items first
-    if not itemKey:
-        feedItems = yield Db.get_slice(userKey, "feed", count=count,
-                                        start=start, reverse=True)
-        feedItems = utils.columnsToDict(feedItems, ordered=True)
-
-        feedItemKeys = list(set(feedItems.values()))
-
-
-        #feedValues = [feedItems[supercolumn].values() for supercolumn in feedItems]
-        #feedItemKeys = [x[0].split(":")[2] for x in feedValues]
-    else:
-        feedItemKeys = [itemKey]
-    items = yield Db.multiget_slice(feedItemKeys, "items", count=count)
-    itemsMap = utils.multiSuperColumnsToDict(items, ordered = True)
-
-    friends = yield utils.getFriends(userKey, count=INFINITY)
-    subscriptions = yield utils.getSubscriptions(userKey, count= INFINITY)
-
-    cols = yield Db.multiget_slice(feedItemKeys, "itemResponses", count=INFINITY)
-    responseMap = utils.multiColumnsToDict(cols, ordered=True)
-    responseKeys = []
-    for itemKey in responseMap:
-        responseKeys.extend(responseMap[itemKey].values())
-
-    responses = yield Db.multiget_slice(responseKeys, "items", count=count)
-    responseDetails  = utils.multiSuperColumnsToDict(responses, ordered=True)
-    posters = []
-    for itemKey in itemsMap:
-        posters.append(itemsMap[itemKey]["meta"]["owner"])
-
-    #posters = [itemsMap[itemKey]["meta"]["owner"] for itemKey in itemsMap]
-    posters.extend([responseDetails[itemKey]["meta"]["owner"] for itemKey in responseDetails])
-    posters.extend([userKey])
-    #TODO: get profile pic info also.
-    cols = yield Db.multiget_slice(posters, "users", super_column='basic',
-                                        count=INFINITY)
-    posterInfo = utils.multiColumnsToDict(cols)
-
-    displayItems = []
-    for itemKey in feedItemKeys:
-        meta = itemsMap[itemKey]["meta"]
-        acl = meta["acl"]
-        owner = meta["owner"]
-        userCompKey = posterInfo[userKey]["org"]
-        ownerCompKey = posterInfo[owner]["org"]
-
-        if meta.get("type", None) in ["status", "link", "document"] \
-            and utils.checkAcl(userKey, acl, owner, friends,
-                                subscriptions, userCompKey, ownerCompKey):
-            items = []
-            comment = meta["comment"]
-            url = meta.get("url", None)
-            unlike = False
-            cols = yield Db.get_slice(itemKey, "itemLikes")
-            cols = utils.columnsToDict(cols)
-            likedBy = cols.keys()
-            liked_text, unlike = _generate_liked_text(userKey, likedBy)
-            items.append([comment, url, posterInfo[owner]["name"], itemKey,
-                            acl, owner, liked_text, unlike])
-            for responseId in responseMap.get(itemKey, {}).values():
-                owner = responseDetails[responseId]["meta"]["owner"]
-                comment = responseDetails[responseId]["meta"]["comment"]
-                url = responseDetails[responseId]["meta"].get("url", None)
-                name = posterInfo[owner]["name"]
-                acl = responseDetails[responseId]["meta"]["acl"]
-
-                cols = yield Db.get_slice(responseId, "itemLikes")
-                cols = utils.columnsToDict(cols)
-                likedBy = cols.keys()
-
-                liked_text, unlike = _generate_liked_text(userKey, likedBy)
-                items.append([comment, url, name, responseId, acl,
-                                liked_text, unlike])
-            displayItems.append(items)
-    defer.returnValue(displayItems)
-
-
 class FeedResource(base.BaseResource):
     isLeaf = True
     resources = {}
+
+    @defer.inlineCallbacks
+    def getItems(self, userKey, itemKey=None, count=10):
+        toFetchItems = set()    # Items, users and groups that need to be fetched
+        toFetchUsers = set()    #
+        toFetchGroups = set()   #
+
+        # 1. Fetch the list of root items (conversations) that will be shown
+        items = OrderedDict()
+        if itemKey:
+            items[itemKey] = [itemKey]
+            toFetchItems.add(itemKey)
+        else:
+            cols = yield Db.get_slice(userKey, "feed", count=count, reverse=True)
+            for col in cols:
+                value = col.column.value
+                items[value] = [value]
+                toFetchItems.add(value)
+
+        # 2. Fetch list of notifications that we have for above conversations and
+        #    check if we have enough responses to be shown in the feed. If not
+        #    fetch responses for those conversations.
+        rawFeedItems = yield Db.get_slice(userKey, "feedItems", items)
+        feedItems = dict()
+        toFetchResponses = set()
+        for conversation in rawFeedItems:
+            convId = conversation.super_column.name
+            feedItems[convId] = []
+            numResponses = 0
+            for update in conversation.super_column.columns:
+                # X:<user>:<item>:<users>:<groups>
+                item = update.value.split(':')
+                feedItems[convId].append(item[0:3])
+
+                toFetchUsers.add(item[1])
+                if len(item) > 3 and len(item[3]):
+                    toFetchUsers.update(item[3].split(","))
+                if len(item) > 4 and len(item[4]):
+                    toFetchGroups.update(item[4].split(","))
+
+                if item[0] == "C":
+                    items[convId].append(item[2])
+                    toFetchItems.add(item[2])
+                    numResponses += 1
+
+            if numResponses < 2:
+                toFetchResponses.add(convId)
+
+        # 2.1 Fetch more responses, if required
+        itemResponses = yield Db.multiget_slice(toFetchResponses, "itemResponses",
+                                                reverse=True, count=2)
+        for convId, responses in itemResponses.items():
+            for response in responses:
+                userKey, itemKey = response.column.value.split(':')
+                if len(items[convId]) < 2:
+                    items[convId].append(itemKey)
+                    toFetchItems.add(itemKey)
+                    toFetchUsers.add(userKey)
+
+        # Finally, concurrently fetch items, users and groups
+        d1 = Db.multiget_slice(toFetchItems, "items", ["data", "meta"])
+        d2 = Db.multiget_slice(toFetchUsers, "users", ["basic"])
+        d3 = Db.multiget_slice(toFetchGroups, "groups", ["basic"])
+        itemData = yield d1
+        userData = yield d2
+        groupData = yield d3
+
+        defer.returnValue([items, feedItems,
+                           utils.multiSuperColumnsToDict(itemData),
+                           utils.multiSuperColumnsToDict(userData),
+                           utils.multiSuperColumnsToDict(groupData)])
 
     @defer.inlineCallbacks
     def _render(self, request):
@@ -223,7 +195,13 @@ class FeedResource(base.BaseResource):
                                     landing, "#share-block", "set", **args)
             yield self._renderShareBlock(request, "status")
 
-        args["comments"] = yield getItems(myKey)
+        items, feed, itemData, userData, groupData = yield self.getItems(myKey)
+        args["conversations"] = items
+        args["feedItems"] = feed
+        args["items"] = itemData
+        args["users"] = userData
+        args["groups"] = groupData
+
         if script:
             yield renderScriptBlock(request, "feed.mako", "feed", landing,
                                     "#user-feed", "set", **args)

@@ -115,6 +115,92 @@
 </%def>
 
 <%def name="feed()">
+  %for convId, convItems in conversations.items():
+    <%
+      comments = []
+      likes = []
+      rootItem = None
+
+      feedItems[convId].reverse()
+      for update in feedItems[convId]:
+          if update[0] == "C":
+              comments.append(update)
+          elif update[0] == "L" and update[2] == convId:
+              likes.append(update)
+          elif update[0] == "!" or update[0] == "I":
+              rootItem = update
+
+      ## Let the user know why this item is in the feed.
+      (typ, userId, itemId) = feedItems[convId][0]
+      userIds = [rootItem[1]]
+      template = None
+      if typ == "C":
+          template = ["%s commented on %s's %s",
+                      "%s and %s commented on %s's %s",
+                      "%s, %s and %s commented on %s's %s"][len(comments)]
+          userIds = [x[1] for x in comments]
+      elif typ == "L" and itemId == convId:
+          template = ["%s liked %s's %s",
+                      "%s and %s liked %s's %s",
+                      "%s, %s and %s liked %s's %s"][len(likes)]
+          userIds = [x[1] for x in likes]
+      elif typ == "L":
+          template == ["%s liked a comment on %s's %s"]
+          userIds = [userId]
+
+      reason = None
+      if template:
+          args = ["<span class='user'><a class='ajax' href='/profile?id=%s>%s</a></span>" % (id, users[id]["basic"]["name"]) for id in userIds]
+          itemType = items[convId]["meta"]["type"]
+          args.append("<span class='item'><a class='ajax' href='/%s?id=%s'>%s</a></span>" % (itemType, convId, _(itemType)))
+          reason = _(template) % args
+    %>
+    <div id=${"conv-%s" % convId} class="conv-item">
+      <div class="conv-avatar"></div>
+      <div class="conv-data">
+        <div class="conv-root-render">
+          %if reason:
+            <span class="conv-reason">${reason}</span>
+          %endif
+          ${self.renderRootItem(convId, reason)}
+        </div>
+        <div class="conv-meta"></div>
+        <div class="conv-comments"></div>
+      </div>
+    </div>
+  %endfor
+</%def>
+
+<%def name="renderRootItem(convId, reason)">
+  <%
+    conv = items[convId]
+    type = conv["meta"]["type"]
+    userId = conv["meta"]["owner"]
+    user = lambda x: ("<span class='user'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (x, users[x]["basic"]["name"]))
+  %>
+  %if type in ["activity"]:
+    <%
+      subtype = conv["meta"]["subType"]
+      target = conv["data"]["target"]
+      if subtype == "connection":
+        activity = _("%s and %s are now friends.") % (user(userId), user(target))
+      elif subtype == "following":
+        activity = _("%s started following %s.") % (user(userId), user(target))
+    %>
+    <span class="conv-reason">${activity}</span>
+  %elif type in ["status", "link", "document"]:
+    %if not reason:
+      <span class="conv-reason">
+        ${user(userId)}
+      </span>
+    %endif
+    %if conv["meta"].has_key("comment"):
+      ${conv["meta"]["comment"]}
+    %endif
+  %endif
+</%def>
+
+<%def name="feed_()">
 % for items in comments:
     <% parentUserKey= items[0][5] %> 
     <% parentItemId = items[0][3] %>
