@@ -150,9 +150,10 @@ def createColumnFamilies(client):
     feed = CfDef(KEYSPACE, 'feed', 'Standard', 'TimeUUIDType', None,
                  'A feed of all the items for user, group and organization')
     yield client.system_add_column_family(feed)
-    feed_responses = CfDef(KEYSPACE, "feedItems", "Super", "UTF8Type",
-                    "TimeUUIDType", "feed of items grouped by root itemId")
-    yield client.system_add_column_family(feed_responses)
+
+    feedItems = CfDef(KEYSPACE, "feedItems", "Super", "UTF8Type",
+                      "TimeUUIDType", "Feed of items grouped by root itemId")
+    yield client.system_add_column_family(feedItems)
 
     # Index of feed by type
     for itemType in ['status', 'link', 'document']:
@@ -362,8 +363,10 @@ def addSampleData(client):
                                         "target": ashokKey
                                     }})
     yield client.insert(prasadKey, "userItems", prasadToAshokKey, timeUUID)
-    value = prasadToAshokKey
-    yield client.batch_insert(prasadKey, "feed", {timeUUID:value})
+    yield client.insert(prasadKey, "feed", prasadToAshokKey, timeUUID)
+    yield client.insert(prasadKey, "feedItems",
+                        "I:%s:%s:%s" % (prasadKey, prasadToAshokKey, ashokKey),
+                        timeUUID, prasadToAshokKey)
 
     timeUUID = uuid.uuid1().bytes
     yield client.batch_insert(ashokToPrasadKey, "items", {
@@ -379,8 +382,10 @@ def addSampleData(client):
                                         "target": prasadKey
                                     }})
     yield client.insert(ashokKey, "userItems", ashokToPrasadKey, timeUUID)
-    value = ashokToPrasadKey
-    yield client.batch_insert(ashokKey, "feed", {timeUUID:value})
+    yield client.insert(ashokKey, "feed", ashokToPrasadKey, timeUUID)
+    yield client.insert(ashokKey, "feedItems",
+                        "I:%s:%s:%s" % (ashokKey, ashokToPrasadKey, prasadKey),
+                        timeUUID, ashokToPrasadKey)
 
     # Subscriptions
     yield client.insert(praveenKey, "subscriptions", "", prasadKey)
@@ -390,7 +395,6 @@ def addSampleData(client):
     praveenFollowingPrasadKey = utils.getUniqueKey()
     timeUUID = uuid.uuid1().bytes
     timestamp = str(int(time.time()))
-    value =  praveenFollowingPrasadKey
     yield client.batch_insert(praveenFollowingPrasadKey, "items", {
                                     "meta": {
                                         "acl": "friends",
@@ -404,7 +408,10 @@ def addSampleData(client):
                                         "target": prasadKey
                                     }})
     yield client.insert(praveenKey, "userItems", praveenFollowingPrasadKey, timeUUID)
-    yield client.batch_insert(praveenKey, "feed", {timeUUID:value})
+    yield client.insert(praveenKey, "feed", praveenFollowingPrasadKey, timeUUID)
+    yield client.insert(praveenKey, "feedItems",
+                        "X:%s:%s:%s" % (praveenKey, praveenFollowingPrasadKey, prasadKey),
+                        timeUUID, praveenFollowingPrasadKey)
 
 
 @defer.inlineCallbacks
@@ -416,7 +423,7 @@ def truncateColumnFamilies(client):
                "items", "itemLikes", "itemResponses", "userItems", "feed",
                "userItems_status", "userItems_link", "userItems_document",
                "feed_status", "feed_link","feed_document", "feedItems"]:
-        log.msg(cf)
+        log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 
 
