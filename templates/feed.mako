@@ -193,7 +193,7 @@
   <%
     item = items[commentId]
     userId = item["meta"]["owner"]
-    comment = item["meta"]["comment"]
+    comment = item["meta"]["comment"] if item["meta"].has_key("comment") else ""
     timestamp = item["meta"]["timestamp"]
     fmtUser = lambda x: ("<span class='user comment-author'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (x, users[x]["basic"]["name"]))
   %>
