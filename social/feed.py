@@ -45,25 +45,27 @@ def pushToOthersFeed(userKey, timeuuid, itemKey,
     others = yield utils.expandAcl(userKey, acl, parentUserKey)
     for key in others:
         yield pushToFeed(key, timeuuid,itemKey, parentKey,
-                         responseType, itemType, parentUserKey)
+                         responseType, itemType, parentUserKey, userKey)
 
 @defer.inlineCallbacks
-def pushToFeed(userKey, timeuuid, itemKey, parentKey, responseType, itemType, convOwner=None):
+def pushToFeed(userKey, timeuuid, itemKey, parentKey, responseType,
+                itemType, convOwner=None, commentOwner=None):
 
     # Caveat: assume itemKey as parentKey if parentKey is None
     parentKey = itemKey if not parentKey else parentKey
     convOwner = userKey if not convOwner else convOwner
+    commentOwner = userKey if not commentOwner else commentOwner
     yield Db.insert(userKey, "feed", parentKey, timeuuid)
     yield Db.insert(userKey, "feed_"+itemType, parentKey, timeuuid)
     yield  updateFeedResponses(userKey, parentKey, itemKey, timeuuid,
-                               itemType, responseType, convOwner)
+                               itemType, responseType, convOwner, commentOwner)
 
 
 @defer.inlineCallbacks
 def updateFeedResponses(userKey, parentKey, itemKey, timeuuid,
-                        itemType, responseType, convOwner):
+                        itemType, responseType, convOwner, commentOwner):
 
-    feedItemValue = ":".join([responseType, userKey, itemKey, ''])
+    feedItemValue = ":".join([responseType, commentOwner, itemKey, ''])
     tmp, oldest = {}, None
 
     cols = yield Db.get_slice(userKey,
@@ -90,7 +92,7 @@ def updateFeedResponses(userKey, parentKey, itemKey, timeuuid,
         yield Db.remove(userKey, "feed_"+itemType, oldest)
 
     if totalItems == 0 and responseType != 'I':
-        value = ":".join(["!", userKey, convOwner, ""])
+        value = ":".join(["!", convOwner, parentKey, ""])
         tuuid = uuid.uuid1().bytes
         yield Db.batch_insert(userKey, "feedItems", {parentKey:{tuuid:value}})
 
@@ -260,7 +262,7 @@ class FeedResource(base.BaseResource):
     def _setLike(self, request):
         itemKey = utils.getRequestArg(request, "itemKey")
         parent =  utils.getRequestArg(request, "parent")
-        parentUserKey = utils.getRequestArg(request, "parentId")
+        parentUserKey = utils.getRequestArg(request, "parentUserId")
         userKey = request.getSession(IAuthInfo).username
         typ = utils.getRequestArg(request, "type")
         acl = utils.getRequestArg(request, "acl")
@@ -282,7 +284,7 @@ class FeedResource(base.BaseResource):
 
         # 3. update user's feed, feedItems, feed_*
         yield pushToFeed(userKey, timeuuid, itemKey, parent,
-                         responseType, typ, parentUserKey)
+                         responseType, typ, parentUserKey, userKey)
 
         # 4. update feed, feedItems, feed_* of user's followers/friends (based on acl)
         yield pushToOthersFeed(userKey, timeuuid, itemKey, parent, acl,
@@ -301,7 +303,7 @@ class FeedResource(base.BaseResource):
     def _setUnlike(self, request):
         itemKey = utils.getRequestArg(request, "itemKey")
         parent =  utils.getRequestArg(request, "parent")
-        parentUserKey = utils.getRequestArg(request, "parentId")
+        parentUserKey = utils.getRequestArg(request, "parentUserId")
         userKey = request.getSession(IAuthInfo).username
 
         typ = utils.getRequestArg(request, "type")
@@ -368,7 +370,7 @@ class FeedResource(base.BaseResource):
         meta["acl"] = acl
         landing = not self._ajax
 
-        parentUserKey = utils.getRequestArg(request, "parentId")
+        parentUserKey = utils.getRequestArg(request, "parentUserId")
         meta["count"] = '0'
         meta["responses"] = ''
         itemKey = utils.getUniqueKey()
@@ -383,7 +385,7 @@ class FeedResource(base.BaseResource):
 
         # 2. update user's feed, feedItems, feed_typ
         yield pushToFeed(userKey, timeuuid, itemKey, parent,
-                         responseType, typ, parentUserKey)
+                         responseType, typ, parentUserKey, userKey)
 
         # 3. update user's followers/friends feed, feedItems, feed_typ
         yield pushToOthersFeed(userKey, timeuuid, itemKey, parent, acl,

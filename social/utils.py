@@ -153,7 +153,7 @@ def expandAcl(userKey, acl, parentUserKey=None):
     keys = set()
     if acl in ["friends", "company", "public"]:
         friends = yield getFriends(userKey, count=INFINITY)
-        if parentUserKey:
+        if acl == "friends" and parentUserKey:
             friends1 = yield getFriends(parentUserKey, count=INFINITY)
             commonFriends = friends.intersection(friends1)
             keys.update(commonFriends)
