@@ -115,44 +115,35 @@
 </%def>
 
 <%def name="feed()">
-  %for convId, convItems in conversations.items():
+  %for convId in conversations:
     <%
-      comments = []
-      likes = []
-      rootItem = None
-      fmtUser = lambda x: ("<span class='user'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (x, users[x]["basic"]["name"]))
-
-      feedItems[convId].reverse()
-      for update in feedItems[convId]:
-          if update[0] == "C":
-              comments.append(update)
-          elif update[0] == "L" and update[2] == convId:
-              likes.append(update)
-          elif update[0] == "!" or update[0] == "I":
-              rootItem = update
+      comments = feedItems[convId]["comments"]
+      rootItem = feedItems[convId]["root"]
+      likes = feedItems[convId]["likes"]
+      fmtUser = lambda x,y=None: ("<span class='user %s'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (y if y else "", x, users[x]["basic"]["name"]))
 
       ## Let the user know why this item is in the feed.
-      (typ, userId, itemId) = feedItems[convId][0]
+      (recentType, recentUserId, recentItemId) = feedItems[convId]["recent"]
       userIds = None
       template = None
-      if typ == "C":
-          userIds = set([x[1] for x in comments])
+      if recentType == "C":
+          userIds = set([x[0] for x in comments])
           template = ["%s commented on %s's %s",
                       "%s and %s commented on %s's %s",
                       "%s, %s and %s commented on %s's %s"][len(userIds)-1]
-      elif typ == "L" and itemId == convId:
-          userIds = set([x[1] for x in likes])
+      elif recentType == "L" and itemId == convId:
+          userIds = set([x[0] for x in likes])
           template = ["%s liked %s's %s",
                       "%s and %s liked %s's %s",
                       "%s, %s and %s liked %s's %s"][len(userIds)-1]
-      elif typ == "L":
+      elif recentType == "L":
           userIds = set([userId])
           template == ["%s liked a comment on %s's %s"]
 
       reason = None
       if template:
-          args = [fmtUser(id) for id in userIds]
-          args.append(fmtUser(rootItem[1]))
+          args = [fmtUser(id, "conv-user-cause") for id in userIds]
+          args.append(fmtUser(rootItem[0]))
           itemType = items[convId]["meta"]["type"]
           args.append("<span class='item'><a class='ajax' href='/%s?id=%s'>%s</a></span>" % (itemType, convId, _(itemType)))
           reason = _(template) % tuple(args)
@@ -168,36 +159,51 @@
         </div>
         <div class="conv-meta"></div>
         <div class="conv-comments">
-          %for comment in convItems[1:]:
-            <div id="comment-${comment}">
-              ${self.renderComment(items[comment])}
+          <%
+            if len(comments) < 2 and len(feedItems[convId]["extras"]):
+              extras = feedItems[convId]["extras"]
+              if len(comments) == 0:
+                comments.extend(extras)
+              else:
+                comments.extend(extras)
+                comments.sort(key=lambda x: items[x[1]]["meta"]["timestamp"])
+          %>
+          %for userId, commentId in comments:
+            <div class="conv-comment" id="comment-${commentId}">
+              ${self.renderComment(commentId)}
             </div>
           %endfor
-          <div id="form-${convId}">
+          <div class="conv-comment" id="form-${convId}">
             <form method="post" action="/feed/share/status" class="ajax">
               <input type="text" name="comment" value=""></input> 
               <input type="hidden" name="parent" value=${convId}></input>
-              <input type="hidden" name="parentUserId" value="${rootItem[1]}"></input>
+              <input type="hidden" name="parentUserId" value="${rootItem[0]}"></input>
               <input type="hidden" name="acl" value="${items[convId]['meta']['acl']}"></input>
               ${widgets.button(None, type="submit", name="comment", value="comment")}<br/>
             </form>
           </div>
         </div>
       </div>
+      <div class="conv-item-bottom"></div>
     </div>
   %endfor
 </%def>
 
-<%def name="renderComment(item)">
+<%def name="renderComment(commentId)">
   <%
+    item = items[commentId]
     userId = item["meta"]["owner"]
     comment = item["meta"]["comment"]
-    fmtUser = lambda x: ("<span class='user'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (x, users[x]["basic"]["name"]))
+    timestamp = item["meta"]["timestamp"]
+    fmtUser = lambda x: ("<span class='user comment-author'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (x, users[x]["basic"]["name"]))
   %>
   <div class="comment-avatar"></div>
   <div class="comment-container">
     <span class="comment-user">${fmtUser(userId)}</span>
     <span class="comment-text">${comment}</span>
+  </div>
+  <div class="comment-meta">
+    <span class="timestamp" _ts="${timestamp}">${timestamp}</span>
   </div>
 </%def>
 
@@ -206,7 +212,7 @@
     conv = items[convId]
     type = conv["meta"]["type"]
     userId = conv["meta"]["owner"]
-    fmtUser = lambda x: ("<span class='user'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (x, users[x]["basic"]["name"]))
+    fmtUser = lambda x,y=None: ("<span class='user %s'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (y if y else '', x, users[x]["basic"]["name"]))
   %>
   %if type == "activity":
     <%
@@ -217,21 +223,20 @@
       elif subtype == "following":
         activity = _("%s started following %s.") % (fmtUser(userId), fmtUser(target))
     %>
-    <div class="conv-summary">
-    ${activity}
+    <div class="conv-summary">${activity}</div>
   %elif type in ["status", "link", "document"]:
     %if not reason:
       <span class="conv-reason">
-        ${fmtUser(userId)}
+        ${fmtUser(userId, "conv-user-cause")}
       </span>
     %endif
     <div class="conv-summary">
-    %if conv["meta"].has_key("comment"):
-      ${conv["meta"]["comment"]}
-    %endif
+      %if conv["meta"].has_key("comment"):
+        ${conv["meta"]["comment"]}
+      %endif
+    </div>
   %endif
   <span class="timestamp" ts="${conv['meta']['timestamp']}">${conv['meta']['timestamp']}</span>
-  </div>
 </%def>
 
 <%def name="feed_()">

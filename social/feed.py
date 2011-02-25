@@ -103,6 +103,7 @@ class FeedResource(base.BaseResource):
     isLeaf = True
     resources = {}
 
+    # TODO: ACLs
     @defer.inlineCallbacks
     def getItems(self, userKey, itemKey=None, count=10):
         toFetchItems = set()    # Items, users and groups that need to be fetched
@@ -110,31 +111,33 @@ class FeedResource(base.BaseResource):
         toFetchGroups = set()   #
 
         # 1. Fetch the list of root items (conversations) that will be shown
-        items = OrderedDict()
+        convs = []
         if itemKey:
-            items[itemKey] = [itemKey]
+            convs.append(itemKey)
             toFetchItems.add(itemKey)
         else:
             cols = yield Db.get_slice(userKey, "feed", count=count, reverse=True)
             for col in cols:
                 value = col.column.value
-                items[value] = [value]
-                toFetchItems.add(value)
+                if value not in toFetchItems:
+                    convs.append(value)
+                    toFetchItems.add(value)
 
         # 2. Fetch list of notifications that we have for above conversations and
         #    check if we have enough responses to be shown in the feed. If not
         #    fetch responses for those conversations.
-        rawFeedItems = yield Db.get_slice(userKey, "feedItems", items)
+        rawFeedItems = yield Db.get_slice(userKey, "feedItems", convs)
         feedItems = dict()
         toFetchResponses = set()
         for conversation in rawFeedItems:
             convId = conversation.super_column.name
-            feedItems[convId] = []
-            numResponses = 0
-            for update in conversation.super_column.columns:
+            mostRecentItem = None
+            columns = conversation.super_column.columns
+            feedItems[convId] = {"comments": [], "likes": [], "extras": [],
+                                 "root": None, "recent": None}
+            for update in columns:
                 # X:<user>:<item>:<users>:<groups>
                 item = update.value.split(':')
-                feedItems[convId].append(item[0:3])
 
                 toFetchUsers.add(item[1])
                 if len(item) > 3 and len(item[3]):
@@ -142,12 +145,21 @@ class FeedResource(base.BaseResource):
                 if len(item) > 4 and len(item[4]):
                     toFetchGroups.update(item[4].split(","))
 
-                if item[0] == "C":
-                    items[convId].append(item[2])
+                type = item[0]
+                if type == "C":
+                    feedItems[convId]["comments"].append(item[1:3])
+                    mostRecentItem = item
                     toFetchItems.add(item[2])
-                    numResponses += 1
+                elif type == "L":
+                    feedItems[convId]["likes"].append(item[1:3])
+                    mostRecentItem = item
+                elif type == "I" or type == "!":
+                    feedItems[convId]["root"] = item[1:3]
+                    if type == "I":
+                        mostRecentItem = item
 
-            if numResponses < 2:
+            feedItems[convId]["recent"] = mostRecentItem[0:3]
+            if len(feedItems[convId]["comments"]) < 2:
                 toFetchResponses.add(convId)
 
         # 2.1 Fetch more responses, if required
@@ -156,8 +168,8 @@ class FeedResource(base.BaseResource):
         for convId, responses in itemResponses.items():
             for response in responses:
                 userKey, itemKey = response.column.value.split(':')
-                if len(items[convId]) < 2:
-                    items[convId].append(itemKey)
+                if itemKey not in toFetchItems:
+                    feedItems[convId]["extras"].append([userKey, itemKey])
                     toFetchItems.add(itemKey)
                     toFetchUsers.add(userKey)
 
@@ -169,7 +181,7 @@ class FeedResource(base.BaseResource):
         userData = yield d2
         groupData = yield d3
 
-        defer.returnValue([items, feedItems,
+        defer.returnValue([convs, feedItems,
                            utils.multiSuperColumnsToDict(itemData),
                            utils.multiSuperColumnsToDict(userData),
                            utils.multiSuperColumnsToDict(groupData)])
@@ -197,8 +209,8 @@ class FeedResource(base.BaseResource):
                                     landing, "#share-block", "set", **args)
             yield self._renderShareBlock(request, "status")
 
-        items, feed, itemData, userData, groupData = yield self.getItems(myKey)
-        args["conversations"] = items
+        convs, feed, itemData, userData, groupData = yield self.getItems(myKey)
+        args["conversations"] = convs
         args["feedItems"] = feed
         args["items"] = itemData
         args["users"] = userData
@@ -403,7 +415,7 @@ class FeedResource(base.BaseResource):
             delimiter = ',' if responses else ''
             responses += delimiter + itemKey
 
-            if count %5 == 1:
+            if count % 5 == 1:
                 count = yield Db.get_count(parent, "itemResponses")
             parentMeta = {"count": str(count+1), "responses": responses }
 
@@ -411,7 +423,7 @@ class FeedResource(base.BaseResource):
                                                     "followers": followers})
 
             # 4.1.2 add item as response to parent
-            yield Db.insert(parent, "itemResponses", itemKey, timeuuid)
+            yield Db.insert(parent, "itemResponses", "%s:%s" % (userKey,itemKey), timeuuid)
 
             if parentOwner != userKey:
                 # 4.1.3 update user's userItems, userItems_*
