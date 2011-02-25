@@ -120,6 +120,7 @@
       comments = []
       likes = []
       rootItem = None
+      fmtUser = lambda x: ("<span class='user'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (x, users[x]["basic"]["name"]))
 
       feedItems[convId].reverse()
       for update in feedItems[convId]:
@@ -132,28 +133,29 @@
 
       ## Let the user know why this item is in the feed.
       (typ, userId, itemId) = feedItems[convId][0]
-      userIds = [rootItem[1]]
+      userIds = None
       template = None
       if typ == "C":
+          userIds = set([x[1] for x in comments])
           template = ["%s commented on %s's %s",
                       "%s and %s commented on %s's %s",
-                      "%s, %s and %s commented on %s's %s"][len(comments)]
-          userIds = [x[1] for x in comments]
+                      "%s, %s and %s commented on %s's %s"][len(userIds)-1]
       elif typ == "L" and itemId == convId:
+          userIds = set([x[1] for x in likes])
           template = ["%s liked %s's %s",
                       "%s and %s liked %s's %s",
-                      "%s, %s and %s liked %s's %s"][len(likes)]
-          userIds = [x[1] for x in likes]
+                      "%s, %s and %s liked %s's %s"][len(userIds)-1]
       elif typ == "L":
+          userIds = set([userId])
           template == ["%s liked a comment on %s's %s"]
-          userIds = [userId]
 
       reason = None
       if template:
-          args = ["<span class='user'><a class='ajax' href='/profile?id=%s>%s</a></span>" % (id, users[id]["basic"]["name"]) for id in userIds]
+          args = [fmtUser(id) for id in userIds]
+          args.append(fmtUser(rootItem[1]))
           itemType = items[convId]["meta"]["type"]
           args.append("<span class='item'><a class='ajax' href='/%s?id=%s'>%s</a></span>" % (itemType, convId, _(itemType)))
-          reason = _(template) % args
+          reason = _(template) % tuple(args)
     %>
     <div id=${"conv-%s" % convId} class="conv-item">
       <div class="conv-avatar"></div>
@@ -165,10 +167,38 @@
           ${self.renderRootItem(convId, reason)}
         </div>
         <div class="conv-meta"></div>
-        <div class="conv-comments"></div>
+        <div class="conv-comments">
+          %for comment in convItems[1:]:
+            <div id="comment-${comment}">
+              ${self.renderComment(items[comment])}
+            </div>
+          %endfor
+          <div id="form-${convId}">
+            <form method="post" action="/feed/share/status" class="ajax">
+              <input type="text" name="comment" value=""></input> 
+              <input type="hidden" name="parent" value=${convId}></input>
+              <input type="hidden" name="parentUserId" value="${rootItem[1]}"></input>
+              <input type="hidden" name="acl" value="${items[convId]['meta']['acl']}"></input>
+              ${widgets.button(None, type="submit", name="comment", value="comment")}<br/>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
   %endfor
+</%def>
+
+<%def name="renderComment(item)">
+  <%
+    userId = item["meta"]["owner"]
+    comment = item["meta"]["comment"]
+    fmtUser = lambda x: ("<span class='user'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (x, users[x]["basic"]["name"]))
+  %>
+  <div class="comment-avatar"></div>
+  <div class="comment-container">
+    <span class="comment-user">${fmtUser(userId)}</span>
+    <span class="comment-text">${comment}</span>
+  </div>
 </%def>
 
 <%def name="renderRootItem(convId, reason)">
@@ -176,28 +206,32 @@
     conv = items[convId]
     type = conv["meta"]["type"]
     userId = conv["meta"]["owner"]
-    user = lambda x: ("<span class='user'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (x, users[x]["basic"]["name"]))
+    fmtUser = lambda x: ("<span class='user'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (x, users[x]["basic"]["name"]))
   %>
-  %if type in ["activity"]:
+  %if type == "activity":
     <%
       subtype = conv["meta"]["subType"]
       target = conv["data"]["target"]
       if subtype == "connection":
-        activity = _("%s and %s are now friends.") % (user(userId), user(target))
+        activity = _("%s and %s are now friends.") % (fmtUser(userId), fmtUser(target))
       elif subtype == "following":
-        activity = _("%s started following %s.") % (user(userId), user(target))
+        activity = _("%s started following %s.") % (fmtUser(userId), fmtUser(target))
     %>
-    <span class="conv-reason">${activity}</span>
+    <div class="conv-summary">
+    ${activity}
   %elif type in ["status", "link", "document"]:
     %if not reason:
       <span class="conv-reason">
-        ${user(userId)}
+        ${fmtUser(userId)}
       </span>
     %endif
+    <div class="conv-summary">
     %if conv["meta"].has_key("comment"):
       ${conv["meta"]["comment"]}
     %endif
   %endif
+  <span class="timestamp" ts="${conv['meta']['timestamp']}">${conv['meta']['timestamp']}</span>
+  </div>
 </%def>
 
 <%def name="feed_()">
