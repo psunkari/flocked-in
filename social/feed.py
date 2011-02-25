@@ -337,7 +337,6 @@ class FeedResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _share(self, request, typ):
-
         meta = {}
         target = utils.getRequestArg(request, "target")
         if target:
@@ -347,9 +346,8 @@ class FeedResource(base.BaseResource):
         cols = yield Db.get(userKey, "users", "name", "basic")
         username = utils.columnsToDict([cols])["name"]
 
-
         meta["owner"] = userKey
-        meta["timestamp"] = "%s" % int(time.time() * 1000)
+        meta["timestamp"] = "%s" % int(time.time())
 
         comment = utils.getRequestArg(request, "comment")
         if comment:
