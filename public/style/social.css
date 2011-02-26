@@ -397,6 +397,11 @@ a.ajax {
     min-height: 25px;
 }
 
+.conv-quote {
+    border-left: 3px solid #EEE;
+    padding-left: 5px;
+}
+
 .comment-avatar {
     height: 25px;
     width: 25px;

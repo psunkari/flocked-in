@@ -207,7 +207,7 @@
   </div>
 </%def>
 
-<%def name="renderRootItem(convId, reason)">
+<%def name="renderRootItem(convId, isQuoted)">
   <%
     conv = items[convId]
     type = conv["meta"]["type"]
@@ -223,20 +223,27 @@
       elif subtype == "following":
         activity = _("%s started following %s.") % (fmtUser(userId), fmtUser(target))
     %>
-    <div class="conv-summary">${activity}</div>
+    <div class="conv-summary${' conv-quote' if isQuoted else ''}">
+      ${activity}
+      <div class="conv-meta">
+        <span class="timestamp" ts="${conv['meta']['timestamp']}">${conv['meta']['timestamp']}</span>
+      </div>
+    </div>
   %elif type in ["status", "link", "document"]:
-    %if not reason:
+    %if not isQuoted:
       <span class="conv-reason">
         ${fmtUser(userId, "conv-user-cause")}
       </span>
     %endif
-    <div class="conv-summary">
+    <div class="conv-summary${' conv-quote' if isQuoted else ''}">
       %if conv["meta"].has_key("comment"):
         ${conv["meta"]["comment"]}
       %endif
+      <div class="conv-meta">
+        <span class="timestamp" ts="${conv['meta']['timestamp']}">${conv['meta']['timestamp']}</span>
+      </div>
     </div>
   %endif
-  <span class="timestamp" ts="${conv['meta']['timestamp']}">${conv['meta']['timestamp']}</span>
 </%def>
 
 <%def name="feed_()">
