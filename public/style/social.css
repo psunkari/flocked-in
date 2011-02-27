@@ -41,7 +41,7 @@ body {
 }
 
 a:link, a:visited {
-    color: #3d85c6;
+    color: #3366CC;
     text-decoration: none;
 }
 a:hover, a:active, a:focus {
@@ -308,7 +308,7 @@ a.ajax {
     display: inline-block;
     padding: 5px;
     margin: -5px -5px -5px 0;
-    color: #3D85C6;
+    color: #3366CC;
 }
 #sharebar-links a:hover,
 #sharebar-links a:active, #sharebar-links a:focus {
