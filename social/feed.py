@@ -383,8 +383,6 @@ class FeedResource(base.BaseResource):
         landing = not self._ajax
 
         parentUserKey = utils.getRequestArg(request, "parentUserId")
-        meta["count"] = '0'
-        meta["responses"] = ''
         itemKey = utils.getUniqueKey()
         timeuuid = uuid.uuid1().bytes
         meta["uuid"] = timeuuid
@@ -404,20 +402,18 @@ class FeedResource(base.BaseResource):
                                 responseType, typ, parentUserKey)
 
         if parent:
-            #4.1.1 update count, followers, reponses of parent item
+            #4.1.1 update responseCount, followers of parent item
             cols = yield Db.get_slice(parent, "items",
-                                        ['count', 'responses', 'owner'],
-                                        super_column='meta')
+                                      ['responseCount', 'owner'],
+                                      super_column='meta')
             cols = utils.columnsToDict(cols)
-            count = int(cols["count"])
-            responses = cols["responses"]
+            responseCount = int(cols["responseCount"]) \
+                            if cols.has_key("responseCount") else 0
             parentOwner = cols["owner"]
-            delimiter = ',' if responses else ''
-            responses += delimiter + itemKey
 
-            if count % 5 == 1:
-                count = yield Db.get_count(parent, "itemResponses")
-            parentMeta = {"count": str(count+1), "responses": responses }
+            if responseCount % 5 == 1:
+                responseCount = yield Db.get_count(parent, "itemResponses")
+            parentMeta = {"responseCount": str(responseCount+1)}
 
             yield Db.batch_insert(parent, "items", {"meta": parentMeta,
                                                     "followers": followers})

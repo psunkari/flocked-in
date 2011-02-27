@@ -121,6 +121,7 @@
       rootItem = feedItems[convId]["root"]
       likes = feedItems[convId]["likes"]
       fmtUser = lambda x,y=None: ("<span class='user %s'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (y if y else "", x, users[x]["basic"]["name"]))
+      conv = items[convId]
 
       ## Let the user know why this item is in the feed.
       (recentType, recentUserId, recentItemId) = feedItems[convId]["recent"]
@@ -144,9 +145,9 @@
       if template:
           args = [fmtUser(id, "conv-user-cause") for id in userIds]
           args.append(fmtUser(rootItem[0]))
-          itemType = items[convId]["meta"]["type"]
-          args.append("<span class='item'><a class='ajax' href='/%s?id=%s'>%s</a></span>" % (itemType, convId, _(itemType)))
+          args.append("<span class='item'><a class='ajax' href='/item?id=%s'>%s</a></span>" % (convId, _(conv["meta"]["type"])))
           reason = _(template) % tuple(args)
+
     %>
     <div id=${"conv-%s" % convId} class="conv-item">
       <div class="conv-avatar"></div>
@@ -155,7 +156,7 @@
           %if reason:
             <span class="conv-reason">${reason}</span>
           %endif
-          ${self.renderRootItem(convId, reason)}
+          ${self.renderRootItem(conv, reason)}
         </div>
         <div class="conv-meta"></div>
         <div class="conv-comments">
@@ -168,6 +169,21 @@
                 comments.extend(extras)
                 comments.sort(key=lambda x: items[x[1]]["meta"]["timestamp"])
           %>
+          %if conv["meta"].has_key("responseCount"):
+            <% responseCount = int(conv["meta"]["responseCount"]) %>
+            %if responseCount > len(comments):
+              <div class="conv-comment">
+                ## When the number of responses is more than 20
+                ## display the item in it's own page (not in the feed)
+                %if responseCount < 20:
+                  <a class="ajax" href="/feed/responses?id=${convId}&all=1">
+                %else:
+                  <a class="ajax" href="/item?id=${convId}">
+                %endif
+                ${_("View all %s comments &#187;") % conv["meta"]["responseCount"]}</a>
+              </div>
+            %endif
+          %endif
           %for userId, commentId in comments:
             <div class="conv-comment" id="comment-${commentId}">
               ${self.renderComment(commentId)}
@@ -207,9 +223,8 @@
   </div>
 </%def>
 
-<%def name="renderRootItem(convId, isQuoted)">
+<%def name="renderRootItem(conv, isQuoted)">
   <%
-    conv = items[convId]
     type = conv["meta"]["type"]
     userId = conv["meta"]["owner"]
     fmtUser = lambda x,y=None: ("<span class='user %s'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (y if y else '', x, users[x]["basic"]["name"]))
