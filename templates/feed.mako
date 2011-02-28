@@ -212,7 +212,7 @@
               args = [fmtUser(id) for id in userIds]
               if likesCount > 1:
                 args.append(str(likesCount))
-
+              
               likeStr = _(template) % tuple(args)
           %>
         </div>
@@ -221,7 +221,7 @@
             ${likeStr}
           %endif
         </div>
-        <div class="conv-comments">
+        <div class="conv-comments"> 
           <%
             if len(comments) < 2 and len(feedItems[convId]["extras"]):
               extras = feedItems[convId]["extras"]
@@ -273,7 +273,7 @@
     userId = item["meta"]["owner"]
     comment = item["meta"]["comment"] if item["meta"].has_key("comment") else ""
     timestamp = item["meta"]["timestamp"]
-    likesCount = item["meta"]["likesCount"] if item["meta"].has_key("likesCount") else 0
+    likesCount = int(item["meta"]["likesCount"]) if item["meta"].has_key("likesCount") else 0
     fmtUser = lambda x: ("<span class='user comment-author'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (x, users[x]["basic"]["name"]))
     def getImgURI(userId):
         data = users[userId].get('avatar', {}).get('small', '')
