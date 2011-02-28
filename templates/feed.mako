@@ -132,14 +132,14 @@
           template = ["%s commented on %s's %s",
                       "%s and %s commented on %s's %s",
                       "%s, %s and %s commented on %s's %s"][len(userIds)-1]
-      elif recentType == "L" and itemId == convId:
+      elif recentType == "L" and recentItemId == convId:
           userIds = set([x[0] for x in likes])
           template = ["%s liked %s's %s",
                       "%s and %s liked %s's %s",
                       "%s, %s and %s liked %s's %s"][len(userIds)-1]
       elif recentType == "L":
-          userIds = set([userId])
-          template == ["%s liked a comment on %s's %s"]
+          userIds = set([recentUserId])
+          template = "%s liked a comment on %s's %s"
 
       reason = None
       if template:
@@ -170,9 +170,57 @@
           %if reason:
             <span class="conv-reason">${reason}</span>
           %endif
-          ${self.renderRootItem(conv, reason)}
+          ${self.renderRootItem(convId, reason)}
         </div>
-        <div class="conv-meta"></div>
+        <div class="conv-likes">
+          <%
+            likeStr = None
+            likesCount = int(conv["meta"]["likesCount"]) if conv["meta"].has_key("likesCount") else 0
+
+            userIds = [x[0] for x in likes]
+            if myKey in userIds:
+              userIds.remove(myKey)
+
+            userIds = userIds[-2:]
+            template = None
+            if len(itemLikes[convId]):
+              likesCount -= (1 + len(userIds))
+              if likesCount == 0:
+                template = ["You like this",
+                            "You and %s like this",
+                            "You, %s and %s like this"][len(userIds)]
+              elif likesCount == 1:
+                template = ["You and 1 other person like this",
+                            "You, %s and 1 other person like this",
+                            "You, %s, %s and 1 other person like this"][len(userIds)]
+              else:
+                template = ["You and %s other people like this",
+                            "You, %s and %s other people like this",
+                            "You, %s, %s and %s other people like this"][len(userIds)]
+            else:
+              likesCount -= len(userIds)
+              if likesCount == 1:
+                template = ["1 person likes this",
+                            "%s and 1 other person like this",
+                            "%s, %s and 1 other people like this"][len(userIds)]
+              elif likesCount > 1:
+                template = ["%s people like this",
+                            "%s and %s other people like this",
+                            "%s, %s and %s other people like this"][len(userIds)]
+
+            if template:
+              args = [fmtUser(id) for id in userIds]
+              if likesCount > 1:
+                args.append(str(likesCount))
+
+              likeStr = _(template) % tuple(args)
+          %>
+        </div>
+        <div class="conv-likes">
+          %if likeStr:
+            ${likeStr}
+          %endif
+        </div>
         <div class="conv-comments">
           <%
             if len(comments) < 2 and len(feedItems[convId]["extras"]):
@@ -200,7 +248,7 @@
           %endif
           %for userId, commentId in comments:
             <div class="conv-comment" id="comment-${commentId}">
-              ${self.renderComment(commentId)}
+              ${self.renderComment(convId, commentId)}
             </div>
           %endfor
           <div class="conv-comment" id="form-${convId}">
@@ -219,12 +267,13 @@
   %endfor
 </%def>
 
-<%def name="renderComment(commentId)">
+<%def name="renderComment(convId, commentId)">
   <%
     item = items[commentId]
     userId = item["meta"]["owner"]
     comment = item["meta"]["comment"] if item["meta"].has_key("comment") else ""
     timestamp = item["meta"]["timestamp"]
+    likesCount = item["meta"]["likesCount"] if item["meta"].has_key("likesCount") else 0
     fmtUser = lambda x: ("<span class='user comment-author'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (x, users[x]["basic"]["name"]))
     def getImgURI(userId):
         data = users[userId].get('avatar', {}).get('small', '')
@@ -245,11 +294,24 @@
   </div>
   <div class="comment-meta">
     <span class="timestamp" _ts="${timestamp}">${timestamp}</span>
+    <span class="likes">
+      %if likesCount:
+        &nbsp;&#183;&nbsp;
+        <a class="ajax" href="/feed/likes?id=${commentId}">${likesCount}</a>
+      %endif
+    </span>
+    &nbsp;&#183;&nbsp;
+    %if len(itemLikes[commentId]):
+      <span><a class="ajax" _ref="/feed/unlike?itemKey=${commentId}&parent=${convId}">${_("Unlike")}</a></span>
+    %else:
+      <span><a class="ajax" _ref="/feed/like?itemKey=${commentId}&parent=${convId}">${_("Like")}</a></span>
+    %endif
   </div>
 </%def>
 
-<%def name="renderRootItem(conv, isQuoted)">
+<%def name="renderRootItem(convId, isQuoted)">
   <%
+    conv = items[convId]
     type = conv["meta"]["type"]
     userId = conv["meta"]["owner"]
     fmtUser = lambda x,y=None: ("<span class='user %s'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (y if y else '', x, users[x]["basic"]["name"]))
@@ -265,10 +327,6 @@
     %>
     <div class="conv-summary${' conv-quote' if isQuoted else ''}">
       ${activity}
-      <div class="conv-meta">
-        <span class="timestamp" ts="${conv['meta']['timestamp']}">${conv['meta']['timestamp']}</span>
-      </div>
-    </div>
   %elif type in ["status", "link", "document"]:
     %if not isQuoted:
       <span class="conv-reason">
@@ -279,11 +337,17 @@
       %if conv["meta"].has_key("comment"):
         ${conv["meta"]["comment"]}
       %endif
-      <div class="conv-meta">
-        <span class="timestamp" ts="${conv['meta']['timestamp']}">${conv['meta']['timestamp']}</span>
-      </div>
-    </div>
   %endif
+  <div class="conv-meta">
+    <span class="timestamp" ts="${conv['meta']['timestamp']}">${conv['meta']['timestamp']}</span>
+    &nbsp;&#183;&nbsp;
+    %if len(itemLikes[convId]):
+      <span><a class="ajax" _ref="/feed/unlike?itemKey=${convId}&parent=${convId}">${_("Unlike")}</a></span>
+    %else:
+      <span><a class="ajax" _ref="/feed/like?itemKey=${convId}&parent=${convId}">${_("Like")}</a></span>
+    %endif
+  </div>
+</div>
 </%def>
 
 <%def name="feed_()">

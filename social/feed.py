@@ -150,9 +150,12 @@ class FeedResource(base.BaseResource):
                     feedItems[convId]["comments"].append(item[1:3])
                     mostRecentItem = item
                     toFetchItems.add(item[2])
-                elif type == "L":
+                elif type == "L" and convId == item[2]:
                     feedItems[convId]["likes"].append(item[1:3])
                     mostRecentItem = item
+                elif type == "L":
+                    mostRecentItem = item
+                    toFetchItems.add(item[2])
                 elif type == "I" or type == "!":
                     feedItems[convId]["root"] = item[1:3]
                     if type == "I":
@@ -167,24 +170,27 @@ class FeedResource(base.BaseResource):
                                                 reverse=True, count=2)
         for convId, responses in itemResponses.items():
             for response in responses:
-                userKey, itemKey = response.column.value.split(':')
+                userKey_, itemKey = response.column.value.split(':')
                 if itemKey not in toFetchItems:
-                    feedItems[convId]["extras"].append([userKey, itemKey])
+                    feedItems[convId]["extras"].append([userKey_, itemKey])
                     toFetchItems.add(itemKey)
-                    toFetchUsers.add(userKey)
+                    toFetchUsers.add(userKey_)
 
         # Finally, concurrently fetch items, users and groups
         d1 = Db.multiget_slice(toFetchItems, "items", ["data", "meta"])
         d2 = Db.multiget_slice(toFetchUsers, "users", ["basic", "avatar"])
         d3 = Db.multiget_slice(toFetchGroups, "groups", ["basic"])
+        d4 = Db.multiget(toFetchItems, "itemLikes", userKey)
         itemData = yield d1
         userData = yield d2
         groupData = yield d3
+        itemLikes = yield d4
 
         defer.returnValue([convs, feedItems,
                            utils.multiSuperColumnsToDict(itemData),
                            utils.multiSuperColumnsToDict(userData),
-                           utils.multiSuperColumnsToDict(groupData)])
+                           utils.multiSuperColumnsToDict(groupData),
+                           utils.multiColumnsToDict(itemLikes)])
 
     @defer.inlineCallbacks
     def _render(self, request):
@@ -209,12 +215,14 @@ class FeedResource(base.BaseResource):
                                     landing, "#share-block", "set", **args)
             yield self._renderShareBlock(request, "status")
 
-        convs, feed, itemData, userData, groupData = yield self.getItems(myKey)
+        convs, feed, itemData, userData, groupData,\
+                                         itemLikes = yield self.getItems(myKey)
         args["conversations"] = convs
         args["feedItems"] = feed
         args["items"] = itemData
         args["users"] = userData
         args["groups"] = groupData
+        args["itemLikes"] = itemLikes
 
         if script:
             yield renderScriptBlock(request, "feed.mako", "feed", landing,
@@ -282,10 +290,24 @@ class FeedResource(base.BaseResource):
             cols = yield Db.get_slice(parent, "items",
                                         ["type", "acl", "owner"],
                                         super_column = "meta")
-            cols = utils.columnsToDict(cols)
+            cols = yield utils.columnsToDict(cols)
             typ = cols["type"]
             acl = cols["acl"]
             parentUserKey = cols["owner"]
+
+        likesCount = 0
+        try:
+            cols = yield Db.get(itemKey, "items", "likesCount", "meta")
+            likesCount = int(cols.column.value)
+        except ttypes.NotFoundException:
+            pass
+
+        # Update the likes count
+        if likesCount % 5 == 1:
+            likesCount = yield Db.get_count(itemKey, "itemLikes")
+        yield Db.insert(itemKey, "items", str(likesCount + 1),
+                        "likesCount", "meta")
+
         timeuuid = uuid.uuid1().bytes
         responseType = "L"
         # 1. add user to Likes list
@@ -309,7 +331,7 @@ class FeedResource(base.BaseResource):
         args ={"comments":items}
         landing = not self._ajax
         yield  renderScriptBlock(request, "feed.mako", "feed", landing,
-                            "#%s"%(parent), "set", **args)
+                            "#conv-%s"%(parent), "set", **args)
 
     @defer.inlineCallbacks
     def _setUnlike(self, request):
@@ -329,6 +351,21 @@ class FeedResource(base.BaseResource):
             typ = cols["type"]
             parentUserKey = cols["owner"]
             acl = cols["acl"]
+
+        # TODO: make sure that likesCount > 0 and that the user liked it.
+        likesCount = 0
+        try:
+            cols = yield Db.get(itemKey, "items", "likesCount", "meta")
+            likesCount = int(cols.column.value)
+        except ttypes.NotFoundException:
+            pass
+
+        # Update the likes count
+        if likesCount % 5 == 1:
+            likesCount = yield Db.get_count(itemKey, "itemLikes")
+        yield Db.insert(itemKey, "items", str(likesCount - 1),
+                        "likesCount", "meta")
+
         # 1. remove the user from likes list.
         yield Db.remove(itemKey, "itemLikes", userKey)
 
