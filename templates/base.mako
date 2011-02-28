@@ -58,8 +58,17 @@
     <div id="top" class="contents">
       <!-- TODO: Avatar and Site Logo -->
       <div id="avatar">
-        %if me.has_key('avatar'):
-          <img src="${me['avatar']['small']}"/>
+        %if me.has_key('avatar') and me['avatar'].has_key('medium'):
+        <%
+        imgURI = ''
+        data = me.get('avatar', {}).get('medium', '')
+        if data:
+            imgtyp, b64data = data.split(":")
+            imgURI = "data:image/%s;base64,%s"%(imgtyp, b64data)
+        %>
+        %if imgURI:
+          <img src="${imgURI}" width=50 height=50/>
+        %endif
         %endif
       </div>
       <div id="sitelogo">

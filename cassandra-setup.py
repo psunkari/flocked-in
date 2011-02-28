@@ -637,7 +637,8 @@ def truncateColumnFamilies(client):
                "followers", "enterpriseLinks", "userGroups", "groupMembers",
                "items", "itemLikes", "itemResponses", "userItems", "feed",
                "userItems_status", "userItems_link", "userItems_document",
-               "feed_status", "feed_link","feed_document", "feedItems"]:
+               "feed_status", "feed_link","feed_document", "feedItems",
+               "domainOrgMap"]:
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 

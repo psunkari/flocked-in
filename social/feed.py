@@ -175,7 +175,7 @@ class FeedResource(base.BaseResource):
 
         # Finally, concurrently fetch items, users and groups
         d1 = Db.multiget_slice(toFetchItems, "items", ["data", "meta"])
-        d2 = Db.multiget_slice(toFetchUsers, "users", ["basic"])
+        d2 = Db.multiget_slice(toFetchUsers, "users", ["basic", "avatar"])
         d3 = Db.multiget_slice(toFetchGroups, "groups", ["basic"])
         itemData = yield d1
         userData = yield d2

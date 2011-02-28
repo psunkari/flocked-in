@@ -7,12 +7,18 @@
 <head>
   <title>${_('Synovel SocialNet')}</title>
   <link rel="stylesheet" type="text/css" media="screen" href="/public/style/signin.css"/>
+  <script type = "text/javascript">
+  function validate()
+  {
+    return document.getElementById("password1").value == document.getElementById("password2").value
+  }
+  </script>
 </head>
 
 <body>
   <table id="aligntable"><tr><td align="center" valign="middle">
   <div id="outer">
-    <form action="/register/create" method="POST" class="loginfields">
+    <form action="/register/create" method="POST" class="loginfields" onsubmit="return validate()">
       <div id="inner">
         <table id="logintable" cellspacing="0" cellpadding="3" border="0" align="center">
           <tr>
@@ -26,12 +32,12 @@
             <td id="userfield"><input id="username" type="hidden" class="textfield" name="emailId" value="${emailId[0]}"></input></td>
           </tr>
           <tr>
-            <td id="passlabel"><label for="password">${_('Password')}</label></td>
-            <td id="passfield"><input id="password" type="password" class="textfield" name="password"></input></td>
+            <td id="passlabel"><label for="password1">${_('Password')}</label></td>
+            <td id="passfield"><input id="password1" type="password" class="textfield" name="password"></input></td>
           </tr>
           <tr>
-            <td id="passlabel"><label for="password">${_('Confirm Password')}</label></td>
-            <td id="passfield"><input id="password" type="password" class="textfield" name="password"></input></td>
+            <td id="passlabel"><label for="password2">${_('Confirm Password')}</label></td>
+            <td id="passfield"><input id="password2" type="password" class="textfield" name="password3"></input></td>
           </tr>
           <tr>
             <td colspan="2" id="submitbox"><input type="submit" id="submit" value="${_('Sign in')}"/>
