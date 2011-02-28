@@ -10,14 +10,17 @@
 </head>
 
 <body>
-  <table id="aligntable"><tr><td align="center" valign="middle">
-  <div id="outer">
-    <form action="/signin${query}" method="POST" class="loginfields">
-      <div id="inner">
-        <table id="logintable" cellspacing="0" cellpadding="3" border="0" align="center">
+  <div id="header">
+    <img alt="Synovel" src="/public/images/synovel.png"/>
+  </div>
+  <div id="wrapper">
+    <div id="inner">
+      <form action="/signin${query}" method="POST">
+      <div id="signin">
+        <table id="signin-table" cellspacing="0" cellpadding="3" border="0" align="center">
           <tr>
-            <td id="logintitle" colspan="2">
-              <img alt="Synovel" src="/public/images/synovel.png"/>
+            <td colspan="2" class="title">
+              Signin to your account
             </td>
           </tr>
           <tr>
@@ -29,35 +32,59 @@
             <td id="passfield"><input id="password" type="password" class="textfield" name="p"></input></td>
           </tr>
           <tr>
-            <td id="rememberfield"><input type="checkbox" id="remember" name="remember"/></td>
-            <td id="rememberlabel"><label for="remember">${_('Remember me on this computer')}</label></td>
+            <td id="rememberfield"><input type="checkbox" id="remember" checked="true" name="remember"/></td>
+            <td id="rememberlabel"><label for="remember">${_('Keep me logged in')}</label></td>
           </tr>
           <tr>
-            <td colspan="2" id="submitbox"><input type="submit" id="submit" value="${_('Sign in')}"/>
+            <td colspan="2" id="signin-submitbox"><input type="submit" id="submit" value="${_('Sign in')}"/>
             </td>
           </tr>
           <tr>
-            <td colspan="2" id="loginhelp">
-              <a href="/public/help">${_('Need help signing in?')}</a>
-              &nbsp;|&nbsp;
-              <a href="/public/contact">${_('Contact')}</a>
-            </td>
-          </tr>
-          <tr>
-            <td>
-             <a href="/register/signup" >signup</a>
-             </td>
-          <tr>
-            <td colspan="2" id="footer">
-              ${_('&copy;2011 Synovel Software')}
-              &nbsp;|&nbsp;
-              <a href="http://www.synovel.com/social">${_('Synovel SocialNet')}</a>
+            <td colspan="2" id="signin-help">
+              <a href="/public/support/signin">${_('Need help signing in?')}</a>
+              &nbsp;&#183;&nbsp;
+              <a href="/public/support/contact">${_('Contact')}</a>
             </td>
           </tr>
         </table>
       </div>
-    </form>
+      </form>
+      <form action="/register" method="POST">
+      <div id="signup">
+        <table id="signup-table" cellspacing="0" cellpadding="3" border="0" align="center">
+          <tr>
+            <td colspan="2" class="title">
+              Create a new account
+            </td>
+          </tr>
+          <tr>
+            <td id="emaillabel"><label for="email">${_('Email')}</label></td>
+            <td id="emailfield"><input id="emailId" type="text" class="textfield" name="emailId"></input></td>
+          </tr>
+          <tr>
+            <td colspan="2" id="signup-submitbox"><input type="submit" id="submit" value="${_('Sign Up')}"/>
+          </tr>
+          <tr>
+            <td colspan="2" id="signup-info">
+              Synovel provides a secure, private social network for your company.
+              A valid company email address is required.
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2" id="signup-help">
+              <a href="/public/support/signup">${_('Know more')}</a>
+              &nbsp;&#183;&nbsp;
+              <a href="/public/support/contact">${_('Buy with e-mail')}</a>
+            </td>
+          </tr>
+        </table>
+      </div>
+      </form>
+      <div id="clear"></div>
+    </div>
   </div>
-  </td></tr></table>
+  <div id="footer">
+    ${_('&copy;2011 Synovel Software')}
+  </div>
 </body>
 </html>
