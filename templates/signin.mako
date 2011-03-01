@@ -42,8 +42,6 @@
           <tr>
             <td colspan="2" id="signin-help">
               <a href="/public/support/signin">${_('Need help signing in?')}</a>
-              &nbsp;&#183;&nbsp;
-              <a href="/public/support/contact">${_('Contact')}</a>
             </td>
           </tr>
         </table>
@@ -73,8 +71,6 @@
           <tr>
             <td colspan="2" id="signup-help">
               <a href="/public/support/signup">${_('Know more')}</a>
-              &nbsp;&#183;&nbsp;
-              <a href="/public/support/contact">${_('Buy with e-mail')}</a>
             </td>
           </tr>
         </table>
@@ -85,6 +81,8 @@
   </div>
   <div id="footer">
     ${_('&copy;2011 Synovel Software')}
+    &nbsp;&#183;&nbsp;
+    <a href="/public/support/contact">${_('Contact')}</a>
   </div>
 </body>
 </html>
