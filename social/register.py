@@ -206,7 +206,6 @@ class RegisterResource(BaseResource):
             userInfo["basic"]["acl"] = basic_acl
 
         dp = utils.getRequestArg(request, "dp")
-        avatar_acl = utils.getRequestArg(request, "avatar_acl")
         if dp:
             imageFormat = _getImageFileFormat(dp)
             if imageFormat not in constants.SUPPORTED_IMAGE_TYPES:
@@ -227,12 +226,13 @@ class RegisterResource(BaseResource):
             image.write(conv)
             image.scale(constants.COMM)
             image.write(small)
-            userInfo["avatar"]={}
-            userInfo["avatar"]["large"] = "%s:%s"%(imageFormat, profile.base64())
-            userInfo["avatar"]["medium"] = "%s:%s"%(imageFormat, conv.base64())
-            userInfo["avatar"]["small"] = "%s:%s"%(imageFormat, small.base64())
-            userInfo["avatar"]["orig"] = "%s:%s"%(imageFormat, blob.base64())
-            userInfo["avatar"]["acl"] = avatar_acl
+
+            if not "basic" in userInfo:
+                userInfo["basic"] = {}
+            userInfo["basic"]["avatar-large"] = "%s:%s"%(imageFormat, profile.base64())
+            userInfo["basic"]["avatar-medium"] = "%s:%s"%(imageFormat, conv.base64())
+            userInfo["basic"]["avatar-small"] = "%s:%s"%(imageFormat, small.base64())
+            userInfo["basic"]["avatar-orig"] = "%s:%s"%(imageFormat, blob.base64())
 
         expertise = utils.getRequestArg(request, "expertise")
         expertise_acl = utils.getRequestArg(request, "expertise_acl")

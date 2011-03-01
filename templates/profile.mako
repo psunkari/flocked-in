@@ -144,17 +144,10 @@
 
 <%def name="summary()">
   <div id="useravatar">
-  <%
-    imgURI = ''
-    data = me.get('avatar', {}).get('large', '')
-    if data:
-        imgtyp, b64data = data.split(":")
-        imgURI= "data:image/%s;base64,%s"%(imgtyp, b64data)
-  %>
-  
-  %if imgURI:
-   <img src="${imgURI}" width=128 height=128/>
-  %endif
+    <% avatarURI = utils.userAvatar(myKey, me, "large") %>
+    %if avatarURI:
+      <img src="${avatarURI}" width=128 height=128/>
+    %endif
   </div>
   <div id="userprofile">
     <div class="titlebar">

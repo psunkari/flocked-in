@@ -1,4 +1,4 @@
-<%! from social import _, __ %>
+<%! from social import utils, _, __ %>
 
 <%namespace name="widgets" file="widgets.mako"/>
 <%inherit file="base.mako"/>
@@ -147,23 +147,16 @@
           args.append(fmtUser(rootItem[0]))
           args.append("<span class='item'><a class='ajax' href='/item?id=%s'>%s</a></span>" % (convId, _(conv["meta"]["type"])))
           reason = _(template) % tuple(args)
-      def getImgURI(userId):
-        data = users[userId].get('avatar', {}).get('medium', '')
-        if data:
-            imgtyp, b64data = data.split(":")
-            return "data:image/%s;base64,%s"%(imgtyp, b64data)
-        return None
-
     %>
     <div id=${"conv-%s" % convId} class="conv-item">
       <div class="conv-avatar">
       <%
-         imgURI = getImgURI(conv["meta"]["owner"])
+        owner = conv["meta"]["owner"]
+        avatarURI = utils.userAvatar(owner, users[owner])
       %>
-      %if imgURI:
-            <img src="${imgURI}" height='50' width='50'/>
+      %if avatarURI:
+        <img src="${avatarURI}" height='50' width='50'/>
       %endif
-      
       </div>
       <div class="conv-data">
         <div class="conv-root-render">
@@ -275,17 +268,12 @@
     timestamp = item["meta"]["timestamp"]
     likesCount = int(item["meta"]["likesCount"]) if item["meta"].has_key("likesCount") else 0
     fmtUser = lambda x: ("<span class='user comment-author'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (x, users[x]["basic"]["name"]))
-    def getImgURI(userId):
-        data = users[userId].get('avatar', {}).get('small', '')
-        if data:
-            imgtyp, b64data = data.split(":")
-            return "data:image/%s;base64,%s"%(imgtyp, b64data)
-        return None
   %>
   <div class="comment-avatar">
-  %if getImgURI(userId) != None:
-    <img src="${getImgURI(userId)}" height='25' width='25'/>
-  %endif
+    <% avatarURI = utils.userAvatar(userId, users[userId], "small") %>
+    %if avatarURI:
+      <img src="${avatarURI}" height='25' width='25'/>
+    %endif
   </div>
 
   <div class="comment-container">

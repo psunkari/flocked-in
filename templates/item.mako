@@ -62,17 +62,9 @@
 
 <%def name="conv_owner()">
   <div class="conv-avatar">
-    <%
-    def getImgURI(userId):
-        data = owner.get('avatar', {}).get('small', '')
-        if data:
-            imgtyp, b64data = data.split(":")
-            return "data:image/%s;base64,%s"%(imgtyp, b64data)
-        return None
-    avatar = getImgURI(ownerId)
-    %>
-    %if avatar:
-      <img src="${avatar}" height="50" width="50"/>
+    <% avatarURI = utils.userAvatar(ownerId, owner) %>
+    %if avatarURI:
+      <img src="${avatarURI}" height="50" width="50"/>
     %endif
   </div>
   ${owner["basic"]["name"]}
@@ -121,17 +113,12 @@
     timestamp = item["meta"]["timestamp"]
     likesCount = item["meta"].get("likesCount", 0)
     fmtUser = lambda x: ("<span class='user comment-author'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (x, users[x]["basic"]["name"]))
-    def getImgURI(userId):
-        data = users[userId].get('avatar', {}).get('small', '')
-        if data:
-            imgtyp, b64data = data.split(":")
-            return "data:image/%s;base64,%s"%(imgtyp, b64data)
-        return None
   %>
   <div class="comment-avatar">
-  %if getImgURI(userId) != None:
-    <img src="${getImgURI(userId)}" height='25' width='25'/>
-  %endif
+    <% avatarURI = utils.userAvatar(userId, users[userId], "small") %>
+    %if avatarURI:
+      <img src="${avatarURI}" height='25' width='25'/>
+    %endif
   </div>
 
   <div class="comment-container">

@@ -25,8 +25,8 @@ class ItemResource(base.BaseResource):
         start = utils.getRequestArg(request, "start") or ''
 
         myKey = args['myKey']
-        col = yield Db.get_slice(myKey, "users", ["basic", "avatar"])
-        me = utils.supercolumnsToDict(col)
+        col = yield Db.get(myKey, "users", super_column="basic")
+        me = utils.supercolumnsToDict([col])
         args["me"] = me
 
         if script and landing:
@@ -54,11 +54,8 @@ class ItemResource(base.BaseResource):
                                                  "#conv-root-%s" %(convId),
                                                  "set", **args)
 
-
-        d4 =  Db.get_slice(convOwner, "users", ["basic", "avatar"])
-
-        owner = yield d4
-        owner = utils.supercolumnsToDict(owner)
+        owner = yield Db.get(convOwner, "users", super_column="basic")
+        owner = utils.supercolumnsToDict([owner])
         args["ownerId"] = convOwner
         args['owner'] = owner
 
@@ -77,8 +74,8 @@ class ItemResource(base.BaseResource):
             users.add(userKey_)
 
         d3 = Db.multiget_slice(responseKeys + [convId], "itemLikes")
-        d2 = Db.multiget_slice(responseKeys, "items", ["meta", "data"])
-        d1 = Db.multiget_slice(users, "users", ["basic", "avatar"])
+        d2 = Db.multiget_slice(responseKeys, "items", ["meta"])
+        d1 = Db.multiget_slice(users, "users", ["basic"])
 
         items = yield d2
         users = yield d1
