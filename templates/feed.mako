@@ -208,51 +208,49 @@
               
               likeStr = _(template) % tuple(args)
           %>
-        </div>
-        <div class="conv-likes">
           %if likeStr:
             ${likeStr}
           %endif
         </div>
-        <div class="conv-comments"> 
-          <%
-            if len(comments) < 2 and len(feedItems[convId]["extras"]):
-              extras = feedItems[convId]["extras"]
-              if len(comments) == 0:
-                comments.extend(extras)
-              else:
-                comments.extend(extras)
-                comments.sort(key=lambda x: items[x[1]]["meta"]["timestamp"])
-          %>
-          %if conv["meta"].has_key("responseCount"):
-            <% responseCount = int(conv["meta"]["responseCount"]) %>
-            %if responseCount > len(comments):
-              <div class="conv-comment">
-                ## When the number of responses is more than 20
-                ## display the item in it's own page (not in the feed)
-                %if responseCount < 20:
-                  <a class="ajax" href="/feed/responses?id=${convId}&all=1">
-                %else:
-                  <a class="ajax" href="/item?id=${convId}">
-                %endif
-                ${_("View all %s comments &#187;") % conv["meta"]["responseCount"]}</a>
-              </div>
-            %endif
+        <%
+          if len(comments) < 2 and len(feedItems[convId]["extras"]):
+            extras = feedItems[convId]["extras"]
+            if len(comments) == 0:
+              comments.extend(extras)
+            else:
+              comments.extend(extras)
+              comments.sort(key=lambda x: items[x[1]]["meta"]["timestamp"])
+        %>
+        %if conv["meta"].has_key("responseCount"):
+          <% responseCount = int(conv["meta"]["responseCount"]) %>
+          %if responseCount > len(comments):
+            <div class="conv-comments-more">
+              ## When the number of responses is more than 20
+              ## display the item in it's own page (not in the feed)
+              %if responseCount < 20:
+                <a class="ajax" href="/feed/responses?id=${convId}&all=1">
+              %else:
+                <a class="ajax" href="/item?id=${convId}">
+              %endif
+              ${_("View all %s comments &#187;") % conv["meta"]["responseCount"]}</a>
+            </div>
           %endif
+        %endif
+        <div class="conv-comments"> 
           %for userId, commentId in comments:
             <div class="conv-comment" id="comment-${commentId}">
               ${self.renderComment(convId, commentId)}
             </div>
           %endfor
-          <div class="conv-comment" id="form-${convId}">
-            <form method="post" action="/feed/share/status" class="ajax">
-              <input type="text" name="comment" value=""></input> 
-              <input type="hidden" name="parent" value=${convId}></input>
-              <input type="hidden" name="parentUserId" value="${rootItem[0]}"></input>
-              <input type="hidden" name="acl" value="${items[convId]['meta']['acl']}"></input>
-              ${widgets.button(None, type="submit", name="comment", value="comment")}<br/>
-            </form>
-          </div>
+        </div>
+        <div class="conv-comment-form" id="form-${convId}">
+          <form method="post" action="/feed/share/status" class="ajax">
+            <input type="text" name="comment" value=""></input> 
+            <input type="hidden" name="parent" value=${convId}></input>
+            <input type="hidden" name="parentUserId" value="${rootItem[0]}"></input>
+            <input type="hidden" name="acl" value="${items[convId]['meta']['acl']}"></input>
+            ${widgets.button(None, type="submit", name="comment", value="comment")}<br/>
+          </form>
         </div>
       </div>
       <div class="conv-item-bottom"></div>

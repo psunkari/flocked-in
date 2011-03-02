@@ -29,7 +29,9 @@
         </div>
       </div>
       <div id="center">
-        ${self.item_layout()}
+        <div class="center-contents">
+          ${self.item_layout()}
+        </div>
       </div>
     </div>
   </div>
@@ -37,38 +39,43 @@
 
 <%def name="item_layout()">
   <div id="conv-${convId}" class="conv-item">
-    <div id="conv-owner">
+    <div class="conv-avatar" id="conv-avatar-${convId}">
       %if not script:
         ${self.conv_owner()}
       %endif
     </div>
-    <div id="conv-root-${convId}">
-      %if not script:
-        ${self.conv_root()}
-      %endif
-    </div>
-    <div id="item-footer-${convId}" class="item-footer">
-      %if not script:
-        ${self.item_footer()}
-      %endif
-    </div>
-    <div id="conv-comments-${convId}">
-      %if not script:
-        ${self.conv_comments()}
-      %endif
+    <div class="conv-data">
+      <div id="conv-root-${convId}">
+        %if not script:
+          ${self.conv_root()}
+        %endif
+      </div>
+      <div id="item-footer-${convId}" class="item-footer">
+        %if not script:
+          ${self.item_footer()}
+        %endif
+      </div>
+      <div id="conv-comments-${convId}" class="conv-comments">
+        %if not script:
+          ${self.conv_comments()}
+        %endif
+      </div>
+      <div class="conv-comment-form">
+        <form method="post" action="/feed/share/status" class="ajax" id="form-${convId}">
+          <input type="text" name="comment" value=""></input> 
+          <input type="hidden" name="parent" value=${convId}></input>
+          ${widgets.button(None, type="submit", name="comment", value="Comment")}<br/>
+        </form>
+      </div>
     </div>
   </div>
 </%def>
 
 <%def name="conv_owner()">
-  <div class="conv-avatar">
-    <% avatarURI = utils.userAvatar(ownerId, owner) %>
-    %if avatarURI:
-      <img src="${avatarURI}" height="50" width="50"/>
-    %endif
-  </div>
-  ${owner["basic"]["name"]}
-  ${owner["basic"]["jobTitle"]}
+  <% avatarURI = utils.userAvatar(ownerId, owner) %>
+  %if avatarURI:
+    <img src="${avatarURI}" height="50" width="50"/>
+  %endif
 </%def>
 
 <%def name="conv_root()">
@@ -95,14 +102,6 @@
   %for responseId in responses:
     ${self.conv_comment(responseId)}
   %endfor
-  <div class="conv-comment">
-    <form method="post" action="/feed/share/status" class="ajax" id="form-${convId}">
-      <input type="text" name="comment" value=""></input> 
-      <input type="hidden" name="parent" value=${convId}></input>
-      <input type="hidden" name="acl" value="${conv['meta']['acl']}"></input>
-      ${widgets.button(None, type="submit", name="comment", value="comment")}<br/>
-    </form>
-  </div>
 </%def>
 
 <%def name="conv_comment(commentId)">
@@ -114,31 +113,32 @@
     likesCount = item["meta"].get("likesCount", 0)
     fmtUser = lambda x: ("<span class='user comment-author'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (x, users[x]["basic"]["name"]))
   %>
-  <div class="comment-avatar">
-    <% avatarURI = utils.userAvatar(userId, users[userId], "small") %>
-    %if avatarURI:
-      <img src="${avatarURI}" height='25' width='25'/>
-    %endif
-  </div>
-
-  <div class="comment-container">
-    <span class="comment-user">${fmtUser(userId)}</span>
-    <span class="comment-text">${comment}</span>
-  </div>
-  <div class="comment-meta">
-    <span class="timestamp" _ts="${timestamp}">${timestamp}</span>
-    <span class="likes">
-      %if likesCount:
-        &nbsp;&#183;&nbsp;
-        <a class="ajax" href="/feed/likes?id=${commentId}">${likesCount}</a>
+  <div class="conv-comment" id="comment-${commentId}">
+    <div class="comment-avatar">
+      <% avatarURI = utils.userAvatar(userId, users[userId], "small") %>
+      %if avatarURI:
+        <img src="${avatarURI}" height='25' width='25'/>
       %endif
-    </span>
-    &nbsp;&#183;&nbsp;
-    %if commentId in myLikes:
-      <span><a class="ajax" _ref="/feed/unlike?itemKey=${commentId}&parent=${convId}">${_("Unlike")}</a></span>
-    %else:
-      <span><a class="ajax" _ref="/feed/like?itemKey=${commentId}&parent=${convId}">${_("Like")}</a></span>
-    %endif
+    </div>
+    <div class="comment-container">
+      <span class="comment-user">${fmtUser(userId)}</span>
+      <span class="comment-text">${comment}</span>
+    </div>
+    <div class="comment-meta">
+      <span class="timestamp" _ts="${timestamp}">${timestamp}</span>
+      <span class="likes">
+        %if likesCount:
+          &nbsp;&#183;&nbsp;
+          <a class="ajax" href="/feed/likes?id=${commentId}">${likesCount}</a>
+        %endif
+      </span>
+      &nbsp;&#183;&nbsp;
+      %if commentId in myLikes:
+        <span><a class="ajax" _ref="/feed/unlike?itemKey=${commentId}&parent=${convId}">${_("Unlike")}</a></span>
+      %else:
+        <span><a class="ajax" _ref="/feed/like?itemKey=${commentId}&parent=${convId}">${_("Like")}</a></span>
+      %endif
+    </div>
   </div>
 </%def>
 

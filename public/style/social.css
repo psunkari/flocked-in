@@ -389,11 +389,18 @@ a.ajax {
     font-weight: bold;
 }
 
-.conv-comment {
+.conv-comments-more,
+.conv-comment,
+.conv-likes,
+.conv-comment-form {
     background-color: #EEE;
     border-bottom: 1px solid #DDD;
     margin: 2px 0 0;
-    padding: 6px;
+    padding: 4px 6px;
+}
+
+.conv-comment {
+    min-height: 32px;
 }
 
 .conv-quote {
@@ -410,5 +417,9 @@ a.ajax {
 
 .comment-container,
 .comment-meta {
-    padding-left: 32px;
+    padding-left: 38px;
+}
+.comment-container {
+    padding-top: 2px;
+    padding-bottom: 2px;
 }
