@@ -20,20 +20,20 @@ def _getTemplate(path, dfn=None):
 
 
 @defer.inlineCallbacks
-def render(request, path, **kw):
-    args = kw
+def render(request, path, *args, **data):
+    kwargs = data
 
     if request.args.has_key("_ns"):
         request.addCookie("_ns", "1")
 
-    if args.has_key("script") and args["script"]:
-        args["noscriptUrl"] = request.path + "?_ns=1" \
+    if kwargs.has_key("script") and kwargs["script"]:
+        kwargs["noscriptUrl"] = request.path + "?_ns=1" \
                               if request.path == request.uri \
                               else request.uri + "&_ns=1"
 
     try:
         template = yield threads.deferToThread(_getTemplate, path)
-        text = template.render(**args)
+        text = template.render(*args, **kwargs)
         request.write(text)
     except Exception, err:
         log.msg(traceback.print_exc())
@@ -41,10 +41,10 @@ def render(request, path, **kw):
 
 
 @defer.inlineCallbacks
-def renderDef(request, path, dfn, **kw):
+def renderDef(request, path, dfn, *args, **data):
     try:
         template = yield threads.deferToThread(_getTemplate, path, dfn)
-        text = template.render(**kw)
+        text = template.render(*args, **data)
         request.write(text)
     except Exception, err:
         log.msg(traceback.print_exc())
@@ -54,10 +54,10 @@ def renderDef(request, path, dfn, **kw):
 @defer.inlineCallbacks
 def renderScriptBlock(request, path, dfn, tags=False, parent=None,
                       method=None, last=False, css=None, scripts=None,
-                      handlers=None, **kw):
+                      handlers=None, args=[], **data):
     try:
         template = yield threads.deferToThread(_getTemplate, path, dfn)
-        text = template.render(**kw)
+        text = template.render(*args, **data)
     except Exception, err:
         log.msg(traceback.print_exc())
         request.processingFailed(err)
