@@ -30,34 +30,34 @@
       </div>
       <div id="center">
         <div class="center-contents">
-          ${self.item_layout()}
+          ${self.item_layout(convId)}
         </div>
       </div>
     </div>
   </div>
 </%def>
 
-<%def name="item_layout()">
+<%def name="item_layout(convId, inline=False)">
   <div id="conv-${convId}" class="conv-item">
     <div class="conv-avatar" id="conv-avatar-${convId}">
-      %if not script:
-        ${self.conv_owner()}
+      %if inline or not script:
+        ${self.conv_owner(convId['meta']['owner'])}
       %endif
     </div>
     <div class="conv-data">
       <div id="conv-root-${convId}">
-        %if not script:
-          ${self.conv_root()}
+        %if inline or not script:
+          ${self.conv_root(convId)}
         %endif
       </div>
       <div id="item-footer-${convId}" class="item-footer">
-        %if not script:
-          ${self.item_footer()}
+        %if inline or not script:
+          ${self.item_footer(convId)}
         %endif
       </div>
       <div id="conv-comments-${convId}" class="conv-comments">
-        %if not script:
-          ${self.conv_comments()}
+        %if inline or not script:
+          ${self.conv_comments(convId)}
         %endif
       </div>
       <div class="conv-comment-form">
@@ -71,17 +71,17 @@
   </div>
 </%def>
 
-<%def name="conv_owner()">
-  <% avatarURI = utils.userAvatar(ownerId, owner) %>
+<%def name="conv_owner(ownerId)">
+  <% avatarURI = utils.userAvatar(ownerId, users[ownerId]) %>
   %if avatarURI:
     <img src="${avatarURI}" height="50" width="50"/>
   %endif
 </%def>
 
-<%def name="conv_root()">
+<%def name="conv_root(convId)">
 </%def>
 
-<%def name="item_footer()">
+<%def name="item_footer(convId)">
   <span class="timestamp" ts="${conv['meta']['timestamp']}">${conv['meta']['timestamp']}</span>
   &nbsp;&#183;&nbsp;
   %if len(myLikes[convId]):
@@ -91,15 +91,18 @@
   %endif
 </%def>
 
-<%def name="conv_comments()">
-  <% responseCount = int(conv["meta"].get("responseCount", "0")) %>
-  %if responseCount > len(responses):
+<%def name="conv_comments(convId)">
+  <%
+    responseCount = int(items[convId]["meta"].get("responseCount", "0"))
+    convResponses = responses[convId]
+  %>
+  %if responseCount > len(convResponses):
     <div class="conv-comment">
-      <span id="conv-comments-count" _num="${len(responses)}">${_("Showing %s of %s") % (len(responses), responseCount)}</span>
+      <span id="conv-comments-count" _num="${len(convResponses)}">${_("Showing %s of %s") % (len(convResponses), responseCount)}</span>
       View older responses
     </div>
   %endif
-  %for responseId in responses:
+  %for responseId in convResponses:
     ${self.conv_comment(responseId)}
   %endfor
 </%def>

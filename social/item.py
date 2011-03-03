@@ -20,7 +20,8 @@ class ItemResource(base.BaseResource):
 
         convId = utils.getRequestArg(request, "id")
         if not convId:
-            raise errors.NotFoundError()
+            raise errors.MissingParam()
+
         args['convId'] = convId
         start = utils.getRequestArg(request, "start") or ''
 
@@ -36,71 +37,69 @@ class ItemResource(base.BaseResource):
             yield renderScriptBlock(request, "item.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-        users = set()
-        responseKeys = []
+        users = {}
+        items = {}
+        args["users"] = users
+        args["items"] = items
+        toFetchUsers = set()
 
-        #TODO: use plugin to get the data
-        conv = yield Db.get_slice(convId, "items", ['meta'])
-        if not conv:
-            log.err("ERROR: Invalid convId:%(convId)s" %locals())
-            raise Exception("Invalid Request")
-        conv = utils.supercolumnsToDict(conv)
-        args["conv"] = conv
-        convOwner = conv['meta']['owner']
+        conv = yield Db.get(convId, "items", super_column='meta')
+        conv = utils.supercolumnsToDict([conv])
+        items[convId] = conv
+        ownerId = conv['meta']['owner']
 
+        # TODO: Fetch data required for rendering using the plugin
+        renderers = []
         if script:
-            renderRoot = yield renderScriptBlock(request, "item.mako",
-                                                 "conv_root", landing,
-                                                 "#conv-root-%s" %(convId),
-                                                 "set", **args)
+            d = yield renderScriptBlock(request, "item.mako", "conv_root",
+                                        landing, "#conv-root-%s" %(convId),
+                                        "set", **args)
+            renderers.append(d)
 
-        owner = yield Db.get(convOwner, "users", super_column="basic")
+        owner = yield Db.get(ownerId, "users", super_column="basic")
         owner = utils.supercolumnsToDict([owner])
-        args["ownerId"] = convOwner
-        args['owner'] = owner
+        args["ownerId"] = ownerId
+        users[ownerId] = owner
 
         if script:
-            renderOwner = yield renderScriptBlock(request, "item.mako",
-                                                  "conv_owner", landing,
-                                                  "#conv-owner", "set", **args)
-
+            d = yield renderScriptBlock(request, "item.mako", "conv_owner",
+                                        landing, "#conv-owner", "set", **args)
+            renderers.append(d)
 
         itemResponses = yield Db.get_slice(convId, "itemResponses",
                                            start=start, reverse=True, count=25)
-
+        responseKeys = []
         for response in itemResponses:
-            userKey_, responseKey = response.column.value.split(":")
+            userKey, responseKey = response.column.value.split(":")
             responseKeys.append(responseKey)
-            users.add(userKey_)
+            toFetchUsers.add(userKey)
 
         d3 = Db.multiget_slice(responseKeys + [convId], "itemLikes")
         d2 = Db.multiget_slice(responseKeys, "items", ["meta"])
-        d1 = Db.multiget_slice(users, "users", ["basic"])
+        d1 = Db.multiget_slice(toFetchUsers, "users", ["basic"])
 
-        items = yield d2
-        users = yield d1
-        itemLikes = yield d3
-        itemLikes = utils.multiColumnsToDict(itemLikes)
-        myLikes = [key for key in itemLikes if myKey in itemLikes[key].keys()]
+        fetchedItems = yield d2
+        fetchedUsers = yield d1
+        myLikes = yield d3
 
-        args["items"] = utils.multiSuperColumnsToDict(items)
-        args["users"] = utils.multiSuperColumnsToDict(users)
-        args["responses"] = responseKeys
-        args["myLikes"] = myLikes
+        args["items"].update(utils.multiSuperColumnsToDict(fetchedItems))
+        args["users"].update(utils.multiSuperColumnsToDict(fetchedUsers))
+        args["myLikes"] = utils.multiColumnsToDict(myLikes)
+        args["responses"] = {convId: responseKeys}
 
         if script:
-            renderResponses = yield renderScriptBlock(request, "item.mako",
-                                                      'conv_comments', landing,
-                                                      '#conv-comments-%s' % convId, 'set',
-                                                      **args)
+            d = yield renderScriptBlock(request, "item.mako", 'conv_comments',
+                                        landing, '#conv-comments-%s' % convId,
+                                        'set', **args)
+            renderers.append(d)
 
-        #TODO:
-        #    itemMe = renderScriptBlock(request, "item.mako", "item_me",
-        #                               landing, "#item-me", "set", **args)
+        # Wait till the item is fully rendered.
+        yield defer.DeferredList(renderers)
+
+        # TODO: Render other blocks
 
 
     def render_GET(self, request):
-
         segmentCount = len(request.postpath)
         if segmentCount == 0:
             d =  self.renderItem(request)
