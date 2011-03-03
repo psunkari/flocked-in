@@ -51,9 +51,9 @@ class ItemResource(base.BaseResource):
         # TODO: Fetch data required for rendering using the plugin
         renderers = []
         if script:
-            d = yield renderScriptBlock(request, "item.mako", "conv_root",
-                                        landing, "#conv-root-%s" %(convId),
-                                        "set", **args)
+            d = renderScriptBlock(request, "item.mako", "conv_root",
+                                  landing, "#conv-root-%s" %(convId),
+                                  "set", **args)
             renderers.append(d)
 
         owner = yield Db.get(ownerId, "users", super_column="basic")
@@ -62,8 +62,8 @@ class ItemResource(base.BaseResource):
         users[ownerId] = owner
 
         if script:
-            d = yield renderScriptBlock(request, "item.mako", "conv_owner",
-                                        landing, "#conv-owner", "set", **args)
+            d = renderScriptBlock(request, "item.mako", "conv_owner",
+                                  landing, "#conv-owner", "set", **args)
             renderers.append(d)
 
         itemResponses = yield Db.get_slice(convId, "itemResponses",
@@ -88,12 +88,13 @@ class ItemResource(base.BaseResource):
         args["responses"] = {convId: responseKeys}
 
         if script:
-            d = yield renderScriptBlock(request, "item.mako", 'conv_comments',
-                                        landing, '#conv-comments-%s' % convId,
-                                        'set', **args)
+            d = renderScriptBlock(request, "item.mako", 'conv_comments',
+                                  landing, '#conv-comments-%s' % convId,
+                                  'set', **args)
             renderers.append(d)
 
         # Wait till the item is fully rendered.
+        log.msg(renderers)
         yield defer.DeferredList(renderers)
 
         # TODO: Render other blocks
