@@ -180,26 +180,27 @@ class FeedResource(base.BaseResource):
 
             # Build a template used to show the reason for having this item
             # as part of the user feed.
-            (type, userId, itemId) = mostRecentItem[0:3]
-            if type == "C":
-                reasonUserIds[convId] = set(responseUsers)
-                reasonTmpl[convId] = ["%s commented on %s's %s",
-                                      "%s and %s commented on %s's %s",
-                                      "%s, %s and %s commented on %s's %s"]\
-                                     [len(reasonUserIds[convId])-1]
-            elif type == "L" and itemId == convId:
-                reasonUserIds[convId] = set(likes[convId])
-                reasonTmpl[convId] = ["%s liked %s's %s",
-                                      "%s and %s liked %s's %s",
-                                      "%s, %s and %s liked %s's %s"]\
-                                     [len(reasonUserIds[convId])-1]
-            elif type == "L":
-                reasonUserIds[convId] = set([userId])
-                reasonTmpl[convId] = "%s liked a comment on %s's %s"
-
-            # Check if we have to fetch more responses for this conversation
-            if len(responses[convId]) < 2:
-                toFetchResponses.add(convId)
+            if mostRecentItem:
+                (type, userId, itemId) = mostRecentItem[0:3]
+                if type == "C":
+                    reasonUserIds[convId] = set(responseUsers)
+                    reasonTmpl[convId] = ["%s commented on %s's %s",
+                                          "%s and %s commented on %s's %s",
+                                          "%s, %s and %s commented on %s's %s"]\
+                                         [len(reasonUserIds[convId])-1]
+                elif type == "L" and itemId == convId:
+                    reasonUserIds[convId] = set(likes[convId])
+                    reasonTmpl[convId] = ["%s liked %s's %s",
+                                          "%s and %s liked %s's %s",
+                                          "%s, %s and %s liked %s's %s"]\
+                                         [len(reasonUserIds[convId])-1]
+                elif type == "L":
+                    reasonUserIds[convId] = set([userId])
+                    reasonTmpl[convId] = "%s liked a comment on %s's %s"
+ 
+                # Check if we have to fetch more responses for this conversation
+                if len(responses[convId]) < 2:
+                    toFetchResponses.add(convId)
 
         # 2.1 Fetch more responses, if required
         itemResponses = yield Db.multiget_slice(toFetchResponses,
@@ -209,7 +210,7 @@ class FeedResource(base.BaseResource):
             for comment in comments:
                 userKey_, itemKey = comment.column.value.split(':')
                 if itemKey not in toFetchItems and len(responses[convId]) < 2:
-                    responses[convId].append([userKey_, itemKey])
+                    responses[convId].append(itemKey)
                     toFetchItems.add(itemKey)
                     toFetchUsers.add(userKey_)
 
