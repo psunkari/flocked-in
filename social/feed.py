@@ -194,7 +194,7 @@ class FeedResource(base.BaseResource):
                                       "%s, %s and %s liked %s's %s"]\
                                      [len(reasonUserIds[convId])-1]
             elif type == "L":
-                reasonUserIds[convId] = set([recentUserId])
+                reasonUserIds[convId] = set([userId])
                 reasonTmpl[convId] = "%s liked a comment on %s's %s"
 
             # Check if we have to fetch more responses for this conversation
@@ -207,7 +207,7 @@ class FeedResource(base.BaseResource):
                                                 reverse=True, count=2)
         for convId, comments in itemResponses.items():
             for comment in comments:
-                userKey_, itemKey = response.column.value.split(':')
+                userKey_, itemKey = comment.column.value.split(':')
                 if itemKey not in toFetchItems and len(responses[convId]) < 2:
                     responses[convId].append([userKey_, itemKey])
                     toFetchItems.add(itemKey)
@@ -525,7 +525,8 @@ class FeedResource(base.BaseResource):
             meta["type"] = typ
 
         acl = utils.getRequestArg(request, "acl")
-        meta["acl"] = acl
+        if acl:
+            meta["acl"] = acl
         landing = not self._ajax
 
         convOwner = utils.getRequestArg(request, "parentUserId")
@@ -588,11 +589,11 @@ class FeedResource(base.BaseResource):
         data.update(feed)
         landing = not self._ajax
         if parent:
-            yield  renderScriptBlock(request, "item.mako", "layout_item",
+            yield  renderScriptBlock(request, "item.mako", "item_layout",
                                      landing, "#conv-%s"%(parent), "set",
                                      args=[parent, True], **data)
         else:
-            yield renderScriptBlock(request, "item.mako", "layout_item",
+            yield renderScriptBlock(request, "item.mako", "item_layout",
                                     landing, "#user-feed", "prepend",
                                     args=[itemKey, True], **data)
         request.finish()
