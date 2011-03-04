@@ -142,7 +142,7 @@ class FeedResource(base.BaseResource):
         toFetchResponses = set()
         for conversation in rawFeedItems:
             convId = conversation.super_column.name
-            mostRecentItem = []
+            mostRecentItem = None
             columns = conversation.super_column.columns
             likes[convId] = []
             responses[convId] = []
