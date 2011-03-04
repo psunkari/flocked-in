@@ -140,7 +140,7 @@
         %endif
       </span>
       &nbsp;&#183;&nbsp;
-      %if commentId in myLikes:
+      %if commentId in myLikes and len(myLikes[commentId]):
         <span><a class="ajax" _ref="/feed/unlike?itemKey=${commentId}&parent=${convId}">${_("Unlike")}</a></span>
       %else:
         <span><a class="ajax" _ref="/feed/like?itemKey=${commentId}&parent=${convId}">${_("Like")}</a></span>
