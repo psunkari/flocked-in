@@ -94,7 +94,6 @@ class ItemResource(base.BaseResource):
             renderers.append(d)
 
         # Wait till the item is fully rendered.
-        log.msg(renderers)
         yield defer.DeferredList(renderers)
 
         # TODO: Render other blocks

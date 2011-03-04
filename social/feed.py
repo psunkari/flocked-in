@@ -8,7 +8,7 @@ from twisted.web        import server
 from twisted.python     import log
 from telephus.cassandra import ttypes
 
-from social             import Db, utils, base
+from social             import Db, utils, base, _, __
 from social.template    import render, renderDef, renderScriptBlock
 from social.auth        import IAuthInfo
 from social.constants   import INFINITY, MAXFEEDITEMS, MAXFEEDITEMSBYTYPE
@@ -113,7 +113,7 @@ class FeedResource(base.BaseResource):
 
     # TODO: ACLs
     @defer.inlineCallbacks
-    def getItems(self, userKey, itemKey=None, count=10):
+    def _getFeedItems(self, userKey, itemKey=None, count=10):
         toFetchItems = set()    # Items, users and groups that need to be fetched
         toFetchUsers = set()    #
         toFetchGroups = set()   #
@@ -131,18 +131,26 @@ class FeedResource(base.BaseResource):
                     convs.append(value)
                     toFetchItems.add(value)
 
-        # 2. Fetch list of notifications that we have for above conversations and
-        #    check if we have enough responses to be shown in the feed. If not
-        #    fetch responses for those conversations.
+        # 2. Fetch list of notifications that we have for above conversations
+        #    and check if we have enough responses to be shown in the feed.
+        #    If not fetch responses for those conversations.
         rawFeedItems = yield Db.get_slice(userKey, "feedItems", convs)
-        feedItems = dict()
+        reasonUserIds = {}
+        reasonTmpl = {}
+        likes = {}
+        responses = {}
         toFetchResponses = set()
         for conversation in rawFeedItems:
             convId = conversation.super_column.name
             mostRecentItem = None
             columns = conversation.super_column.columns
-            feedItems[convId] = {"comments": [], "likes": [], "extras": [],
-                                 "root": None, "recent": None}
+            likes[convId] = []
+            responses[convId] = []
+            responseUsers = []
+            rootItem = None
+
+            # Collect information about recent updates by my friends
+            # and subscriptions on this item.
             for update in columns:
                 # X:<user>:<item>:<users>:<groups>
                 item = update.value.split(':')
@@ -155,50 +163,134 @@ class FeedResource(base.BaseResource):
 
                 type = item[0]
                 if type == "C":
-                    feedItems[convId]["comments"].append(item[1:3])
+                    responseUsers.append(item[1])
+                    responses[convId].append(item[2])
                     mostRecentItem = item
                     toFetchItems.add(item[2])
                 elif type == "L" and convId == item[2]:
-                    feedItems[convId]["likes"].append(item[1:3])
+                    likes[convId].append(item[1])
                     mostRecentItem = item
                 elif type == "L":
                     mostRecentItem = item
                     toFetchItems.add(item[2])
                 elif type == "I" or type == "!":
-                    feedItems[convId]["root"] = item[1:3]
+                    rootItem = item[1:3]
                     if type == "I":
                         mostRecentItem = item
 
-            feedItems[convId]["recent"] = mostRecentItem[0:3]
-            if len(feedItems[convId]["comments"]) < 2:
+            # Build a template used to show the reason for having this item
+            # as part of the user feed.
+            (type, userId, itemId) = mostRecentItem[0:3]
+            if type == "C":
+                reasonUserIds[convId] = set(responseUsers)
+                reasonTmpl[convId] = ["%s commented on %s's %s",
+                                      "%s and %s commented on %s's %s",
+                                      "%s, %s and %s commented on %s's %s"]\
+                                     [len(reasonUserIds[convId])-1]
+            elif type == "L" and itemId == convId:
+                reasonUserIds[convId] = set(likes[convId])
+                reasonTmpl[convId] = ["%s liked %s's %s",
+                                      "%s and %s liked %s's %s",
+                                      "%s, %s and %s liked %s's %s"]\
+                                     [len(reasonUserIds[convId])-1]
+            elif type == "L":
+                reasonUserIds[convId] = set([recentUserId])
+                reasonTmpl[convId] = "%s liked a comment on %s's %s"
+
+            # Check if we have to fetch more responses for this conversation
+            if len(responses[convId]) < 2:
                 toFetchResponses.add(convId)
 
         # 2.1 Fetch more responses, if required
-        itemResponses = yield Db.multiget_slice(toFetchResponses, "itemResponses",
+        itemResponses = yield Db.multiget_slice(toFetchResponses,
+                                                "itemResponses",
                                                 reverse=True, count=2)
-        for convId, responses in itemResponses.items():
-            for response in responses:
+        for convId, comments in itemResponses.items():
+            for comment in comments:
                 userKey_, itemKey = response.column.value.split(':')
-                if itemKey not in toFetchItems:
-                    feedItems[convId]["extras"].append([userKey_, itemKey])
+                if itemKey not in toFetchItems and len(responses[convId]) < 2:
+                    responses[convId].append([userKey_, itemKey])
                     toFetchItems.add(itemKey)
                     toFetchUsers.add(userKey_)
 
-        # Finally, concurrently fetch items, users and groups
-        d1 = Db.multiget_slice(toFetchItems, "items", ["data", "meta"])
-        d2 = Db.multiget_slice(toFetchUsers, "users", ["basic", "avatar"])
+        # Concurrently fetch items, users and groups
+        d1 = Db.multiget_slice(toFetchItems, "items", ["meta"])
+        d2 = Db.multiget_slice(toFetchUsers, "users", ["basic"])
         d3 = Db.multiget_slice(toFetchGroups, "groups", ["basic"])
         d4 = Db.multiget(toFetchItems, "itemLikes", userKey)
-        itemData = yield d1
-        userData = yield d2
-        groupData = yield d3
-        itemLikes = yield d4
+        fetchedItems = yield d1
+        fetchedUsers = yield d2
+        fetchedGroups = yield d3
+        fetchedMyLikes = yield d4
 
-        defer.returnValue([convs, feedItems,
-                           utils.multiSuperColumnsToDict(itemData),
-                           utils.multiSuperColumnsToDict(userData),
-                           utils.multiSuperColumnsToDict(groupData),
-                           utils.multiColumnsToDict(itemLikes)])
+        items = utils.multiSuperColumnsToDict(fetchedItems)
+        users = utils.multiSuperColumnsToDict(fetchedUsers)
+        groups = utils.multiSuperColumnsToDict(fetchedGroups)
+        myLikes = utils.multiColumnsToDict(fetchedMyLikes)
+
+        # We got all our data, do the remaining processing before
+        # rendering the template.
+        reasonStr = {}
+        likeStr = {}
+        for convId in convs:
+            template = reasonTmpl.get(convId, None)
+            conv = items[convId]
+            ownerId = conv["meta"]["owner"]
+
+            # Build reason string
+            if template:
+                vals = [utils.userName(id, users[id], "conv-user-cause")\
+                        for id in reasonUserIds[convId]]
+                vals.append(utils.userName(ownerId, users[ownerId]))
+                vals.append("<span class='item'><a class='ajax' href='/item?id=%s'>%s</a></span>" % (convId, _(conv["meta"]["type"])))
+                reasonStr[convId] = _(template) % tuple(vals)
+
+            # Build like string
+            likeStr[convId] = None
+            likesCount = int(conv["meta"].get("likesCount", "0"))
+            userIds = [x for x in likes[convId]]
+            if userKey in userIds:
+                userIds.remove(userKey)
+
+            userIds = userIds[-2:]
+            template = None
+            if len(myLikes[convId]):
+                likesCount -= (1 + len(userIds))
+                if likesCount == 0:
+                    template = ["You like this",
+                                "You and %s like this",
+                                "You, %s and %s like this"][len(userIds)]
+                elif likesCount == 1:
+                    template = ["You and 1 other person like this",
+                        "You, %s and 1 other person like this",
+                        "You, %s, %s and 1 other person like this"][len(userIds)]
+                else:
+                    template = ["You and %s other people like this",
+                        "You, %s and %s other people like this",
+                        "You, %s, %s and %s other people like this"][len(userIds)]
+            else:
+                likesCount -= len(userIds)
+                if likesCount == 1:
+                    template = ["1 person likes this",
+                        "%s and 1 other person like this",
+                        "%s, %s and 1 other people like this"][len(userIds)]
+                elif likesCount > 1:
+                    template = ["%s people like this",
+                        "%s and %s other people like this",
+                        "%s, %s and %s other people like this"][len(userIds)]
+
+            if template:
+                vals = [utils.userName(id, users[id]) for id in userIds]
+                if likesCount > 1:
+                    vals.append(str(likesCount))
+
+                likeStr[convId] = _(template) % tuple(vals)
+
+        args = {"items": items, "users": users, "groups": groups,
+                "responses": responses, "myLikes": myLikes,
+                "reasonStr": reasonStr, "likeStr": likeStr,
+                "conversations": convs}
+        defer.returnValue(args)
 
     @defer.inlineCallbacks
     def _render(self, request):
@@ -223,15 +315,8 @@ class FeedResource(base.BaseResource):
                                     landing, "#share-block", "set", **args)
             yield self._renderShareBlock(request, "status")
 
-        convs, feed, itemData, userData, groupData,\
-                                         itemLikes = yield self.getItems(myKey)
-        args["conversations"] = convs
-        args["feedItems"] = feed
-        args["items"] = itemData
-        args["users"] = userData
-        args["groups"] = groupData
-        args["itemLikes"] = itemLikes
-
+        feed = yield self._getFeedItems(myKey)
+        args.update(feed)
         if script:
             yield renderScriptBlock(request, "feed.mako", "feed", landing,
                                     "#user-feed", "set", **args)
@@ -342,18 +427,12 @@ class FeedResource(base.BaseResource):
         # TODO: broadcast to followers of the items
 
         # 5. render parent item
-        convs, feed, itemData, userData, groupData,\
-                            itemLikes = yield self.getItems(userKey, parent)
-        (appchange, script, args) = self._getBasicArgs(request)
-        args["conversations"] = convs
-        args["feedItems"] = feed
-        args["items"] = itemData
-        args["users"] = userData
-        args["groups"] = groupData
-        args["itemLikes"] = itemLikes
+        (appchange, script, data) = self._getBasicArgs(request)
+        feed = yield self._getFeedItems(userKey, parent)
+        data.update(feed)
         landing = not self._ajax
-        yield  renderScriptBlock(request, "feed.mako", "feed", landing,
-                            "#conv-%s"%(parent), "set", **args)
+        yield  renderScriptBlock(request, "item.mako", "item_layout", landing,
+                            "#conv-%s"%(parent), "set", args=[parent, True], **data)
 
     @defer.inlineCallbacks
     def _setUnlike(self, request):
@@ -409,18 +488,12 @@ class FeedResource(base.BaseResource):
         yield deleteFromOthersFeed(userKey, itemKey, parent,
                                    typ, acl, convOwner, responseType)
         # 5. render parent item
-        convs, feed, itemData, userData, groupData,\
-                        itemLikes = yield self.getItems(userKey, parent)
-        (appchange, script, args) = self._getBasicArgs(request)
-        args["conversations"] = convs
-        args["feedItems"] = feed
-        args["items"] = itemData
-        args["users"] = userData
-        args["groups"] = groupData
-        args["itemLikes"] = itemLikes
+        (appchange, script, data) = self._getBasicArgs(request)
+        feed = yield self._getFeedItems(userKey, parent)
+        data.update(feed)
         landing = not self._ajax
-        yield  renderScriptBlock(request, "feed.mako", "feed", landing,
-                            "#conv-%s"%(parent), "set", **args)
+        yield  renderScriptBlock(request, "item.mako", "item_layout", landing,
+                            "#conv-%s"%(parent), "set", args=[parent, True], **data)
 
     @defer.inlineCallbacks
     def _share(self, request, typ):
@@ -464,7 +537,7 @@ class FeedResource(base.BaseResource):
 
         # 1. add item to "items"
         yield Db.batch_insert(itemKey, "items", {'meta': meta,
-                                                 'followers':followers})
+                                                 'followers': followers})
 
         # 2. update user's feed, feedItems, feed_typ
         yield pushToFeed(userKey, timeuuid, itemKey, parent,
@@ -507,28 +580,21 @@ class FeedResource(base.BaseResource):
             yield Db.insert(userKey, "userItems_" + typ, userItemValue, timeuuid)
 
         # 5. render the parent item
+        (appchange, script, data) = self._getBasicArgs(request)
         if parent:
-            # TODO: append new comment instead of updating conversation block
-            convs, feed, itemData, userData, groupData,\
-                        itemLikes = yield self.getItems(userKey, parent)
-
+            feed = yield self._getFeedItems(userKey, parent)
         else:
-            convs, feed, itemData, userData, groupData,\
-                        itemLikes = yield self.getItems(userKey, itemKey)
-        (appchange, script, args) = self._getBasicArgs(request)
-        args["conversations"] = convs
-        args["feedItems"] = feed
-        args["items"] = itemData
-        args["users"] = userData
-        args["groups"] = groupData
-        args["itemLikes"] = itemLikes
+            feed = yield self._getFeedItems(userKey, itemKey)
+        data.update(feed)
+        landing = not self._ajax
         if parent:
-            yield  renderScriptBlock(request, "feed.mako", "feed", landing,
-                            "#conv-%s"%(parent), "set", **args)
-
+            yield  renderScriptBlock(request, "item.mako", "layout_item",
+                                     landing, "#conv-%s"%(parent), "set",
+                                     args=[parent, True], **data)
         else:
-            yield renderScriptBlock(request, "feed.mako", "feed", landing,
-                                   "#user-feed", "prepend", **args)
+            yield renderScriptBlock(request, "item.mako", "layout_item",
+                                    landing, "#user-feed", "prepend",
+                                    args=[itemKey, True], **data)
         request.finish()
 
     def render_POST(self, request):

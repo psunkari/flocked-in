@@ -170,9 +170,10 @@ def weekName(num, long=False):
     return full[num-1] if long else short[num-1]
 
 
-def userName(id, basic, classes=None):
+def userName(id, user, classes=None):
     return "<span class='user %s'>" % (classes if classes else "") +\
-           "<a class='ajax' href='/profile?id=%s'>%s</a></span>" % (id, basic["name"])
+           "<a class='ajax' href='/profile?id=%s'>%s</a></span>"\
+           % (id, user["basic"]["name"])
 
 
 # XXX: Don't return data URI.

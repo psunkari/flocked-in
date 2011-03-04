@@ -41,12 +41,15 @@
   <div id="conv-${convId}" class="conv-item">
     <div class="conv-avatar" id="conv-avatar-${convId}">
       %if inline or not script:
-        ${self.conv_owner(convId['meta']['owner'])}
+        ${self.conv_owner(items[convId]['meta']['owner'])}
       %endif
     </div>
     <div class="conv-data">
       <div id="conv-root-${convId}">
         %if inline or not script:
+          %if reasonStr and reasonStr.has_key(convId):
+            <span class="conv-reason">${reasonStr[convId]}</span>
+          %endif
           ${self.conv_root(convId)}
         %endif
       </div>
@@ -82,6 +85,7 @@
 </%def>
 
 <%def name="item_footer(convId)">
+  <% conv = items[convId] %>
   <span class="timestamp" ts="${conv['meta']['timestamp']}">${conv['meta']['timestamp']}</span>
   &nbsp;&#183;&nbsp;
   %if len(myLikes[convId]):
@@ -103,11 +107,11 @@
     </div>
   %endif
   %for responseId in convResponses:
-    ${self.conv_comment(responseId)}
+    ${self.conv_comment(convId, responseId)}
   %endfor
 </%def>
 
-<%def name="conv_comment(commentId)">
+<%def name="conv_comment(convId, commentId)">
   <%
     item = items[commentId]
     userId  = item["meta"]["owner"]
