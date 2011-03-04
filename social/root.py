@@ -9,6 +9,7 @@ from social.auth            import IAuthInfo
 from social.feed            import FeedResource
 from social.register        import RegisterResource
 from social.item            import ItemResource
+from social.poll            import Poll
 
 class RootResource(resource.Resource):
     def __init__(self):
@@ -40,3 +41,4 @@ class AjaxResource(RootResource):
         self._profile = ProfileResource(True)
         self._register = RegisterResource(True)
         self._item = ItemResource(True)
+

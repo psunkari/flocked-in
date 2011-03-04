@@ -1,24 +1,36 @@
 import json
+
 from telephus.cassandra import ttypes
 from twisted.internet   import defer
 from twisted.web        import server
 from twisted.python     import log
+from twisted.plugin     import getPlugins
+
 
 from social             import base, Db, utils
 from social.auth        import IAuthInfo
 from social             import utils
 from social.template    import render, renderScriptBlock
+from social.isocial     import IItem
+from social             import feed
 
 
 class ItemResource(base.BaseResource):
+    isLeaf = True
+    def __init__(self, ajax=False):
 
+        self.plugins = {}
+        for plugin in getPlugins(IItem):
+            self.plugins[plugin.itemType] = plugin
+        base.BaseResource.__init__(self, ajax)
 
     @defer.inlineCallbacks
-    def renderItem(self, request):
+    def renderItem(self, request, toFeed=False):
         (appchange, script, args) = self._getBasicArgs(request)
         landing = not self._ajax
 
         convId = utils.getRequestArg(request, "id")
+        itemType = utils.getRequestArg(request, "type")
         if not convId:
             raise errors.MissingParam()
 
@@ -42,24 +54,45 @@ class ItemResource(base.BaseResource):
         args["users"] = users
         args["items"] = items
         toFetchUsers = set()
-
-        conv = yield Db.get(convId, "items", super_column='meta')
-        conv = utils.supercolumnsToDict([conv])
-        items[convId] = conv
-        ownerId = conv['meta']['owner']
+        plugin = None
+        if itemType in self.plugins:
+            plugin = self.plugins[itemType]
 
         # TODO: Fetch data required for rendering using the plugin
+        if plugin:
+            data = yield plugin.getRoot(convId, myKey)
+            args.update(data)
+            convOwner = data["items"][convId]["meta"]["owner"]
+        else:
+            conv = yield Db.get_slice(convId, "items", ['meta'])
+            if not conv:
+                raise errors.InvalidRequest()
+            conv = utils.supercolumnsToDict(conv)
+            args["items"] = {convId: conv}
+            convOwner = conv['meta']['owner']
+            owner = yield Db.get(convOwner, "users", super_column="basic")
+            owner = utils.supercolumnsToDict([owner])
+            args.update({"users":{convOwner:owner}})
+
+
         renderers = []
+
         if script:
-            d = renderScriptBlock(request, "item.mako", "conv_root",
-                                  landing, "#conv-root-%s" %(convId),
-                                  "set", **args)
+            if plugin:
+                args['toFeed'] = toFeed
+                d =  plugin.renderRoot(request, convId, args)
+                del args['toFeed']
+            else:
+                d = renderScriptBlock(request, "item.mako", "conv_root",
+                                      landing, "#conv-root-%s" %(convId),
+                                      "set", **args)
             renderers.append(d)
 
-        owner = yield Db.get(ownerId, "users", super_column="basic")
+        owner = yield Db.get(convOwner, "users", super_column="basic")
         owner = utils.supercolumnsToDict([owner])
-        args["ownerId"] = ownerId
-        users[ownerId] = owner
+        args["ownerId"] = convOwner
+        args['owner'] = owner
+        users[convOwner] = owner
 
         if script:
             d = renderScriptBlock(request, "item.mako", "conv_owner",
@@ -99,6 +132,47 @@ class ItemResource(base.BaseResource):
         # TODO: Render other blocks
 
 
+    @defer.inlineCallbacks
+    def createItem(self, request):
+
+        itemType = utils.getRequestArg(request, "type")
+        myKey = request.getSession(IAuthInfo).username
+
+        parent = None
+        convOwner = myKey
+        responseType = 'I'
+
+        if itemType in self.plugins:
+            plugin = self.plugins[itemType]
+            convId, timeuuid, acl = yield plugin.create(request)
+
+            request.args["id"] = [convId]
+            userItemValue = ":".join([convId, "", ""])
+            yield feed.pushToFeed(myKey, timeuuid, convId, parent, responseType,
+                                  itemType, convOwner, myKey)
+
+            yield feed.pushToOthersFeed(myKey, timeuuid, convId, parent, acl,
+                                        responseType, itemType, convOwner)
+
+            yield Db.insert(myKey, "userItems", userItemValue, timeuuid)
+            if itemType in ["status", "link", "document"]:
+                yield Db.insert(myKey, "userItems_%s"%(itemType) , userItemValue, timeuuid)
+
+            toFeed = True if itemType in ['status', 'poll'] else False
+
+            yield self.renderItem(request, toFeed)
+
+
+    @defer.inlineCallbacks
+    def actOnItem(self, request):
+        itemType = utils.getRequestArg(request, "type")
+        convId = utils.getRequestArg(request, "id")
+        if itemType in self.plugins:
+            yield self.plugins[itemType].post(request)
+        #TODO: 
+        yield self.renderItem(request, False)
+
+
     def render_GET(self, request):
         segmentCount = len(request.postpath)
         if segmentCount == 0:
@@ -112,6 +186,21 @@ class ItemResource(base.BaseResource):
             d.addCallbacks(callback, errback)
             return server.NOT_DONE_YET
 
-
     def render_POST(self, request):
-        pass
+
+        def callback(res):
+            request.finish()
+        def errback(err):
+            log.msg(err)
+            request.setResponseCode(500)
+            request.finish()
+
+        segmentCount = len(request.postpath)
+        if segmentCount == 1 and request.postpath[0] == 'new':
+            d =  self.createItem(request)
+            d.addCallbacks(callback, errback)
+            return server.NOT_DONE_YET
+        if segmentCount == 1 and request.postpath[0] == 'act':
+            d =  self.actOnItem(request)
+            d.addCallbacks(callback, errback)
+            return server.NOT_DONE_YET

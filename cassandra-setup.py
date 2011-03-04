@@ -166,6 +166,16 @@ def createColumnFamilies(client):
                          None, 'Feed of %s items'%(itemType))
         yield client.system_add_column_family(feedType)
 
+    userpolls = CfDef(KEYSPACE, 'userVotes', 'Standard', 'UTF8Type', None,
+                                'Map of users to vote')
+    yield client.system_add_column_family(userpolls)
+
+    votes = CfDef(KEYSPACE, 'votes', 'Super', 'UTF8Type',
+                        'UTF8Type', 'option - voter map')
+    yield client.system_add_column_family(votes)
+
+
+
 
 
 @defer.inlineCallbacks
@@ -530,9 +540,7 @@ def addSampleData(client):
                                         "type": "activity",
                                         "subType": "connection",
                                         "timestamp": timestamp,
-                                        "uuid": timeUUID
-                                    },
-                                    "data": {
+                                        "uuid": timeUUID,
                                         "target": ashokKey
                                     }})
     yield client.insert(prasadKey, "userItems", prasadToAshokKey, timeUUID)
@@ -549,9 +557,7 @@ def addSampleData(client):
                                         "type": "activity",
                                         "subType": "connection",
                                         "timestamp": timestamp,
-                                        "uuid": timeUUID
-                                    },
-                                    "data": {
+                                        "uuid": timeUUID,
                                         "target": prasadKey
                                     }})
     yield client.insert(ashokKey, "userItems", ashokToPrasadKey, timeUUID)
@@ -569,9 +575,7 @@ def addSampleData(client):
                                         "type": "activity",
                                         "subType": "connection",
                                         "timestamp": timestamp,
-                                        "uuid": timeUUID
-                                    },
-                                    "data": {
+                                        "uuid": timeUUID,
                                         "target": rahulKey
                                     }})
     yield client.insert(praveenKey, "userItems", praveenToRahulKey, timeUUID)
@@ -589,9 +593,7 @@ def addSampleData(client):
                                         "type": "activity",
                                         "subType": "connection",
                                         "timestamp": timestamp,
-                                        "uuid": timeUUID
-                                    },
-                                    "data": {
+                                        "uuid": timeUUID,
                                         "target": praveenKey
                                     }})
     yield client.insert(rahulKey, "userItems", rahulToPraveenKey, timeUUID)
@@ -617,9 +619,7 @@ def addSampleData(client):
                                         "type": "activity",
                                         "subType": "following",
                                         "timestamp": timestamp,
-                                        "uuid": timeUUID
-                                    },
-                                    "data": {
+                                        "uuid": timeUUID,
                                         "target": prasadKey
                                     }})
     yield client.insert(praveenKey, "userItems", praveenFollowingPrasadKey, timeUUID)
@@ -638,7 +638,7 @@ def truncateColumnFamilies(client):
                "items", "itemLikes", "itemResponses", "userItems", "feed",
                "userItems_status", "userItems_link", "userItems_document",
                "feed_status", "feed_link","feed_document", "feedItems",
-               "domainOrgMap"]:
+               "domainOrgMap", "userVotes", "votes"]:
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 

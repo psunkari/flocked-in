@@ -104,6 +104,7 @@
   <div class="input-wrap">
     <input type="text" name="comment" placeholder="${_('Say something about this link')}"/>
   </div>
+  <input type="hidden" name="type" value="link"/>
 </%def>
 
 <%def name="share_document()">
@@ -119,46 +120,5 @@
   %for convId in conversations:
     ${item.item_layout(convId, True)}
   %endfor
-</%def>
-
-<%def name="renderRootItem(convId, isQuoted)">
-  <%
-    conv = items[convId]
-    type = conv["meta"]["type"]
-    userId = conv["meta"]["owner"]
-    fmtUser = lambda x,y=None: ("<span class='user %s'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (y if y else '', x, users[x]["basic"]["name"]))
-  %>
-  %if type == "activity":
-    <%
-      subtype = conv["meta"]["subType"]
-      target = conv["data"]["target"]
-      if subtype == "connection":
-        activity = _("%s and %s are now friends.") % (fmtUser(userId), fmtUser(target))
-      elif subtype == "following":
-        activity = _("%s started following %s.") % (fmtUser(userId), fmtUser(target))
-    %>
-    <div class="conv-summary${' conv-quote' if isQuoted else ''}">
-      ${activity}
-  %elif type in ["status", "link", "document"]:
-    %if not isQuoted:
-      <span class="conv-reason">
-        ${fmtUser(userId, "conv-user-cause")}
-      </span>
-    %endif
-    <div class="conv-summary${' conv-quote' if isQuoted else ''}">
-      %if conv["meta"].has_key("comment"):
-        ${conv["meta"]["comment"]}
-      %endif
-  %endif
-  <div class="conv-meta">
-    <span class="timestamp" ts="${conv['meta']['timestamp']}">${conv['meta']['timestamp']}</span>
-    &nbsp;&#183;&nbsp;
-    %if len(itemLikes[convId]):
-      <span><a class="ajax" _ref="/feed/unlike?itemKey=${convId}&parent=${convId}">${_("Unlike")}</a></span>
-    %else:
-      <span><a class="ajax" _ref="/feed/like?itemKey=${convId}&parent=${convId}">${_("Like")}</a></span>
-    %endif
-  </div>
-</div>
 </%def>
 

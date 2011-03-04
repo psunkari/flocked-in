@@ -142,7 +142,7 @@ class FeedResource(base.BaseResource):
         toFetchResponses = set()
         for conversation in rawFeedItems:
             convId = conversation.super_column.name
-            mostRecentItem = None
+            mostRecentItem = []
             columns = conversation.super_column.columns
             likes[convId] = []
             responses[convId] = []
@@ -197,7 +197,7 @@ class FeedResource(base.BaseResource):
                 elif type == "L":
                     reasonUserIds[convId] = set([userId])
                     reasonTmpl[convId] = "%s liked a comment on %s's %s"
- 
+
                 # Check if we have to fetch more responses for this conversation
                 if len(responses[convId]) < 2:
                     toFetchResponses.add(convId)
@@ -215,7 +215,8 @@ class FeedResource(base.BaseResource):
                     toFetchUsers.add(userKey_)
 
         # Concurrently fetch items, users and groups
-        d1 = Db.multiget_slice(toFetchItems, "items", ["meta"])
+        # TODO: fecthing options to display polls. plugin should handle it
+        d1 = Db.multiget_slice(toFetchItems, "items", ["meta", "options"])
         d2 = Db.multiget_slice(toFetchUsers, "users", ["basic"])
         d3 = Db.multiget_slice(toFetchGroups, "groups", ["basic"])
         d4 = Db.multiget(toFetchItems, "itemLikes", userKey)
@@ -338,9 +339,13 @@ class FeedResource(base.BaseResource):
         elif typ == "document":
             renderDef = "share_document"
 
+        action = '/feed/share/%s' %(typ)
+        if typ == 'status':
+            action = '/item/new'
+
         yield renderScriptBlock(request, "feed.mako", renderDef,
                                 landing, "#sharebar", "set", True,
-                                handlers={"onload": "$('#sharebar-links .selected').removeClass('selected'); $('#sharebar-link-%s').addClass('selected'); $('#share-form').attr('action', '/feed/share/%s');" % (typ, typ)})
+                                handlers={"onload": "$('#sharebar-links .selected').removeClass('selected'); $('#sharebar-link-%s').addClass('selected'); $('#share-form').attr('action', '%s');" % (typ, action)})
 
     def render_GET(self, request):
         segmentCount = len(request.postpath)
