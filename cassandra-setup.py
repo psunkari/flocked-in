@@ -535,7 +535,7 @@ def addSampleData(client):
     timestamp = str(int(time.time()))
     yield client.batch_insert(prasadToAshokKey, "items", {
                                     "meta": {
-                                        "acl": "friends",
+                                        "acl": "company",
                                         "owner": prasadKey,
                                         "type": "activity",
                                         "subType": "connection",

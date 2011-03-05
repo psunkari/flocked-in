@@ -244,7 +244,9 @@ class FeedResource(base.BaseResource):
                 vals = [utils.userName(id, users[id], "conv-user-cause")\
                         for id in reasonUserIds[convId]]
                 vals.append(utils.userName(ownerId, users[ownerId]))
-                vals.append("<span class='item'><a class='ajax' href='/item?id=%s'>%s</a></span>" % (convId, _(conv["meta"]["type"])))
+                itemType = conv["meta"]["type"]
+                vals.append("<span class='item'><a class='ajax' "
+                            "href='/item?id=%s&type=%s'>%s</a></span>" % (convId, itemType, _(itemType)))
                 reasonStr[convId] = _(template) % tuple(vals)
 
             # Build like string
@@ -338,9 +340,12 @@ class FeedResource(base.BaseResource):
             renderDef = "share_link"
         elif typ == "document":
             renderDef = "share_document"
+        elif typ == "poll":
+            renderDef = "share_poll"
+
 
         action = '/feed/share/%s' %(typ)
-        if typ == 'status':
+        if typ in ('status', 'poll'):
             action = '/item/new'
 
         yield renderScriptBlock(request, "feed.mako", renderDef,
@@ -550,19 +555,19 @@ class FeedResource(base.BaseResource):
         yield pushToFeed(userKey, timeuuid, itemKey, parent,
                          responseType, typ, convOwner, userKey)
 
-        # 3. update user's followers/friends feed, feedItems, feed_typ
-        yield pushToOthersFeed(userKey, timeuuid, itemKey, parent, acl,
-                                responseType, typ, convOwner)
+
 
         if parent:
-            #4.1.1 update responseCount, followers of parent item
+            #3.1.1 update responseCount, followers of parent item
             cols = yield Db.get_slice(parent, "items",
-                                      ['responseCount', 'owner'],
+                                      ['responseCount', 'owner', "acl"],
                                       super_column='meta')
             cols = utils.columnsToDict(cols)
             responseCount = int(cols["responseCount"]) \
                             if cols.has_key("responseCount") else 0
             parentOwner = cols["owner"]
+            if not acl and cols.has_key("acl"):
+                acl = cols["acl"]
 
             if responseCount % 5 == 1:
                 responseCount = yield Db.get_count(parent, "itemResponses")
@@ -571,21 +576,25 @@ class FeedResource(base.BaseResource):
             yield Db.batch_insert(parent, "items", {"meta": parentMeta,
                                                     "followers": followers})
 
-            # 4.1.2 add item as response to parent
+            # 3.1.2 add item as response to parent
             yield Db.insert(parent, "itemResponses", "%s:%s" % (userKey,itemKey), timeuuid)
 
             if parentOwner != userKey:
-                # 4.1.3 update user's userItems, userItems_*
+                # 3.1.3 update user's userItems, userItems_*
                 userItemValue = ":".join([itemKey, parent, parentOwner])
                 yield Db.insert(userKey, "userItems", userItemValue, timeuuid)
                 yield Db.insert(userKey, "userItems_" + typ, userItemValue, timeuuid)
 
         else:
-            # 4.2 update user's userItems, userItems_*
+            # 3.2 update user's userItems, userItems_*
             userItemValue = ":".join([itemKey, "", ""])
             yield Db.insert(userKey, "userItems", userItemValue, timeuuid)
             yield Db.insert(userKey, "userItems_" + typ, userItemValue, timeuuid)
 
+
+        # 4. update user's followers/friends feed, feedItems, feed_typ
+        yield pushToOthersFeed(userKey, timeuuid, itemKey, parent, acl,
+                                responseType, typ, convOwner)
         # 5. render the parent item
         (appchange, script, data) = self._getBasicArgs(request)
         if parent:

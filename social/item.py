@@ -7,22 +7,15 @@ from twisted.python     import log
 from twisted.plugin     import getPlugins
 
 
-from social             import base, Db, utils
+from social             import base, Db, utils, plugins
 from social.auth        import IAuthInfo
 from social             import utils
 from social.template    import render, renderScriptBlock
-from social.isocial     import IItem
 from social             import feed
 
 
 class ItemResource(base.BaseResource):
     isLeaf = True
-    def __init__(self, ajax=False):
-
-        self.plugins = {}
-        for plugin in getPlugins(IItem):
-            self.plugins[plugin.itemType] = plugin
-        base.BaseResource.__init__(self, ajax)
 
     @defer.inlineCallbacks
     def renderItem(self, request, toFeed=False):
@@ -38,8 +31,9 @@ class ItemResource(base.BaseResource):
         start = utils.getRequestArg(request, "start") or ''
 
         myKey = args['myKey']
-        col = yield Db.get(myKey, "users", super_column="basic")
-        me = utils.supercolumnsToDict([col])
+        # base.mako needs "me" in args
+        me = yield Db.get_slice(myKey, "users", ["basic"])
+        me = utils.supercolumnsToDict(me)
         args["me"] = me
 
         if script and landing:
@@ -54,25 +48,29 @@ class ItemResource(base.BaseResource):
         args["users"] = users
         args["items"] = items
         toFetchUsers = set()
-        plugin = None
-        if itemType in self.plugins:
-            plugin = self.plugins[itemType]
 
-        # TODO: Fetch data required for rendering using the plugin
+        plugin = plugins[itemType] if itemType in plugins else None
         if plugin:
-            data = yield plugin.getRoot(convId, myKey)
+            data, toFetchUsers, toFetchGroups = yield plugin.getRootData(args)
             args.update(data)
-            convOwner = data["items"][convId]["meta"]["owner"]
+            if toFetchUsers:
+                users = yield Db.multiget_slice(toFetchUsers, "users", ["basic"])
+                users = utils.multiSuperColumnsToDict(users)
+                args.update({"users": users})
+            if toFetchGroups:
+                groups = yield Db.multiget_slice(toFetchGroups, "groups", ["basic"])
+                groups = utils.multiSuperColumnsToDict(groups)
+                args.update({"groups": groups})
         else:
             conv = yield Db.get_slice(convId, "items", ['meta'])
             if not conv:
                 raise errors.InvalidRequest()
             conv = utils.supercolumnsToDict(conv)
-            args["items"] = {convId: conv}
             convOwner = conv['meta']['owner']
             owner = yield Db.get(convOwner, "users", super_column="basic")
             owner = utils.supercolumnsToDict([owner])
             args.update({"users":{convOwner:owner}})
+            args.update({"items":{convId: conv}})
 
 
         renderers = []
@@ -88,11 +86,13 @@ class ItemResource(base.BaseResource):
                                       "set", **args)
             renderers.append(d)
 
-        owner = yield Db.get(convOwner, "users", super_column="basic")
-        owner = utils.supercolumnsToDict([owner])
+        convOwner = args["items"][convId]["meta"]["owner"]
+        if convOwner not in args["users"]:
+            owner = yield Db.get(convOwner, "users", super_column="basic")
+            owner = utils.supercolumnsToDict([owner])
+            args.update({"users": {convOwner: owner}})
+
         args["ownerId"] = convOwner
-        args['owner'] = owner
-        users[convOwner] = owner
 
         if script:
             d = renderScriptBlock(request, "item.mako", "conv_owner",
@@ -142,8 +142,8 @@ class ItemResource(base.BaseResource):
         convOwner = myKey
         responseType = 'I'
 
-        if itemType in self.plugins:
-            plugin = self.plugins[itemType]
+        if itemType in plugins:
+            plugin = plugins[itemType]
             convId, timeuuid, acl = yield plugin.create(request)
 
             request.args["id"] = [convId]
@@ -167,9 +167,9 @@ class ItemResource(base.BaseResource):
     def actOnItem(self, request):
         itemType = utils.getRequestArg(request, "type")
         convId = utils.getRequestArg(request, "id")
-        if itemType in self.plugins:
-            yield self.plugins[itemType].post(request)
-        #TODO: 
+        if itemType in plugins:
+            yield plugins[itemType].post(request)
+        #TODO:
         yield self.renderItem(request, False)
 
 

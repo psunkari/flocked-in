@@ -18,29 +18,21 @@ class   Status(object):
     itemType = "status"
 
     @defer.inlineCallbacks
-    def getRoot(self, convId, myKey):
+    def getRootData(self, args):
+
+        convId = args["convId"]
+        toFetchUsers = set()
+        toFetchGroups = set()
+
         conv = yield Db.get_slice(convId, "items", ['meta'])
+        conv = utils.supercolumnsToDict(conv)
         if not conv:
             raise errors.MissingParams()
 
-        conv = utils.supercolumnsToDict(conv)
+        toFetchUsers.add(conv["meta"]["owner"])
+        data = {"items":{convId: conv}}
 
-        users = yield Db.get_slice(myKey, "users", ["basic"])
-        users = utils.supercolumnsToDict(users)
-
-        groups = {}
-        myLikes = {convId:[]}
-        users = {myKey: users}
-        convs = [convId]
-        items = {convId: conv}
-        likeStr = {convId: None}
-        responses = {convId: []}
-        itemLikes = {convId:{}}
-
-        defer.returnValue({"items":items, "users": users,"groups": groups,
-                           "responses": responses, "myLikes": myLikes,
-                           "reasonStr": {}, "likeStr": {},
-                           "conversations": convs})
+        defer.returnValue([data, toFetchUsers, toFetchGroups])
 
 
     @defer.inlineCallbacks
@@ -60,6 +52,7 @@ class   Status(object):
                                         landing, "#user-feed", "prepend",
                                         args=[convId, True], **args)
                 args['convId'] = convId
+
 
     @defer.inlineCallbacks
     def create(self, request):

@@ -23,44 +23,40 @@ class Poll(object):
 
 
     @defer.inlineCallbacks
-    def getRoot(self, convId, myKey):
+    def getRootData(self, args):
 
         toFetchUsers = set()
-        item = yield Db.get_slice(convId, "items", ["meta", 'options'])
-        item = utils.supercolumnsToDict(item)
-        toFetchUsers.add(item["meta"]["owner"])
-        toFetchUsers.add(myKey)
+        toFetchGroups = set()
+        convId = args["convId"]
+        myKey = args["myKey"]
 
-
-        if not item:
+        conv = yield Db.get_slice(convId, "items", ["meta", 'options'])
+        conv = utils.supercolumnsToDict(conv)
+        if not conv:
             raise errors.InvalidRequest()
 
-        options = item["options"] if item.has_key("options") else None
+        options = conv["options"] if conv.has_key("options") else None
         if not options:
             raise errors.InvalidRequest()
 
-        users = yield Db.multiget_slice(toFetchUsers, "users", ["basic"])
-        users = utils.multiSuperColumnsToDict(users)
+
+        toFetchUsers.add(conv["meta"]["owner"])
 
         myVote = yield Db.get_slice(myKey, "userVotes", [convId])
         myVote = myVote[0].column.value if myVote else ''
-        startTime = item['meta'].get('start', None)
-        endTime = item['meta'].get('end', None)
-        showResults = item['meta'].get('showResults', 'True') == True
+
+        startTime = conv['meta'].get('start', None)
+        endTime = conv['meta'].get('end', None)
+        showResults = conv['meta'].get('showResults', 'True') == True
+
         if not showResults:
             # FIX: endTime is String. convert to time
             if not endTime or time.gmtime() > endTime:
                 showResults = "True"
 
-        items = {convId: item}
-        myLikes = {convId:[]}
-        responses = {convId: []}
-        defer.returnValue({"items": items,
-                           "myVote": myVote,
-                           "responses": responses,
-                           "users": users,
-                           "myLikes": myLikes,
-                           "showResults": showResults})
+        items = {convId: conv}
+        data = {"items": items, "myVote": myVote, "showResults": showResults}
+        defer.returnValue([data, toFetchUsers, toFetchGroups])
 
 
     @defer.inlineCallbacks
@@ -69,14 +65,12 @@ class Poll(object):
         script = args['script']
         landing = not args['ajax']
         toFeed = args['toFeed'] if args.has_key('toFeed') else False
-
         if script:
             if not toFeed:
                 yield renderScriptBlock(request, "item.mako", "poll_root",
                                         landing, "#conv-root-%s" %(convId),
                                         "set", **args)
             else:
-                # del args["convId"] is a workaround. getrid of it.
                 if 'convId' in args:
                     del args['convId']
                 yield renderScriptBlock(request, "item.mako", "item_layout",
@@ -95,7 +89,7 @@ class Poll(object):
         end = utils.getRequestArg(request, "end")
         start = utils.getRequestArg(request, "start")
         options = request.args.get("options", [])
-        question = utils.getRequestArg(request, "q")
+        question = utils.getRequestArg(request, "question")
         showResults = utils.getRequestArg(request, "show") or 'True'
 
         if not (question and options):

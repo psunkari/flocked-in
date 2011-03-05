@@ -1,4 +1,6 @@
 <%! from social import utils, _, __ %>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+                    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 <%namespace name="widgets" file="widgets.mako"/>
 <%inherit file="base.mako"/>
@@ -97,7 +99,7 @@
   <% conv = items[convId] %>
   <span class="timestamp" ts="${conv['meta']['timestamp']}">${conv['meta']['timestamp']}</span>
   &nbsp;&#183;&nbsp;
-  %if len(myLikes[convId]):
+  %if myLikes and myLikes.has_key(convId) and len(myLikes[convId]):
     <span><a class="ajax" _ref="/feed/unlike?itemKey=${convId}&parent=${convId}">${_("Unlike")}</a></span>
   %else:
     <span><a class="ajax" _ref="/feed/like?itemKey=${convId}&parent=${convId}">${_("Like")}</a></span>
@@ -107,7 +109,7 @@
 <%def name="conv_comments(convId)">
   <%
     responseCount = int(items[convId]["meta"].get("responseCount", "0"))
-    convResponses = responses[convId]
+    convResponses = responses.get(convId, {}) if responses else {}
   %>
   %if responseCount > len(convResponses):
     <div class="conv-comment">
@@ -175,20 +177,6 @@
     options = items[convId]["options"] or ["cricket", "football", "hockey"]
   %>
   <div id="conv" class="conv-item">
-
-    <div>
-        <form action='/item/new' method="POST" class="ajax">
-            <label for="q"> Question </label>
-            <input type="text" id="q" name='q'  value = "${question}"  size="30"> </input> <br/>
-            % for i, option in enumerate(options):
-
-                <label for="choice"> ${i} </label>
-                <input type="text" id="options" name="options" value = "${option}"/> <br/>
-            % endfor
-            <input type="hidden" name="type" value="poll" />
-            <input type="submit" id="submit" value="${_('Submit')}"/>
-        </form>
-    </div>
     <div>
         %if myVote:
         <p> you voted for: ${myVote} </p>

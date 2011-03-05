@@ -1,4 +1,6 @@
 <%! from social import utils, _, __ %>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+                    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 <%namespace name="widgets" file="widgets.mako"/>
 <%namespace name="item" file="item.mako"/>
@@ -68,7 +70,7 @@
     <div id="sharebar-tabs">
       <ul id="sharebar-links" class="h-links">
         <li>${_("Share:")}</li>
-        %for name, target in [("Status", "status"), ("Link", "link"), ("Document", "document")]:
+        %for name, target in [("Status", "status"), ("Link", "link"), ("Document", "document"), ("Poll", "poll") ]:
           %if target == 'status':
             <li><a _ref="/feed/share/${target}" id="sharebar-link-${target}" class="ajax selected">${_(name)}</a></li>
           %else:
@@ -116,9 +118,26 @@
   </div>
 </%def>
 
+
+<%def name="share_poll()">
+  <div class="input-wrap">
+    <input type="text" name="question" placeholder="${_('Question')}"/>
+  </div>
+  <div class="input-wrap">
+    <input type="text" name="options" placeholder="${_('Option')}"/>
+  </div>
+  <div class="input-wrap">
+    <input type="text" name="options" placeholder="${_('Option')}"/>
+  </div>
+  <div class="input-wrap">
+    <input type="text" name="options" placeholder="${_('Option')}"/>
+  </div>
+  <input type="hidden" name="type" value="poll"/>
+
+</%def>
+
 <%def name="feed()">
   %for convId in conversations:
     ${item.item_layout(convId, True)}
   %endfor
 </%def>
-

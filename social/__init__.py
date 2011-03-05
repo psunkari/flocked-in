@@ -6,7 +6,9 @@ import gettext
 from telephus.protocol  import ManagedCassandraClientFactory
 from telephus.client    import CassandraClient
 from twisted.internet   import reactor
+from twisted.plugin     import getPlugins
 
+from social.isocial     import IItem
 
 Config = ConfigParser.ConfigParser()
 Config.read([os.path.abspath('etc/social.cfg')])
@@ -22,4 +24,6 @@ Db = CassandraClient(_factory)
 _ = gettext.gettext
 __ = gettext.ngettext
 
-__all__ = [Config, Db, _, __]
+plugins = dict([(plugin.itemType, plugin) for plugin in getPlugins(IItem)])
+
+__all__ = [Config, Db, _, __, plugins]
