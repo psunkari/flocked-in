@@ -70,7 +70,7 @@
     <div id="sharebar-tabs">
       <ul id="sharebar-links" class="h-links">
         <li>${_("Share:")}</li>
-        %for name, target in [("Status", "status"), ("Link", "link"), ("Document", "document"), ("Poll", "poll") ]:
+        %for name, target in [("Status", "status"), ("Link", "link"), ("Document", "document"), ("Poll", "poll"), ('Event', 'event') ]:
           %if target == 'status':
             <li><a _ref="/feed/share/${target}" id="sharebar-link-${target}" class="ajax selected">${_(name)}</a></li>
           %else:
@@ -135,6 +135,27 @@
   <input type="hidden" name="type" value="poll"/>
 
 </%def>
+
+<%def name="share_event()">
+
+  <div class="input-wrap">
+    <input type="text" name="startTime" placeholder="${_('When?')}"/>
+  </div>
+  <div class="input-wrap">
+    <input type="text" name="endTime" placeholder="${_('End Time?')}"/>
+  </div>
+  <div class="input-wrap">
+    <input type="text" name="title" placeholder="${_('What?')}"/>
+  </div>
+  <div class="input-wrap">
+    <input type="text" name="location" placeholder="${_('Where?')}"/>
+  </div>
+  <div class="input-wrap">
+    <input type="text" name="desc" placeholder="${_('Description')}"/>
+  </div>
+  <input type="hidden" name="type" value="event"/>
+</%def>
+
 
 <%def name="feed()">
   %for convId in conversations:

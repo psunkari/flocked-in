@@ -91,6 +91,9 @@
       ${self.renderStatus(convId)}
   % elif itemType == "poll":
       ${self.poll_root(convId)}
+  % elif itemType == "event":
+
+      ${self.event_root(convId)}
   %endif
 
 </%def>
@@ -198,6 +201,7 @@
 
   </div>
 </%def>
+
 <%def name="renderStatus(convId, isQuoted=False)">
   <%
     conv = items[convId]
@@ -228,4 +232,41 @@
       %endif
   %endif
 </div>
+</%def>
+
+<%def name="event_root(convId)">
+  <%
+
+    conv = items[convId]
+    title = items[convId]["meta"].get("title", '')
+    location = items[convId]["meta"].get("location", '')
+    desc = items[convId]["meta"].get("desc", "")
+    start = items[convId]["meta"].get("startTime")
+    end   = items[convId]["meta"].get("endTime", '')
+    options = items[convId]["options"] or ["yes", "maybe", "no"]
+  %>
+  <div id="conv" class="conv-item">
+    <div>
+        %if myResponse:
+        <p> are you attending the <a href="/item?id=${convId}&type=event">event</a>?: ${myResponse} </p>
+        %endif
+        <form action="/item/act" method="POST" class="ajax">
+        <p> ${title} </p>
+        % for option in options:
+            <input type="radio" name="response" value= "${option}"> ${option} </input> <br/>
+        % endfor
+            <input type="hidden" name="id" value="${convId}" />
+            <input type="hidden" name="type" value="event" />
+            <input type="submit" id="submit" value="${_('Submit')}"/>
+        </form>
+        <span>${title}</span>
+        <p>${desc}</p>
+        <p>location: ${location}</p>
+        <p>TIME: ${start} - ${end}</p>
+        % for option in options:
+            <p> ${option} : ${options[option]} </p>
+        %endfor
+    </div>
+
+  </div>
 </%def>

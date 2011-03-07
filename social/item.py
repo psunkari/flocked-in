@@ -158,7 +158,7 @@ class ItemResource(base.BaseResource):
             if itemType in ["status", "link", "document"]:
                 yield Db.insert(myKey, "userItems_%s"%(itemType) , userItemValue, timeuuid)
 
-            toFeed = True if itemType in ['status', 'poll'] else False
+            toFeed = True if itemType in ['status', 'poll', 'event'] else False
 
             yield self.renderItem(request, toFeed)
 

@@ -342,10 +342,11 @@ class FeedResource(base.BaseResource):
             renderDef = "share_document"
         elif typ == "poll":
             renderDef = "share_poll"
-
+        elif typ == "event":
+            renderDef = "share_event"
 
         action = '/feed/share/%s' %(typ)
-        if typ in ('status', 'poll'):
+        if typ in ('status', 'poll', 'event'):
             action = '/item/new'
 
         yield renderScriptBlock(request, "feed.mako", renderDef,

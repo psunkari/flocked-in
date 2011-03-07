@@ -174,6 +174,14 @@ def createColumnFamilies(client):
                         'UTF8Type', 'option - voter map')
     yield client.system_add_column_family(votes)
 
+    userEvents = CfDef(KEYSPACE, 'userEvents', 'Standard', 'UTF8Type', None,
+                                'Map of users to Events')
+    yield client.system_add_column_family(userEvents)
+
+    events = CfDef(KEYSPACE, 'events', 'Super', 'UTF8Type',
+                        'UTF8Type', 'response - user map')
+    yield client.system_add_column_family(events)
+
 
 
 
@@ -638,7 +646,7 @@ def truncateColumnFamilies(client):
                "items", "itemLikes", "itemResponses", "userItems", "feed",
                "userItems_status", "userItems_link", "userItems_document",
                "feed_status", "feed_link","feed_document", "feedItems",
-               "domainOrgMap", "userVotes", "votes"]:
+               "domainOrgMap", "userVotes", "votes", 'userEvents', 'events']:
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 
