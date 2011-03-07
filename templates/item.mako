@@ -1,4 +1,4 @@
-<%! from social import utils, _, __ %>
+<%! from social import utils, _, __, plugins %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -92,12 +92,10 @@
   <%
   itemType = items[convId]["meta"]["type"]
   %>
-  % if itemType in ("status", "link", "document", "activity"):
+  % if itemType in ("link", "document", "activity"):
       ${self.renderStatus(convId)}
-  % elif itemType == "poll":
-      ${self.poll_root(convId)}
-  % elif itemType == "event":
-      ${self.event_root(convId)}
+  % elif itemType in ("status", "poll", "event"):
+      ${plugins[itemType].getRootHTML(convId, context.kwargs)}
   %endif
 
 </%def>
@@ -239,7 +237,6 @@
 
 <%def name="event_root(convId)">
   <%
-
     conv = items[convId]
     title = items[convId]["meta"].get("title", '')
     location = items[convId]["meta"].get("location", '')

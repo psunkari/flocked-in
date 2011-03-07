@@ -11,16 +11,17 @@ from twisted.python     import log
 
 from social             import Db, utils, base
 from social             import feed
-from social.template    import renderScriptBlock, render
+from social.template    import renderScriptBlock, render, getBlock
 from social.auth        import IAuthInfo
 from social.isocial     import IItem
 from social             import errors
-
 
 class Poll(object):
     implements(IPlugin, IItem)
     itemType = "poll"
 
+    def getRootHTML(self, convId, args):
+        return getBlock("item.mako", "poll_root", args=[convId], **args)
 
     @defer.inlineCallbacks
     def getRootData(self, args):

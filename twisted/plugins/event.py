@@ -11,7 +11,7 @@ from twisted.python     import log
 
 from social             import Db, utils, base
 from social             import feed
-from social.template    import renderScriptBlock, render
+from social.template    import renderScriptBlock, render, getBlock
 from social.auth        import IAuthInfo
 from social.isocial     import IItem
 from social             import errors
@@ -22,6 +22,10 @@ class Event(object):
     itemType = "event"
     #TODO: event Invitations.
     #TODO: listing invitations chronologically.
+
+    def getRootHTML(self, convId, args):
+        return getBlock("item.mako", "event_root", args=[convId], **args)
+
 
     @defer.inlineCallbacks
     def getRootData(self, args):

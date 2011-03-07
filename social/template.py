@@ -78,3 +78,13 @@ def renderScriptBlock(request, path, dfn, tags=False, parent=None,
     fmt = "<script>loader.load(%s);</script>\n" if tags else "loader.load(%s)\n"
     text = fmt % json.dumps(map)
     request.write(text)
+
+
+def getBlock(path, dfn, args=[], **data):
+    try:
+        template = _getTemplate(path, dfn)
+        text =  template.render(*args, **data)
+        return text
+    except Exception, err:
+        log.msg(traceback.print_exc())
+        raise Exception(err)

@@ -10,12 +10,16 @@ from twisted.plugin     import IPlugin
 from social             import Db, base, utils, feed, errors
 from social.auth        import IAuthInfo
 from social.isocial     import IItem
-from social.template    import render, renderScriptBlock
+from social.template    import render, renderScriptBlock, getBlock
 
 
 class   Status(object):
     implements(IPlugin, IItem)
     itemType = "status"
+
+    def getRootHTML(self, convId, args):
+        return getBlock("item.mako", "renderStatus", args=[convId], **args)
+
 
     @defer.inlineCallbacks
     def getRootData(self, args):
