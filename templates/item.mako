@@ -71,7 +71,7 @@
         %endif
       </div>
       <div class="conv-comment-form">
-        <form method="post" action="/feed/share/status" class="ajax" id="form-${convId}">
+        <form method="post" action="/item/comment" class="ajax" id="form-${convId}">
           <input type="text" name="comment" value=""></input>
           <input type="hidden" name="parent" value=${convId}></input>
           ${widgets.button(None, type="submit", name="comment", value="Comment")}<br/>

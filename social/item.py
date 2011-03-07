@@ -1,5 +1,6 @@
 import json
 import uuid
+import time
 
 from telephus.cassandra import ttypes
 from twisted.internet   import defer
@@ -285,7 +286,64 @@ class ItemResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _comment(self, request):
-        pass
+        myId = request.getSession(IAuthInfo).username
+        convId = utils.getRequestArg(request, "parent")
+        comment = utils.getRequestArg(request, "comment")
+        if not convId or not comment:
+            raise errors.MissingParam()
+
+        # 0. Fetch conversation and see if I have access to it.
+        # TODO: Check ACL
+        conv = yield Db.get_slice(convId, 'items', super_column='meta')
+        conv = utils.columnsToDict(conv)
+        convType = conv.get("type", "status")
+
+        # 1. Create and add new item
+        meta = {"owner": myId, "parent": convId, "comment": comment,
+                "timestamp": str(int(time.time()))}
+        followers = {myId: ''}
+        itemId = utils.getUniqueKey()
+        yield Db.batch_insert(itemId, "items", {'meta': meta,
+                                                'followers': followers})
+
+        # 2. Update response count and add myself to the followers of conv
+        convOwnerId = conv["owner"]
+        responseCount = int(conv.get("responseCount", "0")) + 1
+        if responseCount % 5 == 0:
+            responseCount = yield Db.get_count(convId, "itemResponses")
+
+        convUpdates = {"responseCount": str(responseCount)}
+        yield Db.batch_insert(convId, "items", {"meta": convUpdates,
+                                                "followers": followers})
+
+        # 3. Add item as response to parent
+        timeUUID = uuid.uuid1().bytes
+        yield Db.insert(convId, "itemResponses",
+                        "%s:%s" % (myId, itemId), timeUUID)
+
+        # 4. Update userItems and userItems_*
+        userItemValue = ":".join([itemId, convId, convOwnerId])
+        yield Db.insert(myId, "userItems", userItemValue, timeUUID)
+        yield Db.insert(myId, "userItems_" + convType, userItemValue, timeUUID)
+
+        # 5. Update my feed.
+        yield feed.pushToFeed(myId, timeUUID, itemId, convId,
+                              "C", convType, convOwnerId, myId)
+
+        # 6. Push to other's feeds
+        convACL = conv.get("acl", "company")
+        yield feed.pushToOthersFeed(myId, timeUUID, itemId, convId,
+                                    convACL, "C", convType, convOwnerId)
+
+        # Finally, update the UI
+        users = yield Db.get(myId, "users", super_column="basic")
+        users = {myId: utils.supercolumnsToDict([users])}
+        items = {itemId: {"meta": meta}}
+        data = {"users": users, "items": items}
+        d = yield renderScriptBlock(request, "item.mako", 'conv_comment',
+                                    False, '#conv-comments-%s' % convId,
+                                    'append', args=[convId, itemId], **data)
+
 
     @defer.inlineCallbacks
     def _likes(self, request):
@@ -312,8 +370,6 @@ class ItemResource(base.BaseResource):
                 d = self._like(request)
             elif path == 'unlike':
                 d = self._unlike(request)
-            elif path == 'comment':
-                d = self._comment(request)
 
         if d:
             def callback(res):
@@ -337,6 +393,8 @@ class ItemResource(base.BaseResource):
                 d =  self.createItem(request)
             elif path == 'act':
                 d =  self.actOnItem(request)
+            elif path == 'comment':
+                d = self._comment(request)
 
         if d:
             def callback(res):
