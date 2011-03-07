@@ -16,6 +16,8 @@ from social.template    import render, renderScriptBlock, getBlock
 class   Status(object):
     implements(IPlugin, IItem)
     itemType = "status"
+    position = 1
+    hasIndex = True
 
     def getRootHTML(self, convId, args):
         return getBlock("item.mako", "renderStatus", args=[convId], **args)

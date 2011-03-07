@@ -19,6 +19,8 @@ from social             import errors
 class Poll(object):
     implements(IPlugin, IItem)
     itemType = "poll"
+    position = 5
+    hasIndex = False
 
     def getRootHTML(self, convId, args):
         return getBlock("item.mako", "poll_root", args=[convId], **args)

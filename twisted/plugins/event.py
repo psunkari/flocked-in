@@ -20,6 +20,8 @@ from social             import errors
 class Event(object):
     implements(IPlugin, IItem)
     itemType = "event"
+    position = 4
+    hasIndex = False
     #TODO: event Invitations.
     #TODO: listing invitations chronologically.
 

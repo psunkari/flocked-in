@@ -2,6 +2,7 @@
 import os
 import ConfigParser
 import gettext
+from ordereddict        import OrderedDict
 
 from telephus.protocol  import ManagedCassandraClientFactory
 from telephus.client    import CassandraClient
@@ -24,6 +25,17 @@ Db = CassandraClient(_factory)
 _ = gettext.gettext
 __ = gettext.ngettext
 
-plugins = dict([(plugin.itemType, plugin) for plugin in getPlugins(IItem)])
+_positionMap = {}
+_positions = []
+for plugin in getPlugins(IItem):
+    _positions.append(plugin.position)
+    _positionMap[plugin.position] = plugin
+
+_positions.sort()
+plugins = OrderedDict()
+for position in _positions:
+    plugin = _positionMap[position]
+    plugins[plugin.itemType] = plugin
+
 
 __all__ = [Config, Db, _, __, plugins]
