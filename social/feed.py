@@ -97,7 +97,8 @@ def updateFeedResponses(userKey, parentKey, itemKey, timeuuid,
     if noOfItems == MAXFEEDITEMSBYTYPE or totalItems == MAXFEEDITEMS:
         yield Db.remove(userKey, "feedItems", oldest, parentKey)
         yield Db.remove(userKey, "feed", oldest)
-        yield Db.remove(userKey, "feed_"+itemType, oldest)
+        if itemType in ['status', 'link', 'document']:
+            yield Db.remove(userKey, "feed_"+itemType, oldest)
 
     if totalItems == 0 and responseType != 'I':
         value = ":".join(["!", convOwner, parentKey, ""])
@@ -250,7 +251,6 @@ class FeedResource(base.BaseResource):
                 reasonStr[convId] = _(template) % tuple(vals)
 
             # Build like string
-            likeStr[convId] = None
             likesCount = int(conv["meta"].get("likesCount", "0"))
             userIds = [x for x in likes[convId]]
             if userKey in userIds:
@@ -274,6 +274,9 @@ class FeedResource(base.BaseResource):
                         "You, %s, %s and %s other people like this"][len(userIds)]
             else:
                 likesCount -= len(userIds)
+                if likesCount == 0 and len(userIds) > 0:
+                    template = ["%s likes this",
+                                "%s and %s like this"][len(userIds)-1]
                 if likesCount == 1:
                     template = ["1 person likes this",
                         "%s and 1 other person like this",

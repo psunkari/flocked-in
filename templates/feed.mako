@@ -159,6 +159,6 @@
 
 <%def name="feed()">
   %for convId in conversations:
-    ${item.item_layout(convId, True)}
+    ${item.item_layout(convId, True, True)}
   %endfor
 </%def>

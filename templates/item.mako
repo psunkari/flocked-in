@@ -39,7 +39,7 @@
   </div>
 </%def>
 
-<%def name="item_layout(convId, inline=False)">
+<%def name="item_layout(convId, inline=False, isFeed=False)">
   <div id="conv-${convId}" class="conv-item">
     <div class="conv-avatar" id="conv-avatar-${convId}">
       %if inline or not script:
@@ -60,9 +60,14 @@
           ${self.item_footer(convId)}
         %endif
       </div>
+      <div id="conv-likes-wrapper-${convId}">
+        %if likeStr and likeStr.has_key(convId):
+          <div class="conv-likes">${likeStr[convId]}</div>
+        %endif
+      </div>
       <div id="conv-comments-${convId}" class="conv-comments">
         %if inline or not script:
-          ${self.conv_comments(convId)}
+          ${self.conv_comments(convId, isFeed)}
         %endif
       </div>
       <div class="conv-comment-form">
@@ -92,35 +97,47 @@
   % elif itemType == "poll":
       ${self.poll_root(convId)}
   % elif itemType == "event":
-
       ${self.event_root(convId)}
   %endif
 
 </%def>
 
-<%def name="item_footer(convId)">
-  <% conv = items[convId] %>
-  <span class="timestamp" ts="${conv['meta']['timestamp']}">${conv['meta']['timestamp']}</span>
+<%def name="item_footer(itemId)">
+  <%
+    meta = items[itemId]['meta']
+    hasParent = meta.has_key('parent')
+    timestamp = meta['timestamp']
+    likesCount = int(meta.get('likesCount', "0"))
+  %>
+  <span class="timestamp" ts="${timestamp}">${timestamp}</span>
   &nbsp;&#183;&nbsp;
-  %if myLikes and myLikes.has_key(convId) and len(myLikes[convId]):
-    <span><a class="ajax" _ref="/item/unlike?id=${convId}">${_("Unlike")}</a></span>
+  %if hasParent and likesCount > 0:
+    <span class="likes"><a class="ajax" _ref="/item/likes?id=${itemId}">${likesCount}</a></span>
+    &nbsp;&#183;&nbsp;
+  %endif
+  %if myLikes and myLikes.has_key(itemId) and len(myLikes[itemId]):
+    <span><a class="ajax" _ref="/item/unlike?id=${itemId}">${_("Unlike")}</a></span>
   %else:
-    <span><a class="ajax" _ref="/item/like?id=${convId}">${_("Like")}</a></span>
+    <span><a class="ajax" _ref="/item/like?id=${itemId}">${_("Like")}</a></span>
   %endif
 </%def>
 
-<%def name="conv_comments(convId)">
+<%def name="conv_comments(convId, isFeed=False)">
   <%
     responseCount = int(items[convId]["meta"].get("responseCount", "0"))
-    convResponses = responses.get(convId, {}) if responses else {}
+    responsesToShow = responses.get(convId, {}) if responses else {}
   %>
-  %if responseCount > len(convResponses):
-    <div class="conv-comment">
-      <span id="conv-comments-count" _num="${len(convResponses)}">${_("Showing %s of %s") % (len(convResponses), responseCount)}</span>
-      View older responses
+  %if responseCount > len(responsesToShow):
+    <div class="conv-comments-more">
+      %if isFeed:
+        ${_("View all %s comments &#187;") % (responseCount)}
+      %else:
+        <span _num="${len(responsesToShow)}">${_("Showing %s of %s") % (len(responsesToShow), responseCount)}</span>
+        ${_("View older comments &#187;")}
+      %endif
     </div>
   %endif
-  %for responseId in convResponses:
+  %for responseId in responsesToShow:
     ${self.conv_comment(convId, responseId)}
   %endfor
 </%def>
@@ -130,8 +147,6 @@
     item = items[commentId]
     userId  = item["meta"]["owner"]
     comment = item["meta"].get("comment", "")
-    timestamp = item["meta"]["timestamp"]
-    likesCount = item["meta"].get("likesCount", 0)
     fmtUser = lambda x: ("<span class='user comment-author'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (x, users[x]["basic"]["name"]))
   %>
   <div class="conv-comment" id="comment-${commentId}">
@@ -146,19 +161,7 @@
       <span class="comment-text">${comment}</span>
     </div>
     <div class="comment-meta">
-      <span class="timestamp" _ts="${timestamp}">${timestamp}</span>
-      <span class="likes">
-        %if likesCount:
-          &nbsp;&#183;&nbsp;
-          <a class="ajax" href="/item/likes?id=${commentId}">${likesCount}</a>
-        %endif
-      </span>
-      &nbsp;&#183;&nbsp;
-      %if myLikes and commentId in myLikes and len(myLikes[commentId]):
-        <span><a class="ajax" _ref="/item/unlike?id=${commentId}">${_("Unlike")}</a></span>
-      %else:
-        <span><a class="ajax" _ref="/item/like?id=${commentId}">${_("Like")}</a></span>
-      %endif
+      ${self.item_footer(commentId)}
     </div>
   </div>
 </%def>
