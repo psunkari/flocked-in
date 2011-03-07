@@ -185,7 +185,7 @@
         %if myVote:
         <p> you voted for: ${myVote} </p>
         %endif
-        <form action="/item/act" method="POST" class="ajax">
+        <form action="/poll/post" method="POST" class="ajax">
         <p> ${question} </p>
         % for option in options:
             <input type="radio" name="option" value= "${option}"> ${option} </input> <br/>
@@ -250,7 +250,7 @@
         %if myResponse:
         <p> are you attending the <a href="/item?id=${convId}&type=event">event</a>?: ${myResponse} </p>
         %endif
-        <form action="/item/act" method="POST" class="ajax">
+        <form action="/event/post" method="POST" class="ajax">
         <p> ${title} </p>
         % for option in options:
             <input type="radio" name="response" value= "${option}"> ${option} </input> <br/>
