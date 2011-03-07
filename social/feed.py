@@ -260,7 +260,7 @@ class FeedResource(base.BaseResource):
             template = None
             if len(myLikes[convId]):
                 likesCount -= (1 + len(userIds))
-                if likesCount == 0:
+                if likesCount <= 0:
                     template = ["You like this",
                                 "You and %s like this",
                                 "You, %s and %s like this"][len(userIds)]
@@ -319,8 +319,8 @@ class FeedResource(base.BaseResource):
                                     landing, "#share-block", "set", **args)
             yield self._renderShareBlock(request, "status")
 
-        feed = yield self._getFeedItems(myKey)
-        args.update(feed)
+        feedItems = yield self._getFeedItems(myKey)
+        args.update(feedItems)
         if script:
             yield renderScriptBlock(request, "feed.mako", "feed", landing,
                                     "#user-feed", "set", **args)
@@ -382,130 +382,6 @@ class FeedResource(base.BaseResource):
             request.finish()
 
         return server.NOT_DONE_YET
-
-    @defer.inlineCallbacks
-    def _setLike(self, request):
-        itemKey = utils.getRequestArg(request, "itemKey")
-        parent =  utils.getRequestArg(request, "parent")
-        convOwner = utils.getRequestArg(request, "parentUserId")
-        userKey = request.getSession(IAuthInfo).username
-        typ = utils.getRequestArg(request, "type")
-        acl = utils.getRequestArg(request, "acl")
-
-        try:
-            cols = yield Db.get(itemKey, "itemLikes", userKey)
-            raise Exception("Invalid!")
-        except ttypes.NotFoundException:
-            pass
-
-        if not (typ and acl and convOwner):
-            cols = yield Db.get_slice(parent, "items",
-                                        ["type", "acl", "owner"],
-                                        super_column = "meta")
-            cols = yield utils.columnsToDict(cols)
-            typ = cols["type"]
-            acl = cols["acl"]
-            convOwner = cols["owner"]
-
-        likesCount = 0
-        try:
-            cols = yield Db.get(itemKey, "items", "likesCount", "meta")
-            likesCount = int(cols.column.value)
-        except ttypes.NotFoundException:
-            pass
-
-        # Update the likes count
-        if likesCount % 5 == 1:
-            likesCount = yield Db.get_count(itemKey, "itemLikes")
-        yield Db.insert(itemKey, "items", str(likesCount + 1),
-                        "likesCount", "meta")
-
-        timeuuid = uuid.uuid1().bytes
-        responseType = "L"
-        # 1. add user to Likes list
-        yield Db.insert(itemKey, "itemLikes", timeuuid, userKey)
-
-        # 2. add users to the followers list of parent item
-        yield Db.batch_insert(parent, "items", {"followers":{userKey:''}})
-
-        # 3. update user's feed, feedItems, feed_*
-        yield pushToFeed(userKey, timeuuid, itemKey, parent,
-                         responseType, typ, convOwner, userKey)
-
-        # 4. update feed, feedItems, feed_* of user's followers/friends (based on acl)
-        yield pushToOthersFeed(userKey, timeuuid, itemKey, parent, acl,
-                                responseType,typ, convOwner)
-
-        # TODO: broadcast to followers of the items
-
-        # 5. render parent item
-        (appchange, script, data) = self._getBasicArgs(request)
-        feed = yield self._getFeedItems(userKey, parent)
-        data.update(feed)
-        landing = not self._ajax
-        yield  renderScriptBlock(request, "item.mako", "item_layout", landing,
-                            "#conv-%s"%(parent), "set", args=[parent, True], **data)
-
-    @defer.inlineCallbacks
-    def _setUnlike(self, request):
-        itemKey = utils.getRequestArg(request, "itemKey")
-        parent =  utils.getRequestArg(request, "parent")
-        convOwner = utils.getRequestArg(request, "parentUserId")
-        userKey = request.getSession(IAuthInfo).username
-
-        typ = utils.getRequestArg(request, "type")
-        acl = utils.getRequestArg(request, "acl")
-        responseType = 'L'
-
-        if not (typ and acl and convOwner):
-            cols = yield Db.get_slice(parent, "items",
-                                      ["type", "acl", "owner"],
-                                      super_column = "meta")
-            cols = utils.columnsToDict(cols)
-            typ = cols["type"]
-            convOwner = cols["owner"]
-            acl = cols["acl"]
-
-        # TODO: make sure that likesCount > 0 and that the user liked it.
-        try:
-            cols = yield Db.get(itemKey, "itemLikes", userKey)
-        except ttypes.NotFoundException, err:
-            raise Exception("Invalid!")
-
-        likesCount = 0
-        try:
-            cols = yield Db.get(itemKey, "items", "likesCount", "meta")
-            likesCount = int(cols.column.value)
-        except ttypes.NotFoundException:
-            pass
-
-        # Update the likes count
-        if likesCount % 5 == 1:
-            likesCount = yield Db.get_count(itemKey, "itemLikes")
-        yield Db.insert(itemKey, "items", str(likesCount - 1),
-                        "likesCount", "meta")
-
-        # 1. remove the user from likes list.
-        yield Db.remove(itemKey, "itemLikes", userKey)
-
-        # 2. Don't remove the user from followers list
-        #    (use can also become follower by responding to item,
-        #        so user can't be removed from followers list)
-
-        # 3. delete from user's feed, feedItems, feed_*
-        yield deleteFromFeed(userKey, itemKey, parent,
-                             typ, userKey, responseType)
-
-        # 4. delete from feed, feedItems, feed_* of user's friends/followers
-        yield deleteFromOthersFeed(userKey, itemKey, parent,
-                                   typ, acl, convOwner, responseType)
-        # 5. render parent item
-        (appchange, script, data) = self._getBasicArgs(request)
-        feed = yield self._getFeedItems(userKey, parent)
-        data.update(feed)
-        landing = not self._ajax
-        yield  renderScriptBlock(request, "item.mako", "item_layout", landing,
-                            "#conv-%s"%(parent), "set", args=[parent, True], **data)
 
     @defer.inlineCallbacks
     def _share(self, request, typ):
@@ -599,10 +475,10 @@ class FeedResource(base.BaseResource):
         # 5. render the parent item
         (appchange, script, data) = self._getBasicArgs(request)
         if parent:
-            feed = yield self._getFeedItems(userKey, parent)
+            feedItems = yield self._getFeedItems(userKey, parent)
         else:
-            feed = yield self._getFeedItems(userKey, itemKey)
-        data.update(feed)
+            feedItems = yield self._getFeedItems(userKey, itemKey)
+        data.update(feedItems)
         landing = not self._ajax
         if parent:
             yield  renderScriptBlock(request, "item.mako", "item_layout",

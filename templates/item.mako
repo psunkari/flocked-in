@@ -103,9 +103,9 @@
   <span class="timestamp" ts="${conv['meta']['timestamp']}">${conv['meta']['timestamp']}</span>
   &nbsp;&#183;&nbsp;
   %if myLikes and myLikes.has_key(convId) and len(myLikes[convId]):
-    <span><a class="ajax" _ref="/feed/unlike?itemKey=${convId}&parent=${convId}">${_("Unlike")}</a></span>
+    <span><a class="ajax" _ref="/item/unlike?id=${convId}">${_("Unlike")}</a></span>
   %else:
-    <span><a class="ajax" _ref="/feed/like?itemKey=${convId}&parent=${convId}">${_("Like")}</a></span>
+    <span><a class="ajax" _ref="/item/like?id=${convId}">${_("Like")}</a></span>
   %endif
 </%def>
 
@@ -150,14 +150,14 @@
       <span class="likes">
         %if likesCount:
           &nbsp;&#183;&nbsp;
-          <a class="ajax" href="/feed/likes?id=${commentId}">${likesCount}</a>
+          <a class="ajax" href="/item/likes?id=${commentId}">${likesCount}</a>
         %endif
       </span>
       &nbsp;&#183;&nbsp;
-      %if commentId in myLikes and len(myLikes[commentId]):
-        <span><a class="ajax" _ref="/feed/unlike?itemKey=${commentId}&parent=${convId}">${_("Unlike")}</a></span>
+      %if myLikes and commentId in myLikes and len(myLikes[commentId]):
+        <span><a class="ajax" _ref="/item/unlike?id=${commentId}">${_("Unlike")}</a></span>
       %else:
-        <span><a class="ajax" _ref="/feed/like?itemKey=${commentId}&parent=${convId}">${_("Like")}</a></span>
+        <span><a class="ajax" _ref="/item/like?id=${commentId}">${_("Like")}</a></span>
       %endif
     </div>
   </div>
