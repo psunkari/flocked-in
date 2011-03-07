@@ -1,14 +1,29 @@
 
 from twisted.web            import resource, server
 from twisted.internet       import defer
+from twisted.python         import log
 
-from social                 import Db, utils, base
+from social                 import Db, utils, base, plugins
 from social.template        import render
 from social.profile         import ProfileResource
 from social.auth            import IAuthInfo
 from social.feed            import FeedResource
 from social.register        import RegisterResource
 from social.item            import ItemResource
+
+def getPluggedResources(ajax=False):
+    resources = {}
+    for itemType in plugins:
+        try:
+            moduleName = 'social.%s' %(itemType)
+            resourceName = '%sResource' %(itemType.capitalize())
+            module = __import__(moduleName, fromlist = ['social'])
+            resources[itemType] = getattr(module, resourceName)(ajax)
+        except:
+            log.msg("resouce %s not found" %(itemType))
+            pass
+    return resources
+
 
 class RootResource(resource.Resource):
     def __init__(self):
@@ -17,6 +32,7 @@ class RootResource(resource.Resource):
         self._profile = ProfileResource()
         self._register = RegisterResource()
         self._item = ItemResource()
+        self.pluginResources = getPluggedResources(False)
 
     def getChildWithDefault(self, path, request):
         if path == "" or path == "feed":
@@ -29,6 +45,8 @@ class RootResource(resource.Resource):
             return self._register
         elif path == "item":
             return self._item
+        elif path in plugins and self.pluginResources.has_key(path):
+            return self.pluginResources[path]
         else:
             return resource.NoResource("Page not found")
 
@@ -40,4 +58,5 @@ class AjaxResource(RootResource):
         self._profile = ProfileResource(True)
         self._register = RegisterResource(True)
         self._item = ItemResource(True)
+        self.pluginResources = getPluggedResources(True)
 
