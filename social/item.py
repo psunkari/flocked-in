@@ -251,6 +251,7 @@ class ItemResource(base.BaseResource):
             conv = yield Db.get(convId, "items", super_column="meta")
             conv = utils.supercolumnsToDict([conv])
         else:
+            convId = itemId
             conv = item
 
         convOwnerId = conv["meta"]["owner"]
