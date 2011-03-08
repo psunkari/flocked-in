@@ -1,4 +1,4 @@
-<%! from social import utils, _, __, plugins %>
+<%! from social import utils, _, __, plugins, constants %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -120,21 +120,31 @@
   %endif
 </%def>
 
+<%def name="conv_comments_head(convId, total, showing, isFeed)">
+  %if total > showing:
+    <div class="conv-comments-more">
+      %if isFeed:
+        %if total > constants.MAX_COMMENTS_IN_FEED or not script:
+          <a class="ajax" href='/item?id=${convId}'>${_("View all %s comments &#187;") % (total)}</a>
+        %else:
+          <a class="ajax" href='/item?id=${convId}' _ref="/item/responses?id=${convId}">${_("View all %s comments &#187;") % (total)}</a>
+        %endif
+      %else:
+        <span class="num-comments">${_("%s of %s") % (showing, total)}</span>
+        ${_("View older comments &#187;")}
+      %endif
+    </div>
+  %endif
+</%def>
+
 <%def name="conv_comments(convId, isFeed=False)">
   <%
     responseCount = int(items[convId]["meta"].get("responseCount", "0"))
     responsesToShow = responses.get(convId, {}) if responses else {}
   %>
-  %if responseCount > len(responsesToShow):
-    <div class="conv-comments-more">
-      %if isFeed:
-        ${_("View all %s comments &#187;") % (responseCount)}
-      %else:
-        <span _num="${len(responsesToShow)}">${_("Showing %s of %s") % (len(responsesToShow), responseCount)}</span>
-        ${_("View older comments &#187;")}
-      %endif
-    </div>
-  %endif
+  <div id="${'comments-header-%s' % convId}">
+    ${self.conv_comments_head(convId, responseCount, len(responsesToShow), isFeed)}
+  </div>
   %for responseId in responsesToShow:
     ${self.conv_comment(convId, responseId)}
   %endfor

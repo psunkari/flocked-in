@@ -7,7 +7,7 @@ from twisted.internet   import defer
 from twisted.web        import server
 from twisted.python     import log
 
-from social             import base, Db, utils, feed, plugins
+from social             import base, Db, utils, feed, plugins, constants
 from social.auth        import IAuthInfo
 from social.template    import render, renderScriptBlock
 
@@ -96,7 +96,8 @@ class ItemResource(base.BaseResource):
             renderers.append(d)
 
         itemResponses = yield Db.get_slice(convId, "itemResponses",
-                                           start=start, reverse=True, count=25)
+                                           start=start, reverse=True,
+                                           count=constants.MAX_COMMENTS_PER_PAGE)
         responseKeys = []
         for response in itemResponses:
             userKey, responseKey = response.column.value.split(":")
@@ -343,15 +344,42 @@ class ItemResource(base.BaseResource):
                                     False, '#conv-comments-%s' % convId,
                                     'append', args=[convId, itemId], **data)
 
-
     @defer.inlineCallbacks
     def _likes(self, request):
-        start = utils.getRequestArg();
         pass
 
     @defer.inlineCallbacks
     def _responses(self, request):
-        pass
+        convId = utils.getRequestArg(request, "id")
+        start = utils.getRequestArg(request, "start")
+
+        toFetchUsers = set()
+        itemResponses = yield Db.get_slice(convId, "itemResponses",
+                                           reverse=True,
+                                           count=constants.MAX_COMMENTS_PER_PAGE)
+        responseKeys = []
+        for response in itemResponses:
+            userKey, responseKey = response.column.value.split(":")
+            responseKeys.append(responseKey)
+            toFetchUsers.add(userKey)
+
+        d3 = Db.multiget_slice(responseKeys + [convId], "itemLikes")
+        d2 = Db.multiget_slice(responseKeys + [convId], "items", ["meta"])
+        d1 = Db.multiget_slice(toFetchUsers, "users", ["basic"])
+
+        fetchedItems = yield d2
+        fetchedUsers = yield d1
+        myLikes = yield d3
+
+        args = {"convId": convId, "isFeed": True, "items":{}, "users": {}}
+        args["items"].update(utils.multiSuperColumnsToDict(fetchedItems))
+        args["users"].update(utils.multiSuperColumnsToDict(fetchedUsers))
+        args["myLikes"] = utils.multiColumnsToDict(myLikes)
+        args["responses"] = {convId: responseKeys}
+
+        yield renderScriptBlock(request, "item.mako", 'conv_comments',
+                                not self._ajax, '#conv-comments-%s' % convId,
+                                'set', **args)
 
 
     def render_GET(self, request):
@@ -363,9 +391,9 @@ class ItemResource(base.BaseResource):
         elif segmentCount == 1:
             path = request.postpath[0]
             if path == "responses":
-                self._responses(request)
+                d = self._responses(request)
             if path == "likes":
-                self._likes(request)
+                d = self._likes(request)
             elif path == 'like' :
                 d = self._like(request)
             elif path == 'unlike':
@@ -381,6 +409,7 @@ class ItemResource(base.BaseResource):
             d.addCallbacks(callback, errback)
             return server.NOT_DONE_YET
         else:
+            log.msg("Not Found: %s" % request.path)
             pass    # XXX: Throw error
 
     def render_POST(self, request):
