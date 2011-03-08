@@ -107,6 +107,7 @@ class ProfileResource(base.BaseResource):
         return server.NOT_DONE_YET
 
     def render_GET(self, request):
+        request.addCookie("_page", "profile", path="/")
         d = self._render(request)
         def errback(err):
             log.err(err)
@@ -161,6 +162,7 @@ class ProfileResource(base.BaseResource):
         # Reload all user-depended blocks if the currently displayed user is
         # not the same as the user for which new data is being requested.
         newId = (request.getCookie('_cu') != userKey or appchange)
+        request.addCookie('_cu', userKey, path="/")
         if script and newId:
             yield renderScriptBlock(request, "profile.mako", "summary",
                                     landing, "#profile-summary", "set", **args)

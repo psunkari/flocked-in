@@ -351,6 +351,7 @@ class FeedResource(base.BaseResource):
         d = None
 
         if segmentCount == 0:
+            request.addCookie("_page", "feed", path="/")
             d = self._render(request)
         elif segmentCount == 2 and request.postpath[0] == "share":
             if self._ajax:

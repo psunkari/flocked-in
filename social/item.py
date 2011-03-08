@@ -359,6 +359,7 @@ class ItemResource(base.BaseResource):
         segmentCount = len(request.postpath)
         d = None
         if segmentCount == 0:
+            request.addCookie("_page", "item", path="/")
             d =  self.renderItem(request)
         elif segmentCount == 1:
             path = request.postpath[0]
