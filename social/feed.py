@@ -125,12 +125,20 @@ class FeedResource(base.BaseResource):
             convs.append(itemKey)
             toFetchItems.add(itemKey)
         else:
-            cols = yield Db.get_slice(userKey, "feed", count=count, reverse=True)
-            for col in cols:
-                value = col.column.value
-                if value not in toFetchItems:
-                    convs.append(value)
-                    toFetchItems.add(value)
+            start = ""
+            fetchCount = count + 5
+            while len(convs) < count:
+                cols = yield Db.get_slice(userKey, "feed", count=fetchCount,
+                                          start=start, reverse=True)
+                for col in cols:
+                    value = col.column.value
+                    if value not in toFetchItems:
+                        convs.append(value)
+                        toFetchItems.add(value)
+                if len(cols) < fetchCount:
+                    break
+                start = cols[-1].column.name
+
 
         # 2. Fetch list of notifications that we have for above conversations
         #    and check if we have enough responses to be shown in the feed.
