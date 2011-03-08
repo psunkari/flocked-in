@@ -1,4 +1,4 @@
-<%! from social import utils, _, __ %>
+<%! from social import utils, _, __, plugins %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -70,16 +70,17 @@
     <div id="sharebar-tabs">
       <ul id="sharebar-links" class="h-links">
         <li>${_("Share:")}</li>
-        %for name, target in [("Status", "status"), ("Link", "link"), ("Document", "document"), ("Poll", "poll"), ('Event', 'event') ]:
-          %if target == 'status':
-            <li><a _ref="/feed/share/${target}" id="sharebar-link-${target}" class="ajax selected">${_(name)}</a></li>
-          %else:
-            <li><a _ref="/feed/share/${target}" id="sharebar-link-${target}" class="ajax">${_(name)}</a></li>
-          %endif
+        <% 
+          supported = [(name.capitalize(), name) for name in plugins]
+          itemName, itemType = supported[0]
+        %>
+        <li><a _ref="/feed/share/${itemType}" id="sharebar-link-${itemType}" class="ajax selected">${_(itemName)}</a></li>
+        %for itemName, itemType in supported[1:]:
+          <li><a _ref="/feed/share/${itemType}" id="sharebar-link-${itemType}" class="ajax">${_(itemName)}</a></li>
         %endfor
       </ul>
     </div>
-    <form id="share-form" class="ajax" autocomplete="off" method="post">
+    <form id="share-form" class="ajax" autocomplete="off" method="post" action="/item/new">
       <div id="sharebar"></div>
       <div>
         <ul id="sharebar-actions" class="h-links">
@@ -98,26 +99,6 @@
   </div>
   <input type="hidden" name="type" value="status"/>
 </%def>
-
-<%def name="share_link()">
-  <div class="input-wrap">
-    <input type="text" name="url" placeholder="${_('http://')}"/>
-  </div>
-  <div class="input-wrap">
-    <input type="text" name="comment" placeholder="${_('Say something about this link')}"/>
-  </div>
-  <input type="hidden" name="type" value="link"/>
-</%def>
-
-<%def name="share_document()">
-  <div class="input-wrap">
-    <input type="file" name="file" placeholder="${_('Select the document to share')}"/>
-  </div>
-  <div class="input-wrap">
-    <input type="text" name="comment" placeholder="${_('Say something about this file')}"/>
-  </div>
-</%def>
-
 
 <%def name="share_poll()">
   <div class="input-wrap">

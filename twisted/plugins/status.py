@@ -7,7 +7,7 @@ from twisted.web        import server
 from twisted.internet   import defer
 from twisted.plugin     import IPlugin
 
-from social             import Db, base, utils, feed, errors
+from social             import Db, base, utils, errors
 from social.auth        import IAuthInfo
 from social.isocial     import IItem
 from social.template    import render, renderScriptBlock, getBlock

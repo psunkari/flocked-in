@@ -10,7 +10,6 @@ from twisted.internet   import defer
 from twisted.python     import log
 
 from social             import Db, utils, base
-from social             import feed
 from social.template    import renderScriptBlock, render, getBlock
 from social.auth        import IAuthInfo
 from social.isocial     import IItem

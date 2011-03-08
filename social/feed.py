@@ -8,7 +8,7 @@ from twisted.web        import server
 from twisted.python     import log
 from telephus.cassandra import ttypes
 
-from social             import Db, utils, base, _, __
+from social             import Db, utils, base, plugins, _, __
 from social.template    import render, renderDef, renderScriptBlock
 from social.auth        import IAuthInfo
 from social.constants   import INFINITY, MAXFEEDITEMS, MAXFEEDITEMSBYTYPE
@@ -19,53 +19,52 @@ def deleteFromFeed(userKey, itemKey, parentKey,
                    itemType, itemOwner, responseType):
     # fix: itemOwner is either the person who owns the item
     #       or person who liked the item. RENAME the variable.
-
-    cols = yield Db.get_slice(userKey,
-                              "feedItems",
-                              super_column=parentKey,
-                              reverse=True)
+    cols = yield Db.get_slice(userKey, "feedItems",
+                              super_column=parentKey, reverse=True)
     cols = utils.columnsToDict(cols)
+
     for tuuid, val in cols.items():
-        rtype =  val.split(":")[0]
-        poster = val.split(":")[1]
-        key = val.split(":")[2]
+        rtype, poster, key =  val.split(":")[0:3]
         if rtype == responseType and poster == itemOwner and key == itemKey:
             yield Db.remove(userKey, "feedItems", tuuid, parentKey)
             yield Db.remove(userKey, "feed", tuuid)
-            if itemType in ("status", "link", "document"):
+            if plugins.has_key(itemType) and plugins[itemType].hasIndex:
                 yield Db.remove(userKey, "feed_"+itemType, tuuid)
+
             break
+
 
 @defer.inlineCallbacks
 def deleteFromOthersFeed(userKey, itemKey,parentKey, itemType,
                          acl, convOwner, responseType):
-
     others = yield utils.expandAcl(userKey, acl, convOwner)
     for key in others:
         yield deleteFromFeed(key, itemKey, parentKey,
                              itemType, userKey, responseType )
 
+
 @defer.inlineCallbacks
 def pushToOthersFeed(userKey, timeuuid, itemKey,parentKey,
                     acl, responseType, itemType, convOwner):
-
     others = yield utils.expandAcl(userKey, acl, convOwner)
     for key in others:
         yield pushToFeed(key, timeuuid, itemKey, parentKey,
                          responseType, itemType, convOwner, userKey)
 
+
 @defer.inlineCallbacks
 def pushToFeed(userKey, timeuuid, itemKey, parentKey, responseType,
                 itemType, convOwner=None, commentOwner=None):
-
     # Caveat: assume itemKey as parentKey if parentKey is None
     parentKey = itemKey if not parentKey else parentKey
     convOwner = userKey if not convOwner else convOwner
     commentOwner = userKey if not commentOwner else commentOwner
+
     yield Db.insert(userKey, "feed", parentKey, timeuuid)
-    if itemType in ['status', 'link', 'document']:
+    if plugins.has_key(itemType) and plugins[itemType].hasIndex:
         yield Db.insert(userKey, "feed_"+itemType, parentKey, timeuuid)
-    yield  updateFeedResponses(userKey, parentKey, itemKey, timeuuid,
+
+    yield updateFeedResponses(userKey, parentKey, itemKey, timeuuid,
                                itemType, responseType, convOwner, commentOwner)
 
 
@@ -76,10 +75,8 @@ def updateFeedResponses(userKey, parentKey, itemKey, timeuuid,
     feedItemValue = ":".join([responseType, commentOwner, itemKey, ''])
     tmp, oldest = {}, None
 
-    cols = yield Db.get_slice(userKey,
-                              "feedItems",
-                              super_column = parentKey,
-                              reverse=True)
+    cols = yield Db.get_slice(userKey, "feedItems",
+                              super_column = parentKey, reverse=True)
     cols = utils.columnsToDict(cols, ordered=True)
 
     for tuuid, val in cols.items():
@@ -97,7 +94,7 @@ def updateFeedResponses(userKey, parentKey, itemKey, timeuuid,
     if noOfItems == MAXFEEDITEMSBYTYPE or totalItems == MAXFEEDITEMS:
         yield Db.remove(userKey, "feedItems", oldest, parentKey)
         yield Db.remove(userKey, "feed", oldest)
-        if itemType in ['status', 'link', 'document']:
+        if plugins.has_key(itemType) and plugins[itemType].hasIndex:
             yield Db.remove(userKey, "feed_"+itemType, oldest)
 
     if totalItems == 0 and responseType != 'I':
@@ -105,7 +102,8 @@ def updateFeedResponses(userKey, parentKey, itemKey, timeuuid,
         tuuid = uuid.uuid1().bytes
         yield Db.batch_insert(userKey, "feedItems", {parentKey:{tuuid:value}})
 
-    yield Db.batch_insert(userKey, "feedItems", {parentKey:{timeuuid: feedItemValue}})
+    yield Db.batch_insert(userKey, "feedItems",
+                          {parentKey:{timeuuid: feedItemValue}})
 
 
 class FeedResource(base.BaseResource):
@@ -339,22 +337,14 @@ class FeedResource(base.BaseResource):
         landing = not self._ajax
         renderDef = "share_status"
 
-        if typ == "link":
-            renderDef = "share_link"
-        elif typ == "document":
-            renderDef = "share_document"
-        elif typ == "poll":
+        if typ == "poll":
             renderDef = "share_poll"
         elif typ == "event":
             renderDef = "share_event"
 
-        action = '/feed/share/%s' %(typ)
-        if typ in ('status', 'poll', 'event'):
-            action = '/item/new'
-
         yield renderScriptBlock(request, "feed.mako", renderDef,
                                 landing, "#sharebar", "set", True,
-                                handlers={"onload": "$('#sharebar-links .selected').removeClass('selected'); $('#sharebar-link-%s').addClass('selected'); $('#share-form').attr('action', '%s');" % (typ, action)})
+                                handlers={"onload": "$('#sharebar-links .selected').removeClass('selected'); $('#sharebar-link-%s').addClass('selected');" % (typ)})
 
     def render_GET(self, request):
         segmentCount = len(request.postpath)
@@ -365,13 +355,6 @@ class FeedResource(base.BaseResource):
         elif segmentCount == 2 and request.postpath[0] == "share":
             if self._ajax:
                 d = self._renderShareBlock(request, request.postpath[1])
-        elif segmentCount ==1 and request.postpath[0] == "like":
-            if self._ajax:
-                d = self._setLike(request)
-
-        elif segmentCount ==1 and request.postpath[0] == 'unlike':
-            if self._ajax:
-                d = self._setUnlike(request)
 
         if d:
             def errback(err):
@@ -384,120 +367,4 @@ class FeedResource(base.BaseResource):
         else:
             request.finish()
 
-        return server.NOT_DONE_YET
-
-    @defer.inlineCallbacks
-    def _share(self, request, typ):
-        meta = {}
-        target = utils.getRequestArg(request, "target")
-        if target:
-            meta["target"] = target
-
-        userKey = request.getSession(IAuthInfo).username
-        cols = yield Db.get(userKey, "users", "name", "basic")
-        username = utils.columnsToDict([cols])["name"]
-
-        meta["owner"] = userKey
-        meta["timestamp"] = "%s" % int(time.time())
-
-        comment = utils.getRequestArg(request, "comment")
-        if comment:
-            meta["comment"] = comment
-
-        parent = utils.getRequestArg(request, "parent")
-        parent = parent if parent else ''
-        if parent:
-            meta["parent"] = parent
-
-        url = utils.getRequestArg(request, "url")
-        if typ == "link":
-            meta["url"] =  url
-        if typ:
-            meta["type"] = typ
-
-        acl = utils.getRequestArg(request, "acl")
-        if acl:
-            meta["acl"] = acl
-        landing = not self._ajax
-
-        convOwner = utils.getRequestArg(request, "parentUserId")
-        itemKey = utils.getUniqueKey()
-        timeuuid = uuid.uuid1().bytes
-        meta["uuid"] = timeuuid
-        followers = {userKey:''}
-        responseType = "C" if parent else "I"
-
-        # 1. add item to "items"
-        yield Db.batch_insert(itemKey, "items", {'meta': meta,
-                                                 'followers': followers})
-
-        # 2. update user's feed, feedItems, feed_typ
-        yield pushToFeed(userKey, timeuuid, itemKey, parent,
-                         responseType, typ, convOwner, userKey)
-
-
-
-        if parent:
-            #3.1.1 update responseCount, followers of parent item
-            cols = yield Db.get_slice(parent, "items",
-                                      ['responseCount', 'owner', "acl"],
-                                      super_column='meta')
-            cols = utils.columnsToDict(cols)
-            responseCount = int(cols["responseCount"]) \
-                            if cols.has_key("responseCount") else 0
-            parentOwner = cols["owner"]
-            if not acl and cols.has_key("acl"):
-                acl = cols["acl"]
-
-            if responseCount % 5 == 1:
-                responseCount = yield Db.get_count(parent, "itemResponses")
-            parentMeta = {"responseCount": str(responseCount+1)}
-
-            yield Db.batch_insert(parent, "items", {"meta": parentMeta,
-                                                    "followers": followers})
-
-            # 3.1.2 add item as response to parent
-            yield Db.insert(parent, "itemResponses", "%s:%s" % (userKey,itemKey), timeuuid)
-
-            if parentOwner != userKey:
-                # 3.1.3 update user's userItems, userItems_*
-                userItemValue = ":".join([itemKey, parent, parentOwner])
-                yield Db.insert(userKey, "userItems", userItemValue, timeuuid)
-                yield Db.insert(userKey, "userItems_" + typ, userItemValue, timeuuid)
-
-        else:
-            # 3.2 update user's userItems, userItems_*
-            userItemValue = ":".join([itemKey, "", ""])
-            yield Db.insert(userKey, "userItems", userItemValue, timeuuid)
-            yield Db.insert(userKey, "userItems_" + typ, userItemValue, timeuuid)
-
-
-        # 4. update user's followers/friends feed, feedItems, feed_typ
-        yield pushToOthersFeed(userKey, timeuuid, itemKey, parent, acl,
-                                responseType, typ, convOwner)
-        # 5. render the parent item
-        (appchange, script, data) = self._getBasicArgs(request)
-        if parent:
-            feedItems = yield self._getFeedItems(userKey, parent)
-        else:
-            feedItems = yield self._getFeedItems(userKey, itemKey)
-        data.update(feedItems)
-        landing = not self._ajax
-        if parent:
-            yield  renderScriptBlock(request, "item.mako", "item_layout",
-                                     landing, "#conv-%s"%(parent), "set",
-                                     args=[parent, True], **data)
-        else:
-            yield renderScriptBlock(request, "item.mako", "item_layout",
-                                    landing, "#user-feed", "prepend",
-                                    args=[itemKey, True], **data)
-        request.finish()
-
-    def render_POST(self, request):
-        if not self._ajax \
-           or len(request.postpath) != 2 or request.postpath[0] != "share":
-            request.redirect("/feed")
-            request.finish()
-            return server.NOT_DONE_YET
-        self._share(request, request.postpath[1])
         return server.NOT_DONE_YET
