@@ -25,7 +25,11 @@ class Event(object):
     #TODO: listing invitations chronologically.
 
     def getRootHTML(self, convId, args):
-        return getBlock("item.mako", "event_root", args=[convId], **args)
+        if "convId" in args:
+            return getBlock("item.mako", "event_root", **args)
+        else:
+            return getBlock("item.mako", "event_root", args=[convId], **args)
+
 
 
     @defer.inlineCallbacks
@@ -63,7 +67,7 @@ class Event(object):
         toFeed = args['toFeed'] if args.has_key('toFeed') else False
         if script:
             if not toFeed:
-                yield renderScriptBlock(request, "item.mako", "event_root",
+                yield renderScriptBlock(request, "item.mako", "conv_root",
                                         landing, "#conv-root-%s" %(convId),
                                         "set", **args)
             else:

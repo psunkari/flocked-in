@@ -20,7 +20,11 @@ class Activity(object):
     hasIndex = False
 
     def getRootHTML(self, convId, args):
-        return getBlock("item.mako", "renderStatus", args=[convId], **args)
+        if "convId" in args:
+            return getBlock("item.mako", "renderStatus", **args)
+        else:
+            return getBlock("item.mako", "renderStatus", args=[convId], **args)
+
 
 
     @defer.inlineCallbacks

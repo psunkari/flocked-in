@@ -92,9 +92,9 @@
   <%
   itemType = items[convId]["meta"]["type"]
   %>
-  % if itemType in ("link", "document", "activity"):
+  % if itemType in ("link", "document"):
       ${self.renderStatus(convId)}
-  % elif itemType in ("status", "poll", "event"):
+  % elif itemType in plugins:
       ${plugins[itemType].getRootHTML(convId, context.kwargs)}
   %endif
 

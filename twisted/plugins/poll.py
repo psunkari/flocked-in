@@ -22,7 +22,11 @@ class Poll(object):
     hasIndex = False
 
     def getRootHTML(self, convId, args):
-        return getBlock("item.mako", "poll_root", args=[convId], **args)
+
+        if "convId" in args:
+            return getBlock("item.mako", "poll_root", **args)
+        else:
+            return getBlock("item.mako", "poll_root", args=[convId], **args)
 
     @defer.inlineCallbacks
     def getRootData(self, args, convId=None):
@@ -71,7 +75,7 @@ class Poll(object):
         toFeed = args['toFeed'] if args.has_key('toFeed') else False
         if script:
             if not toFeed:
-                yield renderScriptBlock(request, "item.mako", "poll_root",
+                yield renderScriptBlock(request, "item.mako", "conv_root",
                                         landing, "#conv-root-%s" %(convId),
                                         "set", **args)
             else:
