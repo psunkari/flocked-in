@@ -119,7 +119,7 @@ class ItemResource(base.BaseResource):
 
         if script:
             d = renderScriptBlock(request, "item.mako", 'conv_comments',
-                                  landing, '#conv-comments-%s' % convId,
+                                  landing, '#conv-comments-wrapper-%s' % convId,
                                   'set', **args)
             renderers.append(d)
 
@@ -336,13 +336,21 @@ class ItemResource(base.BaseResource):
                                     convACL, "C", convType, convOwnerId)
 
         # Finally, update the UI
+        numShowing = utils.getRequestArg(request, "_nc") or "0"
+        numShowing = int(numShowing) + 1
+        isFeed = False if request.getCookie("_page") == "item" else True
+        yield renderScriptBlock(request, 'item.mako', 'conv_comments_head',
+                        False, '#comments-header-%s' % (convId), 'set',
+                        args=[convId, responseCount, numShowing, isFeed])
+
         users = yield Db.get(myId, "users", super_column="basic")
         users = {myId: utils.supercolumnsToDict([users])}
         items = {itemId: {"meta": meta}}
         data = {"users": users, "items": items}
-        d = yield renderScriptBlock(request, "item.mako", 'conv_comment',
-                                    False, '#conv-comments-%s' % convId,
-                                    'append', args=[convId, itemId], **data)
+        yield renderScriptBlock(request, 'item.mako', 'conv_comment', False,
+                                '#comments-%s' % convId, 'append', True,
+                                handlers={"onload": "$(':text', '#comment-form-%s').val(''); $('[name=\"_nc\"]', '#comment-form-%s').val('%s')" % (convId, convId, numShowing)},
+                                args=[convId, itemId], **data)
 
     @defer.inlineCallbacks
     def _likes(self, request):
