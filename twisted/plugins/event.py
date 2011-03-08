@@ -29,11 +29,11 @@ class Event(object):
 
 
     @defer.inlineCallbacks
-    def getRootData(self, args):
+    def getRootData(self, args, convId=None):
 
         toFetchUsers = set()
         toFetchGroups = set()
-        convId = args["convId"]
+        convId = convId or args["convId"]
         myKey = args["myKey"]
 
         conv = yield Db.get_slice(convId, "items", ["meta", "options"])
@@ -49,9 +49,10 @@ class Event(object):
         startTime = conv['meta'].get('start', None)
         endTime = conv['meta'].get('end', None)
 
-        items = {convId: conv}
-        data = {"items": items, "myResponse": myResponse}
-        defer.returnValue([data, toFetchUsers, toFetchGroups])
+        args.setdefault("items", {})[convId] = conv
+        args.setdefault("myResponse", {})[convId] = myResponse
+
+        defer.returnValue([toFetchUsers, toFetchGroups])
 
 
     @defer.inlineCallbacks

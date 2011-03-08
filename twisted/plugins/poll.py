@@ -25,11 +25,11 @@ class Poll(object):
         return getBlock("item.mako", "poll_root", args=[convId], **args)
 
     @defer.inlineCallbacks
-    def getRootData(self, args):
+    def getRootData(self, args, convId=None):
 
         toFetchUsers = set()
         toFetchGroups = set()
-        convId = args["convId"]
+        convId = convId or args["convId"]
         myKey = args["myKey"]
 
         conv = yield Db.get_slice(convId, "items", ["meta", 'options'])
@@ -56,9 +56,11 @@ class Poll(object):
             if not endTime or time.gmtime() > endTime:
                 showResults = "True"
 
-        items = {convId: conv}
-        data = {"items": items, "myVote": myVote, "showResults": showResults}
-        defer.returnValue([data, toFetchUsers, toFetchGroups])
+        args.setdefault("items", {})[convId] = conv
+        args.setdefault("myVote", {})[convId] = myVote
+        args.setdefault("showResults", {})[convId] = showResults
+
+        defer.returnValue([toFetchUsers, toFetchGroups])
 
 
     @defer.inlineCallbacks

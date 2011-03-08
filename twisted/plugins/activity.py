@@ -13,11 +13,11 @@ from social.isocial     import IItem
 from social.template    import render, renderScriptBlock, getBlock
 
 
-class Status(object):
+class Activity(object):
     implements(IPlugin, IItem)
-    itemType = "status"
-    position = 1
-    hasIndex = True
+    itemType = "activity"
+    position = 100
+    hasIndex = False
 
     def getRootHTML(self, convId, args):
         return getBlock("item.mako", "renderStatus", args=[convId], **args)
@@ -35,6 +35,14 @@ class Status(object):
         if not conv:
             raise errors.MissingParams()
 
+        subtype = conv["meta"]["subType"]
+
+        if subtype in ('connection', 'following'):
+            toFetchUsers.add(conv["meta"]["target"])
+
+        if subtype  == 'group':
+            toFetchGroups.add(conv["meta"]["target"])
+
         toFetchUsers.add(conv["meta"]["owner"])
         args.setdefault("items", {})[convId] = conv
 
@@ -51,46 +59,10 @@ class Status(object):
                 yield renderScriptBlock(request, "item.mako", "conv_root",
                                         landing, "#conv-root-%s" %(convId),
                                         "set", **args)
-            else:
-                if 'convId' in args:
-                    del args['convId']
-                yield renderScriptBlock(request, "item.mako", "item_layout",
-                                        landing, "#user-feed", "prepend",
-                                        args=[convId, True], **args)
-                args['convId'] = convId
-
 
     @defer.inlineCallbacks
     def create(self, request):
-
-        myKey = request.getSession(IAuthInfo).username
-        target = utils.getRequestArg(request, "target")
-        acl = utils.getRequestArg(request, "acl")
-        comment = utils.getRequestArg(request, "comment")
-
-        if not comment:
-            raise errors.MissingParams()
-
-        convId = utils.getUniqueKey()
-        itemType = self.itemType
-        timeuuid = uuid.uuid1().bytes
-
-        meta = {}
-        meta["acl"] = acl
-        meta["type"] = itemType
-        meta["uuid"] = timeuuid
-        meta["owner"] = myKey
-        meta["comment"] = comment
-        meta["timestamp"] = "%s" % int(time.time())
-        if target:
-            meta["target"] = target
-
-        followers = {}
-        followers[myKey] = ''
-
-        yield Db.batch_insert(convId, "items", {'meta': meta,
-                                                 'followers':followers})
-        defer.returnValue([convId, timeuuid, acl])
+        raise errors.InvalidRequest()
 
 
     @defer.inlineCallbacks
@@ -98,4 +70,4 @@ class Status(object):
         pass
 
 
-status = Status()
+activity = Activity()

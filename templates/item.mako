@@ -182,8 +182,8 @@
   %>
   <div id="conv" class="conv-item">
     <div>
-        %if myVote:
-        <p> you voted for: ${myVote} </p>
+        %if convId in  myVote and myVote[convId]:
+        <p> you voted for: ${myVote[convId]} </p>
         %endif
         <form action="/poll/post" method="POST" class="ajax">
         <p> ${question} </p>
@@ -214,6 +214,7 @@
     <%
       subtype = conv["meta"]["subType"]
       target = conv["meta"]["target"]
+
       if subtype == "connection":
         activity = _("%s and %s are now friends.") % (fmtUser(userId), fmtUser(target))
       elif subtype == "following":
@@ -247,8 +248,8 @@
   %>
   <div id="conv" class="conv-item">
     <div>
-        %if myResponse:
-        <p> are you attending the <a href="/item?id=${convId}&type=event">event</a>?: ${myResponse} </p>
+        %if convId in myResponse and myResponse[convId]:
+        <p> are you attending the <a href="/item?id=${convId}&type=event">event</a>?: ${myResponse[convId]} </p>
         %endif
         <form action="/event/post" method="POST" class="ajax">
         <p> ${title} </p>

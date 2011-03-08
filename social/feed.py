@@ -116,6 +116,8 @@ class FeedResource(base.BaseResource):
         toFetchItems = set()    # Items, users and groups that need to be fetched
         toFetchUsers = set()    #
         toFetchGroups = set()   #
+        args = {}
+        args["myKey"] = userKey
 
         # 1. Fetch the list of root items (conversations) that will be shown
         convs = []
@@ -215,16 +217,32 @@ class FeedResource(base.BaseResource):
 
         # Concurrently fetch items, users and groups
         # TODO: fecthing options to display polls. plugin should handle it
-        d1 = Db.multiget_slice(toFetchItems, "items", ["meta", "options"])
+        fetchedItems = yield Db.multiget_slice(toFetchItems, "items",
+                                                ["meta", "options"])
+        items = utils.multiSuperColumnsToDict(fetchedItems)
+        args["items"] = items
+        extraDataDeferreds = []
+
+        for convId in convs:
+            itemType = items[convId]["meta"]["type"]
+            if itemType in plugins:
+                d =  plugins[itemType].getRootData(args, convId)
+                extraDataDeferreds.append(d)
+
+        result = yield defer.DeferredList(extraDataDeferreds)
+        for success, ret in result:
+            if success:
+                toFetchUsers_, toFetchGroups_ = ret
+                toFetchUsers.update(toFetchUsers_)
+                toFetchGroups.update(toFetchGroups_)
+
         d2 = Db.multiget_slice(toFetchUsers, "users", ["basic"])
         d3 = Db.multiget_slice(toFetchGroups, "groups", ["basic"])
         d4 = Db.multiget(toFetchItems, "itemLikes", userKey)
-        fetchedItems = yield d1
         fetchedUsers = yield d2
         fetchedGroups = yield d3
         fetchedMyLikes = yield d4
 
-        items = utils.multiSuperColumnsToDict(fetchedItems)
         users = utils.multiSuperColumnsToDict(fetchedUsers)
         groups = utils.multiSuperColumnsToDict(fetchedGroups)
         myLikes = utils.multiColumnsToDict(fetchedMyLikes)
@@ -291,10 +309,11 @@ class FeedResource(base.BaseResource):
 
                 likeStr[convId] = _(template) % tuple(vals)
 
-        args = {"items": items, "users": users, "groups": groups,
+        data = {"users": users, "groups": groups,
                 "responses": responses, "myLikes": myLikes,
                 "reasonStr": reasonStr, "likeStr": likeStr,
                 "conversations": convs}
+        args.update(data)
         defer.returnValue(args)
 
     @defer.inlineCallbacks
