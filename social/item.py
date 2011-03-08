@@ -6,7 +6,6 @@ from telephus.cassandra import ttypes
 from twisted.internet   import defer
 from twisted.web        import server
 from twisted.python     import log
-from twisted.plugin     import getPlugins
 
 from social             import base, Db, utils, feed, plugins
 from social.auth        import IAuthInfo
@@ -324,7 +323,8 @@ class ItemResource(base.BaseResource):
         # 4. Update userItems and userItems_*
         userItemValue = ":".join([itemId, convId, convOwnerId])
         yield Db.insert(myId, "userItems", userItemValue, timeUUID)
-        yield Db.insert(myId, "userItems_" + convType, userItemValue, timeUUID)
+        if plugins.has_key(convType) and plugins[convType].hasIndex:
+            yield Db.insert(myId, "userItems_"+convType, userItemValue, timeUUID)
 
         # 5. Update my feed.
         yield feed.pushToFeed(myId, timeUUID, itemId, convId,
