@@ -16,7 +16,7 @@ from social.template    import render, renderScriptBlock, getBlock
 class Activity(object):
     implements(IPlugin, IItem)
     itemType = "activity"
-    position = 100
+    position = -1
     hasIndex = False
 
     def getRootHTML(self, convId, args):

@@ -70,8 +70,8 @@
     <div id="sharebar-tabs">
       <ul id="sharebar-links" class="h-links">
         <li>${_("Share:")}</li>
-        <% 
-          supported = [(name.capitalize(), name) for name in plugins]
+        <%
+          supported = [(name.capitalize(), name) for name in plugins if plugins[name].position > 0]
           itemName, itemType = supported[0]
         %>
         <li><a _ref="/feed/share/${itemType}" id="sharebar-link-${itemType}" class="ajax selected">${_(itemName)}</a></li>
