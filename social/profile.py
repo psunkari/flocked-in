@@ -108,13 +108,63 @@ class ProfileResource(base.BaseResource):
 
     def render_GET(self, request):
         request.addCookie("_page", "profile", path="/")
-        d = self._render(request)
-        def errback(err):
-            log.err(err)
-            request.setResponseCode(500)
-            request.finish()
-        d.addErrback(errback)
-        return server.NOT_DONE_YET
+        segmentCount = len(request.postpath)
+        if segmentCount == 0:
+            d = self._render(request)
+            def errback(err):
+                log.err(err)
+                request.setResponseCode(500)
+                request.finish()
+            d.addErrback(errback)
+            return server.NOT_DONE_YET
+        if segmentCount == 1 and request.postpath[0]== 'edit':
+            d = self._renderEditProfile(request)
+            def errback(err):
+                log.err(err)
+                request.setResponseCode(500)
+                request.finish()
+            d.addErrback(errback)
+            return server.NOT_DONE_YET
+
+    @defer.inlineCallbacks
+    def _renderEditProfile(self, request):
+        (appchange, script, args) = self._getBasicArgs(request)
+
+        myKey = args["myKey"]
+        cols = yield Db.multiget_slice([myKey], "users")
+        args["me"] = utils.supercolumnsToDict(cols[myKey])
+        args["users"] = utils.multiSuperColumnsToDict(cols)
+        landing = not self._ajax
+
+
+        if script and landing:
+            yield render(request, "profile.mako", **args)
+
+        if script and appchange:
+            yield renderScriptBlock(request, "profile.mako", "layout",
+                                    landing, "#mainbar", "set", **args)
+
+        detail = utils.getRequestArg(request, "dt") or "basic"
+        args["detail"] = detail
+        if detail == "basic":
+            yield renderScriptBlock(request, "profile.mako", "editProfileTabs",
+                                    landing, "#profile-tabs", "set", **args)
+            yield renderScriptBlock(request, "profile.mako", "editBasicInfo",
+                                    landing, "#profile-content", "set", **args)
+
+        if detail == "avatar":
+            yield renderScriptBlock(request, "profile.mako", "editProfileTabs",
+                                    landing, "#profile-tabs", "set", **args)
+            yield renderScriptBlock(request, "profile.mako", "editAvatar",
+                                    landing, "#profile-content", "set", **args)
+        if detail == "detail":
+            yield renderScriptBlock(request, "profile.mako", "editProfileTabs",
+                                    landing, "#profile-tabs", "set", **args)
+            yield renderScriptBlock(request, "profile.mako", "editDetail",
+                                    landing, "#profile-content", "set", **args)
+
+        request.finish()
+
 
     @defer.inlineCallbacks
     def _render(self, request):

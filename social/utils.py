@@ -177,8 +177,8 @@ def userName(id, user, classes=None):
 
 
 # XXX: Don't return data URI.
-def userAvatar(id, basic, size="medium"):
-    avatar = basic.get("avatar-%s" % size, None)
+def userAvatar(id, userInfo, size="medium"):
+    avatar = userInfo.get("basic", {}).get("avatar-%s" % size, None)
     if avatar:
         imgType, b64data =  avatar.split(":")
         return "data:image/%s;base64,%s" % (imgType, b64data)

@@ -423,3 +423,33 @@ a.ajax {
     padding-top: 2px;
     padding-bottom: 2px;
 }
+
+.edit-profile{
+    padding: 10px;
+    width: 500px;
+    display: table;
+}
+
+.edit-profile ul {
+    list-style-type: none;
+    margin: 0px;
+    padding: 0px;
+
+}
+.edit-profile li{
+    width:85px;
+    height:25px;
+    display: inline-block;
+    color: black;
+    text-align: right;
+    font-weight: 400;
+
+}
+.edit-profile select{
+    background-color:#FFF;
+
+}
+
+.edu{
+    background-color:#FFF;
+}

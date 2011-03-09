@@ -178,7 +178,8 @@ class RegisterResource(BaseResource):
                                          "isAdmin": str(isAdmin),
                                          "org": orgKey,
                                          "user": userKey})
-            yield Db.batch_insert(userKey, "users", {'basic': {'name': username, 'org':orgKey}})
+            userInfo = {'basic': {'name': username, 'org':orgKey}}
+            yield Db.batch_insert(userKey, "users", userInfo)
             yield Db.insert(orgKey, "orgUsers", '', userKey)
             yield Db.remove(emailId, "invitations")
         else:
@@ -195,14 +196,16 @@ class RegisterResource(BaseResource):
 
 
         userInfo = {}
+        userKey = utils.getRequestArg(request, "id")
         emailId = utils.getRequestArg(request, "emailId")
-        cols = yield Db.get_slice(emailId, "userAuth", ["user"])
-        cols = utils.columnsToDict(cols)
-        userKey = cols["user"]
+        if not userKey:
+            cols = yield Db.get_slice(emailId, "userAuth", ["user"])
+            cols = utils.columnsToDict(cols)
+            userKey = cols["user"]
         for cn in ("jobTitle", "location", "desc", "name"):
             getUserInfo(userInfo, "basic", cn, request)
         if "basic" in userInfo:
-            basic_acl = utils.getRequestArg(request, "basic_acl")
+            basic_acl = utils.getRequestArg(request, "basic_acl") or 'public'
             userInfo["basic"]["acl"] = basic_acl
 
         dp = utils.getRequestArg(request, "dp")
@@ -235,7 +238,7 @@ class RegisterResource(BaseResource):
             userInfo["basic"]["avatar-orig"] = "%s:%s"%(imageFormat, blob.base64())
 
         expertise = utils.getRequestArg(request, "expertise")
-        expertise_acl = utils.getRequestArg(request, "expertise_acl")
+        expertise_acl = utils.getRequestArg(request, "expertise_acl") or 'public'
         if expertise:
             userInfo["expertise"] = {}
             userInfo["expertise"][expertise]=""
@@ -245,7 +248,7 @@ class RegisterResource(BaseResource):
         lr = utils.getRequestArg(request, "language_r") == "on"
         ls = utils.getRequestArg(request, "language_s") == "on"
         lw = utils.getRequestArg(request, "language_w") == "on"
-        language_acl = utils.getRequestArg(request, "language_acl")
+        language_acl = utils.getRequestArg(request, "language_acl") or 'public'
         if language:
             userInfo["languages"]= {}
             userInfo["languages"][language]= "%(lr)s/%(lw)s/%(ls)s" %(locals())
@@ -254,7 +257,8 @@ class RegisterResource(BaseResource):
         c_email = utils.getRequestArg(request, "c_email")
         c_im = utils.getRequestArg(request, "c_im")
         c_phone = utils.getRequestArg(request, "c_phone")
-        contacts_acl = utils.getRequestArg(request, "contacts_acl")
+        c_mobile = utils.getRequestArg(request, "c_phone")
+        contacts_acl = utils.getRequestArg(request, "contacts_acl") or 'public'
 
         if any([c_email, c_im, c_phone]):
             userInfo["contact"] = {}
@@ -269,7 +273,7 @@ class RegisterResource(BaseResource):
 
 
         interests = utils.getRequestArg(request, "interests")
-        interests_acl = utils.getRequestArg(request, "interests_acl")
+        interests_acl = utils.getRequestArg(request, "interests_acl") or 'public'
         if interests:
             userInfo["interests"]= {}
             userInfo["interests"][interests]= interests
@@ -277,16 +281,49 @@ class RegisterResource(BaseResource):
 
         p_email = utils.getRequestArg(request, "p_email")
         p_phone = utils.getRequestArg(request, "p_phone")
+        p_mobile = utils.getRequestArg(request, "p_mobile")
+        dob_day = utils.getRequestArg(request, "dob_day")
+        dob_mon = utils.getRequestArg(request, "dob_mon")
+        dob_year = utils.getRequestArg(request, "dob_year")
         hometown = utils.getRequestArg(request, "hometown")
-        personal_acl = utils.getRequestArg(request, "personal_acl")
-        if any([p_email, p_phone, hometown]):
+        currentCity = utils.getRequestArg(request, "currentCity")
+        personal_acl = utils.getRequestArg(request, "personal_acl") or 'public'
+        if any([p_email, p_phone, hometown, currentCity,]) \
+            or all([dob_year, dob_mon, dob_day]):
             userInfo["personal"]={}
         if p_email:
             userInfo["personal"]["email"] = p_email
         if p_phone:
             userInfo["personal"]["phone"] = p_phone
         if hometown:
-            userInfo["personal"]["currentCity"] = hometown
+            userInfo["personal"]["hometown"] = hometown
+        if currentCity:
+            userInfo["personal"]["currentCity"] = currentCity
+        if dob_day and dob_mon and dob_year:
+            userInfo["personal"]["birthday"] = "%s%s%s"%(dob_year, dob_mon, dob_day)
+
+
+        employer = utils.getRequestArg(request, "employer")
+        emp_start = utils.getRequestArg(request, "emp_start") or ''
+        emp_end = utils.getRequestArg(request, "emp_end") or ''
+        emp_title = utils.getRequestArg(request, "emp_title") or ''
+        emp_desc = utils.getRequestArg(request, "emp_desc") or ''
+
+        if employer:
+            userInfo["employers"] = {}
+            key = "%s:%s:%s:%s" %(emp_end, emp_start, employer, emp_title)
+            userInfo["employers"][key] = emp_desc
+
+        college = utils.getRequestArg(request, "college")
+        degree = utils.getRequestArg(request, "degree") or ''
+        edu_end = utils.getRequestArg(request, "edu_end") or ''
+        if college:
+            userInfo["education"] = {}
+            key = "%s:%s" %(edu_end, college)
+            userInfo["education"][key] = degree
+
+
+
         if userInfo:
             yield Db.batch_insert(userKey, "users", userInfo)
 
@@ -308,11 +345,11 @@ class RegisterResource(BaseResource):
         elif segmentCount == 1 and request.postpath[0]== 'create':
             d = self._addUser(request)
             def callback(response):
-                request.redirect('/register/basic?emailId=%s'%(utils.getRequestArg(request, "emailId")))
+                request.redirect('/profile/edit')
                 request.finish()
             def errback(err):
                 log.err(err)
-                request.write("Error adding user")
+                request.write("Error")
                 request.setResponseCode(500)
                 request.finish()
             d.addCallbacks(callback, errback)
@@ -325,7 +362,7 @@ class RegisterResource(BaseResource):
                 request.finish()
             d = self._addUserBasic(request)
             def callback(response):
-                request.redirect('/signin')
+                request.redirect('/')
                 request.finish()
             def errback(err):
                 log.err(err)
