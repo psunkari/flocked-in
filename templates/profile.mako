@@ -147,7 +147,7 @@
 
 <%def name="summary()">
   <div id="useravatar">
-    <% avatarURI = utils.userAvatar(myKey, me, "large") %>
+    <% avatarURI = utils.userAvatar(userKey, user, "large") %>
     %if avatarURI:
       <img src="${avatarURI}" width=128 height=128/>
     %endif
