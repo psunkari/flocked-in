@@ -55,7 +55,7 @@
           ${self.conv_root(convId)}
         %endif
       </div>
-      <div id="item-footer-${convId}" class="item-footer">
+      <div id="item-footer-${convId}" class="conv-footer">
         %if inline or not script:
           ${self.item_footer(convId)}
         %endif

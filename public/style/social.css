@@ -395,7 +395,7 @@ a.ajax {
 .conv-likes,
 .conv-comment-form {
     background-color: #EEE;
-    border-bottom: 1px solid #DDD;
+    border-bottom: 1px solid #E9E9E9;
     margin: 2px 0 0;
     padding: 4px 6px;
     margin-right: 60px;
@@ -426,6 +426,20 @@ a.ajax {
     padding-bottom: 2px;
 }
 
+.conv-footer {
+    color: #888;
+    padding: 5px 0;
+}
+.comment-meta {
+    color: #888;
+}
+.conv-footer abbr, .comment-meta abbr {
+    border: none;
+}
+
+/*
+ * Edit profile
+ */
 .edit-profile{
     padding: 10px;
     width: 500px;
@@ -438,7 +452,7 @@ a.ajax {
     padding: 0px;
 
 }
-.edit-profile li{
+.edit-profile li {
     width:85px;
     height:25px;
     display: inline-block;
@@ -447,11 +461,11 @@ a.ajax {
     font-weight: 400;
 
 }
-.edit-profile select{
+.edit-profile select {
     background-color:#FFF;
 
 }
 
-.edu{
+.edu {
     background-color:#FFF;
 }
