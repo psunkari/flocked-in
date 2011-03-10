@@ -339,11 +339,11 @@ class ItemResource(base.BaseResource):
         # 2. Update response count and add myself to the followers of conv
         convOwnerId = conv["owner"]
         convType = conv["type"]
-        responseCount = int(conv.get("responseCount", "0")) + 1
-        if responseCount % 5 == 0:
+        responseCount = int(conv.get("responseCount", "0"))
+        if responseCount % 5 == 3:
             responseCount = yield Db.get_count(convId, "itemResponses")
 
-        convUpdates = {"responseCount": str(responseCount)}
+        convUpdates = {"responseCount": str(responseCount + 1)}
         yield Db.batch_insert(convId, "items", {"meta": convUpdates,
                                                 "followers": followers})
 
