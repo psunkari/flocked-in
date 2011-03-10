@@ -147,10 +147,10 @@ a.ajax {
     word-wrap: break-word;
     min-height: 250px;
 }
-.has-left #left {width: 179px !important }
+.has-left #left {width: 180px !important }
 
 #center-right {
-    margin-left: 179px;
+    margin-left: 180px;
     display: block;
 }
 
@@ -162,7 +162,7 @@ a.ajax {
     border-width: 0 1px;
     width: 980px;
 }
-.has-left.has-right #center { width: 620px !important; }
+.has-left.has-right #center { width: 575px !important; }
 .has-left #center, .has-right #center { width: 800px !important; }
 
 #right {
@@ -171,7 +171,7 @@ a.ajax {
     min-height: 250px;
     width: 0px;
 }
-.has-right #right { width: 179px !important }
+.has-right #right { width: 220px !important }
 
 
 
@@ -274,6 +274,7 @@ a.ajax {
     height: 20px;
     line-height: 20px;
     font-weight: bold;
+    margin: -10px -10px 0;
     padding: 0 15px;
 }
 #profile-tablinks a {
@@ -397,6 +398,7 @@ a.ajax {
     border-bottom: 1px solid #DDD;
     margin: 2px 0 0;
     padding: 4px 6px;
+    margin-right: 60px;
 }
 
 .conv-comment {
