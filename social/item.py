@@ -109,6 +109,7 @@ class ItemResource(base.BaseResource):
             userKey, responseKey = response.column.value.split(":")
             responseKeys.append(responseKey)
             toFetchUsers.add(userKey)
+        responseKeys.reverse()
 
         d3 = Db.multiget_slice(responseKeys + [convId], "itemLikes")
         d2 = Db.multiget_slice(responseKeys, "items", ["meta"])
@@ -377,8 +378,8 @@ class ItemResource(base.BaseResource):
         # Most changes here may need to be done there too.
         toFetchUsers = set()
         itemResponses = yield Db.get_slice(convId, "itemResponses",
-                                        reverse=True, start=start,
-                                        count=constants.COMMENTS_PER_PAGE+1)
+                                           start=start, reverse=True,
+                                           count=constants.COMMENTS_PER_PAGE+1)
 
         nextPageStart = itemResponses[-1].column.name\
                         if len(itemResponses) > constants.COMMENTS_PER_PAGE\
@@ -388,6 +389,7 @@ class ItemResource(base.BaseResource):
             userKey, responseKey = response.column.value.split(":")
             responseKeys.append(responseKey)
             toFetchUsers.add(userKey)
+        responseKeys.reverse()
 
         d3 = Db.multiget_slice(responseKeys + [convId], "itemLikes")
         d2 = Db.multiget_slice(responseKeys + [convId], "items", ["meta"])
