@@ -15,6 +15,98 @@ from social.constants   import INFINITY, MAXFEEDITEMS, MAXFEEDITEMSBYTYPE
 
 
 @defer.inlineCallbacks
+def getUserItems(userKey, count=10):
+
+    toFetchItems = set()
+    toFetchUsers = set()
+    toFetchResponses = set()
+    toFetchGroups = set()
+    responses = {}
+    args = {"myKey":userKey}
+    convs = []
+    userItemsRaw = []
+    userItems = []
+    reasonStr = {}
+
+    toFetchUsers.add(userKey)
+    cols = yield Db.get_slice(userKey, "userItems", reverse=True)
+
+    for col in cols:
+        value = tuple(col.column.value.split(":"))
+        rtype, itemId, convId, convType, convOwnerId = value
+
+        toFetchUsers.add(convOwnerId)
+        if rtype == 'I':
+            toFetchItems.add(convId)
+            toFetchResponses.add(convId)
+            convs.append(convId)
+            responses[convId] = []
+            reasonStr[value] = ''
+            userItems.append(value)
+        elif rtype == "L" and itemId == convId and convOwnerId != userKey:
+            reasonStr[value] = "likes %s's %s"
+            userItems.append(value)
+        elif rtype == "L"  and convOwnerId != userKey:
+            reasonStr[value] = "likes a comment on %s's %s"
+            userItems.append(value)
+        elif rtype == "C" and convOwnerId != userKey:
+            reasonStr[value] = "commented on %s's %s"
+            userItems.append(value)
+
+    itemResponses = yield Db.multiget_slice(toFetchResponses, "itemResponses",
+                                            count=2, reverse=True)
+    for convId, comments in itemResponses.items():
+        for comment in comments:
+            userKey_, itemKey = comment.column.value.split(':')
+            if itemKey not in toFetchItems:
+                responses[convId].insert(0,itemKey)
+                toFetchItems.add(itemKey)
+                toFetchUsers.add(userKey_)
+
+    items = yield Db.multiget_slice(toFetchItems, "items", ["meta"])
+    items = utils.multiSuperColumnsToDict(items)
+    args["items"] = items
+    extraDataDeferreds = []
+
+    for convId in convs:
+        itemType = items[convId]["meta"]["type"]
+        if itemType in plugins:
+            d =  plugins[itemType].getRootData(args, convId)
+            extraDataDeferreds.append(d)
+
+    result = yield defer.DeferredList(extraDataDeferreds)
+    for success, ret in result:
+        if success:
+            toFetchUsers_, toFetchGroups_ = ret
+            toFetchUsers.update(toFetchUsers_)
+            toFetchGroups.update(toFetchGroups_)
+
+    d2 = Db.multiget_slice(toFetchUsers, "users", ["basic"])
+    d3 = Db.multiget_slice(toFetchGroups, "groups", ["basic"])
+
+    fetchedUsers = yield d2
+    fetchedGroups = yield d3
+    users = utils.multiSuperColumnsToDict(fetchedUsers)
+    groups = utils.multiSuperColumnsToDict(fetchedGroups)
+
+    for key in reasonStr:
+        template = reasonStr[key]
+        rtype, itemId, convId, convType, convOwner = key
+        itemLink = "<span class='item'><a class='ajax' " \
+                   "href='/item?id=%s&type=%s'>%s</a></span>" % (convId, convType, _(convType))
+        if template:
+            reasonStr[key] = template %(utils.userName(convOwner, users[convOwner]),
+                                        itemLink)
+    del args['myKey']
+    data = {"users":users, "groups":groups,
+            "reasonStr":reasonStr, "userItems":userItems,
+            "responses":responses}
+    args.update(data)
+
+    defer.returnValue(args)
+
+
+@defer.inlineCallbacks
 def deleteFromFeed(userKey, itemKey, parentKey,
                    itemType, itemOwner, responseType):
     # fix: itemOwner is either the person who owns the item
