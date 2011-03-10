@@ -59,7 +59,7 @@
       <div id="avatar">
         <% avatarURI = utils.userAvatar(myKey, me) %>
         %if avatarURI:
-          <img src="${avatarURI}" width=50 height=50/>
+          <img src="${avatarURI}" width="48" height="48"/>
         %endif
       </div>
       <!-- TODO: Avatar and Site Logo -->

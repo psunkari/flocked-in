@@ -82,7 +82,7 @@
 <%def name="conv_owner(ownerId)">
   <% avatarURI = utils.userAvatar(ownerId, users[ownerId]) %>
   %if avatarURI:
-    <img src="${avatarURI}" height="50" width="50"/>
+    <img src="${avatarURI}" height="48" width="48"/>
   %endif
 </%def>
 
@@ -187,7 +187,7 @@
     <div class="comment-avatar">
       <% avatarURI = utils.userAvatar(userId, users[userId], "small") %>
       %if avatarURI:
-        <img src="${avatarURI}" height='25' width='25'/>
+        <img src="${avatarURI}" height='32' width='32'/>
       %endif
     </div>
     <div class="comment-container">
