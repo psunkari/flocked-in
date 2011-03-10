@@ -21,9 +21,14 @@ class ItemResource(base.BaseResource):
         landing = not self._ajax
 
         convId = utils.getRequestArg(request, "id")
-        itemType = utils.getRequestArg(request, "type")
         if not convId:
             raise errors.MissingParam()
+
+        conv = yield Db.get_slice(convId, "items", ['meta'])
+        conv = utils.supercolumnsToDict(conv)
+        if not conv:
+            raise errors.InvalidRequest()
+        itemType = conv["meta"].get("type", None)
 
         args['convId'] = convId
         start = utils.getRequestArg(request, "start") or ''
@@ -60,10 +65,6 @@ class ItemResource(base.BaseResource):
                 groups = utils.multiSuperColumnsToDict(groups)
                 args.update({"groups": groups})
         else:
-            conv = yield Db.get_slice(convId, "items", ['meta'])
-            if not conv:
-                raise errors.InvalidRequest()
-            conv = utils.supercolumnsToDict(conv)
             convOwner = conv['meta']['owner']
             owner = yield Db.get(convOwner, "users", super_column="basic")
             owner = utils.supercolumnsToDict([owner])

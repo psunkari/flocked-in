@@ -93,7 +93,7 @@ def getUserItems(userKey, count=10):
         template = reasonStr[key]
         rtype, itemId, convId, convType, convOwner = key
         itemLink = "<span class='item'><a class='ajax' " \
-                   "href='/item?id=%s&type=%s'>%s</a></span>" % (convId, convType, _(convType))
+                   "href='/item?id=%s'>%s</a></span>" % (convId, _(convType))
         if template:
             reasonStr[key] = template %(utils.userName(convOwner, users[convOwner]),
                                         itemLink)
@@ -363,7 +363,7 @@ class FeedResource(base.BaseResource):
                 vals.append(utils.userName(ownerId, users[ownerId]))
                 itemType = conv["meta"]["type"]
                 vals.append("<span class='item'><a class='ajax' "
-                            "href='/item?id=%s&type=%s'>%s</a></span>" % (convId, itemType, _(itemType)))
+                            "href='/item?id=%s'>%s</a></span>" % (convId, _(itemType)))
                 reasonStr[convId] = _(template) % tuple(vals)
 
             # Build like string
