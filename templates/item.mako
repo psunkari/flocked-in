@@ -102,10 +102,10 @@
   <%
     meta = items[itemId]['meta']
     hasParent = meta.has_key('parent')
-    timestamp = meta['timestamp']
+    timestamp = int(meta['timestamp'])
     likesCount = int(meta.get('likesCount', "0"))
   %>
-  <span class="timestamp" ts="${timestamp}">${timestamp}</span>
+  ${utils.simpleTimestamp(timestamp)}
   &nbsp;&#183;&nbsp;
   %if hasParent and likesCount > 0:
     <span class="likes"><a class="ajax" _ref="/item/likes?id=${itemId}">${likesCount}</a></span>

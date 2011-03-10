@@ -1,4 +1,5 @@
 
+import time
 import uuid
 import hashlib
 import datetime
@@ -196,3 +197,35 @@ def userAvatar(id, userInfo, size="medium"):
         return "data:image/%s;base64,%s" % (imgType, b64data)
 
     return None
+
+def simpleTimestamp(timestamp):
+    current = int(time.time())
+    delta = current - timestamp
+
+    ts = time.localtime(timestamp)
+
+    # Map used for localization
+    params = {'minutes': ts.tm_min, '24hour': ts.tm_hour,
+              '12hour': 12 if not (ts.tm_hour % 12) else (ts.tm_hour % 12),
+              'month': _(monthName(ts.tm_mon, True)), 'year': ts.tm_year,
+              'ampm': "am" if ts.tm_hour < 11 else "pm",
+              'dow': _(weekName(ts.tm_wday, True)), 'date': ts.tm_mday}
+    tooltip = _("%(dow)s, %(month)s %(date)s, %(year)s at %(12hour)s:%(minutes)02d%(ampm)s") % params
+
+    if delta < 86400:
+        if delta < 60:
+            formatted = _("a few seconds ago")
+        elif delta < 3600:
+            formatted = _("%s minutes ago") % (delta/60)
+        elif delta < 7200:
+            formatted = _("about one hour ago")
+        else:
+            formatted = _("%s hours ago") % (delta/3600)
+    else:
+        cs = time.localtime(current)
+        if cs.tm_year == ts.tm_year:
+            formatted = _("%(month)s %(date)s at %(12hour)s:%(minutes)02d%(ampm)s") % params
+        else:
+            formatted = _("%(month)s %(date)s, %(year)s at %(12hour)s:%(minutes)02d%(ampm)s") % params
+
+    return "<abbr class='timestamp' title='%s' _ts='%s'>%s</abbr>" %(tooltip, timestamp, formatted)
