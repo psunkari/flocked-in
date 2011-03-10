@@ -92,8 +92,8 @@ class ItemResource(base.BaseResource):
         args["ownerId"] = convOwner
 
         if script:
-            d = renderScriptBlock(request, "item.mako", "conv_owner",
-                                  landing, "#conv-owner", "set", **args)
+            d = renderScriptBlock(request, "item.mako", "conv_owner", landing,
+                                  "#conv-avatar-%s" % convId, "set", **args)
             renderers.append(d)
 
         # A copy of this code for fetching comments is present in _responses
