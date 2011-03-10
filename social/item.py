@@ -105,8 +105,11 @@ class ItemResource(base.BaseResource):
         nextPageStart = itemResponses[-1].column.name\
                         if len(itemResponses) > constants.COMMENTS_PER_PAGE\
                         else None
+        itemResponses = itemResponses[:-1] \
+                        if len(itemResponses) > constants.COMMENTS_PER_PAGE\
+                        else itemResponses
         responseKeys = []
-        for response in itemResponses[:-1]:
+        for response in itemResponses:
             userKey, responseKey = response.column.value.split(":")
             responseKeys.append(responseKey)
             toFetchUsers.add(userKey)
@@ -402,8 +405,11 @@ class ItemResource(base.BaseResource):
         nextPageStart = itemResponses[-1].column.name\
                         if len(itemResponses) > constants.COMMENTS_PER_PAGE\
                         else None
+        itemResponses = itemResponses[:-1] \
+                        if len(itemResponses) > constants.COMMENTS_PER_PAGE\
+                        else itemResponses
         responseKeys = []
-        for response in itemResponses[:-1]:
+        for response in itemResponses:
             userKey, responseKey = response.column.value.split(":")
             responseKeys.append(responseKey)
             toFetchUsers.add(userKey)
