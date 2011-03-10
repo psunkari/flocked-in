@@ -1,10 +1,11 @@
-<%! from social import utils, _, __ %>
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<%! from social import utils, _, __ %>
+<%! from social import utils, _, __, plugins %>
 <%! from social import relations as r %>
 
 <%inherit file="base.mako"/>
+<%namespace name="item" file="item.mako"/>
 
 ##
 ## Profile is displayed in a 3-column layout.
@@ -320,11 +321,30 @@
   <div class="content-title"><h4>${_('Other Details')}</h4></div>
   <dl id="content-other">
   </dl>
+
+</%def>
+
+
+<%def name="renderUserItems()">
+  % for key in userItems:
+    <% rtype, itemId, convId, convType, convOwnerId = key %>
+    % if not reasonStr[key]:
+      ${item.item_layout(convId, True, True)}
+    %else:
+      %if convType in plugins:
+        ${_(reasonStr[key])}
+        <br/><hr/><br/>
+      %endif
+    %endif
+  %endfor
 </%def>
 
 <%def name="content()">
   %if detail == 'info':
     ${content_info()}
+  %endif
+  % if detail == 'notes':
+    ${renderUserItems()}
   %endif
 </%def>
 

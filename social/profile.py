@@ -8,7 +8,7 @@ from telephus.cassandra     import ttypes
 
 from social.template        import render, renderDef, renderScriptBlock
 from social.relations       import Relation
-from social                 import Db, auth, utils, base
+from social                 import Db, auth, utils, base, feed
 
 
 class ProfileResource(base.BaseResource):
@@ -184,6 +184,10 @@ class ProfileResource(base.BaseResource):
         detail = utils.getRequestArg(request, "dt") or "notes"
         args["detail"] = detail
         args["userKey"] = userKey
+
+        if detail == "notes":
+            userItems = yield feed.getUserItems(userKey)
+            args.update(userItems)
 
         # When scripts are enabled, updates are sent to the page as
         # and when we get the required data from the database.

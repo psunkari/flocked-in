@@ -144,30 +144,31 @@ class ItemResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def createItem(self, request):
-        itemType = utils.getRequestArg(request, "type")
+
+        convType = utils.getRequestArg(request, "type")
         myKey = request.getSession(IAuthInfo).username
 
         parent = None
         convOwner = myKey
         responseType = 'I'
 
-        if itemType in plugins:
-            plugin = plugins[itemType]
+        if convType in plugins:
+            plugin = plugins[convType]
             convId, timeuuid, acl = yield plugin.create(request)
 
             request.args["id"] = [convId]
-            userItemValue = ":".join([convId, "", ""])
+            userItemValue = ":".join([responseType, convId, convId, convType, myKey])
             yield feed.pushToFeed(myKey, timeuuid, convId, parent, responseType,
-                                  itemType, convOwner, myKey)
+                                  convType, convOwner, myKey)
 
             yield feed.pushToOthersFeed(myKey, timeuuid, convId, parent, acl,
-                                        responseType, itemType, convOwner)
+                                        responseType, convType, convOwner)
 
             yield Db.insert(myKey, "userItems", userItemValue, timeuuid)
-            if itemType in ["status", "link", "document"]:
-                yield Db.insert(myKey, "userItems_%s"%(itemType) , userItemValue, timeuuid)
+            if plugins[convType].hasIndex:
+                yield Db.insert(myKey, "userItems_%s"%(convType) , userItemValue, timeuuid)
 
-            toFeed = True if itemType in ['status', 'poll', 'event'] else False
+            toFeed = True if convType in ['status', 'poll', 'event'] else False
 
             yield self.renderItem(request, toFeed)
 
@@ -220,20 +221,25 @@ class ItemResource(base.BaseResource):
 
         yield Db.insert(itemId, "items", str(likesCount), "likesCount", "meta")
 
-        timeuuid = uuid.uuid1().bytes
+        timeUUID = uuid.uuid1().bytes
         responseType = "L"
         # 1. add user to Likes list
-        yield Db.insert(itemId, "itemLikes", timeuuid, myId)
+        yield Db.insert(itemId, "itemLikes", timeUUID, myId)
 
-        # 2. add users to the followers list of parent item
+        # 2. add user to the followers list of parent item
         yield Db.insert(convId, "items", "", myId, "followers")
 
         # 3. update user's feed, feedItems, feed_*
-        yield feed.pushToFeed(myId, timeuuid, itemId, convId,
+        userItemValue = ":".join([responseType, itemId, convId, convType, convOwnerId])
+        yield Db.insert(myId, "userItems", userItemValue, timeUUID)
+        if plugins.has_key(convType) and plugins[convType].hasIndex:
+            yield Db.insert(myId, "userItems_"+convType, userItemValue, timeUUID)
+
+        yield feed.pushToFeed(myId, timeUUID, itemId, convId,
                               responseType, convType, convOwnerId, myId)
 
         # 4. update feed, feedItems, feed_* of user's followers/friends
-        yield feed.pushToOthersFeed(myId, timeuuid, itemId, convId, convACL,
+        yield feed.pushToOthersFeed(myId, timeUUID, itemId, convId, convACL,
                                     responseType, convType, convOwnerId)
 
         # 5. Broadcast to followers of the items
@@ -250,6 +256,7 @@ class ItemResource(base.BaseResource):
         # Make sure that I liked this item
         try:
             cols = yield Db.get(itemId, "itemLikes", myId)
+            likeTimeUUID = cols.column.value
         except ttypes.NotFoundException:
             raise errors.InvalidRequest()
 
@@ -292,6 +299,13 @@ class ItemResource(base.BaseResource):
         yield feed.deleteFromOthersFeed(myId, itemId, convId, convType,
                                         convACL, convOwnerId, responseType)
 
+        # FIX: if user updates more than one item at exactly same time,
+        #      one of the updates will overwrite the other. Fix it.
+        yield Db.remove(myId, "userItems", likeTimeUUID)
+        if plugins.has_key(convType) and plugins[convType].hasIndex:
+            yield Db.remove(myId, "userItems_"+ convType, likeTimeUUID)
+
+
         # Finally, update the UI
         # TODO
 
@@ -310,8 +324,9 @@ class ItemResource(base.BaseResource):
         convType = conv.get("type", "status")
 
         # 1. Create and add new item
+        timeUUID = uuid.uuid1().bytes
         meta = {"owner": myId, "parent": convId, "comment": comment,
-                "timestamp": str(int(time.time()))}
+                "timestamp": str(int(time.time())), "uuid": timeUUID}
         followers = {myId: ''}
         itemId = utils.getUniqueKey()
         yield Db.batch_insert(itemId, "items", {'meta': meta,
@@ -319,6 +334,7 @@ class ItemResource(base.BaseResource):
 
         # 2. Update response count and add myself to the followers of conv
         convOwnerId = conv["owner"]
+        convType = conv["type"]
         responseCount = int(conv.get("responseCount", "0")) + 1
         if responseCount % 5 == 0:
             responseCount = yield Db.get_count(convId, "itemResponses")
@@ -328,24 +344,25 @@ class ItemResource(base.BaseResource):
                                                 "followers": followers})
 
         # 3. Add item as response to parent
-        timeUUID = uuid.uuid1().bytes
+
         yield Db.insert(convId, "itemResponses",
                         "%s:%s" % (myId, itemId), timeUUID)
 
         # 4. Update userItems and userItems_*
-        userItemValue = ":".join([itemId, convId, convOwnerId])
+        responseType = "C"
+        userItemValue = ":".join([responseType, itemId, convId, convType, convOwnerId])
         yield Db.insert(myId, "userItems", userItemValue, timeUUID)
         if plugins.has_key(convType) and plugins[convType].hasIndex:
             yield Db.insert(myId, "userItems_"+convType, userItemValue, timeUUID)
 
         # 5. Update my feed.
-        yield feed.pushToFeed(myId, timeUUID, itemId, convId,
-                              "C", convType, convOwnerId, myId)
+        yield feed.pushToFeed(myId, timeUUID, itemId, convId, responseType,
+                              convType, convOwnerId, myId)
 
         # 6. Push to other's feeds
         convACL = conv.get("acl", "company")
-        yield feed.pushToOthersFeed(myId, timeUUID, itemId, convId,
-                                    convACL, "C", convType, convOwnerId)
+        yield feed.pushToOthersFeed(myId, timeUUID, itemId, convId, convACL,
+                                    responseType, convType, convOwnerId)
 
         # Finally, update the UI
         numShowing = utils.getRequestArg(request, "nc") or "0"
