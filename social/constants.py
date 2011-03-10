@@ -10,4 +10,4 @@ COMM ='32x32'
 
 # Number of comments shown in a conversation
 MAX_COMMENTS_IN_FEED = 25
-MAX_COMMENTS_PER_PAGE = 25
+COMMENTS_PER_PAGE = 25

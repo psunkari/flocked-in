@@ -27,6 +27,7 @@ class ItemResource(base.BaseResource):
 
         args['convId'] = convId
         start = utils.getRequestArg(request, "start") or ''
+        start = utils.decodeKey(start)
 
         myKey = args['myKey']
         # base.mako needs "me" in args
@@ -95,11 +96,16 @@ class ItemResource(base.BaseResource):
                                   landing, "#conv-owner", "set", **args)
             renderers.append(d)
 
+        # A copy of this code for fetching comments is present in _responses
+        # Most changes here may need to be done there too.
         itemResponses = yield Db.get_slice(convId, "itemResponses",
                                            start=start, reverse=True,
-                                           count=constants.MAX_COMMENTS_PER_PAGE)
+                                           count=constants.COMMENTS_PER_PAGE+1)
+        nextPageStart = itemResponses[-1].column.name\
+                        if len(itemResponses) > constants.COMMENTS_PER_PAGE\
+                        else None
         responseKeys = []
-        for response in itemResponses:
+        for response in itemResponses[:-1]:
             userKey, responseKey = response.column.value.split(":")
             responseKeys.append(responseKey)
             toFetchUsers.add(userKey)
@@ -116,10 +122,16 @@ class ItemResource(base.BaseResource):
         args["users"].update(utils.multiSuperColumnsToDict(fetchedUsers))
         args["myLikes"] = utils.multiColumnsToDict(myLikes)
         args["responses"] = {convId: responseKeys}
+        if nextPageStart:
+            args["oldest"] = utils.encodeKey(nextPageStart)
 
         if script:
             d = renderScriptBlock(request, "item.mako", 'conv_comments',
                                   landing, '#conv-comments-wrapper-%s' % convId,
+                                  'set', **args)
+            renderers.append(d)
+            d = renderScriptBlock(request, "item.mako", 'conv_comment_form',
+                                  landing, '#comment-form-wrapper-%s' % convId,
                                   'set', **args)
             renderers.append(d)
 
@@ -131,7 +143,6 @@ class ItemResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def createItem(self, request):
-
         itemType = utils.getRequestArg(request, "type")
         myKey = request.getSession(IAuthInfo).username
 
@@ -336,7 +347,7 @@ class ItemResource(base.BaseResource):
                                     convACL, "C", convType, convOwnerId)
 
         # Finally, update the UI
-        numShowing = utils.getRequestArg(request, "_nc") or "0"
+        numShowing = utils.getRequestArg(request, "nc") or "0"
         numShowing = int(numShowing) + 1
         isFeed = False if request.getCookie("_page") == "item" else True
         yield renderScriptBlock(request, 'item.mako', 'conv_comments_head',
@@ -349,7 +360,7 @@ class ItemResource(base.BaseResource):
         data = {"users": users, "items": items}
         yield renderScriptBlock(request, 'item.mako', 'conv_comment', False,
                                 '#comments-%s' % convId, 'append', True,
-                                handlers={"onload": "$(':text', '#comment-form-%s').val(''); $('[name=\"_nc\"]', '#comment-form-%s').val('%s')" % (convId, convId, numShowing)},
+                                handlers={"onload": "$(':text', '#comment-form-%s').val(''); $('[name=\"nc\"]', '#comment-form-%s').val('%s')" % (convId, convId, numShowing)},
                                 args=[convId, itemId], **data)
 
     @defer.inlineCallbacks
@@ -359,14 +370,21 @@ class ItemResource(base.BaseResource):
     @defer.inlineCallbacks
     def _responses(self, request):
         convId = utils.getRequestArg(request, "id")
-        start = utils.getRequestArg(request, "start")
+        start = utils.getRequestArg(request, "start") or ''
+        start = utils.decodeKey(start)
 
+        # A copy of this code for fetching comments is present in renderItem
+        # Most changes here may need to be done there too.
         toFetchUsers = set()
         itemResponses = yield Db.get_slice(convId, "itemResponses",
-                                           reverse=True,
-                                           count=constants.MAX_COMMENTS_PER_PAGE)
+                                        reverse=True, start=start,
+                                        count=constants.COMMENTS_PER_PAGE+1)
+
+        nextPageStart = itemResponses[-1].column.name\
+                        if len(itemResponses) > constants.COMMENTS_PER_PAGE\
+                        else None
         responseKeys = []
-        for response in itemResponses:
+        for response in itemResponses[:-1]:
             userKey, responseKey = response.column.value.split(":")
             responseKeys.append(responseKey)
             toFetchUsers.add(userKey)
@@ -379,15 +397,33 @@ class ItemResource(base.BaseResource):
         fetchedUsers = yield d1
         myLikes = yield d3
 
-        args = {"convId": convId, "isFeed": True, "items":{}, "users": {}}
+        isFeed = False if request.getCookie("_page") == "item" else True
+        args = {"convId": convId, "isFeed": isFeed, "items":{}, "users": {}}
         args["items"].update(utils.multiSuperColumnsToDict(fetchedItems))
         args["users"].update(utils.multiSuperColumnsToDict(fetchedUsers))
         args["myLikes"] = utils.multiColumnsToDict(myLikes)
         args["responses"] = {convId: responseKeys}
+        if nextPageStart:
+            args["oldest"] = utils.encodeKey(nextPageStart)
 
-        yield renderScriptBlock(request, "item.mako", 'conv_comments',
-                                not self._ajax, '#conv-comments-%s' % convId,
-                                'set', **args)
+        if isFeed:
+            yield renderScriptBlock(request, "item.mako", 'conv_comments',
+                        not self._ajax, '#conv-comments-wrapper-%s' % convId,
+                        'set', **args)
+        else:
+            landing = not self._ajax
+            showing = utils.getRequestArg(request, "nc") or "0"
+            showing = int(showing) + len(responseKeys)
+            args["showing"] = showing
+            args["total"] = int(args["items"][convId]["meta"].get("responseCount", "0"))
+
+            yield renderScriptBlock(request, "item.mako", 'conv_comments_head',
+                                    landing, '#comments-header-%s' % convId,
+                                    'set', **args)
+            yield renderScriptBlock(request, "item.mako", 'conv_comments_only',
+                            landing, '#comments-%s' % convId, 'prepend', True,
+                            handlers={"onload": "$('[name=\"nc\"]', '#comment-form-%s').val('%s')" % (convId, showing)},
+                            **args)
 
 
     def render_GET(self, request):

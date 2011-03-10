@@ -153,6 +153,18 @@ def checkAcl(userKey, acl, owner, friends=None, subscriptions=None,
             return owner in friends if friends else False
 
 
+def encodeKey(key):
+    return "xX" + base64.urlsafe_b64encode(key).strip('=')
+
+
+def decodeKey(key):
+    if not key.startswith("xX"):
+        return key
+
+    length = len(key) - 2
+    return base64.urlsafe_b64decode(key[2:] + ((length % 4) * '='))
+
+
 #
 # Date and time formating utilities (format based on localizations)
 #

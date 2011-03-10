@@ -70,6 +70,11 @@
           ${self.conv_comments(convId, isFeed)}
         %endif
       </div>
+      <div id="comment-form-wrapper-${convId}" class="conv-comment-form">
+        %if inline or not script:
+          ${self.conv_comment_form(convId)}
+        %endif
+      </div>
     </div>
   </div>
 </%def>
@@ -113,7 +118,7 @@
   %endif
 </%def>
 
-<%def name="conv_comments_head(convId, total, showing, isFeed, start='')">
+<%def name="conv_comments_head(convId, total, showing, isFeed)">
   %if total > showing:
     <div class="conv-comments-more">
       %if isFeed:
@@ -124,16 +129,27 @@
         %endif
       %else:
         <span class="num-comments">${_("%s of %s") % (showing, total)}</span>
-        <a class="ajax" href="/item?id=${convId}&start=${start}" _ref="/item/responses?id=${convId}&showing=${showing}&start=${start}">${_("View older comments &#187;")}</a>
+        %if oldest:
+          <a class="ajax" href="/item?id=${convId}&start=${oldest}" _ref="/item/responses?id=${convId}&nc=${showing}&start=${oldest}">${_("View older comments &#187;")}</a>
+        %else:
+          <a class="ajax" href="/item?id=${convId}" _ref="/item/responses?id=${convId}&nc=${showing}">${_("View older comments &#187;")}</a>
+        %endif
       %endif
     </div>
   %endif
 </%def>
 
+<%def name="conv_comments_only(convId)">
+  <% responsesToShow = responses.get(convId, {}) if responses else [] %>
+  %for responseId in responsesToShow:
+    ${self.conv_comment(convId, responseId)}
+  %endfor
+</%def>
+
 <%def name="conv_comments(convId, isFeed=False)">
   <%
     responseCount = int(items[convId]["meta"].get("responseCount", "0"))
-    responsesToShow = responses.get(convId, {}) if responses else {}
+    responsesToShow = responses.get(convId, {}) if responses else []
   %>
   <div id="comments-header-${convId}">
     ${self.conv_comments_head(convId, responseCount, len(responsesToShow), isFeed)}
@@ -143,17 +159,21 @@
       ${self.conv_comment(convId, responseId)}
     %endfor
   </div>
-  <div class="conv-comment-form">
-    <form method="post" action="/item/comment" class="ajax" autocomplete="off" id="comment-form-${convId}">
-      <input type="text" name="comment" value=""></input>
-      <input type="hidden" name="parent" value=${convId}></input>
-      %if not isFeed:
-        <% nc = len(responses.get(convId, {})) if responses else 0 %>
-        <input type="hidden" name="_nc" value=${nc}></input>
+</%def>
+
+<%def name="conv_comment_form(convId)">
+  <form method="post" action="/item/comment" class="ajax" autocomplete="off" id="comment-form-${convId}">
+    <input type="text" name="comment" value=""></input>
+    <input type="hidden" name="parent" value=${convId}></input>
+    %if not isFeed:
+      <% nc = len(responses.get(convId, {})) if responses else 0 %>
+      <input type="hidden" name="nc" value=${nc}></input>
+      %if oldest:
+        <input type="hidden" name="start" value=${oldest}></input>
       %endif
-      ${widgets.button(None, type="submit", name="comment", value="Comment")}<br/>
-    </form>
-  </div>
+    %endif
+    ${widgets.button(None, type="submit", name="comment", value="Comment")}<br/>
+  </form>
 </%def>
 
 <%def name="conv_comment(convId, commentId)">
