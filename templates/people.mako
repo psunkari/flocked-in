@@ -50,8 +50,8 @@
         <li>${fmtUser(userId)} </li>
         <li>${users[userId]["basic"].get("jobTitle", '')} </li>
         <li>
-          % if myKey != userId and myFriends:
-            % if userId not in myFriends:
+          % if myKey != userId:
+            % if not myFriends or (userId not in myFriends):
               <a onclick="$.post('/ajax/profile/friend', 'id=${userId}')"><span class="button ${button_class}"><span> Add as Friend</span></span></a>
               <% button_class = "" if button_class else "default" %>
             %else:
@@ -61,12 +61,14 @@
           % endif
         </li>
         <li>
-          % if myKey != userId and mySubscriptions:
-            % if (userId not in mySubscriptions) and (myFriends and userId not in myFriends):
-                <a onclick="$.post('/ajax/profile/follow', 'id=${userId}')"><span class="button ${button_class} "><span>Follow User </span> </span></a>
-                <% button_class = "" if button_class else "default" %>
-            % elif userId in mySubscriptions:
+          % if myKey != userId:
+            % if myFriends and userId in myFriends:
+              <!-- -->
+            % elif mySubscriptions and (userId in mySubscriptions):
                 <a onclick="$.post('/ajax/profile/unfollow', 'id=${userId}')"><span class="button ${button_class} "> <span> UnFollow </span></span></a>
+                <% button_class = "" if button_class else "default" %>
+            % else:
+                <a onclick="$.post('/ajax/profile/follow', 'id=${userId}')"><span class="button ${button_class} "><span>Follow User </span> </span></a>
             %endif
           % endif
         </li>
