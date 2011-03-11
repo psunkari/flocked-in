@@ -11,6 +11,7 @@ from twisted.python     import log
 _collection = TemplateLookup(directories=['templates'],
                              module_directory='/tmp/social_templates',
                              output_encoding='utf-8',
+                             default_filters=['decode.utf8'],
                              collection_size=100)
 
 
