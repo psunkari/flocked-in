@@ -10,6 +10,7 @@ from social.auth            import IAuthInfo
 from social.feed            import FeedResource
 from social.register        import RegisterResource
 from social.item            import ItemResource
+from social.avatar          import AvatarResource
 
 def getPluggedResources(ajax=False):
     resources = {}
@@ -32,6 +33,7 @@ class RootResource(resource.Resource):
         self._profile = ProfileResource()
         self._register = RegisterResource()
         self._item = ItemResource()
+        self._avatars = AvatarResource()
         self.pluginResources = getPluggedResources(False)
 
     def getChildWithDefault(self, path, request):
@@ -45,6 +47,8 @@ class RootResource(resource.Resource):
             return self._register
         elif path == "item":
             return self._item
+        elif path == "avatar":
+            return self._avatars
         elif path in plugins and self.pluginResources.has_key(path):
             return self.pluginResources[path]
         else:
@@ -55,8 +59,8 @@ class AjaxResource(RootResource):
     def __init__(self):
         self._feed = FeedResource(True)
         self._ajax = resource.NoResource("Page not found")
+        self._avatars = resource.NoResource("Page not found")
         self._profile = ProfileResource(True)
         self._register = RegisterResource(True)
         self._item = ItemResource(True)
         self.pluginResources = getPluggedResources(True)
-
