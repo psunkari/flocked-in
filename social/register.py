@@ -61,7 +61,6 @@ def send_email(emailId, token, username):
 class RegisterResource(BaseResource):
     isLeaf = True
 
-
     @defer.inlineCallbacks
     def _isValidMailId(self, inviteeDomain, sender):
         orgKey = yield utils.getCompanyKey(sender)
@@ -70,7 +69,6 @@ class RegisterResource(BaseResource):
         domains = cols.keys()
 
         defer.returnValue(inviteeDomain and inviteeDomain in domains)
-
 
     @defer.inlineCallbacks
     def _isValidToken(self, request, token, emailId):
@@ -109,7 +107,6 @@ class RegisterResource(BaseResource):
             d.addCallbacks(callback, errback)
             return server.NOT_DONE_YET
 
-
     @defer.inlineCallbacks
     def _sendInvitation(self, emailId, sender):
         cols = {}
@@ -128,7 +125,6 @@ class RegisterResource(BaseResource):
 
     @defer.inlineCallbacks
     def _signup(self, request):
-
         username = None
         emailId = utils.getRequestArg(request, 'emailId')
         sender = request.getSession(IAuthInfo).username
@@ -186,6 +182,40 @@ class RegisterResource(BaseResource):
             raise errors.ExistingUser
 
     @defer.inlineCallbacks
+    def _saveAvatarItem(self, userId, data):
+        imageFormat = _getImageFileFormat(data)
+        if imageFormat not in constants.SUPPORTED_IMAGE_TYPES:
+            raise errors.UnsupportedFileType()
+
+        try:
+            original = PythonMagick.Blob(data)
+            image = PythonMagick.Image(original)
+        except Exception as e:
+            raise errors.UnknownFileFormat()
+
+        medium = PythonMagick.Blob()
+        small = PythonMagick.Blob()
+        large = PythonMagick.Blob()
+
+        image.scale(constants.AVATAR_SIZE_LARGE)
+        image.write(large)
+        image.scale(constants.AVATAR_SIZE_MEDIUM)
+        image.write(medium)
+        image.scale(constants.AVATAR_SIZE_SMALL)
+        image.write(small)
+
+        itemId = utils.getUniqueKey()
+        item = {
+            "meta": {"owner": userId, "acl": "company", "type": "image"},
+            "avatar": {
+                "format": imageFormat,
+                "small": small.data, "medium": medium.data,
+                "large": large.data, "original": original.data
+            }}
+        yield Db.batch_insert(itemId, "items", item)
+        defer.returnValue("%s:%s" % (imageFormat, itemId))
+
+    @defer.inlineCallbacks
     def _addUserBasic(self, request):
         def getUserInfo(userInfo, sc, cn, request):
             value = utils.getRequestArg(request, cn)
@@ -193,7 +223,6 @@ class RegisterResource(BaseResource):
                 if not sc in userInfo:
                     userInfo[sc]={}
                 userInfo[sc][cn]=value
-
 
         userInfo = {}
         userKey = utils.getRequestArg(request, "id")
@@ -210,32 +239,11 @@ class RegisterResource(BaseResource):
 
         dp = utils.getRequestArg(request, "dp")
         if dp:
-            imageFormat = _getImageFileFormat(dp)
-            if imageFormat not in constants.SUPPORTED_IMAGE_TYPES:
-                raise errors.InvalidImageType
-            from base64 import b64encode
-            blob =  PythonMagick.Blob(dp)
-            try:
-                image = PythonMagick.Image(blob)
-            except Exception as e:
-                raise e
-
-            small = PythonMagick.Blob()
-            profile = PythonMagick.Blob()
-            conv = PythonMagick.Blob()
-            image.scale(constants.PROFILE)
-            image.write(profile)
-            image.scale(constants.CONV)
-            image.write(conv)
-            image.scale(constants.COMM)
-            image.write(small)
-
-            if not "basic" in userInfo:
+            avatar = yield self._saveAvatarItem(userKey, dp)
+            if not userInfo.has_key("basic"):
                 userInfo["basic"] = {}
-            userInfo["basic"]["avatar-large"] = "%s:%s"%(imageFormat, profile.base64())
-            userInfo["basic"]["avatar-medium"] = "%s:%s"%(imageFormat, conv.base64())
-            userInfo["basic"]["avatar-small"] = "%s:%s"%(imageFormat, small.base64())
-            userInfo["basic"]["avatar-orig"] = "%s:%s"%(imageFormat, blob.base64())
+
+            userInfo["basic"]["avatar"] = avatar
 
         expertise = utils.getRequestArg(request, "expertise")
         expertise_acl = utils.getRequestArg(request, "expertise_acl") or 'public'
@@ -302,7 +310,6 @@ class RegisterResource(BaseResource):
         if dob_day and dob_mon and dob_year:
             userInfo["personal"]["birthday"] = "%s%s%s"%(dob_year, dob_mon, dob_day)
 
-
         employer = utils.getRequestArg(request, "employer")
         emp_start = utils.getRequestArg(request, "emp_start") or ''
         emp_end = utils.getRequestArg(request, "emp_end") or ''
@@ -322,8 +329,6 @@ class RegisterResource(BaseResource):
             key = "%s:%s" %(edu_end, college)
             userInfo["education"][key] = degree
 
-
-
         if userInfo:
             yield Db.batch_insert(userKey, "users", userInfo)
 
@@ -332,7 +337,6 @@ class RegisterResource(BaseResource):
 
         segmentCount = len(request.postpath)
         if segmentCount == 0:
-
             d = self._signup(request)
             def errback(err):
                 log.err(err)
@@ -342,6 +346,7 @@ class RegisterResource(BaseResource):
                 request.finish()
             d.addCallbacks(callback, errback)
             return server.NOT_DONE_YET
+
         elif segmentCount == 1 and request.postpath[0]== 'create':
             d = self._addUser(request)
             def callback(response):

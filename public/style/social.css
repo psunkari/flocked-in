@@ -239,6 +239,7 @@ a.ajax {
 
 .center-contents {
     padding: 10px;
+    font-size: 12px;
 }
 
 
@@ -429,9 +430,11 @@ a.ajax {
 .conv-footer {
     color: #888;
     padding: 5px 0;
+    font-size: 10.5px;
 }
 .comment-meta {
     color: #888;
+    font-size: 10.5px;
 }
 .conv-footer abbr, .comment-meta abbr {
     border: none;

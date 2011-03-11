@@ -189,14 +189,15 @@ def userName(id, user, classes=None):
            % (id, user["basic"]["name"])
 
 
-# XXX: Don't return data URI.
-def userAvatar(id, userInfo, size="medium"):
-    avatar = userInfo.get("basic", {}).get("avatar-%s" % size, None)
+def userAvatar(id, userInfo, size=None):
+    size = size[0] if (size and len(size) != 0) else "m"
+    avatar = userInfo.get("basic", {}).get("avatar", None)
     if avatar:
-        imgType, b64data =  avatar.split(":")
-        return "data:image/%s;base64,%s" % (imgType, b64data)
+        imgType, itemId = avatar.split(":")
+        return "/avatar/%s_%s.%s" % (size, itemId, imgType)
 
     return None
+
 
 def simpleTimestamp(timestamp):
     current = int(time.time())
