@@ -204,12 +204,14 @@ class FeedResource(base.BaseResource):
 
     # TODO: ACLs
     @defer.inlineCallbacks
-    def _getFeedItems(self, userKey, itemKey=None, count=10):
+    def _getFeedItems(self, userKey, itemKey=None, count=10, orgKey=None):
         toFetchItems = set()    # Items, users and groups that need to be fetched
         toFetchUsers = set()    #
         toFetchGroups = set()   #
         args = {}
         args["myKey"] = userKey
+        #fetch company feed if orgKey is given
+        key = orgKey if orgKey else userKey
 
         # 1. Fetch the list of root items (conversations) that will be shown
         convs = []
@@ -220,7 +222,7 @@ class FeedResource(base.BaseResource):
             start = ""
             fetchCount = count + 5
             while len(convs) < count:
-                cols = yield Db.get_slice(userKey, "feed", count=fetchCount,
+                cols = yield Db.get_slice(key, "feed", count=fetchCount,
                                           start=start, reverse=True)
                 for col in cols:
                     value = col.column.value
@@ -231,11 +233,13 @@ class FeedResource(base.BaseResource):
                     break
                 start = cols[-1].column.name
 
+        if not convs:
+            defer.returnValue({"conversations": convs})
 
         # 2. Fetch list of notifications that we have for above conversations
         #    and check if we have enough responses to be shown in the feed.
         #    If not fetch responses for those conversations.
-        rawFeedItems = yield Db.get_slice(userKey, "feedItems", convs)
+        rawFeedItems = yield Db.get_slice(key, "feedItems", convs)
         reasonUserIds = {}
         reasonTmpl = {}
         likes = {}
@@ -449,7 +453,7 @@ class FeedResource(base.BaseResource):
                                     landing, "#share-block", "set", **args)
             yield self._renderShareBlock(request, "status")
         if orgFeed:
-            feedItems = yield self._getFeedItems(orgKey)
+            feedItems = yield self._getFeedItems(myKey, orgKey=orgKey)
         else:
             feedItems = yield self._getFeedItems(myKey)
         args.update(feedItems)

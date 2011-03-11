@@ -13,7 +13,7 @@ class AvatarResource(resource.Resource):
             return resource.ErrorPage(404, http.RESPONSES[401],
                                       "Resource not found")
 
-        size, itemId = request.postpath[0].split("_", 2)
+        size, itemId = request.postpath[0].split("_", 1)
         size = {"s": "small", "m": "medium", "l": "large"}[size]
         itemId = itemId.split(".")[0]
 
