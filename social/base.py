@@ -12,12 +12,13 @@ class BaseResource(resource.Resource):
     def _getBasicArgs(self, request):
         auth = request.getSession(IAuthInfo)
         myKey = auth.username
+        orgKey = auth.organization
 
         script = False if request.args.has_key('_ns') or\
                           request.getCookie('_ns') else True
         appchange = True if request.args.has_key('_fp') and self._ajax or\
                             not self._ajax and script else False
-        args = {"myKey": myKey,
+        args = {"myKey": myKey, "orgKey": orgKey,
                 "ajax": self._ajax, "script": script}
 
         return (appchange, script, args)

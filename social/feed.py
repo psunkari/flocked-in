@@ -417,15 +417,22 @@ class FeedResource(base.BaseResource):
         defer.returnValue(args)
 
     @defer.inlineCallbacks
-    def _render(self, request):
+    def _render(self, request, orgFeed=False):
         (appchange, script, args) = self._getBasicArgs(request)
 
         myKey = args["myKey"]
+        myOrg = args["orgKey"]
         col = yield Db.get_slice(myKey, "users")
+
         me = utils.supercolumnsToDict(col)
 
         args["me"] = me
         landing = not self._ajax
+
+        if orgFeed:
+            orgKey = utils.getRequestArg(request, "id")
+            if not orgKey or orgKey != myOrg:
+                errors.InvalidRequest()
 
         if script and landing:
             yield render(request, "feed.mako", **args)
@@ -438,8 +445,10 @@ class FeedResource(base.BaseResource):
             yield renderScriptBlock(request, "feed.mako", "share_block",
                                     landing, "#share-block", "set", **args)
             yield self._renderShareBlock(request, "status")
-
-        feedItems = yield self._getFeedItems(myKey)
+        if orgFeed:
+            feedItems = yield self._getFeedItems(orgKey)
+        else:
+            feedItems = yield self._getFeedItems(myKey)
         args.update(feedItems)
         if script:
             yield renderScriptBlock(request, "feed.mako", "feed", landing,
@@ -469,9 +478,12 @@ class FeedResource(base.BaseResource):
         segmentCount = len(request.postpath)
         d = None
 
-        if segmentCount == 0:
+        if segmentCount == 0 :
             request.addCookie("_page", "feed", path="/")
             d = self._render(request)
+        elif segmentCount ==1 and request.postpath[0] == "org":
+            d = self._render(request, orgFeed=True)
+
         elif segmentCount == 2 and request.postpath[0] == "share":
             if self._ajax:
                 d = self._renderShareBlock(request, request.postpath[1])
