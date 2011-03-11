@@ -433,6 +433,9 @@ class FeedResource(base.BaseResource):
             orgKey = utils.getRequestArg(request, "id")
             if not orgKey or orgKey != myOrg:
                 errors.InvalidRequest()
+            cols = yield Db.get_slice(orgKey, "orgs")
+            if not cols:
+                errors.InvalidRequest()
 
         if script and landing:
             yield render(request, "feed.mako", **args)

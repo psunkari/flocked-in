@@ -472,3 +472,31 @@ a.ajax {
 .edu {
     background-color:#FFF;
 }
+.user-info {
+    height:55px;
+
+    display: table;
+    margin: 20px;
+}
+.user-info ul {
+    list-style-type: none;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    padding: 0px;
+    border-bottom: thin ridge;
+
+}
+.user-info li{
+    width: 100px;
+    height: 30px;
+    text-align: center;
+    display: inline-block;
+    margin-bottom: 5px;
+}
+
+.user-info span {
+    width: 100px;
+    height: 30px;
+    padding: 2.5px;
+
+}

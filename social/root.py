@@ -10,6 +10,7 @@ from social.auth            import IAuthInfo
 from social.feed            import FeedResource
 from social.register        import RegisterResource
 from social.item            import ItemResource
+from social.people          import PeopleResource
 from social.avatar          import AvatarResource
 
 def getPluggedResources(ajax=False):
@@ -33,6 +34,7 @@ class RootResource(resource.Resource):
         self._profile = ProfileResource()
         self._register = RegisterResource()
         self._item = ItemResource()
+        self._people = PeopleResource()
         self._avatars = AvatarResource()
         self.pluginResources = getPluggedResources(False)
 
@@ -47,6 +49,8 @@ class RootResource(resource.Resource):
             return self._register
         elif path == "item":
             return self._item
+        elif path == "people":
+            return self._people
         elif path == "avatar":
             return self._avatars
         elif path in plugins and self.pluginResources.has_key(path):
@@ -63,4 +67,5 @@ class AjaxResource(RootResource):
         self._profile = ProfileResource(True)
         self._register = RegisterResource(True)
         self._item = ItemResource(True)
+        self._people = PeopleResource(True)
         self.pluginResources = getPluggedResources(True)

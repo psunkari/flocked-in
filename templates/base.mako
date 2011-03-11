@@ -15,7 +15,7 @@
       <li><a href="/feed" class="ajax">News Feed</a></li>
       <li><a href="/messages" class="ajax">Messages</a></li>
       <li><a href="/events" class="ajax">Events</a></li>
-      <li><a href="/friends" class="ajax">Friends</a></li>
+      <li><a href="/people/friends" class="ajax">Friends</a></li>
     </ul>
   </div>
   <div id="grpmenu-container" class="sidemenu-container">
