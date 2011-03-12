@@ -1,4 +1,7 @@
 
+import time
+from email.utils            import formatdate
+
 from twisted.internet       import defer
 from twisted.python         import log
 from twisted.web            import resource, server, http
@@ -24,9 +27,11 @@ class AvatarResource(resource.Resource):
             format = avatarInfo["format"]\
                      if avatarInfo.has_key("format") else "jpg"
             data = avatarInfo[size]
+            expires = formatdate(time.time() + 864000)
 
             request.setHeader('Content-Type', 'image/%s' % format)
             request.setHeader('Content-Length', len(data))
+            request.setHeader('Expires', expires)
             request.write(data)
             request.finish()
 
