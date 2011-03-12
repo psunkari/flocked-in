@@ -291,5 +291,4 @@ class ProfileResource(base.BaseResource):
         if not script:
             yield render(request, "profile.mako", **args)
 
-        log.msg("Cookies before finish: ", request.cookies)
         request.finish()
