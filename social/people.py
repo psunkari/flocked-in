@@ -74,12 +74,13 @@ class PeopleResource(base.BaseResource):
 
         friends = yield Db.get_slice(myKey, "connections",
                                      start=start, count=PEOPLE_PER_PAGE)
-        friends = [friend.super_column.name for friend in friends]
-        users = yield Db.multiget_slice(friends, "users", ["basic"])
-        users = utils.multiSuperColumnsToDict(users)
+        friends = utils.supercolumnsToDict(friends)
+        #friends = [friend.super_column.name for friend in friends]
+        users = yield Db.multiget_slice(friends.keys(), "users", ["basic"])
 
-        args["users"] = users
         args["heading"] = "Friends"
+        args["users"] = utils.multiSuperColumnsToDict(users)
+        args["myFriends"] = friends
 
         if script:
             yield renderScriptBlock(request, "people.mako", "content",

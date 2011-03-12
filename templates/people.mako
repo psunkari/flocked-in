@@ -75,28 +75,4 @@
       </ul>
     %endfor
   </div>
-
-
-</%def>
-<%def name="foo()">
-      <span > ${fmtUser(userId)} </span>
-      <span > ${users[userId]["basic"].get("jobTitle", '')} </span>
-      % if myKey != userId and myFriends:
-        % if userId not in myFriends:
-          <span><a href="/profile/friend?id=${userId}" onclick="$.post('/ajax/profile/friend', 'id=${userId}')"><span class="button user-info"> Add as Friend</span></a></span>
-        %else:
-          <span><a href="/profile/unfriend?id=${userId}" onclick="$.post('/ajax/profile/unfriend', 'id=${userId}')"><span class="button user-info"> UnFriend</span></a></span>
-        %endif
-      % endif
-      % if myKey != userId and mySubscriptions:
-        % if userId in mySubscriptions:
-          <span><a href="/profile/unfollow?id=${userId}" onclick="$.post('/ajax/profile/unfollow', 'id=${userId}')"><span class="button user-info"> UnFollow</span>
-        % elif (userId not in mySubscriptions) and (myFriends and userId not in myFriends):
-          <span><a href="/profile/follow?id=${userId}" onclick="$.post('/ajax/profile/follow', 'id=${userId}')"><span class="button user-info">Follow User </span>
-        %endif
-      % endif
-
-     <br/>
-    </div>
-
 </%def>
