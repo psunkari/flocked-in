@@ -1,25 +1,29 @@
 import time
 import uuid
-from zope.interface     import implements
 
+from zope.interface     import implements
 from twisted.python     import log
-from twisted.web        import server
 from twisted.internet   import defer
 from twisted.plugin     import IPlugin
 
 from social             import Db, base, utils, errors
 from social.auth        import IAuthInfo
-from social.isocial     import IItem
+from social.isocial     import IItemType
 from social.template    import render, renderScriptBlock, getBlock
 
 
 class Activity(object):
-    implements(IPlugin, IItem)
+    implements(IPlugin, IItemType)
     itemType = "activity"
     position = -1
     hasIndex = False
 
-    def getRootHTML(self, convId, args):
+
+    def shareBlockProvider(self):
+        raise errors.InvalidRequest()
+
+
+    def rootHTML(self, convId, args):
         if "convId" in args:
             return getBlock("item.mako", "renderStatus", **args)
         else:
@@ -28,7 +32,7 @@ class Activity(object):
 
 
     @defer.inlineCallbacks
-    def getRootData(self, args, convId=None):
+    def fetchData(self, args, convId=None):
 
         convId = convId or args["convId"]
         toFetchUsers = set()

@@ -7,9 +7,9 @@ from ordereddict        import OrderedDict
 from telephus.protocol  import ManagedCassandraClientFactory
 from telephus.client    import CassandraClient
 from twisted.internet   import reactor
-from twisted.plugin import getPlugins
+from twisted.plugin     import getPlugins
 
-from social.isocial     import IItem
+from social.isocial     import IItemType
 
 
 # Read configuration
@@ -32,10 +32,10 @@ __ = gettext.ngettext
 
 
 # Map of all item type plugins
-_pluginList = sorted([x for x in getPlugins(IItem)], key=lambda x: x.position)
+_pluginList = sorted([x for x in getPlugins(IItemType)], key=lambda x: x.position)
 plugins = {}
 for plg in _pluginList:
     plugins[plg.itemType] = plg
-    
+
 
 __all__ = [Config, Db, _, __, plugins]

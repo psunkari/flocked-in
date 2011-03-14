@@ -55,7 +55,7 @@ class ItemResource(base.BaseResource):
 
         plugin = plugins[itemType] if itemType in plugins else None
         if plugin:
-            toFetchUsers, toFetchGroups = yield plugin.getRootData(args)
+            toFetchUsers, toFetchGroups = yield plugin.fetchData(args)
             if toFetchUsers:
                 users = yield Db.multiget_slice(toFetchUsers, "users", ["basic"])
                 users = utils.multiSuperColumnsToDict(users)

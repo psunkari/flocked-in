@@ -238,7 +238,7 @@ class FeedResource(base.BaseResource):
         for convId in convs:
             itemType = items[convId]["meta"]["type"]
             if itemType in plugins:
-                d =  plugins[itemType].getRootData(args, convId)
+                d =  plugins[itemType].fetchData(args, convId)
                 extraDataDeferreds.append(d)
 
         result = yield defer.DeferredList(extraDataDeferreds)
@@ -378,14 +378,14 @@ class FeedResource(base.BaseResource):
     @defer.inlineCallbacks
     def _renderShareBlock(self, request, typ):
         landing = not self._ajax
+        templateFile = "feed.mako"
         renderDef = "share_status"
 
-        if typ == "poll":
-            renderDef = "share_poll"
-        elif typ == "event":
-            renderDef = "share_event"
+        plugin = plugins.get(typ, None)
+        if plugin:
+            templateFile, renderDef = plugin.shareBlockProvider()
 
-        yield renderScriptBlock(request, "feed.mako", renderDef,
+        yield renderScriptBlock(request, templateFile, renderDef,
                                 landing, "#sharebar", "set", True,
                                 handlers={"onload": "$('#sharebar-links .selected').removeClass('selected'); $('#sharebar-link-%s').addClass('selected');" % (typ)})
 

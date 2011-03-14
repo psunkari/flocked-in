@@ -1,40 +1,39 @@
 import time
 import uuid
-import traceback
-from hashlib            import md5
 
-from zope.interface     import Attribute, Interface, implements
+from zope.interface     import implements
 from twisted.plugin     import IPlugin
-from twisted.web        import server
 from twisted.internet   import defer
 from twisted.python     import log
 
-from social             import Db, utils, base
+from social             import Db, utils, base, errors
 from social.template    import renderScriptBlock, render, getBlock
 from social.auth        import IAuthInfo
-from social.isocial     import IItem
-from social             import errors
+from social.isocial     import IItemType
 
 
 class Event(object):
-    implements(IPlugin, IItem)
+    implements(IPlugin, IItemType)
     itemType = "event"
     position = 4
     hasIndex = False
     #TODO: event Invitations.
     #TODO: listing invitations chronologically.
 
-    def getRootHTML(self, convId, args):
-        if "convId" in args:
-            return getBlock("item.mako", "event_root", **args)
-        else:
-            return getBlock("item.mako", "event_root", args=[convId], **args)
 
+    def shareBlockProvider(self):
+        return ("event.mako", "share_event")
+
+
+    def rootHTML(self, convId, args):
+        if "convId" in args:
+            return getBlock("event.mako", "event_root", **args)
+        else:
+            return getBlock("event.mako", "event_root", args=[convId], **args)
 
 
     @defer.inlineCallbacks
-    def getRootData(self, args, convId=None):
-
+    def fetchData(self, args, convId=None):
         toFetchUsers = set()
         toFetchGroups = set()
         convId = convId or args["convId"]
@@ -61,7 +60,6 @@ class Event(object):
 
     @defer.inlineCallbacks
     def renderRoot(self, request, convId, args):
-
         script = args['script']
         landing = not args['ajax']
         toFeed = args['toFeed'] if args.has_key('toFeed') else False
@@ -82,7 +80,6 @@ class Event(object):
 
     @defer.inlineCallbacks
     def create(self, request):
-
         myKey = request.getSession(IAuthInfo).username
 
         acl = utils.getRequestArg(request, 'acl')
@@ -129,7 +126,6 @@ class Event(object):
 
     @defer.inlineCallbacks
     def post(self, request):
-
         convId = utils.getRequestArg(request, 'id')
         response = utils.getRequestArg(request, 'response')
         myKey = request.getSession(IAuthInfo).username

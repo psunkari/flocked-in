@@ -1,22 +1,31 @@
+
 from zope.interface   import Interface, Attribute
 
-class IItem(Interface):
+class IItemType(Interface):
     itemType = Attribute("Type of item")
-    position = Attribute("position in shared-block")
-    hasIndex = Attribute("")
+    position = Attribute("Position in share tabbar")
+    hasIndex = Attribute("Indicates if there are indexes on this type")
 
-    def getRoot(myKey, convId):
+    def shareBlockProvider():
         """
         """
+
+    def rootHTML(convId, args):
+        """
+        """
+
+    def fetchData(args, convId=None):
+        """
+        """
+
     def renderRoot(request, convId, args):
         """
         """
-    def action(myKey):
-        """
-        """
+
     def create(request):
         """
         """
+
     def post(request):
         """
         """

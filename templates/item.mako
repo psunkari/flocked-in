@@ -93,7 +93,7 @@
   % if itemType in ("link", "document"):
       ${self.renderStatus(convId)}
   % elif itemType in plugins:
-      ${plugins[itemType].getRootHTML(convId, context.kwargs)}
+      ${plugins[itemType].rootHTML(convId, context.kwargs)}
   %endif
 
 </%def>
@@ -209,36 +209,6 @@
 <%def name="item_subactions()">
 </%def>
 
-
-<%def name="poll_root(convId)">
-  <%
-    conv = items[convId]
-    question = items[convId]["meta"]["question"] or "what is your fav game?"
-    options = items[convId]["options"] or ["cricket", "football", "hockey"]
-  %>
-  <div id="conv" class="conv-item">
-    <div>
-        %if convId in  myVote and myVote[convId]:
-        <p> you voted for: ${myVote[convId]} </p>
-        %endif
-        <form action="/poll/post" method="POST" class="ajax">
-        <p> ${question} </p>
-        % for option in options:
-            <input type="radio" name="option" value= "${option}"> ${option} </input> <br/>
-        % endfor
-            <input type="hidden" name="id" value="${convId}" />
-            <input type="hidden" name="type" value="poll" />
-            <input type="submit" id="submit" value="${_('Submit')}"/>
-        </form>
-        <span>${question}</span>
-        % for option in options:
-            <p> ${option} : ${options[option]} </p>
-        %endfor
-    </div>
-
-  </div>
-</%def>
-
 <%def name="renderStatus(convId, isQuoted=False)">
   <%
     conv = items[convId]
@@ -272,38 +242,3 @@
 </div>
 </%def>
 
-<%def name="event_root(convId)">
-  <%
-    conv = items[convId]
-    title = items[convId]["meta"].get("title", '')
-    location = items[convId]["meta"].get("location", '')
-    desc = items[convId]["meta"].get("desc", "")
-    start = items[convId]["meta"].get("startTime")
-    end   = items[convId]["meta"].get("endTime", '')
-    options = items[convId]["options"] or ["yes", "maybe", "no"]
-  %>
-  <div id="conv" class="conv-item">
-    <div>
-        %if convId in myResponse and myResponse[convId]:
-        <p> are you attending the <a href="/item?id=${convId}&type=event">event</a>?: ${myResponse[convId]} </p>
-        %endif
-        <form action="/event/post" method="POST" class="ajax">
-        <p> ${title} </p>
-        % for option in options:
-            <input type="radio" name="response" value= "${option}"> ${option} </input> <br/>
-        % endfor
-            <input type="hidden" name="id" value="${convId}" />
-            <input type="hidden" name="type" value="event" />
-            <input type="submit" id="submit" value="${_('Submit')}"/>
-        </form>
-        <span>${title}</span>
-        <p>${desc}</p>
-        <p>location: ${location}</p>
-        <p>TIME: ${start} - ${end}</p>
-        % for option in options:
-            <p> ${option} : ${options[option]} </p>
-        %endfor
-    </div>
-
-  </div>
-</%def>

@@ -69,7 +69,7 @@ class ProfileResource(base.BaseResource):
         for convId in convs:
             itemType = items[convId]["meta"]["type"]
             if itemType in plugins:
-                d =  plugins[itemType].getRootData(args, convId)
+                d =  plugins[itemType].fetchData(args, convId)
                 extraDataDeferreds.append(d)
 
         result = yield defer.DeferredList(extraDataDeferreds)

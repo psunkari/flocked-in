@@ -100,44 +100,6 @@
   <input type="hidden" name="type" value="status"/>
 </%def>
 
-<%def name="share_poll()">
-  <div class="input-wrap">
-    <input type="text" name="question" placeholder="${_('Question')}"/>
-  </div>
-  <div class="input-wrap">
-    <input type="text" name="options" placeholder="${_('Option')}"/>
-  </div>
-  <div class="input-wrap">
-    <input type="text" name="options" placeholder="${_('Option')}"/>
-  </div>
-  <div class="input-wrap">
-    <input type="text" name="options" placeholder="${_('Option')}"/>
-  </div>
-  <input type="hidden" name="type" value="poll"/>
-
-</%def>
-
-<%def name="share_event()">
-
-  <div class="input-wrap">
-    <input type="text" name="startTime" placeholder="${_('When?')}"/>
-  </div>
-  <div class="input-wrap">
-    <input type="text" name="endTime" placeholder="${_('End Time?')}"/>
-  </div>
-  <div class="input-wrap">
-    <input type="text" name="title" placeholder="${_('What?')}"/>
-  </div>
-  <div class="input-wrap">
-    <input type="text" name="location" placeholder="${_('Where?')}"/>
-  </div>
-  <div class="input-wrap">
-    <input type="text" name="desc" placeholder="${_('Description')}"/>
-  </div>
-  <input type="hidden" name="type" value="event"/>
-</%def>
-
-
 <%def name="feed()">
   %for convId in conversations:
     ${item.item_layout(convId, True, True)}

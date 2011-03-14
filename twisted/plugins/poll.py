@@ -1,36 +1,37 @@
 import time
 import uuid
-import traceback
-from hashlib            import md5
 
-from zope.interface     import Attribute, Interface, implements
+from zope.interface     import implements
 from twisted.plugin     import IPlugin
-from twisted.web        import server
 from twisted.internet   import defer
 from twisted.python     import log
 
-from social             import Db, utils, base
+from social             import Db, utils, base, errors
 from social.template    import renderScriptBlock, render, getBlock
 from social.auth        import IAuthInfo
-from social.isocial     import IItem
-from social             import errors
+from social.isocial     import IItemType
+
 
 class Poll(object):
-    implements(IPlugin, IItem)
+    implements(IPlugin, IItemType)
     itemType = "poll"
     position = 5
     hasIndex = False
 
-    def getRootHTML(self, convId, args):
 
+    def shareBlockProvider(self):
+        return ("poll.mako", "share_poll")
+
+
+    def rootHTML(self, convId, args):
         if "convId" in args:
-            return getBlock("item.mako", "poll_root", **args)
+            return getBlock("poll.mako", "poll_root", **args)
         else:
-            return getBlock("item.mako", "poll_root", args=[convId], **args)
+            return getBlock("poll.mako", "poll_root", args=[convId], **args)
+
 
     @defer.inlineCallbacks
-    def getRootData(self, args, convId=None):
-
+    def fetchData(self, args, convId=None):
         toFetchUsers = set()
         toFetchGroups = set()
         convId = convId or args["convId"]
@@ -44,7 +45,6 @@ class Poll(object):
         options = conv["options"] if conv.has_key("options") else None
         if not options:
             raise errors.InvalidRequest()
-
 
         toFetchUsers.add(conv["meta"]["owner"])
 
@@ -69,7 +69,6 @@ class Poll(object):
 
     @defer.inlineCallbacks
     def renderRoot(self, request, convId, args):
-
         script = args['script']
         landing = not args['ajax']
         toFeed = args['toFeed'] if args.has_key('toFeed') else False
@@ -90,7 +89,6 @@ class Poll(object):
 
     @defer.inlineCallbacks
     def create(self, request):
-
         myKey = request.getSession(IAuthInfo).username
 
         acl = utils.getRequestArg(request, 'acl') or 'public'
@@ -136,7 +134,6 @@ class Poll(object):
 
     @defer.inlineCallbacks
     def post(self, request):
-
         convId = utils.getRequestArg(request, 'id')
         vote = utils.getRequestArg(request, 'option')
         myKey = request.getSession(IAuthInfo).username
