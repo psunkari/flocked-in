@@ -48,7 +48,7 @@ class PollResource(base.BaseResource):
         voteCount = yield Db.get_count(convId, "votes", vote)
         optionCounts[vote] = str(voteCount)
 
-        yield Db.batch_insert(convId, "items", {"options":optionCounts})
+        yield Db.batch_insert(convId, "items", {"counts":optionCounts})
 
         defer.returnValue(convId)
 

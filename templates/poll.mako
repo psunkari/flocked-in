@@ -23,18 +23,19 @@
 <%def name="poll_root(convId)">
   <%
     conv = items[convId]
-    question = items[convId]["meta"]["question"] or "what is your fav game?"
-    options = items[convId]["options"] or ["cricket", "football", "hockey"]
+    question = items[convId]["meta"]["question"]
+    options = items[convId]["options"]
+    counts = items[convId].get("counts", {})
   %>
   <div id="conv" class="conv-item">
     <div>
-        %if convId in  myVote and myVote[convId]:
-        <p> you voted for: ${myVote[convId]} </p>
+        %if convId in myVote and myVote[convId]:
+        <p>You voted for: ${options.get(myVote[convId], "")} </p>
         %endif
         <form action="/poll/post" method="POST" class="ajax">
         <p> ${question} </p>
         % for option in options:
-            <input type="radio" name="option" value= "${option}"> ${option} </input> <br/>
+            <input type="radio" name="option" value="${option}">${options[option]}</input> <br/>
         % endfor
             <input type="hidden" name="id" value="${convId}" />
             <input type="hidden" name="type" value="poll" />
@@ -42,7 +43,7 @@
         </form>
         <span>${question}</span>
         % for option in options:
-            <p> ${option} : ${options[option]} </p>
+            <p> ${options[option]}: ${counts.get(option, '0')} </p>
         %endfor
     </div>
   </div>

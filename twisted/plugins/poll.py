@@ -37,10 +37,10 @@ class Poll(object):
         convId = convId or args["convId"]
         myKey = args["myKey"]
 
-        conv = yield Db.get_slice(convId, "items", ["meta", 'options'])
-        conv = utils.supercolumnsToDict(conv)
-        if not conv:
+        conv = yield Db.get_slice(convId, "items", ["meta", 'options', 'counts'])
+        if not len(conv):
             raise errors.InvalidRequest()
+        conv = utils.supercolumnsToDict(conv, True)
 
         options = conv["options"] if conv.has_key("options") else None
         if not options:
@@ -98,7 +98,7 @@ class Poll(object):
         question = utils.getRequestArg(request, "question")
         showResults = utils.getRequestArg(request, "show") or 'True'
 
-        if not (question and options):
+        if not (question and len(options)):
             raise errors.InvalidRequest()
 
         convId = utils.getUniqueKey()
@@ -123,8 +123,8 @@ class Poll(object):
         followers = {}
         followers[myKey] = ''
 
-        options = dict([(option, '0') for option in options])
-
+        # XXX: We support a maximum of 100 options
+        options = dict([('%02d'%(x), options[x]) for x in range(len(options))])
         yield Db.batch_insert(convId, "items", {'meta':meta,
                                                 'options':options,
                                                 'followers':followers})
@@ -168,7 +168,7 @@ class Poll(object):
         voteCount = yield Db.get_count(convId, "votes", vote)
         optionCounts[vote] = str(voteCount)
 
-        yield Db.batch_insert(convId, "items", {"options":optionCounts})
+        yield Db.batch_insert(convId, "items", {"counts":optionCounts})
 
 
 poll = Poll()

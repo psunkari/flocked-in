@@ -23,7 +23,7 @@ def supercolumnsToDict(supercolumns, ordered=False):
     retval = OrderedDict() if ordered else {}
     for item in supercolumns:
         name = item.super_column.name
-        retval[name] = {}
+        retval[name] = OrderedDict() if ordered else {}
         for col in item.super_column.columns:
             retval[name][col.name] = col.value
     return retval
