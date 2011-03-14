@@ -1,4 +1,7 @@
 
+html>body {
+    overflow-y: scroll;
+}
 body {
     margin: 0;
     padding: 0;
@@ -269,6 +272,9 @@ a.ajax {
     margin-right: 6px;
 }
 
+#profile-content {
+    padding-top: 15px;
+}
 #profile-tabs {
     background-color: #E8EEFA;
     border-bottom: 1px solid #C3D9FF;

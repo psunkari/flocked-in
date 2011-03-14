@@ -183,6 +183,12 @@ def weekName(num, long=False):
     return full[num-1] if long else short[num-1]
 
 
+def itemLink(itemId, itemType, classes=None):
+    return "<span class='item %s'>" % (classes if classes else "") +\
+           "<a class='ajax' href='/item?id=%s'>%s</a></span>"\
+           % (itemId, _(itemType))
+
+
 def userName(id, user, classes=None):
     return "<span class='user %s'>" % (classes if classes else "") +\
            "<a class='ajax' href='/profile?id=%s'>%s</a></span>"\
