@@ -321,22 +321,35 @@
   <div class="content-title"><h4>${_('Other Details')}</h4></div>
   <dl id="content-other">
   </dl>
-
 </%def>
 
+<%def name="activity_block(grp)">
+  <div class="conv-item">
+    %for key in grp:
+      <%
+        rtype, itemId, convId, convType, convOwner = key
+        activity = reasonStr[key] % (utils.userName(convOwner, users[convOwner]), utils.itemLink(convId, convType))
+      %>
+      <div class="conv-data">
+        ${activity}
+      </div>
+    %endfor
+  </div>
+</%def>
 
-<%def name="renderUserItems()">
-  % for key in userItems:
-    <% rtype, itemId, convId, convType, convOwnerId = key %>
-    % if not reasonStr[key]:
-      ${item.item_layout(convId, True, True)}
-    %else:
-      %if convType in plugins:
-        ${_(reasonStr[key])}
-        <br/><hr/><br/>
-      %endif
-    %endif
-  %endfor
+<%def name="content_notes()">
+  <%
+    block = []
+    for key in userItems:
+      rtype, itemId, convId, convType, convOwnerId = key
+      if not reasonStr.has_key(key):
+        if len(block) > 0:
+          self.activity_block(block)
+          block = []
+        item.item_layout(convId, True, True)
+      elif convType in plugins:
+        block.append(key)
+  %>
 </%def>
 
 <%def name="content()">
@@ -344,7 +357,7 @@
     ${content_info()}
   %endif
   % if detail == 'notes':
-    ${renderUserItems()}
+    ${content_notes()}
   %endif
 </%def>
 

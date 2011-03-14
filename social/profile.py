@@ -8,12 +8,91 @@ from telephus.cassandra     import ttypes
 
 from social.template        import render, renderDef, renderScriptBlock
 from social.relations       import Relation
-from social                 import Db, auth, utils, base, feed
+from social                 import Db, auth, utils, base, plugins, _, __
 
 
 class ProfileResource(base.BaseResource):
     isLeaf = True
     resources = {}
+
+    @defer.inlineCallbacks
+    def _getUserItems(self, userKey, count=10):
+        toFetchItems = set()
+        toFetchUsers = set()
+        toFetchResponses = set()
+        toFetchGroups = set()
+        responses = {}
+        args = {"myKey":userKey}
+        convs = []
+        userItemsRaw = []
+        userItems = []
+        reasonStr = {}
+
+        toFetchUsers.add(userKey)
+        cols = yield Db.get_slice(userKey, "userItems", reverse=True, count=count)
+        for col in cols:
+            value = tuple(col.column.value.split(":"))
+            rtype, itemId, convId, convType, convOwnerId = value
+
+            toFetchUsers.add(convOwnerId)
+            if rtype == 'I':
+                toFetchItems.add(convId)
+                toFetchResponses.add(convId)
+                convs.append(convId)
+                userItems.append(value)
+            elif rtype == "L" and itemId == convId and convOwnerId != userKey:
+                reasonStr[value] = _("liked %s's %s")
+                userItems.append(value)
+            elif rtype == "L"  and convOwnerId != userKey:
+                reasonStr[value] = _("liked a comment on %s's %s")
+                userItems.append(value)
+            elif rtype == "C" and convOwnerId != userKey:
+                reasonStr[value] = _("commented on %s's %s")
+                userItems.append(value)
+
+        itemResponses = yield Db.multiget_slice(toFetchResponses, "itemResponses",
+                                                count=2, reverse=True)
+        for convId, comments in itemResponses.items():
+            responses[convId] = []
+            for comment in comments:
+                userKey_, itemKey = comment.column.value.split(':')
+                if itemKey not in toFetchItems:
+                    responses[convId].insert(0,itemKey)
+                    toFetchItems.add(itemKey)
+                    toFetchUsers.add(userKey_)
+
+        items = yield Db.multiget(toFetchItems, "items", "meta")
+        items = utils.multiSuperColumnsToDict(items)
+        args["items"] = items
+        extraDataDeferreds = []
+
+        for convId in convs:
+            itemType = items[convId]["meta"]["type"]
+            if itemType in plugins:
+                d =  plugins[itemType].getRootData(args, convId)
+                extraDataDeferreds.append(d)
+
+        result = yield defer.DeferredList(extraDataDeferreds)
+        for success, ret in result:
+            if success:
+                toFetchUsers_, toFetchGroups_ = ret
+                toFetchUsers.update(toFetchUsers_)
+                toFetchGroups.update(toFetchGroups_)
+
+        d2 = Db.multiget(toFetchUsers, "users", "basic")
+        d3 = Db.multiget(toFetchGroups, "groups", "basic")
+
+        fetchedUsers = yield d2
+        fetchedGroups = yield d3
+        users = utils.multiSuperColumnsToDict(fetchedUsers)
+        groups = utils.multiSuperColumnsToDict(fetchedGroups)
+
+        del args['myKey']
+        data = {"users":users, "groups":groups,
+                "reasonStr":reasonStr, "userItems":userItems,
+                "responses":responses}
+        args.update(data)
+        defer.returnValue(args)
 
     @defer.inlineCallbacks
     def _follow(self, request):
@@ -186,7 +265,7 @@ class ProfileResource(base.BaseResource):
         args["userKey"] = userKey
 
         if detail == "notes":
-            userItems = yield feed.getUserItems(userKey)
+            userItems = yield self._getUserItems(userKey)
             args.update(userItems)
 
         # When scripts are enabled, updates are sent to the page as
