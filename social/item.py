@@ -219,11 +219,11 @@ class ItemResource(base.BaseResource):
         # TODO: Check if I have access to that item before liking it!
 
         # Update the likes count
-        likesCount = int(item.get("likesCount", "0")) + 1
-        if likesCount % 5 == 0:
+        likesCount = int(item["meta"].get("likesCount", "0"))
+        if likesCount % 5 == 3:
             likesCount = yield Db.get_count(itemId, "itemLikes")
 
-        yield Db.insert(itemId, "items", str(likesCount), "likesCount", "meta")
+        yield Db.insert(itemId, "items", str(likesCount+1), "likesCount", "meta")
 
         timeUUID = uuid.uuid1().bytes
         responseType = "L"
