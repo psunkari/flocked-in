@@ -13,6 +13,7 @@
   <div id="mymenu-container" class="sidemenu-container">
     <ul id="mymenu" class="v-links sidemenu">
       <li><a href="/feed" class="ajax">News Feed</a></li>
+      <li><a href="/notifications" class="ajax">Notifications</a></li>
       <li><a href="/messages" class="ajax">Messages</a></li>
       <li><a href="/events" class="ajax">Events</a></li>
       <li><a href="/people/friends" class="ajax">Friends</a></li>

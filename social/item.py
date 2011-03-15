@@ -8,6 +8,7 @@ from twisted.web        import server
 from twisted.python     import log
 
 from social             import base, Db, utils, feed, plugins, constants
+from social             import notifications
 from social.auth        import IAuthInfo
 from social.template    import render, renderScriptBlock
 
@@ -246,8 +247,8 @@ class ItemResource(base.BaseResource):
         yield feed.pushToOthersFeed(myId, timeUUID, itemId, convId, convACL,
                                     responseType, convType, convOwnerId)
 
-        # 5. Broadcast to followers of the items
-        # TODO
+        yield notifications.pushNotifications( itemId, convId, responseType, convType,
+                                    convOwnerId, myId, timeUUID)
 
         # Finally, update the UI
         # TODO
@@ -285,10 +286,10 @@ class ItemResource(base.BaseResource):
         yield Db.remove(itemId, "itemLikes", myId)
 
         # Update the likes count
-        likesCount = int(item.get("likesCount", "1")) - 1
+        likesCount = int(item.get("likesCount", "1"))
         if likesCount % 5 == 0:
             likesCount = yield Db.get_count(itemId, "itemLikes")
-        yield Db.insert(itemId, "items", str(likesCount), "likesCount", "meta")
+        yield Db.insert(itemId, "items", str(likesCount -1), "likesCount", "meta")
 
         responseType = 'L'
         # 2. Don't remove the user from followers list
@@ -309,6 +310,7 @@ class ItemResource(base.BaseResource):
         if plugins.has_key(convType) and plugins[convType].hasIndex:
             yield Db.remove(myId, "userItems_"+ convType, likeTimeUUID)
 
+        yield notifications.deleteNofitications(convId, likeTimeUUID)
 
         # Finally, update the UI
         # TODO
@@ -368,6 +370,8 @@ class ItemResource(base.BaseResource):
         yield feed.pushToOthersFeed(myId, timeUUID, itemId, convId, convACL,
                                     responseType, convType, convOwnerId)
 
+        yield notifications.pushNotifications( itemId, convId, responseType,
+                                              convType, convOwnerId, myId, timeUUID)
         # Finally, update the UI
         numShowing = utils.getRequestArg(request, "nc") or "0"
         numShowing = int(numShowing) + 1

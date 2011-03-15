@@ -274,8 +274,7 @@ class FeedResource(base.BaseResource):
                         for id in reasonUserIds[convId]]
                 vals.append(utils.userName(ownerId, users[ownerId]))
                 itemType = conv["meta"]["type"]
-                vals.append("<span class='item'><a class='ajax' "
-                            "href='/item?id=%s'>%s</a></span>" % (convId, _(itemType)))
+                vals.append(utils.itemLink(convId, itemType))
                 reasonStr[convId] = _(template) % tuple(vals)
 
             # Build like string
