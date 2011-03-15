@@ -12,7 +12,7 @@ from email.mime.text    import MIMEText
 import social.constants as constants
 from social.base        import BaseResource
 from social             import utils, Db, Config
-from social.auth        import IAuthInfo
+from social.isocial     import IAuthInfo
 from social.template    import render
 
 DEVMODE = Config.get('General', 'DevMode') == 'True'

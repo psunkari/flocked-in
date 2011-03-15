@@ -3,7 +3,7 @@ from twisted.internet   import defer
 from twisted.python     import log
 
 from social             import Db, utils, base
-from social.auth        import IAuthInfo
+from social.isocial     import IAuthInfo
 from social.item        import ItemResource
 
 class EventResource(base.BaseResource):

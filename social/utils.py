@@ -10,6 +10,7 @@ from twisted.internet   import defer
 from twisted.python     import log
 
 from social             import Db, _, __
+from social.isocial     import IAuthInfo
 from social.constants   import INFINITY
 
 
@@ -93,6 +94,20 @@ def getRandomKey(prefix):
 def getUniqueKey():
     u = uuid.uuid1()
     return base64.urlsafe_b64encode(u.bytes)[:-2]
+
+
+def createNewItem(request, itemType, ownerId=None):
+    owner = ownerId or request.getSession(IAuthInfo).username
+    return {
+        "meta": {
+            "acl": getRequestArg(request, "acl") or "company",
+            "type": itemType,
+            "uuid": uuid.uuid1().bytes,
+            "owner": owner,
+            "timestamp": str(int(time.time()))
+        },
+        "followers": {owner: ''}
+    }
 
 
 @defer.inlineCallbacks

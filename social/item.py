@@ -9,7 +9,7 @@ from twisted.python     import log
 
 from social             import base, Db, utils, feed, plugins, constants
 from social             import notifications
-from social.auth        import IAuthInfo
+from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
 
 
@@ -149,7 +149,6 @@ class ItemResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def createItem(self, request):
-
         convType = utils.getRequestArg(request, "type")
         myKey = request.getSession(IAuthInfo).username
 
@@ -159,33 +158,36 @@ class ItemResource(base.BaseResource):
 
         if convType in plugins:
             plugin = plugins[convType]
-            convId, timeuuid, acl = yield plugin.create(request)
+            convId, conv = yield plugin.create(request)
+            timeUUID = conv["meta"]["uuid"]
+            convACL = conv["meta"]["acl"]
 
             request.args["id"] = [convId]
             userItemValue = ":".join([responseType, convId, convId, convType, myKey])
-            yield feed.pushToFeed(myKey, timeuuid, convId, parent, responseType,
-                                  convType, convOwner, myKey)
+            deferreds = []
 
-            yield feed.pushToOthersFeed(myKey, timeuuid, convId, parent, acl,
-                                        responseType, convType, convOwner)
+            d = feed.pushToFeed(myKey, timeUUID, convId, parent,
+                                responseType, convType, convOwner, myKey)
+            deferreds.append(d)
 
-            yield Db.insert(myKey, "userItems", userItemValue, timeuuid)
+            d = feed.pushToOthersFeed(myKey, timeUUID, convId,
+                                      parent, convACL, responseType,
+                                      convType, convOwner)
+            deferreds.append(d)
+
+            d = Db.insert(myKey, "userItems", userItemValue, timeUUID)
+            deferreds.append(d)
+
             if plugins[convType].hasIndex:
-                yield Db.insert(myKey, "userItems_%s"%(convType) , userItemValue, timeuuid)
+                d = Db.insert(myKey, "userItems_%s"%(convType),
+                              userItemValue, timeUUID)
+                deferreds.append(d)
+
+            deferredList = defer.DeferredList(deferreds)
+            yield deferredList
 
             toFeed = True if convType in ['status', 'poll', 'event'] else False
-
             yield self.renderItem(request, toFeed)
-
-
-    @defer.inlineCallbacks
-    def actOnItem(self, request):
-        itemType = utils.getRequestArg(request, "type")
-        convId = utils.getRequestArg(request, "id")
-        if itemType in plugins:
-            yield plugins[itemType].post(request)
-        #TODO:
-        yield self.renderItem(request, False)
 
 
     @defer.inlineCallbacks
@@ -494,8 +496,6 @@ class ItemResource(base.BaseResource):
             path = request.postpath[0]
             if path == 'new':
                 d =  self.createItem(request)
-            elif path == 'act':
-                d =  self.actOnItem(request)
             elif path == 'comment':
                 d = self._comment(request)
 

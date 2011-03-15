@@ -7,7 +7,7 @@ from twisted.internet   import defer
 from twisted.plugin     import IPlugin
 
 from social             import Db, base, utils, errors
-from social.auth        import IAuthInfo
+from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
 from social.template    import render, renderScriptBlock, getBlock
 
@@ -33,7 +33,6 @@ class Activity(object):
 
     @defer.inlineCallbacks
     def fetchData(self, args, convId=None):
-
         convId = convId or args["convId"]
         toFetchUsers = set()
         toFetchGroups = set()
@@ -68,6 +67,7 @@ class Activity(object):
                                         landing, "#conv-root-%s" %(convId),
                                         "set", **args)
 
+
     @defer.inlineCallbacks
     def create(self, request):
         raise errors.InvalidRequest()
@@ -75,7 +75,7 @@ class Activity(object):
 
     @defer.inlineCallbacks
     def post(self, request):
-        pass
+        raise errors.InvalidRequest()
 
 
 activity = Activity()

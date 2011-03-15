@@ -7,7 +7,7 @@ from twisted.internet   import defer
 from twisted.plugin     import IPlugin
 
 from social             import Db, base, utils, errors
-from social.auth        import IAuthInfo
+from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
 from social.template    import render, renderScriptBlock, getBlock
 
@@ -22,7 +22,6 @@ class Status(object):
         return ("feed.mako", "share_status")
 
     def rootHTML(self, convId, args):
-
         if "convId" in args:
             return getBlock("item.mako", "renderStatus", **args)
         else:
@@ -31,7 +30,6 @@ class Status(object):
 
     @defer.inlineCallbacks
     def fetchData(self, args, convId=None):
-
         convId = convId or args["convId"]
         toFetchUsers = set()
         toFetchGroups = set()
@@ -68,35 +66,22 @@ class Status(object):
 
     @defer.inlineCallbacks
     def create(self, request):
-
-        myKey = request.getSession(IAuthInfo).username
         target = utils.getRequestArg(request, "target")
-        acl = utils.getRequestArg(request, "acl")
         comment = utils.getRequestArg(request, "comment")
 
         if not comment:
             raise errors.MissingParams()
 
         convId = utils.getUniqueKey()
-        itemType = self.itemType
-        timeuuid = uuid.uuid1().bytes
-
-        meta = {}
-        meta["acl"] = acl
-        meta["type"] = itemType
-        meta["uuid"] = timeuuid
-        meta["owner"] = myKey
-        meta["comment"] = comment
-        meta["timestamp"] = "%s" % int(time.time())
+        item = utils.createNewItem(request, self.itemType)
+        meta = {"comment": comment}
         if target:
             meta["target"] = target
 
-        followers = {}
-        followers[myKey] = ''
+        item["meta"].update(meta)
 
-        yield Db.batch_insert(convId, "items", {'meta': meta,
-                                                 'followers':followers})
-        defer.returnValue([convId, timeuuid, acl])
+        yield Db.batch_insert(convId, "items", item)
+        defer.returnValue((convId, item))
 
 
     @defer.inlineCallbacks

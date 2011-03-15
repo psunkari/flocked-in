@@ -11,23 +11,19 @@ from twisted.python             import log, components
 
 from social                     import Config, Db, utils
 from social.template            import render
+from social.isocial             import IAuthInfo
 
 #
 # IAuthInfo: Interface with which data is stored the session.
 #            This is temporary and will actually move to memcached
 #
-class IAuthInfo(Interface):
-    username = Attribute("User key")
-    organization = Attribute("Key of the user's organization")
-    isAdmin = Attribute("Flag to indicate if the user is an administrator")
-
-
 class AuthInfo(components.Adapter):
     implements(IAuthInfo)
     def __init__(self, session):
         self.username = None
 
 components.registerAdapter(AuthInfo, server.Session, IAuthInfo)
+
 
 # Shortcut util to get username from the session.
 def getMyKey(request):

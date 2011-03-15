@@ -6,7 +6,7 @@ from twisted.python         import log
 from social                 import Db, utils, base, plugins
 from social.template        import render
 from social.profile         import ProfileResource
-from social.auth            import IAuthInfo
+from social.isocial         import IAuthInfo
 from social.feed            import FeedResource
 from social.register        import RegisterResource
 from social.item            import ItemResource

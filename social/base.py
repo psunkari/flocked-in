@@ -1,7 +1,7 @@
 
 from twisted.web            import resource, server
 
-from social.auth            import IAuthInfo
+from social.isocial         import IAuthInfo
 
 class BaseResource(resource.Resource):
     _ajax = False

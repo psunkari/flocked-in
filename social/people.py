@@ -4,7 +4,7 @@ from twisted.python     import log
 
 from social             import Db, utils, base
 from social.template    import render, renderScriptBlock
-from social.auth        import IAuthInfo
+from social.isocial     import IAuthInfo
 from social.constants   import PEOPLE_PER_PAGE
 
 

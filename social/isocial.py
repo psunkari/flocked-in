@@ -29,3 +29,9 @@ class IItemType(Interface):
     def post(request):
         """
         """
+
+
+class IAuthInfo(Interface):
+    username = Attribute("User key")
+    organization = Attribute("Key of the user's organization")
+    isAdmin = Attribute("Flag to indicate if the user is an administrator")

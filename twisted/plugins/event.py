@@ -8,7 +8,7 @@ from twisted.python     import log
 
 from social             import Db, utils, base, errors
 from social.template    import renderScriptBlock, render, getBlock
-from social.auth        import IAuthInfo
+from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
 
 
@@ -80,9 +80,6 @@ class Event(object):
 
     @defer.inlineCallbacks
     def create(self, request):
-        myKey = request.getSession(IAuthInfo).username
-
-        acl = utils.getRequestArg(request, 'acl')
         startTime = utils.getRequestArg(request, 'startTime')
         endTime = utils.getRequestArg(request, 'endTime')
         title = utils.getRequestArg(request, 'title')
@@ -93,17 +90,10 @@ class Event(object):
             raise errors.InvalidRequest()
 
         convId = utils.getUniqueKey()
-        itemType = self.itemType
-        timeuuid = uuid.uuid1().bytes
+        item = utils.createNewItem(request, self.itemType)
 
-        meta = {}
-        meta["acl"] = acl
-        meta["type"] = itemType
-        meta["uuid"] = timeuuid
-        meta["owner"] = myKey
-        # FIX: convert to gmt time
-        meta["startTime"] = startTime
-        meta["timestamp"] = "%s" % int(time.time())
+        options = dict([('yes', '0'), ('maybe', '0'), ('no', '0')])
+        meta = {"startTime": startTime}
         if title:
             meta["title"] = title
         if desc:
@@ -113,15 +103,11 @@ class Event(object):
         if location:
             meta["location"] = location
 
-        followers = {}
-        followers[myKey] = ''
-        options = dict([('yes', '0'), ('maybe', '0'), ('no', '0')])
+        item["meta"].update(meta)
+        item["options"] = options
 
-        yield Db.batch_insert(convId, "items", {'meta':meta,
-                                                'options': options,
-                                                'followers':followers})
-
-        defer.returnValue([convId, timeuuid, acl])
+        yield Db.batch_insert(convId, "items", item)
+        defer.returnValue((convId, item))
 
 
     @defer.inlineCallbacks

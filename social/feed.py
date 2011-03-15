@@ -10,7 +10,7 @@ from telephus.cassandra import ttypes
 
 from social             import Db, utils, base, plugins, _, __
 from social.template    import render, renderDef, renderScriptBlock
-from social.auth        import IAuthInfo
+from social.isocial     import IAuthInfo
 from social.constants   import INFINITY, MAXFEEDITEMS, MAXFEEDITEMSBYTYPE
 
 
