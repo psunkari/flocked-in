@@ -558,7 +558,7 @@ def addSampleData(client):
                                         "uuid": timeUUID,
                                         "target": ashokKey
                                     }})
-    userItemValue = ":".join(["I", prasadToAshokKey, prasadToAshokKey, "activity", prasadKey])
+    userItemValue = ":".join(["I", prasadToAshokKey, prasadToAshokKey, "activity", prasadKey, ""])
     yield client.insert(prasadKey, "userItems", userItemValue, timeUUID)
     yield client.insert(prasadKey, "feed", prasadToAshokKey, timeUUID)
     yield client.insert(prasadKey, "feedItems",
@@ -576,7 +576,7 @@ def addSampleData(client):
                                         "uuid": timeUUID,
                                         "target": prasadKey
                                     }})
-    userItemValue = ":".join(["I", ashokToPrasadKey, ashokToPrasadKey, "activity", ashokKey])
+    userItemValue = ":".join(["I", ashokToPrasadKey, ashokToPrasadKey, "activity", ashokKey, ""])
     yield client.insert(ashokKey, "userItems", userItemValue, timeUUID)
     yield client.insert(ashokKey, "feed", ashokToPrasadKey, timeUUID)
     yield client.insert(ashokKey, "feedItems",
@@ -595,7 +595,7 @@ def addSampleData(client):
                                         "uuid": timeUUID,
                                         "target": rahulKey
                                     }})
-    userItemValue = ":".join(["I", praveenToRahulKey, praveenToRahulKey, "activity", praveenKey])
+    userItemValue = ":".join(["I", praveenToRahulKey, praveenToRahulKey, "activity", praveenKey, ""])
     yield client.insert(praveenKey, "userItems", userItemValue, timeUUID)
     yield client.insert(praveenKey, "feed", praveenToRahulKey, timeUUID)
     yield client.insert(praveenKey, "feedItems",
@@ -614,7 +614,7 @@ def addSampleData(client):
                                         "uuid": timeUUID,
                                         "target": praveenKey
                                     }})
-    userItemValue = ":".join(["I", rahulToPraveenKey, rahulToPraveenKey, "activity", rahulKey])
+    userItemValue = ":".join(["I", rahulToPraveenKey, rahulToPraveenKey, "activity", rahulKey, ""])
     yield client.insert(rahulKey, "userItems", userItemValue, timeUUID)
     yield client.insert(rahulKey, "feed", rahulToPraveenKey, timeUUID)
     yield client.insert(rahulKey, "feedItems",
@@ -641,7 +641,7 @@ def addSampleData(client):
                                         "uuid": timeUUID,
                                         "target": prasadKey
                                     }})
-    userItemValue = ":".join(["I", praveenFollowingPrasadKey, praveenFollowingPrasadKey, "activity", praveenKey])
+    userItemValue = ":".join(["I", praveenFollowingPrasadKey, praveenFollowingPrasadKey, "activity", praveenKey, ""])
     yield client.insert(praveenKey, "userItems", userItemValue, timeUUID)
     yield client.insert(praveenKey, "feed", praveenFollowingPrasadKey, timeUUID)
     yield client.insert(praveenKey, "feedItems",
