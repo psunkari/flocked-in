@@ -171,10 +171,8 @@ class ItemResource(base.BaseResource):
             commentSnippet = ""
             userItemValue = ":".join([responseType, convId, convId, convType,
                                       myKey, commentSnippet])
-            yield feed.pushToFeed(myKey, timeuuid, convId, parent, responseType,
-                                  convType, convOwner, myKey)
-            deferreds = []
 
+            deferreds = []
             d = feed.pushToFeed(myKey, timeUUID, convId, parent,
                                 responseType, convType, convOwner, myKey)
             deferreds.append(d)
