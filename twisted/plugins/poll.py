@@ -49,7 +49,7 @@ class Poll(object):
         toFetchUsers.add(conv["meta"]["owner"])
 
         myVote = yield Db.get_slice(myKey, "userVotes", [convId])
-        myVote = myVote[0].column.value if myVote else ''
+        myVote = myVote[0].column.value if myVote else None
 
         startTime = conv['meta'].get('start', None)
         endTime = conv['meta'].get('end', None)
@@ -61,7 +61,7 @@ class Poll(object):
                 showResults = "True"
 
         args.setdefault("items", {})[convId] = conv
-        args.setdefault("myVote", {})[convId] = myVote
+        args.setdefault("myVotes", {})[convId] = myVote
         args.setdefault("showResults", {})[convId] = showResults
 
         defer.returnValue([toFetchUsers, toFetchGroups])

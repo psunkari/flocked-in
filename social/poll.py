@@ -13,7 +13,6 @@ class PollResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _castVote(self, request):
-
         convId = utils.getRequestArg(request, 'id')
         vote = utils.getRequestArg(request, 'option')
         myKey = request.getSession(IAuthInfo).username
