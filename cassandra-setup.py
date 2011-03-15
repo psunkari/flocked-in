@@ -183,6 +183,13 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(events)
 
 
+    notifications = CfDef(KEYSPACE, 'notifications', 'Standard', 'TimeUUIDType', None,
+                 'A feed of all the items for user, group and organization')
+    yield client.system_add_column_family(notifications)
+
+    notificationItems = CfDef(KEYSPACE, "notificationItems", "Super", "UTF8Type",
+                      "TimeUUIDType", "Notifications")
+    yield client.system_add_column_family(notificationItems)
 
 
 
@@ -651,7 +658,8 @@ def truncateColumnFamilies(client):
                "items", "itemLikes", "itemResponses", "userItems", "feed",
                "userItems_status", "userItems_link", "userItems_document",
                "feed_status", "feed_link","feed_document", "feedItems",
-               "domainOrgMap", "userVotes", "votes", 'userEvents', 'events']:
+               "domainOrgMap", "userVotes", "votes", 'userEvents', 'events',
+               "notifications", "notificationItems"]:
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 

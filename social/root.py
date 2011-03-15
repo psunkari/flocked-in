@@ -12,6 +12,7 @@ from social.register        import RegisterResource
 from social.item            import ItemResource
 from social.people          import PeopleResource
 from social.avatar          import AvatarResource
+from social.notifications   import NotificationsResource
 
 def getPluggedResources(ajax=False):
     resources = {}
@@ -36,6 +37,7 @@ class RootResource(resource.Resource):
         self._item = ItemResource()
         self._people = PeopleResource()
         self._avatars = AvatarResource()
+        self._notifications = NotificationsResource()
         self.pluginResources = getPluggedResources(False)
 
     def getChildWithDefault(self, path, request):
@@ -53,6 +55,8 @@ class RootResource(resource.Resource):
             return self._people
         elif path == "avatar":
             return self._avatars
+        elif path == "notifications":
+            return self._notifications
         elif path in plugins and self.pluginResources.has_key(path):
             return self.pluginResources[path]
         else:
@@ -69,3 +73,4 @@ class AjaxResource(RootResource):
         self._item = ItemResource(True)
         self._people = PeopleResource(True)
         self.pluginResources = getPluggedResources(True)
+        self._notifications = NotificationsResource(True)
