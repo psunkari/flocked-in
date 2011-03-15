@@ -380,7 +380,6 @@
   <%
   name = me.get("basic", {}).get("name", '')
   jobTitle = me.get("basic", {}).get("jobTitle", '')
-  avatarURI = utils.userAvatar(myKey, users[myKey])
   %>
   <form action="/register/basic" method="post" enctype="multipart/form-data">
     <div class="edit-profile">
@@ -412,38 +411,6 @@
   </form>
 </%def>
 
-<%def name="editAvatar()">
-  <%
-  name = me.get("basic", {}).get("name", '')
-  jobTitle = me.get("basic", {}).get("jobTitle", '')
-  avatarURI = utils.userAvatar(myKey, users[myKey])
-  %>
-  <form action="/register/basic" method="post" enctype="multipart/form-data">
-    <div class="edit-profile">
-
-      <ul>
-        <li><label for="dp"> Photo: </label> </li>
-        % if avatarURI:
-          <li><img src="${avatarURI}" id="avatar"/> </li>
-        % endif
-        <li><input type="file" id="dp" name="dp" accept="image/jpx, image/png, image/gif" />
-      </ul>
-
-      <ul>
-        % if emailId and emailId[0]:
-        <li><input type="hidden" value = ${emailId[0]} name="emailId" /></li>
-        %endif
-        % if myKey:
-        <li><input type="hidden" value = ${myKey} name="id" /></li>
-        %endif
-      </ul>
-      <ul>
-        <li></li>
-        <li><input type="submit" name="userInfo_submit" value="Save"/> </li>
-      </ul>
-    </div>
-  </form>
-</%def>
 
 <%def name="editDetail()">
 <form action="/register/basic" method="post" enctype="multipart/form-data">

@@ -12,16 +12,11 @@ class PeopleResource(base.BaseResource):
     isLeaf = True
     @defer.inlineCallbacks
     def _renderPeople(self, request, ):
-        (appchange, script, args) = self._getBasicArgs(request)
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
 
         orgKey = args["orgKey"]
-        myKey = args["myKey"]
         start = utils.getRequestArg(request, "start") or ''
-
-        cols = yield Db.get_slice(myKey, "users")
-        me = utils.supercolumnsToDict(cols)
-        args["me"] = me
         args["users"] = {}
 
         if not orgKey:
@@ -54,16 +49,10 @@ class PeopleResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _renderFriends(self, request):
-        (appchange, script, args) = self._getBasicArgs(request)
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
 
-        myKey = args["myKey"]
         start = utils.getRequestArg(request, "start") or ''
-
-        cols = yield Db.get_slice(myKey, "users")
-        me = utils.supercolumnsToDict(cols)
-
-        args["me"] = me
         args["users"] = {}
 
         if script and landing:

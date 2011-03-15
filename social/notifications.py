@@ -150,13 +150,8 @@ class NotificationsResource(base.BaseResource):
     @defer.inlineCallbacks
     def _renderNotifications(self, request):
 
-        (appchange, script, args) = self._getBasicArgs(request)
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
-
-        myKey = args["myKey"]
-        me = yield Db.get_slice(myKey, "users", ["basic"])
-        me = utils.supercolumnsToDict(me)
-        args["me"] = me
 
         if script and landing:
             yield render(request, "notifications.mako", **args)

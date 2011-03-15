@@ -329,16 +329,10 @@ class FeedResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _render(self, request, orgFeed=False):
-        (appchange, script, args) = self._getBasicArgs(request)
-
-        myKey = args["myKey"]
-        myOrg = args["orgKey"]
-        col = yield Db.get_slice(myKey, "users")
-
-        me = utils.supercolumnsToDict(col)
-
-        args["me"] = me
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
+
+        myOrg = args["orgKey"]
 
         if orgFeed:
             orgKey = utils.getRequestArg(request, "id")

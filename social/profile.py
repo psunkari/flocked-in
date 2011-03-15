@@ -207,14 +207,8 @@ class ProfileResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _renderEditProfile(self, request):
-        (appchange, script, args) = self._getBasicArgs(request)
-
-        myKey = args["myKey"]
-        cols = yield Db.multiget_slice([myKey], "users")
-        args["me"] = utils.supercolumnsToDict(cols[myKey])
-        args["users"] = utils.multiSuperColumnsToDict(cols)
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
-
 
         if script and landing:
             yield render(request, "profile.mako", **args)
@@ -230,12 +224,6 @@ class ProfileResource(base.BaseResource):
                                     landing, "#profile-tabs", "set", **args)
             yield renderScriptBlock(request, "profile.mako", "editBasicInfo",
                                     landing, "#profile-content", "set", **args)
-
-        if detail == "avatar":
-            yield renderScriptBlock(request, "profile.mako", "editProfileTabs",
-                                    landing, "#profile-tabs", "set", **args)
-            yield renderScriptBlock(request, "profile.mako", "editAvatar",
-                                    landing, "#profile-content", "set", **args)
         if detail == "detail":
             yield renderScriptBlock(request, "profile.mako", "editProfileTabs",
                                     landing, "#profile-tabs", "set", **args)
@@ -247,16 +235,14 @@ class ProfileResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _render(self, request):
-        (appchange, script, args) = self._getBasicArgs(request)
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
 
-        myKey = args["myKey"]
         userKey = utils.getRequestArg(request, "id") or myKey
         request.addCookie('cu', userKey, path="/ajax/profile")
 
-        cols = yield Db.multiget_slice([myKey, userKey], "users")
-        args["me"] = utils.supercolumnsToDict(cols[myKey])
-        if cols[userKey] and len(cols[userKey]):
-            args["user"] = utils.supercolumnsToDict(cols[userKey])
+        cols = yield Db.get_slice(userKey, "users")
+        if cols:
+            args["user"] = utils.supercolumnsToDict(cols)
         else:
             raise errors.UnknownUser()
 
@@ -363,6 +349,8 @@ class ProfileResource(base.BaseResource):
                                     landing, "#user-subscriptions", "set", **args)
             yield renderScriptBlock(request, "profile.mako", "user_followers",
                                     landing, "#user-followers", "set", **args)
+            yield renderScriptBlock(request, "profile.mako", "user_me",
+                                    landing, "#user-me", "set", **args)
 
         if script and landing:
             request.write("</body></html>")
