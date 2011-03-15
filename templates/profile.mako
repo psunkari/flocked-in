@@ -327,7 +327,7 @@
   <div class="conv-item">
     %for key in grp:
       <%
-        rtype, itemId, convId, convType, convOwner = key
+        rtype, itemId, convId, convType, convOwner, commentSnippet = key
         activity = reasonStr[key] % (utils.userName(convOwner, users[convOwner]), utils.itemLink(convId, convType))
       %>
       <div class="conv-data">
@@ -341,7 +341,7 @@
   <%
     block = []
     for key in userItems:
-      rtype, itemId, convId, convType, convOwnerId = key
+      rtype, itemId, convId, convType, convOwnerId, commentSnippet = key
       if not reasonStr.has_key(key):
         if len(block) > 0:
           self.activity_block(block)

@@ -510,3 +510,8 @@ a.ajax {
 .notifications {
     margin: 20px;
 }
+
+.snippet {
+    font-weight: lighter;
+    color: gray;
+}

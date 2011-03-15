@@ -32,8 +32,8 @@ class ProfileResource(base.BaseResource):
         cols = yield Db.get_slice(userKey, "userItems", reverse=True, count=count)
         for col in cols:
             value = tuple(col.column.value.split(":"))
-            rtype, itemId, convId, convType, convOwnerId = value
-
+            rtype, itemId, convId, convType, convOwnerId, commentSnippet = value
+            commentSnippet = """<span class="snippet"> "%s" </span>""" %(_(commentSnippet))
             toFetchUsers.add(convOwnerId)
             if rtype == 'I':
                 toFetchItems.add(convId)
@@ -44,10 +44,10 @@ class ProfileResource(base.BaseResource):
                 reasonStr[value] = _("liked %s's %s")
                 userItems.append(value)
             elif rtype == "L"  and convOwnerId != userKey:
-                reasonStr[value] = _("liked a comment on %s's %s")
+                reasonStr[value] = _("liked") + "%s" %(commentSnippet) + _(" comment on %s's %s")
                 userItems.append(value)
             elif rtype == "C" and convOwnerId != userKey:
-                reasonStr[value] = _("commented on %s's %s")
+                reasonStr[value] = "%s"%(commentSnippet) + _(" on %s's %s")
                 userItems.append(value)
 
         itemResponses = yield Db.multiget_slice(toFetchResponses, "itemResponses",

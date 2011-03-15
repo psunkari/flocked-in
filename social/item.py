@@ -13,6 +13,17 @@ from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
 
 
+def toSnippet(comment):
+    commentSnippet = []
+    length = 0
+    for word in comment.replace(":", "").split():
+        if length +len(word)> 20:
+            commentSnippet.append(" ...")
+            break
+        commentSnippet.append(word)
+        length += len(word)
+    return " ".join(commentSnippet)
+
 class ItemResource(base.BaseResource):
     isLeaf = True
 
@@ -163,7 +174,11 @@ class ItemResource(base.BaseResource):
             convACL = conv["meta"]["acl"]
 
             request.args["id"] = [convId]
-            userItemValue = ":".join([responseType, convId, convId, convType, myKey])
+            commentSnippet = ""
+            userItemValue = ":".join([responseType, convId, convId, convType,
+                                      myKey, commentSnippet])
+            yield feed.pushToFeed(myKey, timeuuid, convId, parent, responseType,
+                                  convType, convOwner, myKey)
             deferreds = []
 
             d = feed.pushToFeed(myKey, timeUUID, convId, parent,
@@ -211,9 +226,11 @@ class ItemResource(base.BaseResource):
         if convId:
             conv = yield Db.get(convId, "items", super_column="meta")
             conv = utils.supercolumnsToDict([conv])
+            commentSnippet = toSnippet(item["meta"].get("comment"))
         else:
             convId = itemId
             conv = item
+            commentSnippet = ""
 
         convOwnerId = conv["meta"]["owner"]
         convType = conv["meta"]["type"]
@@ -237,7 +254,9 @@ class ItemResource(base.BaseResource):
         yield Db.insert(convId, "items", "", myId, "followers")
 
         # 3. update user's feed, feedItems, feed_*
-        userItemValue = ":".join([responseType, itemId, convId, convType, convOwnerId])
+
+        userItemValue = ":".join([responseType, itemId, convId, convType,
+                                  convOwnerId, commentSnippet])
         yield Db.insert(myId, "userItems", userItemValue, timeUUID)
         if plugins.has_key(convType) and plugins[convType].hasIndex:
             yield Db.insert(myId, "userItems_"+convType, userItemValue, timeUUID)
@@ -358,7 +377,9 @@ class ItemResource(base.BaseResource):
 
         # 4. Update userItems and userItems_*
         responseType = "C"
-        userItemValue = ":".join([responseType, itemId, convId, convType, convOwnerId])
+        commentSnippet = toSnippet(comment)
+        userItemValue = ":".join([responseType, itemId, convId, convType,
+                                  convOwnerId, commentSnippet])
         yield Db.insert(myId, "userItems", userItemValue, timeUUID)
         if plugins.has_key(convType) and plugins[convType].hasIndex:
             yield Db.insert(myId, "userItems_"+convType, userItemValue, timeUUID)
