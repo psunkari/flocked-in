@@ -5,11 +5,126 @@ from zope.interface     import implements
 from twisted.plugin     import IPlugin
 from twisted.internet   import defer
 from twisted.python     import log
+from twisted.web        import server
 
 from social             import Db, utils, base, errors
 from social.template    import renderScriptBlock, render, getBlock
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
+
+
+class PollResource(base.BaseResource):
+    isLeaf = True
+    
+    @defer.inlineCallbacks
+    def _vote(self, request):
+        convId = utils.getRequestArg(request, 'id')
+        vote = utils.getRequestArg(request, 'option')
+        myKey = request.getSession(IAuthInfo).username
+        optionCounts = {}
+
+        if not vote:
+            raise errors.InvalidRequest()
+
+        item = yield Db.get_slice(convId, "items")
+        item = utils.supercolumnsToDict(item)
+
+        if not item:
+            raise errors.MissingParams()
+
+        if (item["meta"].has_key("type") and item["meta"]["type"] != "poll"):
+            raise errors.InvalidRequest()
+
+        prevVote = yield Db.get_slice(myKey, "userVotes", [convId])
+        prevVote = prevVote[0].column.value if prevVote else ''
+
+        if prevVote == vote:
+            return
+
+        if prevVote:
+            yield Db.remove(convId, "votes", myKey, prevVote)
+            prevOptionCount = yield Db.get_count(convId, "votes", prevVote)
+            optionCounts[prevVote] = str(prevOptionCount)
+
+        yield Db.insert(myKey, "userVotes", vote, convId)
+        yield Db.insert(convId, "votes",  '', myKey, vote)
+
+        voteCount = yield Db.get_count(convId, "votes", vote)
+        optionCounts[vote] = str(voteCount)
+
+        yield Db.batch_insert(convId, "items", {"counts":optionCounts})
+        yield self._results(request)
+
+    @defer.inlineCallbacks
+    def _results(self, request):
+        convId = utils.getRequestArg(request, "id");
+        if not convId:
+            raise errors.InvalidRequest()
+
+        data = {}
+        userId = request.getSession(IAuthInfo).username
+        yield poll.fetchData(data, convId, userId)
+        
+        myVotes = data["myVotes"]
+        voted = myVotes[convId] if (convId in myVotes and myVotes[convId])\
+                                else False
+
+        yield renderScriptBlock(request, "poll.mako", 'poll_results',
+                                False, '#conv-root-%s'%convId, 'set',
+                                args=[convId, voted], **data)
+
+    @defer.inlineCallbacks
+    def _change(self, request):
+        convId = utils.getRequestArg(request, "id");
+        if not convId:
+            raise errors.InvalidRequest()
+
+        data = {}
+        userId = request.getSession(IAuthInfo).username
+        yield poll.fetchData(data, convId, userId)
+        
+        myVotes = data["myVotes"]
+        voted = myVotes[convId] if (convId in myVotes and myVotes[convId])\
+                                else False
+
+        yield renderScriptBlock(request, "poll.mako", 'poll_options',
+                                False, '#conv-root-%s'%convId, 'set',
+                                args=[convId, voted], **data)
+
+    def render_POST(self, request):
+        def success(response):
+            request.finish()
+        def failure(err):
+            log.msg(err)
+            request.setResponseCode(500)
+            request.finish()
+
+        segmentCount = len(request.postpath)
+        if segmentCount == 1 and request.postpath[0] == 'vote':
+            d = self._vote(request)
+            d.addCallbacks(success, failure)
+            return server.NOT_DONE_YET
+
+    def render_GET(self, request):
+        segmentCount = len(request.postpath)
+        d = None
+        if segmentCount == 1:
+            if request.postpath[0] == 'results':
+                d = self._results(request)
+            elif request.postpath[1] == 'change':
+                d = self._change(request)
+
+        if d:
+            def success(response):
+                request.finish()
+            def failure(err):
+                log.msg(err)
+                request.setResponseCode(500)
+                request.finish()
+            d.addCallbacks(success, failure)
+            return server.NOT_DONE_YET
+        else:
+            pass # XXX: 404 error
 
 
 class Poll(object):
@@ -18,10 +133,8 @@ class Poll(object):
     position = 5
     hasIndex = False
 
-
     def shareBlockProvider(self):
         return ("poll.mako", "share_poll")
-
 
     def rootHTML(self, convId, args):
         if "convId" in args:
@@ -29,13 +142,12 @@ class Poll(object):
         else:
             return getBlock("poll.mako", "poll_root", args=[convId], **args)
 
-
     @defer.inlineCallbacks
-    def fetchData(self, args, convId=None):
+    def fetchData(self, args, convId=None, userId=None):
         toFetchUsers = set()
         toFetchGroups = set()
         convId = convId or args["convId"]
-        myKey = args["myKey"]
+        myKey = userId or args.get("myKey", None)
 
         conv = yield Db.get_slice(convId, "items", ["meta", 'options', 'counts'])
         if not len(conv):
@@ -66,7 +178,6 @@ class Poll(object):
 
         defer.returnValue([toFetchUsers, toFetchGroups])
 
-
     @defer.inlineCallbacks
     def renderRoot(self, request, convId, args):
         script = args['script']
@@ -85,7 +196,6 @@ class Poll(object):
                                         args=[convId, True], **args)
                 args['convId'] = convId
         # TODO: handle no_script case
-
 
     @defer.inlineCallbacks
     def create(self, request):
@@ -115,6 +225,18 @@ class Poll(object):
 
         yield Db.batch_insert(convId, "items", item)
         defer.returnValue((convId, item))
+
+    _ajaxResource = None
+    _resource = None
+    def getResource(self, isAjax):
+        if isAjax:
+            if not self._ajaxResource:
+                self._ajaxResource = PollResource(True)
+            return self._ajaxResource
+        else:
+            if not self._resource:
+                self._resource = PollResource()
+            return self._resource
 
 
 poll = Poll()

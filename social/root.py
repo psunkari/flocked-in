@@ -17,14 +17,11 @@ from social.notifications   import NotificationsResource
 def getPluggedResources(ajax=False):
     resources = {}
     for itemType in plugins:
-        try:
-            moduleName = 'social.%s' %(itemType)
-            resourceName = '%sResource' %(itemType.capitalize())
-            module = __import__(moduleName, fromlist = ['social'])
-            resources[itemType] = getattr(module, resourceName)(ajax)
-        except:
-            log.msg("resouce %s not found" %(itemType))
-            pass
+        plugin = plugins[itemType]
+        resource = plugin.getResource(ajax)
+        if resource:
+            resources[itemType] = resource
+
     return resources
 
 

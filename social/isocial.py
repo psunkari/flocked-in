@@ -26,7 +26,7 @@ class IItemType(Interface):
         """
         """
 
-    def post(request):
+    def getResource(isAjax):
         """
         """
 

@@ -84,9 +84,8 @@ class Status(object):
         defer.returnValue((convId, item))
 
 
-    @defer.inlineCallbacks
-    def post(self, request):
-        pass
+    def getResource(self, isAjax):
+        return None
 
 
 status = Status()

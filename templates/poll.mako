@@ -64,7 +64,7 @@
   <div class="poll-title">
     <span>${question}</span>
   </div>
-  <form action="/poll/post" method="POST" class="ajax">
+  <form action="/poll/vote" method="POST" class="ajax">
     <div class="tabular-form">
       %for option in options:
         <ul>

@@ -73,9 +73,8 @@ class Activity(object):
         raise errors.InvalidRequest()
 
 
-    @defer.inlineCallbacks
-    def post(self, request):
-        raise errors.InvalidRequest()
+    def getResource(self, isAjax):
+        return None
 
 
 activity = Activity()

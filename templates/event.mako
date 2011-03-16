@@ -38,7 +38,7 @@
         %if convId in myResponse and myResponse[convId]:
         <p> are you attending the <a href="/item?id=${convId}&type=event">event</a>?: ${myResponse[convId]} </p>
         %endif
-        <form action="/event/post" method="POST" class="ajax">
+        <form action="/event/rsvp" method="POST" class="ajax">
         <p> ${title} </p>
         % for option in options:
             <input type="radio" name="response" value= "${option}"> ${option} </input> <br/>

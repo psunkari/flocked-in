@@ -5,6 +5,7 @@ from zope.interface     import implements
 from twisted.plugin     import IPlugin
 from twisted.internet   import defer
 from twisted.python     import log
+from twisted.web        import server
 
 from social             import Db, utils, base, errors
 from social.template    import renderScriptBlock, render, getBlock
@@ -12,13 +13,69 @@ from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
 
 
+class EventResource(base.BaseResource):
+    isLeaf = True
+
+    @defer.inlineCallbacks
+    def _rsvp(self, request):
+        convId = utils.getRequestArg(request, 'id')
+        response = utils.getRequestArg(request, 'response')
+        myKey = request.getSession(IAuthInfo).username
+        optionCounts = {}
+
+        if not response or response not in ('yes', 'maybe', 'no'):
+            raise errors.InvalidRequest()
+
+        item = yield Db.get_slice(convId, "items")
+        item = utils.supercolumnsToDict(item)
+
+        if not item  :
+            raise errors.MissingParams()
+
+        if (item["meta"].has_key("type") and item["meta"]["type"] != self.itemType):
+            raise errors.InvalidRequest()
+
+        prevResponse = yield Db.get_slice(myKey, "userEvents", [convId])
+        prevResponse = prevResponse[0].column.value if prevResponse else ''
+
+        if prevResponse == response:
+            return
+
+        if prevResponse:
+            yield Db.remove(convId, "events", myKey, prevResponse)
+            prevOptionCount = yield Db.get_count(convId, "events", prevResponse)
+            optionCounts[prevResponse] = str(prevOptionCount)
+
+        yield Db.insert(myKey, "userEvents", response, convId)
+        yield Db.insert(convId, "events",  '', myKey, response)
+
+        responseCount = yield Db.get_count(convId, "events", response)
+        optionCounts[response] = str(responseCount)
+
+        yield Db.batch_insert(convId, "items", {"options":optionCounts})
+
+
+    def render_POST(self, request):
+        def success(response):
+            request.finish()
+        def failure(err):
+            log.msg(err)
+            request.finish()
+
+        segmentCount = len(request.postpath)
+        if segmentCount == 1 and request.postpath[0] == 'rsvp':
+            d = self._rsvp(request)
+            d.addCallbacks(success, failure)
+            return server.NOT_DONE_YET
+
+
+#TODO: event Invitations.
+#TODO: listing invitations chronologically.
 class Event(object):
     implements(IPlugin, IItemType)
     itemType = "event"
     position = 4
     hasIndex = False
-    #TODO: event Invitations.
-    #TODO: listing invitations chronologically.
 
 
     def shareBlockProvider(self):
@@ -110,43 +167,17 @@ class Event(object):
         defer.returnValue((convId, item))
 
 
-    @defer.inlineCallbacks
-    def post(self, request):
-        convId = utils.getRequestArg(request, 'id')
-        response = utils.getRequestArg(request, 'response')
-        myKey = request.getSession(IAuthInfo).username
-        optionCounts = {}
-
-        if not response or response not in ('yes', 'maybe', 'no'):
-            raise errors.InvalidRequest()
-
-        item = yield Db.get_slice(convId, "items")
-        item = utils.supercolumnsToDict(item)
-
-        if not item  :
-            raise errors.MissingParams()
-
-        if (item["meta"].has_key("type") and item["meta"]["type"] != self.itemType):
-            raise errors.InvalidRequest()
-
-        prevResponse = yield Db.get_slice(myKey, "userEvents", [convId])
-        prevResponse = prevResponse[0].column.value if prevResponse else ''
-
-        if prevResponse == response:
-            return
-
-        if prevResponse:
-            yield Db.remove(convId, "events", myKey, prevResponse)
-            prevOptionCount = yield Db.get_count(convId, "events", prevResponse)
-            optionCounts[prevResponse] = str(prevOptionCount)
-
-        yield Db.insert(myKey, "userEvents", response, convId)
-        yield Db.insert(convId, "events",  '', myKey, response)
-
-        responseCount = yield Db.get_count(convId, "events", response)
-        optionCounts[response] = str(responseCount)
-
-        yield Db.batch_insert(convId, "items", {"options":optionCounts})
+    _ajaxResource = None
+    _resource = None
+    def getResource(self, isAjax):
+        if isAjax:
+            if not self._ajaxResource:
+                self._ajaxResource = EventResource(True)
+            return self._ajaxResource
+        else:
+            if not self._resource:
+                self._resource = EventResource()
+            return self._resource
 
 
 event = Event()
