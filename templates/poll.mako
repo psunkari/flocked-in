@@ -73,9 +73,13 @@
   <form action="/poll/vote" method="POST" class="ajax">
     <div class="tabular-form poll-options">
       %for option in options:
+        <%
+          checked = 'checked="true"' if (voted and voted == option) else ''
+          optionId = 'option-%s-%s' % (option, convId)
+        %>
         <ul>
-          <li><input type="radio" name="option" value="${option}"/></li>
-          <li>${options[option]}</li>
+          <li><input type="radio" name="option" value="${option}" id="${optionId}" ${checked}/></li>
+          <li><label for="${optionId}">${options[option]}</label></li>
         </ul>
       %endfor
       </div>
