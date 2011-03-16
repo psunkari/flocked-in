@@ -36,9 +36,10 @@ class PollResource(base.BaseResource):
             raise errors.InvalidRequest()
 
         prevVote = yield Db.get_slice(myKey, "userVotes", [convId])
-        prevVote = prevVote[0].column.value if prevVote else ''
+        prevVote = prevVote[0].column.value if prevVote else False
 
         if prevVote == vote:
+            yield self._results(request)
             return
 
         if prevVote:
