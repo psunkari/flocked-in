@@ -63,6 +63,7 @@ a:hover, a:active, a:focus {
 }
 
 a.ajax {
+    color: #3366CC;
     cursor: pointer;
 }
 
@@ -543,16 +544,21 @@ a.ajax {
     border: 1px solid #CCC;
     float: left;
 }
-.option-0 {background-color: #004586;}
-.option-1 {background-color: #FF420E;}
-.option-2 {background-color: #FFD320;}
-.option-3 {background-color: #579d1c;}
-.option-4 {background-color: #004586;}
-.option-5 {background-color: #FF420E;}
-.option-6 {background-color: #FFD320;}
-.option-7 {background-color: #579d1c;}
-.option-8 {background-color: #004586;}
-.option-9 {background-color: #FF420E;}
+.poll-bar {
+    background-color: #888A85;
+    background-image: -webkit-gradient(
+        linear,
+        left bottom,
+        right bottom,
+        color-stop(0, #BABDB6),
+        color-stop(1, #888A85)
+    );
+    background-image: -moz-linear-gradient(
+        left center,
+        #BABDB6 0%,
+        #888A85 100%
+    );
+}
 
 .poll-results {
     list-style: none;
@@ -570,4 +576,7 @@ a.ajax {
 .poll-actions {
     clear: both;
     padding: 8px 0 0;
+}
+.poll-options {
+    margin: 5px 0;
 }

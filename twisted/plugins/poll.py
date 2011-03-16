@@ -111,7 +111,7 @@ class PollResource(base.BaseResource):
         if segmentCount == 1:
             if request.postpath[0] == 'results':
                 d = self._results(request)
-            elif request.postpath[1] == 'change':
+            elif request.postpath[0] == 'change':
                 d = self._change(request)
 
         if d:

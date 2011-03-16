@@ -26,6 +26,8 @@
     question = conv["meta"]["question"]
     options = conv["options"]
     counts = conv.get("counts", {})
+    if not voted:
+      return
   %>
   <div class="poll-title">
     <span>${question}</span>
@@ -52,10 +54,14 @@
       </li>
     %endfor
   </ul>
-  <div class="poll-actions">Total votes: ${total}</div>
+  <div class="poll-actions">
+    ${_("%d total votes")%total}
+    &nbsp;&#183;&nbsp;
+    <a class="ajax" _ref="/poll/change?id=${convId}">${_("Change vote")}</a>
+  </div>
 </%def>
 
-<%def name="poll_choices(convId, voted=False)">
+<%def name="poll_options(convId, voted=False)">
   <%
     conv = items[convId]
     question = conv["meta"]["question"]
@@ -65,7 +71,7 @@
     <span>${question}</span>
   </div>
   <form action="/poll/vote" method="POST" class="ajax">
-    <div class="tabular-form">
+    <div class="tabular-form poll-options">
       %for option in options:
         <ul>
           <li><input type="radio" name="option" value="${option}"/></li>
@@ -74,7 +80,12 @@
       %endfor
       </div>
       <input type="hidden" name="id" value="${convId}"/>
-      <input type="submit" id="submit" value="${_('Submit Vote')}"/>
+      %if voted:
+        <input type="submit" id="submit" value="${_('Update')}"/>&nbsp;
+        <a class="ajax" _ref="/poll/results?id=${convId}">${_('Go back to results')}</a>
+      %else:
+        <input type="submit" id="submit" value="${_('Vote')}"/>
+      %endif
     </form>
   </form>
 </%def>
@@ -90,36 +101,7 @@
     if voted:
       self.poll_results(convId, voted)
     else:
-      self.poll_choices(convId, voted)
+      self.poll_options(convId, voted)
   %>
-</%def>
-
-<%def name="_poll_root(convId)">
-  <%
-    conv = items[convId]
-    question = items[convId]["meta"]["question"]
-    options = items[convId]["options"]
-    counts = items[convId].get("counts", {})
-  %>
-  <div id="conv" class="conv-item">
-    <div>
-        %if convId in myVotes and myVotes[convId]:
-        <p>You voted for: ${options.get(myVotes[convId], "")} </p>
-        %endif
-        <form action="/poll/post" method="POST" class="ajax">
-        <p> ${question} </p>
-        % for option in options:
-            <input type="radio" name="option" value="${option}">${options[option]}</input> <br/>
-        % endfor
-            <input type="hidden" name="id" value="${convId}" />
-            <input type="hidden" name="type" value="poll" />
-            <input type="submit" id="submit" value="${_('Submit')}"/>
-        </form>
-        <span>${question}</span>
-        % for option in options:
-            <p> ${options[option]}: ${counts.get(option, '0')} </p>
-        %endfor
-    </div>
-  </div>
 </%def>
 
