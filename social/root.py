@@ -1,4 +1,6 @@
 
+from email.utils            import formatdate
+
 from twisted.web            import resource, server
 from twisted.internet       import defer
 from twisted.python         import log
@@ -38,6 +40,11 @@ class RootResource(resource.Resource):
         self.pluginResources = getPluggedResources(False)
 
     def getChildWithDefault(self, path, request):
+        # By default prevent caching.
+        # Any resource may change these headers later during the processing
+        request.setHeader('Expires', formatdate(0))
+        request.setHeader('Cache-control', 'private,no-cache,no-store,must-revalidate')
+
         if path == "" or path == "feed":
             return self._feed
         elif path == "profile":

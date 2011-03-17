@@ -31,6 +31,7 @@ class AvatarResource(resource.Resource):
 
             request.setHeader('Content-Type', 'image/%s' % format)
             request.setHeader('Content-Length', len(data))
+            request.setHeader('Cache-control', 'public')
             request.setHeader('Expires', expires)
             request.write(data)
             request.finish()
