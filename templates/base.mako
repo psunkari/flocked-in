@@ -101,7 +101,7 @@
   </div>
 %if script:
   <script type="text/javascript" src="/public/scripts/jquery.js"></script>
-  <script type="text/javascript" src="/public/scripts/jquery.address.js?state=/"></script>
+  <script type="text/javascript" src="/public/scripts/jquery.address.js"></script>
   <script type="text/javascript" src="/public/scripts/social.js"></script>
 %else:
 </body>

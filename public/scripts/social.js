@@ -20,6 +20,10 @@ $(document).ajaxError(function(event, request, settings) {
     alert("Error fetching: " + settings.url);
 });
 
+if (window.history &&
+    typeof window.history.pushState === "function") {
+  $.address.state("/");
+}
 var oldPath = null;
 $.address.change(function(event) {
     if (oldPath) {
