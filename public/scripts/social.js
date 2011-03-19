@@ -1,14 +1,24 @@
 
+
+/*
+ * Asynchronous GET requests
+ */
 $("a.ajax").live("click", function() {
     node = $(this)
-    if (node.attr('_ref'))
-        $.getScript('/ajax' + node.attr('_ref'))
-    else if (node.attr('href'))
-        $.address.value(node.attr('href'));
+    if (url = node.attr('_ref')) {
+        $.getScript('/ajax' + url)
+    } else if (url = node.attr('href')) {
+        $.address.value(url);
+        utils.fetchUri(url);
+    }
 
     return false;
 });
 
+
+/*
+ * Asycnchronous form submissions
+ */
 $('form.ajax').live("submit", function() {
     var node = $(this);
     $.post('/ajax' + node.attr('action'), node.serialize(), null, 'script');
@@ -16,27 +26,35 @@ $('form.ajax').live("submit", function() {
     return false;
 });
 
+
+/*
+ * Handle ajax errors
+ */
 $(document).ajaxError(function(event, request, settings) {
     alert("Error fetching: " + settings.url);
 });
 
+
+/*
+ * If the browser support HTML5 states, use them
+ */
 if (window.history &&
     typeof window.history.pushState === "function") {
   $.address.state("/");
 }
-var oldPath = null;
-$.address.change(function(event) {
-    if (oldPath) {
-        tail = '';
-        if (oldPath != event.path)
-            tail = event.queryString? "&_fp=1": "?_fp=1";
 
-        $.getScript('/ajax' + event.value + tail);
-    }
-    oldPath = event.path
+
+/*
+ * An address or the hash changed, update the page
+ */
+$.address.externalChange(function(event) {
+    utils.fetchUri(event.value)
 });
 
-// The .bind method from Prototype.js
+
+/* 
+ * The .bind method from Prototype.js
+ */
 if (!Function.prototype.bind) {
   Function.prototype.bind = function(){
     var fn = this, args = Array.prototype.slice.call(arguments),
@@ -48,10 +66,10 @@ if (!Function.prototype.bind) {
   };
 }
 
-
-
-// Load the page in Chunks.
-// Takes the already loaded resource ids as argument.
+/*
+ * Load the page in Chunks.
+ * Takes the already loaded resource ids as argument.
+ */
 function ChunkLoader(resources) {
     for (var rsrc in resources)
         this._global.push(rsrc);
@@ -179,8 +197,48 @@ ChunkLoader.prototype = {
 loader = new ChunkLoader();
 
 
+var utils = {
+    /*
+     * Fetch a URI asynchronously.
+     * Note: This is not a generic URI fetcher.  This should be used
+     *       only in situations where there is a need to check if it
+     *       is a full page load or just a partial change in the
+     *       currently displayed page.
+     */
+    _fetchUriOldPath: null,
+    fetchUri: function fetchUri(str) {
+        uri = utils.parseUri(str);
+        if (utils._fetchUriOldPath) {
+            tail = '';
+            if (utils._fetchUriOldPath != uri.path)
+                tail = uri.query? "&_fp=1": "?_fp=1";
+     
+            $.getScript('/ajax' + str + tail);
+        }
+        utils._fetchUriOldPath = uri.path;
+    },
+    
+    /*
+     * URI parser.
+     * Based on parseUri by Steven Levithan
+     * http://blog.stevenlevithan.com/archives/parseuri
+     */
+    parseUri: function parseUri(str) {
+        var matches = /^(?:([^:\/?#]+):)?(?:\/\/((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\/?#]*)(?::(\d*))?))?((((?:[^?#\/]*\/)*)([^?#]*))(?:\?([^#]*))?(?:#(.*))?)/.exec(str);
+        var keys = ["source","protocol","authority","userInfo","user","password","host","port","relative","path","directory","file","query","anchor"];
+        var uri = {}
+    
+        var i = 14
+        while (i--) uri[keys[i]] = matches[i];
+    
+        return uri
+    }
+}
 
-// Popup manager: manager for menus and other types of popups
+
+/*
+ * Popup manager: manager for menus and other types of popups
+ */
 var popup = {
     _stack: [],
 
@@ -218,9 +276,9 @@ $(document).click(function(event) {
 });
 
 
-
-
-// Handle access control related menus and dialog.
+/*
+ * Handle access control related menus and dialog.
+ */
 var acl = {
     updateGroupsList: function(target) {
         console.log("Updating groups list");
@@ -244,3 +302,4 @@ var acl = {
         evt.stopPropagation();
     }
 };
+
