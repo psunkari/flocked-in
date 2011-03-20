@@ -333,6 +333,7 @@ class FeedResource(base.BaseResource):
         landing = not self._ajax
 
         myOrg = args["orgKey"]
+        args["orgFeed"] = orgFeed
 
         if orgFeed:
             orgKey = utils.getRequestArg(request, "id")

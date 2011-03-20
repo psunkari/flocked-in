@@ -28,7 +28,11 @@
       <div id="center">
         <div class="center-header">
           <div class="titlebar">
-            <div id="title"><span class="middle title">${_("News Feed")}</span></div>
+            %if orgFeed:
+              <div id="title"><span class="middle title">${_("Company Feed")}</span></div>
+            %else:
+              <div id="title"><span class="middle title">${_("News Feed")}</span></div>
+            %endif
           </div>
           <div id="share-block">
             %if not script:
