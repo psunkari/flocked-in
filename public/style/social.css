@@ -493,33 +493,44 @@ a.ajax {
 .edu {
     background-color:#FFF;
 }
-.user-info {
-    height:55px;
 
-    display: table;
-    margin: 20px;
-}
-.user-info ul {
-    list-style-type: none;
-    margin-top: 5px;
-    margin-bottom: 5px;
-    padding: 0px;
-    border-bottom: thin ridge;
 
-}
-.user-info li{
-    width: 100px;
-    height: 30px;
-    text-align: center;
-    display: inline-block;
-    margin-bottom: 5px;
+/*
+ * List of users - friends and people in organization
+ */
+.users-wrapper {
+    padding: 15px;
 }
 
-.user-info span {
-    width: 100px;
-    height: 30px;
-    padding: 2.5px;
+.users-row {
+    float: left;
+    width: 100%;
+    min-height: 50px;
+    padding: 0 0 20px 0;
+}
 
+.users-user {
+    float: left;
+    width: 48%;
+}
+
+.users-avatar {
+    width: 48px;
+    height: 48px;
+    background-color: #CCCCCC;
+    position: absolute;
+}
+
+.users-details {
+    margin-left: 60px;
+}
+
+.user-details-title {
+    color: #888;
+}
+
+.user-details-actions {
+    margin-top: 6px;
 }
 
 

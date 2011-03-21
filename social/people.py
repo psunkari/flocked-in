@@ -19,6 +19,7 @@ class PeopleResource(base.BaseResource):
         orgKey = args["orgKey"]
         start = utils.getRequestArg(request, "start") or ''
         args["users"] = {}
+        args["heading"] = _("Organization People")
 
         if not orgKey:
             errors.MissingParams()
@@ -38,14 +39,13 @@ class PeopleResource(base.BaseResource):
         myFriends = yield Db.get_slice(myKey, "connections")
         mySubscriptions = yield Db.get_slice(myKey, "subscriptions")
 
-        args["heading"] = _("Organization People")
         args["users"] = utils.multiSuperColumnsToDict(users)
         args["myFriends"] = utils.supercolumnsToDict(myFriends)
         args["mySubscriptions"] = utils.columnsToDict(mySubscriptions)
 
         if script:
             yield renderScriptBlock(request, "people.mako", "content",
-                                    landing, "#center", "set", **args)
+                                    landing, "#users-wrapper", "set", **args)
 
         if not script:
             yield render(request, "people.mako", **args)
@@ -58,6 +58,7 @@ class PeopleResource(base.BaseResource):
 
         start = utils.getRequestArg(request, "start") or ''
         args["users"] = {}
+        args["heading"] = _("My Friends")
 
         if script and landing:
             yield render(request,"people.mako", **args)
@@ -70,13 +71,12 @@ class PeopleResource(base.BaseResource):
         friends = utils.supercolumnsToDict(friends)
         users = yield Db.multiget_slice(friends.keys(), "users", ["basic"])
 
-        args["heading"] = _("My Friends")
         args["users"] = utils.multiSuperColumnsToDict(users)
         args["myFriends"] = friends
 
         if script:
             yield renderScriptBlock(request, "people.mako", "content",
-                                    landing, "#center", "set", **args)
+                                    landing, "#users-wrapper", "set", **args)
 
         if not script:
             yield render(request, "people.mako", **args)
