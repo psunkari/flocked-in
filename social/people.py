@@ -2,7 +2,7 @@ from twisted.internet   import defer
 from twisted.web        import server
 from twisted.python     import log
 
-from social             import Db, utils, base
+from social             import Db, utils, base, _
 from social.template    import render, renderScriptBlock
 from social.isocial     import IAuthInfo
 from social.constants   import PEOPLE_PER_PAGE
@@ -38,7 +38,7 @@ class PeopleResource(base.BaseResource):
         myFriends = yield Db.get_slice(myKey, "connections")
         mySubscriptions = yield Db.get_slice(myKey, "subscriptions")
 
-        args["heading"] = "People"
+        args["heading"] = _("Organization People")
         args["users"] = utils.multiSuperColumnsToDict(users)
         args["myFriends"] = utils.supercolumnsToDict(myFriends)
         args["mySubscriptions"] = utils.columnsToDict(mySubscriptions)
@@ -68,10 +68,9 @@ class PeopleResource(base.BaseResource):
         friends = yield Db.get_slice(myKey, "connections",
                                      start=start, count=PEOPLE_PER_PAGE)
         friends = utils.supercolumnsToDict(friends)
-        #friends = [friend.super_column.name for friend in friends]
         users = yield Db.multiget_slice(friends.keys(), "users", ["basic"])
 
-        args["heading"] = "Friends"
+        args["heading"] = _("My Friends")
         args["users"] = utils.multiSuperColumnsToDict(users)
         args["myFriends"] = friends
 
@@ -86,10 +85,12 @@ class PeopleResource(base.BaseResource):
     def render_GET(self, request):
         segmentCount = len(request.postpath)
         d = None
+
         if segmentCount == 0:
             d = self._renderPeople(request)
-        if segmentCount == 1 and request.postpath[0]=="friends":
+        elif segmentCount == 1 and request.postpath[0]=="friends":
             d = self._renderFriends(request)
+
         if d:
             def callback(res):
                 request.finish()
