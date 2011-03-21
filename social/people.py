@@ -10,6 +10,7 @@ from social.constants   import PEOPLE_PER_PAGE
 
 class PeopleResource(base.BaseResource):
     isLeaf = True
+
     @defer.inlineCallbacks
     def _renderPeople(self, request, ):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
@@ -23,11 +24,11 @@ class PeopleResource(base.BaseResource):
             errors.MissingParams()
 
         if script and landing:
-            yield render(request,"people.mako", **args)
+            yield render(request, "people.mako", **args)
+
         if script and appchange:
             yield renderScriptBlock(request, "people.mako", "layout",
                                     landing, "#mainbar", "set", **args)
-
 
         employees = yield Db.get_slice(orgKey, "orgUsers",
                                        start=start, count=PEOPLE_PER_PAGE)
@@ -45,6 +46,9 @@ class PeopleResource(base.BaseResource):
         if script:
             yield renderScriptBlock(request, "people.mako", "content",
                                     landing, "#center", "set", **args)
+
+        if not script:
+            yield render(request, "people.mako", **args)
 
 
     @defer.inlineCallbacks
@@ -74,6 +78,10 @@ class PeopleResource(base.BaseResource):
         if script:
             yield renderScriptBlock(request, "people.mako", "content",
                                     landing, "#center", "set", **args)
+
+        if not script:
+            yield render(request, "people.mako", **args)
+
 
     def render_GET(self, request):
         segmentCount = len(request.postpath)
