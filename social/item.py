@@ -196,6 +196,10 @@ class ItemResource(base.BaseResource):
             toFeed = True if convType in ['status', 'poll', 'event'] else False
             yield self.renderItem(request, toFeed)
 
+            yield renderScriptBlock(request, 'feed.mako', 'share_status',
+                                    False, "#sharebar", "set", True,
+                                    handlers={"onload": "$('#sharebar-links .selected').removeClass('selected'); $('#sharebar-link-status').addClass('selected');"})
+
 
     @defer.inlineCallbacks
     def _like(self, request):
