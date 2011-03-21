@@ -52,7 +52,7 @@ $.address.externalChange(function(event) {
 });
 
 
-/* 
+/*
  * The .bind method from Prototype.js
  */
 if (!Function.prototype.bind) {
@@ -65,6 +65,35 @@ if (!Function.prototype.bind) {
     };
   };
 }
+
+
+/*
+ * Update timestamps
+ * XXX: Needs localization of strings and date formats
+ */
+window.setInterval(function() {
+    $('.timestamp').each(function(idx, item) {
+        timestamp = item.getAttribute("_ts")
+        tooltip = item.getAttribute("title");
+
+        current = new Date();
+        current = current.getTime()/1000;
+        delta = current - parseInt(timestamp);
+
+        if ((delta < 60) || (delta > 3630 && delta < 7200) || (delta > 86430)) {
+            // Do nothing.
+        } else if (delta > 86400) {
+            item.innerHTML = Math.floor(delta/86400) + " days ago";
+        } else if (delta > 7200) {
+            item.innerHTML = Math.floor(delta/3600) + " hours ago";
+        } else if (delta > 3600) {
+            item.innerHTML = "about an hour ago";
+        } else if (delta > 60) {
+            item.innerHTML = Math.floor(delta/60) + " minutes ago";
+        }
+    })
+}, 30000);
+
 
 /*
  * Load the page in Chunks.
@@ -212,12 +241,12 @@ var utils = {
             tail = '';
             if (utils._fetchUriOldPath != uri.path)
                 tail = uri.query? "&_fp=1": "?_fp=1";
-     
+
             $.getScript('/ajax' + str + tail);
         }
         utils._fetchUriOldPath = uri.path;
     },
-    
+
     /*
      * URI parser.
      * Based on parseUri by Steven Levithan
@@ -227,10 +256,10 @@ var utils = {
         var matches = /^(?:([^:\/?#]+):)?(?:\/\/((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\/?#]*)(?::(\d*))?))?((((?:[^?#\/]*\/)*)([^?#]*))(?:\?([^#]*))?(?:#(.*))?)/.exec(str);
         var keys = ["source","protocol","authority","userInfo","user","password","host","port","relative","path","directory","file","query","anchor"];
         var uri = {}
-    
+
         var i = 14
         while (i--) uri[keys[i]] = matches[i];
-    
+
         return uri
     }
 }
@@ -302,4 +331,3 @@ var acl = {
         evt.stopPropagation();
     }
 };
-
