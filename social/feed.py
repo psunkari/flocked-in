@@ -327,6 +327,7 @@ class FeedResource(base.BaseResource):
         args.update(data)
         defer.returnValue(args)
 
+
     @defer.inlineCallbacks
     def _render(self, request, orgFeed=False):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
@@ -369,6 +370,7 @@ class FeedResource(base.BaseResource):
         if not script:
             yield render(request, "feed.mako", **args)
 
+
     @defer.inlineCallbacks
     def _renderShareBlock(self, request, typ):
         landing = not self._ajax
@@ -383,29 +385,17 @@ class FeedResource(base.BaseResource):
                                 landing, "#sharebar", "set", True,
                                 handlers={"onload": "$('#sharebar-links .selected').removeClass('selected'); $('#sharebar-link-%s').addClass('selected');" % (typ)})
 
+
     def render_GET(self, request):
         segmentCount = len(request.postpath)
         d = None
 
         if segmentCount == 0 :
-            request.addCookie("_page", "feed", path="/")
             d = self._render(request)
         elif segmentCount ==1 and request.postpath[0] == "org":
             d = self._render(request, orgFeed=True)
-
         elif segmentCount == 2 and request.postpath[0] == "share":
             if self._ajax:
                 d = self._renderShareBlock(request, request.postpath[1])
 
-        if d:
-            def errback(err):
-                log.err(err)
-                request.setResponseCode(500)
-                request.finish()
-            def callback(response):
-                request.finish()
-            d.addCallbacks(callback, errback)
-        else:
-            request.finish()
-
-        return server.NOT_DONE_YET
+        return self._epilogue(request, d)

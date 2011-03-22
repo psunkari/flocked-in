@@ -29,13 +29,15 @@ class BaseResource(resource.Resource):
                 "ajax": self._ajax, "script": script}
         defer.returnValue((appchange, script, args, myKey))
 
-    def _default(self, request):
-        if not self._ajax:
-            request.redirect("/feed")
-
-        request.finish()
-
-    def request_GET(self, request):
-        self._clearAllBlocks()
-        request.finish()
-        return server.NOT_DONE_YET
+    def _epilogue(self, request, deferred=None):
+        if deferred:
+            def errback(err):
+                log.err(err)
+                request.setResponseCode(500)
+                request.finish()
+            def callback(response):
+                request.finish()
+            deferred.addCallbacks(callback, errback)
+            return server.NOT_DONE_YET
+        else:
+            pass    # TODO

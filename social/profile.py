@@ -94,6 +94,7 @@ class ProfileResource(base.BaseResource):
         args.update(data)
         defer.returnValue(args)
 
+
     @defer.inlineCallbacks
     def _follow(self, request):
         targetKey = yield utils.getValidUserKey(request, "id")
@@ -104,7 +105,6 @@ class ProfileResource(base.BaseResource):
         yield d1
         yield d2
 
-        request.finish()
 
     def _unfollow(self, request):
         targetKey = yield utils.getValidUserKey(request, "id")
@@ -118,7 +118,6 @@ class ProfileResource(base.BaseResource):
         except ttypes.NotFoundException:
             pass
 
-        request.finish()
 
     @defer.inlineCallbacks
     def _friend(self, request):
@@ -151,7 +150,7 @@ class ProfileResource(base.BaseResource):
             calls = defer.DeferredList([d1, d2])
 
         yield calls
-        request.finish()
+
 
     @defer.inlineCallbacks
     def _unfriend(self, request):
@@ -166,12 +165,13 @@ class ProfileResource(base.BaseResource):
         except ttypes.NotFoundException:
             pass
 
-        request.finish()
 
     def render_POST(self, request):
-        if len(request.postpath) == 1:
+        segmentCount = len(request.postpath)
+        d = None
+
+        if segmentCount == 1:
             action = request.postpath[0]
-            d = None
             if action == "friend":
                 d = self._friend(request)
             elif action == "unfriend":
@@ -180,30 +180,20 @@ class ProfileResource(base.BaseResource):
                 d = self._follow(request)
             elif action == "unfollow":
                 d = self._unfollow(request)
-            else:
-                self._default(request)
 
-        return server.NOT_DONE_YET
+        return self._epilogue(request, d)
+
 
     def render_GET(self, request):
-        request.addCookie("_page", "profile", path="/")
         segmentCount = len(request.postpath)
+        d = None
         if segmentCount == 0:
             d = self._render(request)
-            def errback(err):
-                log.err(err)
-                request.setResponseCode(500)
-                request.finish()
-            d.addErrback(errback)
-            return server.NOT_DONE_YET
-        if segmentCount == 1 and request.postpath[0]== 'edit':
+        elif segmentCount == 1 and request.postpath[0]== 'edit':
             d = self._renderEditProfile(request)
-            def errback(err):
-                log.err(err)
-                request.setResponseCode(500)
-                request.finish()
-            d.addErrback(errback)
-            return server.NOT_DONE_YET
+
+        return self._epilogue(request, d)
+
 
     @defer.inlineCallbacks
     def _renderEditProfile(self, request):
@@ -229,8 +219,6 @@ class ProfileResource(base.BaseResource):
                                     landing, "#profile-tabs", "set", **args)
             yield renderScriptBlock(request, "profile.mako", "editDetail",
                                     landing, "#profile-content", "set", **args)
-
-        request.finish()
 
 
     @defer.inlineCallbacks

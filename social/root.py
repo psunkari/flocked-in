@@ -16,6 +16,7 @@ from social.people          import PeopleResource
 from social.avatar          import AvatarResource
 from social.notifications   import NotificationsResource
 
+
 def getPluggedResources(ajax=False):
     resources = {}
     for itemType in plugins:
@@ -28,56 +29,61 @@ def getPluggedResources(ajax=False):
 
 
 class RootResource(resource.Resource):
-    def __init__(self):
-        self._feed = FeedResource()
-        self._ajax = AjaxResource()
-        self._profile = ProfileResource()
-        self._register = RegisterResource()
-        self._item = ItemResource()
-        self._people = PeopleResource()
-        self._avatars = AvatarResource()
-        self._notifications = NotificationsResource()
-        self.pluginResources = getPluggedResources(False)
+    def __init__(self, isAjax=False):
+        self._isAjax = isAjax
+        self._initResources()
+
+    def _initResources(self):
+        self._feed = FeedResource(self._isAjax)
+        self._profile = ProfileResource(self._isAjax)
+        self._register = RegisterResource(self._isAjax)
+        self._item = ItemResource(self._isAjax)
+        self._people = PeopleResource(self._isAjax)
+        self._notifications = NotificationsResource(self._isAjax)
+        self._pluginResources = getPluggedResources(self._isAjax)
+        if not self._isAjax:
+            self._ajax = RootResource(True)
+            self._avatars = AvatarResource()
 
     def getChildWithDefault(self, path, request):
-        # By default prevent caching.
-        # Any resource may change these headers later during the processing
-        request.setHeader('Expires', formatdate(0))
-        request.setHeader('Cache-control', 'private,no-cache,no-store,must-revalidate')
-
+        match = None
         if path == "" or path == "feed":
-            return self._feed
+            match = self._feed
         elif path == "profile":
-            return self._profile
-        elif path == "ajax":
-            return self._ajax
+            match = self._profile
+        elif path == "ajax" and not self._isAjax:
+            match = self._ajax
         elif path == "register":
-            return self._register
+            match = self._register
         elif path == "item":
-            return self._item
+            match = self._item
         elif path == "people":
-            return self._people
-        elif path == "avatar":
-            return self._avatars
+            match = self._people
+        elif path == "avatar" and not self._isAjax:
+            match = self._avatars
         elif path == "notifications":
-            return self._notifications
+            match = self._notifications
         elif path == "events":
-            if "event" in plugins and self.pluginResources.has_key("event"):
-                return self.pluginResources["event"]
-        elif path in plugins and self.pluginResources.has_key(path):
-            return self.pluginResources[path]
-        else:
-            return resource.NoResource("Page not found")
+            if "event" in plugins and self._pluginResources.has_key("event"):
+                match = self._pluginResources["event"]
+        elif path in plugins and self._pluginResources.has_key(path):
+            match = self._pluginResources[path]
 
+        if match and not self._isAjax:
+            # By default prevent caching.
+            # Any resource may change these headers later during the processing
+            request.setHeader('Expires', formatdate(0))
+            request.setHeader('Cache-control', 'private,no-cache,no-store,must-revalidate')
 
-class AjaxResource(RootResource):
-    def __init__(self):
-        self._feed = FeedResource(True)
-        self._ajax = resource.NoResource("Page not found")
-        self._avatars = resource.NoResource("Page not found")
-        self._profile = ProfileResource(True)
-        self._register = RegisterResource(True)
-        self._item = ItemResource(True)
-        self._people = PeopleResource(True)
-        self.pluginResources = getPluggedResources(True)
-        self._notifications = NotificationsResource(True)
+            # Also, add a cookie to indicate the page
+            if request.method == "GET":
+                cookiePath = None
+                if path != "ajax":
+                    cookiePath = path or "feed"
+                elif "_fp" in request.args:
+                    cookiePath = request.postpath[0]
+
+                if cookiePath:
+                    request.addCookie("_page", cookiePath, "/")
+
+        return match or resource.NoResource("Page not found")
