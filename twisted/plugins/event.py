@@ -99,7 +99,7 @@ class EventResource(base.BaseResource):
             if prevResponse in ("yes", "maybe") and response == "no":
                 #FIX: timeUUID is different from the one in 'userevents'
                 #     find the correct uuid and then remove the row.
-                yield Db.remove(myKey, "userEvents", timeUUID)
+                yield Db.remove(myKey, "userEvents", item["meta"]["uuid"])
 
         if not prevResponse:
             invitations = yield  Db.get_slice(convId, "eventInvitations",
@@ -112,8 +112,8 @@ class EventResource(base.BaseResource):
         yield Db.insert(myKey, "userEventResponse", response, convId)
         yield Db.insert(convId, "eventResponses",  '', myKey, response)
 
-        if prevResponse == "no" and response in ("yes", "maybe"):
-            yield Db.insert(myKey, "userEvents", convId, timeUUID)
+        if prevResponse not in ("yes", "maybe") and response in ("yes", "maybe"):
+            yield Db.insert(myKey, "userEvents", convId, item["meta"]["uuid"])
 
         responseCount = yield Db.get_count(convId, "eventResponses", response)
         optionCounts[response] = str(responseCount)
