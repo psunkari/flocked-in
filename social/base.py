@@ -1,6 +1,7 @@
 
 from twisted.web            import resource, server
 from twisted.internet       import defer
+from twisted.python         import log
 
 from social.isocial         import IAuthInfo
 from social                 import Db, utils
