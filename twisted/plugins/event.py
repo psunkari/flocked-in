@@ -7,7 +7,7 @@ from twisted.internet   import defer
 from twisted.python     import log
 from twisted.web        import server
 
-from social             import Db, utils, base, errors
+from social             import Db, utils, base, errors, _
 from social.template    import renderScriptBlock, render, getBlock
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
@@ -97,8 +97,6 @@ class EventResource(base.BaseResource):
             prevOptionCount = yield Db.get_count(convId, "eventResponses", prevResponse)
             optionCounts[prevResponse] = str(prevOptionCount)
             if prevResponse in ("yes", "maybe") and response == "no":
-                #FIX: timeUUID is different from the one in 'userevents'
-                #     find the correct uuid and then remove the row.
                 yield Db.remove(myKey, "userEvents", item["meta"]["uuid"])
 
         if not prevResponse:
