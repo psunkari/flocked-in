@@ -96,20 +96,14 @@ class ProfileResource(base.BaseResource):
 
 
     @defer.inlineCallbacks
-    def _follow(self, request):
-        targetKey = yield utils.getValidUserKey(request, "id")
-        myKey = auth.getMyKey(request)
-
+    def _follow(self, myKey, targetKey):
         d1 = Db.insert(myKey, "subscriptions", "", targetKey)
         d2 = Db.insert(targetKey, "followers", "", myKey)
         yield d1
         yield d2
 
 
-    def _unfollow(self, request):
-        targetKey = yield utils.getValidUserKey(request, "id")
-        myKey = auth.getMyKey(request)
-
+    def _unfollow(self, myKey, targetKey):
         try:
             d1 = Db.remove(myKey, "subscriptions", targetKey)
             d2 = Db.remove(targetKey, "followers", myKey)
@@ -120,10 +114,7 @@ class ProfileResource(base.BaseResource):
 
 
     @defer.inlineCallbacks
-    def _friend(self, request):
-        targetKey = yield utils.getValidUserKey(request, "id")
-        myKey = auth.getMyKey(request)
-
+    def _friend(self, request, myKey, targetKey):
         if not utils.areFriendlyDomains(myKey, targetKey):
             raise errors.NotAllowed()
 
@@ -136,27 +127,24 @@ class ProfileResource(base.BaseResource):
         # Check if we have a request pending from this user.
         # If yes, this just becomes accepting a local pending request
         # Else create a friend request that will be pending on the target user
-        calls = None
+        calls = []
         try:
             cols = yield Db.get(myKey, "pendingConnections", targetKey)
             d1 = Db.remove(myKey, "pendingConnections", targetKey)
             d2 = Db.remove(targetKey, "pendingConnections", myKey)
             d3 = Db.batch_insert(myKey, "connections", {targetKey: circlesMap})
             d4 = Db.batch_insert(targetKey, "connections", {myKey: {'__default__':''}})
-            calls = defer.DeferredList([d1, d2, d3])
+            calls = [d1, d2, d3]
         except ttypes.NotFoundException:
             d1 = Db.insert(myKey, "pendingConnections", '0', targetKey)
             d2 = Db.insert(targetKey, "pendingConnections", '1', myKey)
-            calls = defer.DeferredList([d1, d2])
+            calls = [d1, d2]
 
-        yield calls
+        yield defer.DeferredList(calls)
 
 
     @defer.inlineCallbacks
-    def _unfriend(self, request):
-        targetKey = yield utils.getValidUserKey(request, "id")
-        myKey = auth.getMyKey(request)
-
+    def _unfriend(self, myKey, targetKey):
         try:
             d1 = Db.remove(myKey, "connections", None, targetKey)
             d2 = Db.remove(targetKey, "connections", None, myKey)
@@ -168,19 +156,42 @@ class ProfileResource(base.BaseResource):
 
     def render_POST(self, request):
         segmentCount = len(request.postpath)
-        d = None
+        d = utils.getValidUserKey(request, "id")
+        myKey = auth.getMyKey(request)
 
-        if segmentCount == 1:
+        def callback(targetKey):
+            if segmentCount != 1:
+                raise errors.InvalidRequest()
+
+            actionDeferred = None
             action = request.postpath[0]
             if action == "friend":
-                d = self._friend(request)
+                actionDeferred = self._friend(request, myKey, targetKey)
             elif action == "unfriend":
-                d = self._unfriend(request)
+                actionDeferred = self._unfriend(myKey, targetKey)
             elif action == "follow":
-                d = self._follow(request)
+                actionDeferred = self._follow(myKey, targetKey)
             elif action == "unfollow":
-                d = self._unfollow(request)
+                actionDeferred = self._unfollow(myKey, targetKey)
+            else:
+                raise errors.InvalidRequest()
 
+            relation = Relation(myKey, [targetKey])
+            data = {"relations": relation}
+            def fetchRelations(ign):
+                return defer.DeferredList([relation.initFriendsList(),
+                                           relation.initPendingList(),
+                                           relation.initSubscriptionsList()])
+            def renderActions(ign):
+                return renderScriptBlock(request, "profile.mako",
+                            "user_actions", False, "#user-actions-%s"%targetKey,
+                            "set", args=[targetKey, False, True], **data)
+                
+            actionDeferred.addCallback(fetchRelations)
+            actionDeferred.addCallback(renderActions)
+            return actionDeferred
+
+        d.addCallback(callback)
         return self._epilogue(request, d)
 
 
