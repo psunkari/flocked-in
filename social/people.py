@@ -100,11 +100,4 @@ class PeopleResource(base.BaseResource):
         elif segmentCount == 1 and request.postpath[0]=="friends":
             d = self._renderFriends(request)
 
-        if d:
-            def callback(res):
-                request.finish()
-            def errback(err):
-                log.msg(err)
-                request.finish()
-            d.addCallbacks(callback, errback)
-            return server.NOT_DONE_YET
+        return self._epilogue(request, d)

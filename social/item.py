@@ -469,7 +469,6 @@ class ItemResource(base.BaseResource):
         segmentCount = len(request.postpath)
         d = None
         if segmentCount == 0:
-            request.addCookie("_page", "item", path="/")
             d =  self.renderItem(request)
         elif segmentCount == 1:
             path = request.postpath[0]
@@ -482,18 +481,8 @@ class ItemResource(base.BaseResource):
             elif path == 'unlike':
                 d = self._unlike(request)
 
-        if d:
-            def callback(res):
-                request.finish()
-            def errback(err):
-                log.err(err)
-                request.setResponseCode(500)
-                request.finish()
-            d.addCallbacks(callback, errback)
-            return server.NOT_DONE_YET
-        else:
-            log.msg("Not Found: %s" % request.path)
-            pass    # XXX: Throw error
+        return self._epilogue(request, d)
+
 
     def render_POST(self, request):
         segmentCount = len(request.postpath)
@@ -506,15 +495,4 @@ class ItemResource(base.BaseResource):
             elif path == 'comment':
                 d = self._comment(request)
 
-        if d:
-            def callback(res):
-                request.finish()
-            def errback(err):
-                log.err(err)
-                request.setResponseCode(500)
-                request.finish()
-
-            d.addCallbacks(callback, errback)
-            return server.NOT_DONE_YET
-        else:
-            pass # XXX: 404 error
+        return self._epilogue(request, d)

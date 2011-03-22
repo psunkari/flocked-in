@@ -14,7 +14,6 @@ from social.template    import render, renderScriptBlock
 @defer.inlineCallbacks
 def pushNotifications( itemId, convId, responseType,
                       convType, convOwner, commentOwner, timeUUID):
-
     # value = responseType:commentOwner:itemKey:convType:convOwner:
     value = ":".join([responseType, commentOwner, itemId, convType, convOwner])
     followers = yield Db.get_slice(convId, "items", super_column="followers")
@@ -25,6 +24,7 @@ def pushNotifications( itemId, convId, responseType,
             yield Db.insert(userKey, "notifications", convId, timeUUID)
             yield Db.batch_insert(userKey, "notificationItems", {convId:{timeUUID:value}})
 
+
 @defer.inlineCallbacks
 def deleteNofitications(convId, timeUUID):
     followers = yield Db.get_slice(convId, "items", super_column="followers")
@@ -33,9 +33,9 @@ def deleteNofitications(convId, timeUUID):
         yield Db.remove(userKey, "notifications", timeUUID)
         yield Db.remove(userKey, "notificationItems", timeUUID, convId)
 
+
 class NotificationsResource(base.BaseResource):
     isLeaf = True
-
 
     @defer.inlineCallbacks
     def _getNotifications(self, userKey, count=10):
@@ -82,7 +82,6 @@ class NotificationsResource(base.BaseResource):
         if not convs:
             defer.returnValue(args)
 
-
         rawNotifications = yield Db.get_slice(userKey, "notificationItems",
                                               convs, reverse=True)
         rawNotifications = utils.supercolumnsToDict(rawNotifications)
@@ -112,7 +111,6 @@ class NotificationsResource(base.BaseResource):
 
         users = utils.multiSuperColumnsToDict(users)
         groups = utils.multiSuperColumnsToDict(groups)
-
 
         commentTemplate = {1: "%s commented on %s's %s",
                            2: "%s and %s commented on %s's %s",
@@ -158,9 +156,9 @@ class NotificationsResource(base.BaseResource):
 
         defer.returnValue(args)
 
+
     @defer.inlineCallbacks
     def _renderNotifications(self, request):
-
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
 
@@ -180,10 +178,4 @@ class NotificationsResource(base.BaseResource):
 
     def render_GET(self, request):
         d = self._renderNotifications(request)
-        def callback(res):
-            request.finish()
-        def errback(err):
-            log.msg(err)
-            request.finish()
-        d.addCallbacks(callback, errback)
-        return server.NOT_DONE_YET
+        return self._epilogue(request, d)
