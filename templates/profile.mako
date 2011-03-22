@@ -131,9 +131,9 @@
   %if myKey != userKey:
   <div class="sidebar-chunk">
   <%
-    remove_cls   = " hidden" if relation.isFriend != r.REL_FRIEND else ""
-    cancel_cls   = " hidden" if relation.isFriend != r.REL_LOCAL_PENDING else ""
-    unfollow_cls = " hidden" if relation.isFollower != r.REL_FOLLOWER else ""
+    remove_cls   = " hidden" if userKey not in relations.friends else ""
+    cancel_cls   = " hidden" if relations.pending.get(userKey) != "0" else ""
+    unfollow_cls = " hidden" if userKey not in relations.subscriptions else ""
   %>
   <ul id="user-subactions-${userKey}" class="middle user-subactions v-links">
     <li><a href="/profile/unfriend?id=${userKey}" class="${remove_cls}" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}')">Remove as Friend</a></li>
@@ -157,7 +157,7 @@
     <div class="titlebar">
       <div>
         <span class="middle title">${user['basic']['name']}</span>
-        ${user_actions()}
+        ${user_actions(userKey)}
       </div>
       %if user['basic'].has_key('jobTitle'):
         <div class="subtitle">${user['basic']['jobTitle']}</div>
@@ -221,19 +221,25 @@
   </ul>
 </%def>
 
-<%def name="user_actions()">
+<%def name="user_actions(userKey, showRemove=False)">
   %if myKey != userKey:
-  <%
-    respond_cls = " hidden" if relation.isFriend != r.REL_REMOTE_PENDING else ""
-    add_cls     = " hidden" if relation.isFriend != r.REL_UNRELATED else ""
-    follow_cls  = " hidden" if relation.isFriend != r.REL_UNRELATED or relation.isFollower != r.REL_UNRELATED else ""
-    sent_cls    = " hidden" if relation.isFriend != r.REL_LOCAL_PENDING else ""
-  %>
   <ul id="user-actions-${userKey}" class="middle user-actions h-links">
-    <li class="button default${respond_cls}" onclick="$.post('/ajax/profile/friend', 'id=${userKey}')"><span class="button-text">Respond to Friend Request</span></li>
-    <li class="button disabled${sent_cls}"><span class="button-text">Friend request sent</span></li>
-    <li class="button default${add_cls}" onclick="$.post('/ajax/profile/friend', 'id=${userKey}')"><span class="button-text">Add as Friend</span></li>
-    <li class="button${follow_cls}" onclick="$.post('/ajax/profile/follow', 'id=${userKey}')"><span class="button-text">Follow User</span></li>
+    %if userKey not in relations.friends:
+      %if not relations.pending or userKey not in relations.pending:
+        <li class="button default" onclick="$.post('/ajax/profile/friend', 'id=${userKey}')"><span class="button-text">Add as Friend</span></li>
+      %elif relations.pending.get(userKey) == "1":
+        <li class="button default" onclick="$.post('/ajax/profile/friend', 'id=${userKey}')"><span class="button-text">Respond to Friend Request</span></li>
+      %else:
+        <li class="button disabled"><span class="button-text">Friend request sent</span></li>
+      %endif
+      %if userKey not in relations.subscriptions:
+        <li class="button" onclick="$.post('/ajax/profile/follow', 'id=${userKey}')"><span class="button-text">Follow User</span></li>
+      %elif showRemove:
+        <li class="button" onclick="$.post('/ajax/profile/unfollow', 'id=${userKey}')"><span class="button-text">Unfollow User</span></li>
+      %endif
+    %elif showRemove:
+      <li class="button" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}')"><span class="button-text">Unfriend User</span></li>
+    %endif
   </ul>
   %endif
 </%def>

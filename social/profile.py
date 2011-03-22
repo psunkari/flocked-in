@@ -274,10 +274,11 @@ class ProfileResource(base.BaseResource):
         # Prefetch some data about how I am related to the user.
         # This is required in order to reliably filter our profile details
         # that I don't have access to.
-        relation = Relation(myKey, userKey)
-        args["relation"] = relation
-        yield defer.DeferredList([relation.checkIsFriend(),
-                                  relation.checkIsFollowing()])
+        relation = Relation(myKey, [userKey])
+        args["relations"] = relation
+        yield defer.DeferredList([relation.initFriendsList(),
+                                  relation.initPendingList(),
+                                  relation.initSubscriptionsList()])
 
         # Reload all user-depended blocks if the currently displayed user is
         # not the same as the user for which new data is being requested.

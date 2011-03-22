@@ -5,13 +5,13 @@
 <%! from social import relations as r %>
 
 <%inherit file="base.mako"/>
-<%namespace name="item" file="item.mako"/>
+<%namespace name="profile" file="profile.mako"/>
 
 ##
 ## People page is displayed in a 3-column layout.
 ##
 <%def name="layout()">
-  <div class="contents has-left has-right">
+  <div class="contents has-left">
     <div id="left">
       <div id="nav-menu">
         ${self.nav_menu()}
@@ -52,25 +52,7 @@
     <div class="user-details-name">${utils.userName(userId, users[userId])}</div>
     <div class="user-details-title">${users[userId]["basic"].get("jobTitle", '')}</div>
     <div class="user-details-actions">
-      %if myKey != userId:
-        %if not myFriends or (userId not in myFriends):
-          <a onclick="$.post('/ajax/profile/friend', 'id=${userId}')"><span class="button ${button_class}"><span> Add as Friend</span></span></a>
-          <% button_class = "" if button_class else "default" %>
-        %else:
-          <a onclick="$.post('/ajax/profile/unfriend', 'id=${userId}')"><span class="button ${button_class} "><span> UnFriend</span></span></a>
-          <% button_class = "" if button_class else "default" %>
-        %endif
-      %endif
-      %if myKey != userId:
-        %if myFriends and userId in myFriends:
-          <!-- -->
-        %elif mySubscriptions and (userId in mySubscriptions):
-            <a onclick="$.post('/ajax/profile/unfollow', 'id=${userId}')"><span class="button ${button_class} "> <span> UnFollow </span></span></a>
-            <% button_class = "" if button_class else "default" %>
-        %else:
-            <a onclick="$.post('/ajax/profile/follow', 'id=${userId}')"><span class="button ${button_class} "><span>Follow User </span> </span></a>
-        %endif
-      %endif
+      ${profile.user_actions(userId, True)}
     </div>
   </div>
 </%def>

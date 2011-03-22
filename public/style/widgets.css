@@ -9,8 +9,8 @@
 }
 .button-text {
     display: block;
-    height: 20px;
-    line-height: 20px;
+    height: 1.5em;
+    line-height: 1.5em;
     padding: 0 10px;
 }
 .button a {

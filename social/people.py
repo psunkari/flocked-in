@@ -3,6 +3,7 @@ from twisted.web        import server
 from twisted.python     import log
 
 from social             import Db, utils, base, _
+from social.relations   import Relation
 from social.template    import render, renderScriptBlock
 from social.isocial     import IAuthInfo
 from social.constants   import PEOPLE_PER_PAGE
@@ -35,13 +36,16 @@ class PeopleResource(base.BaseResource):
                                        start=start, count=PEOPLE_PER_PAGE)
         employees = [employee.column.name for employee in employees]
 
-        users = yield Db.multiget_slice(employees, "users", ["basic"])
-        myFriends = yield Db.get_slice(myKey, "connections")
-        mySubscriptions = yield Db.get_slice(myKey, "subscriptions")
+        usersDeferred = Db.multiget_slice(employees, "users", ["basic"])
+        relation = Relation(myKey, employees)
+        results = yield defer.DeferredList([usersDeferred,
+                                            relation.initFriendsList(),
+                                            relation.initPendingList(),
+                                            relation.initSubscriptionsList()])
 
-        args["users"] = utils.multiSuperColumnsToDict(users)
-        args["myFriends"] = utils.supercolumnsToDict(myFriends)
-        args["mySubscriptions"] = utils.columnsToDict(mySubscriptions)
+        # First result tuple contains the list of user objects.
+        args["users"] = utils.multiSuperColumnsToDict(results[0][1])
+        args["relations"] = relation
 
         if script:
             yield renderScriptBlock(request, "people.mako", "content",
@@ -68,11 +72,16 @@ class PeopleResource(base.BaseResource):
 
         friends = yield Db.get_slice(myKey, "connections",
                                      start=start, count=PEOPLE_PER_PAGE)
-        friends = utils.supercolumnsToDict(friends)
+        friends = dict((x.super_column.name,\
+                        [y.value for y in x.super_column.columns])\
+                       for x in friends)
+
+        relation = Relation(myKey, friends.keys())
+        relation.friends = friends
         users = yield Db.multiget_slice(friends.keys(), "users", ["basic"])
 
         args["users"] = utils.multiSuperColumnsToDict(users)
-        args["myFriends"] = friends
+        args["relations"] = relation
 
         if script:
             yield renderScriptBlock(request, "people.mako", "content",

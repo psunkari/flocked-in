@@ -269,6 +269,10 @@ a.ajax {
     float: right;
 }
 
+#userprofile .title {
+    margin-right: 20px;
+}
+
 #profile-summary {
     margin-bottom: -21px;
 }
@@ -278,7 +282,7 @@ a.ajax {
 }
 
 .user-actions {
-    margin: 0 10px;
+    font-size: 11px;
 }
 .user-actions > .button {
     margin-right: 6px;
@@ -498,15 +502,17 @@ a.ajax {
 /*
  * List of users - friends and people in organization
  */
-.users-wrapper {
-    padding: 15px;
+#users-wrapper {
+    padding: 20px;
 }
 
 .users-row {
     float: left;
     width: 100%;
     min-height: 50px;
-    padding: 0 0 20px 0;
+    padding: 0 0 10px 0;
+    margin: 0 0 10px 0;
+    border-bottom: 1px solid #EEE;
 }
 
 .users-user {
