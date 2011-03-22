@@ -174,13 +174,31 @@ def createColumnFamilies(client):
                         'UTF8Type', 'option - voter map')
     yield client.system_add_column_family(votes)
 
-    userEvents = CfDef(KEYSPACE, 'userEvents', 'Standard', 'UTF8Type', None,
-                                'Map of users to Events')
-    yield client.system_add_column_family(userEvents)
 
-    events = CfDef(KEYSPACE, 'events', 'Super', 'UTF8Type',
-                        'UTF8Type', 'response - user map')
-    yield client.system_add_column_family(events)
+
+
+    userEventResponse = CfDef(KEYSPACE, 'userEventResponse', 'Standard', 'UTF8Type', None,
+                               'list of responses of users for events')
+    eventInvitations = CfDef(KEYSPACE, "eventInvitations", "Super", "UTF8Type", "TimeUUIDType",
+                             "")
+    eventResponses = CfDef(KEYSPACE, 'eventResponses', 'Super', 'UTF8Type',
+                        'UTF8Type', '')
+    userEvents = CfDef(KEYSPACE, "userEvents", "Standard", "TimeUUIDType", None,
+                       "")
+    userEventInvitations = CfDef(KEYSPACE, "userEventInvitations", "Standard", "TimeUUIDType",
+                                 None, "")
+
+
+
+    yield client.system_add_column_family(userEventResponse)
+    yield client.system_add_column_family(eventInvitations)
+    yield client.system_add_column_family(eventResponses)
+    yield client.system_add_column_family(userEvents)
+    yield client.system_add_column_family(userEventInvitations)
+
+
+
+
 
 
     notifications = CfDef(KEYSPACE, 'notifications', 'Standard', 'TimeUUIDType', None,
@@ -658,8 +676,9 @@ def truncateColumnFamilies(client):
                "items", "itemLikes", "itemResponses", "userItems", "feed",
                "userItems_status", "userItems_link", "userItems_document",
                "feed_status", "feed_link","feed_document", "feedItems",
-               "domainOrgMap", "userVotes", "votes", 'userEvents', 'events',
-               "notifications", "notificationItems"]:
+               "domainOrgMap", "userVotes", "votes", 'userEvents',
+               'eventResponses', "userEventInvitations", "userEventResponse",
+               'eventInvitations',"notifications", "notificationItems"]:
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 

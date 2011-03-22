@@ -62,6 +62,7 @@ class NotificationsResource(base.BaseResource):
         reasonStr = {}
         convLikes = {}
         commentLikes = {}
+        pluginNotifications = {}
         toFetchUsers = set()
         toFetchGroups = set()
         fetchCount = count + 5
@@ -101,6 +102,10 @@ class NotificationsResource(base.BaseResource):
                 elif responseType == "L" and itemId != convId:
                     commentLikes.setdefault(key, [])
                     commentLikes[key].append(commentOwner)
+                elif responseType == "I" and convType in plugins:
+                    pluginNotifications.setdefault(convType, {})
+                    pluginNotifications[convType].setdefault(convId, [])
+                    pluginNotifications[convType][convId].append(commentOwner)
 
         users = yield Db.multiget_slice(toFetchUsers, "users", ["basic"])
         groups = yield Db.multiget_slice(toFetchGroups, "groups", ["basic"])
@@ -140,6 +145,12 @@ class NotificationsResource(base.BaseResource):
             template = commentLikesTemplate[len(set(commentLikes[key]))]
             reason = _getReasonStr(template, convId, convType, convOwner, commentLikes[key])
             reasonStr[convId].append(reason)
+        for convType in pluginNotifications:
+            for convId in pluginNotifications[convType]:
+                reason = yield plugins[convType].getReason(convId,
+                                                     pluginNotifications[convType][convId],
+                                                     users)
+                reasonStr[convId].append(reason)
 
         args["reasonStr"] = reasonStr
         args["groups"] = groups

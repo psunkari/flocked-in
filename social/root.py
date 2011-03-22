@@ -61,6 +61,9 @@ class RootResource(resource.Resource):
             return self._avatars
         elif path == "notifications":
             return self._notifications
+        elif path == "events":
+            if "event" in plugins and self.pluginResources.has_key("event"):
+                return self.pluginResources["event"]
         elif path in plugins and self.pluginResources.has_key(path):
             return self.pluginResources[path]
         else:

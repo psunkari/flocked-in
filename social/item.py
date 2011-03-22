@@ -13,16 +13,6 @@ from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
 
 
-def toSnippet(comment):
-    commentSnippet = []
-    length = 0
-    for word in comment.replace(":", "").split():
-        if length +len(word)> 20:
-            commentSnippet.append(" ...")
-            break
-        commentSnippet.append(word)
-        length += len(word)
-    return " ".join(commentSnippet)
 
 class ItemResource(base.BaseResource):
     isLeaf = True
@@ -222,7 +212,7 @@ class ItemResource(base.BaseResource):
         if convId:
             conv = yield Db.get(convId, "items", super_column="meta")
             conv = utils.supercolumnsToDict([conv])
-            commentSnippet = toSnippet(item["meta"].get("comment"))
+            commentSnippet = utils.toSnippet(item["meta"].get("comment"))
         else:
             convId = itemId
             conv = item
@@ -373,7 +363,7 @@ class ItemResource(base.BaseResource):
 
         # 4. Update userItems and userItems_*
         responseType = "C"
-        commentSnippet = toSnippet(comment)
+        commentSnippet = utils.toSnippet(comment)
         userItemValue = ":".join([responseType, itemId, convId, convType,
                                   convOwnerId, commentSnippet])
         yield Db.insert(myId, "userItems", userItemValue, timeUUID)
