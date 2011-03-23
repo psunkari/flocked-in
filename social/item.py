@@ -43,28 +43,24 @@ class ItemResource(base.BaseResource):
             yield renderScriptBlock(request, "item.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-        users = {}
+        entities = {}
         items = {}
-        args["users"] = users
+        args["entities"] = entities
         args["items"] = items
-        toFetchUsers = set()
+        toFetchEntities = set()
 
         plugin = plugins[itemType] if itemType in plugins else None
         if plugin:
-            toFetchUsers, toFetchGroups = yield plugin.fetchData(args)
-            if toFetchUsers:
-                users = yield Db.multiget_slice(toFetchUsers, "entities", ["basic"])
-                users = utils.multiSuperColumnsToDict(users)
-                args.update({"users": users})
-            if toFetchGroups:
-                groups = yield Db.multiget_slice(toFetchGroups, "entities", ["basic"])
-                groups = utils.multiSuperColumnsToDict(groups)
-                args.update({"groups": groups})
+            toFetchEntities = yield plugin.fetchData(args)
+            if toFetchEntities:
+                entities = yield Db.multiget_slice(toFetchEntities, "entities", ["basic"])
+                entities = utils.multiSuperColumnsToDict(entities)
+                args.update({"entities": entities})
         else:
             convOwner = conv['meta']['owner']
             owner = yield Db.get(convOwner, "entities", super_column="basic")
             owner = utils.supercolumnsToDict([owner])
-            args.update({"users":{convOwner:owner}})
+            args.update({"entities":{convOwner:owner}})
             args.update({"items":{convId: conv}})
 
         renderers = []
@@ -81,10 +77,10 @@ class ItemResource(base.BaseResource):
             renderers.append(d)
 
         convOwner = args["items"][convId]["meta"]["owner"]
-        if convOwner not in args["users"]:
+        if convOwner not in args["entities"]:
             owner = yield Db.get(convOwner, "entities", super_column="basic")
             owner = utils.supercolumnsToDict([owner])
-            args.update({"users": {convOwner: owner}})
+            args.update({"entities": {convOwner: owner}})
 
         args["ownerId"] = convOwner
 
@@ -108,19 +104,19 @@ class ItemResource(base.BaseResource):
         for response in itemResponses:
             userKey, responseKey = response.column.value.split(":")
             responseKeys.append(responseKey)
-            toFetchUsers.add(userKey)
+            toFetchEntities.add(userKey)
         responseKeys.reverse()
 
         d3 = Db.multiget_slice(responseKeys + [convId], "itemLikes")
         d2 = Db.multiget_slice(responseKeys, "items", ["meta"])
-        d1 = Db.multiget_slice(toFetchUsers, "entities", ["basic"])
+        d1 = Db.multiget_slice(toFetchEntities, "entities", ["basic"])
 
         fetchedItems = yield d2
-        fetchedUsers = yield d1
+        fetchedEntities = yield d1
         myLikes = yield d3
 
         args["items"].update(utils.multiSuperColumnsToDict(fetchedItems))
-        args["users"].update(utils.multiSuperColumnsToDict(fetchedUsers))
+        args["entities"].update(utils.multiSuperColumnsToDict(fetchedEntities))
         args["myLikes"] = utils.multiColumnsToDict(myLikes)
         args["responses"] = {convId: responseKeys}
         if nextPageStart:
@@ -389,10 +385,10 @@ class ItemResource(base.BaseResource):
                         False, '#comments-header-%s' % (convId), 'set',
                         args=[convId, responseCount, numShowing, isFeed])
 
-        users = yield Db.get(myId, "entities", super_column="basic")
-        users = {myId: utils.supercolumnsToDict([users])}
+        entities = yield Db.get(myId, "entities", super_column="basic")
+        entities = {myId: utils.supercolumnsToDict([entities])}
         items = {itemId: {"meta": meta}}
-        data = {"users": users, "items": items}
+        data = {"entities": entities, "items": items}
         yield renderScriptBlock(request, 'item.mako', 'conv_comment', False,
                                 '#comments-%s' % convId, 'append', True,
                                 handlers={"onload": "$(':text', '#comment-form-%s').val(''); $('[name=\"nc\"]', '#comment-form-%s').val('%s')" % (convId, convId, numShowing)},
@@ -410,7 +406,7 @@ class ItemResource(base.BaseResource):
 
         # A copy of this code for fetching comments is present in renderItem
         # Most changes here may need to be done there too.
-        toFetchUsers = set()
+        toFetchEntities = set()
         itemResponses = yield Db.get_slice(convId, "itemResponses",
                                            start=start, reverse=True,
                                            count=constants.COMMENTS_PER_PAGE+1)
@@ -425,21 +421,21 @@ class ItemResource(base.BaseResource):
         for response in itemResponses:
             userKey, responseKey = response.column.value.split(":")
             responseKeys.append(responseKey)
-            toFetchUsers.add(userKey)
+            toFetchEntities.add(userKey)
         responseKeys.reverse()
 
         d3 = Db.multiget_slice(responseKeys + [convId], "itemLikes")
         d2 = Db.multiget_slice(responseKeys + [convId], "items", ["meta"])
-        d1 = Db.multiget_slice(toFetchUsers, "entities", ["basic"])
+        d1 = Db.multiget_slice(toFetchEntities, "entities", ["basic"])
 
         fetchedItems = yield d2
-        fetchedUsers = yield d1
+        fetchedEntities = yield d1
         myLikes = yield d3
 
         isFeed = False if request.getCookie("_page") == "item" else True
-        args = {"convId": convId, "isFeed": isFeed, "items":{}, "users": {}}
+        args = {"convId": convId, "isFeed": isFeed, "items":{}, "entities": {}}
         args["items"].update(utils.multiSuperColumnsToDict(fetchedItems))
-        args["users"].update(utils.multiSuperColumnsToDict(fetchedUsers))
+        args["entities"].update(utils.multiSuperColumnsToDict(fetchedEntities))
         args["myLikes"] = utils.multiColumnsToDict(myLikes)
         args["responses"] = {convId: responseKeys}
         if nextPageStart:

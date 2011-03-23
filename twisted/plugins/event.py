@@ -126,7 +126,7 @@ class EventResource(base.BaseResource):
 
         convs = []
         invitations = []
-        toFetchUsers = set()
+        toFetchEntities = set()
 
         if script and landing:
             yield render(request, "event.mako", **args)
@@ -160,15 +160,15 @@ class EventResource(base.BaseResource):
             if convId not in myResponses:
                 myResponses[convId] = ''
 
-        toFetchUsers.update([events[id]["meta"]["owner"] for id in events])
-        users = yield Db.multiget_slice(toFetchUsers, "entities", ["basic"])
-        users = utils.multiSuperColumnsToDict(users)
+        toFetchEntities.update([events[id]["meta"]["owner"] for id in events])
+        entities = yield Db.multiget_slice(toFetchEntities, "entities", ["basic"])
+        entities = utils.multiSuperColumnsToDict(entities)
 
 
         args["items"] = events
         args["myResponse"] = myResponses
         args["conversations"] = convs
-        args["users"] = users
+        args["entities"] = entities
         args["inviItems"] = invitations
 
         if script:
@@ -230,7 +230,7 @@ class Event(object):
         reasons = { 1: "%s invited you to the event: %s ",
                     2: "%s and %s invited you to the event: %s ",
                     3: "%s, %s and 1 other invited you to the event: %s ",
-                    4: "%s, %s and %s other invited you to the event: %s "}
+                    4: "%s, %s and %s others invited you to the event: %s "}
         vals = []
         for userId in requesters:
             userName = utils.userName(userId, users[userId])
@@ -257,8 +257,7 @@ class Event(object):
 
     @defer.inlineCallbacks
     def fetchData(self, args, convId=None):
-        toFetchUsers = set()
-        toFetchGroups = set()
+        toFetchEntities = set()
         convId = convId or args["convId"]
         myKey = args["myKey"]
 
@@ -267,7 +266,7 @@ class Event(object):
         if not conv:
             raise errors.InvalidRequest()
 
-        toFetchUsers.add(conv["meta"]["owner"])
+        toFetchEntities.add(conv["meta"]["owner"])
 
         myResponse = yield Db.get_slice(myKey, "userEventResponse", [convId])
         myResponse = myResponse[0].column.value if myResponse else ''
@@ -278,7 +277,7 @@ class Event(object):
         args.setdefault("items", {})[convId] = conv
         args.setdefault("myResponse", {})[convId] = myResponse
 
-        defer.returnValue([toFetchUsers, toFetchGroups])
+        defer.returnValue(toFetchEntities)
 
 
     @defer.inlineCallbacks

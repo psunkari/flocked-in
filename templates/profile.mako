@@ -119,7 +119,7 @@
   <div class="sidebar-chunk">
     <div class="sidebar-title">${_("Followers")}</div>
     <ul class="v-links">
-    %for group in groups:
+    %for group in userGroups:
       <li><a class="ajax" href="/group?id=${group}">${rawGroupData[group]['name']}</a></li>
     %endfor
     </ul>
@@ -344,7 +344,7 @@
     %for key in grp:
       <%
         rtype, itemId, convId, convType, convOwner, commentSnippet = key
-        activity = reasonStr[key] % (utils.userName(convOwner, users[convOwner]), utils.itemLink(convId, convType))
+        activity = reasonStr[key] % (utils.userName(convOwner, entities[convOwner]), utils.itemLink(convId, convType))
       %>
       <div class="conv-data">
         ${activity}

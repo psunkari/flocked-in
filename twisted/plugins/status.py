@@ -31,18 +31,17 @@ class Status(object):
     @defer.inlineCallbacks
     def fetchData(self, args, convId=None):
         convId = convId or args["convId"]
-        toFetchUsers = set()
-        toFetchGroups = set()
+        toFetchEntities = set()
 
         conv = yield Db.get_slice(convId, "items", ['meta'])
         conv = utils.supercolumnsToDict(conv)
         if not conv:
             raise errors.MissingParams()
 
-        toFetchUsers.add(conv["meta"]["owner"])
+        toFetchEntities.add(conv["meta"]["owner"])
         args.setdefault("items", {})[convId] = conv
 
-        defer.returnValue([toFetchUsers, toFetchGroups])
+        defer.returnValue(toFetchEntities)
 
 
     @defer.inlineCallbacks

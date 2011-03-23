@@ -84,7 +84,7 @@
     options = items[convId]["options"] or ["yes", "maybe", "no"]
     response = myResponse[convId] if convId in myResponse else False
     owner = items[convId]["meta"]["owner"]
-    ownerName = users[owner]["basic"]["name"]
+    ownerName = entities[owner]["basic"]["name"]
   %>
   <div id="conv" class="conv-item">
     <div>

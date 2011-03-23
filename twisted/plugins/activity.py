@@ -34,8 +34,7 @@ class Activity(object):
     @defer.inlineCallbacks
     def fetchData(self, args, convId=None):
         convId = convId or args["convId"]
-        toFetchUsers = set()
-        toFetchGroups = set()
+        toFetchEntities = set()
 
         conv = yield Db.get_slice(convId, "items", ['meta'])
         conv = utils.supercolumnsToDict(conv)
@@ -44,16 +43,13 @@ class Activity(object):
 
         subtype = conv["meta"]["subType"]
 
-        if subtype in ('connection', 'following'):
-            toFetchUsers.add(conv["meta"]["target"])
+        if "target" in conv["meta"]:
+            toFetchEntities.add(conv["meta"]["target"])
 
-        if subtype  == 'group':
-            toFetchGroups.add(conv["meta"]["target"])
-
-        toFetchUsers.add(conv["meta"]["owner"])
+        toFetchEntities.add(conv["meta"]["owner"])
         args.setdefault("items", {})[convId] = conv
 
-        defer.returnValue([toFetchUsers, toFetchGroups])
+        defer.returnValue(toFetchEntities)
 
 
     @defer.inlineCallbacks

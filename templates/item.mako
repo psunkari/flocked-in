@@ -80,7 +80,7 @@
 </%def>
 
 <%def name="conv_owner(ownerId)">
-  <% avatarURI = utils.userAvatar(ownerId, users[ownerId]) %>
+  <% avatarURI = utils.userAvatar(ownerId, entities[ownerId]) %>
   %if avatarURI:
     <img src="${avatarURI}" height="48" width="48"/>
   %endif
@@ -181,11 +181,11 @@
     item = items[commentId]
     userId  = item["meta"]["owner"]
     comment = item["meta"].get("comment", "")
-    fmtUser = lambda x: ("<span class='user comment-author'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (x, users[x]["basic"]["name"]))
+    fmtUser = lambda x: ("<span class='user comment-author'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (x, entities[x]["basic"]["name"]))
   %>
   <div class="conv-comment" id="comment-${commentId}">
     <div class="comment-avatar">
-      <% avatarURI = utils.userAvatar(userId, users[userId], "small") %>
+      <% avatarURI = utils.userAvatar(userId, entities[userId], "small") %>
       %if avatarURI:
         <img src="${avatarURI}" height='32' width='32'/>
       %endif
@@ -214,7 +214,7 @@
     conv = items[convId]
     type = conv["meta"]["type"]
     userId = conv["meta"]["owner"]
-    fmtUser = lambda x,y=None: ("<span class='user %s'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (y if y else '', x, users[x]["basic"]["name"]))
+    fmtUser = lambda x,y=None: ("<span class='user %s'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (y if y else '', x, entities[x]["basic"]["name"]))
   %>
   %if type == "activity":
     <%

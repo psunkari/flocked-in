@@ -113,9 +113,8 @@ class FeedResource(base.BaseResource):
     # TODO: ACLs
     @defer.inlineCallbacks
     def _getFeedItems(self, userKey, itemKey=None, count=10, orgKey=None):
-        toFetchItems = set()    # Items, users and groups that need to be fetched
-        toFetchUsers = set()    #
-        toFetchGroups = set()   #
+        toFetchItems = set()    # Items and entities that need to be fetched
+        toFetchEntities = set() #
         args = {}
         args["myKey"] = userKey
         #fetch company feed if orgKey is given
@@ -165,14 +164,12 @@ class FeedResource(base.BaseResource):
             # Collect information about recent updates by my friends
             # and subscriptions on this item.
             for update in columns:
-                # X:<user>:<item>:<users>:<groups>
+                # X:<user>:<item>:<entities>
                 item = update.value.split(':')
 
-                toFetchUsers.add(item[1])
+                toFetchEntities.add(item[1])
                 if len(item) > 3 and len(item[3]):
-                    toFetchUsers.update(item[3].split(","))
-                if len(item) > 4 and len(item[4]):
-                    toFetchGroups.update(item[4].split(","))
+                    toFetchEntities.update(item[3].split(","))
 
                 type = item[0]
                 if type == "C":
@@ -225,10 +222,10 @@ class FeedResource(base.BaseResource):
                 if itemKey not in toFetchItems and len(responses[convId]) < 2:
                     responses[convId].append(itemKey)
                     toFetchItems.add(itemKey)
-                    toFetchUsers.add(userKey_)
+                    toFetchEntities.add(userKey_)
 
-        # Concurrently fetch items, users and groups
-        # TODO: fecthing options to display polls. plugin should handle it
+        # Concurrently fetch items and entities
+        # TODO: fetching options to display polls. plugin should handle it
         fetchedItems = yield Db.multiget_slice(toFetchItems, "items",
                                                 ["meta", "options"])
         items = utils.multiSuperColumnsToDict(fetchedItems)
@@ -244,19 +241,14 @@ class FeedResource(base.BaseResource):
         result = yield defer.DeferredList(extraDataDeferreds)
         for success, ret in result:
             if success:
-                toFetchUsers_, toFetchGroups_ = ret
-                toFetchUsers.update(toFetchUsers_)
-                toFetchGroups.update(toFetchGroups_)
+                toFetchEntities.update(ret)
 
-        d2 = Db.multiget_slice(toFetchUsers, "entities", ["basic"])
-        d3 = Db.multiget_slice(toFetchGroups, "entities", ["basic"])
-        d4 = Db.multiget(toFetchItems, "itemLikes", userKey)
-        fetchedUsers = yield d2
-        fetchedGroups = yield d3
-        fetchedMyLikes = yield d4
+        d1 = Db.multiget_slice(toFetchEntities, "entities", ["basic"])
+        d2 = Db.multiget(toFetchItems, "itemLikes", userKey)
+        fetchedEntities = yield d1
+        fetchedMyLikes = yield d2
 
-        users = utils.multiSuperColumnsToDict(fetchedUsers)
-        groups = utils.multiSuperColumnsToDict(fetchedGroups)
+        entities = utils.multiSuperColumnsToDict(fetchedEntities)
         myLikes = utils.multiColumnsToDict(fetchedMyLikes)
 
         # We got all our data, do the remaining processing before
@@ -270,9 +262,9 @@ class FeedResource(base.BaseResource):
 
             # Build reason string
             if template:
-                vals = [utils.userName(id, users[id], "conv-user-cause")\
+                vals = [utils.userName(id, entities[id], "conv-user-cause")\
                         for id in reasonUserIds[convId]]
-                vals.append(utils.userName(ownerId, users[ownerId]))
+                vals.append(utils.userName(ownerId, entities[ownerId]))
                 itemType = conv["meta"]["type"]
                 vals.append(utils.itemLink(convId, itemType))
                 reasonStr[convId] = _(template) % tuple(vals)
@@ -314,16 +306,15 @@ class FeedResource(base.BaseResource):
                         "%s, %s and %s other people like this"][len(userIds)]
 
             if template:
-                vals = [utils.userName(id, users[id]) for id in userIds]
+                vals = [utils.userName(id, entities[id]) for id in userIds]
                 if likesCount > 1:
                     vals.append(str(likesCount))
 
                 likeStr[convId] = _(template) % tuple(vals)
 
-        data = {"users": users, "groups": groups,
-                "responses": responses, "myLikes": myLikes,
-                "reasonStr": reasonStr, "likeStr": likeStr,
-                "conversations": convs}
+        data = {"entities": entities, "responses": responses,
+                "myLikes": myLikes, "reasonStr": reasonStr,
+                "likeStr": likeStr, "conversations": convs}
         args.update(data)
         defer.returnValue(args)
 

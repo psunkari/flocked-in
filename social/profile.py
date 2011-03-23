@@ -18,9 +18,8 @@ class ProfileResource(base.BaseResource):
     @defer.inlineCallbacks
     def _getUserItems(self, userKey, count=10):
         toFetchItems = set()
-        toFetchUsers = set()
+        toFetchEntities = set()
         toFetchResponses = set()
-        toFetchGroups = set()
         responses = {}
         args = {"myKey":userKey}
         convs = []
@@ -28,13 +27,13 @@ class ProfileResource(base.BaseResource):
         userItems = []
         reasonStr = {}
 
-        toFetchUsers.add(userKey)
+        toFetchEntities.add(userKey)
         cols = yield Db.get_slice(userKey, "userItems", reverse=True, count=count)
         for col in cols:
             value = tuple(col.column.value.split(":"))
             rtype, itemId, convId, convType, convOwnerId, commentSnippet = value
             commentSnippet = """<span class="snippet"> "%s" </span>""" %(_(commentSnippet))
-            toFetchUsers.add(convOwnerId)
+            toFetchEntities.add(convOwnerId)
             if rtype == 'I':
                 toFetchItems.add(convId)
                 toFetchResponses.add(convId)
@@ -59,7 +58,7 @@ class ProfileResource(base.BaseResource):
                 if itemKey not in toFetchItems:
                     responses[convId].insert(0,itemKey)
                     toFetchItems.add(itemKey)
-                    toFetchUsers.add(userKey_)
+                    toFetchEntities.add(userKey_)
 
         items = yield Db.multiget(toFetchItems, "items", "meta")
         items = utils.multiSuperColumnsToDict(items)
@@ -75,22 +74,14 @@ class ProfileResource(base.BaseResource):
         result = yield defer.DeferredList(extraDataDeferreds)
         for success, ret in result:
             if success:
-                toFetchUsers_, toFetchGroups_ = ret
-                toFetchUsers.update(toFetchUsers_)
-                toFetchGroups.update(toFetchGroups_)
+                toFetchEntities.update(ret)
 
-        d2 = Db.multiget(toFetchUsers, "entities", "basic")
-        d3 = Db.multiget(toFetchGroups, "entities", "basic")
-
-        fetchedUsers = yield d2
-        fetchedGroups = yield d3
-        users = utils.multiSuperColumnsToDict(fetchedUsers)
-        groups = utils.multiSuperColumnsToDict(fetchedGroups)
+        fetchedEntities = yield Db.multiget(toFetchEntities, "entities", "basic")
+        entities = utils.multiSuperColumnsToDict(fetchedEntities)
 
         del args['myKey']
-        data = {"users":users, "groups":groups,
-                "reasonStr":reasonStr, "userItems":userItems,
-                "responses":responses}
+        data = {"entities": entities, "reasonStr": reasonStr,
+                "userItems": userItems, "responses": responses}
         args.update(data)
         defer.returnValue(args)
 
@@ -301,7 +292,7 @@ class ProfileResource(base.BaseResource):
             yield renderScriptBlock(request, "profile.mako", "user_subactions",
                                     landing, "#user-subactions", "set", **args)
 
-        fetchedUsers = set()
+        fetchedEntities = set()
         if script:
             yield renderScriptBlock(request, "profile.mako", "tabs", landing,
                                     "#profile-tabs", "set", **args)
@@ -319,7 +310,7 @@ class ProfileResource(base.BaseResource):
             followers = set(utils.columnsToDict(cols).keys())
             args["followers"] = followers
 
-            # List the users friends (if allowed and look for common friends)
+            # List the user's friends (if allowed and look for common friends)
             cols = yield Db.multiget_slice([myKey, userKey], "connections")
             myFriends = set(utils.supercolumnsToDict(cols[myKey]).keys())
             userFriends = set(utils.supercolumnsToDict(cols[userKey]).keys())
@@ -328,9 +319,9 @@ class ProfileResource(base.BaseResource):
 
             # Fetch item data (name and avatar) for subscriptions, followers,
             # user groups and common items.
-            usersToFetch = followers.union(subscriptions, commonFriends)\
-                                    .difference(fetchedUsers)
-            cols = yield Db.multiget_slice(usersToFetch,
+            entitiesToFetch = followers.union(subscriptions, commonFriends)\
+                                       .difference(fetchedEntities)
+            cols = yield Db.multiget_slice(entitiesToFetch,
                                            "entities", super_column="basic")
             rawUserData = {}
             for key, data in cols.items():
@@ -338,14 +329,14 @@ class ProfileResource(base.BaseResource):
                     rawUserData[key] = utils.columnsToDict(data)
             args["rawUserData"] = rawUserData
 
-            # List the users groups (and look for groups common with me)
+            # List the user's groups (and look for groups common with me)
             cols = yield Db.multiget_slice([myKey, userKey], "userGroups")
             myGroups = set(utils.columnsToDict(cols[userKey]).keys())
             userGroups = set(utils.columnsToDict(cols[userKey]).keys())
             commonGroups = myGroups.intersection(userGroups)
             if len(userGroups) > 10:
                 userGroups = sample(userGroups, 10)
-            args["groups"] = userGroups
+            args["userGroups"] = userGroups
             args["commonGroups"] = commonGroups
 
             groupsToFetch = commonGroups.union(userGroups)

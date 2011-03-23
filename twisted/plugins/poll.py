@@ -145,8 +145,7 @@ class Poll(object):
 
     @defer.inlineCallbacks
     def fetchData(self, args, convId=None, userId=None):
-        toFetchUsers = set()
-        toFetchGroups = set()
+        toFetchEntities = set()
         convId = convId or args["convId"]
         myKey = userId or args.get("myKey", None)
 
@@ -159,7 +158,7 @@ class Poll(object):
         if not options:
             raise errors.InvalidRequest()
 
-        toFetchUsers.add(conv["meta"]["owner"])
+        toFetchEntities.add(conv["meta"]["owner"])
 
         myVote = yield Db.get_slice(myKey, "userVotes", [convId])
         myVote = myVote[0].column.value if myVote else None
@@ -177,7 +176,7 @@ class Poll(object):
         args.setdefault("myVotes", {})[convId] = myVote
         args.setdefault("showResults", {})[convId] = showResults
 
-        defer.returnValue([toFetchUsers, toFetchGroups])
+        defer.returnValue(toFetchEntities)
 
     @defer.inlineCallbacks
     def renderRoot(self, request, convId, args):

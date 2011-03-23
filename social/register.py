@@ -116,7 +116,7 @@ class RegisterResource(BaseResource):
 
         if sender:
             cols = {'sender':sender}
-            userinfo = yield Db.get_slice(sender, "users", ["name"], super_column="basic")
+            userinfo = yield Db.get_slice(sender, "entities", ["name"], super_column="basic")
             userinfo = utils.columnsToDict(userinfo)
             name = userinfo['name'] if userinfo.has_key('name') else None
 

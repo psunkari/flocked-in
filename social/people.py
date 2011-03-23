@@ -19,7 +19,7 @@ class PeopleResource(base.BaseResource):
 
         orgKey = args["orgKey"]
         start = utils.getRequestArg(request, "start") or ''
-        args["users"] = {}
+        args["entities"] = {}
         args["heading"] = _("Organization People")
 
         if not orgKey:
@@ -44,7 +44,7 @@ class PeopleResource(base.BaseResource):
                                             relation.initSubscriptionsList()])
 
         # First result tuple contains the list of user objects.
-        args["users"] = utils.multiSuperColumnsToDict(results[0][1])
+        args["entities"] = utils.multiSuperColumnsToDict(results[0][1])
         args["relations"] = relation
 
         if script:
@@ -61,7 +61,7 @@ class PeopleResource(base.BaseResource):
         landing = not self._ajax
 
         start = utils.getRequestArg(request, "start") or ''
-        args["users"] = {}
+        args["entities"] = {}
         args["heading"] = _("My Friends")
 
         if script and landing:
@@ -78,9 +78,9 @@ class PeopleResource(base.BaseResource):
 
         relation = Relation(myKey, friends.keys())
         relation.friends = friends
-        users = yield Db.multiget_slice(friends.keys(), "entities", ["basic"])
+        entities = yield Db.multiget_slice(friends.keys(), "entities", ["basic"])
 
-        args["users"] = utils.multiSuperColumnsToDict(users)
+        args["entities"] = utils.multiSuperColumnsToDict(entities)
         args["relations"] = relation
 
         if script:

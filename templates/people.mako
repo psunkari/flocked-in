@@ -43,14 +43,14 @@
 <%def name="_displayUser(userId)">
   <% button_class = 'default' %>
   <div class="users-avatar">
-    <% avatarURI = utils.userAvatar(userId, users[userId], "medium") %>
+    <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
     %if avatarURI:
       <img src="${avatarURI}" height='48' width='48'></img>
     %endif
   </div>
   <div class="users-details">
-    <div class="user-details-name">${utils.userName(userId, users[userId])}</div>
-    <div class="user-details-title">${users[userId]["basic"].get("jobTitle", '')}</div>
+    <div class="user-details-name">${utils.userName(userId, entities[userId])}</div>
+    <div class="user-details-title">${entities[userId]["basic"].get("jobTitle", '')}</div>
     <div class="user-details-actions">
       ${profile.user_actions(userId, True, True)}
     </div>
@@ -59,7 +59,7 @@
 
 <%def name="content()">
   <% counter = 0 %>
-  %for userId in users:
+  %for userId in entities:
     %if counter % 2 == 0:
       <div class="users-row">
     %endif
