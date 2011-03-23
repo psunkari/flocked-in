@@ -146,18 +146,16 @@ class ProfileResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _unfriend(self, myKey, targetKey):
-        try:
-            d1 = Db.remove(myKey, "connections", None, targetKey)
-            d2 = Db.remove(targetKey, "connections", None, myKey)
-            yield d1
-            yield d2
-        except ttypes.NotFoundException:
-            pass
+        deferreds = [Db.remove(myKey, "connections", None, targetKey),
+                     Db.remove(targetKey, "connections", None, myKey),
+                     Db.remove(myKey, "pendingConnections", targetKey),
+                     Db.remove(targetKey, "pendingConnections", myKey)]
+        yield defer.DeferredList(deferreds)
 
 
     def render_POST(self, request):
         segmentCount = len(request.postpath)
-        d = utils.getValidEntityId(request, "id", "user")
+        requestDeferred = utils.getValidEntityId(request, "id", "user")
         myKey = auth.getMyKey(request)
 
         def callback(targetKey):
@@ -183,17 +181,27 @@ class ProfileResource(base.BaseResource):
                 return defer.DeferredList([relation.initFriendsList(),
                                            relation.initPendingList(),
                                            relation.initSubscriptionsList()])
+
+            isProfile = (request.getCookie("_page") == "profile")
             def renderActions(ign):
-                return renderScriptBlock(request, "profile.mako",
-                            "user_actions", False, "#user-actions-%s"%targetKey,
-                            "set", args=[targetKey, False, True], **data)
+                d = renderScriptBlock(request, "profile.mako", "user_actions",
+                                False, "#user-actions-%s"%targetKey, "set",
+                                args=[targetKey, False, not isProfile], **data)
+                if isProfile:
+                    def renderSubactions(ign):
+                        return renderScriptBlock(request, "profile.mako",
+                                    "user_subactions", False,
+                                    "#user-subactions-%s"%targetKey, "set",
+                                    args=[targetKey, False], **data)
+                    d.addCallback(renderSubactions)
+                return d
 
             actionDeferred.addCallback(fetchRelations)
             actionDeferred.addCallback(renderActions)
             return actionDeferred
 
-        d.addCallback(callback)
-        return self._epilogue(request, d)
+        requestDeferred.addCallback(callback)
+        return self._epilogue(request, requestDeferred)
 
 
     def render_GET(self, request):

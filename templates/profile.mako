@@ -127,22 +127,28 @@
   %endif
 </%def>
 
-<%def name="user_subactions()">
+<%def name="user_subactions(userKey, renderWrapper=True)">
   %if myKey != userKey:
+  %if renderWrapper:
   <div class="sidebar-chunk">
-  <%
-    remove_cls   = " hidden" if userKey not in relations.friends else ""
-    cancel_cls   = " hidden" if relations.pending.get(userKey) != "0" else ""
-    unfollow_cls = " hidden" if userKey not in relations.subscriptions else ""
-  %>
   <ul id="user-subactions-${userKey}" class="middle user-subactions v-links">
-    <li><a href="/profile/unfriend?id=${userKey}" class="${remove_cls}" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}')">Remove as Friend</a></li>
-    <li><a href="/profile/unfriend?id=${userKey}" class="${cancel_cls}" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}')">Cancel Friend Request</a></li>
-    <li><a href="/profile/unfollow?id=${userKey}" class="${unfollow_cls}" onclick="$.post('/ajax/profile/unfollow', 'id=${userKey}')">Stop Following</a></li>
-    <li><a href="/profile/block?id=${userKey}" onclick="$.post('/ajax/profile/block', 'id=${userKey}')">Block User</a></li>
-    <li><a href="/profile/review?id=${userKey}" onclick="$.post('/ajax/profile/review', 'id=${userKey}')">Request Admin Review</a></li>
+  %endif
+    %if userKey in relations.friends:
+      <li><a href="/profile/unfriend?id=${userKey}" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}', null, 'script'); event.preventDefault();">Remove as Friend</a></li>
+    %else:
+      %if relations.pending.get(userKey) == "0":
+        <li><a href="/profile/unfriend?id=${userKey}" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}', null, 'script'); event.preventDefault();">Cancel Friend Request</a></li>
+      %endif
+      %if userKey in relations.subscriptions:
+        <li><a href="/profile/unfollow?id=${userKey}" onclick="$.post('/ajax/profile/unfollow', 'id=${userKey}', null, 'script'); event.preventDefault();">Stop Following</a></li>
+      %endif
+    %endif
+    <li><a href="/profile/block?id=${userKey}" onclick="$.post('/ajax/profile/block', 'id=${userKey}', null, 'script'); event.preventDefault();">Block User</a></li>
+    <li><a href="/profile/review?id=${userKey}" onclick="$.post('/ajax/profile/review', 'id=${userKey}', null, 'script'); event.preventDefault();">Request Admin Review</a></li>
+  %if renderWrapper:
   </ul>
   </div>
+  %endif
   %endif
 </%def>
 
@@ -221,9 +227,9 @@
   </ul>
 </%def>
 
-<%def name="user_actions(userKey, includeWrapper=True, showRemove=False)">
+<%def name="user_actions(userKey, renderWrapper=True, showRemove=False)">
   %if myKey != userKey:
-  %if includeWrapper:
+  %if renderWrapper:
   <ul id="user-actions-${userKey}" class="middle user-actions h-links">
   %endif
     %if userKey not in relations.friends:
@@ -234,7 +240,7 @@
       %else:
         <li class="button disabled"><span class="button-text">Friend request sent</span></li>
       %endif
-      %if userKey not in relations.subscriptions:
+      %if userKey not in relations.subscriptions and relations.pending.get(userKey) != "1":
         <li class="button" onclick="$.post('/ajax/profile/follow', 'id=${userKey}', null, 'script')"><span class="button-text">Follow User</span></li>
       %elif showRemove:
         <li class="button" onclick="$.post('/ajax/profile/unfollow', 'id=${userKey}', null, 'script')"><span class="button-text">Unfollow User</span></li>
@@ -242,7 +248,7 @@
     %elif showRemove:
       <li class="button" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}', null, 'script')"><span class="button-text">Unfriend User</span></li>
     %endif
-  %if includeWrapper:
+  %if renderWrapper:
   </ul>
   %endif
   %endif
