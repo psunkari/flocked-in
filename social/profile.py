@@ -103,6 +103,7 @@ class ProfileResource(base.BaseResource):
         yield d2
 
 
+    @defer.inlineCallbacks
     def _unfollow(self, myKey, targetKey):
         try:
             d1 = Db.remove(myKey, "subscriptions", targetKey)
