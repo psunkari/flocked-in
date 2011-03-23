@@ -106,8 +106,8 @@ class NotificationsResource(base.BaseResource):
                     pluginNotifications[convType].setdefault(convId, [])
                     pluginNotifications[convType][convId].append(commentOwner)
 
-        users = yield Db.multiget_slice(toFetchUsers, "users", ["basic"])
-        groups = yield Db.multiget_slice(toFetchGroups, "groups", ["basic"])
+        users = yield Db.multiget_slice(toFetchUsers, "entities", ["basic"])
+        groups = yield Db.multiget_slice(toFetchGroups, "entities", ["basic"])
 
         users = utils.multiSuperColumnsToDict(users)
         groups = utils.multiSuperColumnsToDict(groups)

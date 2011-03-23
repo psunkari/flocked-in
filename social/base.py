@@ -23,7 +23,7 @@ class BaseResource(resource.Resource):
         appchange = True if request.args.has_key('_fp') and self._ajax or\
                             not self._ajax and script else False
 
-        me = yield Db.get_slice(myKey, "users", ["basic"])
+        me = yield Db.get_slice(myKey, "entities", ["basic"])
         me = utils.supercolumnsToDict(me)
 
         args = {"myKey": myKey, "orgKey": orgKey, "me": me,

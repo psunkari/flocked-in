@@ -61,17 +61,20 @@ def getRequestArg(request, arg):
 
 
 @defer.inlineCallbacks
-def getValidUserKey(request, arg):
+def getValidEntityId(request, arg, type="user"):
     userKey = getRequestArg(request, arg)
     if not userKey:
         raise errors.MissingParam()
-
     try:
-        col = yield Db.get(userKey, "users", "name", "basic")
-        defer.returnValue(userKey)
+        col = yield Db.get(userKey, "entities", "type", "basic")
+        if col.column.value == type:
+            defer.returnValue(userKey)
+        raise errors.InvalidEntity()
     except Exception, e:
         log.err(e)
-        raise errors.InvalidUser()
+        raise errors.InvalidEntity()
+
+
 
 
 # TODO
@@ -96,11 +99,12 @@ def getUniqueKey():
     return base64.urlsafe_b64encode(u.bytes)[:-2]
 
 
-def createNewItem(request, itemType, ownerId=None):
+def createNewItem(request, itemType, ownerId=None, acl=None):
     owner = ownerId or request.getSession(IAuthInfo).username
+    acl = acl if acl else (getRequestArg(request, "acl") or "company")
     return {
         "meta": {
-            "acl": getRequestArg(request, "acl") or "company",
+            "acl": acl,
             "type": itemType,
             "uuid": uuid.uuid1().bytes,
             "owner": owner,
@@ -131,7 +135,7 @@ def getFriends(userKey, count=10):
 
 @defer.inlineCallbacks
 def getCompanyKey(userKey):
-    cols = yield Db.get_slice(userKey, "users", ["org"], super_column="basic")
+    cols = yield Db.get_slice(userKey, "entities", ["org"], super_column="basic")
     cols = columnsToDict(cols)
     defer.returnValue(cols['org'])
 
@@ -292,3 +296,4 @@ def uuid1(node=None, clock_seq=None, timestamp=None):
         node = uuid.getnode()
     return uuid.UUID(fields=(time_low, time_mid, time_hi_version,
                         clock_seq_hi_variant, clock_seq_low, node), version=1)
+

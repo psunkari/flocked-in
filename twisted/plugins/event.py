@@ -161,7 +161,7 @@ class EventResource(base.BaseResource):
                 myResponses[convId] = ''
 
         toFetchUsers.update([events[id]["meta"]["owner"] for id in events])
-        users = yield Db.multiget_slice(toFetchUsers, "users", ["basic"])
+        users = yield Db.multiget_slice(toFetchUsers, "entities", ["basic"])
         users = utils.multiSuperColumnsToDict(users)
 
 

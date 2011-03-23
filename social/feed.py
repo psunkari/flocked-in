@@ -248,8 +248,8 @@ class FeedResource(base.BaseResource):
                 toFetchUsers.update(toFetchUsers_)
                 toFetchGroups.update(toFetchGroups_)
 
-        d2 = Db.multiget_slice(toFetchUsers, "users", ["basic"])
-        d3 = Db.multiget_slice(toFetchGroups, "groups", ["basic"])
+        d2 = Db.multiget_slice(toFetchUsers, "entities", ["basic"])
+        d3 = Db.multiget_slice(toFetchGroups, "entities", ["basic"])
         d4 = Db.multiget(toFetchItems, "itemLikes", userKey)
         fetchedUsers = yield d2
         fetchedGroups = yield d3
@@ -340,7 +340,7 @@ class FeedResource(base.BaseResource):
             orgKey = utils.getRequestArg(request, "id")
             if not orgKey or orgKey != myOrg:
                 errors.InvalidRequest()
-            cols = yield Db.get_slice(orgKey, "orgs")
+            cols = yield Db.get_slice(orgKey, "entities")
             if not cols:
                 errors.InvalidRequest()
 

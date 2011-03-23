@@ -36,7 +36,7 @@ class PeopleResource(base.BaseResource):
                                        start=start, count=PEOPLE_PER_PAGE)
         employees = [employee.column.name for employee in employees]
 
-        usersDeferred = Db.multiget_slice(employees, "users", ["basic"])
+        usersDeferred = Db.multiget_slice(employees, "entities", ["basic"])
         relation = Relation(myKey, employees)
         results = yield defer.DeferredList([usersDeferred,
                                             relation.initFriendsList(),
@@ -78,7 +78,7 @@ class PeopleResource(base.BaseResource):
 
         relation = Relation(myKey, friends.keys())
         relation.friends = friends
-        users = yield Db.multiget_slice(friends.keys(), "users", ["basic"])
+        users = yield Db.multiget_slice(friends.keys(), "entities", ["basic"])
 
         args["users"] = utils.multiSuperColumnsToDict(users)
         args["relations"] = relation

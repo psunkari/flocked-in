@@ -79,8 +79,8 @@ class ProfileResource(base.BaseResource):
                 toFetchUsers.update(toFetchUsers_)
                 toFetchGroups.update(toFetchGroups_)
 
-        d2 = Db.multiget(toFetchUsers, "users", "basic")
-        d3 = Db.multiget(toFetchGroups, "groups", "basic")
+        d2 = Db.multiget(toFetchUsers, "entities", "basic")
+        d3 = Db.multiget(toFetchGroups, "entities", "basic")
 
         fetchedUsers = yield d2
         fetchedGroups = yield d3
@@ -157,7 +157,7 @@ class ProfileResource(base.BaseResource):
 
     def render_POST(self, request):
         segmentCount = len(request.postpath)
-        d = utils.getValidUserKey(request, "id")
+        d = utils.getValidEntityId(request, "id", "user")
         myKey = auth.getMyKey(request)
 
         def callback(targetKey):
@@ -187,7 +187,7 @@ class ProfileResource(base.BaseResource):
                 return renderScriptBlock(request, "profile.mako",
                             "user_actions", False, "#user-actions-%s"%targetKey,
                             "set", args=[targetKey, False, True], **data)
-                
+
             actionDeferred.addCallback(fetchRelations)
             actionDeferred.addCallback(renderActions)
             return actionDeferred
@@ -240,9 +240,13 @@ class ProfileResource(base.BaseResource):
         userKey = utils.getRequestArg(request, "id") or myKey
         request.addCookie('cu', userKey, path="/ajax/profile")
 
-        cols = yield Db.get_slice(userKey, "users")
+        cols = yield Db.get_slice(userKey, "entities")
         if cols:
-            args["user"] = utils.supercolumnsToDict(cols)
+            user = utils.supercolumnsToDict(cols)
+            if user["basic"]["type"] != "user":
+                raise errors.UnknownUser()
+            args["user"] = user
+
         else:
             raise errors.UnknownUser()
 
@@ -319,7 +323,7 @@ class ProfileResource(base.BaseResource):
             usersToFetch = followers.union(subscriptions, commonFriends)\
                                     .difference(fetchedUsers)
             cols = yield Db.multiget_slice(usersToFetch,
-                                           "users", super_column="basic")
+                                           "entities", super_column="basic")
             rawUserData = {}
             for key, data in cols.items():
                 if len(data) > 0:
@@ -327,7 +331,7 @@ class ProfileResource(base.BaseResource):
             args["rawUserData"] = rawUserData
 
             # List the users groups (and look for groups common with me)
-            cols = yield Db.multiget_slice([myKey, userKey], "groups")
+            cols = yield Db.multiget_slice([myKey, userKey], "userGroups")
             myGroups = set(utils.columnsToDict(cols[userKey]).keys())
             userGroups = set(utils.columnsToDict(cols[userKey]).keys())
             commonGroups = myGroups.intersection(userGroups)
@@ -337,7 +341,7 @@ class ProfileResource(base.BaseResource):
             args["commonGroups"] = commonGroups
 
             groupsToFetch = commonGroups.union(userGroups)
-            cols = yield Db.multiget_slice(groupsToFetch, "groups",
+            cols = yield Db.multiget_slice(groupsToFetch, "entities",
                                            super_column="basic")
             rawGroupData = {}
             for key, data in cols.items():

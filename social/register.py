@@ -64,7 +64,7 @@ class RegisterResource(BaseResource):
     @defer.inlineCallbacks
     def _isValidMailId(self, inviteeDomain, sender):
         orgKey = yield utils.getCompanyKey(sender)
-        cols = yield Db.get_slice(orgKey, "orgs", super_column="domains")
+        cols = yield Db.get_slice(orgKey, "entities", super_column="domains")
         cols = utils.columnsToDict(cols)
         domains = cols.keys()
 
@@ -141,9 +141,9 @@ class RegisterResource(BaseResource):
         orgKey = yield getOrgKey(domain)
         if not orgKey:
             domains = {domain:''}
-            meta = {"name":domain}
+            meta = {"name":domain, "type":"org"}
             orgKey = utils.getUniqueKey()
-            yield Db.batch_insert(orgKey, "orgs", {"meta": meta, "domains":domains})
+            yield Db.batch_insert(orgKey, "entities", {"meta": meta, "domains":domains})
             yield Db.insert(domain, "domainOrgMap", '', orgKey)
 
         # TODO: check if email is already registered
@@ -167,15 +167,15 @@ class RegisterResource(BaseResource):
             count = yield Db.get_count(orgKey, "orgUsers")
             isAdmin = not count
             if isAdmin:
-                yield Db.insert(orgKey, "orgs", "", userKey, "admins")
+                yield Db.insert(orgKey, "entities", "", userKey, "admins")
 
             yield Db.batch_insert(emailId, "userAuth", {
                                         "passwordHash": md5(passwd).hexdigest(),
                                          "isAdmin": str(isAdmin),
                                          "org": orgKey,
                                          "user": userKey})
-            userInfo = {'basic': {'name': username, 'org':orgKey}}
-            yield Db.batch_insert(userKey, "users", userInfo)
+            userInfo = {'basic': {'name': username, 'org':orgKey, 'type': 'user'}}
+            yield Db.batch_insert(userKey, "entities", userInfo)
             yield Db.insert(orgKey, "orgUsers", '', userKey)
             yield Db.remove(emailId, "invitations")
         else:
@@ -330,7 +330,7 @@ class RegisterResource(BaseResource):
             userInfo["education"][key] = degree
 
         if userInfo:
-            yield Db.batch_insert(userKey, "users", userInfo)
+            yield Db.batch_insert(userKey, "entities", userInfo)
 
 
     def render_POST(self, request):

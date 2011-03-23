@@ -53,16 +53,16 @@ class ItemResource(base.BaseResource):
         if plugin:
             toFetchUsers, toFetchGroups = yield plugin.fetchData(args)
             if toFetchUsers:
-                users = yield Db.multiget_slice(toFetchUsers, "users", ["basic"])
+                users = yield Db.multiget_slice(toFetchUsers, "entities", ["basic"])
                 users = utils.multiSuperColumnsToDict(users)
                 args.update({"users": users})
             if toFetchGroups:
-                groups = yield Db.multiget_slice(toFetchGroups, "groups", ["basic"])
+                groups = yield Db.multiget_slice(toFetchGroups, "entities", ["basic"])
                 groups = utils.multiSuperColumnsToDict(groups)
                 args.update({"groups": groups})
         else:
             convOwner = conv['meta']['owner']
-            owner = yield Db.get(convOwner, "users", super_column="basic")
+            owner = yield Db.get(convOwner, "entities", super_column="basic")
             owner = utils.supercolumnsToDict([owner])
             args.update({"users":{convOwner:owner}})
             args.update({"items":{convId: conv}})
@@ -82,7 +82,7 @@ class ItemResource(base.BaseResource):
 
         convOwner = args["items"][convId]["meta"]["owner"]
         if convOwner not in args["users"]:
-            owner = yield Db.get(convOwner, "users", super_column="basic")
+            owner = yield Db.get(convOwner, "entities", super_column="basic")
             owner = utils.supercolumnsToDict([owner])
             args.update({"users": {convOwner: owner}})
 
@@ -113,7 +113,7 @@ class ItemResource(base.BaseResource):
 
         d3 = Db.multiget_slice(responseKeys + [convId], "itemLikes")
         d2 = Db.multiget_slice(responseKeys, "items", ["meta"])
-        d1 = Db.multiget_slice(toFetchUsers, "users", ["basic"])
+        d1 = Db.multiget_slice(toFetchUsers, "entities", ["basic"])
 
         fetchedItems = yield d2
         fetchedUsers = yield d1
@@ -389,7 +389,7 @@ class ItemResource(base.BaseResource):
                         False, '#comments-header-%s' % (convId), 'set',
                         args=[convId, responseCount, numShowing, isFeed])
 
-        users = yield Db.get(myId, "users", super_column="basic")
+        users = yield Db.get(myId, "entities", super_column="basic")
         users = {myId: utils.supercolumnsToDict([users])}
         items = {itemId: {"meta": meta}}
         data = {"users": users, "items": items}
@@ -430,7 +430,7 @@ class ItemResource(base.BaseResource):
 
         d3 = Db.multiget_slice(responseKeys + [convId], "itemLikes")
         d2 = Db.multiget_slice(responseKeys + [convId], "items", ["meta"])
-        d1 = Db.multiget_slice(toFetchUsers, "users", ["basic"])
+        d1 = Db.multiget_slice(toFetchUsers, "entities", ["basic"])
 
         fetchedItems = yield d2
         fetchedUsers = yield d1

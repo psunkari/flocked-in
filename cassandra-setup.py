@@ -29,11 +29,11 @@ def createKeyspace(client):
 
 @defer.inlineCallbacks
 def createColumnFamilies(client):
-    # Information about organizations. Includes meta data about the
-    # organization, list of admins and the logo.
-    orgs = CfDef(KEYSPACE, 'orgs', 'Super', 'UTF8Type', 'UTF8Type',
+    # Information about organizations/groups/Users. Includes meta data
+    # about the organization/groups/users (admins, logo, etc).
+    entities = CfDef(KEYSPACE, 'entities', 'Super', 'UTF8Type', 'UTF8Type',
                   'Organization Information - name, avatar, admins...')
-    yield client.system_add_column_family(orgs)
+    yield client.system_add_column_family(entities)
 
     domainOrgMap = CfDef(KEYSPACE, "domainOrgMap", "Standard", "UTF8Type",
                          None, 'map from domain to org key')
@@ -51,11 +51,6 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(orgGroups)
 
 
-    # Profile information for each user on the system.
-    users = CfDef(KEYSPACE, 'users', 'Super', 'UTF8Type', 'UTF8Type',
-                  'Information about the user - the user profile')
-    yield client.system_add_column_family(users)
-
     # Authentication information of the user.
     # Key is the e-mail address - contains userKey, orgKey, password etc;
     userAuth = CfDef(KEYSPACE, 'userAuth', 'Standard', 'UTF8Type', None,
@@ -72,13 +67,6 @@ def createColumnFamilies(client):
     invitations = CfDef(KEYSPACE, "invitations", 'Standard', 'UTF8Type', None,
                         "List of invitations sent out by existing users")
     yield client.system_add_column_family(invitations)
-
-
-    # Groups
-    groups = CfDef(KEYSPACE, 'groups', 'Super', 'BytesType', 'BytesType',
-                   'Groups of users')
-    yield client.system_add_column_family(groups)
-
 
     # Connections between users
     connections = CfDef(KEYSPACE, 'connections', 'Super', 'UTF8Type',
@@ -188,18 +176,11 @@ def createColumnFamilies(client):
     userEventInvitations = CfDef(KEYSPACE, "userEventInvitations", "Standard", "TimeUUIDType",
                                  None, "")
 
-
-
     yield client.system_add_column_family(userEventResponse)
     yield client.system_add_column_family(eventInvitations)
     yield client.system_add_column_family(eventResponses)
     yield client.system_add_column_family(userEvents)
     yield client.system_add_column_family(userEventInvitations)
-
-
-
-
-
 
     notifications = CfDef(KEYSPACE, 'notifications', 'Standard', 'TimeUUIDType', None,
                  'A feed of all the items for user, group and organization')
@@ -215,9 +196,10 @@ def createColumnFamilies(client):
 def addSampleData(client):
     # Create the organization
     exampleKey = utils.getUniqueKey()
-    yield client.batch_insert(exampleKey, 'orgs', {
-                                'meta': {
-                                    'name': 'Example Software'
+    yield client.batch_insert(exampleKey, 'entities', {
+                                'basic': {
+                                    'name': 'Example Software',
+                                    'type': 'org'
                                 },
                                 'domains': {
                                     'synovel.com': '',
@@ -243,13 +225,14 @@ def addSampleData(client):
                                 })
 
     # User profiles
-    yield client.batch_insert(prasadKey, 'users', {
+    yield client.batch_insert(prasadKey, 'entities', {
                                 'basic': {
                                     'name': 'Prasad Sunkari',
                                     'jobTitle': 'Hacker',
                                     'location': 'synovel.com/location/hyderabad',
                                     'desc': 'Just another Tom, Dick and Harry',
-                                    'org': exampleKey
+                                    'org': exampleKey,
+                                    'type': "user"
                                 },
                                 'expertise': {
                                     'Open Source': '',
@@ -290,13 +273,14 @@ def addSampleData(client):
                                     'birthday': '19800817',
                                     'sex': 'M'
                                 }})
-    yield client.batch_insert(ashokKey, 'users', {
+    yield client.batch_insert(ashokKey, 'entities', {
                                 'basic': {
                                     'name': 'Ashok Gudibandla',
                                     'jobTitle': 'Hacker',
                                     'location': 'synovel.com/location/hyderabad',
                                     'desc': 'Yet another Tom, Dick and Harry',
-                                    'org': exampleKey
+                                    'org': exampleKey,
+                                    'type': "user"
                                 },
                                 'expertise': {
                                     'Sales': '',
@@ -333,13 +317,14 @@ def addSampleData(client):
                                     'hometown': 'cities/in/guntur',
                                     'currentcity': 'cities/in/hyderabad'
                                 }})
-    yield client.batch_insert(praveenKey, 'users', {
+    yield client.batch_insert(praveenKey, 'entities', {
                                 'basic': {
                                     'name': 'Praveen ',
                                     'jobTitle': 'Hacker',
                                     'location': 'synovel.com/location/hyderabad',
                                     'desc': 'Yet another Tom, Dick and Harry',
-                                    'org': exampleKey
+                                    'org': exampleKey,
+                                    'type': "user"
                                 },
                                 'expertise': {
                                     'Operations': ''
@@ -372,13 +357,14 @@ def addSampleData(client):
                                     'hometown': 'cities/in/vijayawada',
                                     'currentcity': 'cities/in/hyderabad'
                                 }})
-    yield client.batch_insert(rahulKey, 'users', {
+    yield client.batch_insert(rahulKey, 'entities', {
                                 'basic': {
                                     'name': 'Rahul',
                                     'jobTitle': 'Hacker',
                                     'location': 'synovel.com/location/hyderabad',
                                     'desc': 'Just another Tom, Dick and Harry',
-                                    'org': exampleKey
+                                    'org': exampleKey,
+                                    'type': "user"
                                 },
                                 'expertise': {
                                     'Open Source': '',
@@ -418,13 +404,14 @@ def addSampleData(client):
                                     'sex': 'M'
                                 }})
 
-    yield client.batch_insert(abhiKey, 'users', {
+    yield client.batch_insert(abhiKey, 'entities', {
                                 'basic': {
                                     'name': 'Abhi',
                                     'jobTitle': 'Hacker',
                                     'location': 'synovel.com/location/hyderabad',
                                     'desc': 'Just another Tom, Dick and Harry',
-                                    'org': exampleKey
+                                    'org': exampleKey,
+                                    'type': "user"
                                 },
                                 'expertise': {
                                     'Open Source': '',
@@ -462,13 +449,14 @@ def addSampleData(client):
                                     'birthday': '19860215',
                                     'sex': 'M'
                                 }})
-    yield client.batch_insert(sandeepKey, 'users', {
+    yield client.batch_insert(sandeepKey, 'entities', {
                                 'basic': {
                                     'name': 'Sandy',
                                     'jobTitle': 'Hacker',
                                     'location': 'synovel.com/location/hyderabad',
                                     'desc': 'Just another Tom, Dick and Harry',
-                                    'org': exampleKey
+                                    'org': exampleKey,
+                                    'type': "user"
                                 },
                                 'expertise': {
                                     'Open Source': '',
@@ -669,7 +657,7 @@ def addSampleData(client):
 
 @defer.inlineCallbacks
 def truncateColumnFamilies(client):
-    for cf in ["orgs", "orgUsers", "orgGroups", "users", "userAuth",
+    for cf in ["entities", "orgUsers", "orgGroups", "userAuth",
                "sessions", "invitations", "groups", "connections",
                "connectionsByTag", "pendingConnections", "subscriptions",
                "followers", "enterpriseLinks", "userGroups", "groupMembers",
