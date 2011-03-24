@@ -27,10 +27,12 @@ parseUri: function parseUri(str) {
  * Initialize ajax requests and history handling
  */
 _fetchUriOldPath: null,
+_historyHasStates: false,
 _initAjaxRequests: function _initAjaxRequests() {
     function _fetchUri(str) {
         uri = social.parseUri(str);
-        if (social._fetchUriOldPath) {
+        if (social._fetchUriOldPath ||
+            (uri.path != "/" && !social._historyHasStates)) {
             tail = '';
             if (social._fetchUriOldPath != uri.path)
                 tail = uri.query? "&_fp=1": "?_fp=1";
@@ -65,8 +67,10 @@ _initAjaxRequests: function _initAjaxRequests() {
     });
     
     /* If the browser support HTML5 states, use them */
-    if (window.history && history.pushState)
+    if (window.history && history.pushState) {
+        social._historyHasStates = true;
         $.address.state("/");
+    }
     
     /* An address or the hash changed externally, update the page */
     $.address.externalChange(function(event) {
