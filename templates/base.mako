@@ -26,7 +26,7 @@
   </div>
   <div id="orgmenu-container" class="sidemenu-container">
     <ul id="orgmenu" class="v-links sidemenu">
-      <li><a href="/feed/org?id=${orgKey}" class="ajax">Company Feed</a></li>
+      <li><a href="/feed?id=${orgKey}" class="ajax">Company Feed</a></li>
       <li><a href="/people" class="ajax">People</a></li>
     </ul>
   </div>
