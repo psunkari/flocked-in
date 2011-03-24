@@ -91,7 +91,7 @@
       <%
         groupName = groups[groupId]["basic"].get("name", "no name")
       %>
-      <div class="user-details-name">${groupName}</div>
+      <div class="user-details-name"><a href ="/feed/group?id=${groupId}">${groupName}</a></div>
       <div class="user-details-actions">
         <ul id="user-actions-${myKey}" class="middle user-actions h-links">
         % if groupId not in myGroups:

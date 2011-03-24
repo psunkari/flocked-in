@@ -223,18 +223,8 @@ class GroupsResource(base.BaseResource):
         segmentCount = len(request.postpath)
         d = None
 
-        if segmentCount == 0:
-            d = None
-        elif segmentCount == 1 and request.postpath[0]=="create":
-            d = self._create(request)
-        elif segmentCount == 1 and request.postpath[0]=="subscribe":
-            d = self._subscribe(request)
-        elif segmentCount == 1 and request.postpath[0]=="unsubscribe":
-            d = self._unsubscribe(request)
-        elif segmentCount == 1 and request.postpath[0]=="follow":
-            d = self._follow(request)
-        elif segmentCount == 1 and request.postpath[0]=="unfollow":
-            d = self._unfollow(request)
+        if segmentCount == 1:
+            d = getattr(self, "_" + request.postpath[0])(request)
         return self._epilogue(request, d)
 
 

@@ -28,8 +28,8 @@
       <div id="center">
         <div class="center-header">
           <div class="titlebar">
-            %if orgFeed:
-              <div id="title"><span class="middle title">${_("Company Feed")}</span></div>
+            %if heading:
+              <div id="title"><span class="middle title">${_(heading)}</span></div>
             %else:
               <div id="title"><span class="middle title">${_("News Feed")}</span></div>
             %endif

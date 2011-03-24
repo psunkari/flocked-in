@@ -62,13 +62,13 @@ def getRequestArg(request, arg):
 
 @defer.inlineCallbacks
 def getValidEntityId(request, arg, type="user"):
-    userKey = getRequestArg(request, arg)
-    if not userKey:
+    entityId = getRequestArg(request, arg)
+    if not entityId:
         raise errors.MissingParam()
     try:
-        col = yield Db.get(userKey, "entities", "type", "basic")
+        col = yield Db.get(entityId, "entities", "type", "basic")
         if col.column.value == type:
-            defer.returnValue(userKey)
+            defer.returnValue(entityId)
         raise errors.InvalidEntity()
     except Exception, e:
         log.err(e)
@@ -139,6 +139,12 @@ def getCompanyKey(userKey):
     cols = columnsToDict(cols)
     defer.returnValue(cols['org'])
 
+@defer.inlineCallbacks
+def getCompanyGroups(orgId):
+    cols = yield Db.get_slice(orgId, "orgGroups")
+    cols = columnsToDict(cols)
+    defer.returnValue(cols.keys())
+
 
 @defer.inlineCallbacks
 def expandAcl(userKey, acl, parentUserKey=None):
@@ -156,6 +162,9 @@ def expandAcl(userKey, acl, parentUserKey=None):
         followers = yield getFollowers(userKey, count=INFINITY)
         keys.update(followers)
         keys.update(set([companyKey]))
+        ###XXX: group acl should be handled separately
+        groups = yield getCompanyGroups(companyKey)
+        keys.update(groups)
     defer.returnValue(keys)
 
 

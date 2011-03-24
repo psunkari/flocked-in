@@ -112,13 +112,14 @@ class FeedResource(base.BaseResource):
 
     # TODO: ACLs
     @defer.inlineCallbacks
-    def _getFeedItems(self, userKey, itemKey=None, count=10, orgKey=None):
+    def _getFeedItems(self, userKey, itemKey=None, count=10,
+                      orgKey=None, groupId=None):
         toFetchItems = set()    # Items and entities that need to be fetched
         toFetchEntities = set() #
         args = {}
         args["myKey"] = userKey
         #fetch company feed if orgKey is given
-        key = orgKey if orgKey else userKey
+        key = groupId if groupId else (orgKey if orgKey else userKey)
 
         # 1. Fetch the list of root items (conversations) that will be shown
         convs = []
@@ -320,20 +321,21 @@ class FeedResource(base.BaseResource):
 
 
     @defer.inlineCallbacks
-    def _render(self, request, orgFeed=False):
+    def _render(self, request, orgFeed=False, groupFeed=False):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
 
         myOrg = args["orgKey"]
-        args["orgFeed"] = orgFeed
+        args["heading"] = "Company Feed" if orgFeed else \
+                                    ("Group Feed" if groupFeed else "News Feed")
 
         if orgFeed:
-            orgKey = utils.getRequestArg(request, "id")
+            orgKey = yield utils.getValidEntityId(request, "id", "org")
             if not orgKey or orgKey != myOrg:
                 errors.InvalidRequest()
-            cols = yield Db.get_slice(orgKey, "entities")
-            if not cols:
-                errors.InvalidRequest()
+
+        if groupFeed:
+            groupId = yield utils.getValidEntityId(request, "id", "group")
 
         if script and landing:
             yield render(request, "feed.mako", **args)
@@ -348,6 +350,9 @@ class FeedResource(base.BaseResource):
             yield self._renderShareBlock(request, "status")
         if orgFeed:
             feedItems = yield self._getFeedItems(myKey, orgKey=orgKey)
+        elif groupFeed:
+            feedItems = yield self._getFeedItems(myKey, groupId = groupId)
+
         else:
             feedItems = yield self._getFeedItems(myKey)
         args.update(feedItems)
@@ -383,8 +388,10 @@ class FeedResource(base.BaseResource):
 
         if segmentCount == 0 :
             d = self._render(request)
-        elif segmentCount ==1 and request.postpath[0] == "org":
+        elif segmentCount == 1 and request.postpath[0] == "org":
             d = self._render(request, orgFeed=True)
+        elif segmentCount == 1 and request.postpath[0] == "group":
+            d = self._render(request, groupFeed=True)
         elif segmentCount == 2 and request.postpath[0] == "share":
             if self._ajax:
                 d = self._renderShareBlock(request, request.postpath[1])

@@ -355,6 +355,8 @@ class ProfileResource(base.BaseResource):
                                     landing, "#user-followers", "set", **args)
             yield renderScriptBlock(request, "profile.mako", "user_me",
                                     landing, "#user-me", "set", **args)
+            yield renderScriptBlock(request, "profile.mako", "user_groups",
+                                    landing, "#user-groups", "set", **args)
 
         if script and landing:
             request.write("</body></html>")
