@@ -88,6 +88,6 @@ class RootResource(resource.Resource):
                     cookiePath = request.postpath[0]
 
                 if cookiePath:
-                    request.addCookie("_page", cookiePath, "/")
+                    request.addCookie("_page", cookiePath, path="/")
 
         return match or resource.NoResource("Page not found")
