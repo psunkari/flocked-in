@@ -76,7 +76,7 @@ def renderScriptBlock(request, path, dfn, tags=False, parent=None,
             map["js"].append(id)
             map["resources"]["id"] = url
 
-    fmt = "<script>loader.load(%s);</script>\n" if tags else "loader.load(%s)\n"
+    fmt = "<script>$$.load(%s);</script>\n" if tags else "$$.load(%s)\n"
     text = fmt % json.dumps(map)
     request.write(text)
 
