@@ -31,8 +31,7 @@ _historyHasStates: false,
 _initAjaxRequests: function _initAjaxRequests() {
     function _fetchUri(str) {
         uri = social.parseUri(str);
-        if (social._fetchUriOldPath ||
-            (uri.path != "/" && !social._historyHasStates)) {
+        if (social._fetchUriOldPath) {
             tail = '';
             if (social._fetchUriOldPath != uri.path)
                 tail = uri.query? "&_fp=1": "?_fp=1";
@@ -70,6 +69,10 @@ _initAjaxRequests: function _initAjaxRequests() {
     if (window.history && history.pushState) {
         social._historyHasStates = true;
         $.address.state("/");
+    } else { 
+        var hash = window.location.hash;
+        if (hash != "" && hash != "/")
+            window.location.href = hash.substr(1);
     }
     
     /* An address or the hash changed externally, update the page */
