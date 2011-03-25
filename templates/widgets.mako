@@ -32,7 +32,7 @@
 ## a popup - most commonly a menu.
 
 <%def name="popupButton(id=None, classes='', value=None, tooltip=None)">
-  <div ${'' if not id else ('id="%s" ' % id)}onclick="popup.open(event, this);"
+  <div ${'' if not id else ('id="%s" ' % id)}onclick="$$.popups.open(event, this);"
           class="button has-popup ${classes} ${'has-tooltip' if tooltip else ''}"
           role="button" tabIndex="0">
   %if value:

@@ -255,14 +255,15 @@ social._initAjaxRequests();
 social._initTimestampUpdates();
 
 $.social = window.social = window.$$ = social;
-
 })(window, jQuery);
+
 
 
 
 /*
  * Popup manager: manager for menus and other types of popups
  */
+(function($$, $) {
 var popup = {
     _stack: [],
 
@@ -295,14 +296,21 @@ var popup = {
             node.removeClass("popup-open");
     }
 }
+
+// Close popups when user clicks outside the popup
 $(document).click(function(event) {
     popup.closeAll();
 });
+$$.popups = popup;
+})(social, jQuery);
+
+
 
 
 /*
  * Handle access control related menus and dialog.
  */
+(function($$, $) {
 var acl = {
     updateGroupsList: function(target) {
         console.log("Updating groups list");
@@ -319,10 +327,12 @@ var acl = {
             $("#" + stub + "-tooltip").html(target.attr("info"));
             $("#" + stub + "-input").attr("value", value);
 
-            popup.close();
+            $$.popups.close();
         }
 
         evt.preventDefault();
         evt.stopPropagation();
     }
 };
+$$.acl = acl;
+})(social, jQuery);

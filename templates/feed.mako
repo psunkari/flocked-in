@@ -55,7 +55,7 @@
     <%widgets:popupButton id="${id}" classes="acl-button" value="${_('Company')}"
                           tooltip="${_('Anyone working at my company')}">
       <input id="${id}-input" type="hidden" name="acl" value="company"/>
-      <div class="popup" onclick="acl.updateACL(event, this.parentNode);">
+      <div class="popup" onclick="$$.acl.updateACL(event, this.parentNode);">
         <ul class="v-links">
           <li type="public" info="${'Everyone'}">${_("Everyone")}</li>
           <li type="company" info="${'Anyone working at my company'}">${_("Company")}</li>
