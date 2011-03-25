@@ -134,17 +134,17 @@
   <ul id="user-subactions-${userKey}" class="middle user-subactions v-links">
   %endif
     %if userKey in relations.friends:
-      <li><a href="/profile/unfriend?id=${userKey}" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}', null, 'script'); event.preventDefault();">Remove as Friend</a></li>
+      <li><a href="/profile/unfriend?id=${userKey}" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}', null, 'script'); $.event.fix(event).preventDefault();">Remove as Friend</a></li>
     %else:
       %if relations.pending.get(userKey) == "0":
-        <li><a href="/profile/unfriend?id=${userKey}" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}', null, 'script'); event.preventDefault();">Cancel Friend Request</a></li>
+        <li><a href="/profile/unfriend?id=${userKey}" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}', null, 'script'); $.event.fix(event).preventDefault();">Cancel Friend Request</a></li>
       %endif
       %if userKey in relations.subscriptions:
-        <li><a href="/profile/unfollow?id=${userKey}" onclick="$.post('/ajax/profile/unfollow', 'id=${userKey}', null, 'script'); event.preventDefault();">Stop Following</a></li>
+        <li><a href="/profile/unfollow?id=${userKey}" onclick="$.post('/ajax/profile/unfollow', 'id=${userKey}', null, 'script'); $.event.fix(event).preventDefault();">Stop Following</a></li>
       %endif
     %endif
-    <li><a href="/profile/block?id=${userKey}" onclick="$.post('/ajax/profile/block', 'id=${userKey}', null, 'script'); event.preventDefault();">Block User</a></li>
-    <li><a href="/profile/review?id=${userKey}" onclick="$.post('/ajax/profile/review', 'id=${userKey}', null, 'script'); event.preventDefault();">Request Admin Review</a></li>
+    <li><a href="/profile/block?id=${userKey}" onclick="$.post('/ajax/profile/block', 'id=${userKey}', null, 'script'); $.event.fix(event).preventDefault();">Block User</a></li>
+    <li><a href="/profile/review?id=${userKey}" onclick="$.post('/ajax/profile/review', 'id=${userKey}', null, 'script'); $.event.fix(event).preventDefault();">Request Admin Review</a></li>
   %if renderWrapper:
   </ul>
   </div>
