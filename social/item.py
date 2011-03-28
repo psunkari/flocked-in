@@ -7,7 +7,7 @@ from twisted.internet   import defer
 from twisted.web        import server
 from twisted.python     import log
 
-from social             import base, Db, utils, feed, plugins, constants
+from social             import base, Db, utils, feed, plugins, constants, tags
 from social             import notifications
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
@@ -21,12 +21,13 @@ class ItemResource(base.BaseResource):
     def renderItem(self, request, toFeed=False):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
+        myOrgId = args["orgKey"]
 
         convId = utils.getRequestArg(request, "id")
         if not convId:
             raise errors.MissingParam()
 
-        conv = yield Db.get_slice(convId, "items", ['meta'])
+        conv = yield Db.get_slice(convId, "items", ['meta', 'tags'])
         conv = utils.supercolumnsToDict(conv)
         if not conv:
             raise errors.InvalidRequest()
@@ -46,6 +47,7 @@ class ItemResource(base.BaseResource):
 
         args["entities"] = {}
         toFetchEntities = set()
+        toFetchTags = set(conv.get("tags", {}).keys())
 
         plugin = plugins[itemType] if itemType in plugins else None
         if plugin:
@@ -104,22 +106,34 @@ class ItemResource(base.BaseResource):
             toFetchEntities.add(userKey)
         responseKeys.reverse()
 
-        d3 = Db.multiget_slice(responseKeys + [convId], "itemLikes")
-        d2 = Db.multiget_slice(responseKeys, "items", ["meta"])
         d1 = Db.multiget_slice(toFetchEntities, "entities", ["basic"])
+        d2 = Db.multiget_slice(responseKeys, "items", ["meta"])
+        d3 = Db.multiget_slice(responseKeys + [convId], "itemLikes")
+        d4 = Db.get_slice(myOrgId, "orgTags", toFetchTags)\
+                                    if toFetchTags else defer.succeed([])
 
-        fetchedItems = yield d2
         fetchedEntities = yield d1
+        fetchedItems = yield d2
         myLikes = yield d3
+        fetchedTags = yield d4
 
         args["items"].update(utils.multiSuperColumnsToDict(fetchedItems))
         args["entities"].update(utils.multiSuperColumnsToDict(fetchedEntities))
         args["myLikes"] = utils.multiColumnsToDict(myLikes)
+        args["tags"] = utils.supercolumnsToDict(fetchedTags)
         args["responses"] = {convId: responseKeys}
         if nextPageStart:
             args["oldest"] = utils.encodeKey(nextPageStart)
 
         if script:
+            d = renderScriptBlock(request, "item.mako", 'item_footer',
+                                  landing, '#item-footer-%s' % convId,
+                                  'set', args=[convId], **args)
+            renderers.append(d)
+            d = renderScriptBlock(request, "item.mako", 'conv_tags',
+                                  landing, '#conv-tags-wrapper-%s' % convId,
+                                  'set', **args)
+            renderers.append(d)
             d = renderScriptBlock(request, "item.mako", 'conv_comments',
                                   landing, '#conv-comments-wrapper-%s' % convId,
                                   'set', **args)
@@ -130,7 +144,8 @@ class ItemResource(base.BaseResource):
             renderers.append(d)
 
         # Wait till the item is fully rendered.
-        yield defer.DeferredList(renderers)
+        if renderers:
+            yield defer.DeferredList(renderers)
 
         # TODO: Render other blocks
 
@@ -464,6 +479,64 @@ class ItemResource(base.BaseResource):
                             **args)
 
 
+    @defer.inlineCallbacks
+    def _tag(self, request):
+        tagName = utils.getRequestArg(request, "tag")
+        if not tagName:
+            raise errors.MissingParam()
+
+        (itemId, item) = yield utils.getValidItemId(request, "id", ["tags"])
+        if "parent" in item["meta"]:
+            raise errors.InvalidRequest()
+
+        (tagId, tag) = yield tags.ensureTag(request, tagName)
+        if tagId in item.get("tags", {}):
+            raise errors.InvalidRequest() # Tag already exists on item.
+
+        d1 = Db.insert(itemId, "items", '', tagId, "tags")
+        d2 = Db.insert(tagId, "tagItems", itemId, item["meta"]["uuid"])
+
+        orgId = request.getSession(IAuthInfo).organization
+        tagItemsCount = int(tag.get("itemsCount", "0")) + 1
+        if tagItemsCount % 10 == 7:
+            tagItemsCount = yield Db.get_count(tagId, "tagItems") + 1
+        d3 = Db.insert(orgId, "orgTags", "%s"%tagItemsCount,
+                       "itemsCount", tagId)
+
+        yield defer.DeferredList([d1, d2])
+
+
+    @defer.inlineCallbacks
+    def _untag(self, request):
+        tagId = utils.getRequestArg(request, "tag")
+        if not tagId:
+            raise errors.MissingParam()
+
+        (itemId, item) = yield utils.getValidItemId(request, "id", ["tags"])
+        if "parent" in item:
+            raise errors.InvalidRequest()
+
+        if tagId not in item.get("tags", {}):
+            raise errors.InvalidRequest()  # No such tag on item
+
+        d1 = Db.remove(itemId, "items", tagId, "tags")
+        d2 = Db.remove(tagId, "tagItems", item["meta"]["uuid"])
+
+        orgId = request.getSession(IAuthInfo).organization
+        itemsCountCol = yield Db.get(orgId, "orgTags", "itemsCount", tagId)
+        tagItemsCount = int(itemsCountCol.column.value) - 1
+        if tagItemsCount % 10 == 7:
+            tagItemsCount = yield Db.get_count(tagId, "tagItems") - 1
+        d3 = Db.insert(orgId, "orgTags", "%s"%tagItemsCount,
+                       "itemsCount", tagId)
+
+        yield defer.DeferredList([d1, d2])
+
+
+    def _tags(self, request):
+        pass
+
+
     def render_GET(self, request):
         segmentCount = len(request.postpath)
         d = None
@@ -479,6 +552,8 @@ class ItemResource(base.BaseResource):
                 d = self._like(request)
             elif path == 'unlike':
                 d = self._unlike(request)
+            elif path == 'untag':
+                d = self._untag(request)
 
         return self._epilogue(request, d)
 
@@ -493,5 +568,9 @@ class ItemResource(base.BaseResource):
                 d =  self.createItem(request)
             elif path == 'comment':
                 d = self._comment(request)
+            elif path == 'tag':
+                d = self._tag(request)
+            elif path == 'untag':
+                d = self._untag(request)
 
         return self._epilogue(request, d)

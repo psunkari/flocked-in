@@ -154,6 +154,7 @@ def createColumnFamilies(client):
                          None, 'Feed of %s items'%(itemType))
         yield client.system_add_column_family(feedType)
 
+    # Polls
     userpolls = CfDef(KEYSPACE, 'userVotes', 'Standard', 'UTF8Type', None,
                                 'Map of users to vote')
     yield client.system_add_column_family(userpolls)
@@ -162,26 +163,25 @@ def createColumnFamilies(client):
                         'UTF8Type', 'option - voter map')
     yield client.system_add_column_family(votes)
 
-
-
-
-    userEventResponse = CfDef(KEYSPACE, 'userEventResponse', 'Standard', 'UTF8Type', None,
-                               'list of responses of users for events')
-    eventInvitations = CfDef(KEYSPACE, "eventInvitations", "Super", "UTF8Type", "TimeUUIDType",
-                             "")
+    # Events
+    userEventResponse = CfDef(KEYSPACE, 'userEventResponse', 'Standard',
+                              'UTF8Type', None,
+                              'List of responses of users for events')
+    eventInvitations = CfDef(KEYSPACE, "eventInvitations", "Super", "UTF8Type",
+                             "TimeUUIDType", "")
     eventResponses = CfDef(KEYSPACE, 'eventResponses', 'Super', 'UTF8Type',
-                        'UTF8Type', '')
-    userEvents = CfDef(KEYSPACE, "userEvents", "Standard", "TimeUUIDType", None,
-                       "")
-    userEventInvitations = CfDef(KEYSPACE, "userEventInvitations", "Standard", "TimeUUIDType",
-                                 None, "")
-
+                           'UTF8Type', '')
+    userEvents = CfDef(KEYSPACE, "userEvents", "Standard",
+                       "TimeUUIDType", None, "")
+    userEventInvitations = CfDef(KEYSPACE, "userEventInvitations", "Standard",
+                                 "TimeUUIDType", None, "")
     yield client.system_add_column_family(userEventResponse)
     yield client.system_add_column_family(eventInvitations)
     yield client.system_add_column_family(eventResponses)
     yield client.system_add_column_family(userEvents)
     yield client.system_add_column_family(userEventInvitations)
 
+    # Notifications
     notifications = CfDef(KEYSPACE, 'notifications', 'Standard', 'TimeUUIDType', None,
                          'A feed of all the items for user, group and organization')
     yield client.system_add_column_family(notifications)
@@ -190,6 +190,7 @@ def createColumnFamilies(client):
                               "TimeUUIDType", "Notifications")
     yield client.system_add_column_family(notificationItems)
 
+    # User's name indices
     displayNameIndex = CfDef(KEYSPACE, "displayNameIndex", "Standard",
                              "UTF8Type", None, "entityId to displayName:userId map")
     yield client.system_add_column_family(displayNameIndex)
@@ -198,6 +199,20 @@ def createColumnFamilies(client):
                       "entityId to (display name/firstname/lastname):userId map")
     yield client.system_add_column_family(nameIndex)
 
+
+    # Tags
+    orgTags = CfDef(KEYSPACE, "orgTags", "Super", "BytesType", "UTF8Type",
+                    "List of tags by organization")
+    tagFollowers = CfDef(KEYSPACE, "tagFollowers", "Standard", "BytesType",
+                         None, "List of followers of each tag")
+    tagItems = CfDef(KEYSPACE, "tagItems", "Standard", "TimeUUIDType", None,
+                     "List of items in this tag")
+    orgTagsByName = CfDef(KEYSPACE, "orgTagsByName", "Standard", "UTF8Type",
+                          None, "List of tags by their name")
+    yield client.system_add_column_family(orgTags)
+    yield client.system_add_column_family(tagFollowers)
+    yield client.system_add_column_family(tagItems)
+    yield client.system_add_column_family(orgTagsByName)
 
 
 @defer.inlineCallbacks
@@ -718,8 +733,9 @@ def truncateColumnFamilies(client):
                "feed_status", "feed_link","feed_document", "feedItems",
                "domainOrgMap", "userVotes", "votes", 'userEvents',
                'eventResponses', "userEventInvitations", "userEventResponse",
-               'eventInvitations',"notifications", "notificationItems", "nameIndex",
-               "displayNameIndex"]:
+               'eventInvitations',"notifications", "notificationItems",
+               "nameIndex", "displayNameIndex", "orgTags", "tagItems",
+               "tagFollowers", "orgTagsByName"]:
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 

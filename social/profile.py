@@ -77,13 +77,14 @@ class ProfileResource(base.BaseResource):
     def _getUserItems(self, userKey, count=10):
         toFetchItems = set()
         toFetchEntities = set()
+        toFetchTags = set()
         toFetchResponses = set()
         responses = {}
-        args = {"myKey":userKey}
         convs = []
         userItemsRaw = []
         userItems = []
         reasonStr = {}
+        args = {}
 
         toFetchEntities.add(userKey)
         cols = yield Db.get_slice(userKey, "userItems", reverse=True, count=count)
@@ -118,7 +119,7 @@ class ProfileResource(base.BaseResource):
                     toFetchItems.add(itemKey)
                     toFetchEntities.add(userKey_)
 
-        items = yield Db.multiget_slice(toFetchItems, "items", ["meta"])
+        items = yield Db.multiget_slice(toFetchItems, "items", ["meta", "tags"])
         items = utils.multiSuperColumnsToDict(items)
         args["items"] = items
         extraDataDeferreds = []
@@ -129,6 +130,8 @@ class ProfileResource(base.BaseResource):
             toFetchEntities.add(meta["owner"])
             if "target" in meta:
                 toFetchEntities.add(meta["target"])
+
+            toFetchTags.update(items[convId].get("tags", {}).keys())
 
             if itemType in plugins:
                 d =  plugins[itemType].fetchData(args, convId)
@@ -142,8 +145,14 @@ class ProfileResource(base.BaseResource):
         fetchedEntities = yield Db.multiget(toFetchEntities, "entities", "basic")
         entities = utils.multiSuperColumnsToDict(fetchedEntities)
 
-        del args['myKey']
-        data = {"entities": entities, "reasonStr": reasonStr,
+        tags = {}
+        if toFetchTags:
+            userOrgId = entities[userKey]["basic"]["org"]
+            fetchedTags = yield Db.get_slice(userOrgId, "orgTags", toFetchTags)
+            tags = utils.supercolumnsToDict(fetchedTags)
+
+
+        data = {"entities": entities, "reasonStr": reasonStr, "tags": tags,
                 "userItems": userItems, "responses": responses}
         args.update(data)
         defer.returnValue(args)

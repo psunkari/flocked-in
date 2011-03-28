@@ -53,7 +53,7 @@ def renderDef(request, path, dfn, *args, **data):
 
 
 @defer.inlineCallbacks
-def renderScriptBlock(request, path, dfn, tags=False, parent=None,
+def renderScriptBlock(request, path, dfn, wrapInTags=False, parent=None,
                       method=None, last=False, css=None, scripts=None,
                       handlers=None, args=[], **data):
     try:
@@ -76,7 +76,7 @@ def renderScriptBlock(request, path, dfn, tags=False, parent=None,
             map["js"].append(id)
             map["resources"]["id"] = url
 
-    fmt = "<script>$$.load(%s);</script>\n" if tags else "$$.load(%s)\n"
+    fmt = "<script>$$.load(%s);</script>\n" if wrapInTags else "$$.load(%s)\n"
     text = fmt % json.dumps(map)
     request.write(text)
 

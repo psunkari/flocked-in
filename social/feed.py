@@ -112,12 +112,17 @@ class FeedResource(base.BaseResource):
 
     # TODO: ACLs
     @defer.inlineCallbacks
-    def _getFeedItems(self, userKey, itemKey=None, count=10, entityId=None):
+    def _getFeedItems(self, request, itemKey=None, count=10, entityId=None):
         toFetchItems = set()    # Items and entities that need to be fetched
         toFetchEntities = set() #
+        toFetchTags = set()
         args = {}
-        args["myKey"] = userKey
-        #fetch entity(org/group) feed if entityId is given
+
+        authinfo = request.getSession(IAuthInfo)
+        userKey = authinfo.username
+        myOrgId = authinfo.organization
+
+        # Fetch entity(org/group) feed if entityId is given
         key = entityId if entityId else userKey
 
         # 1. Fetch the list of root items (conversations) that will be shown
@@ -225,7 +230,8 @@ class FeedResource(base.BaseResource):
                     toFetchEntities.add(userKey_)
 
         # Concurrently fetch items and entities
-        fetchedItems = yield Db.multiget_slice(toFetchItems, "items", ["meta"])
+        fetchedItems = yield Db.multiget_slice(toFetchItems, "items",
+                                               ["meta", "tags"])
         items = utils.multiSuperColumnsToDict(fetchedItems)
         args["items"] = items
         extraDataDeferreds = []
@@ -236,6 +242,8 @@ class FeedResource(base.BaseResource):
             toFetchEntities.add(meta["owner"])
             if "target" in meta:
                 toFetchEntities.add(meta["target"])
+
+            toFetchTags.update(items[convId].get("tags", {}).keys())
 
             if itemType in plugins:
                 d =  plugins[itemType].fetchData(args, convId)
@@ -248,11 +256,16 @@ class FeedResource(base.BaseResource):
 
         d1 = Db.multiget_slice(toFetchEntities, "entities", ["basic"])
         d2 = Db.multiget(toFetchItems, "itemLikes", userKey)
+        d3 = Db.get_slice(myOrgId, "orgTags", toFetchTags) \
+                                if toFetchTags else defer.succeed([])
+
         fetchedEntities = yield d1
         fetchedMyLikes = yield d2
+        fetchedTags = yield d3
 
         entities = utils.multiSuperColumnsToDict(fetchedEntities)
         myLikes = utils.multiColumnsToDict(fetchedMyLikes)
+        args["tags"] = utils.supercolumnsToDict(fetchedTags)
 
         # We got all our data, do the remaining processing before
         # rendering the template.
@@ -326,18 +339,18 @@ class FeedResource(base.BaseResource):
     def _render(self, request, entityId=None):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
-
-        myOrg = args["orgKey"]
+        myOrgId = args["orgKey"]
 
         if entityId:
             entity = yield Db.get_slice(entityId, "entities", ["basic"])
             entity = utils.supercolumnsToDict(entity)
             entityType = entity["basic"]['type']
             if entityType == "org":
-                if entityId != myOrg:
+                if entityId != myOrgId:
                     errors.InvalidRequest()
                 args["heading"] = "Company Feed"
             elif entityType == "group":
+                # XXX: Check if I am a member of this group!
                 args["heading"] = "Group Feed"
             else:
                 errors.InvalidRequest()
@@ -354,9 +367,9 @@ class FeedResource(base.BaseResource):
                                     landing, "#share-block", "set", **args)
             yield self._renderShareBlock(request, "status")
         if entityId:
-            feedItems = yield self._getFeedItems(myKey, entityId=entityId)
+            feedItems = yield self._getFeedItems(request, entityId=entityId)
         else:
-            feedItems = yield self._getFeedItems(myKey)
+            feedItems = yield self._getFeedItems(request)
         args.update(feedItems)
         if script:
             yield renderScriptBlock(request, "feed.mako", "feed", landing,

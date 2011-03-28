@@ -75,6 +75,23 @@ def getValidEntityId(request, arg, type="user"):
         raise errors.InvalidEntity()
 
 
+@defer.inlineCallbacks
+def getValidItemId(request, arg, columns=[], type=None):
+    itemId = getRequestArg(request, arg)
+    if not itemId:
+        raise errors.MissingParam()
+
+    item = yield Db.get_slice(itemId, "items", ["meta"].extend(columns))
+    if not item:
+        raise errors.InvalidEntity()
+
+    item = supercolumnsToDict(item)
+    if not type:
+        defer.returnValue((itemId, item))
+    elif type and item["meta"].get("type", None) == type:
+        defer.returnValue((itemId, item))
+    else:
+        raise errors.InvalidEntity()
 
 
 # TODO
@@ -309,4 +326,3 @@ def uuid1(node=None, clock_seq=None, timestamp=None):
         node = uuid.getnode()
     return uuid.UUID(fields=(time_low, time_mid, time_hi_version,
                         clock_seq_hi_variant, clock_seq_low, node), version=1)
-

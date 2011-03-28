@@ -65,6 +65,11 @@
           <div class="conv-likes">${likeStr[convId]}</div>
         %endif
       </div>
+      <div id="conv-tags-wrapper-${convId}">
+        %if inline or not script:
+          ${self.conv_tags(convId)}
+        %endif
+      </div>
       <div id="conv-comments-wrapper-${convId}">
         %if inline or not script:
           ${self.conv_comments(convId, isFeed)}
@@ -95,7 +100,6 @@
   % elif itemType in plugins:
       ${plugins[itemType].rootHTML(convId, context.kwargs)}
   %endif
-
 </%def>
 
 <%def name="item_footer(itemId)">
@@ -197,6 +201,20 @@
     <div class="comment-meta">
       ${self.item_footer(commentId)}
     </div>
+  </div>
+</%def>
+
+<%def name="conv_tags(convId)">
+  <% itemTags = items[convId].get("tags", {}) %>
+    <div id="conv-tags-${convId}" class="conv-tags">
+    %for tagId in itemTags.keys():
+      <span>${tags[tagId]["title"]}<span class="delete-tag"><a class="ajax" _ref="/item/untag?id=${convId}&tag=${tagId}">X</a></span></span>
+    %endfor
+    <form method="post" action="/item/tag" class="ajax" autocomplete="off" id="addtag-form-${convId}">
+      <input type="text" name="tag" value=""></input>
+      <input type="hidden" name="id" value=${convId}></input>
+      ${widgets.button(None, type="submit", name="add", value="Add")}<br/>
+    </form>
   </div>
 </%def>
 
