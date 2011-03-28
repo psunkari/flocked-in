@@ -395,13 +395,23 @@
 <%def name="editBasicInfo()">
   <%
   name = me.get("basic", {}).get("name", '')
+  firstname = me.get("basic", {}).get("firstname", '')
+  lastname = me.get("basic", {}).get("lastname", '')
   jobTitle = me.get("basic", {}).get("jobTitle", '')
   %>
-  <form action="/register/basic" method="post" enctype="multipart/form-data">
+  <form action="/profile/edit" method="post"  enctype="multipart/form-data">
     <div class="edit-profile">
       <ul>
-        <li><label for="name"> Name: </label></li>
+        <li><label for="name"> Display Name: </label></li>
         <li><input type="text" id="name" name="name" value= "${name}" /></li>
+      </ul>
+      <ul>
+        <li><label for="firstname"> First Name: </label></li>
+        <li><input type="text" id="firstname" name="firstname" value= "${firstname}" /></li>
+      </ul>
+      <ul>
+        <li><label for="lastname"> Last Name: </label></li>
+        <li><input type="text" id="lastname" name="lastname" value= "${lastname}" /></li>
       </ul>
       <ul>
         <li><label for="jobTitle"> Job Title: </label></li>
@@ -429,7 +439,7 @@
 
 
 <%def name="editDetail()">
-<form action="/register/basic" method="post" enctype="multipart/form-data">
+<form action="/profile/edit" method="post"  enctype="multipart/form-data">
     <div class="edit-profile">
       <div id="personal">
         <h3> Personal </h3>

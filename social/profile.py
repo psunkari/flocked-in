@@ -1,4 +1,5 @@
-
+import PythonMagick
+import imghdr
 from random                 import sample
 
 from twisted.web            import resource, server, http
@@ -9,6 +10,63 @@ from telephus.cassandra     import ttypes
 from social.template        import render, renderDef, renderScriptBlock
 from social.relations       import Relation
 from social                 import Db, auth, utils, base, plugins, _, __
+from social                 import constants, feed
+
+@defer.inlineCallbacks
+def deleteNameIndex(userKey, name, targetKey):
+    if name:
+        yield Db.remove(userKey, "nameIndex", ":".join([name.lower(), targetKey]))
+
+
+@defer.inlineCallbacks
+def _updateDisplayNameIndex(userKey, targetKey, newName, oldName):
+    calls = []
+    if oldName:
+        d1 =  Db.remove(targetKey, "displayNameIndex", oldName.lower() + ":" + userKey)
+        calls.append(d1)
+    if newName:
+        d2 =  Db.insert(targetKey, "displayNameIndex", "", newName.lower() + ':' + userKey)
+        calls.append(d2)
+    if calls:
+        yield defer.DeferredList(calls)
+
+
+@defer.inlineCallbacks
+def updateDisplayNameIndex(userKey, targetKeys, newName, oldName):
+    calls = []
+    for targetKey in targetKeys:
+        d = _updateDisplayNameIndex(userKey, targetKey, newName, oldName)
+        calls.append(d)
+    yield defer.DeferredList(calls)
+
+
+@defer.inlineCallbacks
+def _updateNameIndex(userKey, targetKey, newName, oldName):
+    calls = []
+    if oldName:
+        d1 =  Db.remove(targetKey, "nameIndex", oldName.lower() + ":" + userKey)
+        calls.append(d1)
+    if newName:
+        d2 =  Db.insert(targetKey, "nameIndex", "", newName.lower() + ":" + userKey)
+        calls.append(d2)
+    if calls:
+        yield defer.DeferredList(calls)
+
+
+@defer.inlineCallbacks
+def updateNameIndex(userKey, targetKeys, newName, oldName):
+    calls = []
+    for targetKey in targetKeys:
+        d = _updateNameIndex(userKey, targetKey, newName, oldName)
+        calls.append(d)
+    yield defer.DeferredList(calls)
+
+
+def _getImageFileFormat(data):
+    imageType = imghdr.what(None, data)
+    if imageType:
+        return imageType.lower()
+    return imageType
 
 
 class ProfileResource(base.BaseResource):
@@ -122,11 +180,64 @@ class ProfileResource(base.BaseResource):
         calls = []
         try:
             cols = yield Db.get(myKey, "pendingConnections", targetKey)
+            cols = yield Db.multiget_slice([myKey, targetKey], "entities",
+                                            ["basic"])
+            users = utils.multiSuperColumnsToDict(cols)
             d1 = Db.remove(myKey, "pendingConnections", targetKey)
             d2 = Db.remove(targetKey, "pendingConnections", myKey)
             d3 = Db.batch_insert(myKey, "connections", {targetKey: circlesMap})
             d4 = Db.batch_insert(targetKey, "connections", {myKey: {'__default__':''}})
-            calls = [d1, d2, d3]
+
+            myName = users[myKey]["basic"].get("name", None)
+            myFirstName = users[myKey]["basic"].get("firstname", None)
+            myLastName = users[myKey]["basic"].get("lastname", None)
+            targetName = users[targetKey]['basic'].get('name', None)
+            targetFirstName = users[targetKey]["basic"].get("firstname", None)
+            targetLastName = users[targetKey]["basic"].get("lastname", None)
+
+            d5 = _updateDisplayNameIndex(targetKey, myKey, targetName, None)
+            d6 = _updateDisplayNameIndex(myKey, targetKey, myName, None)
+
+            d7 = _updateNameIndex(myKey, targetKey,  myName, None)
+            d8 = _updateNameIndex(myKey, targetKey, myFirstName, None)
+            d9 = _updateNameIndex(myKey,targetKey,  myLastName, None)
+
+            d10 = _updateNameIndex(targetKey, myKey, targetName, None)
+            d11 = _updateNameIndex(targetKey, myKey, targetFirstName, None)
+            d12 = _updateNameIndex(targetKey, myKey, targetLastName, None)
+
+            #add to feed
+            responseType = "I"
+            itemType = "activity"
+            myItemId = utils.getUniqueKey()
+            targetItemId = utils.getUniqueKey()
+            myItem = utils.createNewItem(request, itemType, ownerId = myKey,
+                                         subType="connection")
+            targetItem = utils.createNewItem(request, itemType,
+                                             ownerId= targetKey,
+                                             subType="connection")
+            targetItem["meta"]["target"] = myKey
+            myItem["meta"]["target"] = targetKey
+            d13 = Db.batch_insert(myItemId, "items", myItem)
+            d14 = Db.batch_insert(targetItemId, "items", targetItem)
+            d15 = feed.pushToFeed(myKey, myItem["meta"]["uuid"], myItemId,
+                                  myItemId, responseType, itemType, myKey)
+            d16 = feed.pushToFeed(targetKey, targetItem["meta"]["uuid"],
+                                  targetItemId, targetItemId, responseType,
+                                  itemType, targetKey)
+
+            userItemValue = ":".join([responseType, myItemId,
+                                      myItemId, "activity", myKey, ""])
+            d17 =  Db.insert(myKey, "userItems", userItemValue,
+                             myItem["meta"]['uuid'])
+            userItemValue = ":".join([responseType, targetItemId, targetItemId,
+                                      itemType, targetKey, ""])
+            d18 =  Db.insert(targetKey, "userItems", userItemValue,
+                             targetItem["meta"]['uuid'])
+            #notify users
+
+            calls = [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13,
+                     d14, d15, d16, d17, d18]
         except ttypes.NotFoundException:
             d1 = Db.insert(myKey, "pendingConnections", '0', targetKey)
             d2 = Db.insert(targetKey, "pendingConnections", '1', myKey)
@@ -137,22 +248,223 @@ class ProfileResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _unfriend(self, myKey, targetKey):
+
+        cols = yield Db.multiget_slice([myKey, targetKey], "entities",
+                                        ["basic"])
+        users = utils.multiSuperColumnsToDict(cols)
+        targetDisplayName = users[targetKey]["basic"]["name"]
+        myDisplayName = users[myKey]["basic"]["name"]
+        myFirstName = users[myKey]["basic"].get("firstname", None)
+        myLastName = users[myKey]["basic"].get("lastname", None)
+        targetFirstName = users[targetKey]["basic"].get("firstname", None)
+        targetLastName = users[targetKey]["basic"].get("lastname", None)
+
         deferreds = [Db.remove(myKey, "connections", None, targetKey),
                      Db.remove(targetKey, "connections", None, myKey),
                      Db.remove(myKey, "pendingConnections", targetKey),
-                     Db.remove(targetKey, "pendingConnections", myKey)]
+                     Db.remove(targetKey, "pendingConnections", myKey),
+                     Db.remove(myKey, "displayNameIndex",
+                               ":".join([targetDisplayName, targetKey])),
+                     Db.remove(targetKey, "displayNameIndex",
+                               ":".join([myDisplayName, myKey]))]
+        if myFirstName:
+            deferreds.append(deleteNameIndex(targetKey, myFirstName, myKey))
+        if myLastName:
+            deferreds.append(deleteNameIndex(targetKey, myLastName, myKey))
+
+        if targetFirstName:
+            deferreds.append(deleteNameIndex(myKey, targetFirstName, targetKey))
+        if targetLastName:
+            deferreds.append(deleteNameIndex(myKey, targetLastName, targetKey))
+
         yield defer.DeferredList(deferreds)
+
+
+    @defer.inlineCallbacks
+    def _saveAvatarItem(self, userId, data):
+        imageFormat = _getImageFileFormat(data)
+        if imageFormat not in constants.SUPPORTED_IMAGE_TYPES:
+            raise errors.UnsupportedFileType()
+
+        try:
+            original = PythonMagick.Blob(data)
+            image = PythonMagick.Image(original)
+        except Exception as e:
+            raise errors.UnknownFileFormat()
+
+        medium = PythonMagick.Blob()
+        small = PythonMagick.Blob()
+        large = PythonMagick.Blob()
+
+        image.scale(constants.AVATAR_SIZE_LARGE)
+        image.write(large)
+        image.scale(constants.AVATAR_SIZE_MEDIUM)
+        image.write(medium)
+        image.scale(constants.AVATAR_SIZE_SMALL)
+        image.write(small)
+
+        itemId = utils.getUniqueKey()
+        item = {
+            "meta": {"owner": userId, "acl": "company", "type": "image"},
+            "avatar": {
+                "format": imageFormat,
+                "small": small.data, "medium": medium.data,
+                "large": large.data, "original": original.data
+            }}
+        yield Db.batch_insert(itemId, "items", item)
+        defer.returnValue("%s:%s" % (imageFormat, itemId))
+
+
+    @defer.inlineCallbacks
+    def _edit(self, request):
+
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        userInfo = {}
+        calls = []
+
+        for cn in ("jobTitle", "location", "desc", "name", "firstname", "lastname"):
+            val = utils.getRequestArg(request, cn)
+            if val:
+                userInfo.setdefault("basic", {})[cn] = val
+
+        user = yield Db.get_slice(myKey, "entities", ["basic"])
+        user = utils.supercolumnsToDict(user)
+
+        cols = yield Db.get_slice(myKey, 'connections', )
+        friends = [item.super_column.name for item in cols] + [args["orgKey"]]
+
+        for field in ["name", "lastname", "firstname"]:
+            if "basic" in userInfo and field in userInfo["basic"]:
+                d = updateNameIndex(myKey, friends, userInfo["basic"][field],
+                                    user["basic"].get(field, None))
+                if field == 'name':
+                    d1 = updateDisplayNameIndex(myKey, friends,
+                                                userInfo["basic"][field],
+                                                user["basic"].get(field, None))
+                    calls.append(d1)
+                calls.append(d)
+
+        if calls:
+            yield defer.DeferredList(calls)
+
+
+        if "basic" in userInfo:
+            basic_acl = utils.getRequestArg(request, "basic_acl") or 'public'
+            userInfo["basic"]["acl"] = basic_acl
+
+        dp = utils.getRequestArg(request, "dp")
+        if dp:
+            avatar = yield self._saveAvatarItem(myKey, dp)
+            if not userInfo.has_key("basic"):
+                userInfo["basic"] = {}
+            userInfo["basic"]["avatar"] = avatar
+
+        expertise = utils.getRequestArg(request, "expertise")
+        expertise_acl = utils.getRequestArg(request, "expertise_acl") or 'public'
+        if expertise:
+            userInfo["expertise"] = {}
+            userInfo["expertise"][expertise]=""
+            userInfo["expertise"]["acl"]=expertise_acl
+
+        language = utils.getRequestArg(request, "language")
+        lr = utils.getRequestArg(request, "language_r") == "on"
+        ls = utils.getRequestArg(request, "language_s") == "on"
+        lw = utils.getRequestArg(request, "language_w") == "on"
+        language_acl = utils.getRequestArg(request, "language_acl") or 'public'
+        if language:
+            userInfo["languages"]= {}
+            userInfo["languages"][language]= "%(lr)s/%(lw)s/%(ls)s" %(locals())
+            userInfo["languages"]["acl"] = language_acl
+
+        c_email = utils.getRequestArg(request, "c_email")
+        c_im = utils.getRequestArg(request, "c_im")
+        c_phone = utils.getRequestArg(request, "c_phone")
+        c_mobile = utils.getRequestArg(request, "c_phone")
+        contacts_acl = utils.getRequestArg(request, "contacts_acl") or 'public'
+
+        if any([c_email, c_im, c_phone]):
+            userInfo["contact"] = {}
+            userInfo["contact"]["acl"] = contacts_acl
+
+        if c_email:
+            userInfo["contact"]["mail"] = c_email
+        if c_im:
+            userInfo["contact"]["im"] = c_im
+        if c_phone:
+            userInfo["contact"]["phone"] = c_phone
+
+
+        interests = utils.getRequestArg(request, "interests")
+        interests_acl = utils.getRequestArg(request, "interests_acl") or 'public'
+        if interests:
+            userInfo["interests"]= {}
+            userInfo["interests"][interests]= interests
+            userInfo["interests"]["acl"] = interests_acl
+
+        p_email = utils.getRequestArg(request, "p_email")
+        p_phone = utils.getRequestArg(request, "p_phone")
+        p_mobile = utils.getRequestArg(request, "p_mobile")
+        dob_day = utils.getRequestArg(request, "dob_day")
+        dob_mon = utils.getRequestArg(request, "dob_mon")
+        dob_year = utils.getRequestArg(request, "dob_year")
+        hometown = utils.getRequestArg(request, "hometown")
+        currentCity = utils.getRequestArg(request, "currentCity")
+        personal_acl = utils.getRequestArg(request, "personal_acl") or 'public'
+        if any([p_email, p_phone, hometown, currentCity,]) \
+            or all([dob_year, dob_mon, dob_day]):
+            userInfo["personal"]={}
+        if p_email:
+            userInfo["personal"]["email"] = p_email
+        if p_phone:
+            userInfo["personal"]["phone"] = p_phone
+        if hometown:
+            userInfo["personal"]["hometown"] = hometown
+        if currentCity:
+            userInfo["personal"]["currentCity"] = currentCity
+        if dob_day and dob_mon and dob_year:
+            userInfo["personal"]["birthday"] = "%s%s%s"%(dob_year, dob_mon, dob_day)
+
+        employer = utils.getRequestArg(request, "employer")
+        emp_start = utils.getRequestArg(request, "emp_start") or ''
+        emp_end = utils.getRequestArg(request, "emp_end") or ''
+        emp_title = utils.getRequestArg(request, "emp_title") or ''
+        emp_desc = utils.getRequestArg(request, "emp_desc") or ''
+
+        if employer:
+            userInfo["employers"] = {}
+            key = "%s:%s:%s:%s" %(emp_end, emp_start, employer, emp_title)
+            userInfo["employers"][key] = emp_desc
+
+        college = utils.getRequestArg(request, "college")
+        degree = utils.getRequestArg(request, "degree") or ''
+        edu_end = utils.getRequestArg(request, "edu_end") or ''
+        if college:
+            userInfo["education"] = {}
+            key = "%s:%s" %(edu_end, college)
+            userInfo["education"][key] = degree
+
+        if userInfo:
+            yield Db.batch_insert(myKey, "entities", userInfo)
+        request.redirect("/profile/edit")
 
 
     def render_POST(self, request):
         segmentCount = len(request.postpath)
+        if segmentCount != 1:
+                raise errors.InvalidRequest()
+        action = request.postpath[0]
+        if action == "edit":
+            headers = request.requestHeaders
+            content_length = headers.getRawHeaders("content-length", [0])[0]
+            if int(content_length) > constants.MAX_IMAGE_SIZE:
+                raise errors.LargeFile()
+            requestDeferred = self._edit(request)
+            return self._epilogue(request, requestDeferred)
+
         requestDeferred = utils.getValidEntityId(request, "id", "user")
         myKey = auth.getMyKey(request)
 
         def callback(targetKey):
-            if segmentCount != 1:
-                raise errors.InvalidRequest()
-
             actionDeferred = None
             action = request.postpath[0]
             if action == "friend":

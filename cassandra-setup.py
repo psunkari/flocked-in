@@ -183,12 +183,20 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(userEventInvitations)
 
     notifications = CfDef(KEYSPACE, 'notifications', 'Standard', 'TimeUUIDType', None,
-                 'A feed of all the items for user, group and organization')
+                         'A feed of all the items for user, group and organization')
     yield client.system_add_column_family(notifications)
 
     notificationItems = CfDef(KEYSPACE, "notificationItems", "Super", "UTF8Type",
-                      "TimeUUIDType", "Notifications")
+                              "TimeUUIDType", "Notifications")
     yield client.system_add_column_family(notificationItems)
+
+    displayNameIndex = CfDef(KEYSPACE, "displayNameIndex", "Standard",
+                             "UTF8Type", None, "entityId to displayName:userId map")
+    yield client.system_add_column_family(displayNameIndex)
+
+    nameIndex = CfDef(KEYSPACE, "nameIndex", "Standard", "UTF8Type", None,
+                      "entityId to (display name/firstname/lastname):userId map")
+    yield client.system_add_column_family(nameIndex)
 
 
 
@@ -208,6 +216,16 @@ def addSampleData(client):
     yield client.insert('synovel.com', 'domainOrgMap', '', exampleKey)
     yield client.insert('example.org', 'domainOrgMap', '', exampleKey)
 
+    groupId = utils.getUniqueKey()
+    meta = {"name": "Angry Birds",
+            "desc":"",
+            "orgKey":"PtW-7FSHEeCZAAAb_JBZ2A",
+            "admin": "PueYplSHEeCZAAAb_JBZ2A",
+            "access":"public",
+            "type":"group"}
+    yield client.batch_insert(groupId, "entities", {"basic":meta})
+    yield client.insert(exampleKey, "orgGroups", '', groupId)
+
     # List of users in the organization
     prasadKey = utils.getUniqueKey()
     praveenKey = utils.getUniqueKey()
@@ -215,6 +233,27 @@ def addSampleData(client):
     abhiKey = utils.getUniqueKey()
     rahulKey = utils.getUniqueKey()
     sandeepKey = utils.getUniqueKey()
+
+    yield client.insert(exampleKey, "displayNameIndex", "", "prasad:"+prasadKey)
+    yield client.insert(exampleKey, "displayNameIndex", "", "ashok:"+ashokKey)
+    yield client.insert(exampleKey, "displayNameIndex", "", "rahul:"+rahulKey)
+    yield client.insert(exampleKey, "displayNameIndex", "", "abhi:"+abhiKey)
+    yield client.insert(exampleKey, "displayNameIndex", "", "sandy:"+sandeepKey)
+    yield client.insert(exampleKey, "displayNameIndex", "", "praveen:"+praveenKey)
+
+    yield client.insert(exampleKey, "nameIndex", "", "prasad:"+prasadKey)
+    yield client.insert(exampleKey, "nameIndex", "", "ashok:"+ashokKey)
+    yield client.insert(exampleKey, "nameIndex", "", "rahul:"+rahulKey)
+    yield client.insert(exampleKey, "nameIndex", "", "abhi:"+abhiKey)
+    yield client.insert(exampleKey, "nameIndex", "", "sandeep:"+sandeepKey)
+    yield client.insert(exampleKey, "nameIndex", "", "praveen:"+praveenKey)
+
+
+    yield client.insert(exampleKey, "nameIndex", "", "pothana:"+praveenKey)
+    yield client.insert(exampleKey, "nameIndex", "", "sunkari:"+prasadKey)
+    yield client.insert(exampleKey, "nameIndex", "", "amaram:"+rahulKey)
+    yield client.insert(exampleKey, "nameIndex", "", "Gudibandla:"+ashokKey)
+
     yield client.batch_insert(exampleKey, 'orgUsers', {
                                     prasadKey: '',
                                     praveenKey: '',
@@ -227,7 +266,9 @@ def addSampleData(client):
     # User profiles
     yield client.batch_insert(prasadKey, 'entities', {
                                 'basic': {
-                                    'name': 'Prasad Sunkari',
+                                    'name': 'Prasad',
+                                    'firstname':"Prasad",
+                                    "lastname": "Sunkari",
                                     'jobTitle': 'Hacker',
                                     'location': 'synovel.com/location/hyderabad',
                                     'desc': 'Just another Tom, Dick and Harry',
@@ -275,7 +316,9 @@ def addSampleData(client):
                                 }})
     yield client.batch_insert(ashokKey, 'entities', {
                                 'basic': {
-                                    'name': 'Ashok Gudibandla',
+                                    'name': 'Ashok',
+                                    "firstname": "Ashok",
+                                    "lastname": "Gudibandla",
                                     'jobTitle': 'Hacker',
                                     'location': 'synovel.com/location/hyderabad',
                                     'desc': 'Yet another Tom, Dick and Harry',
@@ -319,7 +362,9 @@ def addSampleData(client):
                                 }})
     yield client.batch_insert(praveenKey, 'entities', {
                                 'basic': {
-                                    'name': 'Praveen ',
+                                    'name': 'Praveen',
+                                    "firstname": "Praveen",
+                                    "lastname": "Pothana",
                                     'jobTitle': 'Hacker',
                                     'location': 'synovel.com/location/hyderabad',
                                     'desc': 'Yet another Tom, Dick and Harry',
@@ -360,6 +405,8 @@ def addSampleData(client):
     yield client.batch_insert(rahulKey, 'entities', {
                                 'basic': {
                                     'name': 'Rahul',
+                                    "firstname": "Rahul",
+                                    "lastname": "Amaram",
                                     'jobTitle': 'Hacker',
                                     'location': 'synovel.com/location/hyderabad',
                                     'desc': 'Just another Tom, Dick and Harry',
@@ -452,6 +499,7 @@ def addSampleData(client):
     yield client.batch_insert(sandeepKey, 'entities', {
                                 'basic': {
                                     'name': 'Sandy',
+                                    "firstname": "Sandeep",
                                     'jobTitle': 'Hacker',
                                     'location': 'synovel.com/location/hyderabad',
                                     'desc': 'Just another Tom, Dick and Harry',
@@ -550,6 +598,10 @@ def addSampleData(client):
                                     rahulKey: {
                                         "__default__": praveenToRahulKey
                                     }})
+    yield client.insert(praveenKey, "displayNameIndex", "", "rahul:"+rahulKey)
+    yield client.insert(rahulKey, "displayNameIndex", "", "praveen:"+praveenKey)
+    yield client.insert(prasadKey, "displayNameIndex", "", "ashok:"+ashokKey)
+    yield client.insert(ashokKey, "displayNameIndex", "", "prasad:"+prasadKey)
 
     # Create activity items and insert into feeds and userItems
     timeUUID = uuid.uuid1().bytes
@@ -658,7 +710,7 @@ def addSampleData(client):
 @defer.inlineCallbacks
 def truncateColumnFamilies(client):
     for cf in ["entities", "orgUsers", "orgGroups", "userAuth",
-               "sessions", "invitations", "groups", "connections",
+               "sessions", "invitations", "connections",
                "connectionsByTag", "pendingConnections", "subscriptions",
                "followers", "enterpriseLinks", "userGroups", "groupMembers",
                "items", "itemLikes", "itemResponses", "userItems", "feed",
@@ -666,7 +718,8 @@ def truncateColumnFamilies(client):
                "feed_status", "feed_link","feed_document", "feedItems",
                "domainOrgMap", "userVotes", "votes", 'userEvents',
                'eventResponses', "userEventInvitations", "userEventResponse",
-               'eventInvitations',"notifications", "notificationItems"]:
+               'eventInvitations',"notifications", "notificationItems", "nameIndex",
+               "displayNameIndex"]:
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 

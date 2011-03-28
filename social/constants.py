@@ -7,6 +7,8 @@ SUPPORTED_IMAGE_TYPES = ['jpeg', 'png', 'gif', 'jpg']
 AVATAR_SIZE_LARGE  = '128x128'
 AVATAR_SIZE_MEDIUM = '48x48'
 AVATAR_SIZE_SMALL  = '32x32'
+MAX_IMAGE_SIZE = 4*1024*1024 #4MB
+
 
 # Number of comments shown in a conversation
 MAX_COMMENTS_IN_FEED = 25

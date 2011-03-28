@@ -99,10 +99,11 @@ def getUniqueKey():
     return base64.urlsafe_b64encode(u.bytes)[:-2]
 
 
-def createNewItem(request, itemType, ownerId=None, acl=None):
+def createNewItem(request, itemType, ownerId=None, acl=None, subType=None):
     owner = ownerId or request.getSession(IAuthInfo).username
     acl = acl if acl else (getRequestArg(request, "acl") or "company")
-    return {
+
+    meta = {
         "meta": {
             "acl": acl,
             "type": itemType,
@@ -112,6 +113,9 @@ def createNewItem(request, itemType, ownerId=None, acl=None):
         },
         "followers": {owner: ''}
     }
+    if subType:
+        meta["meta"]["subType"] = subType
+    return meta
 
 
 @defer.inlineCallbacks

@@ -32,9 +32,9 @@ class PeopleResource(base.BaseResource):
             yield renderScriptBlock(request, "people.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-        employees = yield Db.get_slice(orgKey, "orgUsers",
-                                       start=start, count=PEOPLE_PER_PAGE)
-        employees = [employee.column.name for employee in employees]
+        cols = yield Db.get_slice(orgKey, "displayNameIndex", start=start,
+                                  count=PEOPLE_PER_PAGE)
+        employees = [col.column.name.split(":")[1] for col in cols]
 
         usersDeferred = Db.multiget_slice(employees, "entities", ["basic"])
         relation = Relation(myKey, employees)
@@ -46,6 +46,7 @@ class PeopleResource(base.BaseResource):
         # First result tuple contains the list of user objects.
         args["entities"] = utils.multiSuperColumnsToDict(results[0][1])
         args["relations"] = relation
+        args["people"] = employees
 
         if script:
             yield renderScriptBlock(request, "people.mako", "content",
@@ -80,8 +81,17 @@ class PeopleResource(base.BaseResource):
         relation.friends = friends
         entities = yield Db.multiget_slice(friends.keys(), "entities", ["basic"])
 
+        cols = yield Db.get_slice(myKey, "displayNameIndex", start=start,
+                                  count=PEOPLE_PER_PAGE)
+        people = []
+        for col in cols:
+            userId = col.column.name.split(":")[1]
+            if userId in friends.keys():
+                people.append(userId)
+
         args["entities"] = utils.multiSuperColumnsToDict(entities)
         args["relations"] = relation
+        args["people"] = people
 
         if script:
             yield renderScriptBlock(request, "people.mako", "content",

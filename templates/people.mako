@@ -59,7 +59,7 @@
 
 <%def name="content()">
   <% counter = 0 %>
-  %for userId in entities:
+  %for userId in people:
     %if counter % 2 == 0:
       <div class="users-row">
     %endif
