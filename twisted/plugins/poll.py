@@ -15,7 +15,7 @@ from social.isocial     import IItemType
 
 class PollResource(base.BaseResource):
     isLeaf = True
-    
+
     @defer.inlineCallbacks
     def _vote(self, request):
         convId = utils.getRequestArg(request, 'id')
@@ -64,8 +64,8 @@ class PollResource(base.BaseResource):
 
         data = {}
         userId = request.getSession(IAuthInfo).username
-        yield poll.fetchData(data, convId, userId)
-        
+        yield poll.fetchData(data, convId, userId, ["meta"])
+
         myVotes = data["myVotes"]
         voted = myVotes[convId] if (convId in myVotes and myVotes[convId])\
                                 else False
@@ -82,8 +82,8 @@ class PollResource(base.BaseResource):
 
         data = {}
         userId = request.getSession(IAuthInfo).username
-        yield poll.fetchData(data, convId, userId)
-        
+        yield poll.fetchData(data, convId, userId, ["meta"])
+
         myVotes = data["myVotes"]
         voted = myVotes[convId] if (convId in myVotes and myVotes[convId])\
                                 else False
@@ -137,28 +137,29 @@ class Poll(object):
     def shareBlockProvider(self):
         return ("poll.mako", "share_poll")
 
+
     def rootHTML(self, convId, args):
         if "convId" in args:
             return getBlock("poll.mako", "poll_root", **args)
         else:
             return getBlock("poll.mako", "poll_root", args=[convId], **args)
 
+
     @defer.inlineCallbacks
-    def fetchData(self, args, convId=None, userId=None):
-        toFetchEntities = set()
+    def fetchData(self, args, convId=None, userId=None, columns=[]):
         convId = convId or args["convId"]
         myKey = userId or args.get("myKey", None)
 
-        conv = yield Db.get_slice(convId, "items", ["meta", 'options', 'counts'])
-        if not len(conv):
+        conv = yield Db.get_slice(convId, "items",
+                                  ['options', 'counts'].extend(columns))
+        if not conv:
             raise errors.InvalidRequest()
         conv = utils.supercolumnsToDict(conv, True)
+        conv.update(args.get("items", {}).get(convId, {}))
 
         options = conv["options"] if conv.has_key("options") else None
         if not options:
             raise errors.InvalidRequest()
-
-        toFetchEntities.add(conv["meta"]["owner"])
 
         myVote = yield Db.get_slice(myKey, "userVotes", [convId])
         myVote = myVote[0].column.value if myVote else None
@@ -176,7 +177,8 @@ class Poll(object):
         args.setdefault("myVotes", {})[convId] = myVote
         args.setdefault("showResults", {})[convId] = showResults
 
-        defer.returnValue(toFetchEntities)
+        defer.returnValue(set())
+
 
     @defer.inlineCallbacks
     def renderRoot(self, request, convId, args):
@@ -196,6 +198,7 @@ class Poll(object):
                                         args=[convId, True], **args)
                 args['convId'] = convId
         # TODO: handle no_script case
+
 
     @defer.inlineCallbacks
     def create(self, request):
@@ -225,6 +228,7 @@ class Poll(object):
 
         yield Db.batch_insert(convId, "items", item)
         defer.returnValue((convId, item))
+
 
     _ajaxResource = None
     _resource = None

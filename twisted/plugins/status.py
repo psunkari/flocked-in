@@ -28,20 +28,8 @@ class Status(object):
             return getBlock("item.mako", "renderStatus", args=[convId], **args)
 
 
-    @defer.inlineCallbacks
     def fetchData(self, args, convId=None):
-        convId = convId or args["convId"]
-        toFetchEntities = set()
-
-        conv = yield Db.get_slice(convId, "items", ['meta'])
-        conv = utils.supercolumnsToDict(conv)
-        if not conv:
-            raise errors.MissingParams()
-
-        toFetchEntities.add(conv["meta"]["owner"])
-        args.setdefault("items", {})[convId] = conv
-
-        defer.returnValue(toFetchEntities)
+        return defer.succeed(set())
 
 
     @defer.inlineCallbacks
