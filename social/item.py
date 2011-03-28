@@ -134,6 +134,12 @@ class ItemResource(base.BaseResource):
 
         # TODO: Render other blocks
 
+        if script and landing:
+            request.write("</body></html>")
+
+        if not script:
+            yield render(request, "item.mako", **args)
+
 
     @defer.inlineCallbacks
     def createItem(self, request):
