@@ -41,7 +41,7 @@
         </div>
         <div id="user-subactions">
           %if not script:
-            ${self.user_subactions()}
+            ${self.user_subactions(userKey)}
           %endif
         </div>
       </div>
