@@ -231,7 +231,12 @@ class FeedResource(base.BaseResource):
         extraDataDeferreds = []
 
         for convId in convs:
-            itemType = items[convId]["meta"]["type"]
+            meta = items[convId]["meta"]
+            itemType = meta["type"]
+            toFetchEntities.add(meta["owner"])
+            if "target" in meta:
+                toFetchEntities.add(meta["target"])
+
             if itemType in plugins:
                 d =  plugins[itemType].fetchData(args, convId)
                 extraDataDeferreds.append(d)

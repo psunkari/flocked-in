@@ -18,7 +18,6 @@ class EventResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _inviteUsers(self, request, convId=None):
-
         invitees = utils.getRequestArg(request, 'invitees')
         invitees = invitees.split(',') if invitees else None
         myKey = request.getSession(IAuthInfo).username
@@ -62,6 +61,7 @@ class EventResource(base.BaseResource):
                 yield Db.insert(userKey, "notifications", convId, timeUUID)
                 value = ":".join([responseType, myKey, convId, convType, convOwner])
                 yield Db.batch_insert(userKey, "notificationItems", {convId:{timeUUID:value}})
+
 
     @defer.inlineCallbacks
     def _rsvp(self, request):
@@ -118,9 +118,9 @@ class EventResource(base.BaseResource):
 
         yield Db.batch_insert(convId, "items", {"options":optionCounts})
 
+
     @defer.inlineCallbacks
     def _events(self, request):
-
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
 
@@ -164,7 +164,6 @@ class EventResource(base.BaseResource):
         entities = yield Db.multiget_slice(toFetchEntities, "entities", ["basic"])
         entities = utils.multiSuperColumnsToDict(entities)
 
-
         args["items"] = events
         args["myResponse"] = myResponses
         args["conversations"] = convs
@@ -177,7 +176,6 @@ class EventResource(base.BaseResource):
         if script:
             yield renderScriptBlock(request, "event.mako", "invitations", landing,
                                     "#invitations", "set", **args)
-
 
 
     def render_POST(self, request):
@@ -196,6 +194,8 @@ class EventResource(base.BaseResource):
             d = self._inviteUsers(request)
             d.addCallbacks(success, failure)
             return server.NOT_DONE_YET
+
+
     def render_GET(self, request):
         def success(response):
             request.finish()
@@ -257,16 +257,14 @@ class Event(object):
 
     @defer.inlineCallbacks
     def fetchData(self, args, convId=None):
-        toFetchEntities = set()
         convId = convId or args["convId"]
         myKey = args["myKey"]
 
-        conv = yield Db.get_slice(convId, "items", ["meta", "options"])
-        conv = utils.supercolumnsToDict(conv)
+        conv = yield Db.get_slice(convId, "items", ["options"])
         if not conv:
             raise errors.InvalidRequest()
-
-        toFetchEntities.add(conv["meta"]["owner"])
+        conv = utils.supercolumnsToDict(conv)
+        conv.update(args.get("items", {}).get(convId, {}))
 
         myResponse = yield Db.get_slice(myKey, "userEventResponse", [convId])
         myResponse = myResponse[0].column.value if myResponse else ''
@@ -277,7 +275,7 @@ class Event(object):
         args.setdefault("items", {})[convId] = conv
         args.setdefault("myResponse", {})[convId] = myResponse
 
-        defer.returnValue(toFetchEntities)
+        defer.returnValue(set())
 
 
     @defer.inlineCallbacks

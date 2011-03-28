@@ -60,13 +60,18 @@ class ProfileResource(base.BaseResource):
                     toFetchItems.add(itemKey)
                     toFetchEntities.add(userKey_)
 
-        items = yield Db.multiget(toFetchItems, "items", "meta")
+        items = yield Db.multiget_slice(toFetchItems, "items", ["meta"])
         items = utils.multiSuperColumnsToDict(items)
         args["items"] = items
         extraDataDeferreds = []
 
         for convId in convs:
-            itemType = items[convId]["meta"]["type"]
+            meta = items[convId]["meta"]
+            itemType = meta["type"]
+            toFetchEntities.add(meta["owner"])
+            if "target" in meta:
+                toFetchEntities.add(meta["target"])
+
             if itemType in plugins:
                 d =  plugins[itemType].fetchData(args, convId)
                 extraDataDeferreds.append(d)

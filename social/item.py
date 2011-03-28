@@ -33,6 +33,7 @@ class ItemResource(base.BaseResource):
         itemType = conv["meta"].get("type", None)
 
         args['convId'] = convId
+        args['items'] = {convId: conv}
         start = utils.getRequestArg(request, "start") or ''
         start = utils.decodeKey(start)
 
@@ -43,25 +44,21 @@ class ItemResource(base.BaseResource):
             yield renderScriptBlock(request, "item.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-        entities = {}
-        items = {}
-        args["entities"] = entities
-        args["items"] = items
+        args["entities"] = {}
         toFetchEntities = set()
 
         plugin = plugins[itemType] if itemType in plugins else None
         if plugin:
-            toFetchEntities = yield plugin.fetchData(args)
-            if toFetchEntities:
-                entities = yield Db.multiget_slice(toFetchEntities, "entities", ["basic"])
-                entities = utils.multiSuperColumnsToDict(entities)
-                args.update({"entities": entities})
-        else:
-            convOwner = conv['meta']['owner']
-            owner = yield Db.get(convOwner, "entities", super_column="basic")
-            owner = utils.supercolumnsToDict([owner])
-            args.update({"entities":{convOwner:owner}})
-            args.update({"items":{convId: conv}})
+            entityIds = yield plugin.fetchData(args)
+            toFetchEntities.update(entityIds)
+
+        toFetchEntities.add(conv['meta']['owner'])
+        if "target" in conv["meta"]:
+            toFetchEntities.add(conv['meta']['target'])
+
+        entities = yield Db.multiget_slice(toFetchEntities, "entities", ["basic"])
+        entities = utils.multiSuperColumnsToDict(entities)
+        args["entities"].update(entities)
 
         renderers = []
 
