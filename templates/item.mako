@@ -208,7 +208,7 @@
   <% itemTags = items[convId].get("tags", {}) %>
     <div id="conv-tags-${convId}" class="conv-tags">
     %for tagId in itemTags.keys():
-      <span>${tags[tagId]["title"]}<span class="delete-tag"><a class="ajax" _ref="/item/untag?id=${convId}&tag=${tagId}">X</a></span></span>
+      <span><a class="ajax" href="/tags?id=${tagId}">${tags[tagId]["title"]}</a><span class="delete-tag"><a class="ajax" _ref="/item/untag?id=${convId}&tag=${tagId}">X</a></span></span>
     %endfor
     <form method="post" action="/item/tag" class="ajax" autocomplete="off" id="addtag-form-${convId}">
       <input type="text" name="tag" value=""></input>

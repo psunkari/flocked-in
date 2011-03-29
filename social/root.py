@@ -16,6 +16,7 @@ from social.people          import PeopleResource
 from social.avatar          import AvatarResource
 from social.notifications   import NotificationsResource
 from social.groups          import GroupsResource
+from social.tags            import TagsResource
 
 
 def getPluggedResources(ajax=False):
@@ -39,6 +40,7 @@ class RootResource(resource.Resource):
         self._profile = ProfileResource(self._isAjax)
         self._register = RegisterResource(self._isAjax)
         self._item = ItemResource(self._isAjax)
+        self._tags = TagsResource(self._isAjax)
         self._people = PeopleResource(self._isAjax)
         self._notifications = NotificationsResource(self._isAjax)
         self._groups = GroupsResource(self._isAjax)
@@ -59,6 +61,8 @@ class RootResource(resource.Resource):
             match = self._register
         elif path == "item":
             match = self._item
+        elif path == "tags":
+            match = self._tags
         elif path == "people":
             match = self._people
         elif path == "avatar" and not self._isAjax:
