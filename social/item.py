@@ -500,8 +500,7 @@ class ItemResource(base.BaseResource):
         tagItemsCount = int(tag.get("itemsCount", "0")) + 1
         if tagItemsCount % 10 == 7:
             tagItemsCount = yield Db.get_count(tagId, "tagItems") + 1
-        d3 = Db.insert(orgId, "orgTags", "%s"%tagItemsCount,
-                       "itemsCount", tagId)
+        Db.insert(orgId, "orgTags", "%s"%tagItemsCount, "itemsCount", tagId)
 
         yield defer.DeferredList([d1, d2])
 
@@ -523,13 +522,14 @@ class ItemResource(base.BaseResource):
         d2 = Db.remove(tagId, "tagItems", item["meta"]["uuid"])
 
         orgId = request.getSession(IAuthInfo).organization
-        itemsCountCol = yield Db.get(orgId, "orgTags", "itemsCount", tagId)
-        tagItemsCount = int(itemsCountCol.column.value) - 1
-        if tagItemsCount % 10 == 7:
-            tagItemsCount = yield Db.get_count(tagId, "tagItems") - 1
-        d3 = Db.insert(orgId, "orgTags", "%s"%tagItemsCount,
-                       "itemsCount", tagId)
-
+        try:
+            itemsCountCol = yield Db.get(orgId, "orgTags", "itemsCount", tagId)
+            tagItemsCount = int(itemsCountCol.column.value) - 1
+            if tagItemsCount % 10 == 7:
+                tagItemsCount = yield Db.get_count(tagId, "tagItems") - 1
+            Db.insert(orgId, "orgTags", "%s"%tagItemsCount, "itemsCount", tagId)
+        except ttypes.NotFoundException:
+            pass
         yield defer.DeferredList([d1, d2])
 
 
