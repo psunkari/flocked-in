@@ -100,7 +100,11 @@ class TagsResource(base.BaseResource):
             fetchedTags = yield Db.get_slice(myOrgId, "orgTags", toFetchTags)
             tags = utils.supercolumnsToDict(fetchedTags)
 
-        data = {"entities": entities, "tags": tags, "items": items,
+        fetchedLikes = yield Db.multiget(toFetchItems, "itemLikes", myId)
+        myLikes = utils.multiColumnsToDict(fetchedLikes)
+
+        data = {"entities": entities, "tags": tags,
+                "items": items, "myLikes": myLikes,
                 "responses": responses, "conversations": convs}
         args.update(data)
         defer.returnValue(args)

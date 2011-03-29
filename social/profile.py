@@ -151,8 +151,11 @@ class ProfileResource(base.BaseResource):
             fetchedTags = yield Db.get_slice(userOrgId, "orgTags", toFetchTags)
             tags = utils.supercolumnsToDict(fetchedTags)
 
+        fetchedLikes = yield Db.multiget(toFetchItems, "itemLikes", userKey)
+        myLikes = utils.multiColumnsToDict(fetchedLikes)
 
-        data = {"entities": entities, "reasonStr": reasonStr, "tags": tags,
+        data = {"entities": entities, "reasonStr": reasonStr,
+                "tags": tags, "myLikes": myLikes,
                 "userItems": userItems, "responses": responses}
         args.update(data)
         defer.returnValue(args)
