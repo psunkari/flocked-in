@@ -506,7 +506,7 @@ class ProfileResource(base.BaseResource):
             def renderActions(ign):
                 d = renderScriptBlock(request, "profile.mako", "user_actions",
                                 False, "#user-actions-%s"%targetKey, "set",
-                                args=[targetKey, False, not isProfile], **data)
+                                args=[targetKey, not isProfile], **data)
                 if isProfile:
                     def renderSubactions(ign):
                         return renderScriptBlock(request, "profile.mako",

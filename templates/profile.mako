@@ -163,7 +163,9 @@
     <div class="titlebar">
       <div>
         <span class="middle title">${user['basic']['name']}</span>
-        ${user_actions(userKey)}
+        <ul id="user-actions-${userKey}" class="middle user-actions h-links">
+          ${user_actions(userKey)}
+        </ul>
       </div>
       %if user['basic'].has_key('jobTitle'):
         <div class="subtitle">${user['basic']['jobTitle']}</div>
@@ -227,11 +229,8 @@
   </ul>
 </%def>
 
-<%def name="user_actions(userKey, renderWrapper=True, showRemove=False)">
+<%def name="user_actions(userKey, showRemove=False)">
   %if myKey != userKey:
-  %if renderWrapper:
-  <ul id="user-actions-${userKey}" class="middle user-actions h-links">
-  %endif
     %if userKey not in relations.friends:
       %if not relations.pending or userKey not in relations.pending:
         <li class="button default" onclick="$.post('/ajax/profile/friend', 'id=${userKey}', null, 'script')"><span class="button-text">Add as Friend</span></li>
@@ -248,9 +247,6 @@
     %elif showRemove:
       <li class="button" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}', null, 'script')"><span class="button-text">Unfriend User</span></li>
     %endif
-  %if renderWrapper:
-  </ul>
-  %endif
   %endif
 </%def>
 
