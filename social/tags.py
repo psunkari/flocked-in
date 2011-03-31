@@ -134,6 +134,12 @@ class TagsResource(base.BaseResource):
             tagInfo = utils.columnsToDict(tagInfo)
             args["tags"] = {tagId: tagInfo}
             args["tagId"] = tagId
+            args["tagFollowing"] = False
+            try:
+                yield Db.get(tagId, "tagFollowers", myKey)
+                args["tagFollowing"] = True
+            except ttypes.NotFoundException:
+                pass
 
         if script and newId:
             yield renderScriptBlock(request, "tags.mako", "header",
@@ -146,7 +152,6 @@ class TagsResource(base.BaseResource):
             yield renderScriptBlock(request, "tags.mako", "items",
                                     landing, "#tag-items", "set", **args)
 
-
     def render_GET(self, request):
         segmentCount = len(request.postpath)
         d = None
@@ -157,4 +162,29 @@ class TagsResource(base.BaseResource):
         return self._epilogue(request, d)
 
     def render_POST(self, request):
-        pass
+        segmentCount = len(request.postpath)
+        if segmentCount != 1:
+            raise errors.InvalidRequest()
+
+        requestDeferred = utils.getValidTagId(request, "id")
+        def callback((tagId, tag)):
+            actionDeferred = None
+            action = request.postpath[0]
+            myId = request.getSession(IAuthInfo).username
+
+            if action == "follow":
+                actionDeferred = Db.insert(tagId, "tagFollowers", '', myId)
+            elif action == "unfollow":
+                actionDeferred = Db.remove(tagId, "tagFollowers", myId)
+            else:
+                raise errors.InvalidRequest()
+
+            def renderActions(result):
+                return renderScriptBlock(request, "tags.mako", "tag_actions",
+                                False, "#tag-actions-%s" % tagId, "set",
+                                args=[tagId], tagFollowing=(action=="follow"))
+            actionDeferred.addCallback(renderActions)
+            return actionDeferred
+
+        requestDeferred.addCallback(callback)
+        return self._epilogue(request, requestDeferred)

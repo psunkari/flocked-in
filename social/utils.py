@@ -94,6 +94,23 @@ def getValidItemId(request, arg, columns=[], type=None):
         raise errors.InvalidEntity()
 
 
+@defer.inlineCallbacks
+def getValidTagId(request, arg, orgId=None):
+    tagId = getRequestArg(request, arg)
+    if not tagId:
+        raise errors.MissingParam()
+
+    if not orgId:
+        orgId = request.getSession(IAuthInfo).organization
+
+    tag = yield Db.get_slice(orgId, "orgTags", [tagId])
+    if not tag:
+        raise errors.InvalidTag()
+
+    tag = supercolumnsToDict(tag)
+    defer.returnValue((tagId, tag))
+
+
 # TODO
 def areFriendlyDomains(one, two):
     return True

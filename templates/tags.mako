@@ -39,6 +39,9 @@
   <div class="titlebar">
     <div id="title">
       <span class="middle title">${tags[tagId]["title"]}</span>
+      <ul id="tag-actions-${tagId}" class="middle user-actions h-links">
+        ${tag_actions(tagId)}
+      </ul>
     </div>
   </div>
 </%def>
@@ -47,4 +50,12 @@
   %for convId in conversations:
     ${item.item_layout(convId, True, True)}
   %endfor
+</%def>
+
+<%def name="tag_actions(tagId, showRemove=True)">
+  %if not tagFollowing:
+    <li class="button default" onclick="$.post('/ajax/tags/follow', 'id=${tagId}', null, 'script')"><span class="button-text">Follow</span></li>
+  %elif showRemove:
+    <li class="button" onclick="$.post('/ajax/tags/unfollow', 'id=${tagId}', null, 'script')"><span class="button-text">Unfollow</span></li>
+  %endif
 </%def>
