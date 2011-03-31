@@ -171,13 +171,10 @@ class ProfileResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _unfollow(self, myKey, targetKey):
-        try:
-            d1 = Db.remove(myKey, "subscriptions", targetKey)
-            d2 = Db.remove(targetKey, "followers", myKey)
-            yield d1
-            yield d2
-        except ttypes.NotFoundException:
-            pass
+        d1 = Db.remove(myKey, "subscriptions", targetKey)
+        d2 = Db.remove(targetKey, "followers", myKey)
+        yield d1
+        yield d2
 
 
     @defer.inlineCallbacks
@@ -469,6 +466,7 @@ class ProfileResource(base.BaseResource):
         segmentCount = len(request.postpath)
         if segmentCount != 1:
                 raise errors.InvalidRequest()
+
         action = request.postpath[0]
         if action == "edit":
             headers = request.requestHeaders
@@ -483,7 +481,6 @@ class ProfileResource(base.BaseResource):
 
         def callback(targetKey):
             actionDeferred = None
-            action = request.postpath[0]
             if action == "friend":
                 actionDeferred = self._friend(request, myKey, targetKey)
             elif action == "unfriend":
