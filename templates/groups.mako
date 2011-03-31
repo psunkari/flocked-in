@@ -75,7 +75,9 @@
       <div class="user-details-name">${utils.userName(userId, users[userId])}</div>
       <div class="user-details-title">${users[userId]["basic"].get("jobTitle", '')}</div>
       <div class="user-details-actions">
-        ${profile.user_actions(userId, True, True)}
+        <ul id="user-actions-${userId}" class="middle user-actions h-links">
+          ${profile.user_actions(userId, True)}
+        </ul>
       </div>
     </div>
 </%def>
