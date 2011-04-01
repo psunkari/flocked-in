@@ -70,10 +70,10 @@
         %endif
       </div>
       <div id="search-container">
-        <form id="search">
-          <input type="text" id="searchbox"
+        <form id="search" action="/fst/search" method="post">
+          <input type="text" id="searchbox" name="searchbox"
                  placeholder="${_('Search people, messages and statuses...')}"/>
-          <input type="button" id="searchbutton" value="${_('Go!')}"/>
+          <input type="submit" id="searchbutton" value="${_('Go!')}"/>
         </form>
       </div>
     </div>

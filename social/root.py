@@ -16,6 +16,7 @@ from social.people          import PeopleResource
 from social.avatar          import AvatarResource
 from social.notifications   import NotificationsResource
 from social.groups          import GroupsResource
+from social.fts             import FTSResource
 from social.tags            import TagsResource
 
 
@@ -44,6 +45,7 @@ class RootResource(resource.Resource):
         self._people = PeopleResource(self._isAjax)
         self._notifications = NotificationsResource(self._isAjax)
         self._groups = GroupsResource(self._isAjax)
+        self._fst = FTSResource(self._isAjax)
         self._pluginResources = getPluggedResources(self._isAjax)
         if not self._isAjax:
             self._ajax = RootResource(True)
@@ -71,6 +73,8 @@ class RootResource(resource.Resource):
             match = self._notifications
         elif path == "groups":
             match = self._groups
+        elif path == "fst":
+            match = self._fst
         elif path == "events":
             if "event" in plugins and self._pluginResources.has_key("event"):
                 match = self._pluginResources["event"]

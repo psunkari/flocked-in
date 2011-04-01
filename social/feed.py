@@ -2,15 +2,12 @@
 import time
 import uuid
 
-from ordereddict        import OrderedDict
 from twisted.internet   import defer
 from twisted.web        import server
 from twisted.python     import log
-from telephus.cassandra import ttypes
 
 from social             import Db, utils, base, plugins, _, __
 from social.template    import render, renderDef, renderScriptBlock
-from social.isocial     import IAuthInfo
 from social.constants   import INFINITY, MAXFEEDITEMS, MAXFEEDITEMSBYTYPE
 
 
@@ -112,7 +109,7 @@ class FeedResource(base.BaseResource):
 
     # TODO: ACLs
     @defer.inlineCallbacks
-    def _getFeedItems(self, request, itemKey=None, start='', count=10, entityId=None):
+    def _getFeedItems(self, request, itemIds=None, start='', count=10, entityId=None):
         toFetchItems = set()    # Items and entities that need to be fetched
         toFetchEntities = set() #
         toFetchTags = set()
@@ -128,9 +125,9 @@ class FeedResource(base.BaseResource):
         # 1. Fetch the list of root items (conversations) that will be shown
         convs = []
         nextPageStart = None
-        if itemKey:
-            convs.append(itemKey)
-            toFetchItems.add(itemKey)
+        if itemIds:
+            convs.extend(itemIds)
+            toFetchItems.update(set(itemIds))
         else:
             keysFromFeed = []
             fetchStart = utils.decodeKey(start)
