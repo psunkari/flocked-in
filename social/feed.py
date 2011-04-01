@@ -112,7 +112,7 @@ class FeedResource(base.BaseResource):
 
     # TODO: ACLs
     @defer.inlineCallbacks
-    def _getFeedItems(self, request, itemKey=None, count=10, entityId=None):
+    def _getFeedItems(self, request, itemKey=None, start='', count=10, entityId=None):
         toFetchItems = set()    # Items and entities that need to be fetched
         toFetchEntities = set() #
         toFetchTags = set()
@@ -127,23 +127,31 @@ class FeedResource(base.BaseResource):
 
         # 1. Fetch the list of root items (conversations) that will be shown
         convs = []
+        nextPageStart = None
         if itemKey:
             convs.append(itemKey)
             toFetchItems.add(itemKey)
         else:
-            start = ""
+            keysFromFeed = []
+            fetchStart = utils.decodeKey(start)
             fetchCount = count + 5
             while len(convs) < count:
                 cols = yield Db.get_slice(key, "feed", count=fetchCount,
-                                          start=start, reverse=True)
+                                          start=fetchStart, reverse=True)
                 for col in cols:
                     value = col.column.value
                     if value not in toFetchItems:
                         convs.append(value)
                         toFetchItems.add(value)
+                        keysFromFeed.append(col.column.name)
+
                 if len(cols) < fetchCount:
                     break
-                start = cols[-1].column.name
+                fetchStart = cols[-1].column.name
+
+            if len(keysFromFeed) > count:
+                nextPageStart = utils.encodeKey(keysFromFeed[count])
+                convs = convs[0:count]
 
         if not convs:
             defer.returnValue({"conversations": convs})
@@ -330,7 +338,8 @@ class FeedResource(base.BaseResource):
 
         data = {"entities": entities, "responses": responses,
                 "myLikes": myLikes, "reasonStr": reasonStr,
-                "likeStr": likeStr, "conversations": convs}
+                "likeStr": likeStr, "conversations": convs,
+                "nextPageStart": nextPageStart}
         args.update(data)
         defer.returnValue(args)
 
@@ -362,18 +371,27 @@ class FeedResource(base.BaseResource):
             yield renderScriptBlock(request, "feed.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-        if script:
+        start = utils.getRequestArg(request, "start") or ''
+        fromFetchMore = ((not landing) and (not appchange) and start)
+
+        if script and not fromFetchMore:
             yield renderScriptBlock(request, "feed.mako", "share_block",
                                     landing, "#share-block", "set", **args)
             yield self._renderShareBlock(request, "status")
+
         if entityId:
-            feedItems = yield self._getFeedItems(request, entityId=entityId)
+            feedItems = yield self._getFeedItems(request, start=start, entityId=entityId)
         else:
-            feedItems = yield self._getFeedItems(request)
+            feedItems = yield self._getFeedItems(request, start=start)
+
         args.update(feedItems)
         if script:
-            yield renderScriptBlock(request, "feed.mako", "feed", landing,
-                                    "#user-feed", "set", **args)
+            if fromFetchMore:
+                yield renderScriptBlock(request, "feed.mako", "feed", landing,
+                                        "#next-load-wrapper", "replace", **args)
+            else:
+                yield renderScriptBlock(request, "feed.mako", "feed", landing,
+                                        "#user-feed", "set", **args)
 
         if script and landing:
             request.write("</body></html>")

@@ -44,6 +44,7 @@
           %if not script:
             ${self.feed()}
           %endif
+          <div id="foot-loader"></div>
         </div>
       </div>
     </div>
@@ -108,4 +109,9 @@
   %for convId in conversations:
     ${item.item_layout(convId, True, True)}
   %endfor
+  %if nextPageStart:
+    <div id="next-load-wrapper"><a id="next-page-load" class="ajax" _ref="/feed?start=${nextPageStart}">${_("Fetch older posts")}</a></div>
+  %else:
+    <div id="next-load-wrapper">No more posts to show</div>
+  %endif
 </%def>

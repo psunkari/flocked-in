@@ -7,7 +7,7 @@
 (function(window, $) {
 var social = {
 
-/* 
+/*
  * parseUri:
  * Based on http://blog.stevenlevithan.com/archives/parseuri
  */
@@ -52,32 +52,39 @@ _initAjaxRequests: function _initAjaxRequests() {
         }
         return false;
     });
-    
+
     /* Async form submit */
     $('form.ajax').live("submit", function() {
         var node = $(this);
         $.post('/ajax' + node.attr('action'), node.serialize(), null, 'script');
         return false;
     });
-    
+
     /* Global ajax error handler */
     $(document).ajaxError(function(event, request, settings) {
         alert("Error fetching: " + settings.url);
     });
-    
+
     /* If the browser support HTML5 states, use them */
     if (window.history && history.pushState) {
         social._historyHasStates = true;
         $.address.state("/");
-    } else { 
+    } else {
         var hash = window.location.hash;
         if (hash != "" && hash != "/")
             window.location.href = hash.substr(1);
     }
-    
+
     /* An address or the hash changed externally, update the page */
     $.address.externalChange(function(event) {
         _fetchUri(event.value)
+    });
+
+    /* Add a scroll to bottom handler */
+    $(window).scroll(function(){
+        if ($(window).scrollTop() == $(document).height() - $(window).height()){
+            $('#next-page-load').click();
+        }
     });
 },
 
@@ -90,11 +97,11 @@ _initTimestampUpdates: function _initTimestampUpdates() {
         $('.timestamp').each(function(idx, item) {
             timestamp = item.getAttribute("_ts")
             tooltip = item.getAttribute("title");
-    
+
             current = new Date();
             current = current.getTime()/1000;
             delta = current - parseInt(timestamp);
-    
+
             if ((delta < 60) || (delta > 3630 && delta < 7200) || (delta > 86430)) {
                 // Do nothing.
             } else if (delta > 86400) {
@@ -120,11 +127,11 @@ _initChunkLoader: function(resources) {
         _loaded: [],    // resourceIDs of already loaded resources
         _resources: {}, // map of resourceID to resource
         _global: [],    // resourceIDs of global resources
-    
+
         // Unload a stylesheet that is not needed anymore.
         _unloadResource: function() {
         },
-    
+
         // Waiting for CSS to load before calling the callback is a pretty
         // ugly hack.  A small discussion about it is at:
         //                      http://stackoverflow.com/questions/4488567/
@@ -134,7 +141,7 @@ _initChunkLoader: function(resources) {
             for (var id in ids)
                 if (id in chunkLoader._resources)
                     resources.push(chunkLoader._resources[id]);
-    
+
             filesToLoad = ids.length;
             if (ids.length == 0)
                 callback();
@@ -143,20 +150,20 @@ _initChunkLoader: function(resources) {
                 if (filesToLoad == 0)
                     callback();
             }
-    
+
             function cssCheckLoaded(id) {
                 var maxWaitTime = 5000
                 var currentWaitTime   = 0
                 var w = 27;
                 var nodeId = "_css_poll_" + id;
-    
+
                 var div = document.getElementById(nodeId)
                 if (!document.getElementById(nodeId)) {
                     div = document.createElement("div");
                     div.id = nodeId;
                     document.body.appendChild(div);
                 }
-    
+
                 var timer = null;
                 function checker() {
                     if (div.offsetWidth == w || $(div).css('width') == w + 'px' ||
@@ -169,7 +176,7 @@ _initChunkLoader: function(resources) {
                 }
                 timer = setInterval(checker.bind(chunkLoader), 20)
             }
-    
+
             function loadCSS(rsrc) {
                 if (!rsrc.id in chunkLoader._requested)
                     $("document").ready(function(){
@@ -178,7 +185,7 @@ _initChunkLoader: function(resources) {
                     })
                 cssCheckLoaded(rsrc.id);
             }
-    
+
             for (var rsrc in resources) {
                 if (rsrc.id in chunkLoader._loaded)
                     checkResourcesCount()
@@ -188,7 +195,7 @@ _initChunkLoader: function(resources) {
                     $.getScript(rsrc.url, function() {checkResourcesCount()});
             }
         },
-    
+
         _displayContent: function(rsrc) {
             if (rsrc.content && rsrc.node) {
                 method = "method" in rsrc? rsrc.method: "set";
@@ -199,31 +206,34 @@ _initChunkLoader: function(resources) {
                     case "prepend":
                         $(rsrc.node).prepend(rsrc.content)
                         break;
+                    case "replace":
+                        $(rsrc.node).replaceWith(rsrc.content)
+                        break;
                     case "set":
                     default:
                         $(rsrc.node).html(rsrc.content);
                 }
             }
         },
-    
+
         // Load the chunk
         load: function(obj) {
             if (obj.hasOwnProperty("resources"))
                 for (var rsrc in obj.resources)
                     chunkLoader._resources[rsrc.id] = rsrc;
-    
+
             var cleanup = obj.method == "set"? true: false;
             chunkLoader._loadResources(obj.css || [],
                             chunkLoader._displayContent.bind(chunkLoader, obj),
                             cleanup, obj.parent || null);
-    
+
             chunkLoader._delayed.push(obj);
             if (obj.last) {
                 chunkLoader._loadResources(obj.js || [],
                               chunkLoader._runEventHandlers.bind(chunkLoader));
             }
         },
-    
+
         _runEventHandlers: function() {
             $.each(chunkLoader._delayed, function(index, value) {
                     if (value.handlers) {
