@@ -12,22 +12,22 @@
 <%def name="nav_menu()">
   <div id="mymenu-container" class="sidemenu-container">
     <ul id="mymenu" class="v-links sidemenu">
-      <li><a href="/feed" class="ajax">News Feed</a></li>
-      <li><a href="/notifications" class="ajax">Notifications</a></li>
-      <li><a href="/messages" class="ajax">Messages</a></li>
-      <li><a href="/events" class="ajax">Events</a></li>
-      <li><a href="/people/friends" class="ajax">Friends</a></li>
+      <li><a href="/feed" class="ajax busy-indicator">News Feed</a></li>
+      <li><a href="/notifications" class="ajax busy-indicator">Notifications</a></li>
+      <li><a href="/messages" class="ajax busy-indicator">Messages</a></li>
+      <li><a href="/events" class="ajax busy-indicator">Events</a></li>
+      <li><a href="/people/friends" class="ajax busy-indicator">Friends</a></li>
     </ul>
   </div>
   <div id="grpmenu-container" class="sidemenu-container">
     <ul id="grpmenu" class="v-links sidemenu">
-      <li><a href="/groups" class="ajax">Groups</a></li>
+      <li><a href="/groups" class="ajax busy-indicator">Groups</a></li>
     </ul>
   </div>
   <div id="orgmenu-container" class="sidemenu-container">
     <ul id="orgmenu" class="v-links sidemenu">
-      <li><a href="/feed?id=${orgKey}" class="ajax">Company Feed</a></li>
-      <li><a href="/people" class="ajax">People</a></li>
+      <li><a href="/feed?id=${orgKey}" class="ajax busy-indicator">Company Feed</a></li>
+      <li><a href="/people" class="ajax busy-indicator">People</a></li>
     </ul>
   </div>
 </%def>

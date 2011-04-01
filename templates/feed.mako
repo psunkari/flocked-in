@@ -72,7 +72,7 @@
 
 <%def name="share_block()">
   %if script:
-    <div id="sharebar-tabs">
+    <div id="sharebar-tabs" class="busy-indicator">
       <ul id="sharebar-links" class="h-links">
         <li>${_("Share:")}</li>
         <%
@@ -110,7 +110,7 @@
     ${item.item_layout(convId, True, True)}
   %endfor
   %if nextPageStart:
-    <div id="next-load-wrapper"><a id="next-page-load" class="ajax" _ref="/feed?start=${nextPageStart}">${_("Fetch older posts")}</a></div>
+    <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" _ref="/feed?start=${nextPageStart}">${_("Fetch older posts")}</a></div>
   %else:
     <div id="next-load-wrapper">No more posts to show</div>
   %endif

@@ -55,7 +55,7 @@
           ${self.conv_root(convId)}
         %endif
       </div>
-      <div id="item-footer-${convId}" class="conv-footer">
+      <div id="item-footer-${convId}" class="conv-footer busy-indicator">
         %if inline or not script:
           ${self.item_footer(convId)}
         %endif
@@ -65,7 +65,7 @@
           <div class="conv-likes">${likeStr[convId]}</div>
         %endif
       </div>
-      <div id="conv-tags-wrapper-${convId}">
+      <div id="conv-tags-wrapper-${convId}" class="busy-indicator">
         %if inline or not script:
           ${self.conv_tags(convId)}
         %endif
@@ -75,7 +75,7 @@
           ${self.conv_comments(convId, isFeed)}
         %endif
       </div>
-      <div id="comment-form-wrapper-${convId}" class="conv-comment-form">
+      <div id="comment-form-wrapper-${convId}" class="conv-comment-form busy-indicator">
         %if inline or not script:
           ${self.conv_comment_form(convId)}
         %endif
@@ -155,7 +155,7 @@
     responseCount = int(items[convId]["meta"].get("responseCount", "0"))
     responsesToShow = responses.get(convId, {}) if responses else []
   %>
-  <div id="comments-header-${convId}">
+  <div id="comments-header-${convId}" class="busy-indicator">
     ${self.conv_comments_head(convId, responseCount, len(responsesToShow), isFeed)}
   </div>
   <div id="comments-${convId}">

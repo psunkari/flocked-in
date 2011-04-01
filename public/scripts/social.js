@@ -31,32 +31,69 @@ _historyHasStates: false,
 _initAjaxRequests: function _initAjaxRequests() {
     function _fetchUri(str) {
         uri = social.parseUri(str);
+        deferred = null;
         if (social._fetchUriOldPath) {
             tail = '';
             if (social._fetchUriOldPath != uri.path)
                 tail = uri.query? "&_fp=1": "?_fp=1";
 
-            $.getScript('/ajax' + str + tail);
+            deferred = $.getScript('/ajax' + str + tail);
         }
         social._fetchUriOldPath = uri.path;
+        return deferred;
+    };
+
+    function _setBusy(deferred, node) {
+        busyIndicator = null;
+        if (!deferred)
+            return;
+
+        if (node.hasClass('busy-indicator'))
+            busyIndicator = node;
+        else if (bi = node.attr("_bi"))
+            busyIndicator = $('#' + bi);
+        else
+            busyIndicator = node.closest('.busy-indicator');
+
+        busyIndicator.addClass("busy");
+        deferred.done(function(){busyIndicator.removeClass("busy");});
     };
 
     /* Async Get */
     $("a.ajax").live("click", function() {
-        node = $(this)
+        node = $(this);
+        deferred = null;
+
         if (url = node.attr('_ref')) {
-            $.getScript('/ajax' + url)
+            deferred = $.getScript('/ajax' + url);
         } else if (url = node.attr('href')) {
             $.address.value(url);
-            _fetchUri(url);
+            deferred = _fetchUri(url);
         }
+
+        _setBusy(deferred, node);
+        return false;
+    });
+
+    /* Async Post */
+    $("a.ajaxpost").live("click", function() {
+        node = $(this);
+        url = node.attr('_ref');
+        parsed = social.parseUri(url);
+
+        deferred = $.post('/ajax' + parsed.path, parsed.query, null, 'script');
+
+        _setBusy(deferred, node);
         return false;
     });
 
     /* Async form submit */
     $('form.ajax').live("submit", function() {
         var node = $(this);
-        $.post('/ajax' + node.attr('action'), node.serialize(), null, 'script');
+        deferred = $.post('/ajax' + node.attr('action'),
+                          node.serialize(), null, 'script');
+
+        _setBusy(deferred, node)
         return false;
     });
 

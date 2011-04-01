@@ -52,7 +52,7 @@
           %endif
         </div>
         <div class="center-contents">
-          <div id="profile-tabs">
+          <div id="profile-tabs" class="busy-indicator">
           %if not script:
             ${self.tabs()}
           %endif
