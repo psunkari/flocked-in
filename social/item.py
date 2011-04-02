@@ -7,7 +7,7 @@ from twisted.internet   import defer
 from twisted.web        import server
 from twisted.python     import log
 
-from social             import base, Db, utils, feed, plugins, constants, tags
+from social             import base, Db, utils, feed, plugins, constants, tags, fts
 from social             import notifications
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
@@ -411,6 +411,8 @@ class ItemResource(base.BaseResource):
                                 '#comments-%s' % convId, 'append', True,
                                 handlers={"onload": "$(':text', '#comment-form-%s').val(''); $('[name=\"nc\"]', '#comment-form-%s').val('%s')" % (convId, convId, numShowing)},
                                 args=[convId, itemId], **data)
+        d = fts.solr.updateIndex(itemId, {'meta':meta})
+
 
     @defer.inlineCallbacks
     def _likes(self, request):
