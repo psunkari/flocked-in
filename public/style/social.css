@@ -79,7 +79,6 @@ a.ajax {
     vertical-align: middle;
 }
 
-
 .busy-indicator {
     min-height: 16px;
     min-width: 24px;
@@ -90,6 +89,13 @@ a.ajax {
     background-repeat: no-repeat;
 }
 
+.icon {
+    height: 16px;
+    width: 16px;
+    background-image: url(/public/images/sprite.png);
+    background-repeat: no-repeat;
+    display: inline-block;
+}
 
 
 #topbar {
@@ -207,21 +213,52 @@ a.ajax {
 }
 
 .sidemenu a {
-    padding: 0 2px 0 21px;
+    padding: 1px 2px 1px 5px;
     line-height: 20px;
     display: block;
     color: #333;
     text-decoration: none;
-    border-bottom: 1px solid transparent;
+    position: relative;
 }
 
 .sidemenu a:hover, .sidemenu a:active, .sidemenu a:focus {
     background-color: #F0F0FF;
-    border-bottom: 1px solid #C4D7ED;
 }
 
 .sidemenu-selected {
     background-color: #C4D7ED;
+}
+
+.sidemenu-icon {
+    position: absolute;
+    vertical-align: middle;
+    width: 21px;
+    top: 2px;
+}
+.sidemenu-text {
+    padding-left: 21px;
+}
+
+.feed-icon {
+    background-position: 0 -48px;
+}
+.notifications-icon {
+    background-position: 0 -80px;
+}
+.messages-icon {
+    background-position: 0 -64px;
+}
+.events-icon {
+    background-position: 0 -96px;
+}
+.people-icon {
+    background-position: 0 -128px;
+}
+.groups-icon {
+    background-position: 0 -112px;
+}
+.org-icon {
+    background-position: 0 -144px;
 }
 
 .sidebar-title {
@@ -341,16 +378,37 @@ a.ajax {
 }
 #sharebar-links a {
     display: inline-block;
-    padding: 5px;
-    margin: -5px -5px -5px 0;
+    padding: 5px 0px 5px 5px;
+    margin: -5px 10px -5px 0;
     color: #3366CC;
+    position: relative;
 }
 #sharebar-links a:hover,
 #sharebar-links a:active, #sharebar-links a:focus {
     color: #4d95d6;
+    text-decoration: none;
+}
+a:hover > .sharebar-text,
+a:active > .sharebar-text, a:focus > .sharebar-text {
+    text-decoration: underline;
 }
 #sharebar-links .selected {
     color: black !important;
+}
+.sharebar-icon {
+    position: absolute;
+    vertical-align: middle;
+    top: 2px;
+}
+.sharebar-text {
+    padding-left: 20px;
+}
+
+.poll-icon {
+    background-position: 0px -32px;
+}
+.event-icon {
+    background-position: 0px -16px;
 }
 
 #sharebar .input-wrap {
