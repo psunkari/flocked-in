@@ -7,6 +7,7 @@ from twisted.web        import server
 from twisted.python     import log
 
 from social             import Db, utils, base, plugins, _, __
+from social.isocial     import IAuthInfo
 from social.template    import render, renderDef, renderScriptBlock
 from social.constants   import INFINITY, MAXFEEDITEMS, MAXFEEDITEMSBYTYPE
 
