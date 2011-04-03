@@ -264,9 +264,13 @@ def userName(id, user, classes=None):
 def userAvatar(id, userInfo, size=None):
     size = size[0] if (size and len(size) != 0) else "m"
     avatar = userInfo.get("basic", {}).get("avatar", None)
+    sex = userInfo.get("basic", {}).get("sex", "M").lower()
     if avatar:
         imgType, itemId = avatar.split(":")
         return "/avatar/%s_%s.%s" % (size, itemId, imgType)
+    else:
+        sex = "m" if sex != "f" else "f"
+        return "/public/images/avatar_%s_%s.png" % (sex, size)
 
     return None
 

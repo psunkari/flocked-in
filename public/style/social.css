@@ -105,8 +105,8 @@ a.ajax {
 #avatar {
     height: 48px;
     width: 48px;
-    background: transparent url(/public/images/default-avatar-tb.jpg);
     border: 1px solid white;
+    background: white;
     float: left;
     margin: 3px 0;
 }
@@ -459,7 +459,6 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .conv-avatar {
     width: 48px;
     height: 48px;
-    background-color: #CCC;
     position: absolute;
 }
 
@@ -506,7 +505,6 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     height: 32px;
     width: 32px;
     float: left;
-    background-color: #CCC;
 }
 
 .comment-container,
@@ -592,7 +590,6 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .users-avatar {
     width: 48px;
     height: 48px;
-    background-color: #CCCCCC;
     position: absolute;
 }
 
