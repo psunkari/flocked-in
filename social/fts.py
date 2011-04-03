@@ -18,6 +18,7 @@ from social.template            import render, renderScriptBlock
 URL = Config.get('SOLR', 'HOST')
 DEBUG = False
 
+
 class XMLBodyProducer(object):
     implements (IBodyProducer)
 
@@ -34,6 +35,7 @@ class XMLBodyProducer(object):
 
     def stopProducing(self):
         pass
+
 
 class JsonBodyReceiver(protocol.Protocol):
     def __init__(self, deferred):
@@ -69,7 +71,6 @@ class Solr(object):
         return d
 
     def updateIndex(self, itemId, item):
-
         fields = [self.elementMaker.field(str(itemId), {"name":"id"})]
         itemType = item["meta"].get("type", "status")
         defaultIndex = [("meta", "comment"), ("meta", "parent")]
@@ -87,10 +88,8 @@ class Solr(object):
 
         return self._request("POST", url, {}, XMLBodyProducer(root))
 
-
     def deleteIndex(self, itemId, item):
         pass
-
 
     def search(self, term):
         def callback(response):
@@ -104,14 +103,11 @@ class Solr(object):
         return d
 
 
-
 class FTSResource(base.BaseResource):
     isLeaf=True
 
-
     @defer.inlineCallbacks
     def search(self, request):
-
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
         args["heading"] = _("Search Results")
@@ -155,15 +151,11 @@ class FTSResource(base.BaseResource):
         if not script:
             yield render(request, "feed.mako", **args)
 
-
     def render_POST(self, request):
         segmentCount = len(request.postpath)
         d = None
-
-        if segmentCount == 1:
-            path = request.postpath[0]
-            if path == "search":
-                d = self.search(request)
+        if segmentCount == 0:
+            d = self.search(request)
         return self._epilogue(request, d)
 
     def render_GET(self, request):

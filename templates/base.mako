@@ -74,7 +74,7 @@
         %endif
       </div>
       <div id="search-container">
-        <form id="search" action="/fst/search" method="post">
+        <form id="search" action="/search" method="post">
           <input type="text" id="searchbox" name="searchbox"
                  placeholder="${_('Search people, messages and statuses...')}"/>
           <input type="submit" id="searchbutton" value="${_('Go!')}"/>
