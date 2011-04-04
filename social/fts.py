@@ -136,7 +136,7 @@ class FTSResource(base.BaseResource):
 
         if convs:
             feedResource = FeedResource()
-            feedItems = yield feedResource._getFeedItems(myKey, itemIds=convs)
+            feedItems = yield feedResource._getFeedItems(request, itemIds=convs)
             args.update(feedItems)
         else:
             args["conversations"] = convs

@@ -120,6 +120,8 @@ class FeedResource(base.BaseResource):
         userKey = authinfo.username
         myOrgId = authinfo.organization
 
+        args["myKey"] = userKey
+
         # Fetch entity(org/group) feed if entityId is given
         key = entityId if entityId else userKey
 
