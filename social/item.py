@@ -108,7 +108,7 @@ class ItemResource(base.BaseResource):
 
         d1 = Db.multiget_slice(toFetchEntities, "entities", ["basic"])
         d2 = Db.multiget_slice(responseKeys, "items", ["meta"])
-        d3 = Db.multiget_slice(responseKeys + [convId], "itemLikes")
+        d3 = Db.multiget_slice(responseKeys + [convId], "itemLikes", [myKey])
         d4 = Db.get_slice(myOrgId, "orgTags", toFetchTags)\
                                     if toFetchTags else defer.succeed([])
 
