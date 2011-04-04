@@ -74,7 +74,7 @@ class ProfileResource(base.BaseResource):
     resources = {}
 
     @defer.inlineCallbacks
-    def _getUserItems(self, userKey, count=10):
+    def _getUserItems(self, userKey, myKey, count=10):
         toFetchItems = set()
         toFetchEntities = set()
         toFetchTags = set()
@@ -84,7 +84,7 @@ class ProfileResource(base.BaseResource):
         userItemsRaw = []
         userItems = []
         reasonStr = {}
-        args = {}
+        args = {"myKey": myKey}
 
         toFetchEntities.add(userKey)
         cols = yield Db.get_slice(userKey, "userItems", reverse=True, count=count)
@@ -151,9 +151,10 @@ class ProfileResource(base.BaseResource):
             fetchedTags = yield Db.get_slice(userOrgId, "orgTags", toFetchTags)
             tags = utils.supercolumnsToDict(fetchedTags)
 
-        fetchedLikes = yield Db.multiget(toFetchItems, "itemLikes", userKey)
+        fetchedLikes = yield Db.multiget(toFetchItems, "itemLikes", myKey)
         myLikes = utils.multiColumnsToDict(fetchedLikes)
 
+        del args['myKey']
         data = {"entities": entities, "reasonStr": reasonStr,
                 "tags": tags, "myLikes": myLikes,
                 "userItems": userItems, "responses": responses}
@@ -580,7 +581,7 @@ class ProfileResource(base.BaseResource):
         args["userKey"] = userKey
 
         if detail == "notes":
-            userItems = yield self._getUserItems(userKey)
+            userItems = yield self._getUserItems(userKey, myKey)
             args.update(userItems)
 
         # When scripts are enabled, updates are sent to the page as
