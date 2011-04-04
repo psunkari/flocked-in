@@ -321,9 +321,8 @@ def toSnippet(comment):
 
 
 
-_last_timestamp = None
 def uuid1(node=None, clock_seq=None, timestamp=None):
-    global _last_timestamp
+
     if not timestamp:
         nanoseconds = int(time.time() * 1e9)
         # 0x01b21dd213814000 is the number of 100-ns intervals between the
@@ -332,9 +331,7 @@ def uuid1(node=None, clock_seq=None, timestamp=None):
     else:
         nanoseconds = int(timestamp*1e9)
         timestamp = int(nanoseconds/100) + 0x01b21dd213814000L
-    if _last_timestamp is not None and timestamp <= _last_timestamp:
-        timestamp = _last_timestamp + 1
-    _last_timestamp = timestamp
+
     if clock_seq is None:
         import random
         clock_seq = random.randrange(1<<14L) # instead of stable storage

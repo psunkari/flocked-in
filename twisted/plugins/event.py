@@ -85,9 +85,11 @@ class EventResource(base.BaseResource):
         starttime = int(item["meta"]["startTime"])
         timeUUID = utils.uuid1(timestamp=starttime)
         timeUUID = timeUUID.bytes
+        prevResponse, responseUUID = None, None
 
-        prevResponse = yield Db.get_slice(myKey, "userEventResponse", [convId])
-        prevResponse = prevResponse[0].column.value if prevResponse else ''
+        cols = yield Db.get_slice(myKey, "userEventResponse", [convId])
+        if cols:
+            prevResponse, responseUUID = cols[0].column.value.split(":")
 
         if prevResponse == response:
             return
@@ -96,22 +98,21 @@ class EventResource(base.BaseResource):
             yield Db.remove(convId, "eventResponses", myKey, prevResponse)
             prevOptionCount = yield Db.get_count(convId, "eventResponses", prevResponse)
             optionCounts[prevResponse] = str(prevOptionCount)
-            if prevResponse in ("yes", "maybe") and response == "no":
-                yield Db.remove(myKey, "userEvents", item["meta"]["uuid"])
+            yield Db.remove(myKey, "userEvents", responseUUID)
 
         if not prevResponse:
             invitations = yield  Db.get_slice(convId, "eventInvitations",
                                               super_column =myKey)
             for invitation in invitations:
-                timeUUID = invitation.column.name
-                yield Db.remove(myKey, "userEventInvitations", timeUUID)
+                tuuid = invitation.column.name
+                yield Db.remove(myKey, "userEventInvitations", tuuid)
             yield Db.remove(convId, "eventInvitations", super_column=myKey)
 
-        yield Db.insert(myKey, "userEventResponse", response, convId)
+        yield Db.insert(myKey, "userEventResponse", response+":"+timeUUID, convId)
         yield Db.insert(convId, "eventResponses",  '', myKey, response)
 
-        if prevResponse not in ("yes", "maybe") and response in ("yes", "maybe"):
-            yield Db.insert(myKey, "userEvents", convId, item["meta"]["uuid"])
+        if response in ("yes", "maybe"):
+            yield Db.insert(myKey, "userEvents", convId, timeUUID)
 
         responseCount = yield Db.get_count(convId, "eventResponses", response)
         optionCounts[response] = str(responseCount)
@@ -153,7 +154,7 @@ class EventResource(base.BaseResource):
             responses = yield Db.get_slice(myKey, "userEventResponse", convs )
             for item in responses:
                 convId = item.column.name
-                value = item.column.value
+                value = item.column.value.split(":")[0]
                 myResponses[convId] = value
 
         for convId in convs:
@@ -267,7 +268,7 @@ class Event(object):
         conv.update(args.get("items", {}).get(convId, {}))
 
         myResponse = yield Db.get_slice(myKey, "userEventResponse", [convId])
-        myResponse = myResponse[0].column.value if myResponse else ''
+        myResponse = myResponse[0].column.value.split(":")[0] if myResponse else ''
 
         startTime = conv['meta'].get('start', None)
         endTime = conv['meta'].get('end', None)
