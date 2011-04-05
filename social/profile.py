@@ -13,6 +13,41 @@ from social                 import Db, auth, utils, base, plugins, _, __
 from social                 import constants, feed
 
 @defer.inlineCallbacks
+def saveAvatarItem(userId, data):
+    imageFormat = _getImageFileFormat(data)
+    if imageFormat not in constants.SUPPORTED_IMAGE_TYPES:
+        raise errors.UnsupportedFileType()
+
+    try:
+        original = PythonMagick.Blob(data)
+        image = PythonMagick.Image(original)
+    except Exception as e:
+        raise errors.UnknownFileFormat()
+
+    medium = PythonMagick.Blob()
+    small = PythonMagick.Blob()
+    large = PythonMagick.Blob()
+
+    image.scale(constants.AVATAR_SIZE_LARGE)
+    image.write(large)
+    image.scale(constants.AVATAR_SIZE_MEDIUM)
+    image.write(medium)
+    image.scale(constants.AVATAR_SIZE_SMALL)
+    image.write(small)
+
+    itemId = utils.getUniqueKey()
+    item = {
+        "meta": {"owner": userId, "acl": "company", "type": "image"},
+        "avatar": {
+            "format": imageFormat,
+            "small": small.data, "medium": medium.data,
+            "large": large.data, "original": original.data
+        }}
+    yield Db.batch_insert(itemId, "items", item)
+    defer.returnValue("%s:%s" % (imageFormat, itemId))
+
+
+@defer.inlineCallbacks
 def deleteNameIndex(userKey, name, targetKey):
     if name:
         yield Db.remove(userKey, "nameIndex", ":".join([name.lower(), targetKey]))
@@ -296,41 +331,6 @@ class ProfileResource(base.BaseResource):
 
 
     @defer.inlineCallbacks
-    def _saveAvatarItem(self, userId, data):
-        imageFormat = _getImageFileFormat(data)
-        if imageFormat not in constants.SUPPORTED_IMAGE_TYPES:
-            raise errors.UnsupportedFileType()
-
-        try:
-            original = PythonMagick.Blob(data)
-            image = PythonMagick.Image(original)
-        except Exception as e:
-            raise errors.UnknownFileFormat()
-
-        medium = PythonMagick.Blob()
-        small = PythonMagick.Blob()
-        large = PythonMagick.Blob()
-
-        image.scale(constants.AVATAR_SIZE_LARGE)
-        image.write(large)
-        image.scale(constants.AVATAR_SIZE_MEDIUM)
-        image.write(medium)
-        image.scale(constants.AVATAR_SIZE_SMALL)
-        image.write(small)
-
-        itemId = utils.getUniqueKey()
-        item = {
-            "meta": {"owner": userId, "acl": "company", "type": "image"},
-            "avatar": {
-                "format": imageFormat,
-                "small": small.data, "medium": medium.data,
-                "large": large.data, "original": original.data
-            }}
-        yield Db.batch_insert(itemId, "items", item)
-        defer.returnValue("%s:%s" % (imageFormat, itemId))
-
-
-    @defer.inlineCallbacks
     def _edit(self, request):
 
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
@@ -369,7 +369,7 @@ class ProfileResource(base.BaseResource):
 
         dp = utils.getRequestArg(request, "dp")
         if dp:
-            avatar = yield self._saveAvatarItem(myKey, dp)
+            avatar = yield saveAvatarItem(myKey, dp)
             if not userInfo.has_key("basic"):
                 userInfo["basic"] = {}
             userInfo["basic"]["avatar"] = avatar

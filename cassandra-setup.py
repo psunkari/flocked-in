@@ -104,6 +104,10 @@ def createColumnFamilies(client):
                        'List of groups that a user is a member of')
     yield client.system_add_column_family(userGroups)
 
+    bannedUsers = Cf(KEYSPACE, "bannedUsers", "Standard", "UTF8Type", None,
+                     "List of users banned from a group")
+    yield client.system_add_column_family(bannedUsers)
+
     # List of members in a group
     # userKey => <subscribed>:<activityKey>
     groupMembers = CfDef(KEYSPACE, 'groupMembers', 'Standard', 'UTF8Type', None,
@@ -735,7 +739,7 @@ def truncateColumnFamilies(client):
                'eventResponses', "userEventInvitations", "userEventResponse",
                'eventInvitations',"notifications", "notificationItems",
                "nameIndex", "displayNameIndex", "orgTags", "tagItems",
-               "tagFollowers", "orgTagsByName"]:
+               "tagFollowers", "orgTagsByName", "bannedUsers"]:
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 

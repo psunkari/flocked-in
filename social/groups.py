@@ -4,7 +4,7 @@ from twisted.internet   import defer
 from telephus.cassandra import ttypes
 
 
-from social             import base, Db, utils, errors, feed
+from social             import base, Db, utils, errors, feed, profile
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
@@ -60,6 +60,11 @@ class GroupsResource(base.BaseResource):
         cols = yield Db.get(groupId, "entities", "access", "basic")
         access = cols.column.value
 
+        cols = yield Db.get_slice(groupId, "bannedUsers", [myKey])
+        if cols:
+            log.msg("userid %s banned by admin" %(myKey))
+            raise errors.UserBanned()
+
         try:
             cols = yield Db.get(myKey, "userGroups", groupId)
         except ttypes.NotFoundException:
@@ -71,7 +76,7 @@ class GroupsResource(base.BaseResource):
                 yield Db.insert(groupId, "pendingConnections", '1', myKey)
 
     @defer.inlineCallbacks
-    def _acceptSubscriptions(self, request):
+    def _acceptSubscription(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         groupId = yield utils.getValidEntityId(request, "id", "group")
         userId = yield utils.getValidEntityId(request, "uid", "user")
@@ -88,11 +93,62 @@ class GroupsResource(base.BaseResource):
             except ttypes.NotFoundException:
                 pass
 
+    @defer.inlineCallbacks
+    def _rejectSubscription(self, request):
+        appchange, script, args, myKey = yield self._getBasicArgs(request)
+        groupId = yield utils.getValidEntityId(request, "id", "group")
+        userId = yield utils.getValidEntityId(request, "uid", "user")
+        group = yield Db.get_slice(groupId, "entities", ["basic"])
+        group = utils.supercolumnsToDict(group)
+
+        if myKey == group["basic"]["admin"]:
+            #or myKey in moderators #if i am moderator
+            try:
+                cols = yield Db.get(groupId, "pendingConnections", userId)
+                yield Db.remove(groupId, "pendingConnections", userId)
+                yield Db.remove(userId, "pendingConnections", groupId)
+                # notify user that the moderator rejected.
+            except ttypes.NotFoundException:
+                pass
 
 
     @defer.inlineCallbacks
     def _blockUser(self, request):
-        pass
+        appchange, script, args, myKey = yield self._getBasicArgs(request)
+        groupId = yield utils.getValidEntityId(request, "id", "group")
+        userId = yield utils.getValidEntityId(request, "uid", "user")
+        group = yield Db.get_slice(groupId, "entities", ["basic"])
+        group = utils.supercolumnsToDict(group)
+
+        if myKey == userId and myKey == group["basic"]["admin"]:
+            log.msg("Admin can't be banned from group")
+            raise errors.InvalidRequest()
+
+        if myKey == group["basic"]["admin"]:
+            # if the request is pending, remove the request
+            yield Db.remove(groupId, "pendingConnections", userId)
+            yield Db.remove(userId, "pendingConnections", groupId)
+
+            # if the users is already a member, remove the user from the group
+            yield Db.remove(groupId, "groupMembers", userId)
+            yield Db.remove(groupId, "followers", userId)
+            yield Db.remove(userId, "userGroups", groupId)
+
+            yield Db.insert(groupId, "bannedUsers", '', userId)
+
+    @defer.inlineCallbacks
+    def _unBlockUser(self, request):
+
+        appchange, script, args, myKey = yield self._getBasicArgs(request)
+        groupId = yield utils.getValidEntityId(request, "id", "group")
+        userId = yield utils.getValidEntityId(request, "uid", "user")
+        group = yield Db.get_slice(groupId, "entities", ["basic"])
+        group = utils.supercolumnsToDict(group)
+
+        if myKey == group["basic"]["admin"]:
+            # if the request is pending, remove the request
+            yield Db.remove(groupId, "bannedUsers", userId)
+            log.msg("unblocked user %s from group %s"%(userId, groupId))
 
     @defer.inlineCallbacks
     def _unsubscribe(self, request):
@@ -118,10 +174,10 @@ class GroupsResource(base.BaseResource):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         orgKey = args["orgKey"]
 
-        name = utils.getRequestArgs(request, "name")
-        description = utils.getRequestArgs(request, "desc")
-        access = utils.getRequestArgs(request, "access") or "public"
-        allowExternal = utils.getRequestArgs(reqiest, "external") or "closed"
+        name = utils.getRequestArg(request, "name")
+        description = utils.getRequestArg(request, "desc")
+        access = utils.getRequestArg(request, "access") or "public"
+        allowExternal = utils.getRequestArg(request, "external") or "closed"
 
         if allowExternal not in ("open", "closed"):
             raise errors.InvalidRequest()
@@ -130,14 +186,36 @@ class GroupsResource(base.BaseResource):
             raise errors.MissingParams()
 
         groupId = utils.getUniqueKey()
-        meta = {"name":name, "admin":admin, "type":"group",
+        meta = {"name":name, "admin":myKey, "type":"group",
                 "access":access, "orgKey":args["orgKey"],
                 "allowExternalUsers": allowExternal}
-        if desc:
-            meta["desc"] = desc
+        if description:
+            meta["desc"] = description
 
-        yield Db.batch_insert(groupId, "entities", {"meta": meta})
+        dp = utils.getRequestArg(request, "dp")
+        if dp:
+            avatar = yield profile.saveAvatarItem(groupId, dp)
+            meta["avatar"] = avatar
+
+        yield Db.batch_insert(groupId, "entities", {"basic": meta})
         yield Db.insert(orgKey, "orgGroups", '', groupId)
+        request.redirect("/feed?id=%s"%(groupId))
+
+    @defer.inlineCallbacks
+    def _renderCreate(self, request):
+        appchange, script, args, myKey = yield self._getBasicArgs(request)
+        landing = not self._ajax
+        orgKey = args["orgKey"]
+
+        if script and landing:
+            yield render(request,"groups.mako", **args)
+        if script and appchange:
+            yield renderScriptBlock(request, "groups.mako", "layout",
+                                    landing, "#mainbar", "set", **args)
+        if script:
+             yield renderScriptBlock(request, "groups.mako", "createGroup",
+                                    landing, "#groups-wrapper", "set", **args)
+
 
     @defer.inlineCallbacks
     def _listGroups(self, request):
@@ -206,6 +284,45 @@ class GroupsResource(base.BaseResource):
                                     landing, "#groups-wrapper", "set", **args)
 
 
+    @defer.inlineCallbacks
+    def _listPendingSubscriptions (self, request):
+        appchange, script, args, myKey = yield self._getBasicArgs(request)
+        landing = not self._ajax
+
+        groupId = yield utils.getValidEntityId(request, "id", "group")
+
+        group = yield Db.get_slice(groupId, "entities", ["basic"])
+        group = utils.supercolumnsToDict(group)
+
+        if script and landing:
+            yield render(request,"groups.mako", **args)
+        if script and appchange:
+            yield renderScriptBlock(request, "groups.mako", "layout",
+                                    landing, "#mainbar", "set", **args)
+
+
+
+        if myKey == group["basic"]["admin"]:
+            #or myKey in moderators #if i am moderator
+            cols = yield Db.get_slice(groupId, "pendingConnections")
+            cols = utils.columnsToDict(cols)
+            userIds = cols.keys()
+            cols = yield Db.multiget_slice(userIds, "entities", ["basic"])
+            users = utils.multiSuperColumnsToDict(cols)
+            args["entities"] = users
+        else:
+            args["entities"] = []
+
+        args["heading"] = "Pending Requests"
+        args["groupId"] = groupId
+        if script:
+            yield renderScriptBlock(request, "groups.mako", "titlebar",
+                                    landing, "#titlebar", "set", **args)
+            yield renderScriptBlock(request, "groups.mako", "pendingRequests",
+                                    landing, "#groups-wrapper", "set", **args)
+
+
+
     def render_GET(self, request):
         segmentCount = len(request.postpath)
         d = None
@@ -214,6 +331,12 @@ class GroupsResource(base.BaseResource):
             d = self._listGroups(request)
         elif segmentCount == 1 and request.postpath[0]=="members":
             d = self._listGroupMembers(request)
+        elif segmentCount == 1 and request.postpath[0] == "create":
+            d = self._renderCreate(request)
+        elif segmentCount == 1 and request.postpath[0] == "admin":
+            d = self._listPendingSubscriptions(request)
+        elif segmentCount == 1 and request.postpath[0] == "unblock":
+            d = self._unBlockUser(request)
 
         return self._epilogue(request, d)
 
@@ -223,9 +346,15 @@ class GroupsResource(base.BaseResource):
         segmentCount = len(request.postpath)
         d = None
 
-        if segmentCount == 1:
+        if segmentCount == 1 and request.postpath[0] == "approve":
+            d = self._acceptSubscription(request)
+        elif segmentCount == 1 and request.postpath[0] == "reject":
+            d = self._rejectSubscription(request)
+        elif segmentCount == 1 and request.postpath[0] == "block":
+            d = self._blockUser(request)
+        elif segmentCount == 1 and request.postpath[0] == "unblock":
+            d = self._unBlockUser(request)
+        elif segmentCount == 1:
             d = getattr(self, "_" + request.postpath[0])(request)
+
         return self._epilogue(request, d)
-
-
-

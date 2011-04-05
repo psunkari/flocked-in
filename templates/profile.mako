@@ -120,7 +120,7 @@
     <div class="sidebar-title">${_("Groups")}</div>
     <ul class="v-links">
     %for group in userGroups:
-      <li><a class="ajax" href="/groups?id=${group}">${rawGroupData[group]['name']}</a></li>
+      <li><a class="ajax" href="/feed?id=${group}">${rawGroupData[group]['name']}</a></li>
     %endfor
     </ul>
   </div>

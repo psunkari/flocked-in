@@ -82,12 +82,46 @@
     </div>
 </%def>
 
+<%def name="pendingRequests()">
+  <%
+    counter = 0
+  %>
+  %for userId in entities:
+
+
+    <div class="users-user">
+
+      <div class="users-avatar">
+      <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
+      %if avatarURI:
+        <img src="${avatarURI}" height='48' width='48'></img>
+      %endif
+      </div>
+      <div class="users-details">
+        <div class="user-details-name">${utils.userName(userId, entities[userId])}</div>
+        <div class="user-details-actions">
+          <ul id="user-actions-${userId}" class="middle user-actions h-links">
+            <li class="button default" onclick="$.post('/ajax/groups/approve', 'id=${groupId}&uid=${userId}', null, 'script')"><span class="button-text">Accept</span></li>
+            <li class="button default" onclick="$.post('/ajax/groups/reject', 'id=${groupId}&uid=${userId}', null, 'script')"><span class="button-text">Reject</span></li>
+            <li class="button default" onclick="$.post('/ajax/groups/block', 'id=${groupId}&uid=${userId}', null, 'script')"><span class="button-text">Block</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  %endfor
+
+</%def>
+
 <%def name="displayGroups()">
 
   % for groupId in groups:
 
     <div class="user-avatar">
-
+      <% avatarURI = utils.userAvatar(groupId, groups[groupId], "large") %>
+      %if avatarURI:
+        <!--<img src="${avatarURI}" width=64 height=64/>-->
+      %endif
     </div>
     <div class="user-details">
       <%
@@ -112,3 +146,44 @@
   %endfor
 </%def>
 
+
+<%def name="createGroup()">
+  <form action="/groups/create" method="post"  enctype="multipart/form-data">
+    <div class="edit-profile">
+      <ul>
+        <li><label for="name"> Group Name: </label></li>
+        <li><input type="text" id="name" name="name" value= "" /></li>
+      </ul>
+      <ul>
+        <li><label for="desc"> Description: </label></li>
+        <li><textarea id="desc" name="desc" /></li>
+      </ul>
+      <ul>
+        <li><label for="access"> Group Type : </label></li>
+        <li><input type="radio" id="access" name="access" value= "public" > Public</input></li>
+        <li><input type="radio" id="access" name="access" value= "private" > Private</input></li>
+      </ul>
+
+      <ul>
+        <li><label for="external"> external users allowed: </label></li>
+        <li><input type="radio" id="external" name="external" value= "open"> Yes</input>  </li>
+        <li><input type="radio" id="external" name="external" value= "closed"> No </input></li>
+      </ul>
+      <ul><li></li></ul>
+
+      <ul>
+        <li><label for="dp"> Photo </label> </li>
+        <li><input type="file" id="dp" name="dp" accept="image/jpx, image/png, image/gif" />
+      </ul>
+      <ul>
+        % if myKey:
+        <li><input type="hidden" value = ${myKey} name="id" /></li>
+        %endif
+      </ul>
+      <ul>
+        <li></li>
+        <li><input type="submit" name="userInfo_submit" value="Save"/> </li>
+      </ul>
+    </div>
+  </form>
+</%def>
