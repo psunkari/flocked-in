@@ -18,6 +18,7 @@ from social.notifications   import NotificationsResource
 from social.groups          import GroupsResource
 from social.fts             import FTSResource
 from social.tags            import TagsResource
+from social.auto            import AutoCompleteResource
 
 
 def getPluggedResources(ajax=False):
@@ -50,11 +51,14 @@ class RootResource(resource.Resource):
         if not self._isAjax:
             self._ajax = RootResource(True)
             self._avatars = AvatarResource()
+            self._auto = AutoCompleteResource()
 
     def getChildWithDefault(self, path, request):
         match = None
         if path == "" or path == "feed":
             match = self._feed
+        elif path == "auto" and not self._isAjax:
+            match = self._auto
         elif path == "profile":
             match = self._profile
         elif path == "ajax" and not self._isAjax:

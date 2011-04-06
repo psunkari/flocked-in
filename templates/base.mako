@@ -41,6 +41,10 @@
   <title>${self.title()}</title>
   <link rel="stylesheet" type="text/css" media="screen" href="/public/style/social.css"/>
   <link rel="stylesheet" type="text/css" media="screen" href="/public/style/widgets.css"/>
+  <link rel="stylesheet" type="text/css" media="screen" href="/public/style/jquery.ui.core.css"/>
+  <link rel="stylesheet" type="text/css" media="screen" href="/public/style/jquery.ui.menu.css"/>
+  <link rel="stylesheet" type="text/css" media="screen" href="/public/style/jquery.ui.autocomplete.css"/>
+  <link rel="stylesheet" type="text/css" media="screen" href="/public/style/jquery.ui.theme.css"/>
 %if script:
   <noscript>
     <meta http-equiv="refresh" content="0; URL=${noscriptUrl}"/>
@@ -105,8 +109,14 @@
   </div>
 %if script:
   <script type="text/javascript" src="/public/scripts/jquery.js"></script>
+  <script type="text/javascript" src="/public/scripts/jquery.ui.js"></script>
+  <script type="text/javascript" src="/public/scripts/jquery.ui.menu.js"></script>
+  <script type="text/javascript" src="/public/scripts/jquery.ui.autocomplete.js"></script>
   <script type="text/javascript" src="/public/scripts/jquery.address.js"></script>
   <script type="text/javascript" src="/public/scripts/social.js"></script>
+  <script type="text/javascript">
+    $().ready(function() {$$.initUI()});
+  </script>
 %else:
 </body>
 </html>
