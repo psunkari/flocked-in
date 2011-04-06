@@ -284,6 +284,8 @@ _initChunkLoader: function _initChunkLoader(resources) {
 },
 
 initUI: function() {
+    var self = this;
+
     /* Add a scroll to bottom handler */
     $(window).scroll(function(){
         if ($(window).scrollTop() == $(document).height() - $(window).height()){
@@ -291,8 +293,30 @@ initUI: function() {
         }
     });
 
+    $.extend($.ui.autocomplete.prototype, {
+        _renderItem: function(ul, item) {
+            return $("<li></li>")
+                        .data("item.autocomplete", item)
+                        .append($( "<a></a>" ).html( item.label ))
+                        .appendTo(ul);
+        }
+    });
+
     /* Searchbar must support autocomplete */
-    $("#searchbox").autocomplete({source: '/auto/searchbox'});
+    $("#searchbox").autocomplete({
+        source: '/auto/searchbox',
+        minLength: 3,
+        select: function(event, obj){
+            url = obj.item.href;
+            if (url !== undefined) {
+                $.address.value(url);
+                deferred = self.fetchUri(url);
+                event.target.value = "";
+                return false;
+            }
+            return true;
+        }
+    });
 }
 
 }; // var social;

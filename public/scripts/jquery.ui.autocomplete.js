@@ -13,13 +13,6 @@
  *	jquery.ui.position.js
  *	jquery.ui.menu.js
  */
-
-/*
- * Prasad:
- *   1. Support navigating to a URL when "href" exists on the item
- *   2. Add label as HTML
- */
-
 (function( $, undefined ) {
 
 // used to prevent race conditions with remote data sources
@@ -31,7 +24,7 @@ $.widget( "ui.autocomplete", {
 		appendTo: "body",
 		autoFocus: false,
 		delay: 300,
-		minLength: 3,	/* Prasad: Changed 1 to 3 */
+		minLength: 1,
 		position: {
 			my: "left top",
 			at: "left bottom",
@@ -202,13 +195,7 @@ $.widget( "ui.autocomplete", {
 					}
 
 					if ( false !== self._trigger( "select", event, { item: item } ) ) {
-						if (item.href !== undefined) {
-							$.address.value(item.href);
-							$$.fetchUri(item.href);
-							self._value("");
-						} else {
-							self._value( item.value );
-						}
+						self._value( item.value );
 					}
 					// reset the term after the select event
 					// this allows custom select handling to work properly
@@ -406,14 +393,12 @@ $.widget( "ui.autocomplete", {
 		});
 	},
 
-	/* Prasad: Begin HTML support */
 	_renderItem: function( ul, item) {
 		return $( "<li></li>" )
 			.data( "item.autocomplete", item )
-			.append( $( "<a></a>" ).html( item.label ) )
+			.append( $( "<a></a>" ).text( item.label ) )
 			.appendTo( ul );
 	},
-	/* Prasad: End HTML support */
 
 	_move: function( direction, event ) {
 		if ( !this.menu.element.is(":visible") ) {
