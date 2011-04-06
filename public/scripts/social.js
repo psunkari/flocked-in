@@ -28,36 +28,36 @@ parseUri: function parseUri(str) {
  */
 _fetchUriOldPath: null,
 _historyHasStates: false,
+fetchUri: function _fetchUri(str) {
+    uri = social.parseUri(str);
+    deferred = null;
+    if (social._fetchUriOldPath) {
+        tail = '';
+        if (social._fetchUriOldPath != uri.path)
+            tail = uri.query? "&_fp=1": "?_fp=1";
+
+        deferred = $.getScript('/ajax' + str + tail);
+    }
+    social._fetchUriOldPath = uri.path;
+    return deferred;
+},
+setBusy: function _setBusy(deferred, node) {
+    busyIndicator = null;
+    if (!deferred)
+        return;
+
+    if (node.hasClass('busy-indicator'))
+        busyIndicator = node;
+    else if (bi = node.attr("_bi"))
+        busyIndicator = $('#' + bi);
+    else
+        busyIndicator = node.closest('.busy-indicator');
+
+    busyIndicator.addClass("busy");
+    deferred.done(function(){busyIndicator.removeClass("busy");});
+},
 _initAjaxRequests: function _initAjaxRequests() {
-    function _fetchUri(str) {
-        uri = social.parseUri(str);
-        deferred = null;
-        if (social._fetchUriOldPath) {
-            tail = '';
-            if (social._fetchUriOldPath != uri.path)
-                tail = uri.query? "&_fp=1": "?_fp=1";
-
-            deferred = $.getScript('/ajax' + str + tail);
-        }
-        social._fetchUriOldPath = uri.path;
-        return deferred;
-    };
-
-    function _setBusy(deferred, node) {
-        busyIndicator = null;
-        if (!deferred)
-            return;
-
-        if (node.hasClass('busy-indicator'))
-            busyIndicator = node;
-        else if (bi = node.attr("_bi"))
-            busyIndicator = $('#' + bi);
-        else
-            busyIndicator = node.closest('.busy-indicator');
-
-        busyIndicator.addClass("busy");
-        deferred.done(function(){busyIndicator.removeClass("busy");});
-    };
+    var self = this;
 
     /* Async Get */
     $("a.ajax").live("click", function() {
@@ -68,10 +68,10 @@ _initAjaxRequests: function _initAjaxRequests() {
             deferred = $.getScript('/ajax' + url);
         } else if (url = node.attr('href')) {
             $.address.value(url);
-            deferred = _fetchUri(url);
+            deferred = self.fetchUri(url);
         }
 
-        _setBusy(deferred, node);
+        self.setBusy(deferred, node);
         return false;
     });
 
@@ -83,7 +83,7 @@ _initAjaxRequests: function _initAjaxRequests() {
 
         deferred = $.post('/ajax' + parsed.path, parsed.query, null, 'script');
 
-        _setBusy(deferred, node);
+        self.setBusy(deferred, node);
         return false;
     });
 
@@ -114,14 +114,7 @@ _initAjaxRequests: function _initAjaxRequests() {
 
     /* An address or the hash changed externally, update the page */
     $.address.externalChange(function(event) {
-        _fetchUri(event.value)
-    });
-
-    /* Add a scroll to bottom handler */
-    $(window).scroll(function(){
-        if ($(window).scrollTop() == $(document).height() - $(window).height()){
-            $('#next-page-load').click();
-        }
+        self.fetchUri(event.value)
     });
 },
 
@@ -157,7 +150,7 @@ _initTimestampUpdates: function _initTimestampUpdates() {
 /* ChunkLoader: Load the page in Chunks.
  * Takes the already loaded resource ids as argument.
  */
-_initChunkLoader: function(resources) {
+_initChunkLoader: function _initChunkLoader(resources) {
     chunkLoader = {
         _delayed: [],   // Chunks on which scripts have not been called yet
         _requested: [], // resourceIDs of requested resources
@@ -288,6 +281,18 @@ _initChunkLoader: function(resources) {
 
     social._chunkLoader = chunkLoader;
     social.load = chunkLoader.load;
+},
+
+initUI: function() {
+    /* Add a scroll to bottom handler */
+    $(window).scroll(function(){
+        if ($(window).scrollTop() == $(document).height() - $(window).height()){
+            $('#next-page-load').click();
+        }
+    });
+
+    /* Searchbar must support autocomplete */
+    $("#searchbox").autocomplete({source: '/auto/searchbox'});
 }
 
 }; // var social;
