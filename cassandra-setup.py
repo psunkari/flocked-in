@@ -267,11 +267,10 @@ def addSampleData(client):
     yield client.insert(exampleKey, "nameIndex", "", "sandeep:"+sandeepKey)
     yield client.insert(exampleKey, "nameIndex", "", "praveen:"+praveenKey)
 
-
     yield client.insert(exampleKey, "nameIndex", "", "pothana:"+praveenKey)
     yield client.insert(exampleKey, "nameIndex", "", "sunkari:"+prasadKey)
     yield client.insert(exampleKey, "nameIndex", "", "amaram:"+rahulKey)
-    yield client.insert(exampleKey, "nameIndex", "", "Gudibandla:"+ashokKey)
+    yield client.insert(exampleKey, "nameIndex", "", "gudibandla:"+ashokKey)
 
     yield client.batch_insert(exampleKey, 'orgUsers', {
                                     prasadKey: '',
