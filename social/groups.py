@@ -35,10 +35,10 @@ class GroupsResource(base.BaseResource):
             pass
 
     @defer.inlineCallbacks
-    def _addMember(self, request, groupId, userId, acl="public"):
+    def _addMember(self, request, groupId, userId, orgId, acl="company"):
 
         itemId = utils.getUniqueKey()
-        item = utils.createNewItem(request, "activity", userId, acl)
+        item = yield utils.createNewItem(request, "activity", userId, acl, ownerOrgId = orgId)
         item["meta"]["subType"] = "group"
         item["meta"]["target"] = groupId
         yield Db.insert(userId, "userGroups", "", groupId)
@@ -56,6 +56,7 @@ class GroupsResource(base.BaseResource):
     @defer.inlineCallbacks
     def _subscribe(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
+        myOrgId = args["orgKey"]
         groupId = yield utils.getValidEntityId(request, "id", "group")
         cols = yield Db.get(groupId, "entities", "access", "basic")
         access = cols.column.value
@@ -70,7 +71,7 @@ class GroupsResource(base.BaseResource):
         except ttypes.NotFoundException:
             #add to pending connections
             if access == "public":
-                yield self._addMember(request, groupId, myKey)
+                yield self._addMember(request, groupId, myKey, myOrgId)
             else:
                 yield Db.insert(myKey, "pendingConnections", '0', groupId)
                 yield Db.insert(groupId, "pendingConnections", '1', myKey)
@@ -78,6 +79,7 @@ class GroupsResource(base.BaseResource):
     @defer.inlineCallbacks
     def _acceptSubscription(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
+        myOrgId = args["orgKey"]
         groupId = yield utils.getValidEntityId(request, "id", "group")
         userId = yield utils.getValidEntityId(request, "uid", "user")
         group = yield Db.get_slice(groupId, "entities", ["basic"])
@@ -89,7 +91,7 @@ class GroupsResource(base.BaseResource):
                 cols = yield Db.get(groupId, "pendingConnections", userId)
                 yield Db.remove(groupId, "pendingConnections", userId)
                 yield Db.remove(userId, "pendingConnections", groupId)
-                yield self._addMember(request, groupId, userId)
+                yield self._addMember(request, groupId, userId, myOrgId)
             except ttypes.NotFoundException:
                 pass
 

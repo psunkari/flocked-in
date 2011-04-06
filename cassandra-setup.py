@@ -104,7 +104,7 @@ def createColumnFamilies(client):
                        'List of groups that a user is a member of')
     yield client.system_add_column_family(userGroups)
 
-    bannedUsers = Cf(KEYSPACE, "bannedUsers", "Standard", "UTF8Type", None,
+    bannedUsers = CfDef(KEYSPACE, "bannedUsers", "Standard", "UTF8Type", None,
                      "List of users banned from a group")
     yield client.system_add_column_family(bannedUsers)
 
@@ -628,6 +628,7 @@ def addSampleData(client):
     yield client.batch_insert(prasadToAshokKey, "items", {
                                     "meta": {
                                         "acl": "company",
+                                        "aclIds": exampleKey,
                                         "owner": prasadKey,
                                         "type": "activity",
                                         "subType": "connection",
@@ -646,6 +647,7 @@ def addSampleData(client):
     yield client.batch_insert(ashokToPrasadKey, "items", {
                                     "meta": {
                                         "acl": "friends",
+                                        "aclIds":"",
                                         "owner": ashokKey,
                                         "type": "activity",
                                         "subType": "connection",
@@ -665,6 +667,7 @@ def addSampleData(client):
     yield client.batch_insert(praveenToRahulKey, "items", {
                                     "meta": {
                                         "acl": "friends",
+                                        "aclIds":"",
                                         "owner": praveenKey,
                                         "type": "activity",
                                         "subType": "connection",
@@ -684,6 +687,7 @@ def addSampleData(client):
     yield client.batch_insert(rahulToPraveenKey, "items", {
                                     "meta": {
                                         "acl": "friends",
+                                        "aclIds":"",
                                         "owner": rahulKey,
                                         "type": "activity",
                                         "subType": "connection",
@@ -711,6 +715,7 @@ def addSampleData(client):
     yield client.batch_insert(praveenFollowingPrasadKey, "items", {
                                     "meta": {
                                         "acl": "friends",
+                                        "aclIds":"",
                                         "owner": praveenKey,
                                         "type": "activity",
                                         "subType": "following",

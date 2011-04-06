@@ -32,7 +32,9 @@
       </div>
       <div id="center">
         <div class="center-contents">
-          ${self.item_layout(convId)}
+          % if convId:
+              ${self.item_layout(convId)}
+          % endif
         </div>
       </div>
     </div>

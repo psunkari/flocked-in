@@ -8,6 +8,7 @@ from twisted.python     import log
 
 from social             import Db, utils, base, plugins, _, __
 from social.isocial     import IAuthInfo
+from social.relations   import Relation
 from social.template    import render, renderDef, renderScriptBlock
 from social.constants   import INFINITY, MAXFEEDITEMS, MAXFEEDITEMSBYTYPE
 
@@ -121,6 +122,11 @@ class FeedResource(base.BaseResource):
         myOrgId = authinfo.organization
 
         args["myKey"] = userKey
+        relation = Relation(userKey, [])
+        yield defer.DeferredList([relation.initFriendsList(),
+                                  relation.initSubscriptionsList(),
+                                  relation.initPendingList(),
+                                  relation.initFollowersList()])
 
         # Fetch entity(org/group) feed if entityId is given
         key = entityId if entityId else userKey
@@ -244,8 +250,17 @@ class FeedResource(base.BaseResource):
         args["items"] = items
         extraDataDeferreds = []
 
-        for convId in convs:
+        # fetch extra data (polls/events/links)
+        for convId in convs[:]:
             meta = items[convId]["meta"]
+            owner = meta["owner"]
+
+            if not utils.checkAcl(userKey, meta["acl"], owner,
+                                  relation, myOrgId, meta["aclIds"]):
+                convs.remove(convId)
+                # delete the items from feed
+                continue
+
             itemType = meta["type"]
             toFetchEntities.add(meta["owner"])
             if "target" in meta:
