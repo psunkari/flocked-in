@@ -11,12 +11,15 @@ from social             import Db, utils, base, errors, _
 from social.template    import renderScriptBlock, render, getBlock
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
+from social.logging     import dump_args, profile
 
 
 class EventResource(base.BaseResource):
     isLeaf = True
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _inviteUsers(self, request, convId=None):
         invitees = utils.getRequestArg(request, 'invitees')
         invitees = invitees.split(',') if invitees else None
@@ -65,7 +68,9 @@ class EventResource(base.BaseResource):
                 yield Db.batch_insert(userKey, "notificationItems", {convId:{timeUUID:value}})
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _rsvp(self, request):
         convId = utils.getRequestArg(request, 'id')
         response = utils.getRequestArg(request, 'response')
@@ -122,7 +127,9 @@ class EventResource(base.BaseResource):
         yield Db.batch_insert(convId, "items", {"options":optionCounts})
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _events(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
@@ -181,6 +188,8 @@ class EventResource(base.BaseResource):
                                     "#invitations", "set", **args)
 
 
+    @profile
+    @dump_args
     def render_POST(self, request):
         def success(response):
             request.finish()
@@ -199,6 +208,8 @@ class EventResource(base.BaseResource):
             return server.NOT_DONE_YET
 
 
+    @profile
+    @dump_args
     def render_GET(self, request):
         def success(response):
             request.finish()
@@ -219,7 +230,9 @@ class Event(object):
     position = 4
     hasIndex = False
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def getReason(self, convId, requesters, users):
         conv = yield Db.get_slice(convId, "items", ["meta"])
         conv = utils.supercolumnsToDict(conv)
@@ -258,7 +271,9 @@ class Event(object):
             return getBlock("event.mako", "event_root", args=[convId], **args)
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def fetchData(self, args, convId=None):
         convId = convId or args["convId"]
         myKey = args["myKey"]
@@ -281,7 +296,9 @@ class Event(object):
         defer.returnValue(set())
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def renderRoot(self, request, convId, args):
         script = args['script']
         landing = not args['ajax']
@@ -301,7 +318,9 @@ class Event(object):
         # TODO: handle no_script case
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def create(self, request):
         startTime = utils.getRequestArg(request, 'startTime')
         endTime = utils.getRequestArg(request, 'endTime')

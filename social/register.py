@@ -14,13 +14,16 @@ from social.base        import BaseResource
 from social             import utils, Db, Config
 from social.isocial     import IAuthInfo
 from social.template    import render
+from social.logging     import dump_args, profile
 
 DEVMODE = Config.get('General', 'DevMode') == 'True'
 DEVMODE = True
 MAXFILESIZE = 4*1024*1024
 
 
+@profile
 @defer.inlineCallbacks
+@dump_args
 def getOrgKey(domain):
     cols = yield Db.get_slice(domain, "domainOrgMap")
     cols = utils.columnsToDict(cols)
@@ -28,7 +31,9 @@ def getOrgKey(domain):
     defer.returnValue(orgKey)
 
 
+@profile
 @defer.inlineCallbacks
+@dump_args
 def send_email(emailId, token, username):
     rootUrl = Config.get('General', 'Home')
     subject  = ''
@@ -56,7 +61,9 @@ def send_email(emailId, token, username):
 class RegisterResource(BaseResource):
     isLeaf = True
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _isValidMailId(self, inviteeDomain, sender):
         orgKey = yield utils.getCompanyKey(sender)
         cols = yield Db.get_slice(orgKey, "entities", super_column="domains")
@@ -65,7 +72,9 @@ class RegisterResource(BaseResource):
 
         defer.returnValue(inviteeDomain and inviteeDomain in domains)
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _isValidToken(self, request, token, emailId):
         try:
             userKey = yield Db.get(emailId, "userAuth", "user")
@@ -78,6 +87,8 @@ class RegisterResource(BaseResource):
             else:
                 raise Exception("Invalid Token")
 
+    @profile
+    @dump_args
     def render_GET(self, request):
         def errback(err):
             log.err(err)
@@ -102,7 +113,9 @@ class RegisterResource(BaseResource):
             d.addCallbacks(callback, errback)
             return server.NOT_DONE_YET
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _sendInvitation(self, emailId, sender):
         cols = {}
         name = None
@@ -118,7 +131,9 @@ class RegisterResource(BaseResource):
         yield Db.batch_insert(emailId, "invitations", cols)
         yield send_email(emailId, token, name)
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _signup(self, request):
         username = None
         emailId = utils.getRequestArg(request, 'emailId')
@@ -147,7 +162,9 @@ class RegisterResource(BaseResource):
         if not sender:
             request.redirect('/signin')
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _addUser(self, request):
         emailId = utils.getRequestArg(request, 'emailId')
         domain = emailId.split("@")[1]
@@ -178,7 +195,8 @@ class RegisterResource(BaseResource):
         else:
             raise errors.ExistingUser
 
-
+    @profile
+    @dump_args
     def render_POST(self, request):
 
         segmentCount = len(request.postpath)

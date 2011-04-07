@@ -6,11 +6,14 @@ from twisted.internet       import defer
 from twisted.python         import log
 from twisted.web            import resource, server, http
 
-from social import _, __, Db, utils
+from social                 import _, __, Db, utils
+from social.logging         import profile, dump_args
 
 class AvatarResource(resource.Resource):
     isLeaf = True
 
+    @profile
+    @dump_args
     def render_GET(self, request):
         if len(request.postpath) != 1:
             return resource.ErrorPage(404, http.RESPONSES[401],

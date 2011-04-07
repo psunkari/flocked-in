@@ -10,6 +10,7 @@ from social             import Db, base, utils, errors
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
 from social.template    import render, renderScriptBlock, getBlock
+from social.logging     import profile, dump_args
 
 
 class Status(object):
@@ -32,7 +33,9 @@ class Status(object):
         return defer.succeed(set())
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def renderRoot(self, request, convId, args):
         script = args['script']
         landing = not args['ajax']
@@ -51,7 +54,9 @@ class Status(object):
                 args['convId'] = convId
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def create(self, request):
         target = utils.getRequestArg(request, "target")
         comment = utils.getRequestArg(request, "comment")

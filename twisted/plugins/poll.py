@@ -11,12 +11,15 @@ from social             import Db, utils, base, errors
 from social.template    import renderScriptBlock, render, getBlock
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
+from social.logging     import profile, dump_args
 
 
 class PollResource(base.BaseResource):
     isLeaf = True
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _vote(self, request):
         convId = utils.getRequestArg(request, 'id')
         vote = utils.getRequestArg(request, 'option')
@@ -56,7 +59,9 @@ class PollResource(base.BaseResource):
         yield Db.batch_insert(convId, "items", {"counts":optionCounts})
         yield self._results(request)
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _results(self, request):
         convId = utils.getRequestArg(request, "id");
         if not convId:
@@ -74,7 +79,9 @@ class PollResource(base.BaseResource):
                                 False, '#conv-root-%s'%convId, 'set',
                                 args=[convId, voted], **data)
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _change(self, request):
         convId = utils.getRequestArg(request, "id");
         if not convId:
@@ -92,6 +99,8 @@ class PollResource(base.BaseResource):
                                 False, '#conv-root-%s'%convId, 'set',
                                 args=[convId, voted], **data)
 
+    @profile
+    @dump_args
     def render_POST(self, request):
         def success(response):
             request.finish()
@@ -106,6 +115,8 @@ class PollResource(base.BaseResource):
             d.addCallbacks(success, failure)
             return server.NOT_DONE_YET
 
+    @profile
+    @dump_args
     def render_GET(self, request):
         segmentCount = len(request.postpath)
         d = None
@@ -145,7 +156,9 @@ class Poll(object):
             return getBlock("poll.mako", "poll_root", args=[convId], **args)
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def fetchData(self, args, convId=None, userId=None, columns=[]):
         convId = convId or args["convId"]
         myKey = userId or args.get("myKey", None)
@@ -180,7 +193,9 @@ class Poll(object):
         defer.returnValue(set())
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def renderRoot(self, request, convId, args):
         script = args['script']
         landing = not args['ajax']
@@ -200,7 +215,9 @@ class Poll(object):
         # TODO: handle no_script case
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def create(self, request):
         myKey = request.getSession(IAuthInfo).username
 

@@ -9,9 +9,12 @@ from twisted.python     import log
 from social             import Db, utils, _, __, base, plugins
 from social.template    import render, renderDef, renderScriptBlock
 from social.isocial     import IAuthInfo
+from social.logging     import profile, dump_args
 
 
+@profile
 @defer.inlineCallbacks
+@dump_args
 def ensureTag(request, tagName):
     authInfo = request.getSession(IAuthInfo)
     myId = authInfo.username
@@ -40,7 +43,9 @@ def ensureTag(request, tagName):
 class TagsResource(base.BaseResource):
     isLeaf = True
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _getTagItems(self, request, tagId, count=10):
         authinfo = request.getSession(IAuthInfo)
         myId = authinfo.username
@@ -110,7 +115,9 @@ class TagsResource(base.BaseResource):
         defer.returnValue(args)
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _render(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
@@ -152,6 +159,8 @@ class TagsResource(base.BaseResource):
             yield renderScriptBlock(request, "tags.mako", "items",
                                     landing, "#tag-items", "set", **args)
 
+    @profile
+    @dump_args
     def render_GET(self, request):
         segmentCount = len(request.postpath)
         d = None
@@ -161,6 +170,8 @@ class TagsResource(base.BaseResource):
 
         return self._epilogue(request, d)
 
+    @profile
+    @dump_args
     def render_POST(self, request):
         segmentCount = len(request.postpath)
         if segmentCount != 1:

@@ -8,12 +8,15 @@ from social             import base, Db, utils, errors, feed, profile
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
+from social.logging     import profile, dump_args
 
 
 class GroupsResource(base.BaseResource):
     isLeaf= True
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _follow(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         groupId = yield utils.getValidEntityId(request, "id", "group")
@@ -24,7 +27,9 @@ class GroupsResource(base.BaseResource):
         except ttypes.NotFoundException:
             pass
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _unfollow(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         groupId = yield utils.getValidEntityId(request, "id", "group")
@@ -34,7 +39,9 @@ class GroupsResource(base.BaseResource):
         except ttypes.NotFoundException:
             pass
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _addMember(self, request, groupId, userId, orgId, acl="company"):
 
         itemId = utils.getUniqueKey()
@@ -53,7 +60,9 @@ class GroupsResource(base.BaseResource):
         #notify user
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _subscribe(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         myOrgId = args["orgKey"]
@@ -76,7 +85,9 @@ class GroupsResource(base.BaseResource):
                 yield Db.insert(myKey, "pendingConnections", '0', groupId)
                 yield Db.insert(groupId, "pendingConnections", '1', myKey)
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _acceptSubscription(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         myOrgId = args["orgKey"]
@@ -95,7 +106,9 @@ class GroupsResource(base.BaseResource):
             except ttypes.NotFoundException:
                 pass
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _rejectSubscription(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         groupId = yield utils.getValidEntityId(request, "id", "group")
@@ -114,7 +127,9 @@ class GroupsResource(base.BaseResource):
                 pass
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _blockUser(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         groupId = yield utils.getValidEntityId(request, "id", "group")
@@ -138,7 +153,9 @@ class GroupsResource(base.BaseResource):
 
             yield Db.insert(groupId, "bannedUsers", '', userId)
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _unBlockUser(self, request):
 
         appchange, script, args, myKey = yield self._getBasicArgs(request)
@@ -152,7 +169,9 @@ class GroupsResource(base.BaseResource):
             yield Db.remove(groupId, "bannedUsers", userId)
             log.msg("unblocked user %s from group %s"%(userId, groupId))
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _unsubscribe(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         groupId = yield utils.getValidEntityId(request, "id", "group")
@@ -171,7 +190,9 @@ class GroupsResource(base.BaseResource):
         yield Db.remove(myKey, "userGroups", groupId)
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _create(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         orgKey = args["orgKey"]
@@ -203,7 +224,9 @@ class GroupsResource(base.BaseResource):
         yield Db.insert(orgKey, "orgGroups", '', groupId)
         request.redirect("/feed?id=%s"%(groupId))
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _renderCreate(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         landing = not self._ajax
@@ -219,7 +242,9 @@ class GroupsResource(base.BaseResource):
                                     landing, "#groups-wrapper", "set", **args)
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _listGroups(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         landing = not self._ajax
@@ -253,7 +278,9 @@ class GroupsResource(base.BaseResource):
                                     landing, "#groups-wrapper", "set", **args)
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _listGroupMembers(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         landing = not self._ajax
@@ -286,7 +313,9 @@ class GroupsResource(base.BaseResource):
                                     landing, "#groups-wrapper", "set", **args)
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _listPendingSubscriptions (self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         landing = not self._ajax
@@ -324,7 +353,8 @@ class GroupsResource(base.BaseResource):
                                     landing, "#groups-wrapper", "set", **args)
 
 
-
+    @profile
+    @dump_args
     def render_GET(self, request):
         segmentCount = len(request.postpath)
         d = None
@@ -342,7 +372,8 @@ class GroupsResource(base.BaseResource):
 
         return self._epilogue(request, d)
 
-
+    @profile
+    @dump_args
     def render_POST(self, request):
 
         segmentCount = len(request.postpath)

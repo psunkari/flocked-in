@@ -9,9 +9,12 @@ from twisted.python     import log
 from social             import base, Db, utils, feed, plugins, constants, _
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
+from social.logging     import dump_args, profile
 
 
+@profile
 @defer.inlineCallbacks
+@dump_args
 def pushNotifications( itemId, convId, responseType,
                       convType, convOwner, commentOwner, timeUUID):
     # value = responseType:commentOwner:itemKey:convType:convOwner:
@@ -25,7 +28,9 @@ def pushNotifications( itemId, convId, responseType,
             yield Db.batch_insert(userKey, "notificationItems", {convId:{timeUUID:value}})
 
 
+@profile
 @defer.inlineCallbacks
+@dump_args
 def deleteNofitications(convId, timeUUID):
     followers = yield Db.get_slice(convId, "items", super_column="followers")
     for follower in followers:
@@ -37,7 +42,9 @@ def deleteNofitications(convId, timeUUID):
 class NotificationsResource(base.BaseResource):
     isLeaf = True
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _getNotifications(self, userKey, count=10):
 
         def _getReasonStr(template, convId, itemType, itemOwnerId, usersList):
@@ -157,7 +164,9 @@ class NotificationsResource(base.BaseResource):
         defer.returnValue(args)
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _renderNotifications(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
@@ -175,7 +184,8 @@ class NotificationsResource(base.BaseResource):
             yield renderScriptBlock(request, "notifications.mako", "content",
                                     landing, "#center", "set", **args)
 
-
+    @profile
+    @dump_args
     def render_GET(self, request):
         d = self._renderNotifications(request)
         return self._epilogue(request, d)

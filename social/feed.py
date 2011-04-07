@@ -11,9 +11,11 @@ from social.isocial     import IAuthInfo
 from social.relations   import Relation
 from social.template    import render, renderDef, renderScriptBlock
 from social.constants   import INFINITY, MAXFEEDITEMS, MAXFEEDITEMSBYTYPE
+from social.logging     import profile, dump_args
 
-
+@profile
 @defer.inlineCallbacks
+@dump_args
 def deleteFromFeed(userKey, itemKey, parentKey,
                    itemType, itemOwner, responseType):
     # fix: itemOwner is either the person who owns the item
@@ -33,7 +35,9 @@ def deleteFromFeed(userKey, itemKey, parentKey,
             break
 
 
+@profile
 @defer.inlineCallbacks
+@dump_args
 def deleteFromOthersFeed(userKey, itemKey,parentKey, itemType,
                          acl, convOwner, responseType):
     others = yield utils.expandAcl(userKey, acl, convOwner)
@@ -42,7 +46,9 @@ def deleteFromOthersFeed(userKey, itemKey,parentKey, itemType,
                              itemType, userKey, responseType )
 
 
+@profile
 @defer.inlineCallbacks
+@dump_args
 def pushToOthersFeed(userKey, timeuuid, itemKey,parentKey,
                     acl, responseType, itemType, convOwner):
     others = yield utils.expandAcl(userKey, acl, convOwner)
@@ -51,7 +57,9 @@ def pushToOthersFeed(userKey, timeuuid, itemKey,parentKey,
                          responseType, itemType, convOwner, userKey)
 
 
+@profile
 @defer.inlineCallbacks
+@dump_args
 def pushToFeed(userKey, timeuuid, itemKey, parentKey, responseType,
                 itemType, convOwner=None, commentOwner=None):
     # Caveat: assume itemKey as parentKey if parentKey is None
@@ -67,7 +75,9 @@ def pushToFeed(userKey, timeuuid, itemKey, parentKey, responseType,
                                itemType, responseType, convOwner, commentOwner)
 
 
+@profile
 @defer.inlineCallbacks
+@dump_args
 def updateFeedResponses(userKey, parentKey, itemKey, timeuuid,
                         itemType, responseType, convOwner, commentOwner):
 
@@ -110,7 +120,10 @@ class FeedResource(base.BaseResource):
     resources = {}
 
     # TODO: ACLs
+
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _getFeedItems(self, request, itemIds=None, start='', count=10, entityId=None):
         toFetchItems = set()    # Items and entities that need to be fetched
         toFetchEntities = set() #
@@ -359,7 +372,9 @@ class FeedResource(base.BaseResource):
         defer.returnValue(args)
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _render(self, request, entityId=None):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
@@ -398,7 +413,6 @@ class FeedResource(base.BaseResource):
             feedItems = yield self._getFeedItems(request, start=start, entityId=entityId)
         else:
             feedItems = yield self._getFeedItems(request, start=start)
-
         args.update(feedItems)
         if script:
             if fromFetchMore:
@@ -415,7 +429,9 @@ class FeedResource(base.BaseResource):
             yield render(request, "feed.mako", **args)
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _renderShareBlock(self, request, typ):
         landing = not self._ajax
         templateFile = "feed.mako"
@@ -429,7 +445,8 @@ class FeedResource(base.BaseResource):
                                 landing, "#sharebar", "set", True,
                                 handlers={"onload": "$('#sharebar-links .selected').removeClass('selected'); $('#sharebar-link-%s').addClass('selected');" % (typ)})
 
-
+    @profile
+    @dump_args
     def render_GET(self, request):
         segmentCount = len(request.postpath)
         d = None

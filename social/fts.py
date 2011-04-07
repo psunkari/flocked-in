@@ -13,6 +13,7 @@ from social                     import base, Db, utils, Config
 from social                     import errors, plugins, _
 from social.feed                import FeedResource
 from social.template            import render, renderScriptBlock
+from social.logging             import dump_args, profile
 
 
 URL = Config.get('SOLR', 'HOST')
@@ -106,7 +107,9 @@ class Solr(object):
 class FTSResource(base.BaseResource):
     isLeaf=True
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def search(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
@@ -151,6 +154,8 @@ class FTSResource(base.BaseResource):
         if not script:
             yield render(request, "feed.mako", **args)
 
+    @profile
+    @dump_args
     def render_POST(self, request):
         segmentCount = len(request.postpath)
         d = None
@@ -158,6 +163,8 @@ class FTSResource(base.BaseResource):
             d = self.search(request)
         return self._epilogue(request, d)
 
+    @profile
+    @dump_args
     def render_GET(self, request):
         request.redirect("/feed")
         return ""

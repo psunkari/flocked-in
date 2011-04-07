@@ -7,12 +7,15 @@ from social.relations   import Relation
 from social.template    import render, renderScriptBlock
 from social.isocial     import IAuthInfo
 from social.constants   import PEOPLE_PER_PAGE
+from social.logging     import dump_args, profile
 
 
 class PeopleResource(base.BaseResource):
     isLeaf = True
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _renderPeople(self, request, ):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
@@ -56,7 +59,9 @@ class PeopleResource(base.BaseResource):
             yield render(request, "people.mako", **args)
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _renderFriends(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
@@ -100,7 +105,8 @@ class PeopleResource(base.BaseResource):
         if not script:
             yield render(request, "people.mako", **args)
 
-
+    @profile
+    @dump_args
     def render_GET(self, request):
         segmentCount = len(request.postpath)
         d = None

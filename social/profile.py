@@ -11,8 +11,11 @@ from social.template        import render, renderDef, renderScriptBlock
 from social.relations       import Relation
 from social                 import Db, auth, utils, base, plugins, _, __
 from social                 import constants, feed
+from social.logging         import dump_args, profile
 
+@profile
 @defer.inlineCallbacks
+@dump_args
 def saveAvatarItem(userId, data):
     imageFormat = _getImageFileFormat(data)
     if imageFormat not in constants.SUPPORTED_IMAGE_TYPES:
@@ -47,13 +50,17 @@ def saveAvatarItem(userId, data):
     defer.returnValue("%s:%s" % (imageFormat, itemId))
 
 
+@profile
 @defer.inlineCallbacks
+@dump_args
 def deleteNameIndex(userKey, name, targetKey):
     if name:
         yield Db.remove(userKey, "nameIndex", ":".join([name.lower(), targetKey]))
 
 
+@profile
 @defer.inlineCallbacks
+@dump_args
 def _updateDisplayNameIndex(userKey, targetKey, newName, oldName):
     calls = []
     if oldName:
@@ -66,7 +73,9 @@ def _updateDisplayNameIndex(userKey, targetKey, newName, oldName):
         yield defer.DeferredList(calls)
 
 
+@profile
 @defer.inlineCallbacks
+@dump_args
 def updateDisplayNameIndex(userKey, targetKeys, newName, oldName):
     calls = []
     for targetKey in targetKeys:
@@ -75,7 +84,9 @@ def updateDisplayNameIndex(userKey, targetKeys, newName, oldName):
     yield defer.DeferredList(calls)
 
 
+@profile
 @defer.inlineCallbacks
+@dump_args
 def _updateNameIndex(userKey, targetKey, newName, oldName):
     calls = []
     if oldName:
@@ -88,7 +99,9 @@ def _updateNameIndex(userKey, targetKey, newName, oldName):
         yield defer.DeferredList(calls)
 
 
+@profile
 @defer.inlineCallbacks
+@dump_args
 def updateNameIndex(userKey, targetKeys, newName, oldName):
     calls = []
     for targetKey in targetKeys:
@@ -96,7 +109,8 @@ def updateNameIndex(userKey, targetKeys, newName, oldName):
         calls.append(d)
     yield defer.DeferredList(calls)
 
-
+@profile
+@dump_args
 def _getImageFileFormat(data):
     imageType = imghdr.what(None, data)
     if imageType:
@@ -108,7 +122,9 @@ class ProfileResource(base.BaseResource):
     isLeaf = True
     resources = {}
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _getUserItems(self, userKey, myKey, count=10):
         toFetchItems = set()
         toFetchEntities = set()
@@ -197,7 +213,9 @@ class ProfileResource(base.BaseResource):
         defer.returnValue(args)
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _follow(self, myKey, targetKey):
         d1 = Db.insert(myKey, "subscriptions", "", targetKey)
         d2 = Db.insert(targetKey, "followers", "", myKey)
@@ -205,7 +223,9 @@ class ProfileResource(base.BaseResource):
         yield d2
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _unfollow(self, myKey, targetKey):
         d1 = Db.remove(myKey, "subscriptions", targetKey)
         d2 = Db.remove(targetKey, "followers", myKey)
@@ -213,7 +233,9 @@ class ProfileResource(base.BaseResource):
         yield d2
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _friend(self, request, myKey, targetKey):
         if not utils.areFriendlyDomains(myKey, targetKey):
             raise errors.NotAllowed()
@@ -299,7 +321,9 @@ class ProfileResource(base.BaseResource):
         yield defer.DeferredList(calls)
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _unfriend(self, myKey, targetKey):
 
         cols = yield Db.multiget_slice([myKey, targetKey], "entities",
@@ -333,7 +357,9 @@ class ProfileResource(base.BaseResource):
         yield defer.DeferredList(deferreds)
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _edit(self, request):
 
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
@@ -466,6 +492,8 @@ class ProfileResource(base.BaseResource):
         request.redirect("/profile/edit")
 
 
+    @profile
+    @dump_args
     def render_POST(self, request):
         segmentCount = len(request.postpath)
         if segmentCount != 1:
@@ -525,6 +553,8 @@ class ProfileResource(base.BaseResource):
         return self._epilogue(request, requestDeferred)
 
 
+    @profile
+    @dump_args
     def render_GET(self, request):
         segmentCount = len(request.postpath)
         d = None
@@ -536,7 +566,9 @@ class ProfileResource(base.BaseResource):
         return self._epilogue(request, d)
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _renderEditProfile(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
@@ -562,7 +594,9 @@ class ProfileResource(base.BaseResource):
                                     landing, "#profile-content", "set", **args)
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _render(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
 

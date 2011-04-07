@@ -2,6 +2,7 @@ import json
 import uuid
 import time
 
+
 from telephus.cassandra import ttypes
 from twisted.internet   import defer
 from twisted.web        import server
@@ -12,13 +13,18 @@ from social             import notifications
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
+from social.logging      import profile, dump_args
 
 
 
 class ItemResource(base.BaseResource):
     isLeaf = True
 
+
+
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def renderItem(self, request, toFeed=False):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
@@ -170,7 +176,9 @@ class ItemResource(base.BaseResource):
             yield render(request, "item.mako", **args)
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def createItem(self, request):
         convType = utils.getRequestArg(request, "type")
         myKey = request.getSession(IAuthInfo).username
@@ -219,7 +227,9 @@ class ItemResource(base.BaseResource):
                                     handlers={"onload": "$('#sharebar-links .selected').removeClass('selected'); $('#sharebar-link-status').addClass('selected');"})
 
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _like(self, request):
         itemId = utils.getRequestArg(request, "id")
         myId = request.getSession(IAuthInfo).username
@@ -288,7 +298,11 @@ class ItemResource(base.BaseResource):
         # Finally, update the UI
         # TODO
 
+
+
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _unlike(self, request):
         itemId = utils.getRequestArg(request, "id")
         myId = request.getSession(IAuthInfo).username
@@ -350,7 +364,10 @@ class ItemResource(base.BaseResource):
         # Finally, update the UI
         # TODO
 
+
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _comment(self, request):
         myId = request.getSession(IAuthInfo).username
         convId = utils.getRequestArg(request, "parent")
@@ -427,12 +444,16 @@ class ItemResource(base.BaseResource):
                                 args=[convId, itemId], **data)
         d = fts.solr.updateIndex(itemId, {'meta':meta})
 
-
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _likes(self, request):
         pass
 
+
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _responses(self, request):
         convId = utils.getRequestArg(request, "id")
         start = utils.getRequestArg(request, "start") or ''
@@ -495,7 +516,10 @@ class ItemResource(base.BaseResource):
                             **args)
 
 
+
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _tag(self, request):
         tagName = utils.getRequestArg(request, "tag")
         if not tagName:
@@ -521,7 +545,10 @@ class ItemResource(base.BaseResource):
         yield defer.DeferredList([d1, d2])
 
 
+
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _untag(self, request):
         tagId = utils.getRequestArg(request, "tag")
         if not tagId:
@@ -552,7 +579,8 @@ class ItemResource(base.BaseResource):
     def _tags(self, request):
         pass
 
-
+    @profile
+    @dump_args
     def render_GET(self, request):
         segmentCount = len(request.postpath)
         d = None
@@ -573,7 +601,8 @@ class ItemResource(base.BaseResource):
 
         return self._epilogue(request, d)
 
-
+    @profile
+    @dump_args
     def render_POST(self, request):
         segmentCount = len(request.postpath)
         d = None

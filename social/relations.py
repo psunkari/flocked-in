@@ -4,6 +4,7 @@ from twisted.internet   import defer
 from telephus.cassandra import ttypes
 
 from social import Db, utils, constants
+from social.logging     import profile, dump_args
 
 #
 # Determine how the other person is related to me.
@@ -20,7 +21,9 @@ class Relation(object):
 
 
     # Initialize self.following
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def initFollowersList(self):
         if self.others:
             cols = yield Db.get_slice(self.me, "followers", self.others)
@@ -31,7 +34,9 @@ class Relation(object):
 
 
     # Initialize self.subscriptions
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def initSubscriptionsList(self):
         if self.others:
             cols = yield Db.get_slice(self.me, "subscriptions", self.others)
@@ -42,7 +47,9 @@ class Relation(object):
 
 
     # Initialize self.friends, self.localPending and self.remotePending
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def initFriendsList(self):
         if self.others:
             cols = yield Db.get_slice(self.me, 'connections', self.others)
@@ -55,7 +62,9 @@ class Relation(object):
 
 
     # Initialize self.pending
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def initPendingList(self):
         if self.others:
             cols = yield Db.get_slice(self.me, 'pendingConnections', self.others)
