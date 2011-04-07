@@ -49,13 +49,15 @@ class EventResource(base.BaseResource):
 
         responses = yield Db.get_slice(convId, "eventResponses")
         responses = utils.supercolumnsToDict(responses)
-        responders = responses.get("yes", {}).keys() + \
+        attendees = responses.get("yes", {}).keys() + \
                      responses.get("maybe", {}).keys() + \
                      responses.get("no", {}).keys()
 
         for mailId in invitees:
-            userKey = invitees[mailId]["user"]
-            if userKey not in responders:
+            userKey = invitees[mailId].get("user", None)
+            if not userKey:
+                raise errors.InvalidUserId()
+            if userKey not in attendees:
                 yield Db.batch_insert(convId, "eventInvitations", {userKey:{timeUUID:''}})
                 yield Db.insert(userKey, "userEventInvitations", convId, timeUUID)
                 yield Db.insert(userKey, "notifications", convId, timeUUID)
@@ -313,7 +315,7 @@ class Event(object):
             raise errors.InvalidRequest()
 
         convId = utils.getUniqueKey()
-        item = utils.createNewItem(request, self.itemType)
+        item = yield utils.createNewItem(request, self.itemType)
 
         options = dict([('yes', '0'), ('maybe', '0'), ('no', '0')])
         meta = {"startTime": startTime}

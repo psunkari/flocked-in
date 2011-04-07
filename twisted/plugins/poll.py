@@ -214,7 +214,7 @@ class Poll(object):
             raise errors.InvalidRequest()
 
         convId = utils.getUniqueKey()
-        item = utils.createNewItem(request, self.itemType)
+        item = yield utils.createNewItem(request, self.itemType)
 
         options = dict([('%02d'%(x), options[x]) for x in range(len(options))])
         meta = {"question": question, "showResults": showResults}

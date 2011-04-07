@@ -132,14 +132,27 @@ def getUniqueKey():
     u = uuid.uuid1()
     return base64.urlsafe_b64encode(u.bytes)[:-2]
 
-
-def createNewItem(request, itemType, ownerId=None, acl=None, subType=None):
+@defer.inlineCallbacks
+def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
+                  ownerOrgId=None, groupIds = None):
     owner = ownerId or request.getSession(IAuthInfo).username
     acl = acl if acl else (getRequestArg(request, "acl") or "company")
+
+    if acl == "company":
+        if not ownerOrgId:
+            col = yield Db.get(owner, "entities", "org", "basic")
+            aclIds = col.column.value
+        else:
+            aclIds = ownerOrgId
+    elif acl == "group":
+        aclIds = ",".join(groupIds)
+    else:
+        aclIds = ""
 
     meta = {
         "meta": {
             "acl": acl,
+            "aclIds": aclIds,
             "type": itemType,
             "uuid": uuid.uuid1().bytes,
             "owner": owner,
@@ -149,7 +162,7 @@ def createNewItem(request, itemType, ownerId=None, acl=None, subType=None):
     }
     if subType:
         meta["meta"]["subType"] = subType
-    return meta
+    defer.returnValue(meta)
 
 
 @defer.inlineCallbacks
@@ -206,18 +219,21 @@ def expandAcl(userKey, acl, parentUserKey=None):
     defer.returnValue(keys)
 
 
-def checkAcl(userKey, acl, owner, friends=None, subscriptions=None,
-            userCompKey=None, ownerCompKey=None):
+def checkAcl(userKey, acl, owner, relation,
+            userOrgId=None, aclIds=''):
 
     if acl == "public":
         return True
     if acl == "company":
-        return (ownerCompKey and userCompKey) and ownerCompKey == userCompKey
+        return userOrgId in aclIds.split(",")
     if acl in ["friends"]:
         if userKey == owner:
             return True
         else:
-            return owner in friends if friends else False
+            return owner in relation.friends if relation.friends else False
+    if acl == "group":
+        return True
+        # check if the user belongs to any of the groups in aclIds
 
 
 def encodeKey(key):

@@ -22,21 +22,33 @@ class Relation(object):
     # Initialize self.following
     @defer.inlineCallbacks
     def initFollowersList(self):
-        cols = yield Db.get_slice(self.me, "followers", self.others)
+        if self.others:
+            cols = yield Db.get_slice(self.me, "followers", self.others)
+        else:
+            cols = yield Db.get_slice(self.me, "followers")
+
         self.followers = set([x.column.name for x in cols])
 
 
     # Initialize self.subscriptions
     @defer.inlineCallbacks
     def initSubscriptionsList(self):
-        cols = yield Db.get_slice(self.me, "subscriptions", self.others)
+        if self.others:
+            cols = yield Db.get_slice(self.me, "subscriptions", self.others)
+        else:
+            cols = yield Db.get_slice(self.me, "subscriptions")
+
         self.subscriptions = set([x.column.name for x in cols])
 
 
     # Initialize self.friends, self.localPending and self.remotePending
     @defer.inlineCallbacks
     def initFriendsList(self):
-        cols = yield Db.get_slice(self.me, 'connections', self.others)
+        if self.others:
+            cols = yield Db.get_slice(self.me, 'connections', self.others)
+        else:
+            cols = yield Db.get_slice(self.me, 'connections')
+
         self.friends = dict((x.super_column.name,\
                              [y.value for y in x.super_column.columns])\
                             for x in cols)
@@ -45,5 +57,8 @@ class Relation(object):
     # Initialize self.pending
     @defer.inlineCallbacks
     def initPendingList(self):
-        cols = yield Db.get_slice(self.me, 'pendingConnections', self.others)
+        if self.others:
+            cols = yield Db.get_slice(self.me, 'pendingConnections', self.others)
+        else:
+            cols = yield Db.get_slice(self.me, 'pendingConnections')
         self.pending = dict((x.column.name, x.column.value) for x in cols)

@@ -9,6 +9,7 @@ from twisted.python     import log
 
 from social             import base, Db, utils, feed, plugins, constants, tags, fts
 from social             import notifications
+from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
 
@@ -33,13 +34,26 @@ class ItemResource(base.BaseResource):
             raise errors.InvalidRequest()
         itemType = conv["meta"].get("type", None)
 
-        args['convId'] = convId
-        args['items'] = {convId: conv}
         start = utils.getRequestArg(request, "start") or ''
         start = utils.decodeKey(start)
 
         if script and landing:
             yield render(request, "item.mako", **args)
+
+        args['convId'] = convId
+        args['items'] = {convId: conv}
+        meta = conv["meta"]
+        owner = meta["owner"]
+
+        relation = Relation(myKey, [])
+        yield defer.DeferredList([relation.initFriendsList(),
+                                  relation.initSubscriptionsList(),
+                                  relation.initPendingList(),
+                                  relation.initFollowersList()])
+
+        if not utils.checkAcl(myKey, meta["acl"], owner,
+                             relation, myOrgId, meta["aclIds"]):
+            defer.returnValue(None)
 
         if script and appchange:
             yield renderScriptBlock(request, "item.mako", "layout",
