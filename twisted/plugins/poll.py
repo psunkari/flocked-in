@@ -226,9 +226,12 @@ class Poll(object):
         options = request.args.get("options", None)
         question = utils.getRequestArg(request, "question")
         showResults = utils.getRequestArg(request, "show") or 'True'
+        options = [option for option in options if option]
 
         if not (question and options):
-            raise errors.InvalidRequest()
+            raise errors.MissingParams()
+        if len(options) <2 :
+            raise errors.InSufficientParams()
 
         convId = utils.getUniqueKey()
         item = yield utils.createNewItem(request, self.itemType)
