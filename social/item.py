@@ -519,6 +519,10 @@ class ItemResource(base.BaseResource):
         Db.insert(orgId, "orgTags", "%s"%tagItemsCount, "itemsCount", tagId)
 
         yield defer.DeferredList([d1, d2])
+        yield renderScriptBlock(request, "item.mako", 'conv_tag', False,
+                                '#conv-tags-%s'%itemId, "append", True,
+                                handlers={"onload": "$('input:text', '#addtag-form-%s').val('');" % itemId},
+                                args=[itemId, tagId, tag["title"]])
 
 
     @defer.inlineCallbacks

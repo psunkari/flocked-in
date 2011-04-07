@@ -126,7 +126,7 @@
 
 <%def name="conv_comments_head(convId, total, showing, isFeed)">
   %if total > showing:
-    <div class="conv-comments-more">
+    <div class="conv-comments-more" class="busy-indicator">
       %if isFeed:
         %if total > constants.MAX_COMMENTS_IN_FEED or not script:
           <a class="ajax" href="/item?id=${convId}">${_("View all %s comments &#187;") % (total)}</a>
@@ -157,7 +157,7 @@
     responseCount = int(items[convId]["meta"].get("responseCount", "0"))
     responsesToShow = responses.get(convId, {}) if responses else []
   %>
-  <div id="comments-header-${convId}" class="busy-indicator">
+  <div id="comments-header-${convId}">
     ${self.conv_comments_head(convId, responseCount, len(responsesToShow), isFeed)}
   </div>
   <div id="comments-${convId}">
@@ -206,18 +206,24 @@
   </div>
 </%def>
 
+
+<%def name="conv_tag(convId, tagId, tagName)">
+  <span><a class="ajax" href="/tags?id=${tagId}">${tagName}</a><span class="delete-tag"><a class="ajax" _ref="/item/untag?id=${convId}&tag=${tagId}">X</a></span></span>
+</%def>
+
+
 <%def name="conv_tags(convId)">
   <% itemTags = items[convId].get("tags", {}) %>
-    <div id="conv-tags-${convId}" class="conv-tags">
+  <div id="conv-tags-${convId}" class="conv-tags">
     %for tagId in itemTags.keys():
       <span><a class="ajax" href="/tags?id=${tagId}">${tags[tagId]["title"]}</a><span class="delete-tag"><a class="ajax" _ref="/item/untag?id=${convId}&tag=${tagId}">X</a></span></span>
     %endfor
-    <form method="post" action="/item/tag" class="ajax" autocomplete="off" id="addtag-form-${convId}">
-      <input type="text" name="tag" value=""></input>
-      <input type="hidden" name="id" value=${convId}></input>
-      ${widgets.button(None, type="submit", name="add", value="Add")}<br/>
-    </form>
   </div>
+  <form method="post" action="/item/tag" class="ajax" autocomplete="off" id="addtag-form-${convId}">
+    <input type="text" name="tag" value=""></input>
+    <input type="hidden" name="id" value=${convId}></input>
+    ${widgets.button(None, type="submit", name="add", value="Add")}<br/>
+  </form>
 </%def>
 
 <%def name="item_me()">
