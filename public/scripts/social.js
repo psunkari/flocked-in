@@ -93,7 +93,7 @@ _initAjaxRequests: function _initAjaxRequests() {
         deferred = $.post('/ajax' + node.attr('action'),
                           node.serialize(), null, 'script');
 
-        _setBusy(deferred, node)
+        self.setBusy(deferred, node)
         return false;
     });
 
