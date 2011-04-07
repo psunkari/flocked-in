@@ -41,10 +41,7 @@
   <title>${self.title()}</title>
   <link rel="stylesheet" type="text/css" media="screen" href="/public/style/social.css"/>
   <link rel="stylesheet" type="text/css" media="screen" href="/public/style/widgets.css"/>
-  <link rel="stylesheet" type="text/css" media="screen" href="/public/style/jquery.ui.core.css"/>
-  <link rel="stylesheet" type="text/css" media="screen" href="/public/style/jquery.ui.menu.css"/>
-  <link rel="stylesheet" type="text/css" media="screen" href="/public/style/jquery.ui.autocomplete.css"/>
-  <link rel="stylesheet" type="text/css" media="screen" href="/public/style/jquery.ui.theme.css"/>
+  <link rel="stylesheet" type="text/css" media="screen" href="/public/style/jquery.ui.css"/>
 %if script:
   <noscript>
     <meta http-equiv="refresh" content="0; URL=${noscriptUrl}"/>

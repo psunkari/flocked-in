@@ -134,3 +134,23 @@
     border-color: #C3D9FF #A0B5D9 #A0B5D9 #C3D9FF;
     background: #E8EEFA url(/public/images/ui.png) no-repeat left top;
 }
+
+/*
+ * Autocomplete menu items
+ */
+.ui-ac-icon {
+  height: 32px;
+  width: 32px;
+  position: absolute;
+}
+.ui-ac-title {
+  padding-left: 36px;
+}
+.ui-ac-meta {
+  padding-left: 36px;
+  font-size: 90%;
+  color: #999;
+}
+.ui-state-focus .ui-ac-meta {
+  color: #CCC;
+}
