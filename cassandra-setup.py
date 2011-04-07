@@ -203,7 +203,34 @@ def createColumnFamilies(client):
                       "entityId to (display name/firstname/lastname):userId map")
     yield client.system_add_column_family(nameIndex)
 
+    messages = CfDef(KEYSPACE, "messages", "Standard", "UTF8Type", None,
+                      "A collection of all messages in this system")
+    yield client.system_add_column_family(messages)
 
+    mUserMessages = CfDef(KEYSPACE, "mUserMessages", "Super", "UTF8Type",
+                              "UTF8Type",
+                              "A super collection of per user information about a message")
+    yield client.system_add_column_family(mUserMessages)
+
+    mFolderMessages = CfDef(KEYSPACE, "mFolderMessages", "Standard", "TimeUUIDType",
+                            None, "A collection of all messages in a user folder")
+    yield client.system_add_column_family(mFolderMessages)
+
+    #mFolderMessagesByStar
+    #mFolderMessagesByDate
+    #mFolderMessagesByUnread
+    #mUserConversations
+
+    mUserFolders = CfDef(KEYSPACE, "mUserFolders", "Super", "UTF8Type",
+                            "UTF8Type", "A collection of all folders of a \
+                                          user and related information about \
+                                          each folder")
+    yield client.system_add_column_family(mUserFolders)
+
+    mConversationMessages = CfDef(KEYSPACE, "mConversationMessages", "Standard", "TimeUUIDType",
+                            None, "A collection of all messages belonging to a \
+                                    conversation.")
+    yield client.system_add_column_family(mConversationMessages)
     # Tags
     orgTags = CfDef(KEYSPACE, "orgTags", "Super", "BytesType", "UTF8Type",
                     "List of tags by organization")
@@ -743,7 +770,8 @@ def truncateColumnFamilies(client):
                'eventResponses', "userEventInvitations", "userEventResponse",
                'eventInvitations',"notifications", "notificationItems",
                "nameIndex", "displayNameIndex", "orgTags", "tagItems",
-               "tagFollowers", "orgTagsByName", "bannedUsers"]:
+               "tagFollowers", "orgTagsByName", "messages", "mUserMessages", "mFolderMessages", "bannedUsers"
+               "mUserFolders", "mConversationMessages"]:
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 

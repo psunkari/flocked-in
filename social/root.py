@@ -20,6 +20,7 @@ from social.fts             import FTSResource
 from social.tags            import TagsResource
 from social.auto            import AutoCompleteResource
 
+from social.messaging       import MessagingResource
 
 def getPluggedResources(ajax=False):
     resources = {}
@@ -52,7 +53,8 @@ class RootResource(resource.Resource):
             self._ajax = RootResource(True)
             self._avatars = AvatarResource()
             self._auto = AutoCompleteResource()
-
+        self._messages = MessagingResource(self._isAjax)
+        
     def getChildWithDefault(self, path, request):
         match = None
         if path == "" or path == "feed":
@@ -79,6 +81,8 @@ class RootResource(resource.Resource):
             match = self._groups
         elif path == "search":
             match = self._fts
+        elif path == "messages":
+            match = self._messages
         elif path == "events":
             if "event" in plugins and self._pluginResources.has_key("event"):
                 match = self._pluginResources["event"]
