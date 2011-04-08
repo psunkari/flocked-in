@@ -17,6 +17,7 @@ from social.constants   import PEOPLE_PER_PAGE
 
 class MessagingResource(base.BaseResource):
     isLeaf = True
+    _specialFolders = ["INBOX", "SENT", "DRAFTS", "TRASH", "ARCHIVES"]
 
     @defer.inlineCallbacks
     def _threadActions(self, request):
@@ -114,29 +115,28 @@ class MessagingResource(base.BaseResource):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         myKey = auth.getMyKey(request)
         landing = not self._ajax
-        special_folders = ["INBOX", "SENT", "DRAFTS", "TRASH", "ARCHIVES"]
-        folder = request.args.get("folder", ["INBOX"])[0]
-        if folder.upper() in special_folders:
-            folder = folder.upper()
-            folder = "%s-%s" %(myKey, folder)
+
+        if script and landing:
+            yield render(request, "message.mako", **args)
+
+        if appchange and script:
+            renderScriptBlock(request, "message.mako", "layout",
+                              landing, "#mainbar", "set", **args)
+
+        folder = utils.getRequestArg(request, "folder") or "INBOX"
+        if folder.upper() in self._specialFolders:
+            folder = "%s:%s" %(myKey, folder.upper())
 
         yield self._checkStandardFolders(myKey)
-        try:
-            res = yield Db.get(key=myKey, column_family="mUserFolders",
-                               super_column=folder, column="label")
-            folder_label = res.column.value
-            args.update({"folder":folder_label})
-        except ttypes.NotFoundException:
-            print "whaaa"
-            defer.returnValue(0)
-        else:
-            pass
+        res = yield Db.get(key=myKey, column_family="mUserFolders",
+                           super_column=folder, column="label")
+        folder_label = res.column.value
+        args.update({"folder":folder_label})
 
         res = yield Db.get_slice(key=folder, column_family="mFolderMessages",
-                                 count=60)
+                                 count=60, reverse=True)
 
-        #Fetch the message-ids from mFolderMessages
-        print "Listing messages in %s" % folder,
+        # Fetch the message-ids from mFolderMessages
         mids = utils.columnsToDict(res, ordered=True).values()
         res = yield Db.multiget_slice(keys=mids, column_family="messages")
         msgs = utils.multiColumnsToDict(res, ordered=True)
@@ -148,6 +148,9 @@ class MessagingResource(base.BaseResource):
         args.update({"view":"messages"})
 
         if script:
+            yield renderScriptBlock(request, "message.mako", "center",
+                                    landing, ".center-contents", "set", **args)
+        else:
             yield render(request, "message.mako", **args)
 
     @defer.inlineCallbacks
@@ -188,7 +191,7 @@ class MessagingResource(base.BaseResource):
         #Deliver the message to the sender's collection
         myKey = auth.getMyKey(request)
         yield self._checkStandardFolders(myKey)
-        yield self._deliverToUser(myKey, "%s-%s" %(myKey, "SENT"), message)
+        yield self._deliverToUser(myKey, "%s:%s" %(myKey, "SENT"), message)
 
         if not recipients:
             recipients = [x[1] for x in [email.utils.parseaddr(message["To"])]]
@@ -202,7 +205,7 @@ class MessagingResource(base.BaseResource):
             #Check if the recipient has the standard folders
             yield self._checkStandardFolders(recipient)
             yield self._deliverToUser(recipient,
-                                      "%s-%s" %(recipient, "INBOX"), message)
+                                      "%s:%s" %(recipient, "INBOX"), message)
 
     @defer.inlineCallbacks
     def _deliverToUser(self, user_id, folder_id, message):
@@ -333,55 +336,37 @@ class MessagingResource(base.BaseResource):
     def _checkStandardFolders(self, userid):
         #Standard folders have the same key as their labels.
         try:
-            inbox = yield Db.get(key=userid, column_family='mUserFolders',
-                                       super_column="%s-%s" %(userid, "INBOX"))
+            yield Db.get(key=userid, column_family='mUserFolders',
+                         super_column="%s:%s" %(userid, "INBOX"))
         except ttypes.NotFoundException:
             yield Db.insert(key=userid, column_family='mUserFolders',
-                            value="Inbox", column="label", super_column="%s-%s" %(userid, "INBOX"))
+                            value="Inbox", column="label",
+                            super_column="%s:%s" %(userid, "INBOX"))
             yield Db.insert(key=userid, column_family='mUserFolders',
-                            value="Sent", column="label", super_column="%s-%s" %(userid, "SENT"))
+                            value="Sent", column="label",
+                            super_column="%s:%s" %(userid, "SENT"))
 
     def render_GET(self, request):
         segmentCount = len(request.postpath)
         d = None
-        prematureAbort = False
-        if segmentCount == 0:
-            request.redirect("/messages/")
-            request.finish()
-        elif segmentCount == 1 and request.postpath[0]=="":
-            d = self._renderMessages(request)
-        elif segmentCount == 1 and request.postpath[0]=="write":
-            d = self._renderComposer(request)
-        elif segmentCount == 1 and request.postpath[0]=="thread":
-            d = self._renderThread(request)
-        if d:
-            def callback(res):
-                request.finish()
-            def errback(err):
-                log.msg(err)
-                request.finish()
 
-            d.addCallbacks(callback, errback)
-            return server.NOT_DONE_YET
+        if segmentCount == 0:
+            d = self._renderMessages(request)
+        elif segmentCount == 1 and request.postpath[0] == "write":
+            d = self._renderComposer(request)
+        elif segmentCount == 1 and request.postpath[0] == "thread":
+            d = self._renderThread(request)
+
+        return self._epilogue(request, d)
 
     def render_POST(self, request):
         segmentCount = len(request.postpath)
         d = None
-        if segmentCount == 0:
-            #Handle actions on multiple threads.
-            request.finish()
-        elif segmentCount == 1 and request.postpath[0]=="write":
+
+        if segmentCount == 1 and request.postpath[0] == "write":
             d = self._composeMessage(request)
-        elif segmentCount == 1 and request.postpath[0]=="thread":
+        elif segmentCount == 1 and request.postpath[0] == "thread":
             #Handle actions on a single thread
             print request.args
-            request.finish()
-        if d:
-            def callback(res):
-                request.finish()
-            def errback(err):
-                log.msg(err)
-                request.finish()
 
-            d.addCallbacks(callback, errback)
-            return server.NOT_DONE_YET
+        return self._epilogue(request, d)

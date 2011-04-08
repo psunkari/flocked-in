@@ -16,26 +16,10 @@
       </div>
     </div>
     <div id="center-right">
-      <div id="right">
-        <div id="item-me">
-          %if not script:
-            ${self.item_me()}
-          %endif
-        </div>
-        <div id="item-meta">
-          %if not script:
-            ${self.item_meta()}
-          %endif
-        </div>
-        <div id="item-subactions">
-          %if not script:
-            ${self.item_subactions()}
-          %endif
-        </div>
-      </div>
+      <div id="right"></div>
       <div id="center">
         <div class="center-contents">
-          ${self.feed()}
+          ${self.center()}
         </div>
       </div>
     </div>
@@ -175,7 +159,7 @@
             <textarea style="width:99%;height:400px" name="body">${formatBodyForReply(msg, "")}</textarea>
             <input type="hidden" value="${msg["message-id"]}" name="parent">
           % else:
-            <textarea style="width:99%" type="text" name="recipients" placeholder="${_("Enter your colleague's name or email address") |h}"></textarea>
+            <textarea style="width:99%" type="text" name="recipients" placeholder="${_('Enter name or email address') |h}"></textarea>
             <input style="width:99%" type="text" name="subject" placeholder="${_('Enter a subject of your message') |h}"/>
             <textarea style="width:99%;height:400px" name="body"></textarea>
           % endif
@@ -212,7 +196,7 @@
   %endif
 </%def>
 
-<%def name="feed()">
+<%def name="center()">
   % if view == "conversations":
     %for conversation in conversations:
       ${conversation_layout(conversation, msgs_map, True, True)}
