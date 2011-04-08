@@ -85,8 +85,8 @@ class ItemResource(base.BaseResource):
                 del args['toFeed']
             else:
                 d = renderScriptBlock(request, "item.mako", "conv_root",
-                                      landing, "#conv-root-%s" %(convId),
-                                      "set", **args)
+                        landing, "#conv-root-%s > .conv-summary" %(convId),
+                        "set", **args)
             renderers.append(d)
 
         convOwner = args["items"][convId]["meta"]["owner"]

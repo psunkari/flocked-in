@@ -23,11 +23,11 @@ class Activity(object):
         raise errors.InvalidRequest()
 
 
-    def rootHTML(self, convId, args):
+    def rootHTML(self, convId, isQuoted, args):
         if "convId" in args:
-            return getBlock("item.mako", "renderStatus", **args)
+            return getBlock("item.mako", "render_activity", **args)
         else:
-            return getBlock("item.mako", "renderStatus", args=[convId], **args)
+            return getBlock("item.mako", "render_activity", args=[convId, isQuoted], **args)
 
 
     def fetchData(self, args, convId=None):
