@@ -50,16 +50,20 @@
     </div>
     <div class="conv-data">
       <div id="conv-root-${convId}">
-        %if inline or not script:
-          %if reasonStr and reasonStr.has_key(convId):
+        %if inline:
+          <% hasReason = reasonStr and reasonStr.has_key(convId) %>
+          %if hasReason:
             <span class="conv-reason">${reasonStr[convId]}</span>
           %endif
-          ${self.conv_root(convId)}
-        %endif
-      </div>
-      <div id="item-footer-${convId}" class="conv-footer busy-indicator">
-        %if inline or not script:
-          ${self.item_footer(convId)}
+          <div class="conv-summary${' conv-quote' if hasReason else ''}">
+            ${self.conv_root(convId, hasReason)}
+            <div id="item-footer-${convId}" class="conv-footer busy-indicator">
+              ${self.item_footer(convId)}
+            </div>
+          </div>
+        %else:
+          <div class="conv-summary"></div>
+          <div id="item-footer-${convId}" class="conv-footer busy-indicator"></div>
         %endif
       </div>
       <div id="conv-likes-wrapper-${convId}">
@@ -93,14 +97,10 @@
   %endif
 </%def>
 
-<%def name="conv_root(convId)">
-  <%
-  itemType = items[convId]["meta"]["type"]
-  %>
-  % if itemType in ("link", "document"):
-      ${self.renderStatus(convId)}
-  % elif itemType in plugins:
-      ${plugins[itemType].rootHTML(convId, context.kwargs)}
+<%def name="conv_root(convId, isQuoted=False)">
+  <% itemType = items[convId]["meta"]["type"] %>
+  %if itemType in plugins:
+    ${plugins[itemType].rootHTML(convId, isQuoted, context.kwargs)}
   %endif
 </%def>
 
@@ -126,7 +126,7 @@
 
 <%def name="conv_comments_head(convId, total, showing, isFeed)">
   %if total > showing:
-    <div class="conv-comments-more">
+    <div class="conv-comments-more" class="busy-indicator">
       %if isFeed:
         %if total > constants.MAX_COMMENTS_IN_FEED or not script:
           <a class="ajax" href="/item?id=${convId}">${_("View all %s comments &#187;") % (total)}</a>
@@ -157,7 +157,7 @@
     responseCount = int(items[convId]["meta"].get("responseCount", "0"))
     responsesToShow = responses.get(convId, {}) if responses else []
   %>
-  <div id="comments-header-${convId}" class="busy-indicator">
+  <div id="comments-header-${convId}">
     ${self.conv_comments_head(convId, responseCount, len(responsesToShow), isFeed)}
   </div>
   <div id="comments-${convId}">
@@ -187,7 +187,6 @@
     item = items[commentId]
     userId  = item["meta"]["owner"]
     comment = item["meta"].get("comment", "")
-    fmtUser = lambda x: ("<span class='user comment-author'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (x, entities[x]["basic"]["name"]))
   %>
   <div class="conv-comment" id="comment-${commentId}">
     <div class="comment-avatar">
@@ -197,7 +196,7 @@
       %endif
     </div>
     <div class="comment-container">
-      <span class="comment-user">${fmtUser(userId)}</span>
+      <span class="comment-user">${utils.userName(userId, entities[userId])}</span>
       <span class="comment-text">${comment}</span>
     </div>
     <div class="comment-meta">
@@ -206,18 +205,24 @@
   </div>
 </%def>
 
+
+<%def name="conv_tag(convId, tagId, tagName)">
+  <span><a class="ajax" href="/tags?id=${tagId}">${tagName}</a><span class="delete-tag"><a class="ajax" _ref="/item/untag?id=${convId}&tag=${tagId}">X</a></span></span>
+</%def>
+
+
 <%def name="conv_tags(convId)">
   <% itemTags = items[convId].get("tags", {}) %>
-    <div id="conv-tags-${convId}" class="conv-tags">
+  <div id="conv-tags-${convId}" class="conv-tags">
     %for tagId in itemTags.keys():
       <span><a class="ajax" href="/tags?id=${tagId}">${tags[tagId]["title"]}</a><span class="delete-tag"><a class="ajax" _ref="/item/untag?id=${convId}&tag=${tagId}">X</a></span></span>
     %endfor
-    <form method="post" action="/item/tag" class="ajax" autocomplete="off" id="addtag-form-${convId}">
-      <input type="text" name="tag" value=""></input>
-      <input type="hidden" name="id" value=${convId}></input>
-      ${widgets.button(None, type="submit", name="add", value="Add")}<br/>
-    </form>
   </div>
+  <form method="post" action="/item/tag" class="ajax" autocomplete="off" id="addtag-form-${convId}">
+    <input type="text" name="tag" value=""></input>
+    <input type="hidden" name="id" value=${convId}></input>
+    ${widgets.button(None, type="submit", name="add", value="Add")}<br/>
+  </form>
 </%def>
 
 <%def name="item_me()">
@@ -229,35 +234,33 @@
 <%def name="item_subactions()">
 </%def>
 
-<%def name="renderStatus(convId, isQuoted=False)">
+<%def name="render_status(convId, isQuoted=False)">
   <%
     conv = items[convId]
-    type = conv["meta"]["type"]
     userId = conv["meta"]["owner"]
-    fmtUser = lambda x,y=None: ("<span class='user %s'><a class='ajax' href='/profile?id=%s'>%s</a></span>" % (y if y else '', x, entities[x]["basic"]["name"]))
   %>
-  %if type == "activity":
-    <%
-      subtype = conv["meta"]["subType"]
-      target = conv["meta"]["target"]
-
-      if subtype == "connection":
-        activity = _("%s and %s are now friends.") % (fmtUser(userId), fmtUser(target))
-      elif subtype == "following":
-        activity = _("%s started following %s.") % (fmtUser(userId), fmtUser(target))
-    %>
-    <div class="conv-summary${' conv-quote' if isQuoted else ''}">
-      ${activity}
-  %elif type in ["status", "link", "document"]:
-    %if not isQuoted:
-      <span class="conv-reason">
-        ${fmtUser(userId, "conv-user-cause")}
-      </span>
-    %endif
-    <div class="conv-summary${' conv-quote' if isQuoted else ''}">
-      %if conv["meta"].has_key("comment"):
-        ${conv["meta"]["comment"]}
-      %endif
+  %if not isQuoted:
+    ${utils.userName(userId, entities[userId], "conv-user-cause")}
+  %else:
+    ${utils.userName(userId, entities[userId])}
   %endif
-</div>
+  %if conv["meta"].has_key("comment"):
+    ${conv["meta"]["comment"]}
+  %endif
+</%def>
+
+<%def name="render_activity(convId, isQuoted=False)">
+  <%
+    conv = items[convId]
+    userId = conv["meta"]["owner"]
+    subtype = conv["meta"]["subType"]
+    target = conv["meta"]["target"]
+    fmtUser = utils.userName
+
+    if subtype == "connection":
+      activity = _("%s and %s are now friends.") % (fmtUser(userId, entities[userId]), fmtUser(target, entities[target]))
+    elif subtype == "following":
+      activity = _("%s started following %s.") % (fmtUser(userId, entities[userId]), fmtUser(target, entities[target]))
+  %>
+  ${activity}
 </%def>

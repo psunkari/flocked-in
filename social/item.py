@@ -91,8 +91,8 @@ class ItemResource(base.BaseResource):
                 del args['toFeed']
             else:
                 d = renderScriptBlock(request, "item.mako", "conv_root",
-                                      landing, "#conv-root-%s" %(convId),
-                                      "set", **args)
+                        landing, "#conv-root-%s > .conv-summary" %(convId),
+                        "set", **args)
             renderers.append(d)
 
         convOwner = args["items"][convId]["meta"]["owner"]
@@ -543,6 +543,10 @@ class ItemResource(base.BaseResource):
         Db.insert(orgId, "orgTags", "%s"%tagItemsCount, "itemsCount", tagId)
 
         yield defer.DeferredList([d1, d2])
+        yield renderScriptBlock(request, "item.mako", 'conv_tag', False,
+                                '#conv-tags-%s'%itemId, "append", True,
+                                handlers={"onload": "$('input:text', '#addtag-form-%s').val('');" % itemId},
+                                args=[itemId, tagId, tag["title"]])
 
 
 

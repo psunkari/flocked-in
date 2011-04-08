@@ -22,11 +22,11 @@ class Status(object):
     def shareBlockProvider(self):
         return ("feed.mako", "share_status")
 
-    def rootHTML(self, convId, args):
+    def rootHTML(self, convId, isQuoted, args):
         if "convId" in args:
-            return getBlock("item.mako", "renderStatus", **args)
+            return getBlock("item.mako", "render_status", **args)
         else:
-            return getBlock("item.mako", "renderStatus", args=[convId], **args)
+            return getBlock("item.mako", "render_status", args=[convId, isQuoted], **args)
 
 
     def fetchData(self, args, convId=None):

@@ -29,9 +29,6 @@
     if not voted:
       return
   %>
-  <div class="poll-title">
-    <span>${question}</span>
-  </div>
   <ul class="poll-results">
     <%
       total = 0
@@ -49,7 +46,7 @@
           <div class="poll-bar-wrapper">
             <div class="poll-bar option-${int(option)%10}" style="width:${percent}%;">&nbsp;</div>
           </div>
-          <div class="poll-share">${"%d%%"%percent}</div>
+          <div class="poll-percent">${"%d%%"%percent}</div>
         </div>
       </li>
     %endfor
@@ -67,9 +64,6 @@
     question = conv["meta"]["question"]
     options = conv["options"]
   %>
-  <div class="poll-title">
-    <span>${question}</span>
-  </div>
   <form action="/poll/vote" method="POST" class="ajax">
     <div class="tabular-form poll-options">
       %for option in options:
@@ -94,18 +88,32 @@
   </form>
 </%def>
 
-<%def name="poll_root(convId)">
+<%def name="poll_root(convId, isQuoted=False)">
   <%
     conv = items[convId]
-    question = items[convId]["meta"]["question"]
-    options = items[convId]["options"]
-    counts = items[convId].get("counts", {})
+    question = conv["meta"]["question"]
+    options = conv["options"]
+    userId = conv["meta"]["owner"]
+    counts = conv.get("counts", {})
     voted = myVotes[convId] if (convId in myVotes and myVotes[convId])\
                             else False
+  %>
+  %if not isQuoted:
+    <span class="conv-reason">
+      ${utils.userName(userId, entities[userId], "conv-user-cause")}
+    </span>
+  %endif
+  <div class="item-title has-icon">
+    <span class="icon item-icon poll-icon"></span>
+    <span class="item-title-text">${question}</span>
+  </div>
+  <div id="poll-contents-${convId}" class="item-contents has-icon">
+  <%
     if voted:
       self.poll_results(convId, voted)
     else:
       self.poll_options(convId, voted)
   %>
+  </div>
 </%def>
 

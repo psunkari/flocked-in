@@ -447,9 +447,9 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
  */
 
 .conv-item {
-    margin-bottom: 12px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid #EEE;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px dotted #CCC;
 }
 
 .conv-item-bottom {
@@ -477,7 +477,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     margin-bottom: 4px;
 }
 
-.conv-user-cause, .comment-author {
+.conv-user-cause {
     font-weight: bold;
 }
 
@@ -485,7 +485,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .conv-comment,
 .conv-likes,
 .conv-comment-form {
-    background-color: #EEE;
+    background-color: #F9F9F9;
     border-bottom: 1px solid #E9E9E9;
     margin: 2px 0 0;
     padding: 4px 6px;
@@ -497,8 +497,9 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 
 .conv-quote {
-    border-left: 3px solid #EEE;
-    padding-left: 5px;
+    border-left: 1px solid #DDD;
+    padding: 0 8px;
+    margin: 10px 0;
 }
 
 .comment-avatar {
@@ -518,7 +519,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 
 .conv-footer {
     color: #888;
-    padding: 5px 0;
+    padding: 5px 0 0;
     font-size: 10.5px;
 }
 .comment-meta {
@@ -527,6 +528,24 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 .conv-footer abbr, .comment-meta abbr {
     border: none;
+}
+
+
+/*
+ * Generic item display
+ */
+.item-title.has-icon {
+    position: relative;
+    font-weight: bold;
+}
+.item-icon {
+    position: absolute;
+    vertical-align: middle;
+}
+.has-icon > .item-title-text,
+.has-icon.item-contents {
+    padding-left: 20px;
+    padding-bottom: 8px;
 }
 
 
@@ -620,27 +639,18 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 
 
 
-/* Styling for polls */
+/*
+ * Styling for polls
+ */
+
 .poll-bar-wrapper {
     padding: 1px;
     width: 300px;
-    border: 1px solid #CCC;
+    border: 1px solid #3D85C6;
     float: left;
 }
 .poll-bar {
-    background-color: #888A85;
-    background-image: -webkit-gradient(
-        linear,
-        left bottom,
-        right bottom,
-        color-stop(0, #BABDB6),
-        color-stop(1, #888A85)
-    );
-    background-image: -moz-linear-gradient(
-        left center,
-        #BABDB6 0%,
-        #888A85 100%
-    );
+    background-color: #C3D9FF;
 }
 
 .poll-results {
@@ -652,12 +662,14 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     clear: both;
     padding: 5px 0;
 }
-.poll-share {
+.poll-percent {
     float: left;
     padding: 2px 6px;
 }
 .poll-actions {
     clear: both;
+    color: #888;
+    font-size: 10.5px;
     padding: 8px 0 0;
 }
 .poll-options {

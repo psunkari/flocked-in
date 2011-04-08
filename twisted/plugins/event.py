@@ -264,11 +264,11 @@ class Event(object):
         return ("event.mako", "share_event")
 
 
-    def rootHTML(self, convId, args):
+    def rootHTML(self, convId, isQuoted, args):
         if "convId" in args:
             return getBlock("event.mako", "event_root", **args)
         else:
-            return getBlock("event.mako", "event_root", args=[convId], **args)
+            return getBlock("event.mako", "event_root", args=[convId, isQuoted], **args)
 
 
     @profile

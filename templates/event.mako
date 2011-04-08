@@ -73,7 +73,7 @@
   <input type="hidden" name="type" value="event"/>
 </%def>
 
-<%def name="event_root(convId)">
+<%def name="event_root(convId, isQuoted=False)">
   <%
     conv = items[convId]
     title = items[convId]["meta"].get("title", '')

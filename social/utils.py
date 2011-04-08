@@ -272,7 +272,7 @@ def itemLink(itemId, itemType, classes=None):
 
 
 def userName(id, user, classes=None):
-    return "<span class='user %s'>" % (classes if classes else "") +\
+    return "<span class='user%s'>" % (' '+classes if classes else "") +\
            "<a class='ajax' href='/profile?id=%s'>%s</a></span>"\
            % (id, user["basic"]["name"])
 

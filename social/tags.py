@@ -54,7 +54,7 @@ class TagsResource(base.BaseResource):
         toFetchItems = set()
         toFetchEntities = set()
         toFetchTags = set()
-        args = {}
+        args = {"myKey": myId}
         convs = []
 
         tagItems = yield Db.get_slice(tagId, "tagItems",

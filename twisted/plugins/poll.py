@@ -76,7 +76,7 @@ class PollResource(base.BaseResource):
                                 else False
 
         yield renderScriptBlock(request, "poll.mako", 'poll_results',
-                                False, '#conv-root-%s'%convId, 'set',
+                                False, '#poll-contents-%s'%convId, 'set',
                                 args=[convId, voted], **data)
 
     @profile
@@ -96,7 +96,7 @@ class PollResource(base.BaseResource):
                                 else False
 
         yield renderScriptBlock(request, "poll.mako", 'poll_options',
-                                False, '#conv-root-%s'%convId, 'set',
+                                False, '#poll-contents-%s'%convId, 'set',
                                 args=[convId, voted], **data)
 
     @profile
@@ -149,11 +149,11 @@ class Poll(object):
         return ("poll.mako", "share_poll")
 
 
-    def rootHTML(self, convId, args):
+    def rootHTML(self, convId, isQuoted, args):
         if "convId" in args:
             return getBlock("poll.mako", "poll_root", **args)
         else:
-            return getBlock("poll.mako", "poll_root", args=[convId], **args)
+            return getBlock("poll.mako", "poll_root", args=[convId, isQuoted], **args)
 
 
     @profile
