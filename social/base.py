@@ -41,4 +41,5 @@ class BaseResource(resource.Resource):
             deferred.addCallbacks(callback, errback)
             return server.NOT_DONE_YET
         else:
-            pass    # TODO
+            # TODO
+            request.finish()
