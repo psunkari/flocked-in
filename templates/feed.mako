@@ -79,9 +79,9 @@
           supported = [(name.capitalize(), name) for name in plugins if plugins[name].position > 0]
           itemName, itemType = supported[0]
         %>
-        <li><a _ref="/feed/share/${itemType}" id="sharebar-link-${itemType}" class="ajax selected"><span class="sharebar-icon icon ${itemType}-icon"></span><span class="sharebar-text">${_(itemName)}</span></a></li>
+        <li><a _ref="/feed/share/${itemType}" id="publisher-${itemType}" class="ajax selected"><span class="sharebar-icon icon ${itemType}-icon"></span><span class="sharebar-text">${_(itemName)}</span></a></li>
         %for itemName, itemType in supported[1:]:
-          <li><a _ref="/feed/share/${itemType}" id="sharebar-link-${itemType}" class="ajax"><span class="sharebar-icon icon ${itemType}-icon"></span><span class="sharebar-text">${_(itemName)}</span></a></li>
+          <li><a _ref="/feed/share/${itemType}" id="publisher-${itemType}" class="ajax"><span class="sharebar-icon icon ${itemType}-icon"></span><span class="sharebar-text">${_(itemName)}</span></a></li>
         %endfor
       </ul>
     </div>

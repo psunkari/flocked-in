@@ -433,17 +433,10 @@ class FeedResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _renderShareBlock(self, request, typ):
-        landing = not self._ajax
-        templateFile = "feed.mako"
-        renderDef = "share_status"
-
         plugin = plugins.get(typ, None)
         if plugin:
-            templateFile, renderDef = plugin.shareBlockProvider()
+            yield plugin.renderShareBlock(request, self._ajax)
 
-        yield renderScriptBlock(request, templateFile, renderDef,
-                                landing, "#sharebar", "set", True,
-                                handlers={"onload": "$('#sharebar-links .selected').removeClass('selected'); $('#sharebar-link-%s').addClass('selected');" % (typ)})
 
     @profile
     @dump_args

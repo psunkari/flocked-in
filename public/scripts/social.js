@@ -269,7 +269,7 @@ _initChunkLoader: function _initChunkLoader(resources) {
                     if (value.handlers) {
                         handlers = value.handlers;
                         if (handlers.onload)
-                            eval(handlers.onload);
+                            eval(handlers.onload)(value);
                     }
                 }.bind(chunkLoader));
             chunkLoader._delayed = [];
@@ -341,6 +341,16 @@ $.social = window.social = window.$$ = social;
 })(window, jQuery);
 
 
+(function($$, $) {
+var publisher = {
+    load: function(obj) {
+        $('.selected-publisher').removeClass('selected-publisher');
+        $('#publisher-'+obj.publisherName).addClass('selected-publisher');
+    }
+};
+
+$$.publisher = publisher;
+})(social, jQuery);
 
 
 /*

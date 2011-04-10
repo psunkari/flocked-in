@@ -8,14 +8,16 @@
   <div class="input-wrap">
     <input type="text" name="question" placeholder="${_('Question')}"/>
   </div>
-  <div class="input-wrap">
-    <input type="text" name="options" placeholder="${_('Option')}"/>
-  </div>
-  <div class="input-wrap">
-    <input type="text" name="options" placeholder="${_('Option')}"/>
-  </div>
-  <div class="input-wrap">
-    <input type="text" name="options" placeholder="${_('Option')}"/>
+  <div id="share-poll-options">
+    <div class="input-wrap">
+      <input type="text" name="options" placeholder="${_('Add an option')}"/>
+    </div>
+    <div class="input-wrap">
+      <input type="text" name="options" placeholder="${_('Add an option')}"/>
+    </div>
+    <div class="input-wrap">
+      <input type="text" name="options" placeholder="${_('Add an option')}"/>
+    </div>
   </div>
   <input type="hidden" name="type" value="poll"/>
 </%def>

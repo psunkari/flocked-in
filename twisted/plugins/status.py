@@ -19,8 +19,16 @@ class Status(object):
     position = 1
     hasIndex = True
 
-    def shareBlockProvider(self):
-        return ("feed.mako", "share_status")
+    @defer.inlineCallbacks
+    def renderShareBlock(self, request, isAjax):
+        templateFile = "feed.mako"
+        renderDef = "share_status"
+
+        yield renderScriptBlock(request, templateFile, renderDef,
+                                not isAjax, "#sharebar", "set", True,
+                                attrs={"publisherName": "status"},
+                                handlers={"onload": "function(obj){$$.publisher.load(obj)};"})
+
 
     def rootHTML(self, convId, isQuoted, args):
         if "convId" in args:

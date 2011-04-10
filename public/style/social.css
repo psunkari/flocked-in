@@ -392,7 +392,7 @@ a:hover > .sharebar-text,
 a:active > .sharebar-text, a:focus > .sharebar-text {
     text-decoration: underline;
 }
-#sharebar-links .selected {
+.selected-publisher {
     color: black !important;
 }
 .sharebar-icon {

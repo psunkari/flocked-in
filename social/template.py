@@ -55,7 +55,7 @@ def renderDef(request, path, dfn, *args, **data):
 @defer.inlineCallbacks
 def renderScriptBlock(request, path, dfn, wrapInTags=False, parent=None,
                       method=None, last=False, css=None, scripts=None,
-                      handlers=None, args=[], **data):
+                      handlers=None, attrs={}, args=[], **data):
     try:
         template = yield threads.deferToThread(_getTemplate, path, dfn)
         text = template.render(*args, **data)
@@ -65,6 +65,7 @@ def renderScriptBlock(request, path, dfn, wrapInTags=False, parent=None,
 
     map = {"content": text, "node": parent, "method": method, "last": last,
            "css": [], "js": [], "resources": {}, "handlers": handlers}
+    map.update(attrs)
 
     if css:
         for id, url in css:

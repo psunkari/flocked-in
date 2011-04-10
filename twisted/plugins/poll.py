@@ -145,8 +145,15 @@ class Poll(object):
     position = 5
     hasIndex = False
 
-    def shareBlockProvider(self):
-        return ("poll.mako", "share_poll")
+    @defer.inlineCallbacks
+    def renderShareBlock(self, request, isAjax):
+        templateFile = "poll.mako"
+        renderDef = "share_poll"
+
+        yield renderScriptBlock(request, templateFile, renderDef,
+                                not isAjax, "#sharebar", "set", True,
+                                attrs={"publisherName": "poll"},
+                                handlers={"onload": "function(obj){$$.publisher.load(obj)};"})
 
 
     def rootHTML(self, convId, isQuoted, args):

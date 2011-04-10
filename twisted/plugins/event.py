@@ -260,8 +260,15 @@ class Event(object):
         defer.returnValue(_(reasons[noOfRequesters])%(tuple(vals)))
 
 
-    def shareBlockProvider(self):
-        return ("event.mako", "share_event")
+    @defer.inlineCallbacks
+    def renderShareBlock(self, request, isAjax):
+        templateFile = "event.mako"
+        renderDef = "share_event"
+
+        yield renderScriptBlock(request, templateFile, renderDef,
+                                not isAjax, "#sharebar", "set", True,
+                                attrs={"publisherName": "event"},
+                                handlers={"onload": "function(obj){$$.publisher.load(obj)};"})
 
 
     def rootHTML(self, convId, isQuoted, args):
