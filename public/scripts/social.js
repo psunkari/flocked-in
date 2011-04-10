@@ -124,7 +124,7 @@ _initAjaxRequests: function _initAjaxRequests() {
  */
 _initTimestampUpdates: function _initTimestampUpdates() {
     window.setInterval(function() {
-        $('abbr.timestamp').each(function(idx, item) {
+        $('.timestamp').each(function(idx, item) {
             timestamp = item.getAttribute("_ts")
             tooltip = item.getAttribute("title");
 
