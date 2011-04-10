@@ -6,16 +6,19 @@
 
 <%def name="share_poll()">
   <div class="input-wrap">
-    <input type="text" name="question" placeholder="${_('Question')}"/>
+    <input type="text" name="question" placeholder="${_('What would you like to know?')}"/>
   </div>
   <div id="share-poll-options">
     <div class="input-wrap">
+      <img class="icon poll-option"/>
       <input type="text" name="options" placeholder="${_('Add an option')}"/>
     </div>
     <div class="input-wrap">
+      <img class="icon poll-option"/>
       <input type="text" name="options" placeholder="${_('Add an option')}"/>
     </div>
     <div class="input-wrap">
+      <img class="icon poll-option"/>
       <input type="text" name="options" placeholder="${_('Add an option')}"/>
     </div>
   </div>

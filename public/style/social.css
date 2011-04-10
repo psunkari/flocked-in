@@ -675,3 +675,12 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .poll-options {
     margin: 5px 0;
 }
+#share-poll-options > .input-wrap {
+    padding-left: 25px;
+    position: relative;
+}
+.poll-option {
+    position: absolute;
+    background-position: 0 -304px;
+    left: 4px;
+}
