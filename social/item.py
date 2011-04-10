@@ -220,7 +220,12 @@ class ItemResource(base.BaseResource):
             yield deferredList
 
             toFeed = True if convType in ['status', 'poll', 'event'] else False
-            yield self.renderItem(request, toFeed)
+            d1 = self.renderItem(request, toFeed)
+
+            defaultType = plugins.keys()[0]
+            d2 = plugins[defaultType].renderShareBlock(request, True)
+
+            yield defer.DeferredList([d1, d2])
 
 
     @profile
