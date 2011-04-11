@@ -1,4 +1,10 @@
 
+.ui-ph-label {
+    color: graytext;
+    position: absolute;
+    cursor: text;
+}
+
 .button {
     font-family: inherit;
     border-width: 1px;

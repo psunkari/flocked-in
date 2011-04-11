@@ -317,8 +317,12 @@ $.social = window.social = window.$$ = social;
 (function($$, $) {
 var publisher = {
     load: function(obj) {
+        // Tab selection
         $('.selected-publisher').removeClass('selected-publisher');
         $('#publisher-'+obj.publisherName).addClass('selected-publisher');
+
+        // Placeholders
+        $$.ui.placeholders('#sharebar input:text');
     }
 };
 
@@ -334,8 +338,6 @@ $$.publisher = publisher;
 (function($$, $){
 var ui = {
     init: function() {
-        var self = this;
-
         /* Add a scroll to bottom handler */
         $(window).scroll(function(){
             if ($(window).scrollTop() == $(document).height() - $(window).height()){
@@ -366,6 +368,61 @@ var ui = {
                 }
                 return true;
             }
+        });
+        ui.placeholders("#searchbox");
+
+        /* Install handlers for placeholder text */
+        if (!ui._placeholders) {
+            $(".ui-ph-label").live("click", function() {
+                var input = this.nextSibling;
+                input.focus();
+            });
+
+            $(".ui-ph-active").live("focus", function() {
+                var label = this.previousSibling;
+                $(label).css('display', 'none');
+                $(this).removeClass('ui-ph-active');
+            })
+
+            $(".ui-ph").live("blur", function() {
+                if (this.value != "")
+                    return;
+
+                var label = this.previousSibling;
+                $(label).css('display', 'block');
+                $(this).addClass('ui-ph-active');
+            })
+        }
+    },
+
+    _placeholders: 'placeholder' in document.createElement('input'),
+    placeholders: function(selector) {
+        if (ui._placeholders)   // Browser supports placeholder text
+            return;
+
+        $(selector).each(function(index, element){
+            $this = $(this);
+
+            text = $this.attr('placeholder');
+            if (!text)
+                return;
+
+            label = document.createElement("label");
+            try {
+                label.innerText = text;
+                label.textContent = text;
+            } catch(ex) {}
+            label.setAttribute('class', 'ui-ph-label ui-ph-active');
+
+            $label = $(label);
+            inputHeight = $this.outerHeight();
+            $label.height(inputHeight);
+            $label.width($this.outerWidth());
+            $label.css('line-height', inputHeight+'px');
+
+            this.parentNode.insertBefore(label, this);
+            $this.addClass('ui-ph');
+            $this.addClass('ui-ph-active');
         });
     }
 }
