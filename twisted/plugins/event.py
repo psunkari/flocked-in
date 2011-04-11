@@ -268,7 +268,7 @@ class Event(object):
         yield renderScriptBlock(request, templateFile, renderDef,
                                 not isAjax, "#sharebar", "set", True,
                                 attrs={"publisherName": "event"},
-                                handlers={"onload": "function(obj){$$.publisher.load(obj)};"})
+                                handlers={"onload": "(function(obj){$$.publisher.load(obj)})(this);"})
 
 
     def rootHTML(self, convId, isQuoted, args):

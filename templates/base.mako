@@ -112,7 +112,7 @@
   <script type="text/javascript" src="/public/scripts/jquery.address.js"></script>
   <script type="text/javascript" src="/public/scripts/social.js"></script>
   <script type="text/javascript">
-    $().ready(function() {$$.initUI()});
+    $().ready(function() {$$.ui.init()});
   </script>
 %else:
 </body>

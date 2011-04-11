@@ -268,8 +268,11 @@ _initChunkLoader: function _initChunkLoader(resources) {
             $.each(chunkLoader._delayed, function(index, value) {
                     if (value.handlers) {
                         handlers = value.handlers;
-                        if (handlers.onload)
-                            eval(handlers.onload)(value);
+                        if (handlers.onload) {
+                            try {
+                                (new Function(handlers.onload)).apply(value);
+                            } catch(ex) {}
+                        }
                     }
                 }.bind(chunkLoader));
             chunkLoader._delayed = [];
@@ -281,42 +284,6 @@ _initChunkLoader: function _initChunkLoader(resources) {
 
     social._chunkLoader = chunkLoader;
     social.load = chunkLoader.load;
-},
-
-initUI: function() {
-    var self = this;
-
-    /* Add a scroll to bottom handler */
-    $(window).scroll(function(){
-        if ($(window).scrollTop() == $(document).height() - $(window).height()){
-            $('#next-page-load').click();
-        }
-    });
-
-    $.extend($.ui.autocomplete.prototype, {
-        _renderItem: function(ul, item) {
-            return $("<li></li>")
-                        .data("item.autocomplete", item)
-                        .append($( "<a></a>" ).html( item.label ))
-                        .appendTo(ul);
-        }
-    });
-
-    /* Searchbar must support autocomplete */
-    $("#searchbox").autocomplete({
-        source: '/auto/searchbox',
-        minLength: 3,
-        select: function(event, obj){
-            url = obj.item.href;
-            if (url !== undefined) {
-                $.address.value(url);
-                deferred = self.fetchUri(url);
-                event.target.value = "";
-                return false;
-            }
-            return true;
-        }
-    });
 }
 
 }; // var social;
@@ -341,6 +308,12 @@ $.social = window.social = window.$$ = social;
 })(window, jQuery);
 
 
+
+
+/*
+ * Loader for the share block (publisher)
+ * TODO: Handle extra options for showing buttons etc;
+ */
 (function($$, $) {
 var publisher = {
     load: function(obj) {
@@ -351,6 +324,56 @@ var publisher = {
 
 $$.publisher = publisher;
 })(social, jQuery);
+
+
+
+
+/*
+ * Elements of the UI
+ */
+(function($$, $){
+var ui = {
+    init: function() {
+        var self = this;
+
+        /* Add a scroll to bottom handler */
+        $(window).scroll(function(){
+            if ($(window).scrollTop() == $(document).height() - $(window).height()){
+                $('#next-page-load').click();
+            }
+        });
+
+        $.extend($.ui.autocomplete.prototype, {
+            _renderItem: function(ul, item) {
+                return $("<li></li>")
+                            .data("item.autocomplete", item)
+                            .append($( "<a></a>" ).html( item.label ))
+                            .appendTo(ul);
+            }
+        });
+
+        /* Searchbar must support autocomplete */
+        $("#searchbox").autocomplete({
+            source: '/auto/searchbox',
+            minLength: 3,
+            select: function(event, obj){
+                url = obj.item.href;
+                if (url !== undefined) {
+                    $.address.value(url);
+                    deferred = $$.fetchUri(url);
+                    event.target.value = "";
+                    return false;
+                }
+                return true;
+            }
+        });
+    }
+}
+
+$$.ui = ui;
+})(social, jQuery);
+
+
 
 
 /*

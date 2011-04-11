@@ -441,7 +441,7 @@ class ItemResource(base.BaseResource):
         data = {"entities": entities, "items": items}
         yield renderScriptBlock(request, 'item.mako', 'conv_comment', False,
                                 '#comments-%s' % convId, 'append', True,
-                                handlers={"onload": "function(){$(':text', '#comment-form-%s').val(''); $('[name=\"nc\"]', '#comment-form-%s').val('%s');}" % (convId, convId, numShowing)},
+                                handlers={"onload": "(function(){$(':text', '#comment-form-%s').val(''); $('[name=\"nc\"]', '#comment-form-%s').val('%s');})();" % (convId, convId, numShowing)},
                                 args=[convId, itemId], **data)
         d = fts.solr.updateIndex(itemId, {'meta':meta})
 
@@ -513,7 +513,7 @@ class ItemResource(base.BaseResource):
                                     'set', **args)
             yield renderScriptBlock(request, "item.mako", 'conv_comments_only',
                             landing, '#comments-%s' % convId, 'prepend', True,
-                            handlers={"onload": "function(){$('[name=\"nc\"]', '#comment-form-%s').val('%s');}" % (convId, showing)},
+                            handlers={"onload": "(function(){$('[name=\"nc\"]', '#comment-form-%s').val('%s');})();" % (convId, showing)},
                             **args)
 
 
@@ -546,7 +546,7 @@ class ItemResource(base.BaseResource):
         yield defer.DeferredList([d1, d2])
         yield renderScriptBlock(request, "item.mako", 'conv_tag', False,
                                 '#conv-tags-%s'%itemId, "append", True,
-                                handlers={"onload": "function(){$('input:text', '#addtag-form-%s').val('');}" % itemId},
+                                handlers={"onload": "(function(){$('input:text', '#addtag-form-%s').val('');})();" % itemId},
                                 args=[itemId, tagId, tag["title"]])
 
 
