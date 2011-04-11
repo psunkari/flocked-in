@@ -9,6 +9,10 @@ body {
     color: #333;
     font-size: 11px;
 }
+textarea, input {
+    font-family: "lucida grande",tahoma,verdana,arial,sans-serif;
+    font-size: 12.5px;
+}
 
 .contents {
     width: 980px;
@@ -418,11 +422,14 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     margin: 0 0 5px 0;
 }
 
-#sharebar input {
+#sharebar input, #sharebar textarea {
     width: 100%;
     border: none;
     outline: 0px;
     background-color: transparent;
+}
+#sharebar textarea {
+    height: 1.3em;
 }
 
 #sharebar-actions {

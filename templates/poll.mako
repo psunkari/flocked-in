@@ -6,7 +6,7 @@
 
 <%def name="share_poll()">
   <div class="input-wrap">
-    <input type="text" name="question" placeholder="${_('What would you like to know?')}"/>
+    <textarea name="question" placeholder="${_('What would you like to know?')}"/>
   </div>
   <div id="share-poll-options">
     <div class="input-wrap">

@@ -322,7 +322,10 @@ var publisher = {
         $('#publisher-'+obj.publisherName).addClass('selected-publisher');
 
         // Placeholders
-        $$.ui.placeholders('#sharebar input:text');
+        $$.ui.placeholders('#sharebar input:text, #sharebar textarea');
+
+        // Auto expand textareas
+        $('#sharebar textarea').autogrow();
     }
 };
 

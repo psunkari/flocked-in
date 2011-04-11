@@ -110,6 +110,7 @@
   <script type="text/javascript" src="/public/scripts/jquery.ui.menu.js"></script>
   <script type="text/javascript" src="/public/scripts/jquery.ui.autocomplete.js"></script>
   <script type="text/javascript" src="/public/scripts/jquery.address.js"></script>
+  <script type="text/javascript" src="/public/scripts/jquery.autogrow-textarea.js"></script>
   <script type="text/javascript" src="/public/scripts/social.js"></script>
   <script type="text/javascript">
     $().ready(function() {$$.ui.init()});

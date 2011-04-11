@@ -100,7 +100,7 @@
 
 <%def name="share_status()">
   <div class="input-wrap">
-    <input type="text" name="comment" placeholder="${_('What are you currently working on?')}"/>
+    <textarea name="comment" placeholder="${_('What are you currently working on?')}"/>
   </div>
   <input type="hidden" name="type" value="status"/>
 </%def>
