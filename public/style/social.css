@@ -201,8 +201,9 @@ a:hover, a:active, a:focus {
     float: left;
     border-style: solid;
     border-color: #C3D9FF;
-    border-width: 0 1px;
+    border-width: 0 1px 1px;
     width: 980px;
+    margin-bottom: 20px;
 }
 .has-left.has-right #center { width: 575px !important; }
 .has-left #center, .has-right #center { width: 800px !important; }
@@ -543,6 +544,12 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     border: none;
 }
 
+#next-load-wrapper {
+    padding: 10px 20px;
+    border: 1px solid #3D85C6;
+    background-color: #E8EEFA;
+}
+
 
 /*
  * Generic item display
@@ -711,3 +718,4 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 .tag.external {
 }
+
