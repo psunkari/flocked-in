@@ -151,9 +151,9 @@ class RegisterResource(BaseResource):
         orgKey = yield getOrgKey(domain)
         if not orgKey:
             domains = {domain:''}
-            meta = {"name":domain, "type":"org"}
+            basic = {"name":domain, "type":"org"}
             orgKey = utils.getUniqueKey()
-            yield Db.batch_insert(orgKey, "entities", {"meta": meta, "domains":domains})
+            yield Db.batch_insert(orgKey, "entities", {"basic": basic, "domains":domains})
             yield Db.insert(domain, "domainOrgMap", '', orgKey)
 
         # TODO: check if email is already registered
