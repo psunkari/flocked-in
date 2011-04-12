@@ -51,8 +51,19 @@ a:link, a:visited {
     color: #3366CC;
     text-decoration: none;
 }
+a.ajax {
+    color: #3366CC;
+    cursor: pointer;
+}
 a:hover, a:active, a:focus {
     text-decoration: underline;
+}
+.invisible:link, .invisible:visited {
+    color: inherit;
+}
+.invisible:hover, .invisible:active, .invisible:focus {
+    color: #3366CC;
+    text-decoration: none;
 }
 
 .middle {
@@ -64,11 +75,6 @@ a:hover, a:active, a:focus {
 }
 .hidden {
     display: none !important;
-}
-
-a.ajax {
-    color: #3366CC;
-    cursor: pointer;
 }
 
 .tabular-form {
@@ -690,4 +696,18 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     position: absolute;
     background-position: 0 -304px;
     left: 4px;
+}
+
+/*
+ * Styling for tags
+ */
+.tag {
+  display: inline-block;
+  background-color: #F9F9F9;
+  border: 1px solid #E9E9E9;
+  border-radius: 2px;
+  padding: 0px 2px;
+  margin: 1px 2px 0 0;
+}
+.tag.external {
 }

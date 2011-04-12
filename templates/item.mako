@@ -71,11 +71,6 @@
           <div class="conv-likes">${likeStr[convId]}</div>
         %endif
       </div>
-      <div id="conv-tags-wrapper-${convId}" class="busy-indicator">
-        %if inline or not script:
-          ${self.conv_tags(convId)}
-        %endif
-      </div>
       <div id="conv-comments-wrapper-${convId}">
         %if inline or not script:
           ${self.conv_comments(convId, isFeed)}
@@ -121,6 +116,12 @@
     <span><a class="ajax" _ref="/item/unlike?id=${itemId}">${_("Unlike")}</a></span>
   %else:
     <span><a class="ajax" _ref="/item/like?id=${itemId}">${_("Like")}</a></span>
+  %endif
+  %if not hasParent:
+    &nbsp;&#183;&nbsp;
+    <span id="conv-tags-wrapper-${itemId}">
+      ${self.conv_tags(itemId)}
+    </span>
   %endif
 </%def>
 
@@ -207,22 +208,22 @@
 
 
 <%def name="conv_tag(convId, tagId, tagName)">
-  <span><a class="ajax" href="/tags?id=${tagId}">${tagName}</a><span class="delete-tag"><a class="ajax" _ref="/item/untag?id=${convId}&tag=${tagId}">X</a></span></span>
+  <span class="tag"><a class="ajax invisible" href="/tags?id=${tagId}">${tagName}</a></span>
 </%def>
 
 
 <%def name="conv_tags(convId)">
   <% itemTags = items[convId].get("tags", {}) %>
-  <div id="conv-tags-${convId}" class="conv-tags">
+  <span id="conv-tags-${convId}" class="conv-tags">
     %for tagId in itemTags.keys():
-      <span><a class="ajax" href="/tags?id=${tagId}">${tags[tagId]["title"]}</a><span class="delete-tag"><a class="ajax" _ref="/item/untag?id=${convId}&tag=${tagId}">X</a></span></span>
+      <span class="tag"><a class="ajax invisible" href="/tags?id=${tagId}">${tags[tagId]["title"]}</a></span>
     %endfor
-  </div>
-  <form method="post" action="/item/tag" class="ajax" autocomplete="off" id="addtag-form-${convId}">
+  </span>
+  <!-- form method="post" action="/item/tag" class="ajax" autocomplete="off" id="addtag-form-${convId}">
     <input type="text" name="tag" value=""></input>
     <input type="hidden" name="id" value=${convId}></input>
     ${widgets.button(None, type="submit", name="add", value="Add")}<br/>
-  </form>
+  </form -->
 </%def>
 
 <%def name="item_me()">
