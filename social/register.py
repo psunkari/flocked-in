@@ -175,23 +175,13 @@ class RegisterResource(BaseResource):
         existingUser = yield Db.get_count(emailId, "userAuth")
         if not existingUser:
             orgKey = yield getOrgKey(domain)
-            userKey = utils.getUniqueKey()
-            count = yield Db.get_count(orgKey, "orgUsers")
-            isAdmin = not count
-            if isAdmin:
+            userKey = yield utils.addUser(emailId, username, passwd, orgKey)
+            yield Db.remove(emailId, "invitations")
+
+            cols = yield Db.get_slice(orgKey, "entities", ["admins"])
+            if not cols:
                 yield Db.insert(orgKey, "entities", "", userKey, "admins")
 
-            yield Db.batch_insert(emailId, "userAuth", {
-                                        "passwordHash": md5(passwd).hexdigest(),
-                                         "isAdmin": str(isAdmin),
-                                         "org": orgKey,
-                                         "user": userKey})
-            userInfo = {'basic': {'name': username, 'org':orgKey, 'type': 'user'}}
-            yield Db.batch_insert(userKey, "entities", userInfo)
-            yield Db.insert(orgKey, "displayNameIndex", "",
-                            username.lower()+ ":" + userKey)
-            yield Db.insert(orgKey, "orgUsers", '', userKey)
-            yield Db.remove(emailId, "invitations")
         else:
             raise errors.ExistingUser
 

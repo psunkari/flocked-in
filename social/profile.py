@@ -51,65 +51,6 @@ def saveAvatarItem(userId, data):
 
 
 @profile
-@defer.inlineCallbacks
-@dump_args
-def deleteNameIndex(userKey, name, targetKey):
-    if name:
-        yield Db.remove(userKey, "nameIndex", ":".join([name.lower(), targetKey]))
-
-
-@profile
-@defer.inlineCallbacks
-@dump_args
-def _updateDisplayNameIndex(userKey, targetKey, newName, oldName):
-    calls = []
-    if oldName:
-        d1 =  Db.remove(targetKey, "displayNameIndex", oldName.lower() + ":" + userKey)
-        calls.append(d1)
-    if newName:
-        d2 =  Db.insert(targetKey, "displayNameIndex", "", newName.lower() + ':' + userKey)
-        calls.append(d2)
-    if calls:
-        yield defer.DeferredList(calls)
-
-
-@profile
-@defer.inlineCallbacks
-@dump_args
-def updateDisplayNameIndex(userKey, targetKeys, newName, oldName):
-    calls = []
-    for targetKey in targetKeys:
-        d = _updateDisplayNameIndex(userKey, targetKey, newName, oldName)
-        calls.append(d)
-    yield defer.DeferredList(calls)
-
-
-@profile
-@defer.inlineCallbacks
-@dump_args
-def _updateNameIndex(userKey, targetKey, newName, oldName):
-    calls = []
-    if oldName:
-        d1 =  Db.remove(targetKey, "nameIndex", oldName.lower() + ":" + userKey)
-        calls.append(d1)
-    if newName:
-        d2 =  Db.insert(targetKey, "nameIndex", "", newName.lower() + ":" + userKey)
-        calls.append(d2)
-    if calls:
-        yield defer.DeferredList(calls)
-
-
-@profile
-@defer.inlineCallbacks
-@dump_args
-def updateNameIndex(userKey, targetKeys, newName, oldName):
-    calls = []
-    for targetKey in targetKeys:
-        d = _updateNameIndex(userKey, targetKey, newName, oldName)
-        calls.append(d)
-    yield defer.DeferredList(calls)
-
-@profile
 @dump_args
 def _getImageFileFormat(data):
     imageType = imghdr.what(None, data)
@@ -267,16 +208,16 @@ class ProfileResource(base.BaseResource):
             targetFirstName = users[targetKey]["basic"].get("firstname", None)
             targetLastName = users[targetKey]["basic"].get("lastname", None)
 
-            d5 = _updateDisplayNameIndex(targetKey, myKey, targetName, None)
-            d6 = _updateDisplayNameIndex(myKey, targetKey, myName, None)
+            d5 = utils._updateDisplayNameIndex(targetKey, myKey, targetName, None)
+            d6 = utils._updateDisplayNameIndex(myKey, targetKey, myName, None)
 
-            d7 = _updateNameIndex(myKey, targetKey,  myName, None)
-            d8 = _updateNameIndex(myKey, targetKey, myFirstName, None)
-            d9 = _updateNameIndex(myKey,targetKey,  myLastName, None)
+            d7 = utils._updateNameIndex(myKey, targetKey,  myName, None)
+            d8 = utils._updateNameIndex(myKey, targetKey, myFirstName, None)
+            d9 = utils._updateNameIndex(myKey,targetKey,  myLastName, None)
 
-            d10 = _updateNameIndex(targetKey, myKey, targetName, None)
-            d11 = _updateNameIndex(targetKey, myKey, targetFirstName, None)
-            d12 = _updateNameIndex(targetKey, myKey, targetLastName, None)
+            d10 = utils._updateNameIndex(targetKey, myKey, targetName, None)
+            d11 = utils._updateNameIndex(targetKey, myKey, targetFirstName, None)
+            d12 = utils._updateNameIndex(targetKey, myKey, targetLastName, None)
 
             #add to feed
             responseType = "I"
@@ -345,14 +286,14 @@ class ProfileResource(base.BaseResource):
                      Db.remove(targetKey, "displayNameIndex",
                                ":".join([myDisplayName, myKey]))]
         if myFirstName:
-            deferreds.append(deleteNameIndex(targetKey, myFirstName, myKey))
+            deferreds.append(utils.deleteNameIndex(targetKey, myFirstName, myKey))
         if myLastName:
-            deferreds.append(deleteNameIndex(targetKey, myLastName, myKey))
+            deferreds.append(utils.deleteNameIndex(targetKey, myLastName, myKey))
 
         if targetFirstName:
-            deferreds.append(deleteNameIndex(myKey, targetFirstName, targetKey))
+            deferreds.append(utils.deleteNameIndex(myKey, targetFirstName, targetKey))
         if targetLastName:
-            deferreds.append(deleteNameIndex(myKey, targetLastName, targetKey))
+            deferreds.append(utils.deleteNameIndex(myKey, targetLastName, targetKey))
 
         yield defer.DeferredList(deferreds)
 
@@ -379,10 +320,11 @@ class ProfileResource(base.BaseResource):
 
         for field in ["name", "lastname", "firstname"]:
             if "basic" in userInfo and field in userInfo["basic"]:
-                d = updateNameIndex(myKey, friends, userInfo["basic"][field],
-                                    user["basic"].get(field, None))
+                d = utils.updateNameIndex(myKey, friends,
+                                          userInfo["basic"][field],
+                                          user["basic"].get(field, None))
                 if field == 'name':
-                    d1 = updateDisplayNameIndex(myKey, friends,
+                    d1 = utils.updateDisplayNameIndex(myKey, friends,
                                                 userInfo["basic"][field],
                                                 user["basic"].get(field, None))
                     calls.append(d1)

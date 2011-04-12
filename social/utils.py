@@ -12,6 +12,7 @@ from twisted.python     import log
 from social             import Db, _, __
 from social.isocial     import IAuthInfo
 from social.constants   import INFINITY
+from social.logging     import profile, dump_args
 
 
 def md5(text):
@@ -371,21 +372,44 @@ def existingUser(emailId):
 
 @defer.inlineCallbacks
 def addUser(emailId, displayName, passwd, orgKey, jobTitle = None):
-    userKey = getUniqueKey()
+    userId = getUniqueKey()
 
     userInfo = {'basic': {'name': displayName, 'org':orgKey,
                           'type': 'user', 'emailId':emailId}}
-    userAuthInfo = {"passwordHash": md5(passwd), "org": orgKey, "user": userKey}
+    userAuthInfo = {"passwordHash": md5(passwd), "org": orgKey, "user": userId}
 
     if jobTitle:
         userInfo["basic"]["jobTitle"] = jobTitle
 
-    yield Db.insert(orgKey, "orgUsers", '', userKey)
-    yield Db.batch_insert(userKey, "entities", userInfo)
+    yield Db.insert(orgKey, "orgUsers", '', userId)
+    yield Db.batch_insert(userId, "entities", userInfo)
     yield Db.batch_insert(emailId, "userAuth", userAuthInfo)
-    yield Db.insert(orgKey, "displayNameIndex", "", displayName.lower()+ ":" + userKey)
+    yield Db.insert(orgKey, "displayNameIndex", "", displayName.lower()+ ":" + userId)
 
-    defer.returnValue(userKey)
+    defer.returnValue(userId)
+
+
+@defer.inlineCallbacks
+def removeUser(userId, userInfo=None):
+
+    if not userInfo:
+        cols = yield Db.get_slice(userId, "entities", ["basic"])
+        userInfo = supercolumnsToDict(cols)
+    emailId = userInfo["basic"].get("emailId", None)
+    displayName = userInfo["basic"].get("name", None)
+    orgKey = userInfo["basic"]["org"]
+
+    yield Db.remove(emailId, "userAuth")
+    yield Db.remove(orgKey, "displayNameIndex", ":".join([displayName.lower(), userId]))
+    yield Db.remove(orgKey, "orgUsers", userId)
+    yield Db.remove(orgKey, "blockedUsers", userId)
+    #unfriend - remove all pending requests
+    #clear displayName index
+    #clear nameindex
+    #unfollow
+    #unsubscribe from all groups
+
+
 
 @defer.inlineCallbacks
 def getAdmins(entityId):
@@ -399,3 +423,63 @@ def isAdmin(userId, entityId):
     if not admins:
         defer.returnValue(False)
     defer.returnValue(userId in admins)
+
+
+@profile
+@defer.inlineCallbacks
+@dump_args
+def deleteNameIndex(userKey, name, targetKey):
+    if name:
+        yield Db.remove(userKey, "nameIndex", ":".join([name.lower(), targetKey]))
+
+
+@profile
+@defer.inlineCallbacks
+@dump_args
+def _updateDisplayNameIndex(userKey, targetKey, newName, oldName):
+    calls = []
+    if oldName:
+        d1 =  Db.remove(targetKey, "displayNameIndex", oldName.lower() + ":" + userKey)
+        calls.append(d1)
+    if newName:
+        d2 =  Db.insert(targetKey, "displayNameIndex", "", newName.lower() + ':' + userKey)
+        calls.append(d2)
+    if calls:
+        yield defer.DeferredList(calls)
+
+
+@profile
+@defer.inlineCallbacks
+@dump_args
+def updateDisplayNameIndex(userKey, targetKeys, newName, oldName):
+    calls = []
+    for targetKey in targetKeys:
+        d = _updateDisplayNameIndex(userKey, targetKey, newName, oldName)
+        calls.append(d)
+    yield defer.DeferredList(calls)
+
+
+@profile
+@defer.inlineCallbacks
+@dump_args
+def _updateNameIndex(userKey, targetKey, newName, oldName):
+    calls = []
+    if oldName:
+        d1 =  Db.remove(targetKey, "nameIndex", oldName.lower() + ":" + userKey)
+        calls.append(d1)
+    if newName:
+        d2 =  Db.insert(targetKey, "nameIndex", "", newName.lower() + ":" + userKey)
+        calls.append(d2)
+    if calls:
+        yield defer.DeferredList(calls)
+
+
+@profile
+@defer.inlineCallbacks
+@dump_args
+def updateNameIndex(userKey, targetKeys, newName, oldName):
+    calls = []
+    for targetKey in targetKeys:
+        d = _updateNameIndex(userKey, targetKey, newName, oldName)
+        calls.append(d)
+    yield defer.DeferredList(calls)

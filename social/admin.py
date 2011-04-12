@@ -130,6 +130,29 @@ class Admin(base.BaseResource):
         yield Db.remove(orgKey, "blockedUsers", userId)
 
     @defer.inlineCallbacks
+    def _deleteUser(self, request):
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        orgKey = args["orgKey"]
+
+        isAdmin = yield utils.isAdmin(myKey, orgKey)
+        if not isAdmin:
+            raise Unauthorized()
+
+        userId = utils.getRequestArg(request, "id")
+        cols = yield Db.get_slice(userId, "entities", ["basic"])
+        userInfo = utils.supercolumnsToDict(cols)
+        emailId = userInfo.get("basic", {}).get("emailId", None)
+        userOrg = userInfo.get("basic", {}).get("org", None)
+
+        if userOrg != orgKey:
+            log.msg("can't unblock users of other networks")
+            raise errors.UnAuthoried()
+        if not emailId:
+            raise errors.MissingData()
+        yield utils.removeUser(userId, userInfo)
+
+
+    @defer.inlineCallbacks
     def _renderAddUsers(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         orgKey = args["orgKey"]
@@ -206,12 +229,12 @@ class Admin(base.BaseResource):
 
         cols = yield Db.get_slice(orgKey, "displayNameIndex", start=start,
                                   count=PEOPLE_PER_PAGE)
-        employeeIds = [col.column.name.split(":")[1] for col in cols]
-        employees = [userId for userId in employeeIds if userId not in blockedUsers]
+        employees = [col.column.name.split(":")[1] for col in cols]
 
         userInfo = yield Db.multiget_slice(employees, "entities", ["basic"])
         args["entities"] = utils.multiSuperColumnsToDict(userInfo)
         args["people"] = employees
+        args["blockedUsers"] = blockedUsers
 
         if script:
             yield renderScriptBlock(request, "admin.mako", "list_users",
@@ -230,6 +253,8 @@ class Admin(base.BaseResource):
             d = self._unBlockUser(request)
         elif segmentCount == 1 and request.postpath[0] == "add":
             d = self._addUsers(request)
+        elif segmentCount == 1 and request.postpath[0] == "delete":
+            d = self._deleteUser(request)
 
         return self._epilogue(request, d)
 
