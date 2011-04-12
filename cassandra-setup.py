@@ -108,6 +108,12 @@ def createColumnFamilies(client):
                      "List of users banned from a group")
     yield client.system_add_column_family(bannedUsers)
 
+    blockedUsers = CfDef(KEYSPACE, "blockedUsers", "Standard", "UTF8Type", None,
+                         "List of users blocked by admins."
+                         "blocked users will not be able to login")
+    yield client.system_add_column_family(blockedUsers)
+
+
     # List of members in a group
     # userKey => <subscribed>:<activityKey>
     groupMembers = CfDef(KEYSPACE, 'groupMembers', 'Standard', 'UTF8Type', None,
@@ -250,6 +256,16 @@ def createColumnFamilies(client):
 def addSampleData(client):
     # Create the organization
     exampleKey = utils.getUniqueKey()
+
+    # List of users in the organization
+    prasadKey = utils.getUniqueKey()
+    praveenKey = utils.getUniqueKey()
+    ashokKey = utils.getUniqueKey()
+    abhiKey = utils.getUniqueKey()
+    rahulKey = utils.getUniqueKey()
+    sandeepKey = utils.getUniqueKey()
+
+
     yield client.batch_insert(exampleKey, 'entities', {
                                 'basic': {
                                     'name': 'Example Software',
@@ -258,7 +274,9 @@ def addSampleData(client):
                                 'domains': {
                                     'synovel.com': '',
                                     'example.org': ''
-                                }})
+                                },
+                                'admins':{praveenKey: ''} })
+
     yield client.insert('synovel.com', 'domainOrgMap', '', exampleKey)
     yield client.insert('example.org', 'domainOrgMap', '', exampleKey)
 
@@ -272,13 +290,6 @@ def addSampleData(client):
     yield client.batch_insert(groupId, "entities", {"basic":meta})
     yield client.insert(exampleKey, "orgGroups", '', groupId)
 
-    # List of users in the organization
-    prasadKey = utils.getUniqueKey()
-    praveenKey = utils.getUniqueKey()
-    ashokKey = utils.getUniqueKey()
-    abhiKey = utils.getUniqueKey()
-    rahulKey = utils.getUniqueKey()
-    sandeepKey = utils.getUniqueKey()
 
     yield client.insert(exampleKey, "displayNameIndex", "", "prasad:"+prasadKey)
     yield client.insert(exampleKey, "displayNameIndex", "", "ashok:"+ashokKey)
@@ -318,7 +329,8 @@ def addSampleData(client):
                                     'location': 'synovel.com/location/hyderabad',
                                     'desc': 'Just another Tom, Dick and Harry',
                                     'org': exampleKey,
-                                    'type': "user"
+                                    'type': "user",
+                                    'emailId': "prasad@synovel.com"
                                 },
                                 'expertise': {
                                     'Open Source': '',
@@ -368,7 +380,8 @@ def addSampleData(client):
                                     'location': 'synovel.com/location/hyderabad',
                                     'desc': 'Yet another Tom, Dick and Harry',
                                     'org': exampleKey,
-                                    'type': "user"
+                                    'type': "user",
+                                    "emailId": "ashok@synovel.com"
                                 },
                                 'expertise': {
                                     'Sales': '',
@@ -414,7 +427,8 @@ def addSampleData(client):
                                     'location': 'synovel.com/location/hyderabad',
                                     'desc': 'Yet another Tom, Dick and Harry',
                                     'org': exampleKey,
-                                    'type': "user"
+                                    'type': "user",
+                                    "emailId": "praveen@synovel.com"
                                 },
                                 'expertise': {
                                     'Operations': ''
@@ -456,7 +470,8 @@ def addSampleData(client):
                                     'location': 'synovel.com/location/hyderabad',
                                     'desc': 'Just another Tom, Dick and Harry',
                                     'org': exampleKey,
-                                    'type': "user"
+                                    'type': "user",
+                                    "emailId": "rahul@synovel.com"
                                 },
                                 'expertise': {
                                     'Open Source': '',
@@ -503,7 +518,8 @@ def addSampleData(client):
                                     'location': 'synovel.com/location/hyderabad',
                                     'desc': 'Just another Tom, Dick and Harry',
                                     'org': exampleKey,
-                                    'type': "user"
+                                    'type': "user",
+                                    "emailId": "abhishek@synovel.com"
                                 },
                                 'expertise': {
                                     'Open Source': '',
@@ -549,7 +565,8 @@ def addSampleData(client):
                                     'location': 'synovel.com/location/hyderabad',
                                     'desc': 'Just another Tom, Dick and Harry',
                                     'org': exampleKey,
-                                    'type': "user"
+                                    'type': "user",
+                                    "emailId": "sandeep@synovel.com"
                                 },
                                 'expertise': {
                                     'Open Source': '',
@@ -770,7 +787,8 @@ def truncateColumnFamilies(client):
                'eventResponses', "userEventInvitations", "userEventResponse",
                'eventInvitations',"notifications", "notificationItems",
                "nameIndex", "displayNameIndex", "orgTags", "tagItems",
-               "tagFollowers", "orgTagsByName", "messages", "mUserMessages", "mFolderMessages", "bannedUsers"
+               "tagFollowers", "orgTagsByName", "messages", "mUserMessages",
+               "mFolderMessages", "bannedUsers", "blockedUsers",
                "mUserFolders", "mConversationMessages"]:
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)

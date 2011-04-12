@@ -360,3 +360,42 @@ def uuid1(node=None, clock_seq=None, timestamp=None):
         node = uuid.getnode()
     return uuid.UUID(fields=(time_low, time_mid, time_hi_version,
                         clock_seq_hi_variant, clock_seq_low, node), version=1)
+
+
+@defer.inlineCallbacks
+def existingUser(emailId):
+    count = yield Db.get_count(emailId, "userAuth")
+    if count:
+        defer.returnValue(True)
+    defer.returnValue(False)
+
+@defer.inlineCallbacks
+def addUser(emailId, displayName, passwd, orgKey, jobTitle = None):
+    userKey = getUniqueKey()
+
+    userInfo = {'basic': {'name': displayName, 'org':orgKey,
+                          'type': 'user', 'emailId':emailId}}
+    userAuthInfo = {"passwordHash": md5(passwd), "org": orgKey, "user": userKey}
+
+    if jobTitle:
+        userInfo["basic"]["jobTitle"] = jobTitle
+
+    yield Db.insert(orgKey, "orgUsers", '', userKey)
+    yield Db.batch_insert(userKey, "entities", userInfo)
+    yield Db.batch_insert(emailId, "userAuth", userAuthInfo)
+    yield Db.insert(orgKey, "displayNameIndex", "", displayName.lower()+ ":" + userKey)
+
+    defer.returnValue(userKey)
+
+@defer.inlineCallbacks
+def getAdmins(entityId):
+    cols = yield Db.get_slice(entityId, "entities", ["admins"])
+    admins = supercolumnsToDict(cols).get("admins", {}).keys()
+    defer.returnValue(admins)
+
+@defer.inlineCallbacks
+def isAdmin(userId, entityId):
+    admins = yield getAdmins(entityId)
+    if not admins:
+        defer.returnValue(False)
+    defer.returnValue(userId in admins)

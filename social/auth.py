@@ -86,13 +86,16 @@ class UserPasswordChecker():
 
     def _authenticate(self, username, password):
         d = Db.get_slice(username, "userAuth",
-                         ["passwordHash", "org", "user", "isAdmin"])
+                         ["passwordHash", "org", "user", "isAdmin", "isBlocked"])
         def checkPassword(result):
             cols = utils.columnsToDict(result)
             if not cols.has_key("passwordHash") or\
                    cols["passwordHash"] != password:
                 raise LoginFailed()
+            if "isBlocked" in cols and cols["isBlocked"] == "True":
+                raise  Unauthorized()
             return cols
+
         def erred(error):
             log.err(error)
             raise Unauthorized()

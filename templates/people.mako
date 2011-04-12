@@ -40,7 +40,7 @@
   </div>
 </%def>
 
-<%def name="_displayUser(userId)">
+<%def name="_displayUser(userId, showBlocked=False)">
   <% button_class = 'default' %>
   <div class="users-avatar">
     <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
@@ -53,19 +53,23 @@
     <div class="user-details-title">${entities[userId]["basic"].get("jobTitle", '')}</div>
     <div class="user-details-actions">
       <ul id="user-actions-${userId}" class="middle user-actions h-links">
-        ${profile.user_actions(userId, True)}
+        % if showBlocked:
+          <li class="button default" onclick="$.post('/ajax/admin/block', 'id=${userId}', null, 'script')"><span class="button-text">Block</span></li>
+        %else:
+          ${profile.user_actions(userId, True)}
+        %endif
       </ul>
     </div>
   </div>
 </%def>
 
-<%def name="content()">
+<%def name="content(showBlocked=False)">
   <% counter = 0 %>
   %for userId in people:
     %if counter % 2 == 0:
       <div class="users-row">
     %endif
-    <div class="users-user">${_displayUser(userId)}</div>
+    <div class="users-user">${_displayUser(userId, showBlocked)}</div>
     %if counter % 2 == 1:
       </div>
     %endif
