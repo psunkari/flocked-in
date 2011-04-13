@@ -683,7 +683,7 @@ def addSampleData(client):
     yield client.insert(prasadKey, "userItems", userItemValue, timeUUID)
     yield client.insert(prasadKey, "feed", prasadToAshokKey, timeUUID)
     yield client.insert(prasadKey, "feedItems",
-                        "I:%s:%s:%s" % (prasadKey, prasadToAshokKey, ashokKey),
+                        "I:%s:%s:%s:" % (prasadKey, prasadToAshokKey, ashokKey),
                         timeUUID, prasadToAshokKey)
 
     timeUUID = uuid.uuid1().bytes
@@ -702,7 +702,7 @@ def addSampleData(client):
     yield client.insert(ashokKey, "userItems", userItemValue, timeUUID)
     yield client.insert(ashokKey, "feed", ashokToPrasadKey, timeUUID)
     yield client.insert(ashokKey, "feedItems",
-                        "I:%s:%s:%s" % (ashokKey, ashokToPrasadKey, prasadKey),
+                        "I:%s:%s:%s:" % (ashokKey, ashokToPrasadKey, prasadKey),
                         timeUUID, ashokToPrasadKey)
 
     timeUUID = uuid.uuid1().bytes
@@ -722,7 +722,7 @@ def addSampleData(client):
     yield client.insert(praveenKey, "userItems", userItemValue, timeUUID)
     yield client.insert(praveenKey, "feed", praveenToRahulKey, timeUUID)
     yield client.insert(praveenKey, "feedItems",
-                                "I:%s:%s:%s" %(praveenKey, praveenToRahulKey, rahulKey),
+                                "I:%s:%s:%s:" %(praveenKey, praveenToRahulKey, rahulKey),
                                 timeUUID, praveenToRahulKey)
 
 
@@ -742,7 +742,7 @@ def addSampleData(client):
     yield client.insert(rahulKey, "userItems", userItemValue, timeUUID)
     yield client.insert(rahulKey, "feed", rahulToPraveenKey, timeUUID)
     yield client.insert(rahulKey, "feedItems",
-                                "I:%s:%s:%s" %(rahulKey, rahulToPraveenKey, praveenKey),
+                                "I:%s:%s:%s:" %(rahulKey, rahulToPraveenKey, praveenKey),
                                 timeUUID, rahulToPraveenKey)
 
 
@@ -770,7 +770,7 @@ def addSampleData(client):
     yield client.insert(praveenKey, "userItems", userItemValue, timeUUID)
     yield client.insert(praveenKey, "feed", praveenFollowingPrasadKey, timeUUID)
     yield client.insert(praveenKey, "feedItems",
-                        "I:%s:%s:%s" % (praveenKey, praveenFollowingPrasadKey, prasadKey),
+                        "I:%s:%s:%s:" % (praveenKey, praveenFollowingPrasadKey, prasadKey),
                         timeUUID, praveenFollowingPrasadKey)
 
 

@@ -523,6 +523,8 @@ class ItemResource(base.BaseResource):
     @dump_args
     def _tag(self, request):
         tagName = utils.getRequestArg(request, "tag")
+        myId = request.getSession(IAuthInfo).username
+
         if not tagName:
             raise errors.MissingParam()
 
@@ -536,6 +538,7 @@ class ItemResource(base.BaseResource):
 
         d1 = Db.insert(itemId, "items", '', tagId, "tags")
         d2 = Db.insert(tagId, "tagItems", itemId, item["meta"]["uuid"])
+        d3 = Db.get_slice(tagId, "tagFollowers")
 
         orgId = request.getSession(IAuthInfo).organization
         tagItemsCount = int(tag.get("itemsCount", "0")) + 1
@@ -543,12 +546,26 @@ class ItemResource(base.BaseResource):
             tagItemsCount = yield Db.get_count(tagId, "tagItems") + 1
         Db.insert(orgId, "orgTags", "%s"%tagItemsCount, "itemsCount", tagId)
 
-        yield defer.DeferredList([d1, d2])
+        result = yield defer.DeferredList([d1, d2, d3])
+        followers = utils.columnsToDict(result[2][1]).keys()
         yield renderScriptBlock(request, "item.mako", 'conv_tag', False,
                                 '#conv-tags-%s'%itemId, "append", True,
                                 handlers={"onload": "(function(){$('input:text', '#addtag-form-%s').val('');})();" % itemId},
                                 args=[itemId, tagId, tag["title"]])
 
+        convACL = item["meta"]["acl"]
+        convType = item["meta"]["type"]
+        timeUUID = uuid.uuid1().bytes
+        convOwnerId = item["meta"]["owner"]
+        responseType = "T"
+
+        yield feed.pushToFeed(myId, timeUUID, itemId, itemId, responseType,
+                              convType, convOwnerId, myId, tagId=tagId)
+
+        if followers:
+            yield feed.pushToOthersFeed(myId, timeUUID, itemId, itemId, convACL,
+                                        responseType, convType, convOwnerId,
+                                        others=followers, tagId=tagId)
 
 
     @profile
@@ -556,6 +573,7 @@ class ItemResource(base.BaseResource):
     @dump_args
     def _untag(self, request):
         tagId = utils.getRequestArg(request, "tag")
+        myId = request.getSession(IAuthInfo).username
         if not tagId:
             raise errors.MissingParam()
 
@@ -568,6 +586,7 @@ class ItemResource(base.BaseResource):
 
         d1 = Db.remove(itemId, "items", tagId, "tags")
         d2 = Db.remove(tagId, "tagItems", item["meta"]["uuid"])
+        d3 = Db.get_slice(tagId, "tagFollowers")
 
         orgId = request.getSession(IAuthInfo).organization
         try:
@@ -578,7 +597,22 @@ class ItemResource(base.BaseResource):
             Db.insert(orgId, "orgTags", "%s"%tagItemsCount, "itemsCount", tagId)
         except ttypes.NotFoundException:
             pass
-        yield defer.DeferredList([d1, d2])
+        result = yield defer.DeferredList([d1, d2, d3])
+        followers = utils.columnsToDict(result[2][1]).keys()
+
+        convId = itemId
+        convACL = item["meta"]["acl"]
+        convType = item["meta"]["type"]
+        convOwnerId = item["meta"]["owner"]
+        responseType = 'T'
+
+        yield feed.deleteFromFeed(myId, itemId, convId,
+                                  convType, myId, responseType)
+
+        if followers:
+            yield feed.deleteFromOthersFeed(myId, itemId, convId, convType,
+                                            convACL, convOwnerId, responseType,
+                                            others=followers)
 
 
     def _tags(self, request):
@@ -603,6 +637,8 @@ class ItemResource(base.BaseResource):
                 d = self._unlike(request)
             elif path == 'untag':
                 d = self._untag(request)
+            elif path == "tag":
+                d = self._tag(request)
 
         return self._epilogue(request, d)
 

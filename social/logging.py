@@ -23,7 +23,7 @@ def dump_args(func):
         argStr = ', '.join('%s=%r' % entry for entry in allArgs)
         log.msg(fname, "arguments", argStr)
         ret = func(*args, **kwargs)
-        log.msg(fname, "dump_args","ReturnValue",ret)
+        #log.msg(fname, "dump_args","ReturnValue",ret)
         log.msg(fname, "dump_args", "ExecutionTime:", time.time()-profiler_start)
         return ret
     return wrapper
@@ -35,7 +35,7 @@ def profile(func):
         fname = func.__name__
         profiler_start = time.time()
         def logReturnValue(retVal):
-                log.msg(fname, "ReturnValue",retVal)
+                #log.msg(fname, "ReturnValue",retVal)
                 log.msg(fname, "ExecutionTime:", time.time()-profiler_start)
                 return retVal
         ret = func(*args, **kwargs)

@@ -39,8 +39,9 @@ def deleteFromFeed(userKey, itemKey, parentKey,
 @defer.inlineCallbacks
 @dump_args
 def deleteFromOthersFeed(userKey, itemKey,parentKey, itemType,
-                         acl, convOwner, responseType):
-    others = yield utils.expandAcl(userKey, acl, convOwner)
+                         acl, convOwner, responseType, others=None):
+    if not others:
+        others = yield utils.expandAcl(userKey, acl, convOwner)
     for key in others:
         yield deleteFromFeed(key, itemKey, parentKey,
                              itemType, userKey, responseType )
@@ -49,19 +50,22 @@ def deleteFromOthersFeed(userKey, itemKey,parentKey, itemType,
 @profile
 @defer.inlineCallbacks
 @dump_args
-def pushToOthersFeed(userKey, timeuuid, itemKey,parentKey,
-                    acl, responseType, itemType, convOwner):
-    others = yield utils.expandAcl(userKey, acl, convOwner)
+def pushToOthersFeed(userKey, timeuuid, itemKey, parentKey,
+                     acl, responseType, itemType, convOwner,
+                     others=None, tagId=''):
+    if not others:
+        others = yield utils.expandAcl(userKey, acl, convOwner)
     for key in others:
         yield pushToFeed(key, timeuuid, itemKey, parentKey,
-                         responseType, itemType, convOwner, userKey)
+                         responseType, itemType, convOwner,
+                         userKey, tagId)
 
 
 @profile
 @defer.inlineCallbacks
 @dump_args
 def pushToFeed(userKey, timeuuid, itemKey, parentKey, responseType,
-                itemType, convOwner=None, commentOwner=None):
+                itemType, convOwner=None, commentOwner=None, tagId=''):
     # Caveat: assume itemKey as parentKey if parentKey is None
     parentKey = itemKey if not parentKey else parentKey
     convOwner = userKey if not convOwner else convOwner
@@ -71,17 +75,17 @@ def pushToFeed(userKey, timeuuid, itemKey, parentKey, responseType,
     if plugins.has_key(itemType) and plugins[itemType].hasIndex:
         yield Db.insert(userKey, "feed_"+itemType, parentKey, timeuuid)
 
-    yield updateFeedResponses(userKey, parentKey, itemKey, timeuuid,
-                               itemType, responseType, convOwner, commentOwner)
+    yield updateFeedResponses(userKey, parentKey, itemKey, timeuuid, itemType,
+                               responseType, convOwner, commentOwner, tagId)
 
 
 @profile
 @defer.inlineCallbacks
 @dump_args
-def updateFeedResponses(userKey, parentKey, itemKey, timeuuid,
-                        itemType, responseType, convOwner, commentOwner):
+def updateFeedResponses(userKey, parentKey, itemKey, timeuuid, itemType,
+                        responseType, convOwner, commentOwner, tagId=''):
 
-    feedItemValue = ":".join([responseType, commentOwner, itemKey, ''])
+    feedItemValue = ":".join([responseType, commentOwner, itemKey,'', tagId])
     tmp, oldest = {}, None
 
     cols = yield Db.get_slice(userKey, "feedItems",
@@ -180,6 +184,7 @@ class FeedResource(base.BaseResource):
         #    If not fetch responses for those conversations.
         rawFeedItems = yield Db.get_slice(key, "feedItems", convs)
         reasonUserIds = {}
+        reasonTagId = {}
         reasonTmpl = {}
         likes = {}
         responses = {}
@@ -191,12 +196,14 @@ class FeedResource(base.BaseResource):
             likes[convId] = []
             responses[convId] = []
             responseUsers = []
+
+            tagId = None
             rootItem = None
 
             # Collect information about recent updates by my friends
             # and subscriptions on this item.
             for update in columns:
-                # X:<user>:<item>:<entities>
+                # X:<user>:<item>:<entities>:<tag>
                 item = update.value.split(':')
 
                 toFetchEntities.add(item[1])
@@ -215,6 +222,10 @@ class FeedResource(base.BaseResource):
                 elif type == "L":
                     mostRecentItem = item
                     toFetchItems.add(item[2])
+                elif type == "T":
+                    mostRecentItem = item
+                    if len(item) >4 and len(item[4]):
+                        tagId = item[4]
                 elif type == "I" or type == "!":
                     rootItem = item[1:3]
                     if type == "I":
@@ -239,6 +250,10 @@ class FeedResource(base.BaseResource):
                 elif type == "L":
                     reasonUserIds[convId] = set([userId])
                     reasonTmpl[convId] = "%s liked a comment on %s's %s"
+                elif type == "T":
+                    reasonUserIds[convId] = set([userId])
+                    reasonTagId[convId] = tagId
+                    reasonTmpl[convId] = "%s applied %s tag on %s's %s"
 
                 # Check if we have to fetch more responses for this conversation
                 if len(responses[convId]) < 2:
@@ -301,7 +316,9 @@ class FeedResource(base.BaseResource):
 
         entities = utils.multiSuperColumnsToDict(fetchedEntities)
         myLikes = utils.multiColumnsToDict(fetchedMyLikes)
-        args["tags"] = utils.supercolumnsToDict(fetchedTags)
+        fetchedTags = utils.supercolumnsToDict(fetchedTags)
+        args["tags"] = fetchedTags
+
 
         # We got all our data, do the remaining processing before
         # rendering the template.
@@ -316,6 +333,10 @@ class FeedResource(base.BaseResource):
             if template:
                 vals = [utils.userName(id, entities[id], "conv-user-cause")\
                         for id in reasonUserIds[convId]]
+                if reasonTagId.get(convId, None):
+                    tagId = reasonTagId[convId]
+                    tagname = fetchedTags[tagId]["title"]
+                    vals.append("<a class='ajax' href='/tags?id=%s'>%s</a>" %(tagId, tagname))
                 vals.append(utils.userName(ownerId, entities[ownerId]))
                 itemType = conv["meta"]["type"]
                 vals.append(utils.itemLink(convId, itemType))
