@@ -605,7 +605,7 @@ class ProfileResource(base.BaseResource):
             handlers = {} if detail != "notes" \
                 else {"onload": "(function(obj){$$.items.load(obj);})(this);"}
             yield renderScriptBlock(request, "profile.mako", "content", landing,
-                                    "#profile-content", "set",
+                                    "#profile-content", "set", True,
                                     handlers=handlers, **args)
 
         if newId or not script:
