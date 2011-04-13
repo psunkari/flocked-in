@@ -29,7 +29,11 @@
                 resize:     'none'
             }).appendTo(this.parentNode);
 
-            var update = function() {
+            var update = function(event) {
+                if (event.type === "keydown" && event.which === 13 && !event.shiftKey) {
+                    event.preventDefault();
+                    $this.parents("form").submit();
+                }
 
                 var times = function(string, number) {
                     for (var i = 0, r = ''; i < number; i ++) r += string;
