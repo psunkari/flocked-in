@@ -172,9 +172,12 @@ class FeedResource(base.BaseResource):
                     break
                 fetchStart = cols[-1].column.name
 
-            if len(keysFromFeed) > count:
+            if len(keysFromFeed) > count:   # We have more items than count
                 nextPageStart = utils.encodeKey(keysFromFeed[count])
                 convs = convs[0:count]
+            elif len(cols) == fetchCount:   # We got duplicate items in feed
+                nextPageStart = utils.encodeKey(keysFromFeed[-1])
+                convs = convs[0:-1]
 
         if not convs:
             defer.returnValue({"conversations": convs})
