@@ -30,7 +30,7 @@
             }).appendTo(this.parentNode);
 
             var update = function(event) {
-                if (event.type === "keydown" && event.which === 13 && !event.shiftKey) {
+                if (event && event.type === "keydown" && event.which === 13 && !event.shiftKey) {
                     event.preventDefault();
                     $this.parents("form").submit();
                 }
