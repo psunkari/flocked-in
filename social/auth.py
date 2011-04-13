@@ -105,7 +105,9 @@ class UserPasswordChecker():
     def requestAvatarId(self, cred):
         d = self._authenticate(cred.username, cred.password)
         def setCookie(auth):
-            authinfo = cred.request.getSession(IAuthInfo)
+            session = cred.request.getSession()
+            session.sessionTimeout = 14400  # Timeout of 4 hours
+            authinfo = session.getComponent(IAuthInfo)
             authinfo.username = auth["user"]
             authinfo.organization = auth["org"] if auth.has_key("org") else None
             authinfo.isAdmin = auth["isAdmin"] if auth.has_key("isAdmin") else False
