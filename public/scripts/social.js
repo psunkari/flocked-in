@@ -311,7 +311,7 @@ $.social = window.social = window.$$ = social;
 
 
 /*
- * Loader for the share block (publisher)
+ * Custom loading for the share block (publisher)
  * TODO: Handle extra options for showing buttons etc;
  */
 (function($$, $) {
@@ -330,6 +330,27 @@ var publisher = {
 };
 
 $$.publisher = publisher;
+})(social, jQuery);
+
+
+
+
+/*
+ * Callback to be called when one or more items are loaded
+ * into the view. Initializes the item's display - the comment form etc;
+ */
+(function($$, $) {
+var items = {
+    load: function(obj) {
+        // Placeholders in comment input boxes
+        $$.ui.placeholders('.comment-input');
+
+        // Auto expand comment boxes
+        $('.comment-input').autogrow();
+    }
+};
+
+$$.items = items;
 })(social, jQuery);
 
 
@@ -404,7 +425,11 @@ var ui = {
             return;
 
         $(selector).each(function(index, element){
+            var $this, text, label, $label, inputHeight;
+
             $this = $(this);
+            if ($(this.previousSibling).hasClass("ui-ph-label"))
+                return;
 
             text = $this.attr('placeholder');
             if (!text)

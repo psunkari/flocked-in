@@ -66,6 +66,11 @@
           <div id="item-footer-${convId}" class="conv-footer busy-indicator"></div>
         %endif
       </div>
+      <div id="conv-tags-wrapper-${convId}">
+        %if inline or not script:
+          ${self.conv_tags(convId)}
+        %endif
+      </div>
       <div id="conv-likes-wrapper-${convId}">
         %if likeStr and likeStr.has_key(convId):
           <div class="conv-likes">${likeStr[convId]}</div>
@@ -76,11 +81,13 @@
           ${self.conv_comments(convId, isFeed)}
         %endif
       </div>
+      %if script:
       <div id="comment-form-wrapper-${convId}" class="conv-comment-form busy-indicator">
-        %if inline or not script:
+        %if inline:
           ${self.conv_comment_form(convId)}
         %endif
       </div>
+      %endif
     </div>
   </div>
 </%def>
@@ -116,12 +123,6 @@
     <span><a class="ajax" _ref="/item/unlike?id=${itemId}">${_("Unlike")}</a></span>
   %else:
     <span><a class="ajax" _ref="/item/like?id=${itemId}">${_("Like")}</a></span>
-  %endif
-  %if not hasParent:
-    &nbsp;&#183;&nbsp;
-    <span id="conv-tags-wrapper-${itemId}">
-      ${self.conv_tags(itemId)}
-    </span>
   %endif
 </%def>
 
@@ -170,7 +171,9 @@
 
 <%def name="conv_comment_form(convId)">
   <form method="post" action="/item/comment" class="ajax" autocomplete="off" id="comment-form-${convId}">
-    <input type="text" name="comment" value=""></input>
+    <div class="input-wrap">
+      <textarea class="comment-input" name="comment" placeholder="${_('Leave a response...')}" value=""></textarea>
+    </div>
     <input type="hidden" name="parent" value=${convId}></input>
     %if not isFeed:
       <% nc = len(responses.get(convId, {})) if responses else 0 %>
@@ -179,7 +182,6 @@
         <input type="hidden" name="start" value=${oldest}></input>
       %endif
     %endif
-    ${widgets.button(None, type="submit", name="comment", value="Comment")}<br/>
   </form>
 </%def>
 
@@ -214,16 +216,13 @@
 
 <%def name="conv_tags(convId)">
   <% itemTags = items[convId].get("tags", {}) %>
-  <span id="conv-tags-${convId}" class="conv-tags">
+  %if itemTags:
+  <div id="conv-tags-${convId}" class="conv-tags">
     %for tagId in itemTags.keys():
       <span class="tag"><a class="ajax invisible" href="/tags?id=${tagId}">${tags[tagId]["title"]}</a></span>
     %endfor
-  </span>
-  <!-- form method="post" action="/item/tag" class="ajax" autocomplete="off" id="addtag-form-${convId}">
-    <input type="text" name="tag" value=""></input>
-    <input type="hidden" name="id" value=${convId}></input>
-    ${widgets.button(None, type="submit", name="add", value="Add")}<br/>
-  </form -->
+  </div>
+  %endif
 </%def>
 
 <%def name="item_me()">

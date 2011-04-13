@@ -10,8 +10,7 @@ body {
     font-size: 11px;
 }
 textarea, input {
-    font-family: "lucida grande",tahoma,verdana,arial,sans-serif;
-    font-size: 12.5px;
+    font-family: sans-serif;
 }
 
 .contents {
@@ -107,6 +106,22 @@ a:hover, a:active, a:focus {
     display: inline-block;
 }
 
+.input-wrap {
+    background-color: white;
+    border: 1px solid #C3D9FF;
+    padding: 3px;
+}
+.input-wrap input, .input-wrap textarea {
+    width: 100%;
+    border: none;
+    outline: 0px;
+    background-color: transparent;
+    padding: 0px;
+    overflow: auto;
+    height: 14px;
+    line-height: 14px;
+    font-size: 12px;
+}
 
 #topbar {
     height: 35px;
@@ -423,20 +438,8 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 
 #sharebar .input-wrap {
-    background-color: white;
-    border: 1px solid #C3D9FF;
     padding: 4px;
-    margin: 0 0 5px 0;
-}
-
-#sharebar input, #sharebar textarea {
-    width: 100%;
-    border: none;
-    outline: 0px;
-    background-color: transparent;
-}
-#sharebar textarea {
-    height: 1.3em;
+    margin-bottom: 5px;
 }
 
 #sharebar-actions {
@@ -498,12 +501,12 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .conv-comments-more,
 .conv-comment,
 .conv-likes,
+.conv-tags,
 .conv-comment-form {
-    background-color: #F9F9F9;
-    border-bottom: 1px solid #E9E9E9;
+    background-color: #F3F3F3;
+    border-bottom: 1px solid #E3E3E3;
     margin: 2px 0 0;
     padding: 4px 6px;
-    margin-right: 60px;
 }
 
 .conv-comment {
@@ -709,13 +712,13 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
  * Styling for tags
  */
 .tag {
-  display: inline-block;
-  background-color: #F9F9F9;
-  border: 1px solid #E9E9E9;
-  border-radius: 2px;
-  padding: 0px 2px;
-  margin: 1px 2px 0 0;
+    display: inline-block;
+    color: #3D85C6;
+    border-width: 1px;
+    border-style: solid;
+    border-color: #FFF #FFF #C3D9FF #C3D9FF;
+    background-color: #E8EEFA;
+    padding: 1px 6px 1px 4px;
+    margin: 1px;
+    border-radius: 3px;
 }
-.tag.external {
-}
-

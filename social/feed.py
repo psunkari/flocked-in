@@ -435,13 +435,17 @@ class FeedResource(base.BaseResource):
         else:
             feedItems = yield self._getFeedItems(request, start=start)
         args.update(feedItems)
+
         if script:
+            onload = "(function(obj){$$.items.load(obj);})(this);"
             if fromFetchMore:
                 yield renderScriptBlock(request, "feed.mako", "feed", landing,
-                                        "#next-load-wrapper", "replace", **args)
+                                        "#next-load-wrapper", "replace", True,
+                                        handlers={"onload": onload}, **args)
             else:
                 yield renderScriptBlock(request, "feed.mako", "feed", landing,
-                                        "#user-feed", "set", **args)
+                                        "#user-feed", "set", True,
+                                        handlers={"onload": onload}, **args)
 
         if script and landing:
             request.write("</body></html>")

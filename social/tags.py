@@ -156,8 +156,10 @@ class TagsResource(base.BaseResource):
         args.update(tagItems)
 
         if script:
+            onload = "(function(obj){$$.items.load(obj);})(this);"
             yield renderScriptBlock(request, "tags.mako", "items",
-                                    landing, "#tag-items", "set", **args)
+                                    landing, "#tag-items", "set", True,
+                                    handlers={"onload": onload}, **args)
 
     @profile
     @dump_args

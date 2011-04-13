@@ -559,10 +559,6 @@ class ProfileResource(base.BaseResource):
         args["detail"] = detail
         args["userKey"] = userKey
 
-        if detail == "notes":
-            userItems = yield self._getUserItems(userKey, myKey)
-            args.update(userItems)
-
         # When scripts are enabled, updates are sent to the page as
         # and when we get the required data from the database.
 
@@ -599,11 +595,18 @@ class ProfileResource(base.BaseResource):
                                     landing, "#user-subactions", "set", **args)
 
         fetchedEntities = set()
+        if detail == "notes":
+            userItems = yield self._getUserItems(userKey, myKey)
+            args.update(userItems)
+
         if script:
             yield renderScriptBlock(request, "profile.mako", "tabs", landing,
                                     "#profile-tabs", "set", **args)
+            handlers = {} if detail != "notes" \
+                else {"onload": "(function(obj){$$.items.load(obj);})(this);"}
             yield renderScriptBlock(request, "profile.mako", "content", landing,
-                                    "#profile-content", "set", **args)
+                                    "#profile-content", "set",
+                                    handlers=handlers, **args)
 
         if newId or not script:
             # List the user's subscriptions

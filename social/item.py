@@ -441,7 +441,7 @@ class ItemResource(base.BaseResource):
         data = {"entities": entities, "items": items}
         yield renderScriptBlock(request, 'item.mako', 'conv_comment', False,
                                 '#comments-%s' % convId, 'append', True,
-                                handlers={"onload": "(function(){$(':text', '#comment-form-%s').val(''); $('[name=\"nc\"]', '#comment-form-%s').val('%s');})();" % (convId, convId, numShowing)},
+                                handlers={"onload": "(function(){$('.comment-input', '#comment-form-%s').val(''); $('[name=\"nc\"]', '#comment-form-%s').val('%s');})();" % (convId, convId, numShowing)},
                                 args=[convId, itemId], **data)
         d = fts.solr.updateIndex(itemId, {'meta':meta})
 
