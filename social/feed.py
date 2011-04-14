@@ -16,21 +16,41 @@ from social.logging     import profile, dump_args
 @profile
 @defer.inlineCallbacks
 @dump_args
-def deleteFromFeed(userKey, itemKey, parentKey,
+def deleteFromFeed(userId, itemId, convId,
                    itemType, itemOwner, responseType):
     # fix: itemOwner is either the person who owns the item
     #       or person who liked the item. RENAME the variable.
-    cols = yield Db.get_slice(userKey, "feedItems",
-                              super_column=parentKey, reverse=True)
+    cols = yield Db.get_slice(userId, "feedItems",
+                              super_column=convId, reverse=True)
+
+    noOfItems = len(cols)
+    latest, second, pseudoFeedTime = None, None, None
+    for col in cols:
+        tuuid = col.column.name
+        val = col.column.value
+        rtype, poster, key =  val.split(":")[0:3]
+        if latest and not second and rtype != "!":
+            second = tuuid
+        if not latest and rtype != "!":
+            latest = tuuid
+        if noOfItems == 2 and rtype == "!":
+            pseudoFeedTime = tuuid
+
     cols = utils.columnsToDict(cols)
 
     for tuuid, val in cols.items():
         rtype, poster, key =  val.split(":")[0:3]
-        if rtype == responseType and poster == itemOwner and key == itemKey:
-            yield Db.remove(userKey, "feedItems", tuuid, parentKey)
-            yield Db.remove(userKey, "feed", tuuid)
+        if rtype == responseType and poster == itemOwner and key == itemId:
+            yield Db.remove(userId, "feedItems", tuuid, convId)
+            if latest == tuuid:
+                yield Db.remove(userId, "feed", tuuid)
+                if second:
+                    yield Db.insert(userId, "feed", convId, second)
+            if pseudoFeedTime:
+                yield Db.remove(userId, "feedItems", super_column=convId)
+                yield Db.remove(userId, "feed", pseudoFeedTime)
             if plugins.has_key(itemType) and plugins[itemType].hasIndex:
-                yield Db.remove(userKey, "feed_"+itemType, tuuid)
+                yield Db.remove(userId, "feed_"+itemType, tuuid)
 
             break
 
@@ -38,13 +58,13 @@ def deleteFromFeed(userKey, itemKey, parentKey,
 @profile
 @defer.inlineCallbacks
 @dump_args
-def deleteFromOthersFeed(userKey, itemKey,parentKey, itemType,
+def deleteFromOthersFeed(userId, itemId, convId, itemType,
                          acl, convOwner, responseType, others=None):
     if not others:
-        others = yield utils.expandAcl(userKey, acl, convOwner)
+        others = yield utils.expandAcl(userId, acl, convOwner)
     for key in others:
-        yield deleteFromFeed(key, itemKey, parentKey,
-                             itemType, userKey, responseType )
+        yield deleteFromFeed(key, itemId, convId,
+                             itemType, userId, responseType )
 
 
 @profile
