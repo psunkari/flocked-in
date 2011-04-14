@@ -86,7 +86,7 @@ def updateFeedResponses(userKey, parentKey, itemKey, timeuuid, itemType,
                         responseType, convOwner, commentOwner, tagId=''):
 
     feedItemValue = ":".join([responseType, commentOwner, itemKey,'', tagId])
-    tmp, oldest = {}, None
+    tmp, oldest, latest = {}, None, None
 
     cols = yield Db.get_slice(userKey, "feedItems",
                               super_column = parentKey, reverse=True)
@@ -97,6 +97,10 @@ def updateFeedResponses(userKey, parentKey, itemKey, timeuuid, itemType,
         if rtype not in  ('!', 'I'):
             tmp.setdefault(val.split(':')[0], []).append(tuuid)
             oldest = tuuid
+        if rtype != "!" and not latest:
+            #to prevent duplicate, feed should have only one entry of convId
+            latest = tuuid
+            yield Db.remove(userKey, "feed", tuuid)
 
     totalItems = len(cols)
     noOfItems = len(tmp.get(responseType, []))
