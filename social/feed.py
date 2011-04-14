@@ -16,8 +16,8 @@ from social.logging     import profile, dump_args
 @profile
 @defer.inlineCallbacks
 @dump_args
-def deleteFromFeed(userId, itemId, convId,
-                   itemType, itemOwner, responseType):
+def deleteFromFeed(userId, itemId, convId, itemType,
+                   itemOwner, responseType, tagId=''):
     # fix: itemOwner is either the person who owns the item
     #       or person who liked the item. RENAME the variable.
     cols = yield Db.get_slice(userId, "feedItems",
@@ -39,8 +39,13 @@ def deleteFromFeed(userId, itemId, convId,
     cols = utils.columnsToDict(cols)
 
     for tuuid, val in cols.items():
+        vals = val.split(":")
         rtype, poster, key =  val.split(":")[0:3]
-        if rtype == responseType and poster == itemOwner and key == itemId:
+        tag = ''
+        if len(vals) == 5 and vals[4]:
+            tag = vals[4]
+        if rtype == responseType and poster == itemOwner \
+            and key == itemId and tagId == tag:
             yield Db.remove(userId, "feedItems", tuuid, convId)
             if latest == tuuid:
                 yield Db.remove(userId, "feed", tuuid)
@@ -58,13 +63,13 @@ def deleteFromFeed(userId, itemId, convId,
 @profile
 @defer.inlineCallbacks
 @dump_args
-def deleteFromOthersFeed(userId, itemId, convId, itemType,
-                         acl, convOwner, responseType, others=None):
+def deleteFromOthersFeed(userId, itemId, convId, itemType, acl,
+                         convOwner, responseType, others=None, tagId=''):
     if not others:
         others = yield utils.expandAcl(userId, acl, convOwner)
     for key in others:
-        yield deleteFromFeed(key, itemId, convId,
-                             itemType, userId, responseType )
+        yield deleteFromFeed(key, itemId, convId, itemType,
+                             userId, responseType, tagId=tagId )
 
 
 @profile

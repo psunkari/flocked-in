@@ -606,13 +606,13 @@ class ItemResource(base.BaseResource):
         convOwnerId = item["meta"]["owner"]
         responseType = 'T'
 
-        yield feed.deleteFromFeed(myId, itemId, convId,
-                                  convType, myId, responseType)
+        yield feed.deleteFromFeed(myId, itemId, convId, convType,
+                                  myId, responseType, tagId= tagId)
 
         if followers:
             yield feed.deleteFromOthersFeed(myId, itemId, convId, convType,
                                             convACL, convOwnerId, responseType,
-                                            others=followers)
+                                            others=followers, tagId=tagId)
 
 
     def _tags(self, request):
