@@ -251,6 +251,10 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(tagItems)
     yield client.system_add_column_family(orgTagsByName)
 
+    deletedConvs = CfDef(KEYSPACE, "deletedConvs", "Standard", "UTF8Type",
+                         None, "list of deleted convs")
+    yield client.system_add_column_family(deletedConvs)
+
 
 @defer.inlineCallbacks
 def addSampleData(client):
@@ -789,7 +793,7 @@ def truncateColumnFamilies(client):
                "nameIndex", "displayNameIndex", "orgTags", "tagItems",
                "tagFollowers", "orgTagsByName", "messages", "mUserMessages",
                "mFolderMessages", "bannedUsers", "blockedUsers",
-               "mUserFolders", "mConversationMessages"]:
+               "mUserFolders", "mConversationMessages", "deletedConvs"]:
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 

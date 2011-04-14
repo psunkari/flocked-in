@@ -364,6 +364,13 @@ class Event(object):
 
         defer.returnValue((convId, item))
 
+    @defer.inlineCallbacks
+    def delete(self, itemId):
+        log.msg("plugin:delete", itemId)
+        yield Db.get_slice(itemId, "entities")
+
+
+
 
     _ajaxResource = None
     _resource = None

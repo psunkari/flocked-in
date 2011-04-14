@@ -1,4 +1,3 @@
-
 import time
 import uuid
 
@@ -44,8 +43,11 @@ def deleteFromFeed(userId, itemId, convId, itemType,
         tag = ''
         if len(vals) == 5 and vals[4]:
             tag = vals[4]
-        if rtype == responseType and poster == itemOwner \
-            and key == itemId and tagId == tag:
+        if rtype == responseType and \
+            (rtype == "T" or poster == itemOwner) and \
+            key == itemId and tagId == tag:
+            # anyone can untag
+
             yield Db.remove(userId, "feedItems", tuuid, convId)
             if latest == tuuid:
                 yield Db.remove(userId, "feed", tuuid)
