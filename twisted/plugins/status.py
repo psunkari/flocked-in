@@ -83,9 +83,15 @@ class Status(object):
         yield Db.batch_insert(convId, "items", item)
         defer.returnValue((convId, item))
 
+    @defer.inlineCallbacks
+    def delete(self, itemId):
+        yield Db.get_slice(itemId, "entities")
+
 
     def getResource(self, isAjax):
         return None
+
+
 
 
 status = Status()

@@ -232,8 +232,11 @@ class ItemResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _like(self, request):
-        itemId = utils.getRequestArg(request, "id")
+
         myId = request.getSession(IAuthInfo).username
+
+        # Get the item and the conversation
+        (itemId, item) = yield utils.getValidItemId(request, "id")
 
         # Check if I already liked the item
         try:
@@ -241,10 +244,6 @@ class ItemResource(base.BaseResource):
             raise errors.InvalidRequest()
         except ttypes.NotFoundException:
             pass
-
-        # Get the item and the conversation
-        item = yield Db.get(itemId, "items", super_column="meta")
-        item = utils.supercolumnsToDict([item])
 
         convId = item["meta"].get("parent", None)
         conv = None
@@ -305,9 +304,11 @@ class ItemResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _unlike(self, request):
-        itemId = utils.getRequestArg(request, "id")
+
         myId = request.getSession(IAuthInfo).username
 
+        # Get the item and the conversation
+        (itemId, item) = yield utils.getValidItemId(request, "id", ["tags"])
         # Make sure that I liked this item
         try:
             cols = yield Db.get(itemId, "itemLikes", myId)
@@ -315,9 +316,7 @@ class ItemResource(base.BaseResource):
         except ttypes.NotFoundException:
             raise errors.InvalidRequest()
 
-        # Get the item and the conversation
-        item = yield Db.get(itemId, "items", super_column="meta")
-        item = utils.supercolumnsToDict([item])
+
 
         convId = item["meta"].get("parent", None)
         conv = None
@@ -371,16 +370,15 @@ class ItemResource(base.BaseResource):
     @dump_args
     def _comment(self, request):
         myId = request.getSession(IAuthInfo).username
-        convId = utils.getRequestArg(request, "parent")
         comment = utils.getRequestArg(request, "comment")
-        if not convId or not comment:
+        if not comment:
             raise errors.MissingParam()
 
         # 0. Fetch conversation and see if I have access to it.
         # TODO: Check ACL
-        conv = yield Db.get_slice(convId, 'items', super_column='meta')
-        conv = utils.columnsToDict(conv)
-        convType = conv.get("type", "status")
+
+        (convId, conv) = yield utils.getValidItemId(request, "parent")
+        convType = conv["meta"].get("type", "status")
 
         # 1. Create and add new item
         timeUUID = uuid.uuid1().bytes
@@ -392,9 +390,9 @@ class ItemResource(base.BaseResource):
                                                 'followers': followers})
 
         # 2. Update response count and add myself to the followers of conv
-        convOwnerId = conv["owner"]
-        convType = conv["type"]
-        responseCount = int(conv.get("responseCount", "0"))
+        convOwnerId = conv["meta"]["owner"]
+        convType = conv["meta"]["type"]
+        responseCount = int(conv["meta"].get("responseCount", "0"))
         if responseCount % 5 == 3:
             responseCount = yield Db.get_count(convId, "itemResponses")
 
@@ -421,7 +419,7 @@ class ItemResource(base.BaseResource):
                               convType, convOwnerId, myId)
 
         # 6. Push to other's feeds
-        convACL = conv.get("acl", "company")
+        convACL = conv["meta"].get("acl", "company")
         yield feed.pushToOthersFeed(myId, timeUUID, itemId, convId, convACL,
                                     responseType, convType, convOwnerId)
 
@@ -536,7 +534,7 @@ class ItemResource(base.BaseResource):
         if tagId in item.get("tags", {}):
             raise errors.InvalidRequest() # Tag already exists on item.
 
-        d1 = Db.insert(itemId, "items", '', tagId, "tags")
+        d1 = Db.insert(itemId, "items", myId, tagId, "tags")
         d2 = Db.insert(tagId, "tagItems", itemId, item["meta"]["uuid"])
         d3 = Db.get_slice(tagId, "tagFollowers")
 
@@ -614,6 +612,126 @@ class ItemResource(base.BaseResource):
                                             convACL, convOwnerId, responseType,
                                             others=followers, tagId=tagId)
 
+    @defer.inlineCallbacks
+    def _delete(self, request):
+
+        #TODO: refactor "delete item likes"
+
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        landing = not self._ajax
+        myOrgId = args["orgKey"]
+        conv = None
+
+        (itemId, item) = yield utils.getValidItemId(request, 'id', ["tags"])
+        convId = item["meta"].get("parent", itemId)
+        itemOwner = item["meta"]["owner"]
+
+        if itemId == convId:
+            conv = item
+        else:
+            conv = yield Db.get_slice(convId, "items", ["meta"])
+            conv = utils.supercolumnsToDict(conv)
+
+        if itemOwner != myId and (itemId != convId and not conv):
+            raise errors.InvalidRequest()
+
+        if itemOwner != myId and \
+            (itemId == convId or conv["meta"]["owner"] != myId):
+            raise errors.UnAuthorised()
+
+        itemType = item["meta"].get("type", None)
+        convType = conv["meta"]["type"]
+        convACL = conv["meta"]["acl"]
+        convOwnerId = conv["meta"]["owner"]
+
+        #mark the item as deleted.
+        yield Db.insert(itemId, "items", '', 'deleted', 'meta')
+        yield Db.insert(itemOwner, "deletedConvs", '', convId)
+
+        #TODO: custom data to be deleted by plugins
+        #if itemType and itemType in plugins:
+        #    yield plugins[itemType].delete(itemId)
+
+        #if the item is tagged remove the itemId from the tagItems and delete
+        # the feed entry corresponding to tag
+        responseType="T"
+        if convId == itemId:
+            for tagId in item.get("tags", {}):
+                userId = item["tags"][tagId]
+                yield Db.remove(tagId, "tagItems", item["meta"]["uuid"])
+                yield feed.deleteFromFeed(userId, itemId, convId, convType,
+                                          userId, responseType, tagId= tagId)
+                followers = yield Db.get_slice(tagId, "tagFollowers")
+                followers = utils.columnsToDict(followers).keys()
+                if followers:
+                    yield feed.deleteFromOthersFeed(myId, itemId, convId, convType,
+                                                   convACL, convOwnerId, responseType,
+                                                   others=followers, tagId=tagId)
+
+        #remove from itemLikes
+        itemResponses = yield Db.get_slice(convId, "itemResponses")
+        itemResponses = utils.columnsToDict(itemResponses)
+        itemLikes = yield Db.get_slice(itemId, "itemLikes")
+        itemLikes = utils.columnsToDict(itemLikes)
+        responseType = "L"
+        for userId in itemLikes:
+            tuuid = itemLikes[userId]
+            yield Db.remove(userId, "userItems", tuuid)
+            if plugins.has_key(itemType) and plugins[itemType].hasIndex:
+                yield Db.remove(userId, "userItems_"+ itemType, tuuid)
+            yield feed.deleteFromFeed(userId, itemId, convId, convType,
+                                      userId, responseType)
+            yield feed.deleteFromOthersFeed(userId, itemId, convId, convType,
+                                            convACL, convOwnerId, responseType)
+
+        # if conv is being deleted, delete feed corresponding to commentLikes also.
+        if itemId == convId:
+            for tuuid in itemResponses:
+                userId, responseId = itemResponses[tuuid].split(":")
+                itemLikes = yield Db.get_slice(responseId, "itemLikes")
+                itemLikes = utils.columnsToDict(itemLikes)
+                for userId in itemLikes:
+                    tuuid = itemLikes[userId]
+                    yield Db.remove(userId, "userItems", tuuid)
+                    if plugins.has_key(itemType) and plugins[itemType].hasIndex:
+                        yield Db.remove(userId, "userItems_"+ itemType, tuuid)
+                    yield feed.deleteFromFeed(userId, responseId, convId, convType,
+                                              userId, responseType)
+                    yield feed.deleteFromOthersFeed(userId, responseId, convId, convType,
+                                                    convACL, convOwnerId, responseType)
+
+        #remove from itemResponses
+        responseType = "C"
+        for tuuid in itemResponses:
+            userId, responseId = itemResponses[tuuid].split(":")
+            if itemId == convId or (responseId == itemId):
+                deleteFromFeed = (itemId == convId)
+                yield Db.remove(userId, "userItems", tuuid)
+                if plugins.has_key(itemType) and plugins[itemType].hasIndex:
+                    yield Db.remove(userId, "userItems_"+ itemType, tuuid)
+                yield feed.deleteFromFeed(userId, responseId, convId, convType,
+                                          userId, responseType)
+                yield feed.deleteFromOthersFeed(userId, responseId, convId,
+                                                convType, convACL, convOwnerId,
+                                                responseType)
+                yield Db.insert(convId, "deletedConvs", '', responseId)
+                yield Db.remove(convId, "itemResponses", tuuid)
+                #delete notifications
+        #update itemResponse Count
+        responseCount = yield Db.get_count(convId, "itemResponses")
+        yield Db.insert(convId, "items", str(responseCount), "responseCount", "meta")
+
+        if itemId == convId:
+            responseType="I"
+            yield Db.remove(conv["meta"]['owner'], "userItems", conv["meta"]["uuid"])
+            yield feed.deleteFromFeed(convOwnerId, convId, convId, convType,
+                                      itemOwner, responseType)
+            yield feed.deleteFromOthersFeed(convOwnerId, convId, convId,
+                                            convType, convACL, convOwnerId,
+                                            responseType, None)
+        #TODO: delete notifications
+
+
 
     def _tags(self, request):
         pass
@@ -639,6 +757,8 @@ class ItemResource(base.BaseResource):
                 d = self._untag(request)
             elif path == "tag":
                 d = self._tag(request)
+            elif path == 'delete':
+                d = self._delete(request)
 
         return self._epilogue(request, d)
 
@@ -658,5 +778,7 @@ class ItemResource(base.BaseResource):
                 d = self._tag(request)
             elif path == 'untag':
                 d = self._untag(request)
+            elif path == 'delete':
+                d = self._delete(request)
 
         return self._epilogue(request, d)

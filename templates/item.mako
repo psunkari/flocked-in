@@ -124,6 +124,7 @@
   %else:
     <span><a class="ajax" _ref="/item/like?id=${itemId}">${_("Like")}</a></span>
   %endif
+  <span><a class="ajax" _ref="/item/delete?id=${itemId}">${_("Delete")}</a></span>
 </%def>
 
 <%def name="conv_comments_head(convId, total, showing, isFeed)">
@@ -188,8 +189,8 @@
 <%def name="conv_comment(convId, commentId)">
   <%
     item = items[commentId]
-    userId  = item["meta"]["owner"]
-    comment = item["meta"].get("comment", "")
+    userId = item["meta"]["owner"]
+    comment = item["meta"]["comment"]
   %>
   <div class="conv-comment" id="comment-${commentId}">
     <div class="comment-avatar">
