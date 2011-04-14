@@ -89,11 +89,25 @@ _initAjaxRequests: function _initAjaxRequests() {
 
     /* Async form submit */
     $('form.ajax').live("submit", function() {
-        var node = $(this);
-        deferred = $.post('/ajax' + node.attr('action'),
-                          node.serialize(), null, 'script');
+        if (this.hasAttribute("disabled"))
+            return false;
 
-        self.setBusy(deferred, node)
+        var $this = $(this);
+        var deferred = $.post('/ajax' + $this.attr('action'),
+                          $this.serialize(), null, 'script');
+
+        self.setBusy(deferred, $this)
+
+        // Prevent accidental resubmission by disabling the
+        // form till we get a response from the server.
+        $this.attr("disabled", true);
+        $inputs = $this.find(":input").attr("disabled", true);
+        var enabler = function() {
+            $inputs.removeAttr("disabled");
+            $this.removeAttr("disabled");
+        };
+        deferred.then(enabler, enabler);
+
         return false;
     });
 

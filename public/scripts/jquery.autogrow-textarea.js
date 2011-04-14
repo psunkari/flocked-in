@@ -33,6 +33,7 @@
                 if (event && event.type === "keydown" && event.which === 13 && !event.shiftKey) {
                     event.preventDefault();
                     $this.parents("form").submit();
+                    return;
                 }
 
                 var times = function(string, number) {
