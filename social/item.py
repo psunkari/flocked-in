@@ -21,7 +21,6 @@ class ItemResource(base.BaseResource):
     isLeaf = True
 
 
-
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -85,12 +84,7 @@ class ItemResource(base.BaseResource):
         renderers = []
 
         if script:
-            if plugin:
-                args['toFeed'] = toFeed
-                d =  plugin.renderRoot(request, convId, args)
-                del args['toFeed']
-            else:
-                d = renderScriptBlock(request, "item.mako", "conv_root",
+            d = renderScriptBlock(request, "item.mako", "conv_root",
                         landing, "#conv-root-%s > .conv-summary" %(convId),
                         "set", **args)
             renderers.append(d)
@@ -193,10 +187,9 @@ class ItemResource(base.BaseResource):
             timeUUID = conv["meta"]["uuid"]
             convACL = conv["meta"]["acl"]
 
-            request.args["id"] = [convId]
             commentSnippet = ""
-            userItemValue = ":".join([responseType, convId, convId, convType,
-                                      myKey, commentSnippet])
+            userItemValue = ":".join([responseType, convId, convId,
+                                      convType, myKey, commentSnippet])
 
             deferreds = []
             d = feed.pushToFeed(myKey, timeUUID, convId, parent,
@@ -216,11 +209,17 @@ class ItemResource(base.BaseResource):
                               userItemValue, timeUUID)
                 deferreds.append(d)
 
+            cols = yield Db.get_slice(myKey, "entities", ["basic"])
+            me = utils.supercolumnsToDict(cols)
+
             deferredList = defer.DeferredList(deferreds)
             yield deferredList
 
-            toFeed = True if convType in ['status', 'poll', 'event'] else False
-            d1 = self.renderItem(request, toFeed)
+            data = {"items":{convId:conv},
+                    "entities":{myKey: me}, "script": True}
+            d1 = renderScriptBlock(request, "item.mako", "item_layout",
+                                   False, "#user-feed", "prepend",
+                                   args=[convId, True, True], **data)
 
             defaultType = plugins.keys()[0]
             d2 = plugins[defaultType].renderShareBlock(request, True)

@@ -100,7 +100,7 @@
     options = conv["options"]
     userId = conv["meta"]["owner"]
     counts = conv.get("counts", {})
-    voted = myVotes[convId] if (convId in myVotes and myVotes[convId])\
+    voted = myVotes[convId] if (myVotes and myVotes.get(convId, False))\
                             else False
   %>
   %if not isQuoted:
@@ -121,4 +121,3 @@
   %>
   </div>
 </%def>
-

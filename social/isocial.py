@@ -6,7 +6,7 @@ class IItemType(Interface):
     position = Attribute("Position in share tabbar")
     hasIndex = Attribute("Indicates if there are indexes on this type")
 
-    def shareBlockProvider():
+    def renderShareBlock(request, isAjax):
         """
         """
 
@@ -15,10 +15,6 @@ class IItemType(Interface):
         """
 
     def fetchData(args, convId=None):
-        """
-        """
-
-    def renderRoot(request, convId, args):
         """
         """
 
