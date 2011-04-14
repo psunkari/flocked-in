@@ -4,11 +4,12 @@ from twisted.internet   import defer
 from telephus.cassandra import ttypes
 
 
-from social             import base, Db, utils, errors, feed, profile
+from social             import base, Db, utils, errors, feed
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
 from social.logging     import profile, dump_args
+from social.profile     import saveAvatarItem
 
 
 class GroupsResource(base.BaseResource):
@@ -217,7 +218,7 @@ class GroupsResource(base.BaseResource):
 
         dp = utils.getRequestArg(request, "dp")
         if dp:
-            avatar = yield profile.saveAvatarItem(groupId, dp)
+            avatar = yield saveAvatarItem(groupId, dp)
             meta["avatar"] = avatar
 
         yield Db.batch_insert(groupId, "entities", {"basic": meta})
