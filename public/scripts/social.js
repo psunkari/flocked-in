@@ -378,7 +378,7 @@ var ui = {
     init: function() {
         /* Add a scroll to bottom handler */
         $(window).scroll(function(){
-            if ($(window).scrollTop() == $(document).height() - $(window).height()){
+            if ($(window).scrollTop() > $(document).height() - (50 + $(window).height())){
                 $('#next-page-load').click();
             }
         });
