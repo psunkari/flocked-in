@@ -4,6 +4,8 @@ import uuid
 import hashlib
 import datetime
 import base64
+import re
+import string
 
 from ordereddict        import OrderedDict
 from twisted.internet   import defer
@@ -291,6 +293,20 @@ def userAvatar(id, userInfo, size=None):
 
     return None
 
+_urlRegEx = r'\b(([\w-]+://?|www[.])[^\s()<>]+(?:\([\w\d]+\)|([^%s\s]|/)))'
+_urlRegEx = _urlRegEx % re.sub(r'([-\\\]])', r'\\\1', string.punctuation)
+_urlRegEx = re.compile(_urlRegEx)
+def linkURLs(text):
+    global _urlRegEx
+    def addAnchor(m):
+        if (m.group(2) == "www."):
+            return '<a class="c-link" target="_blank" href="http://%s">%s</a>'%(m.group(0), m.group(0))
+        elif (m.group(2).startswith("http")):
+            return '<a class="c-link" target="_blank" href="%s">%s</a>'%(m.group(0), m.group(0))
+        else:
+            return m.group(0)
+
+    return _urlRegEx.sub(addAnchor, text)
 
 def simpleTimestamp(timestamp):
     current = int(time.time())

@@ -246,7 +246,7 @@
     ${utils.userName(userId, entities[userId])}
   %endif
   %if conv["meta"].has_key("comment"):
-    ${conv["meta"]["comment"]}
+    ${utils.linkURLs(conv["meta"]["comment"])}
   %endif
 </%def>
 
