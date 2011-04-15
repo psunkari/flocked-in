@@ -201,7 +201,7 @@
     </div>
     <div class="comment-container">
       <span class="comment-user">${utils.userName(userId, entities[userId])}</span>
-      <span class="comment-text">${comment}</span>
+      <span class="comment-text">${utils.linkURLs(comment)}</span>
     </div>
     <div class="comment-meta">
       ${self.item_footer(commentId)}
