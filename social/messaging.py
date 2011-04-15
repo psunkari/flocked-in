@@ -24,12 +24,61 @@ class MessagingResource(base.BaseResource):
         defer.returnValue('0')
 
     @defer.inlineCallbacks
+    def _folderActions(self, request):
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        myKey = auth.getMyKey(request)
+        landing = not self._ajax
+        selected = request.args.get("selected", None)
+        if selected: selected = [utils.decodeKey(x) for x in selected]
+        folder = request.args.get("fid", [None])[0]
+        delete = request.args.get("delete", [None])[0]
+        archive = request.args.get("archive", [None])[0]
+
+        if folder:
+            if folder.rfind(":") != -1 and not folder.startswith(myKey):
+                folder=None
+
+        if selected and folder and delete:
+            selected = yield Db.get_slice(key=folder,
+                                          column_family="mFolderMessages",
+                                          names=selected)
+            mids = utils.columnsToDict(selected).values()
+            tids = utils.columnsToDict(selected).keys()
+            trash = "%s:%s" %(myKey, "TRASH")
+            yield self._copyToFolder(trash, mids)
+            yield self._deleteFromFolder(folder, tids)
+        elif selected and folder and archive:
+            selected = yield Db.get_slice(key=folder,
+                                          column_family="mFolderMessages",
+                                          names=selected)
+            mids =  utils.columnsToDict(selected).values()
+            tids = utils.columnsToDict(selected).keys()
+            archives = "%s:%s" %(myKey, "ARCHIVES")
+            yield self._copyToFolder(archives, mids)
+            yield self._deleteFromFolder(folder, tids)
+
+    @defer.inlineCallbacks
+    def _copyToFolder(self, destination, messages):
+        message_map = {}
+        for m in messages:
+            message_map[utils.uuid.uuid1().bytes] = m
+        yield Db.batch_insert(key=destination, column_family="mFolderMessages",
+                              mapping=message_map)
+
+    @defer.inlineCallbacks
+    def _deleteFromFolder(self, folder, timestamps):
+        cfmap = {"mFolderMessages":[folder]}
+        yield Db.batch_remove(cfmap=cfmap, names=timestamps)
+
+    @defer.inlineCallbacks
     def _composeMessage(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         myKey = auth.getMyKey(request)
         landing = not self._ajax
         recipients, body, subject, parent = self._parseComposerArgs(request)
 
+        if len(recipients) == 0:
+            raise "No recipients specified"
         res = yield Db.get_slice(key=myKey, column_family='entities')
         res = utils.supercolumnsToDict(res)
         name = res["basic"]["name"]
@@ -78,7 +127,6 @@ class MessagingResource(base.BaseResource):
         yield Db.batch_insert(key=new_message_id, column_family = 'messages',
                               mapping = message)
         yield self._deliverMessage(request, message, uids)
-        #request.write("$$.fetchUri('/messages/')")
 
     @defer.inlineCallbacks
     def _renderComposer(self, request):
@@ -87,27 +135,34 @@ class MessagingResource(base.BaseResource):
         landing = not self._ajax
         parent = request.args.get("parent", [None])[0]
 
+        if script and landing:
+            yield render(request, "message.mako", **args)
+
+        if appchange and script:
+            renderScriptBlock(request, "message.mako", "layout",
+                              landing, "#mainbar", "set", **args)
+
         if parent:
             #XXX: The current user should have the rights to view the message
-            #TODO: multiget does not raise an exception!!!. check manually
-            try:
-                res = yield Db.multiget_slice(keys=[parent], column_family="messages")
-            except ttypes.NotFoundException:
-                parent_msg = None
+            res = yield Db.multiget_slice(keys=[parent], column_family="messages")
+            res = utils.multiColumnsToDict(res)
+            if parent in res.keys():
+                parent_msg = res[parent]
             else:
-                res = utils.multiColumnsToDict(res)
-                if parent in res.keys():
-                    parent_msg = res[parent]
-                else:
-                    parent_msg = None
-            finally:
-                args.update({"parent_msg":parent_msg})
-                args.update({"view":"reply"})
-                if script:
-                    yield render(request, "message.mako", **args)
+                parent_msg = None
+            args.update({"parent_msg":parent_msg})
+            args.update({"view":"reply"})
+            if script:
+                yield renderScriptBlock(request, "message.mako", "center",
+                                        landing, ".center-contents", "set", **args)
+            else:
+                yield render(request, "message.mako", **args)
         else:
             args.update({"view":"compose"})
             if script:
+                yield renderScriptBlock(request, "message.mako", "center",
+                                        landing, ".center-contents", "set", **args)
+            else:
                 yield render(request, "message.mako", **args)
 
     @defer.inlineCallbacks
@@ -131,18 +186,20 @@ class MessagingResource(base.BaseResource):
         res = yield Db.get(key=myKey, column_family="mUserFolders",
                            super_column=folder, column="label")
         folder_label = res.column.value
-        args.update({"folder":folder_label})
+        args.update({"folder":folder_label, "fid":folder})
 
         res = yield Db.get_slice(key=folder, column_family="mFolderMessages",
                                  count=60, reverse=True)
 
         # Fetch the message-ids from mFolderMessages
         mids = utils.columnsToDict(res, ordered=True).values()
+        tids = utils.columnsToDict(res, ordered=True).keys()
+        tids = [utils.encodeKey(x) for x in tids]
         res = yield Db.multiget_slice(keys=mids, column_family="messages")
         msgs = utils.multiColumnsToDict(res, ordered=True)
-        for k,v in msgs.iteritems():
-            people = yield self._generatePeopleInConversation(v, myKey)
-            v.update({"people":people})
+        for mid, msg in msgs.iteritems():
+            people = yield self._generatePeopleInConversation(msg, myKey)
+            msg.update({"people":people, "tid": tids[mids.index(mid)]})
         args.update({"messages":msgs})
         args.update({"mids":mids})
         args.update({"view":"messages"})
@@ -169,6 +226,13 @@ class MessagingResource(base.BaseResource):
         landing = not self._ajax
         conversationView = False
 
+        if script and landing:
+            yield render(request, "message.mako", **args)
+
+        if appchange and script:
+            renderScriptBlock(request, "message.mako", "layout",
+                              landing, "#mainbar", "set", **args)
+
         if thread:
             #XXX: the viewer needs to have the necessary acls to view this
             res = yield Db.get_slice(key=thread, column_family="messages")
@@ -180,6 +244,9 @@ class MessagingResource(base.BaseResource):
                 args.update({"id":thread})
                 args.update({"view":"message"})
                 if script:
+                    yield renderScriptBlock(request, "message.mako", "center",
+                                            landing, ".center-contents", "set", **args)
+                else:
                     yield render(request, "message.mako", **args)
             else:
                 request.write("Message not found")
@@ -221,7 +288,6 @@ class MessagingResource(base.BaseResource):
                 col = yield Db.get(key=user_id, column_family="mUserMessages",
                                           column="conversation",
                                           super_column=message["irt"])
-                print col.column.value
                 conversation_id = str(col.column.value)
                 print "Found the conversationid: %s" %conversation_id
             except ttypes.NotFoundException:
@@ -275,7 +341,7 @@ class MessagingResource(base.BaseResource):
         recipients_email = []
         for recipient in recipients:
             rtuple = email.utils.parseaddr(recipient)
-            remail = rtuple[1]
+            remail = rtuple[1].lower()
             recipients_email.append(remail)
 
         res = yield Db.multiget_slice(keys=recipients_email, column_family="userAuth")
@@ -345,6 +411,15 @@ class MessagingResource(base.BaseResource):
             yield Db.insert(key=userid, column_family='mUserFolders',
                             value="Sent", column="label",
                             super_column="%s:%s" %(userid, "SENT"))
+            yield Db.insert(key=userid, column_family='mUserFolders',
+                            value="Trash", column="label",
+                            super_column="%s:%s" %(userid, "TRASH"))
+            yield Db.insert(key=userid, column_family='mUserFolders',
+                            value="Archives", column="label",
+                            super_column="%s:%s" %(userid, "ARCHIVES"))
+            yield Db.insert(key=userid, column_family='mUserFolders',
+                            value="Drafts", column="label",
+                            super_column="%s:%s" %(userid, "DRAFTS"))
 
     def render_GET(self, request):
         segmentCount = len(request.postpath)
@@ -363,7 +438,9 @@ class MessagingResource(base.BaseResource):
         segmentCount = len(request.postpath)
         d = None
 
-        if segmentCount == 1 and request.postpath[0] == "write":
+        if segmentCount == 0:
+            d = self._folderActions(request)
+        elif segmentCount == 1 and request.postpath[0] == "write":
             d = self._composeMessage(request)
         elif segmentCount == 1 and request.postpath[0] == "thread":
             #Handle actions on a single thread
