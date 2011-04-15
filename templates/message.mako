@@ -89,7 +89,7 @@
 
 <%def name="messages_layout(id, conversation)">
   <div id="conv-${id}" class="conv-item">
-    <div style="display:table-cell;vertical-align:top"><input type="checkbox" selected/></div>
+    <div style="display:table-cell;vertical-align:top"><input type="checkbox" name="selected" value="${conversation['tid']}"/></div>
     <div style="display:table-cell;width:100%">
       <div style="display:table;width:100%">
       <div style="display:table-cell;width:100px">${conversation["From"]|nameinemail}</div>
@@ -122,78 +122,87 @@
 </%def>
 
 <%def name="conversation_layout(conversation, inline=False, isFeed=False)">
-  <div id="conv-${conversation}" class="conv-item">
-    <div class="conv-avatar" id="conv-avatar-${conversation}">
-      %if inline or not script:
-      %endif
-    </div>
-    <div class="conv-data">
-      <div id="conv-root-${conversation}">
-        %if inline or not script:
-        %endif
-      </div>
-      <div id="item-footer-${conversation}" class="conv-footer">
-        %if inline or not script:
-        %endif
-      </div>
-      <div id="conv-comments-wrapper-${conversation}">
-        %if inline or not script:
-        %endif
-      </div>
-      <div id="comment-form-wrapper-${conversation}" class="conv-comment-form">
-        %if inline or not script:
-        %endif
-      </div>
-    </div>
-  </div>
+
 </%def>
 
 <%def name="composer_layout(msg)">
-  %if script:
-    <form id="share-form" class="ajax" autocomplete="off" method="post" action="/messages/write">
+    <div>
       <div>
-        <div>
-          % if msg:
-            <textarea style="width:99%" name="recipients" placeholder="${_('Enter your colleagues name or email address') |h}">${msg['From']}</textarea>
-            <input style="width:99%" type="text" name="subject" value="${formatSubjectForReply(msg['Subject'])}" placeholder="${_('Enter a subject of your message') |h}"/>
-            <textarea style="width:99%;height:400px" name="body">${formatBodyForReply(msg, "")}</textarea>
-            <input type="hidden" value="${msg["message-id"]}" name="parent">
-          % else:
-            <textarea style="width:99%" type="text" name="recipients" placeholder="${_('Enter name or email address') |h}"></textarea>
-            <input style="width:99%" type="text" name="subject" placeholder="${_('Enter a subject of your message') |h}"/>
-            <textarea style="width:99%;height:400px" name="body"></textarea>
-          % endif
-        </div>
+        % if msg:
+          <textarea style="width:99%" name="recipients" placeholder="${_('Enter your colleagues name or email address') |h}">${msg['From']}</textarea>
+          <input style="width:99%" type="text" name="subject" value="${formatSubjectForReply(msg['Subject'])}" placeholder="${_('Enter a subject of your message') |h}"/>
+          <textarea style="width:99%;height:400px" name="body">${formatBodyForReply(msg, "")}</textarea>
+          <input type="hidden" value="${msg["message-id"]}" name="parent">
+        % else:
+          <textarea style="width:99%" type="text" name="recipients" placeholder="${_('Enter name or email address') |h}"></textarea>
+          <input style="width:99%" type="text" name="subject" placeholder="${_('Enter a subject of your message') |h}"/>
+          <textarea style="width:99%;height:400px" name="body"></textarea>
+        % endif
       </div>
-      <div>
-        <ul id="sharebar-actions" class="h-links">
-          <li>${widgets.button("composer-submit", "submit", "default", None, "Compose")}</li>
-        </ul>
-        <span class="clear" style="display:block"></span>
-      </div>
-    </form>
-  %endif
+    </div>
+    <div>
+      <ul id="sharebar-actions" class="h-links">
+        <li>${widgets.button("composer-submit", "submit", "default", None, "Compose")}</li>
+      </ul>
+      <span class="clear" style="display:block"></span>
+    </div>
 </%def>
 
 <%def name="quick_reply_layout(msg)">
-  %if script:
-    <form id="share-form" class="ajax" autocomplete="off" method="post" action="/messages/write">
-      <div id="sharebar">
-        <div class="input-wrap" style="text-align:center">
-            <textarea style="width:99%;height:100px" name="body"></textarea>
-            <input type="hidden" value="${msg["message-id"]}" name="parent"/>
-            <input type="hidden" value="${formatSubjectForReply(msg['Subject'])}" name="subject"/>
-            <input type="hidden" value="${msg["From"]}" name="recipients"/>
-        </div>
+    <div id="sharebar">
+      <div class="input-wrap" style="text-align:center">
+          <textarea style="width:99%;height:100px" name="body"></textarea>
+          <input type="hidden" value="${msg["message-id"]}" name="parent"/>
+          <input type="hidden" value="${formatSubjectForReply(msg['Subject'])}" name="subject"/>
+          <input type="hidden" value="${msg["From"]}" name="recipients"/>
       </div>
-      <div>
+    </div>
+    <div>
+      <ul id="sharebar-actions" class="h-links">
+        <li>${widgets.button("composer-submit", "submit", "default", None, "Quick Reply")}</li>
+      </ul>
+      <span class="clear" style="display:block"></span>
+    </div>
+</%def>
+
+<%def name="toolbar_layout(view, folder=None, fid=None, message=None)">
+  % if view == "messages":
+    <div style="padding-bottom:10px">
+      <span>Viewing ${folder}</span>
+        <input type="hidden" name="fid" value="${fid}"/>
         <ul id="sharebar-actions" class="h-links">
-          <li>${widgets.button("composer-submit", "submit", "default", None, "Quick Reply")}</li>
+          <li><a style="padding:3px" class="button default" href="/messages/write">Write</a></li>
+          <li><input type="submit" class="button default" name="delete" value="Delete"></li>
+          <li><input type="submit" class="button default" name="archive" value="Archive"></li>
         </ul>
         <span class="clear" style="display:block"></span>
-      </div>
-    </form>
-  %endif
+    </div>
+  % elif view == "message":
+    <div>
+        <input type="hidden" name="fid" value="${fid}"/>
+        <ul id="sharebar-actions" class="h-links">
+          <li><a style="padding:3px" class="button default" href="/messages">Go Back</a></li>
+          <li><a style="padding:3px" class="button default" href="/messages/write?parent=${message["message-id"]}">Reply</a></li>
+          <li><input type="submit" class="button default" name="delete" value="Delete"></li>
+          <li><input type="submit" class="button default" name="archive" value="Archive"></li>
+        </ul>
+        <span class="clear" style="display:block"></span>
+    </div>
+  %elif view == "compose":
+    <div>
+        <ul id="sharebar-actions" class="h-links">
+          <li><a style="padding:3px" class="button default" href="/messages">Go Back</a></li>
+        </ul>
+        <span class="clear" style="display:block"></span>
+    </div>
+  % elif view == "reply":
+    <div>
+        <ul id="sharebar-actions" class="h-links">
+          <li><a style="padding:3px" class="button default" href="/messages/thread?id=${message["message-id"]}">Go Back</a></li>
+        </ul>
+        <span class="clear" style="display:block"></span>
+    </div>
+  % endif
 </%def>
 
 <%def name="center()">
@@ -202,58 +211,27 @@
       ${conversation_layout(conversation, msgs_map, True, True)}
     %endfor
   %elif view == "messages":
-    <div style="padding-bottom:10px">
-      <span>Viewing ${folder}</span>
-        <ul id="sharebar-actions" class="h-links">
-          <li><a href="/messages/write">Write</a></li>
-          <li><a>Delete</a></li>
-          <li><a>Archive</a></li>
-          <li><a>Refresh</a></li>
-        </ul>
-        <span class="clear" style="display:block"></span>
-    </div>
+    <form method="post" action="/messages">
+    ${toolbar_layout(view, folder, fid)}
     %for mid in mids:
       ${messages_layout(mid, messages[mid])}
     %endfor
+    </form>
   %elif view == "message":
-    <div>
-        <ul id="sharebar-actions" class="h-links">
-          % if script:
-            <li><a href="javascript:history.go(-1)">Go Back</a></li>
-          % else:
-            <li><a href="/messages/">Go Back</a></li>
-          % endif
-          <li><a href="/messages/write?parent=${message["message-id"]}">Reply</a></li>
-          <li><a>Delete</a></li>
-          <li><a>Archive</a></li>
-        </ul>
-        <span class="clear" style="display:block"></span>
-    </div>
+    <form id="share-form" class="ajax" autocomplete="off" method="post" action="/messages/write">
+    ${toolbar_layout(view, fid, message=message)}
     ${message_layout(id, message)}
     ${quick_reply_layout(message)}
+    </form>
   %elif view == "compose":
-    <div>
-        <ul id="sharebar-actions" class="h-links">
-          % if script:
-            <li><a href="javascript:history.go(-1)">Go Back</a></li>
-          % else:
-            <li><a href="/messages/">Go Back</a></li>
-          % endif
-        </ul>
-        <span class="clear" style="display:block"></span>
-    </div>
+    <form id="share-form" class="ajax" autocomplete="off" method="post" action="/messages/write">
+    ${toolbar_layout(view)}
     ${composer_layout(None)}
+    </form>
   %elif view == "reply":
-    <div>
-        <ul id="sharebar-actions" class="h-links">
-          % if script:
-            <li><a href="javascript:history.go(-1)">Go Back</a></li>
-          % else:
-            <li><a href="/messages/">Go Back</a></li>
-          % endif
-        </ul>
-        <span class="clear" style="display:block"></span>
-    </div>
+    <form id="share-form" class="ajax" autocomplete="off" method="post" action="/messages/write">
+    ${toolbar_layout(view, message=parent_msg)}
     ${composer_layout(parent_msg)}
+    </form>
   %endif
 </%def>

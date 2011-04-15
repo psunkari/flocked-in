@@ -24,6 +24,53 @@ class MessagingResource(base.BaseResource):
         defer.returnValue('0')
 
     @defer.inlineCallbacks
+    def _folderActions(self, request):
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        myKey = auth.getMyKey(request)
+        landing = not self._ajax
+        selected = request.args.get("selected", None)
+        if selected: selected = [utils.decodeKey(x) for x in selected]
+        folder = request.args.get("fid", [None])[0]
+        delete = request.args.get("delete", [None])[0]
+        archive = request.args.get("archive", [None])[0]
+
+        if folder:
+            if folder.rfind(":") != -1 and not folder.startswith(myKey):
+                folder=None
+
+        if selected and folder and delete:
+            selected = yield Db.get_slice(key=folder,
+                                          column_family="mFolderMessages",
+                                          names=selected)
+            mids = utils.columnsToDict(selected).values()
+            tids = utils.columnsToDict(selected).keys()
+            trash = "%s:%s" %(myKey, "TRASH")
+            yield self._copyToFolder(trash, mids)
+            yield self._deleteFromFolder(folder, tids)
+        elif selected and folder and archive:
+            selected = yield Db.get_slice(key=folder,
+                                          column_family="mFolderMessages",
+                                          names=selected)
+            mids =  utils.columnsToDict(selected).values()
+            tids = utils.columnsToDict(selected).keys()
+            archives = "%s:%s" %(myKey, "ARCHIVES")
+            yield self._copyToFolder(archives, mids)
+            yield self._deleteFromFolder(folder, tids)
+
+    @defer.inlineCallbacks
+    def _copyToFolder(self, destination, messages):
+        message_map = {}
+        for m in messages:
+            message_map[utils.uuid.uuid1().bytes] = m
+        yield Db.batch_insert(key=destination, column_family="mFolderMessages",
+                              mapping=message_map)
+
+    @defer.inlineCallbacks
+    def _deleteFromFolder(self, folder, timestamps):
+        cfmap = {"mFolderMessages":[folder]}
+        yield Db.batch_remove(cfmap=cfmap, names=timestamps)
+
+    @defer.inlineCallbacks
     def _composeMessage(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         myKey = auth.getMyKey(request)
@@ -32,7 +79,6 @@ class MessagingResource(base.BaseResource):
 
         if len(recipients) == 0:
             raise "No recipients specified"
-
         res = yield Db.get_slice(key=myKey, column_family='entities')
         res = utils.supercolumnsToDict(res)
         name = res["basic"]["name"]
@@ -392,7 +438,9 @@ class MessagingResource(base.BaseResource):
         segmentCount = len(request.postpath)
         d = None
 
-        if segmentCount == 1 and request.postpath[0] == "write":
+        if segmentCount == 0:
+            d = self._folderActions(request)
+        elif segmentCount == 1 and request.postpath[0] == "write":
             d = self._composeMessage(request)
         elif segmentCount == 1 and request.postpath[0] == "thread":
             #Handle actions on a single thread
