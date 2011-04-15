@@ -514,7 +514,6 @@ class ItemResource(base.BaseResource):
                             **args)
 
 
-
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -558,11 +557,12 @@ class ItemResource(base.BaseResource):
 
         yield feed.pushToFeed(myId, timeUUID, itemId, itemId, responseType,
                               convType, convOwnerId, myId, tagId=tagId)
-
         if followers:
             yield feed.pushToOthersFeed(myId, timeUUID, itemId, itemId, convACL,
                                         responseType, convType, convOwnerId,
                                         others=followers, tagId=tagId)
+        #TODO: update userFeed
+        #TODO: notifications
 
 
     @profile
@@ -638,7 +638,7 @@ class ItemResource(base.BaseResource):
             (itemId == convId or conv["meta"]["owner"] != myId):
             raise errors.UnAuthorised()
 
-        itemType = item["meta"].get("type", None)
+        itemType = item["meta"].get("type", "status")
         convType = conv["meta"]["type"]
         convACL = conv["meta"]["acl"]
         convOwnerId = conv["meta"]["owner"]
@@ -658,14 +658,13 @@ class ItemResource(base.BaseResource):
             for tagId in item.get("tags", {}):
                 userId = item["tags"][tagId]
                 yield Db.remove(tagId, "tagItems", item["meta"]["uuid"])
-                yield feed.deleteFromFeed(userId, itemId, convId, convType,
-                                          userId, responseType, tagId= tagId)
                 followers = yield Db.get_slice(tagId, "tagFollowers")
                 followers = utils.columnsToDict(followers).keys()
-                if followers:
-                    yield feed.deleteFromOthersFeed(myId, itemId, convId, convType,
-                                                   convACL, convOwnerId, responseType,
-                                                   others=followers, tagId=tagId)
+
+                yield feed.deleteAllFeed(userId, itemId, convId, convType,
+                                         convACL, convOwnerId, responseType,
+                                         followers, tagId)
+
 
         #remove from itemLikes
         itemResponses = yield Db.get_slice(convId, "itemResponses")
@@ -675,13 +674,10 @@ class ItemResource(base.BaseResource):
         responseType = "L"
         for userId in itemLikes:
             tuuid = itemLikes[userId]
-            yield Db.remove(userId, "userItems", tuuid)
-            if plugins.has_key(itemType) and plugins[itemType].hasIndex:
-                yield Db.remove(userId, "userItems_"+ itemType, tuuid)
-            yield feed.deleteFromFeed(userId, itemId, convId, convType,
-                                      userId, responseType)
-            yield feed.deleteFromOthersFeed(userId, itemId, convId, convType,
-                                            convACL, convOwnerId, responseType)
+            yield feed.deleteUserFeed(userId, itemType, tuuid)
+            yield feed.deleteAllFeed(userId, itemId, convId, convType, convACL,
+                                     convOwnerId, responseType)
+            yield notifications.deleteNofitications(convId, tuuid)
 
         # if conv is being deleted, delete feed corresponding to commentLikes also.
         if itemId == convId:
@@ -691,13 +687,11 @@ class ItemResource(base.BaseResource):
                 itemLikes = utils.columnsToDict(itemLikes)
                 for userId in itemLikes:
                     tuuid = itemLikes[userId]
-                    yield Db.remove(userId, "userItems", tuuid)
-                    if plugins.has_key(itemType) and plugins[itemType].hasIndex:
-                        yield Db.remove(userId, "userItems_"+ itemType, tuuid)
-                    yield feed.deleteFromFeed(userId, responseId, convId, convType,
-                                              userId, responseType)
-                    yield feed.deleteFromOthersFeed(userId, responseId, convId, convType,
-                                                    convACL, convOwnerId, responseType)
+                    yield feed.deleteUserFeed(userId, itemType, tuuid)
+                    yield feed.deleteAllFeed(userId, responseId, convId,
+                                             convType, convACL, convOwnerId,
+                                             responseType)
+                    yield notifications.deleteNofitications(convId, tuuid)
 
         #remove from itemResponses
         responseType = "C"
@@ -705,31 +699,26 @@ class ItemResource(base.BaseResource):
             userId, responseId = itemResponses[tuuid].split(":")
             if itemId == convId or (responseId == itemId):
                 deleteFromFeed = (itemId == convId)
-                yield Db.remove(userId, "userItems", tuuid)
-                if plugins.has_key(itemType) and plugins[itemType].hasIndex:
-                    yield Db.remove(userId, "userItems_"+ itemType, tuuid)
-                yield feed.deleteFromFeed(userId, responseId, convId, convType,
-                                          userId, responseType)
-                yield feed.deleteFromOthersFeed(userId, responseId, convId,
-                                                convType, convACL, convOwnerId,
-                                                responseType)
+                yield feed.deleteUserFeed(userId, itemType, tuuid)
+                yield feed.deleteAllFeed(userId, responseId, convId, convType,
+                                         convACL, convOwnerId, responseType)
                 yield Db.insert(convId, "deletedConvs", '', responseId)
                 yield Db.remove(convId, "itemResponses", tuuid)
-                #delete notifications
+                yield notifications.deleteNofitications(convId, tuuid)
+
         #update itemResponse Count
-        responseCount = yield Db.get_count(convId, "itemResponses")
-        yield Db.insert(convId, "items", str(responseCount), "responseCount", "meta")
+        if itemId != convId:
+            responseCount = yield Db.get_count(convId, "itemResponses")
+            yield Db.insert(convId, "items", str(responseCount), "responseCount", "meta")
 
         if itemId == convId:
             responseType="I"
-            yield Db.remove(conv["meta"]['owner'], "userItems", conv["meta"]["uuid"])
-            yield feed.deleteFromFeed(convOwnerId, convId, convId, convType,
-                                      itemOwner, responseType)
-            yield feed.deleteFromOthersFeed(convOwnerId, convId, convId,
-                                            convType, convACL, convOwnerId,
-                                            responseType, None)
-        #TODO: delete notifications
+            yield feed.deleteUserFeed(convOwnerId, convType, conv["meta"]["uuid"])
+            yield feed.deleteAllFeed(convOwnerId, convId, convId, convType,
+                                     convACL, convOwnerId, responseType)
+            yield notifications.deleteNofitications(convId, conv["meta"]["uuid"])
 
+        #TODO: update UI
 
 
     def _tags(self, request):

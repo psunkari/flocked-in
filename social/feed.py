@@ -12,6 +12,28 @@ from social.template    import render, renderDef, renderScriptBlock
 from social.constants   import INFINITY, MAXFEEDITEMS, MAXFEEDITEMSBYTYPE
 from social.logging     import profile, dump_args
 
+@defer.inlineCallbacks
+def deleteUserFeed(userId, itemType, tuuid):
+    yield Db.remove(userId, "userItems", tuuid)
+    if plugins.has_key(itemType) and plugins[itemType].hasIndex:
+        yield Db.remove(userId, "userItems_"+ itemType, tuuid)
+
+@defer.inlineCallbacks
+def deleteAllFeed(userId, itemId, convId, itemType, acl,
+                  convOwner, responseType, others=None, tagId=''):
+
+    """
+    wrapper around deleteFromFeed&deleteFromOthersFeed
+    """
+
+    yield deleteFromFeed(userId, itemId, convId, itemType,
+                         userId, responseType, tagId )
+    yield deleteFromOthersFeed(userId, itemId, convId, itemType, acl,
+                               convOwner, responseType, others, tagId)
+
+
+
+
 @profile
 @defer.inlineCallbacks
 @dump_args
