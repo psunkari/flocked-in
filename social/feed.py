@@ -19,8 +19,8 @@ def deleteUserFeed(userId, itemType, tuuid):
         yield Db.remove(userId, "userItems_"+ itemType, tuuid)
 
 @defer.inlineCallbacks
-def deleteAllFeed(userId, itemId, convId, itemType, acl,
-                  convOwner, responseType, others=None, tagId=''):
+def deleteFeed(userId, itemId, convId, itemType, acl, convOwner,
+                responseType, others=None, tagId='', deleteAll=False):
 
     """
     wrapper around deleteFromFeed&deleteFromOthersFeed
@@ -28,8 +28,9 @@ def deleteAllFeed(userId, itemId, convId, itemType, acl,
 
     yield deleteFromFeed(userId, itemId, convId, itemType,
                          userId, responseType, tagId )
-    yield deleteFromOthersFeed(userId, itemId, convId, itemType, acl,
-                               convOwner, responseType, others, tagId)
+    if deleteAll:
+        yield deleteFromOthersFeed(userId, itemId, convId, itemType, acl,
+                                   convOwner, responseType, others, tagId)
 
 
 
@@ -313,6 +314,7 @@ class FeedResource(base.BaseResource):
 
                 # Check if we have to fetch more responses for this conversation
                 if len(responses[convId]) < 2:
+
                     toFetchResponses.add(convId)
 
         # 2.1 Fetch more responses, if required

@@ -125,6 +125,9 @@
     <span><a class="ajax" _ref="/item/like?id=${itemId}">${_("Like")}</a></span>
   %endif
   <span><a class="ajax" _ref="/item/delete?id=${itemId}">${_("Delete")}</a></span>
+  % if not hasParent:
+    <span><a class="ajax" _ref="/item/remove?id=${itemId}">${_("Remove")}</a></span>
+  %endif
 </%def>
 
 <%def name="conv_comments_head(convId, total, showing, isFeed)">
@@ -270,4 +273,3 @@
   %>
   ${activity}
 </%def>
-
