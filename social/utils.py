@@ -307,7 +307,7 @@ def companyLogo(orgInfo, size=None):
 _urlRegEx = r'\b(([\w-]+://?|www[.])[^\s()<>]+(?:\([\w\d]+\)|([^%s\s]|/)))'
 _urlRegEx = _urlRegEx % re.sub(r'([-\\\]])', r'\\\1', string.punctuation)
 _urlRegEx = re.compile(_urlRegEx)
-def linkURLs(text):
+def normalizeText(text):
     global _urlRegEx
     def addAnchor(m):
         if (m.group(2) == "www."):
@@ -317,7 +317,9 @@ def linkURLs(text):
         else:
             return m.group(0)
 
-    return _urlRegEx.sub(addAnchor, text)
+    urlReplaced = _urlRegEx.sub(addAnchor, text)
+    return urlReplaced.strip().lstrip().replace("\r\n", "<br/>")
+
 
 def simpleTimestamp(timestamp):
     current = int(time.time())
