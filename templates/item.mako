@@ -242,12 +242,15 @@
   %>
   %if not isQuoted:
     ${utils.userName(userId, entities[userId], "conv-user-cause")}
-  %else:
-    ${utils.userName(userId, entities[userId])}
   %endif
-  %if conv["meta"].has_key("comment"):
-    ${utils.linkURLs(conv["meta"]["comment"])}
-  %endif
+  <div class="item-title">
+    %if isQuoted:
+      ${utils.userName(userId, entities[userId])}
+    %endif
+    %if conv["meta"].has_key("comment"):
+      ${utils.linkURLs(conv["meta"]["comment"])}
+    %endif
+  </div>
 </%def>
 
 <%def name="render_activity(convId, isQuoted=False)">
