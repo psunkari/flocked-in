@@ -13,10 +13,26 @@ from social                 import Db, auth, utils, base, plugins, _, __
 from social                 import constants, feed
 from social.logging         import dump_args, profile
 
+@defer.inlineCallbacks
+def deleteAvatarItem(entity, isLogo=False):
+    entity = yield Db.get_slice(entity, "entities", ["basic"])
+    entity = utils.supercolumnsToDict(entity)
+    itemId = None
+    imgFmt = None
+    col = None
+    if isLogo:
+        col = entity["basic"].get("logo", None)
+    else:
+        col = entity["basic"].get("avatar", None)
+    if col:
+        imgFmt, itemId = col.split(":")
+    if itemId:
+        yield Db.remove(itemId, "items")
+
 @profile
 @defer.inlineCallbacks
 @dump_args
-def saveAvatarItem(userId, data, isLogo=False):
+def saveAvatarItem(entityId, data, isLogo=False):
     imageFormat = _getImageFileFormat(data)
     if imageFormat not in constants.SUPPORTED_IMAGE_TYPES:
         raise errors.UnsupportedFileType()
@@ -44,13 +60,16 @@ def saveAvatarItem(userId, data, isLogo=False):
 
     itemId = utils.getUniqueKey()
     item = {
-        "meta": {"owner": userId, "acl": "company", "type": "image"},
+        "meta": {"owner": entityId, "acl": "company", "type": "image"},
         "avatar": {
             "format": imageFormat,
             "small": small.data, "medium": medium.data,
             "large": large.data, "original": original.data
         }}
     yield Db.batch_insert(itemId, "items", item)
+    #delete older image if any;
+    yield deleteAvatarItem(entityId, isLogo)
+
     defer.returnValue("%s:%s" % (imageFormat, itemId))
 
 
