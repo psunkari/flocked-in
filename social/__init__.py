@@ -38,4 +38,18 @@ for plg in _pluginList:
     plugins[plg.itemType] = plg
 
 
-__all__ = [Config, Db, _, __, plugins]
+whitelist = []
+blacklistedDomains = []
+try:
+    wlist = open('whitelist.txt', 'r').readlines()
+    whitelist = [emailId.strip() for emailId in wlist if emailId]
+except IOError:
+    pass
+
+try:
+    blistDomains = open('blacklistedDomains.txt', 'r').readlines()
+    blacklistedDomains = [domain.strip() for domain in blistDomains if domain]
+except IOError:
+    pass
+
+__all__ = [Config, Db, _, __, plugins, whitelist, blacklistedDomains]

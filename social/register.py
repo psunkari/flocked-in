@@ -6,12 +6,13 @@ from twisted.python     import log
 from twisted.internet   import defer
 from twisted.web        import server, resource
 from twisted.mail.smtp  import sendmail
+from twisted.cred.error import Unauthorized
 from telephus.cassandra import ttypes
 from email.mime.text    import MIMEText
 
 import social.constants as constants
 from social.base        import BaseResource
-from social             import utils, Db, Config
+from social             import utils, Db, Config, whitelist, blacklistedDomains
 from social.isocial     import IAuthInfo
 from social.template    import render
 from social.logging     import dump_args, profile
@@ -136,12 +137,22 @@ class RegisterResource(BaseResource):
     @dump_args
     def _signup(self, request):
         username = None
+        domain = None
         emailId = utils.getRequestArg(request, 'emailId')
         sender = request.getSession(IAuthInfo).username
+
         try:
             mailid, domain = emailId.split("@")
         except ValueError, err:
             raise err
+
+        wmode = Config.get("General", "WhiteList") == "True"
+        if wmode and emailId not in whitelist:
+            request.write("'%s' is not whitelisted" %(emailId))
+            raise Unauthorized()
+        if domain and domain in blacklistedDomains:
+            request.write("%s is blacklisted"%(domain))
+            raise Unauthorized()
 
         if sender:
             validMailId = yield self._isValidMailId(domain, sender)
