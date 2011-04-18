@@ -191,6 +191,7 @@
     item = items[commentId]
     userId = item["meta"]["owner"]
     comment = item["meta"]["comment"]
+    normalize = utils.normalizeText
   %>
   <div class="conv-comment" id="comment-${commentId}">
     <div class="comment-avatar">
@@ -201,7 +202,7 @@
     </div>
     <div class="comment-container">
       <span class="comment-user">${utils.userName(userId, entities[userId])}</span>
-      <span class="comment-text">${utils.linkURLs(comment)}</span>
+      <span class="comment-text">${comment|normalize}</span>
     </div>
     <div class="comment-meta">
       ${self.item_footer(commentId)}
@@ -239,6 +240,7 @@
   <%
     conv = items[convId]
     userId = conv["meta"]["owner"]
+    normalize = utils.normalizeText
   %>
   %if not isQuoted:
     ${utils.userName(userId, entities[userId], "conv-user-cause")}
@@ -248,7 +250,7 @@
       ${utils.userName(userId, entities[userId])}
     %endif
     %if conv["meta"].has_key("comment"):
-      ${utils.linkURLs(conv["meta"]["comment"])}
+      ${conv["meta"]["comment"]|normalize}
     %endif
   </div>
 </%def>
