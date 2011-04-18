@@ -291,6 +291,15 @@ def userAvatar(id, userInfo, size=None):
 
     return None
 
+def companyLogo(orgInfo, size=None):
+    size = size[0] if (size and len(size) != 0) else "m"
+    logo = orgInfo.get("basic", {}).get("logo", None)
+    log.msg("company logo", logo)
+    if logo:
+        imgType, itemId = logo.split(":")
+        return "/avatar/%s_%s.%s" % (size, itemId, imgType)
+    else:
+        return None
 
 def simpleTimestamp(timestamp):
     current = int(time.time())

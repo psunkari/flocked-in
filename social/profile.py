@@ -16,7 +16,7 @@ from social.logging         import dump_args, profile
 @profile
 @defer.inlineCallbacks
 @dump_args
-def saveAvatarItem(userId, data):
+def saveAvatarItem(userId, data, isLogo=False):
     imageFormat = _getImageFileFormat(data)
     if imageFormat not in constants.SUPPORTED_IMAGE_TYPES:
         raise errors.UnsupportedFileType()
@@ -30,12 +30,16 @@ def saveAvatarItem(userId, data):
     medium = PythonMagick.Blob()
     small = PythonMagick.Blob()
     large = PythonMagick.Blob()
+    largesize = constants.LOGO_SIZE_LARGE if isLogo else constants.AVATAR_SIZE_LARGE
+    mediumsize = constants.LOGO_SIZE_MEDIUM if isLogo else constants.AVATAR_SIZE_MEDIUM
+    smallsize = constants.LOGO_SIZE_SMALL if isLogo else constants.AVATAR_SIZE_SMALL
+    log.msg(largesize, smallsize, mediumsize)
 
-    image.scale(constants.AVATAR_SIZE_LARGE)
+    image.scale(largesize)
     image.write(large)
-    image.scale(constants.AVATAR_SIZE_MEDIUM)
+    image.scale(mediumsize)
     image.write(medium)
-    image.scale(constants.AVATAR_SIZE_SMALL)
+    image.scale(smallsize)
     image.write(small)
 
     itemId = utils.getUniqueKey()

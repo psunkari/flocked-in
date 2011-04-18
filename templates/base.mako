@@ -71,7 +71,10 @@
       <!-- TODO: Avatar and Site Logo -->
       <div id="sitelogo">
         %if org and org.has_key('basic'):
-          <img src="${org['basic']['logo']}" alt="${org['basic']['name']}"/>
+          <% logoURI = utils.companyLogo(org) %>
+          % if logoURI:
+            <img src="${logoURI}" alt="${org['basic']['name']}"/>
+          % endif
         %endif
       </div>
       <div id="search-container">
