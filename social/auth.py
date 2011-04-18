@@ -86,12 +86,13 @@ class UserPasswordChecker():
 
     def _authenticate(self, username, password):
 
-        wmode = Config.get("General", "WhiteList") == "True"
-        if wmode and username not in whitelist:
-            raise Unauthorized()
-        domain = username.split("@")
-        if len(domain) < 2 or domain[1] in blacklistedDomains:
-            raise Unauthorized()
+        if Config.has_option("General", "WhiteListMode") and \
+           Config.get("General", "WhiteListMode") == "True" :
+            if username not in whitelist:
+                raise Unauthorized()
+            domain = username.split("@")
+            if len(domain) < 2 or domain[1] in blacklistedDomains:
+                raise Unauthorized()
 
         d = Db.get_slice(username, "userAuth",
                          ["passwordHash", "org", "user", "isAdmin", "isBlocked"])

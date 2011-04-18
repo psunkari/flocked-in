@@ -146,13 +146,15 @@ class RegisterResource(BaseResource):
         except ValueError, err:
             raise err
 
-        wmode = Config.get("General", "WhiteList") == "True"
-        if wmode and emailId not in whitelist:
-            request.write("'%s' is not whitelisted" %(emailId))
-            raise Unauthorized()
-        if domain and domain in blacklistedDomains:
-            request.write("%s is blacklisted"%(domain))
-            raise Unauthorized()
+        if Config.has_option("General", "WhiteListMode") and \
+           Config.get("General", "WhiteListMode") == "True":
+            if domain and domain in blacklistedDomains:
+                request.write("'%s' is a blacklisted domain"%(domain))
+                raise Unauthorized()
+            if emailId not in whitelist:
+                request.write("'%s' is not whitelisted" %(emailId))
+                raise Unauthorized()
+
 
         if sender:
             validMailId = yield self._isValidMailId(domain, sender)
