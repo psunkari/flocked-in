@@ -9,7 +9,7 @@ from twisted.web                import resource, util, http, server, static
 from twisted.internet           import defer, threads, reactor
 from twisted.python             import log, components
 
-from social                     import Config, Db, utils, whitelist, blacklistedDomains
+from social                     import Config, Db, utils
 from social.template            import render
 from social.isocial             import IAuthInfo
 
@@ -85,14 +85,6 @@ class UserPasswordChecker():
     credentialInterfaces = [IUserPassword]
 
     def _authenticate(self, username, password):
-
-        if Config.has_option("General", "WhiteListMode") and \
-           Config.get("General", "WhiteListMode") == "True" :
-            if username not in whitelist:
-                raise Unauthorized()
-            domain = username.split("@")
-            if len(domain) < 2 or domain[1] in blacklistedDomains:
-                raise Unauthorized()
 
         d = Db.get_slice(username, "userAuth",
                          ["passwordHash", "org", "user", "isAdmin", "isBlocked"])

@@ -39,17 +39,17 @@ for plg in _pluginList:
 
 
 whitelist = []
-blacklistedDomains = []
+blacklist = []
 try:
     wlist = open('whitelist.txt', 'r').readlines()
-    whitelist = [emailId.strip() for emailId in wlist if emailId]
+    whitelist = [domain.strip() for domain in wlist if domain]
 except IOError:
     pass
 
 try:
-    blistDomains = open('blacklistedDomains.txt', 'r').readlines()
-    blacklistedDomains = [domain.strip() for domain in blistDomains if domain]
+    blist = open('blacklist.txt', 'r').readlines()
+    blacklist = [domain.strip() for domain in blist if domain]
 except IOError:
     pass
 
-__all__ = [Config, Db, _, __, plugins, whitelist, blacklistedDomains]
+__all__ = [Config, Db, _, __, plugins, whitelist, blacklist]

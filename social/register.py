@@ -12,7 +12,7 @@ from email.mime.text    import MIMEText
 
 import social.constants as constants
 from social.base        import BaseResource
-from social             import utils, Db, Config, whitelist, blacklistedDomains
+from social             import utils, Db, Config, whitelist, blacklist
 from social.isocial     import IAuthInfo
 from social.template    import render
 from social.logging     import dump_args, profile
@@ -148,11 +148,11 @@ class RegisterResource(BaseResource):
 
         if Config.has_option("General", "WhiteListMode") and \
            Config.get("General", "WhiteListMode") == "True":
-            if domain and domain in blacklistedDomains:
+            if domain and domain in blacklist:
                 request.write("'%s' is a blacklisted domain"%(domain))
                 raise Unauthorized()
-            if emailId not in whitelist:
-                request.write("'%s' is not whitelisted" %(emailId))
+            if domain and domain not in whitelist:
+                request.write("'%s' is not whitelisted" %(domain))
                 raise Unauthorized()
 
 

@@ -1,5 +1,2 @@
-paul@example.com
-ashok@exampe.com
-kevin@example.com
-william@example.com
-john@example.com
+example.com
+synovel.com
