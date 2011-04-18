@@ -16,6 +16,10 @@
       ${navMenuItem("/admin/add", _("Add Users"), "")}
       ${navMenuItem("/admin/people", _("Block Users"), "")}
       ${navMenuItem("/admin/unblock", _("UnBlock Users "), "")}
+
+    </ul>
+    <ul id="mymenu" class="v-links sidemenu">
+      ${navMenuItem("/admin/org", _("Update OrgInfo"), "")}
     </ul>
   </div>
 </%def>
@@ -56,7 +60,7 @@
 
 <%def name="list_blocked()">
   % if not entities:
-    <div class="users-user">No Blocked Users</div>
+    <div id="next-load-wrapper">No blocked users</div>
   % else:
     % for userId in entities:
       <div class="users-user">
@@ -120,6 +124,32 @@
       <ul>
         <li><label for="data"> Upload File: </label></li>
         <li><input type="file" name="data" accept="csv" /> </li>
+      </ul>
+      <ul>
+        <li></li>
+        <li> <input type="submit" value="Submit"/></li>
+      </ul>
+    </form>
+  </div>
+</%def>
+
+
+<%def name="orgInfo()">
+  <%
+    name = org.get("basic", {}).get("name", '')
+  %>
+  <div class="edit-profile">
+    <form action="/admin/org" method="POST" enctype="multipart/form-data">
+    <!-- fileupload doesn't work with ajax request.
+        TODO: find workaround to submit file in ajax request-->
+
+      <ul>
+        <li><label for="name"> Name: </label></li>
+        <li><input type="text" name="name"  value="${name}"/> </li>
+      </ul>
+      <ul>
+        <li><label for="dp"> Display Image: </label></li>
+        <li><input type="file" name="dp" /> </li>
       </ul>
       <ul>
         <li></li>

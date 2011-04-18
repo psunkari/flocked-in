@@ -26,8 +26,11 @@ class BaseResource(resource.Resource):
         me = yield Db.get_slice(myKey, "entities", ["basic"])
         me = utils.supercolumnsToDict(me)
 
+        org = yield Db.get_slice(orgKey, "entities", ["basic"])
+        org = utils.supercolumnsToDict(org)
+
         args = {"myKey": myKey, "orgKey": orgKey, "me": me,
-                "ajax": self._ajax, "script": script}
+                "ajax": self._ajax, "script": script, "org": org}
         defer.returnValue((appchange, script, args, myKey))
 
     def _epilogue(self, request, deferred=None):

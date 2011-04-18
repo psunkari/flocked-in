@@ -10,6 +10,7 @@ from social             import base, Db, utils
 from social.register    import getOrgKey # move getOrgKey to utils
 from social.template    import render, renderScriptBlock
 from social.constants   import PEOPLE_PER_PAGE
+from social.profile     import saveAvatarItem
 
 class Admin(base.BaseResource):
 
@@ -151,6 +152,57 @@ class Admin(base.BaseResource):
             raise errors.MissingData()
         yield utils.removeUser(userId, userInfo)
 
+    @defer.inlineCallbacks
+    def _updateOrgInfo(self, request):
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        orgKey = args["orgKey"]
+        isAdmin = yield utils.isAdmin(myKey, orgKey)
+        if not isAdmin:
+            raise Unauthorized()
+        name = utils.getRequestArg(request, "name")
+        dp = utils.getRequestArg(request, "dp")
+
+        orgInfo = {}
+        if dp:
+            avatar = yield saveAvatarItem(myKey, dp, isLogo=True)
+            if not orgInfo.has_key("basic"):
+                orgInfo["basic"] = {}
+            orgInfo["basic"]["logo"] = avatar
+        if name:
+            if "basic" not in orgInfo:
+                orgInfo["basic"] = {}
+            orgInfo["basic"]["name"] = name
+        if orgInfo:
+            yield Db.batch_insert(orgKey, "entities", orgInfo)
+        request.redirect('/admin/org')
+
+    @defer.inlineCallbacks
+    def _renderOrgInfo(self, request):
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        orgId = args["orgKey"]
+        landing = not self._ajax
+        isAdmin = yield utils.isAdmin(myId, orgId)
+        if not isAdmin:
+            raise Unauthorized()
+        if script and landing:
+            yield render(request, "admin.mako", **args)
+
+        if script and appchange:
+            yield renderScriptBlock(request, "admin.mako", "layout",
+                                    landing, "#mainbar", "set", **args)
+
+        orgInfo = yield Db.get_slice(orgId, "entities", ['basic'])
+        orgInfo = utils.supercolumnsToDict(orgInfo)
+
+        args["orgInfo"]= orgInfo
+
+        if script:
+            yield renderScriptBlock(request, "admin.mako", "orgInfo",
+                                    landing, "#add-users", "set", **args)
+
+        if script and landing:
+            request.write("</body></html>")
+
 
     @defer.inlineCallbacks
     def _renderAddUsers(self, request):
@@ -255,6 +307,8 @@ class Admin(base.BaseResource):
             d = self._addUsers(request)
         elif segmentCount == 1 and request.postpath[0] == "delete":
             d = self._deleteUser(request)
+        elif segmentCount == 1 and request.postpath[0] == "org":
+            d = self._updateOrgInfo(request)
 
         return self._epilogue(request, d)
 
@@ -267,5 +321,7 @@ class Admin(base.BaseResource):
             d = self._listBlockedUsers(request)
         elif segmentCount == 1 and request.postpath[0] == "people":
             d = self._listUsers(request)
+        elif segmentCount == 1 and request.postpath[0] == "org":
+            d = self._renderOrgInfo(request)
 
         return self._epilogue(request, d)
