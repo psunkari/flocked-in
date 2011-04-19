@@ -42,13 +42,13 @@ for plg in _pluginList:
 whitelist = []
 blacklist = []
 try:
-    wlist = open('whitelist.txt', 'r').readlines()
+    wlist = open('etc/whitelist.txt', 'r').readlines()
     whitelist = [domain.strip() for domain in wlist if domain]
 except IOError:
     pass
 
 try:
-    blist = open('blacklist.txt', 'r').readlines()
+    blist = open('etc/blacklist.txt', 'r').readlines()
     blacklist = [domain.strip() for domain in blist if domain]
 except IOError:
     pass
