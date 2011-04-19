@@ -13,8 +13,9 @@ from social.isocial     import IItemType
 
 
 # Read configuration
+config_sources = os.environ.get("CONFIG_SOURCES", "etc/social.cfg").split(",")
 Config = ConfigParser.ConfigParser()
-Config.read([os.path.abspath('etc/social.cfg')])
+Config.read([os.path.abspath(source) for source in config_sources])
 
 
 # Connect to Cassandra

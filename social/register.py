@@ -31,7 +31,7 @@ def getOrgKey(domain):
 @defer.inlineCallbacks
 @dump_args
 def send_email(emailId, token, username):
-    rootUrl = Config.get('General', 'Home')
+    rootUrl = Config.get('General', 'URL')
     subject  = ''
     if username:
         subject = "%s has invited you to join Jujubi" %(username)
