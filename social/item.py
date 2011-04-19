@@ -57,7 +57,7 @@ class ItemResource(base.BaseResource):
                                   relation.initFollowersList()])
 
         if not utils.checkAcl(myKey, meta["acl"], owner,
-                             relation, myOrgId, meta["aclIds"]):
+                             relation, myOrgId):
             defer.returnValue(None)
 
         if script and appchange:
@@ -665,7 +665,7 @@ class ItemResource(base.BaseResource):
 
                 yield feed.deleteFeed(userId, itemId, convId, convType,
                                          convACL, convOwnerId, responseType,
-                                         followers, tagId, deleteAll=delteAll)
+                                         followers, tagId, deleteAll=deleteAll)
 
 
         #remove from itemLikes

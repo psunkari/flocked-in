@@ -6,6 +6,7 @@ import datetime
 import base64
 import re
 import string
+import pickle
 
 from ordereddict        import OrderedDict
 from twisted.internet   import defer
@@ -139,23 +140,21 @@ def getUniqueKey():
 def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
                   ownerOrgId=None, groupIds = None):
     owner = ownerId or request.getSession(IAuthInfo).username
-    acl = acl if acl else (getRequestArg(request, "acl") or "company")
+    if not ownerOrgId:
+        ownerOrgId = request.getSession(IAuthInfo).organization
+    if not ownerOrgId:
+        col = yield Db.get(owner, "entities", "org", "basic")
+        ownerOrgId = col.column.value
 
-    if acl == "company":
-        if not ownerOrgId:
-            col = yield Db.get(owner, "entities", "org", "basic")
-            aclIds = col.column.value
-        else:
-            aclIds = ownerOrgId
-    elif acl == "group":
-        aclIds = ",".join(groupIds)
-    else:
-        aclIds = ""
+    if not acl:
+        acl = getRequestArg(request, "acl")
+    if not acl:
+        acl = {"accept":{"orgs":[ownerOrgId]}}
+    acl = pickle.dumps(acl)
 
     meta = {
         "meta": {
             "acl": acl,
-            "aclIds": aclIds,
             "type": itemType,
             "uuid": uuid.uuid1().bytes,
             "owner": owner,
@@ -201,42 +200,67 @@ def getCompanyGroups(orgId):
 
 
 @defer.inlineCallbacks
-def expandAcl(userKey, acl, parentUserKey=None):
+def expandAcl(userKey, acl, convOwnerId=None):
     keys = set()
-    if acl in ["friends", "company", "public"]:
+    acl = pickle.loads(acl)
+    log.msg(acl)
+    accept = acl.get("accept", {})
+    deny = acl.get('deny', {})
+
+    #if acl in ["friends", "company", "public"]:
+    if "users" in accept:
+        for uid in accept["users"]:
+            if uid not in deny.get("users", []) :
+                keys.update(accept["users"])
+    if "groups" in accept:
+        groups = accept["groups"][:]
+        for groupId in groups[:]:
+            if groupId in deny.get("groups", []):
+                groups.remove(groupId)
+        groupMembers = yield Db.multiget_slice(groups,"followers")
+        groupMembers = multiColumnsToDict(groupMembers)
+        for groupId in groupMembers:
+           keys.update(set(groupMembers[groupId].keys()))
+
+    if any([typ in ["friends", "orgs", "public"] for typ in accept]):
         friends = yield getFriends(userKey, count=INFINITY)
-        if acl == "friends" and parentUserKey:
-            friends1 = yield getFriends(parentUserKey, count=INFINITY)
+        if "friends"  in accept and convOwnerId:
+            friends1 = yield getFriends(convOwnerId, count=INFINITY)
             commonFriends = friends.intersection(friends1)
             keys.update(commonFriends)
         else:
             keys.update(friends)
-    if acl in ["company", "public"]:
+    if any([typ in ["orgs", "public"] for typ in accept]):
         companyKey = yield getCompanyKey(userKey)
         followers = yield getFollowers(userKey, count=INFINITY)
         keys.update(followers)
         keys.update(set([companyKey]))
-        ###XXX: group acl should be handled separately
-        groups = yield getCompanyGroups(companyKey)
-        keys.update(groups)
     defer.returnValue(keys)
 
 
-def checkAcl(userKey, acl, owner, relation,
-            userOrgId=None, aclIds=''):
+def checkAcl(userId, acl, owner, relation, userOrgId=None):
 
-    if acl == "public":
+    acl = pickle.loads(acl)
+    deny = acl.get("deny", {})
+    accept = acl.get("accept", {})
+
+    if userId in deny.get("users", []) or \
+       userOrgId in deny.get("org", []) or \
+       (deny.get("friends", []) and owner in relation.friends) or \
+       any([groupid in deny.get("groups", []) for groupid in relation.subscriptions]):
+        return False
+
+    if "public" in accept:
         return True
-    if acl == "company":
-        return userOrgId in aclIds.split(",")
-    if acl in ["friends"]:
-        if userKey == owner:
-            return True
-        else:
-            return owner in relation.friends if relation.friends else False
-    if acl == "group":
-        return True
-        # check if the user belongs to any of the groups in aclIds
+    elif "orgs" in accept:
+        return userOrgId in accept["orgs"]
+    elif "groups" in accept:
+        return any([groupid in accept["groups"] for groupid in relation.subscriptions])
+    elif "friends" in accept:
+        return (userId == owner) or (owner in relation.friends)
+    elif "users" in accept:
+        return userId in accept["users"]
+    return False
 
 
 def encodeKey(key):

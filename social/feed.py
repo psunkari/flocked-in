@@ -342,7 +342,7 @@ class FeedResource(base.BaseResource):
             owner = meta["owner"]
 
             if not utils.checkAcl(userKey, meta["acl"], owner,
-                                  relation, myOrgId, meta["aclIds"]):
+                                  relation, myOrgId):
                 convs.remove(convId)
                 # delete the items from feed
                 continue

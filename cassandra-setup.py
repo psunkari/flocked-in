@@ -4,6 +4,7 @@ import sys
 import getopt
 import uuid
 import time
+import pickle
 
 from telephus.protocol import ManagedCassandraClientFactory
 from telephus.client import CassandraClient
@@ -307,7 +308,7 @@ def addSampleData(client):
                                     "access": "private",
                                     "type": "group" }})
     yield client.insert(exampleKey, "orgGroups", '', managementGroupId)
-    
+
     programmersGroupId = utils.getUniqueKey()
     yield client.batch_insert(programmersGroupId, "entities", {
                                 "basic": {
@@ -597,12 +598,14 @@ def addSampleData(client):
     yield client.insert(ashokKey, "displayNameIndex", "", "kevin:"+kevinKey)
 
     # Create activity items and insert into feeds and userItems
+    acl_friends = pickle.dumps({"accept":{"friends":[]}})
+    acl_company = pickle.dumps({"accept":{"orgs": [exampleKey]}})
+
     timeUUID = uuid.uuid1().bytes
     timestamp = str(int(time.time()))
     yield client.batch_insert(kevinToAshokKey, "items", {
                                     "meta": {
-                                        "acl": "company",
-                                        "aclIds": exampleKey,
+                                        "acl": acl_company,
                                         "owner": kevinKey,
                                         "type": "activity",
                                         "subType": "connection",
@@ -620,8 +623,7 @@ def addSampleData(client):
     timeUUID = uuid.uuid1().bytes
     yield client.batch_insert(ashokToKevinKey, "items", {
                                     "meta": {
-                                        "acl": "friends",
-                                        "aclIds":"",
+                                        "acl": acl_friends,
                                         "owner": ashokKey,
                                         "type": "activity",
                                         "subType": "connection",
@@ -640,8 +642,7 @@ def addSampleData(client):
     timestamp = str(int(time.time()))
     yield client.batch_insert(williamToPaulKey, "items", {
                                     "meta": {
-                                        "acl": "friends",
-                                        "aclIds":"",
+                                        "acl": acl_friends,
                                         "owner": williamKey,
                                         "type": "activity",
                                         "subType": "connection",
@@ -660,8 +661,7 @@ def addSampleData(client):
     timeUUID = uuid.uuid1().bytes
     yield client.batch_insert(paulToWilliamKey, "items", {
                                     "meta": {
-                                        "acl": "friends",
-                                        "aclIds":"",
+                                        "acl": acl_friends,
                                         "owner": paulKey,
                                         "type": "activity",
                                         "subType": "connection",
@@ -688,8 +688,7 @@ def addSampleData(client):
     timestamp = str(int(time.time()))
     yield client.batch_insert(williamFollowingKevinKey, "items", {
                                     "meta": {
-                                        "acl": "friends",
-                                        "aclIds":"",
+                                        "acl": acl_friends,
                                         "owner": williamKey,
                                         "type": "activity",
                                         "subType": "following",
