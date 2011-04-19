@@ -17,11 +17,6 @@ from social.isocial     import IAuthInfo
 from social.template    import render
 from social.logging     import dump_args, profile
 
-DEVMODE = Config.get('General', 'DevMode') == 'True'
-DEVMODE = True
-MAXFILESIZE = 4*1024*1024
-
-
 @profile
 @defer.inlineCallbacks
 @dump_args
@@ -46,8 +41,9 @@ def send_email(emailId, token, username):
     msg = MIMEText("%(subject)s."
             "Click on the link to activate your account. "
             "%(rootUrl)s/register?emailId=%(emailId)s&token=%(token)s"%(locals()))
-    to_addr = 'praveen@synovel.com' if DEVMODE else emailId
-    from_addr = "noreply@synovel.com"
+    #to_addr = 'praveen@synovel.com' if DEVMODE else emailId
+    to_addr = emailId
+    from_addr = "social@synovel.com"
     msg['From'] = from_addr
     msg['To'] = to_addr
     msg['Subject'] = subject
@@ -130,7 +126,7 @@ class RegisterResource(BaseResource):
             name = userinfo['name'] if userinfo.has_key('name') else None
 
         yield Db.batch_insert(emailId, "invitations", cols)
-        yield send_email(emailId, token, name)
+        send_email(emailId, token, name)
 
     @profile
     @defer.inlineCallbacks
