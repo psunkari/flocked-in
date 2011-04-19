@@ -6,7 +6,10 @@ import datetime
 import base64
 import re
 import string
-import pickle
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
 from ordereddict        import OrderedDict
 from twisted.internet   import defer
