@@ -209,13 +209,21 @@ class MessagingResource(base.BaseResource):
         #res = yield Db.get_count(folder, "mFolderMessages")
         #args.update({"total":res})
 
-        #TODO: Get flags from mUserMessages
         mids = mids[:-1] if len(mids) == 11 else mids
+
+        if len(mids) > 0:
+            res = yield Db.get_slice(key=myKey, column_family="mUserMessages",
+                                          names=mids)
+            messageFlags = utils.supercolumnsToDict(res)
+        else:
+            messageFlags = {}
+
         res = yield Db.multiget_slice(keys=mids, column_family="messages")
         msgs = utils.multiColumnsToDict(res, ordered=True)
         for mid, msg in msgs.iteritems():
             people = yield self._generatePeopleInConversation(msg, myKey)
             msg.update({"people":people, "tid": tids[mids.index(mid)]})
+            msg.update({"flags":messageFlags[mid]})
         args.update({"messages":msgs})
         args.update({"mids":mids})
         args.update({"view":"messages"})
@@ -257,6 +265,11 @@ class MessagingResource(base.BaseResource):
             res = yield Db.get_slice(key=thread, column_family="messages")
             msgs = utils.columnsToDict(res)
             if len(msgs) > 0:
+                #Mark the message as read.XXX: This will change when
+                #   conversations are implemented
+                yield Db.insert(key=myKey, column_family="mUserMessages",
+                                value="1", column="read",
+                                super_column=thread)
                 people = yield self._generatePeopleInConversation(msgs, myKey)
                 msgs.update({"people":people})
                 args.update({"message":msgs})
@@ -276,8 +289,10 @@ class MessagingResource(base.BaseResource):
     def _deliverMessage(self, request, message, recipients=None):
         #Deliver the message to the sender's collection
         myKey = auth.getMyKey(request)
+        flags = {"read":"1"}
         yield self._checkStandardFolders(myKey)
-        yield self._deliverToUser(myKey, "%s:%s" %(myKey, "SENT"), message)
+        yield self._deliverToUser(myKey, "%s:%s" %(myKey, "SENT"), message,
+                                  flags)
 
         if not recipients:
             recipients = [x[1] for x in [email.utils.parseaddr(message["To"])]]
@@ -291,10 +306,11 @@ class MessagingResource(base.BaseResource):
             #Check if the recipient has the standard folders
             yield self._checkStandardFolders(recipient)
             yield self._deliverToUser(recipient,
-                                      "%s:%s" %(recipient, "INBOX"), message)
+                                      "%s:%s" %(recipient, "INBOX"), message,
+                                      None)
 
     @defer.inlineCallbacks
-    def _deliverToUser(self, user_id, folder_id, message):
+    def _deliverToUser(self, user_id, folder_id, message, flags):
         if message["irt"] == "":
             isNewMessage = True
         else:isNewMessage = False
@@ -316,14 +332,16 @@ class MessagingResource(base.BaseResource):
         yield Db.insert(key=user_id, column_family="mUserMessages",
                         value=conversation_id, column="conversation",
                         super_column=message_id)
-        yield Db.insert(key=user_id, column_family="mUserMessages",
-                        value="0", column="read",
-                        super_column=message_id)
-        yield Db.insert(key=user_id, column_family="mUserMessages",
-                        value="0", column="star",
-                        super_column=message_id)
 
-        #TODO:Add the flags to the message, unstarred and read etc.
+        flags = {} if flags is None else flags
+        read = flags.get("read", "0")
+        star = flags.get("star", "0")
+        yield Db.insert(key=user_id, column_family="mUserMessages",
+                        value=read, column="read",
+                        super_column=message_id)
+        yield Db.insert(key=user_id, column_family="mUserMessages",
+                        value=star, column="star",
+                        super_column=message_id)
 
         #Insert the new message to the folders cf
         yield Db.insert(key=folder_id, column_family="mFolderMessages",

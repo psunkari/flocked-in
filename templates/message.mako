@@ -119,13 +119,19 @@
     <div style="display:table-cell;width:100%">
       <div style="display:table;width:100%">
       <div style="display:table-cell;width:100px">${conversation["From"]|nameinemail}</div>
-      % if len(conversation["people"]) <= 2:
-        <div style="display:table-cell;width:130px">${", ".join(conversation["people"])}</div>
-      % else:
-        <div style="display:table-cell;width:130px">${", ".join(conversation["people"][:2])} and ${len(conversation["people"])-2} others</div>
-      % endif
+      <div style="display:table-cell;width:130px">
+        % if len(conversation["people"]) <= 2:
+          ${", ".join(conversation["people"])}
+        % else:
+          ${", ".join(conversation["people"][:2])} and ${len(conversation["people"])-2} others
+        % endif
+      </div>
       <div style="display:table-cell;width:250px">
-        <a href="/messages/thread?id=${conversation['message-id']}">${conversation["Subject"]|h}</a>
+        % if conversation["flags"]["read"] == "0":
+          <a style="font-weight:bold" href="/messages/thread?id=${conversation['message-id']}">${conversation["Subject"]|h}</a>
+        % else:
+          <a style="font-weight:normal" href="/messages/thread?id=${conversation['message-id']}">${conversation["Subject"]|h}</a>
+        % endif
       </div>
       <abbr style="display:table-cell;width:130px" class="timestamp" _ts=${conversation["date_epoch"]}>
         ${conversation["date_epoch"]|timeElapsedSince}
