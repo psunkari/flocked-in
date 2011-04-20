@@ -26,8 +26,8 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     def _folderActions(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        myKey = auth.getMyKey(request)
         landing = not self._ajax
+
         selected = request.args.get("selected", None)
         if selected: selected = [utils.decodeKey(x) for x in selected]
         folder = request.args.get("fid", [None])[0]
@@ -73,7 +73,6 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     def _composeMessage(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        myKey = auth.getMyKey(request)
         landing = not self._ajax
         recipients, body, subject, parent = self._parseComposerArgs(request)
 
@@ -131,9 +130,12 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     def _renderComposer(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        myKey = auth.getMyKey(request)
         landing = not self._ajax
-        parent = request.args.get("parent", [None])[0]
+        parent = utils.getRequestArg(request, "parent")
+
+        folders = yield Db.get_slice(myKey, "mUserFolders")
+        folders = utils.supercolumnsToDict(folders)
+        args["folders"] = folders
 
         if script and landing:
             yield render(request, "message.mako", **args)
@@ -168,10 +170,18 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     def _renderMessages(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        myKey = auth.getMyKey(request)
         landing = not self._ajax
         start = utils.getRequestArg(request, "start") or ''
         start = utils.decodeKey(start)
+
+        folderId = utils.getRequestArg(request, "folder") or "INBOX"
+        if folderId.upper() in self._specialFolders:
+            folderId = "%s:%s" %(myKey, folderId.upper())
+
+
+        folders = yield Db.get_slice(myKey, "mUserFolders")
+        folders = utils.supercolumnsToDict(folders)
+        args["folders"] = folders
 
         if script and landing:
             yield render(request, "message.mako", **args)
@@ -180,15 +190,8 @@ class MessagingResource(base.BaseResource):
             renderScriptBlock(request, "message.mako", "layout",
                               landing, "#mainbar", "set", **args)
 
-        folder = utils.getRequestArg(request, "folder") or "INBOX"
-        if folder.upper() in self._specialFolders:
-            folder = "%s:%s" %(myKey, folder.upper())
-
+        args.update({"fid":folderId})
         yield self._checkStandardFolders(myKey)
-        res = yield Db.get(key=myKey, column_family="mUserFolders",
-                           super_column=folder, column="label")
-        folder_label = res.column.value
-        args.update({"folder":folder_label, "fid":folder})
 
         res = yield Db.get_slice(key=folder, column_family="mFolderMessages",
                                  start=start, count=11, reverse=True)
@@ -239,9 +242,12 @@ class MessagingResource(base.BaseResource):
         # be expanded.
 
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        myKey = auth.getMyKey(request)
         landing = not self._ajax
         conversationView = False
+
+        folders = yield Db.get_slice(myKey, "mUserFolders")
+        folders = utils.supercolumnsToDict(folders)
+        args["folders"] = folders
 
         if script and landing:
             yield render(request, "message.mako", **args)

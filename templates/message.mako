@@ -8,6 +8,32 @@
 <%namespace name="widgets" file="widgets.mako"/>
 <%inherit file="base.mako"/>
 
+<%def name="nav_menu()">
+  <%
+    specialFolders = ["sent", "inbox", "trash", "drafts", "archives"]
+    def navMenuItem(link, text, icon):
+        return '<li><a href="%(link)s" class="ajax busy-indicator"><span class="sidemenu-icon icon %(icon)s-icon"></span><span class="sidemenu-text">%(text)s</span></a></li>' % locals()
+
+  %>
+  <div id="mymenu-container" class="sidemenu-container">
+    <ul id="mymenu" class="v-links sidemenu">
+        ${navMenuItem("/messages?folder=INBOX", _("Inbox"), "")}
+        ${navMenuItem("/messages?folder=ARCHIVES", _("Archives"), "")}
+        ${navMenuItem("/messages?folder=TRASH", _("Trash"), "")}
+        ${navMenuItem("/messages?folder=SENT", _("Sent"), "")}
+        <!--${navMenuItem("/messages?folder=DRAFTS", _("Drafts"), "")}-->
+    </ul>
+    <ul id="mymenu" class="v-links sidemenu">
+        % for folderId in folders:
+          % if folders[folderId]['label'].lower() not in specialFolders:
+            ${navMenuItem("/messages?folder=%s"%(folderId), _(folders[folderId]['label']), "")}
+          % endif
+        % endfor
+    </ul>
+  </div>
+</%def>
+
+
 <%def name="layout()">
   <div class="contents has-left">
     <div id="left">
@@ -165,10 +191,12 @@
     </div>
 </%def>
 
-<%def name="toolbar_layout(view, folder=None, fid=None, message=None)">
+<%def name="toolbar_layout(view, fid=None, message=None)">
   % if view == "messages":
     <div style="padding-bottom:10px">
-      <span>Viewing ${folder}</span>
+      % if fid:
+        <span>Viewing ${_(folders[fid]['label'])}</span>
+      % endif
         <input type="hidden" name="fid" value="${fid}"/>
         <ul id="sharebar-actions" class="h-links">
           <li><a style="padding:3px" class="button default" href="/messages/write">Write</a></li>
@@ -179,7 +207,9 @@
     </div>
   % elif view == "message":
     <div>
-        <input type="hidden" name="fid" value="${fid}"/>
+        % if fid:
+          <input type="hidden" name="fid" value="${fid}"/>
+        % endif
         <ul id="sharebar-actions" class="h-links">
           <li><a style="padding:3px" class="button default" href="/messages">Go Back</a></li>
           <li><a style="padding:3px" class="button default" href="/messages/write?parent=${message["message-id"]}">Reply</a></li>
@@ -224,7 +254,7 @@
     %endfor
   %elif view == "messages":
     <form method="post" action="/messages">
-    ${toolbar_layout(view, folder, fid)}
+    ${toolbar_layout(view, fid)}
     ${navigation_layout(view, start, end)}
     %for mid in mids:
       ${messages_layout(mid, messages[mid])}
