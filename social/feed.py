@@ -143,6 +143,9 @@ def updateFeedResponses(userKey, parentKey, itemKey, timeuuid, itemType,
     cols = utils.columnsToDict(cols, ordered=True)
 
     for tuuid, val in cols.items():
+        if tuuid == timeuuid:
+            #trying to update feedItems more than once, don't update
+            defer.returnValue(None)
         rtype = val.split(':')[0]
         if rtype not in  ('!', 'I'):
             tmp.setdefault(val.split(':')[0], []).append(tuuid)
@@ -335,14 +338,16 @@ class FeedResource(base.BaseResource):
         items = utils.multiSuperColumnsToDict(fetchedItems)
         args["items"] = items
         extraDataDeferreds = []
+        userGroups = yield Db.get_slice(userKey, "userGroups")
+        userGroups = utils.columnsToDict(userGroups)
 
         # fetch extra data (polls/events/links)
         for convId in convs[:]:
             meta = items[convId]["meta"]
             owner = meta["owner"]
 
-            if not utils.checkAcl(userKey, meta["acl"], owner,
-                                  relation, myOrgId):
+            if not utils.checkAcl(userKey, meta["acl"], owner, relation,
+                                  myOrgId, userGroups.keys()):
                 convs.remove(convId)
                 # delete the items from feed
                 continue

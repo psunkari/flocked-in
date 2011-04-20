@@ -55,9 +55,11 @@ class ItemResource(base.BaseResource):
                                   relation.initSubscriptionsList(),
                                   relation.initPendingList(),
                                   relation.initFollowersList()])
+        userGroups = yield Db.get_slice(myKey, "userGroups")
+        userGroups = utils.columnsToDict(userGroups)
 
-        if not utils.checkAcl(myKey, meta["acl"], owner,
-                             relation, myOrgId):
+        if not utils.checkAcl(myKey, meta["acl"], owner, relation,
+                             myOrgId, userGroups.keys()):
             defer.returnValue(None)
 
         if script and appchange:

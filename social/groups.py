@@ -43,7 +43,7 @@ class GroupsResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _addMember(self, request, groupId, userId, orgId, acl="company"):
+    def _addMember(self, request, groupId, userId, orgId, acl=None):
 
         itemId = utils.getUniqueKey()
         item = yield utils.createNewItem(request, "activity", userId, acl, ownerOrgId = orgId)

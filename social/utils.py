@@ -206,7 +206,6 @@ def getCompanyGroups(orgId):
 def expandAcl(userKey, acl, convOwnerId=None):
     keys = set()
     acl = pickle.loads(acl)
-    log.msg(acl)
     accept = acl.get("accept", {})
     deny = acl.get('deny', {})
 
@@ -223,7 +222,8 @@ def expandAcl(userKey, acl, convOwnerId=None):
         groupMembers = yield Db.multiget_slice(groups,"followers")
         groupMembers = multiColumnsToDict(groupMembers)
         for groupId in groupMembers:
-           keys.update(set(groupMembers[groupId].keys()))
+            keys.update(set(groupMembers[groupId].keys()))
+        keys.update(groups)
 
     if any([typ in ["friends", "orgs", "public"] for typ in accept]):
         friends = yield getFriends(userKey, count=INFINITY)
@@ -241,11 +241,15 @@ def expandAcl(userKey, acl, convOwnerId=None):
     defer.returnValue(keys)
 
 
-def checkAcl(userId, acl, owner, relation, userOrgId=None):
+def checkAcl(userId, acl, owner, relation, userOrgId=None, userGroups=[]):
 
     acl = pickle.loads(acl)
     deny = acl.get("deny", {})
     accept = acl.get("accept", {})
+
+    # if userID is owner of the conversation, show the item irrespective of acl
+    #if userId == owner:
+    #    return True
 
     if userId in deny.get("users", []) or \
        userOrgId in deny.get("org", []) or \
@@ -258,7 +262,7 @@ def checkAcl(userId, acl, owner, relation, userOrgId=None):
     elif "orgs" in accept:
         return userOrgId in accept["orgs"]
     elif "groups" in accept:
-        return any([groupid in accept["groups"] for groupid in relation.subscriptions])
+        return any([groupid in accept["groups"] for groupid in userGroups])
     elif "friends" in accept:
         return (userId == owner) or (owner in relation.friends)
     elif "users" in accept:
@@ -323,7 +327,6 @@ def userAvatar(id, userInfo, size=None):
 def companyLogo(orgInfo, size=None):
     size = size[0] if (size and len(size) != 0) else "m"
     logo = orgInfo.get("basic", {}).get("logo", None)
-    log.msg("company logo", logo)
     if logo:
         imgType, itemId = logo.split(":")
         return "/avatar/%s_%s.%s" % (size, itemId, imgType)
