@@ -25,24 +25,3 @@
   </button>
 %endif
 </%def>
-
-
-## Render a popup button.
-## Click (hover if browser does not support scripting) on this button will open
-## a popup - most commonly a menu.
-
-<%def name="popupButton(id=None, classes='', value=None, tooltip=None)">
-  <div ${'' if not id else ('id="%s" ' % id)}onclick="$$.popups.open(event, this);"
-          class="button has-popup ${classes} ${'has-tooltip' if tooltip else ''}"
-          role="button" tabIndex="0">
-  %if value:
-    <span ${'' if not id else ('id="%s-content" ' % id)}
-          class="button-content">${value}</span>
-    <div class="tooltip">
-      <span ${'' if not id else ('id="%s-tooltip" ' % id)}
-            class="tooltip-content">${tooltip}</span>
-    </div>
-  %endif
-    ${caller.body()}
-  </div>
-</%def>

@@ -13,7 +13,10 @@
     background: #dbdbdb url(/public/images/ui.png) no-repeat right -256px;
     cursor: pointer;
 }
-.button-text {
+button.button {
+    height: 22px;
+}
+.button-content {
     display: block;
     height: 1.5em;
     line-height: 1.5em;
@@ -31,7 +34,7 @@
     color: white;
     font-weight: bold;
 }
-.default > .button-text {
+.default > .button-content {
     padding: 0 12px;
 }
 .button:active, .button:focus, .button:hover {
@@ -41,54 +44,10 @@
     background-image: none;
 }
 
-.button.has-popup {
-    background: #dbdbdb url(/public/images/ui.png) no-repeat right -192px;
-}
-.has-popup > .button-text {
-    display: block;
-    padding-right: 22px;
-}
-.button-icon {
-    height: 16px;
-    width: 16px;
-    margin: 2px;
-}
 
-.popup {
-    display: none;
-    position: absolute;
-    background: white;
-    border-width: 1px 1px 2px;
-    border-color: #204573;
-    border-style: solid;
-    z-index: 4;
-}
-.button > .popup {
-    margin: 0 -1px;
-    min-width: 125%;
-}
-.noscript .has-popup:hover > .popup,
-.popup-open > .popup {
-    display: block;
-}
-
-.noscript .has-popup:hover,
-.popup-open {
-    position: relative;
-    background: white !important;
-    border-color: #204573 #204573 white !important;
-    z-index: 9;
-}
-
-.noscript .has-popup:hover .button-text,
-.popup-open .button-text {
-    background: white url(/public/images/ui.png) no-repeat right -128px;
-    position: relative;
-    padding-bottom: 1px;
-    margin-bottom: -1px;
-    z-index: 10;
-}
-
+/*
+ * Tooltips
+ */
 .has-tooltip {
     position: relative;
 }
@@ -109,7 +68,7 @@
 .tooltip.left {
     left: 0;
 }
-.tooltip-contents {
+.tooltip-content {
     display: block;
     white-space: pre;
     background-color: #333;
@@ -119,27 +78,7 @@
 .has-tooltip:hover .tooltip {
     display: block;
 }
-.popup-open .tooltip {
-    display: none !important;
-}
 
-.v-links .separator {
-    border: 0px none !important;
-}
-.popup li {
-    background: white;
-    color: inherit;
-    display: block;
-    padding: 0 5px;
-    white-space: nowrap;
-    border: 1px solid transparent;
-}
-.popup li:focus, .popup li:active, .popup li:hover {
-    text-decoration: none;
-    color: inherit;
-    border-color: #C3D9FF #A0B5D9 #A0B5D9 #C3D9FF;
-    background: #E8EEFA url(/public/images/ui.png) no-repeat left top;
-}
 
 /*
  * Autocomplete menu items
@@ -159,4 +98,21 @@
 }
 .ui-state-focus .ui-ac-meta {
   color: #CCC;
+}
+
+
+/*
+ * Menu
+ */
+.ui-menu {
+  position: absolute;
+  box-shadow: 0 4px 6px #AAA;
+  border: 1px solid #CCC !important;
+  outline: none !important;
+}
+
+.ui-menu-separator {
+  max-height: 0px;
+  border-bottom: 1px solid #CCC;
+  clear: left;
 }

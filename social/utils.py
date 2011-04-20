@@ -4,6 +4,7 @@ import uuid
 import hashlib
 import datetime
 import base64
+import json
 import re
 import string
 try:
@@ -139,6 +140,7 @@ def getUniqueKey():
     u = uuid.uuid1()
     return base64.urlsafe_b64encode(u.bytes)[:-2]
 
+
 @defer.inlineCallbacks
 def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
                   ownerOrgId=None, groupIds = None):
@@ -151,10 +153,12 @@ def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
 
     if not acl:
         acl = getRequestArg(request, "acl")
-    if not acl:
-        acl = {"accept":{"orgs":[ownerOrgId]}}
-    acl = pickle.dumps(acl)
+        try:
+            acl = json.loads(acl);
+        except:
+            acl = {"accept":{"orgs":[ownerOrgId]}}
 
+    acl = pickle.dumps(acl)
     meta = {
         "meta": {
             "acl": acl,

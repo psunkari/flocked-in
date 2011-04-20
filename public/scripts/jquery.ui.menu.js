@@ -11,6 +11,12 @@
  *	jquery.ui.core.js
  *	jquery.ui.widget.js
  */
+
+/*
+ * Prasad:
+ *   1. Removed support for submenus
+ *   2. Removed support for paging (we don't need it + _hasScroll() seems to be wrong)
+ */
 (function($) {
 	
 var idIncrement = 0;
@@ -26,7 +32,6 @@ $.widget("ui.menu", {
 	},
 	_create: function() {
 		var self = this;
-		this.activeMenu = this.element;
 		this.menuId = this.element.attr( "id" ) || "ui-menu-" + idIncrement++;
 		this.element
 			.addClass( "ui-menu ui-widget ui-widget-content ui-corner-all" )
@@ -95,66 +100,11 @@ $.widget("ui.menu", {
 				event.preventDefault();
 				event.stopImmediatePropagation();
 				break;
-			case $.ui.keyCode.LEFT:
-				if (self.left( event )) {
-					event.stopImmediatePropagation();
-				}
-				event.preventDefault();
-				break;
-			case $.ui.keyCode.RIGHT:
-				if (self.right( event )) {
-					event.stopImmediatePropagation();
-				}
-				event.preventDefault();
-				break;
 			case $.ui.keyCode.ENTER:
 				self.select( event );
 				event.preventDefault();
 				event.stopImmediatePropagation();
 				break;
-			case $.ui.keyCode.ESCAPE:
-				if ( self.left( event ) ) {
-					event.stopImmediatePropagation();
-				}
-				event.preventDefault();
-				break;
-			default:
-				event.stopPropagation();
-				clearTimeout(self.filterTimer);
-				var prev = self.previousFilter || "";
-				var character = String.fromCharCode(event.keyCode);
-				var skip = false;
-				if (character == prev) {
-					skip = true;
-				} else {
-					character = prev + character;
-				}
-				function escape(value) {
-					return value.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
-				}
-				var match = self.widget().children(".ui-menu-item").filter(function() {
-					return new RegExp("^" + escape(character), "i").test($(this).children("a").text());
-				});
-				var match = skip && match.index(self.active.next()) != -1 ? self.active.nextAll(".ui-menu-item") : match;
-				if (!match.length) {
-					character = String.fromCharCode(event.keyCode);
-					match = self.widget().children(".ui-menu-item").filter(function() {
-						return new RegExp("^" + escape(character), "i").test($(this).children("a").text());
-					});
-				}
-				if (match.length) {
-					self.focus(event, match);
-					if (match.length > 1) {
-						self.previousFilter = character;
-						self.filterTimer = setTimeout(function() {
-							delete self.previousFilter;
-						}, 1000);
-					} else {
-						delete self.previousFilter;
-					}
-				} else {
-					delete self.previousFilter;
-				}
 			}
 		});
 	},
@@ -176,19 +126,8 @@ $.widget("ui.menu", {
 	},
 	
 	refresh: function() {
-		// initialize nested menus
-		// TODO add role=listbox to these, too? or just the top level menu?
-		var submenus = this.element.find("ul:not(.ui-menu)")
-			.addClass( "ui-menu ui-widget ui-widget-content ui-corner-all" )
-			.hide()
-		
-		submenus
-			.prev("a")
-			.prepend('<span class="ui-icon ui-icon-carat-1-e"></span>');
-		
-		
 		// don't refresh list items that are already adapted
-		var items = submenus.add(this.element).children( "li:not(.ui-menu-item):has(a)" )
+		var items = this.element.children( "li:not(.ui-menu-item):has(a)" )
 			.addClass( "ui-menu-item" )
 			.attr( "role", "menuitem" );
 		
@@ -201,21 +140,6 @@ $.widget("ui.menu", {
 		var self = this;
 		
 		this.blur();
-		
-		if ( this._hasScroll() ) {
-			var borderTop = parseFloat( $.curCSS( this.element[0], "borderTopWidth", true) ) || 0,
-				paddingtop = parseFloat( $.curCSS( this.element[0], "paddingTop", true) ) || 0,
-				offset = item.offset().top - this.element.offset().top - borderTop - paddingtop,
-				scroll = this.element.attr( "scrollTop" ),
-				elementHeight = this.element.height(),
-				itemHeight = item.height();
-			if ( offset < 0 ) {
-				this.element.attr( "scrollTop", scroll + offset );
-			} else if ( offset + itemHeight > elementHeight ) {
-				this.element.attr( "scrollTop", scroll + offset - elementHeight + itemHeight );
-			}
-		}
-		
 		this.active = item.first()
 			.children( "a" )
 				.addClass( "ui-state-focus" )
@@ -230,12 +154,6 @@ $.widget("ui.menu", {
 		self.timer = setTimeout(function() {
 			self._close();
 		}, self.delay)
-		var nested = $(">ul", item);
-		if (nested.length && /^mouse/.test(event.type)) {
-			self._startOpening(nested);
-		}
-		this.activeMenu = item.parent();
-		
 		this._trigger( "focus", event, { item: item } );
 	},
 
@@ -254,61 +172,15 @@ $.widget("ui.menu", {
 		this.active = null;
 	},
 
-	_startOpening: function(submenu) {
-		clearTimeout(this.timer);
-		var self = this;
-		self.timer = setTimeout(function() {
-			self._close();
-			self._open(submenu);
-		}, self.delay);
-	},
-	
-	_open: function(submenu) {
-		this.element.find(".ui-menu").not(submenu.parents()).hide();
-			
-		var position = $.extend({}, {
-			of: this.active
-		}, $.type(this.options.position) == "function"
-			? this.options.position(this.active)
-			: this.options.position
-		);
-
-		submenu.show().position(position);
-		
-		this.active.find(">a:first").addClass("ui-state-active");
-	},
-	
 	closeAll: function() {
 		this.element
-		 .find("ul").hide().end()
 		 .find("a.ui-state-active").removeClass("ui-state-active");
 		this.blur();
-		this.activeMenu = this.element;
 	},
 	
 	_close: function() {
 		this.active.parent()
-		 .find("ul").hide().end()
 		 .find("a.ui-state-active").removeClass("ui-state-active");
-	},
-
-	left: function(event) {
-		var newItem = this.active && this.active.parents("li").first();
-		if (newItem && newItem.length) {
-			this.active.parent().hide();
-			this.focus(event, newItem);
-			return true;
-		}
-	},
-
-	right: function(event) {
-		var newItem = this.active && this.active.children("ul").children("li").first();
-		if (newItem && newItem.length) {
-			this._open(newItem.parent());
-			var current = this.active;
-			this.focus(event, newItem);
-			return true;
-		}
 	},
 
 	next: function(event) {
@@ -329,58 +201,25 @@ $.widget("ui.menu", {
 
 	_move: function(direction, edge, filter, event) {
 		if ( !this.active ) {
-			this.focus( event, this.activeMenu.children(edge)[filter]() );
+			this.focus( event, this.element.children(edge)[filter]() );
 			return;
 		}
 		var next = this.active[ direction + "All" ]( ".ui-menu-item" ).eq( 0 );
 		if ( next.length ) {
 			this.focus( event, next );
 		} else {
-			this.focus( event, this.activeMenu.children(edge)[filter]() );
+			this.focus( event, this.element.children(edge)[filter]() );
 		}
 	},
 	
 	nextPage: function( event ) {
-		if ( this._hasScroll() ) {
-			if ( !this.active || this.last() ) {
-				this.focus( event, this.activeMenu.children( ".ui-menu-item" ).first() );
-				return;
-			}
-			var base = this.active.offset().top,
-				height = this.element.height(),
-				result;
-			this.active.nextAll( ".ui-menu-item" ).each( function() {
-				result = $( this );
-				return $( this ).offset().top - base - height < 0;
-			});
-
-			this.focus( event, result );
-		} else {
-			this.focus( event, this.activeMenu.children( ".ui-menu-item" )
-				[ !this.active || this.last() ? "first" : "last" ]() );
-		}
+		this.focus( event, this.element.children( ".ui-menu-item" )
+			[ !this.active || this.last() ? "first" : "last" ]() );
 	},
 
 	previousPage: function( event ) {
-		if ( this._hasScroll() ) {
-			if ( !this.active || this.first() ) {
-				this.focus( event, this.activeMenu.children( ".ui-menu-item" ).last() );
-				return;
-			}
-
-			var base = this.active.offset().top,
-				height = this.element.height(),
-				result;
-			this.active.prevAll( ".ui-menu-item" ).each( function() {
-				result = $( this );
-				return $(this).offset().top - base + height > 0;
-			});
-
-			this.focus( event, result );
-		} else {
-			this.focus( event, this.activeMenu.children( ".ui-menu-item" )
-				[ !this.active || this.first() ? ":last" : ":first" ]() );
-		}
+		this.focus( event, this.activeMenu.children( ".ui-menu-item" )
+			[ !this.active || this.first() ? ":last" : ":first" ]() );
 	},
 
 	_hasScroll: function() {

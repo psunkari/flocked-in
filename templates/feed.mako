@@ -51,22 +51,20 @@
   </div>
 </%def>
 
-<%def name="acl_button(id)">
+<%def name="acl_button(id, defaultVal, defaultLabel)">
+  <input type="hidden" id="${id}" name="acl" value="${defaultVal}"/>
   %if script:
-    <%widgets:popupButton id="${id}" classes="acl-button" value="${_('Company')}"
-                          tooltip="${_('Anyone working at my company')}">
-      <input id="${id}-input" type="hidden" name="acl" value="company"/>
-      <div class="popup" onclick="$$.acl.updateACL(event, this.parentNode);">
-        <ul class="v-links">
-          <li type="public" info="${'Everyone'}">${_("Everyone")}</li>
-          <li type="company" info="${'Anyone working at my company'}">${_("Company")}</li>
-          <li type="friends" info="${'All my friends'}">${_("Friends")}</li>
-          <li id="${id}-groups" class="separator"></li>
-          <li id="${id}-groups-end" class="separator"></li>
-          <li type="custom">${_("Custom")}</li>
-        </ul>
-      </div>
-    </%widgets:popupButton>
+    <div id="${id}-wrapper">
+      <input type="button" class="acl-button" id="${id}-label"
+             value="${defaultLabel}" onclick="$$.acl.showACL(event, '${id}');"/>
+      <ul id="${id}-menu" class="acl-menu" style="display:none;">
+        <li><a class="acl-item" _acl="public"><div class="icon"></div>${_("Public")}</a></li>
+        <li><a class="acl-item" _acl="org:${orgKey}"><div class="icon"></div>${_("Company")}</a></li>
+        <li><a class="acl-item" _acl="friends"><div class="icon"></div>${_("Friends")}</a></li>
+        <li class="ui-menu-separator"></li>
+        <li><a class="acl-item" _acl="custom"><div class="icon"></div>${_("Custom")}</a></li>
+      </ul>
+    </div>
   %endif
 </%def>
 
@@ -89,7 +87,7 @@
       <div id="sharebar"></div>
       <div>
         <ul id="sharebar-actions" class="h-links">
-          <li>${acl_button("sharebar-acl")}</li>
+          <li>${acl_button("sharebar-acl", "{accept:{org:[%s]}}"%orgKey, "Company")}</li>
           <li>${widgets.button("sharebar-submit", "submit", "default", None, "Share")}</li>
         </ul>
         <span class="clear" style="display:block"></span>

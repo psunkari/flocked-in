@@ -447,17 +447,28 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 #sharebar-submit {
     margin-left: 6px;
-    width: 55px;
-}
-#sharebar-acl {
-    width: 100px;
-}
-#sharebar-acl > .popup {
-    min-width: 90px;
-    padding: 5px;
 }
 
-
+.acl-menu {
+    width: 120px;
+}
+.acl-footer {
+    border-top: 1px solid #CCC;
+    text-align: right;
+    clear: left;
+    padding: 2px;
+}
+.acl-item {
+    padding-left: 20px !important;
+}
+.acl-item .icon {
+    position: absolute;
+    background: transparent;
+    left: 4px;
+}
+.acl-checked .icon {
+    background-position: 0 -320px;
+}
 
 /*
  * Feed

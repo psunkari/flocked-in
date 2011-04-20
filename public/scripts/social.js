@@ -473,52 +473,33 @@ $$.ui = ui;
 })(social, jQuery);
 
 
-
-
 /*
- * Popup manager: manager for menus and other types of popups
+ * JSON stringify
  */
 (function($$, $) {
-var popup = {
-    _stack: [],
-
-    // Change the state of the given popup to open.
-    open: function(event, node) {
-        evt = $.event.fix(event);
-        node = $(node);
-        node.parentsUntil(".popup-open").each(function(index, item) {
-            if (item === document.body)
-                popup.closeAll();
-        })
-
-        node.addClass("popup-open");
-        popup._stack.push(node)
-
-        evt.stopPropagation();
-        evt.preventDefault();
-    },
-
-    // Hide the popup that is on the top of the stack
-    close: function() {
-        node = popup._stack.pop();
-        if (node)
-            node.removeClass("popup-open");
-    },
-
-    // Close all popups.
-    closeAll: function() {
-        while((node = popup._stack.pop()))
-            node.removeClass("popup-open");
+var json = JSON || {};
+json.stringify = JSON.stringify || function (obj) {
+    var t = typeof (obj);
+    if (t != "object" || obj === null) {
+        // simple data type
+        if (t == "string") obj = '"'+obj+'"';
+        return String(obj);
     }
-}
+    else {
+        // recurse array or object
+        var n, v, json = [], arr = (obj && obj.constructor == Array);
+        for (n in obj) {
+            v = obj[n]; t = typeof(v);
+            if (t == "string") v = '"'+v+'"';
+            else if (t == "object" && v !== null) v = JSON.stringify(v);
+            json.push((arr ? "" : '"' + n + '":') + String(v));
+        }
+        return (arr ? "[" : "{") + String(json) + (arr ? "]" : "}");
+    }
+};
 
-// Close popups when user clicks outside the popup
-$(document).click(function(event) {
-    popup.closeAll();
-});
-$$.popups = popup;
+$$.json = json;
 })(social, jQuery);
-
 
 
 
@@ -527,26 +508,58 @@ $$.popups = popup;
  */
 (function($$, $) {
 var acl = {
-    updateGroupsList: function(target) {
-        console.log("Updating groups list");
-    },
+    showACL: function(event, id) {
+        var evt = $.event.fix(event),
+            $target = $(evt.target),
+            $menu = $target.next()
 
-    updateACL: function(event, parent) {
-        evt = $.event.fix(event);
-        target = $(evt.target);
-
-        value = target.attr("type");
-        if (value) {
-            stub = parent.id;
-            $("#" + stub + "-content").html(target.html());
-            $("#" + stub + "-tooltip").html(target.attr("info"));
-            $("#" + stub + "-input").attr("value", value);
-
-            $$.popups.close();
+        if (!$menu.hasClass("ui-menu")) {
+            $menu.menu({
+                    select: function(event, ui) {
+                         $(this).hide();
+                         acl.updateACL(id, ui);
+                     }
+                 })
+                 .css("z-index", 1000);
         }
 
-        evt.preventDefault();
+        acl.refreshGroups(id);
+        $menu.show().position({
+                my: "right top",
+                at: "right top",
+                of: $target
+            }).focus();
+
+        $(document).one("click", function() {$menu.hide();});
         evt.stopPropagation();
+    },
+
+    updateACL: function(id, ui) {
+        var type = ui.item.children("a").first().attr("_acl"),
+            aclObj = {accept:{}},
+            str = ui.item.text();
+        
+        if (type === "public") {
+            aclObj.accept.public = true;
+        }
+        else if (type === "friends") {
+            aclObj.accept.friends = true;
+        }
+        else if (type.match(/^org:/)) {
+            aclObj.accept.orgs = type.substr(4).split(",");
+        }
+        else if (type.match(/^group:/)) {
+            aclObj.accept.groups = type.substr(6).split(",");
+        }
+        else {
+            return;
+        }
+
+        $("#"+id).attr("value", $$.json.stringify(aclObj));
+        $("#"+id+"-label").attr("value", ui.item.text());
+    },
+
+    refreshGroups: function(id) {
     }
 };
 $$.acl = acl;
