@@ -193,7 +193,7 @@ class MessagingResource(base.BaseResource):
         args.update({"fid":folderId})
         yield self._checkStandardFolders(myKey)
 
-        res = yield Db.get_slice(key=folder, column_family="mFolderMessages",
+        res = yield Db.get_slice(key=folderId, column_family="mFolderMessages",
                                  start=start, count=11, reverse=True)
         # Fetch the message-ids from mFolderMessages
         mids = utils.columnsToDict(res, ordered=True).values()
