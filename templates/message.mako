@@ -17,11 +17,11 @@
   %>
   <div id="mymenu-container" class="sidemenu-container">
     <ul id="mymenu" class="v-links sidemenu">
-        ${navMenuItem("/messages?folder=INBOX", _("Inbox"), "")}
-        ${navMenuItem("/messages?folder=ARCHIVES", _("Archives"), "")}
-        ${navMenuItem("/messages?folder=TRASH", _("Trash"), "")}
-        ${navMenuItem("/messages?folder=SENT", _("Sent"), "")}
-        <!--${navMenuItem("/messages?folder=DRAFTS", _("Drafts"), "")}-->
+        ${navMenuItem("/messages?fid=INBOX", _("Inbox"), "")}
+        ${navMenuItem("/messages?fid=ARCHIVES", _("Archives"), "")}
+        ${navMenuItem("/messages?fid=TRASH", _("Trash"), "")}
+        ${navMenuItem("/messages?fid=SENT", _("Sent"), "")}
+        <!--${navMenuItem("/messages?fid=DRAFTS", _("Drafts"), "")}-->
     </ul>
     <ul id="mymenu" class="v-links sidemenu">
         % for folderId in folders:

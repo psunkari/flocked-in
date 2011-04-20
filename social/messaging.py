@@ -28,34 +28,31 @@ class MessagingResource(base.BaseResource):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
 
+        folder = utils.getRequestArg(request, "fid")
+        delete = utils.getRequestArg(request, "delete")
+        archive = utils.getRequestArg(request, "archive")
         selected = request.args.get("selected", None)
         if selected: selected = [utils.decodeKey(x) for x in selected]
-        folder = request.args.get("fid", [None])[0]
-        delete = request.args.get("delete", [None])[0]
-        archive = request.args.get("archive", [None])[0]
 
         if folder:
             if folder.rfind(":") != -1 and not folder.startswith(myKey):
                 folder=None
 
-        if selected and folder and delete:
-            selected = yield Db.get_slice(key=folder,
-                                          column_family="mFolderMessages",
-                                          names=selected)
+        if selected and folder and (delete or archive):
+            selected = yield Db.get_slice(folder, "mFolderMessages", selected)
             mids = utils.columnsToDict(selected).values()
             tids = utils.columnsToDict(selected).keys()
-            trash = "%s:%s" %(myKey, "TRASH")
-            yield self._copyToFolder(trash, mids)
+            copyToFolder = ""
+            if delete:
+                copyToFolder = "%s:%s" %(myKey, "TRASH")
+            elif archive:
+                copyToFolder = "%s:%s" %(myKey, "ARCHIVES")
+
+            yield self._copyToFolder(copyToFolder, mids)
             yield self._deleteFromFolder(folder, tids)
-        elif selected and folder and archive:
-            selected = yield Db.get_slice(key=folder,
-                                          column_family="mFolderMessages",
-                                          names=selected)
-            mids =  utils.columnsToDict(selected).values()
-            tids = utils.columnsToDict(selected).keys()
-            archives = "%s:%s" %(myKey, "ARCHIVES")
-            yield self._copyToFolder(archives, mids)
-            yield self._deleteFromFolder(folder, tids)
+            # redirect to avoid reposting when user press F5.
+            # TODO: check for better solution.
+        request.redirect("/messages?fid=%s"%(folder))
 
     @defer.inlineCallbacks
     def _copyToFolder(self, destination, messages):
@@ -174,10 +171,9 @@ class MessagingResource(base.BaseResource):
         start = utils.getRequestArg(request, "start") or ''
         start = utils.decodeKey(start)
 
-        folderId = utils.getRequestArg(request, "folder") or "INBOX"
+        folderId = utils.getRequestArg(request, "fid") or "INBOX"
         if folderId.upper() in self._specialFolders:
             folderId = "%s:%s" %(myKey, folderId.upper())
-
 
         folders = yield Db.get_slice(myKey, "mUserFolders")
         folders = utils.supercolumnsToDict(folders)
