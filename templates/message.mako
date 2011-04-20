@@ -205,6 +205,18 @@
   % endif
 </%def>
 
+<%def name="navigation_layout(view, start, end)">
+  % if view == "messages":
+    <div style="display:table-row">
+      <ul class="h-links">
+        % if end != 0:
+          <li><a href="/messages?start=${end}">Next</a></li>
+        % endif
+      </ul>
+    </div>
+  % endif
+</%def>
+
 <%def name="center()">
   % if view == "conversations":
     %for conversation in conversations:
@@ -213,6 +225,7 @@
   %elif view == "messages":
     <form method="post" action="/messages">
     ${toolbar_layout(view, folder, fid)}
+    ${navigation_layout(view, start, end)}
     %for mid in mids:
       ${messages_layout(mid, messages[mid])}
     %endfor

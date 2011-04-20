@@ -170,6 +170,8 @@ class MessagingResource(base.BaseResource):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         myKey = auth.getMyKey(request)
         landing = not self._ajax
+        start = utils.getRequestArg(request, "start") or ''
+        start = utils.decodeKey(start)
 
         if script and landing:
             yield render(request, "message.mako", **args)
@@ -189,12 +191,27 @@ class MessagingResource(base.BaseResource):
         args.update({"folder":folder_label, "fid":folder})
 
         res = yield Db.get_slice(key=folder, column_family="mFolderMessages",
-                                 count=60, reverse=True)
-
+                                 start=start, count=11, reverse=True)
         # Fetch the message-ids from mFolderMessages
         mids = utils.columnsToDict(res, ordered=True).values()
         tids = utils.columnsToDict(res, ordered=True).keys()
         tids = [utils.encodeKey(x) for x in tids]
+
+        #The start key will help us go back and end key to go forward in paging
+        startKey = tids[0] if len(tids) > 0 else 0
+        endKey =  tids[-1] if len(tids) > 0 else 0
+        if len(mids) < 11:
+            endKey = 0
+        args.update({"start":startKey, "end":endKey})
+
+        # Count the total number of messages in this folder
+        #XXX: We don't really need to show the total number of messages at the
+        # moment.
+        #res = yield Db.get_count(folder, "mFolderMessages")
+        #args.update({"total":res})
+
+        #TODO: Get flags from mUserMessages
+        mids = mids[:-1] if len(mids) == 11 else mids
         res = yield Db.multiget_slice(keys=mids, column_family="messages")
         msgs = utils.multiColumnsToDict(res, ordered=True)
         for mid, msg in msgs.iteritems():
