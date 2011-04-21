@@ -114,11 +114,6 @@ class MessagingResource(base.BaseResource):
 
         yield Db.batch_insert(new_message_id, 'messages', message)
         yield self._deliverMessage(request, message, uids)
-
-        #TODO: get the folder the user was previously viewing from cookie and
-        #       render messages of the folder
-
-        request.args["fid"] = ["%s:SENT"%(myKey)]
         yield self._renderMessages(request)
         #FIX: hitting F5 would render compose message as URL is not changing.
 
@@ -170,11 +165,13 @@ class MessagingResource(base.BaseResource):
         start = utils.getRequestArg(request, "start") or ''
         start = utils.decodeKey(start)
 
-
-
-        folderId = utils.getRequestArg(request, "fid") or "INBOX"
+        c_fid = None if (landing or appchange) else request.getCookie("fid")
+        folderId = utils.getRequestArg(request, "fid") or c_fid or "INBOX"
         if folderId.upper() in self._specialFolders:
             folderId = "%s:%s" %(myKey, folderId.upper())
+
+        if folderId != c_fid :
+            request.addCookie('fid', folderId, path="/ajax/messages")
 
         folders = yield Db.get_slice(myKey, "mUserFolders")
         folders = utils.supercolumnsToDict(folders)
