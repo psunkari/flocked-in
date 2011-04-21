@@ -21,7 +21,52 @@ class MessagingResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _threadActions(self, request):
-        defer.returnValue('0')
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        landing = not self._ajax
+
+        _validActions = ["delete", "star", "unstar", "read", "unread", "fullview"]
+        parent = utils.getRequestArg(request, "parent") or None
+        parentTid = utils.getRequestArg(request, "tid") or None
+        folder = utils.getRequestArg(request, "fid") or None
+        delete = utils.getRequestArg(request, "delete")
+        archive = utils.getRequestArg(request, "archive")
+        isOtherActions = utils.getRequestArg(request, "other")
+        action = utils.getRequestArg(request, "more")
+        if not (parent or folder):
+            raise errors.InvalidParams()
+
+        mids = [parent]
+        tids = [utils.decodeKey(parentTid)]
+        copyToFolder = ""
+        if delete:
+            copyToFolder = "%s:%s" %(myKey, "TRASH")
+            yield self._copyToFolder(copyToFolder, mids)
+            yield self._deleteFromFolder(folder, tids)
+        elif archive:
+            copyToFolder = "%s:%s" %(myKey, "ARCHIVES")
+            yield self._copyToFolder(copyToFolder, mids)
+            yield self._deleteFromFolder(folder, tids)
+        elif isOtherActions:
+            if action not in _validActions:
+                raise errors.InvalidParams()
+            else:
+                if action == "star":
+                    self._setFlagOnMessage(myKey, parent, "star", "1")
+                elif action == "unstar":
+                    self._setFlagOnMessage(myKey, parent, "star", "0")
+                elif action == "read":
+                    self._setFlagOnMessage(myKey, parent, "read", "1")
+                elif action == "unread":
+                    self._setFlagOnMessage(myKey, parent, "read", "0")
+
+        request.redirect("/messages?fid=%s"%(folder if folder else "inbox"))
+
+    @defer.inlineCallbacks
+    def _setFlagOnMessage(self, user, message, flag, fValue):
+        #XXX:Check if user has access to this message
+        yield Db.insert(key=user, column_family="mUserMessages",
+                        value=fValue, column=flag,
+                        super_column=message)
 
     @defer.inlineCallbacks
     def _folderActions(self, request):
@@ -117,12 +162,14 @@ class MessagingResource(base.BaseResource):
         yield self._renderMessages(request)
         #FIX: hitting F5 would render compose message as URL is not changing.
 
-
     @defer.inlineCallbacks
     def _renderComposer(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
         parent = utils.getRequestArg(request, "parent")
+        action = utils.getRequestArg(request, "action") or "reply"
+        fid = request.args.get("fid", ["inbox"])[0]
+        args.update({"fid":fid})
 
         folders = yield Db.get_slice(myKey, "mUserFolders")
         folders = utils.supercolumnsToDict(folders)
@@ -144,7 +191,10 @@ class MessagingResource(base.BaseResource):
             else:
                 parent_msg = None
             args.update({"parent_msg":parent_msg})
-            args.update({"view":"reply"})
+            if action == "forward":
+                args.update({"view":"forward"})
+            else:
+                args.update({"view":"reply"})
             if script:
                 yield renderScriptBlock(request, "message.mako", "center",
                                         landing, ".center-contents", "set", **args)
@@ -235,7 +285,9 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     def _renderThread(self, request):
         #Based on the request, render a message or a conversation
-        thread=request.args.get("id", [None])[0]
+        thread = request.args.get("id", [None])[0]
+        folder = request.args.get("fid", [None])[0]
+        tid = request.args.get("tid", [None])[0]
         #XXXBased on the user's preference, the id can be a message id or a
         # conversation id. In a conversation view, a single message can only be
         # viewed in the context of the entire conversation it belongs to. If
@@ -258,7 +310,7 @@ class MessagingResource(base.BaseResource):
             renderScriptBlock(request, "message.mako", "layout",
                               landing, "#mainbar", "set", **args)
 
-        if thread:
+        if thread and folder and tid:
             #XXX: the viewer needs to have the necessary acls to view this
             res = yield Db.get_slice(key=thread, column_family="messages")
             msgs = utils.columnsToDict(res)
@@ -268,10 +320,17 @@ class MessagingResource(base.BaseResource):
                 yield Db.insert(key=myKey, column_family="mUserMessages",
                                 value="1", column="read",
                                 super_column=thread)
+                res = yield Db.get_slice(key=myKey,
+                                         column_family="mUserMessages",
+                                         names=[thread])
+                flags = utils.supercolumnsToDict(res)[thread]
                 people = yield self._generatePeopleInConversation(msgs, myKey)
                 msgs.update({"people":people})
                 args.update({"message":msgs})
                 args.update({"id":thread})
+                args.update({"fid":folder})
+                args.update({"tid":tid})
+                args.update({"flags":flags})
                 args.update({"view":"message"})
                 if script:
                     yield renderScriptBlock(request, "message.mako", "center",
@@ -279,9 +338,9 @@ class MessagingResource(base.BaseResource):
                 else:
                     yield render(request, "message.mako", **args)
             else:
-                request.write("Message not found")
+                request.redirect("/messages?fid=%s"%(folder if folder else "inbox"))
         else:
-            request.write("Message not found")
+            request.redirect("/messages?fid=%s"%(folder if folder else "inbox"))
 
     @defer.inlineCallbacks
     def _deliverMessage(self, request, message, recipients):
@@ -464,7 +523,6 @@ class MessagingResource(base.BaseResource):
         elif segmentCount == 1 and request.postpath[0] == "write":
             d = self._composeMessage(request)
         elif segmentCount == 1 and request.postpath[0] == "thread":
-            #Handle actions on a single thread
-            print request.args
+            d = self._threadActions(request)
 
         return self._epilogue(request, d)
