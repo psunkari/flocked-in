@@ -9,7 +9,7 @@ from twisted.python     import log
 
 from telephus.cassandra     import ttypes
 
-from social             import Db, utils, base, auth
+from social             import Db, utils, base, auth, errors
 from social.template    import render, renderScriptBlock
 from social.isocial     import IAuthInfo
 from social.constants   import PEOPLE_PER_PAGE
@@ -71,44 +71,24 @@ class MessagingResource(base.BaseResource):
     def _composeMessage(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
-        recipients, body, subject, parent = self._parseComposerArgs(request)
 
+        recipients, body, subject, parent = self._parseComposerArgs(request)
         if len(recipients) == 0:
             raise "No recipients specified"
-        res = yield Db.get_slice(key=myKey, column_family='entities')
-        res = utils.supercolumnsToDict(res)
-        name = res["basic"]["name"]
-        email = res["contact"]["mail"]
+
+        name = args['me']["basic"]["name"]
+        email = args['me']["basic"]["emailId"]
         from_header = "%s <%s>" %(name, email)
 
+        date_header, epoch = self._createDateHeader()
         new_message_id = str(utils.getUniqueKey()) + "@synovel.com"
         recipient_header, uids = yield self._createRecipientHeader(recipients)
-        date_header, epoch = self._createDateHeader()
 
-        if parent:
-            #XXX: Check if user has access to this message via acl
-            res = yield Db.multiget_slice(keys=[parent], column_family="messages")
-            res = utils.multiColumnsToDict(res)
-            if parent in res.keys():
-                parent = res[parent]
-                references = parent["references"] + parent["message-id"]
-                irt = parent["message-id"]
-                message = {
-                          'From': from_header,
-                          'To': recipient_header,
-                          'Subject': subject,
-                          'body':body,
-                          'message-id':new_message_id,
-                          'Date':date_header,
-                          'references':references,
-                          'irt':irt,
-                          'date_epoch': str(epoch)
-                        }
-            else:
-                #Throw an error
-                parent = None
-        else:
-            message = {
+        fid = utils.getRequestArg(request, 'fid') or "INBOX"
+        # TODO: use the folderId from cookie
+        #yield self._renderMessages(request)
+
+        message = {
                       'From': from_header,
                       'To': recipient_header,
                       'Subject': subject,
@@ -119,10 +99,29 @@ class MessagingResource(base.BaseResource):
                       'irt':"",
                       'date_epoch': str(epoch)
                     }
-        print "Delivering a new message: " + str(message)
-        yield Db.batch_insert(key=new_message_id, column_family = 'messages',
-                              mapping = message)
+        if parent:
+            #XXX: Check if user has access to this message via acl
+            parent = yield Db.get_slice(parent, "messages")
+            parent = utils.columnsToDict(parent)
+            if parent:
+                message["references"] = parent["references"] + parent["message-id"]
+                message['irt'] = parent["message-id"]
+            else:
+                #Throw an error
+                parent = None
+                raise errors.InvalidParams()
+
+
+        yield Db.batch_insert(new_message_id, 'messages', message)
         yield self._deliverMessage(request, message, uids)
+
+        #TODO: get the folder the user was previously viewing from cookie and
+        #       render messages of the folder
+
+        request.args["fid"] = ["%s:SENT"%(myKey)]
+        yield self._renderMessages(request)
+        #FIX: hitting F5 would render compose message as URL is not changing.
+
 
     @defer.inlineCallbacks
     def _renderComposer(self, request):
@@ -170,6 +169,8 @@ class MessagingResource(base.BaseResource):
         landing = not self._ajax
         start = utils.getRequestArg(request, "start") or ''
         start = utils.decodeKey(start)
+
+
 
         folderId = utils.getRequestArg(request, "fid") or "INBOX"
         if folderId.upper() in self._specialFolders:
