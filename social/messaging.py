@@ -284,70 +284,52 @@ class MessagingResource(base.BaseResource):
             request.write("Message not found")
 
     @defer.inlineCallbacks
-    def _deliverMessage(self, request, message, recipients=None):
+    def _deliverMessage(self, request, message, recipients):
         #Deliver the message to the sender's collection
         myKey = auth.getMyKey(request)
         flags = {"read":"1"}
+        folder = "%s:%s" %(myKey, "SENT")
         yield self._checkStandardFolders(myKey)
-        yield self._deliverToUser(myKey, "%s:%s" %(myKey, "SENT"), message,
-                                  flags)
-
-        if not recipients:
-            recipients = [x[1] for x in [email.utils.parseaddr(message["To"])]]
-            res = yield Db.multiget(keys=recipients, column_family="userAuth",
-                                    column="user")
-            res = utils.multiColumnsToDict(res)
-            recipients = [x['user'] for x in res.values() if 'user' in x]
+        yield self._deliverToUser(myKey, folder, message, flags)
 
         for recipient in recipients:
             #Deliver  to each recipient's Inbox
             #Check if the recipient has the standard folders
+            folder = "%s:%s" %(recipient, "INBOX")
             yield self._checkStandardFolders(recipient)
-            yield self._deliverToUser(recipient,
-                                      "%s:%s" %(recipient, "INBOX"), message,
-                                      None)
+            yield self._deliverToUser(recipient, folder, message, None)
 
     @defer.inlineCallbacks
-    def _deliverToUser(self, user_id, folder_id, message, flags):
-        if message["irt"] == "":
-            isNewMessage = True
-        else:isNewMessage = False
-        message_id = message["message-id"]
+    def _deliverToUser(self, userId, folderId, message, flags):
+
+        isNewMessage = (message["irt"] == "")
         if isNewMessage:
-            conversation_id = utils.getUniqueKey()
+            conversationId = utils.getUniqueKey()
         else:
             #XXX:What if the parent is deleted?Do we fetch the references?
             try:
-                col = yield Db.get(key=user_id, column_family="mUserMessages",
-                                          column="conversation",
-                                          super_column=message["irt"])
-                conversation_id = str(col.column.value)
-                print "Found the conversationid: %s" %conversation_id
+                col = yield Db.get(userId, "mUserMessages",
+                                   "conversation", message["irt"])
+                conversationId = str(col.column.value)
             except ttypes.NotFoundException:
-                conversation_id = utils.getUniqueKey()
-
-        message_id = message["message-id"]
-        yield Db.insert(key=user_id, column_family="mUserMessages",
-                        value=conversation_id, column="conversation",
-                        super_column=message_id)
+                conversationId = utils.getUniqueKey()
 
         flags = {} if flags is None else flags
-        read = flags.get("read", "0")
-        star = flags.get("star", "0")
-        yield Db.insert(key=user_id, column_family="mUserMessages",
-                        value=read, column="read",
-                        super_column=message_id)
-        yield Db.insert(key=user_id, column_family="mUserMessages",
-                        value=star, column="star",
-                        super_column=message_id)
+        messageId = message["message-id"]
+
+        messageInfo = {}
+        messageInfo["conversation"] = conversationId
+        messageInfo["read"] = flags.get("read", "0")
+        messageInfo["star"] = flags.get("star", "0")
+
+        yield Db.batch_insert(userId, "mUserMessages", {messageId: messageInfo})
 
         #Insert the new message to the folders cf
-        yield Db.insert(key=folder_id, column_family="mFolderMessages",
-                        column=uuid.uuid1().bytes, value=message_id)
+        yield Db.insert(folderId, "mFolderMessages", messageId, uuid.uuid1().bytes)
 
         #Insert this message into a new conversation
-        yield Db.insert(key=conversation_id, column_family="mConversationMessages",
-                        column=uuid.uuid1().bytes, value=message_id)
+        yield Db.insert(conversationId, "mConversationMessages",
+                        messageId, uuid.uuid1().bytes)
 
     def _preFormatBodyForReply(self, message, reply):
         body = message['body']
@@ -375,19 +357,25 @@ class MessagingResource(base.BaseResource):
     def _createRecipientHeader(self, recipients):
         recipients_email = []
         for recipient in recipients:
-            rtuple = email.utils.parseaddr(recipient)
-            remail = rtuple[1].lower()
-            recipients_email.append(remail)
+            name, mailId = email.utils.parseaddr(recipient)
+            if mailId is not '':
+                recipients_email.append(mailId)
+            else:
+                raise errors.InvalidEmailId()
 
-        res = yield Db.multiget_slice(keys=recipients_email, column_family="userAuth")
+        res = yield Db.multiget_slice(recipients_email, "userAuth", ["user"])
         res = utils.multiColumnsToDict(res)
+
+        if not all(res.values()):
+            raise errors.InvalidEmailId()
+
         recipient_strings = []
         uids = [x['user'] for x in res.values() if 'user' in x]
-        res = yield Db.multiget_slice(keys=uids, column_family='entities')
+        res = yield Db.multiget_slice(uids, 'entities', ["basic"])
         res = utils.multiSuperColumnsToDict(res)
         for uid in res.keys():
             recipient_strings.append("%s <%s>" %(res[uid]["basic"]["name"],
-                                                 res[uid]["contact"]["mail"]))
+                                                 res[uid]["basic"]["emailId"]))
         recipient_header = ", ".join(recipient_strings)
         defer.returnValue((recipient_header, uids))
 
@@ -395,13 +383,11 @@ class MessagingResource(base.BaseResource):
         #Since we will deal with composer related forms.Take care of santizing
         # all the input and fill with safe defaults wherever needed.
         #To, CC, Subject, Body,
-        recipients = request.args.get("recipients", [''])
-        recipients = re.sub(',\s+', ',', recipients[0])
-        recipients = recipients.split(",")
-        body = request.args.get("body", [""])
-        body = body[0]
-        subject = request.args.get("subject", ["Private message from XYZ"])[0]
-        parent = request.args.get("parent", [None])[0] #TODO
+        body = utils.getRequestArg(request, "body")
+        parent = utils.getRequestArg(request, "parent") #TODO
+        subject = utils.getRequestArg(request, "subject") or "Private message from XYZ"
+        recipients = utils.getRequestArg(request, "recipients")
+        recipients = re.sub(',\s+', ',', recipients).split(",")
         return recipients, body, subject, parent
 
     @defer.inlineCallbacks

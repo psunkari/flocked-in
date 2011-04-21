@@ -26,7 +26,7 @@
     <ul id="mymenu" class="v-links sidemenu">
         % for folderId in folders:
           % if folders[folderId]['label'].lower() not in specialFolders:
-            ${navMenuItem("/messages?folder=%s"%(folderId), _(folders[folderId]['label']), "")}
+            ${navMenuItem("/messages?fid=%s"%(folderId), _(folders[folderId]['label']), "")}
           % endif
         % endfor
     </ul>
