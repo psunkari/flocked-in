@@ -460,6 +460,10 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 .acl-item {
     padding-left: 20px !important;
+    padding-right: 5px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .acl-item .icon {
     position: absolute;
@@ -468,6 +472,13 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 .acl-checked .icon {
     background-position: 0 -320px;
+}
+.acl-busy-item {
+    line-height: 1.5em;
+    padding: 0.2em 0.4em;
+    background-image: url(/public/images/loading.gif);
+    background-position: -5px center;
+    background-repeat: no-repeat;
 }
 
 /*

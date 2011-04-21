@@ -526,6 +526,7 @@ class FeedResource(base.BaseResource):
             yield plugin.renderShareBlock(request, self._ajax)
 
 
+
     @profile
     @dump_args
     def render_GET(self, request):

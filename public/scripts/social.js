@@ -503,6 +503,40 @@ $$.json = json;
 
 
 
+
+/*
+ * Cache for lazy load.
+ * List of groups, list of online users, list of notifications etc;
+ */
+(function($$, $) {
+var data = {
+    _data: {},  // Local cache of data
+
+    wait: function(url, method) {
+        var self = this;
+        if (self._data[url] !== undefined) {
+            method(self._data[url]);
+            return;
+        }
+
+        var deferred = $.get(url, null, null, "json"),
+            success = function(data) {
+                self._data[url] = data;
+                method(self._data[url]);
+            },
+            failure = function() {
+                method([]);
+            }
+        deferred.then(success, failure);
+    }
+};
+
+$$.data = data;
+})(social, jQuery);
+
+
+
+
 /*
  * Handle access control related menus and dialog.
  */
@@ -538,7 +572,7 @@ var acl = {
         var type = ui.item.children("a").first().attr("_acl"),
             aclObj = {accept:{}},
             str = ui.item.text();
-        
+
         if (type === "public") {
             aclObj.accept.public = true;
         }
@@ -559,7 +593,28 @@ var acl = {
         $("#"+id+"-label").attr("value", ui.item.text());
     },
 
+    /* Update list of groups displayed in the menu */
     refreshGroups: function(id) {
+        var groupsSeparator = $("#"+id+"-groups-sep");
+
+        groupsSeparator.nextUntil(".ui-menu-separator").remove();
+        groupsSeparator.after("<li class='acl-busy-item'><i>Loading...</i></li>")
+
+        $$.data.wait("/auto/mygroups", (function(groups) {
+            items = [];
+            $.each(groups || [], function(i, g) {
+                items.push('<li><a class="acl-item" _acl="group:' + g.id +
+                           '" title="'+ g.name +'"><div class="icon"></div>' +
+                           g.name + '</a></li>');
+            });
+
+            if (items.length) {
+                groupsSeparator.next().replaceWith(items.join(""));
+                $("#"+id+"-menu").menu("refresh")
+            } else {
+                groupsSeparator.next().remove();
+            }
+        }).bind(this));
     }
 };
 $$.acl = acl;

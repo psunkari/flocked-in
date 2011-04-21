@@ -61,6 +61,7 @@
         <li><a class="acl-item" _acl="public"><div class="icon"></div>${_("Public")}</a></li>
         <li><a class="acl-item" _acl="org:${orgKey}"><div class="icon"></div>${_("Company")}</a></li>
         <li><a class="acl-item" _acl="friends"><div class="icon"></div>${_("Friends")}</a></li>
+        <li class="ui-menu-separator" id="${id}-groups-sep"></li>
         <li class="ui-menu-separator"></li>
         <li><a class="acl-item" _acl="custom"><div class="icon"></div>${_("Custom")}</a></li>
       </ul>
