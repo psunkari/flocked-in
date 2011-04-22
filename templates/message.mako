@@ -287,6 +287,16 @@
   % if view == "messages":
     <div style="display:table-row">
       <ul class="h-links">
+        % if start !=0:
+          %if fid:
+            <li><a href="/messages?start=${start}&fid=${fid}&back=True">Back</a></li>
+          %else:
+            <li><a href="/messages?start=${start}&back=True">Back</a></li>
+          %endif
+        % endif
+      </ul>
+
+      <ul class="h-links">
         % if end != 0:
           % if fid:
             <li><a href="/messages?start=${end}&fid=${fid}">Next</a></li>
