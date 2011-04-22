@@ -256,8 +256,11 @@ class MessagingResource(base.BaseResource):
     def _renderMessages(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
+
+        back = utils.getRequestArg(request, "back") == "True"
         start = utils.getRequestArg(request, "start") or ''
         start = utils.decodeKey(start)
+        reverse = not back
 
         c_fid = None if (landing or appchange) else request.getCookie("fid")
         folderId = utils.getRequestArg(request, "fid") or c_fid or "INBOX"
@@ -282,17 +285,35 @@ class MessagingResource(base.BaseResource):
         args.update({"fid":folderId})
 
         res = yield Db.get_slice(key=folderId, column_family="mFolderMessages",
-                                 start=start, count=11, reverse=True)
+                                 start=start, count=11+int(back), reverse=reverse)
+
+        if back and len(res) < 12:
+            # less than 10 messages it first pages, not good UX
+            # fetch messages as if start is not given.
+            back = False
+            start = ''
+            res = yield Db.get_slice(key=folderId,
+                                     column_family="mFolderMessages",
+                                     count=11, reverse=True)
         # Fetch the message-ids from mFolderMessages
         mids = utils.columnsToDict(res, ordered=True).values()
         tids = utils.columnsToDict(res, ordered=True).keys()
         tids = [utils.encodeKey(x) for x in tids]
 
         #The start key will help us go back and end key to go forward in paging
-        startKey = tids[0] if len(tids) > 0 else 0
-        endKey =  tids[-1] if len(tids) > 0 else 0
-        if len(mids) < 11:
-            endKey = 0
+        if not back:
+            startKey = tids[0] if len(tids) and start else 0
+            endKey = 0 if len(tids) == 0 or len(mids) < 11 else tids[-1]
+            mids = mids[:-1] if len(mids) == 11 else mids
+
+        else:
+            mids.reverse()
+            tids.reverse()
+            startKey = 0 if len(tids) < 12 else tids[1]
+            endKey =  tids[-1] if len(tids) > 0 else 0
+            mids = mids[:-1]
+            if len(mids) == 11:
+                mids.pop(0)
         args.update({"start":startKey, "end":endKey})
 
         # Count the total number of messages in this folder
@@ -301,7 +322,6 @@ class MessagingResource(base.BaseResource):
         #res = yield Db.get_count(folder, "mFolderMessages")
         #args.update({"total":res})
 
-        mids = mids[:-1] if len(mids) == 11 else mids
 
         if len(mids) > 0:
             res = yield Db.get_slice(key=myKey, column_family="mUserMessages",
