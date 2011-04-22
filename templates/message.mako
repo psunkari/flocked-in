@@ -253,7 +253,7 @@
           <textarea style="width:99%;height:400px;font-size:11px" placeholder="Write a message to your friends and colleagues" name="body"></textarea>
         % endif
     </div>
-    <div>
+    <div style="background-color:#e0ecff">
       <input type="submit" name="send" value="Send">
     </div>
 </%def>
@@ -311,27 +311,25 @@
 
 <%def name="navigation_layout(view, start, end, fid)">
   % if view == "messages":
-    <div style="display:table-row">
+    <div style="display:table-row;float:right">
       <ul class="h-links">
         % if start !=0:
           %if fid:
-            <li><a href="/messages?start=${start}&fid=${fid}&back=True">Back</a></li>
+            <li style="padding: 0pt 4px;"><a href="/messages?start=${start}&fid=${fid}&back=True">Back</a></li>
           %else:
-            <li><a href="/messages?start=${start}&back=True">Back</a></li>
+            <li style="padding: 0pt 4px;"><a href="/messages?start=${start}&back=True">Back</a></li>
           %endif
         % endif
-      </ul>
-
-      <ul class="h-links">
         % if end != 0:
           % if fid:
-            <li><a href="/messages?start=${end}&fid=${fid}">Next</a></li>
+            <li style="padding: 0pt 4px;"><a href="/messages?start=${end}&fid=${fid}">Next</a></li>
           %else:
-            <li><a href="/messages?start=${end}">Next</a></li>
+            <li style="padding: 0pt 4px;"><a href="/messages?start=${end}">Next</a></li>
           %endif
         % endif
       </ul>
     </div>
+    <span class="clear" style="display:block"></span>
   % endif
 </%def>
 

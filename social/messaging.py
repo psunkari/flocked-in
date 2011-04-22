@@ -89,11 +89,10 @@ class MessagingResource(base.BaseResource):
                     elif action == "unread":
                         self._setFlagOnMessage(myKey, parent, "read", "0")
                     if action in ["star", "unstar"]:
+                        print "starred"
                         request.redirect("/messages/thread?id=%s&fid=%s" %(parent, folder))
-
-            request.redirect("/messages?fid=%s"%(folder))
-        else:
-            request.redirect("/messages")
+            else:request.redirect("/messages?fid=%s"%(folder))
+        else:request.redirect("/messages")
 
     @defer.inlineCallbacks
     def _setFlagOnMessage(self, user, message, flag, fValue):
@@ -162,13 +161,14 @@ class MessagingResource(base.BaseResource):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
 
-        recipients, body, subject, parent = self._parseComposerArgs(request)
-        if len(recipients) == 0:
-            raise "No recipients specified"
-
         name = args['me']["basic"]["name"]
         email = args['me']["basic"]["emailId"]
         from_header = "%s <%s>" %(name, email)
+
+        recipients, body, subject, parent = self._parseComposerArgs(request,
+                                                                    name)
+        if len(recipients) == 0:
+            raise "No recipients specified"
 
         date_header, epoch = self._createDateHeader()
         new_message_id = str(utils.getUniqueKey()) + "@synovel.com"
@@ -502,13 +502,14 @@ class MessagingResource(base.BaseResource):
         recipient_header = ", ".join(recipient_strings)
         defer.returnValue((recipient_header, uids))
 
-    def _parseComposerArgs(self, request):
+    def _parseComposerArgs(self, request, myName):
         #Since we will deal with composer related forms.Take care of santizing
         # all the input and fill with safe defaults wherever needed.
         #To, CC, Subject, Body,
         body = utils.getRequestArg(request, "body")
         parent = utils.getRequestArg(request, "parent") #TODO
-        subject = utils.getRequestArg(request, "subject") or "Private message from XYZ"
+        subject = utils.getRequestArg(request, "subject") or \
+            "Private message from %s" %(myName)
         recipients = utils.getRequestArg(request, "recipients")
         recipients = re.sub(',\s+', ',', recipients).split(",")
         return recipients, body, subject, parent
