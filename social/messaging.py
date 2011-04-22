@@ -259,6 +259,7 @@ class MessagingResource(base.BaseResource):
         if folderId != c_fid :
             request.addCookie('fid', folderId, path="/ajax/messages")
 
+        yield self._checkStandardFolders(myKey)
         folders = yield Db.get_slice(myKey, "mUserFolders")
         folders = utils.supercolumnsToDict(folders)
         args["folders"] = folders
@@ -271,7 +272,6 @@ class MessagingResource(base.BaseResource):
                               landing, "#mainbar", "set", **args)
 
         args.update({"fid":folderId})
-        yield self._checkStandardFolders(myKey)
 
         res = yield Db.get_slice(key=folderId, column_family="mFolderMessages",
                                  start=start, count=11, reverse=True)
