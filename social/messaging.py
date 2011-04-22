@@ -20,46 +20,73 @@ class MessagingResource(base.BaseResource):
     _specialFolders = ["INBOX", "SENT", "DRAFTS", "TRASH", "ARCHIVES"]
 
     @defer.inlineCallbacks
+    def _checkUserFolderACL(self, userId, folder):
+        #Check if user owns the folder or has permission to access it(XXX)
+        if folder.rfind(":") != -1 and folder.startswith(userId):
+            defer.returnValue(True)
+        else:
+            if folder.upper() in self._specialFolders:
+                folder = "%s:%s" %(myKey, folder.upper())
+            try:
+                yield Db.get(key=userId, column_family="mUserFolders",
+                             super_column=folder)
+            except ttypes.NotFoundException:
+                defer.returnValue(False)
+            else:
+                defer.returnValue(True)
+
+    @defer.inlineCallbacks
     def _threadActions(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
 
         _validActions = ["delete", "star", "unstar", "read", "unread", "fullview"]
         parent = utils.getRequestArg(request, "parent") or None
-        parentTid = utils.getRequestArg(request, "tid") or None
         folder = utils.getRequestArg(request, "fid") or None
         delete = utils.getRequestArg(request, "delete")
         archive = utils.getRequestArg(request, "archive")
         isOtherActions = utils.getRequestArg(request, "other")
         action = utils.getRequestArg(request, "more")
-        if not (parent or folder):
-            raise errors.InvalidParams()
+
+        if folder:
+            res = yield self._checkUserFolderACL(myKey, folder)
+            if not res:
+                request.redirect("/messages")
+        else:
+            request.redirect("/messages")
 
         mids = [parent]
-        tids = [utils.decodeKey(parentTid)]
-        copyToFolder = ""
-        if delete:
-            copyToFolder = "%s:%s" %(myKey, "TRASH")
-            yield self._copyToFolder(copyToFolder, mids)
-            yield self._deleteFromFolder(folder, tids)
-        elif archive:
-            copyToFolder = "%s:%s" %(myKey, "ARCHIVES")
-            yield self._copyToFolder(copyToFolder, mids)
-            yield self._deleteFromFolder(folder, tids)
-        elif isOtherActions:
-            if action not in _validActions:
-                raise errors.InvalidParams()
-            else:
-                if action == "star":
-                    self._setFlagOnMessage(myKey, parent, "star", "1")
-                elif action == "unstar":
-                    self._setFlagOnMessage(myKey, parent, "star", "0")
-                elif action == "read":
-                    self._setFlagOnMessage(myKey, parent, "read", "1")
-                elif action == "unread":
-                    self._setFlagOnMessage(myKey, parent, "read", "0")
+        res = yield Db.get_slice(key=myKey, column_family="mUserMessages",
+                                      names=mids)
+        res = utils.supercolumnsToDict(res, ordered=True)
+        tids = [res[x]["timestamp"] for x in res.keys() if "timestamp" in res[x]]
 
-        request.redirect("/messages?fid=%s"%(folder if folder else "inbox"))
+        if len(tids) > 0 and folder:
+            copyToFolder = ""
+            if delete:
+                copyToFolder = "%s:%s" %(myKey, "TRASH")
+                yield self._copyToFolder(copyToFolder, mids, tids)
+                yield self._deleteFromFolder(folder, tids)
+            elif archive:
+                copyToFolder = "%s:%s" %(myKey, "ARCHIVES")
+                yield self._copyToFolder(copyToFolder, mids, tids)
+                yield self._deleteFromFolder(folder, tids)
+            elif isOtherActions:
+                if action not in _validActions:
+                    raise errors.InvalidParams()
+                else:
+                    if action == "star":
+                        self._setFlagOnMessage(myKey, parent, "star", "1")
+                    elif action == "unstar":
+                        self._setFlagOnMessage(myKey, parent, "star", "0")
+                    elif action == "read":
+                        self._setFlagOnMessage(myKey, parent, "read", "1")
+                    elif action == "unread":
+                        self._setFlagOnMessage(myKey, parent, "read", "0")
+
+            request.redirect("/messages?fid=%s"%(folder))
+        else:
+            request.redirect("/messages")
 
     @defer.inlineCallbacks
     def _setFlagOnMessage(self, user, message, flag, fValue):
@@ -77,33 +104,43 @@ class MessagingResource(base.BaseResource):
         delete = utils.getRequestArg(request, "delete")
         archive = utils.getRequestArg(request, "archive")
         selected = request.args.get("selected", None)
-        if selected: selected = [utils.decodeKey(x) for x in selected]
+        if selected and len(selected) > 0:
+            # Selected are mids of the selected mails. We find their respective
+            #   timestamps from mUserMessages and work from there
+            res = yield Db.get_slice(key=myKey, column_family="mUserMessages",
+                                          names=selected)
+            res = utils.supercolumnsToDict(res, ordered=True)
+            tids = [res[x]["timestamp"] for x in res.keys()]
+        else:
+            request.redirect("/messages?fid=%s"%(folder))
 
         if folder:
-            if folder.rfind(":") != -1 and not folder.startswith(myKey):
-                folder=None
+            res = yield self._checkUserFolderACL(myKey, folder)
+            if not res:
+                request.redirect("/messages")
+        else:
+            request.redirect("/messages")
 
-        if selected and folder and (delete or archive):
-            selected = yield Db.get_slice(folder, "mFolderMessages", selected)
-            mids = utils.columnsToDict(selected).values()
-            tids = utils.columnsToDict(selected).keys()
+        if tids and folder and (delete or archive):
+            #selected = yield Db.get_slice(folder, "mFolderMessages", selected)
+            #mids = utils.columnsToDict(selected).values()
+            #tids = utils.columnsToDict(selected).keys()
             copyToFolder = ""
             if delete:
                 copyToFolder = "%s:%s" %(myKey, "TRASH")
             elif archive:
                 copyToFolder = "%s:%s" %(myKey, "ARCHIVES")
 
-            yield self._copyToFolder(copyToFolder, mids)
+            yield self._copyToFolder(copyToFolder, selected, tids)
             yield self._deleteFromFolder(folder, tids)
-            # redirect to avoid reposting when user press F5.
-            # TODO: check for better solution.
         request.redirect("/messages?fid=%s"%(folder))
 
     @defer.inlineCallbacks
-    def _copyToFolder(self, destination, messages):
+    def _copyToFolder(self, destination, messages, timestamps):
+        #XXX:Get the tids from mUserMessages and insert them
         message_map = {}
         for m in messages:
-            message_map[utils.uuid.uuid1().bytes] = m
+            message_map[timestamps[messages.index(m)]] = m
         yield Db.batch_insert(key=destination, column_family="mFolderMessages",
                               mapping=message_map)
 
@@ -159,8 +196,7 @@ class MessagingResource(base.BaseResource):
 
         yield Db.batch_insert(new_message_id, 'messages', message)
         yield self._deliverMessage(request, message, uids)
-        yield self._renderMessages(request)
-        #FIX: hitting F5 would render compose message as URL is not changing.
+        request.redirect("/messages?fid=sent")
 
     @defer.inlineCallbacks
     def _renderComposer(self, request):
@@ -287,7 +323,6 @@ class MessagingResource(base.BaseResource):
         #Based on the request, render a message or a conversation
         thread = request.args.get("id", [None])[0]
         folder = request.args.get("fid", [None])[0]
-        tid = request.args.get("tid", [None])[0]
         #XXXBased on the user's preference, the id can be a message id or a
         # conversation id. In a conversation view, a single message can only be
         # viewed in the context of the entire conversation it belongs to. If
@@ -310,7 +345,7 @@ class MessagingResource(base.BaseResource):
             renderScriptBlock(request, "message.mako", "layout",
                               landing, "#mainbar", "set", **args)
 
-        if thread and folder and tid:
+        if thread and folder:
             #XXX: the viewer needs to have the necessary acls to view this
             res = yield Db.get_slice(key=thread, column_family="messages")
             msgs = utils.columnsToDict(res)
@@ -329,7 +364,6 @@ class MessagingResource(base.BaseResource):
                 args.update({"message":msgs})
                 args.update({"id":thread})
                 args.update({"fid":folder})
-                args.update({"tid":tid})
                 args.update({"flags":flags})
                 args.update({"view":"message"})
                 if script:
@@ -375,20 +409,22 @@ class MessagingResource(base.BaseResource):
 
         flags = {} if flags is None else flags
         messageId = message["message-id"]
+        timestamp = uuid.uuid1().bytes
 
         messageInfo = {}
         messageInfo["conversation"] = conversationId
         messageInfo["read"] = flags.get("read", "0")
         messageInfo["star"] = flags.get("star", "0")
+        messageInfo["timestamp"] = timestamp
 
         yield Db.batch_insert(userId, "mUserMessages", {messageId: messageInfo})
 
         #Insert the new message to the folders cf
-        yield Db.insert(folderId, "mFolderMessages", messageId, uuid.uuid1().bytes)
+        yield Db.insert(folderId, "mFolderMessages", messageId, timestamp)
 
         #Insert this message into a new conversation
         yield Db.insert(conversationId, "mConversationMessages",
-                        messageId, uuid.uuid1().bytes)
+                        messageId, timestamp)
 
     def _preFormatBodyForReply(self, message, reply):
         body = message['body']

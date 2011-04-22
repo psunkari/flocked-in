@@ -129,7 +129,7 @@
 <%def name="messages_layout(id, conversation, fid)">
   <div id="conv-${id}" class="conv-item">
     <div style="display:table-cell;vertical-align:top">
-      <input type="checkbox" name="selected" value="${conversation['tid']}"/>
+      <input type="checkbox" name="selected" value="${id}"/>
     </div>
     <div style="display:table-cell;vertical-align:top">
       <a>
@@ -152,9 +152,9 @@
       </div>
       <div style="display:table-cell;width:250px">
         % if conversation["flags"]["read"] == "0":
-          <a style="font-weight:bold" href="/messages/thread?id=${conversation['message-id']}&fid=${fid}&tid=${conversation['tid']}">${conversation["Subject"]|h}</a>
+          <a style="font-weight:bold" href="/messages/thread?id=${conversation['message-id']}&fid=${fid}">${conversation["Subject"]|h}</a>
         % else:
-          <a style="font-weight:normal" href="/messages/thread?id=${conversation['message-id']}&fid=${fid}&tid=${conversation['tid']}">${conversation["Subject"]|h}</a>
+          <a style="font-weight:normal" href="/messages/thread?id=${conversation['message-id']}&fid=${fid}">${conversation["Subject"]|h}</a>
         % endif
       </div>
       <abbr style="display:table-cell;width:130px">
@@ -165,7 +165,7 @@
   </div>
 </%def>
 
-<%def name="message_layout(mid, message, flags, fid, tid)">
+<%def name="message_layout(mid, message, flags, fid)">
     <div style="padding:4px 0">
       <h2 style="display:inline">${message["Subject"]|h}</h2>
       <a style="display:inline-block;float:right">
@@ -187,6 +187,7 @@
       <a style="padding:3px" href="/messages/write?parent=${message["message-id"]}&action="forward">Forward</a>
     </div>
     <div class="conv-comment" style="margin:0">${message["body"] | newlinescape}</div>
+    <input type="hidden" name="parent" value="${message["message-id"]}">
 </%def>
 
 <%def name="conversation_layout(conversation, inline=False, isFeed=False)">
@@ -283,7 +284,6 @@
 </%def>
 
 <%def name="navigation_layout(view, start, end, fid)">
-
   % if view == "messages":
     <div style="display:table-row">
       <ul class="h-links">
@@ -316,12 +316,12 @@
   %elif view == "message":
     <form method="post" action="/messages/thread">
     ${toolbar_layout(view, message=message, fid=fid)}
-    ${message_layout(id, message, flags, fid, tid)}
+    ${message_layout(id, message, flags, fid)}
+    <input type="hidden" name="fid" value="${fid}"/>
     </form>
     <form method="post" action="/messages/write">
     ${quick_reply_layout(message)}
     <input type="hidden" name="fid" value="${fid}"/>
-    <input type="hidden" name="tid" value="${tid}"/>
     </form>
   %elif view == "compose":
     <form id="share-form" method="post" action="/messages/write">
