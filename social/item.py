@@ -541,7 +541,8 @@ class ItemResource(base.BaseResource):
         orgId = request.getSession(IAuthInfo).organization
         tagItemsCount = int(tag.get("itemsCount", "0")) + 1
         if tagItemsCount % 10 == 7:
-            tagItemsCount = yield Db.get_count(tagId, "tagItems") + 1
+            tagItemsCount = yield Db.get_count(tagId, "tagItems")
+            tagItemsCount += 1
         Db.insert(orgId, "orgTags", "%s"%tagItemsCount, "itemsCount", tagId)
 
         result = yield defer.DeferredList([d1, d2, d3])
