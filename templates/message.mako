@@ -44,7 +44,7 @@
     <div id="center-right">
       <div id="right"></div>
       <div id="center">
-        <div class="center-contents">
+        <div class="center-contents" style="padding:10px 0 0">
           ${self.center()}
         </div>
       </div>
@@ -69,7 +69,23 @@
       date = message['Date']
       quoted_reply = "\n".join([">%s" %x for x in body.split('\n')]+['>'])
       prequotestring = "On %s, %s wrote" %(date, sender)
-      new_reply = "%s\n\n%s\n%s" %(reply, prequotestring, quoted_reply)
+      new_reply = "\n%s\n\n%s\n%s" %(reply, prequotestring, quoted_reply)
+      return new_reply
+%>
+
+<%!
+    def formatBodyForForward(message):
+      lines = []
+      lines.append("")
+      lines.append("")
+      lines.append("-------- Original Message --------")
+      lines.append("Subject: %s" %message["Subject"])
+      lines.append("Date: %s" %message["Date"])
+      lines.append("From: %s" %message["From"])
+      lines.append("To: %s" %message["To"])
+      lines.append("")
+      lines.append(message["body"])
+      new_reply = "\n".join(lines)
       return new_reply
 %>
 
@@ -85,10 +101,10 @@
 
 <%!
     def formatSubjectForForward(subject):
-      reply_re = r"""(?i)^Re:\s+\w"""
+      reply_re = r"""(?i)^Re|Fwd:\s+\w"""
       match = re.search(reply_re, subject)
       if match:
-        return "%s %s" %("Fwd:", subject.strip())
+        return "%s %s" %("Fwd:", subject.strip("Re:"))
       else:
         return "%s %s" %("Fwd:", subject.strip())
 %>
@@ -166,7 +182,7 @@
 </%def>
 
 <%def name="message_layout(mid, message, flags, fid)">
-    <div style="padding:4px 0">
+    <div style="padding:4px 10px">
       <h2 style="display:inline">${message["Subject"]|h}</h2>
       <a style="display:inline-block;float:right">
         % if flags["star"] == "0":
@@ -176,17 +192,19 @@
         % endif
       </a>
     </div>
-    % if len(message["people"]) <= 2:
-      <div>${message["From"]|nameinemail} wrote to ${", ".join(message["people"][:2])}
-    % else:
-      <div>${message["From"]|nameinemail} wrote to ${", ".join(message["people"][:2])} and ${len(message["people"])-2} others</div>
-    % endif
-    <div style="display:inline-block;float:right">${message["date_epoch"]|timeElapsedSince}</div>
-    <div style="display:block">
-      <a style="padding:3px" href="/messages/write?parent=${message["message-id"]}">Reply</a>
-      <a style="padding:3px" href="/messages/write?parent=${message["message-id"]}&action="forward">Forward</a>
+    <div style="padding:4px 10px;background-color:#CCCCCC">
+      % if len(message["people"]) <= 2:
+        <span>${message["From"]|nameinemail} wrote to ${", ".join(message["people"][:2])}</span>
+      % else:
+        <span>${message["From"]|nameinemail} wrote to ${", ".join(message["people"][:2])} and ${len(message["people"])-2} others</span>
+      % endif
+      <span style="float:right">${message["date_epoch"]|timeElapsedSince}</span>
     </div>
-    <div class="conv-comment" style="margin:0">${message["body"] | newlinescape}</div>
+    <div style="display:block;padding:4px 10px;background-color:#CCCCCC">
+      <a style="padding:3px" href="/messages/write?parent=${message["message-id"]}">Reply</a>
+      <a style="padding:3px" href="/messages/write?parent=${message["message-id"]}&action=forward">Forward</a>
+    </div>
+    <div style="margin:0;padding:10px">${message["body"] | newlinescape}</div>
     <input type="hidden" name="parent" value="${message["message-id"]}">
 </%def>
 
@@ -195,64 +213,78 @@
 </%def>
 
 <%def name="composer_layout(view, msg)">
-    <div>
-      <div>
+    <div style="background-color:#e0ecff">
         % if msg:
-          <textarea style="width:99%" name="recipients" placeholder="${_('Enter your colleagues name or email address') |h}">${msg['From']}</textarea>
+          <div style="display:table-row">
+            <div style="display:table-cell;vertical-align:top;font-weight:bold">Recipients</div>
+            <div style="display:table-cell;width:100%">
+              <textarea style="width:99%;font-size:11px" name="recipients" placeholder="${_('Enter your colleagues name or email address') |h}">${msg['From']}</textarea>
+            </div>
+          </div>
+          <div style="display:table-row">
+            <div style="display:table-cell;vertical-align:top;font-weight:bold">Subject</div>
+            <div style="display:table-cell;width:100%">
+              % if view == "reply":
+                <input style="width:99%;font-size:11px" type="text" name="subject" value="${formatSubjectForReply(msg['Subject'])}" placeholder="${_('Enter a subject of your message') |h}"/>
+              % elif view == "forward":
+                <input style="width:99%;font-size:11px" type="text" name="subject" value="${formatSubjectForForward(msg['Subject'])}" placeholder="${_('Enter a subject of your message') |h}"/>
+              % endif
+            </div>
+          </div>
           % if view == "reply":
-            <input style="width:99%" type="text" name="subject" value="${formatSubjectForReply(msg['Subject'])}" placeholder="${_('Enter a subject of your message') |h}"/>
-          % elif view == "forward":
-            <input style="width:99%" type="text" name="subject" value="${formatSubjectForForward(msg['Subject'])}" placeholder="${_('Enter a subject of your message') |h}"/>
+            <textarea style="width:99%;height:400px;font-size:11px" name="body">${formatBodyForReply(msg, "")}</textarea>
+            <input type="hidden" value="${msg["message-id"]}" name="parent">
+          % else:
+            <textarea style="width:99%;height:400px;font-size:11px" name="body">${formatBodyForForward(msg)}</textarea>
           % endif
-          <textarea style="width:99%;height:400px" name="body">${formatBodyForReply(msg, "")}</textarea>
-          <input type="hidden" value="${msg["message-id"]}" name="parent">
         % else:
-          <textarea style="width:99%" type="text" name="recipients" placeholder="${_('Enter name or email address') |h}"></textarea>
-          <input style="width:99%" type="text" name="subject" placeholder="${_('Enter a subject of your message') |h}"/>
-          <textarea style="width:99%;height:400px" name="body"></textarea>
+          <div style="display:table-row">
+            <div style="display:table-cell;vertical-align:top;font-weight:bold">Recipients</div>
+            <div style="display:table-cell;width:100%">
+              <textarea style="width:99%;font-size:11px" type="text" name="recipients" placeholder="${_('Enter name or email address') |h}"></textarea>
+            </div>
+          </div>
+          <div style="display:table-row">
+            <div style="display:table-cell;vertical-align:top;font-weight:bold">Subject</div>
+            <div style="display:table-cell;width:100%">
+              <input style="width:99%;font-size:11px" type="text" name="subject" placeholder="${_('Enter a subject of your message') |h}"/>
+            </div>
+          </div>
+          <textarea style="width:99%;height:400px;font-size:11px" placeholder="Write a message to your friends and colleagues" name="body"></textarea>
         % endif
-      </div>
     </div>
     <div>
-      <ul id="sharebar-actions" class="h-links">
-        <li>${widgets.button("composer-submit", "submit", "default", None, "Compose")}</li>
-      </ul>
-      <span class="clear" style="display:block"></span>
+      <input type="submit" name="send" value="Send">
     </div>
 </%def>
 
 <%def name="quick_reply_layout(msg)">
-    <div id="sharebar">
-      <div class="input-wrap" style="text-align:center">
-          <textarea style="width:99%;height:100px" name="body"></textarea>
+    <div style="background-color:#e0ecff">
+      <div style="background-color:#c3d9ff"><b>Quick Reply</b></div>
+      <div>
+          <textarea style="width:80ex;height:100px" name="body"></textarea>
           <input type="hidden" value="${msg["message-id"]}" name="parent"/>
           <input type="hidden" value="${formatSubjectForReply(msg['Subject'])}" name="subject"/>
           <input type="hidden" value="${msg["From"]}" name="recipients"/>
       </div>
     </div>
-    <div>
-      <ul id="sharebar-actions" class="h-links">
-        <li>${widgets.button("composer-submit", "submit", "default", None, "Quick Reply")}</li>
-      </ul>
-      <span class="clear" style="display:block"></span>
+    <div style="background-color:#e0ecff">
+      <input type="submit" name="send" value="Send">
     </div>
 </%def>
 
 <%def name="toolbar_layout(view, fid=None, message=None)">
   % if view == "messages":
-    <div style="padding-bottom:10px">
+    <div style="background-color:#C3D9FF;padding-bottom:10px">
       % if fid:
-        <span>Viewing ${_(folders[fid]['label'])}</span>
+        <b style="float:right;padding:4px">Viewing ${_(folders[fid]['label'])}</b>
       % endif
-        <ul id="sharebar-actions" class="h-links">
-          <li><a style="padding:3px" class="button default" href="/messages/write">Write</a></li>
-          <li><input type="submit" class="button default" name="delete" value="Delete"></li>
-          <li><input type="submit" class="button default" name="archive" value="Archive"></li>
-        </ul>
-        <span class="clear" style="display:block"></span>
+      <a style="padding:3px;color:white" href="/messages/write">New Message</a>
+      <input type="submit" name="delete" value="Delete">
+      <input type="submit" name="archive" value="Archive">
     </div>
   % elif view == "message":
-    <div>
+    <div style="background-color:#C3D9FF">
         <a style="padding:3px" href="/messages?fid=${fid}">Go Back</a>
         <input type="submit" name="delete" value="Delete">
         <input type="submit" name="archive" value="Archive">
@@ -267,18 +299,12 @@
         <span class="clear" style="display:block"></span>
     </div>
   %elif view == "compose":
-    <div>
-        <ul id="sharebar-actions" class="h-links">
-          <li><a style="padding:3px" class="button default" href="/messages?fid=${fid}">Go Back</a></li>
-        </ul>
-        <span class="clear" style="display:block"></span>
+    <div style="background-color:#C3D9FF;padding:3px 0">
+      <a style="padding:3px;font-weight:bold" href="/messages?fid=${fid}">Go Back</a>
     </div>
   % elif view == "reply":
-    <div>
-        <ul id="sharebar-actions" class="h-links">
-          <li><a style="padding:3px" class="button default" href="/messages?fid=${fid}">Go Back</a></li>
-        </ul>
-        <span class="clear" style="display:block"></span>
+    <div style="background-color:#C3D9FF;padding:3px 0">
+      <a style="padding:3px;font-weight:bold" href="/messages?fid=${fid}">Go Back</a>
     </div>
   % endif
 </%def>
@@ -334,18 +360,18 @@
     <input type="hidden" name="fid" value="${fid}"/>
     </form>
   %elif view == "compose":
-    <form id="share-form" method="post" action="/messages/write">
+    <form method="post" action="/messages/write">
     ${toolbar_layout(view, fid=fid)}
     ${composer_layout(view, None)}
     </form>
   %elif view == "reply":
-    <form id="share-form" method="post" action="/messages/write">
+    <form method="post" action="/messages/write">
     ${toolbar_layout(view, fid=fid, message=parent_msg)}
     ${composer_layout(view, parent_msg)}
     </form>
   %elif view == "forward":
-    <form id="share-form" method="post" action="/messages/write">
-    ${toolbar_layout(view, fid=fid, message=parent_msg)}
+    <form method="post" action="/messages/write">
+    ${toolbar_layout("reply", fid=fid, message=parent_msg)}
     ${composer_layout(view, parent_msg)}
     </form>
   %endif
