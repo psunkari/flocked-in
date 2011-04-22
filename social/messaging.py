@@ -59,6 +59,11 @@ class MessagingResource(base.BaseResource):
         res = yield Db.get_slice(key=myKey, column_family="mUserMessages",
                                       names=mids)
         res = utils.supercolumnsToDict(res, ordered=True)
+        mids = res.keys()
+        tids = []
+        for mId in mids:
+            tids.append(res[mId]["timestamp"])
+
         tids = [res[x]["timestamp"] for x in res.keys() if "timestamp" in res[x]]
 
         if len(tids) > 0 and folder:
@@ -83,6 +88,8 @@ class MessagingResource(base.BaseResource):
                         self._setFlagOnMessage(myKey, parent, "read", "1")
                     elif action == "unread":
                         self._setFlagOnMessage(myKey, parent, "read", "0")
+                    if action in ["star", "unstar"]:
+                        request.redirect("/messages/thread?id=%s&fid=%s" %(parent, folder))
 
             request.redirect("/messages?fid=%s"%(folder))
         else:
@@ -104,13 +111,18 @@ class MessagingResource(base.BaseResource):
         delete = utils.getRequestArg(request, "delete")
         archive = utils.getRequestArg(request, "archive")
         selected = request.args.get("selected", None)
+        tids = None
+
         if selected and len(selected) > 0:
             # Selected are mids of the selected mails. We find their respective
             #   timestamps from mUserMessages and work from there
             res = yield Db.get_slice(key=myKey, column_family="mUserMessages",
                                           names=selected)
             res = utils.supercolumnsToDict(res, ordered=True)
-            tids = [res[x]["timestamp"] for x in res.keys()]
+            selected = res.keys()
+            tids = []
+            for mId in selected:
+                tids.append(res[mId]["timestamp"])
         else:
             request.redirect("/messages?fid=%s"%(folder))
 
@@ -122,9 +134,6 @@ class MessagingResource(base.BaseResource):
             request.redirect("/messages")
 
         if tids and folder and (delete or archive):
-            #selected = yield Db.get_slice(folder, "mFolderMessages", selected)
-            #mids = utils.columnsToDict(selected).values()
-            #tids = utils.columnsToDict(selected).keys()
             copyToFolder = ""
             if delete:
                 copyToFolder = "%s:%s" %(myKey, "TRASH")
@@ -137,7 +146,6 @@ class MessagingResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _copyToFolder(self, destination, messages, timestamps):
-        #XXX:Get the tids from mUserMessages and insert them
         message_map = {}
         for m in messages:
             message_map[timestamps[messages.index(m)]] = m
