@@ -9,6 +9,7 @@ from twisted.python     import log
 from social             import Db, utils, _, __, base, plugins
 from social.template    import render, renderDef, renderScriptBlock
 from social.isocial     import IAuthInfo
+from social.relations   import Relation
 from social.logging     import profile, dump_args
 
 
@@ -46,7 +47,7 @@ class TagsResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _getTagItems(self, request, tagId, count=10):
+    def _getTagItems(self, request, tagId, start='', count=10):
         authinfo = request.getSession(IAuthInfo)
         myId = authinfo.username
         myOrgId = authinfo.organization
@@ -54,14 +55,49 @@ class TagsResource(base.BaseResource):
         toFetchItems = set()
         toFetchEntities = set()
         toFetchTags = set()
+
+        toFetchStart = utils.decodeKey(start) if start else ''
+        nextPageStart = None
         args = {"myKey": myId}
         convs = []
 
-        tagItems = yield Db.get_slice(tagId, "tagItems",
-                                      count=count, reverse=True)
-        for item in tagItems:
-            convs.append(item.column.value)
-            toFetchItems.add(item.column.value)
+        relation = Relation(myId, [])
+        yield defer.DeferredList([relation.initFriendsList(),
+                                  relation.initSubscriptionsList(),
+                                  relation.initPendingList(),
+                                  relation.initFollowersList()])
+        userGroups = yield Db.get_slice(myId, "userGroups")
+        userGroups = utils.columnsToDict(userGroups)
+
+        toFetchCount = count + 1
+        while len(convs) <  count:
+
+            tagItems = yield Db.get_slice(tagId, "tagItems", count=toFetchCount,
+                                          start = toFetchStart, reverse=True)
+            toFetchStart = tagItems[-1].column.name
+            if len(tagItems) == toFetchCount:
+                nextPageStart = toFetchStart
+            tagItems = [item.column.value for item in tagItems]
+            convs.extend(tagItems)
+            items = yield Db.multiget_slice(convs, "items", ["meta"])
+            items = utils.multiSuperColumnsToDict(items)
+            if len(tagItems) == toFetchCount:
+                convs = convs[0:count]
+            for convId in convs[:]:
+                acl = items[convId]["meta"]["acl"]
+                owner = items[convId]["meta"]["owner"]
+                if not utils.checkAcl(myId, acl, owner, relation,
+                                      myOrgId, userGroups.keys()):
+                    convs.remove(convId)
+
+            if len(tagItems) < toFetchCount:
+                break
+        if nextPageStart:
+            nextPageStart = utils.encodeKey(nextPageStart)
+
+        if len(convs) >= toFetchCount:
+            convs = convs[0:count]
+        toFetchItems.update(convs)
 
         responses = {}
         itemResponses = yield Db.multiget_slice(toFetchItems, "itemResponses",
@@ -110,7 +146,8 @@ class TagsResource(base.BaseResource):
 
         data = {"entities": entities, "tags": tags,
                 "items": items, "myLikes": myLikes,
-                "responses": responses, "conversations": convs}
+                "responses": responses, "conversations": convs,
+                "nextPageStart": nextPageStart}
         args.update(data)
         defer.returnValue(args)
 
@@ -151,8 +188,9 @@ class TagsResource(base.BaseResource):
         if script and newId:
             yield renderScriptBlock(request, "tags.mako", "header",
                               landing, "#tags-header", "set", **args)
+        start = utils.getRequestArg(request, "start") or ''
 
-        tagItems = yield self._getTagItems(request, tagId)
+        tagItems = yield self._getTagItems(request, tagId, start=start)
         args.update(tagItems)
 
         if script:
