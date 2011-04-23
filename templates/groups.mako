@@ -113,6 +113,27 @@
 
 </%def>
 
+<%def name="userActions(groupId)">
+
+
+        <ul id="user-actions-${groupId}" class="middle user-actions h-links">
+        %if groupId in pendingConnections:
+          <li class="button disabled"><span class="button-text">Request Pending</span></li>
+        % elif groupId not in myGroups:
+          <li class="button default" onclick="$.post('/ajax/groups/subscribe', 'id=${groupId}', null, 'script')"><span class="button-text">Subscribe</span></li>
+        %else:
+          <li class="button" onclick="$.post('/ajax/groups/unsubscribe', 'id=${groupId}', null, 'script')"><span class="button-text">Unsubscribe</span></li>
+          %if myKey in groupFollowers[groupId]:
+            <li class="button" onclick="$.post('/ajax/groups/unfollow', 'id=${groupId}', null, 'script')"><span class="button-text">UnFollow</span></li>
+          %else:
+            <li class="button default" onclick="$.post('/ajax/groups/follow', 'id=${groupId}', null, 'script')"><span class="button-text">Follow</span></li>
+          %endif
+        %endif
+        </ul>
+
+
+</%def>
+
 <%def name="displayGroups()">
 
   % for groupId in groups:
@@ -128,20 +149,11 @@
         groupName = groups[groupId]["basic"].get("name", "no name")
       %>
       <div class="user-details-name"><a href ="/feed?id=${groupId}">${groupName}</a></div>
-      <div class="user-details-actions">
-        <ul id="user-actions-${myKey}" class="middle user-actions h-links">
-        % if groupId not in myGroups:
-          <li class="button default" onclick="$.post('/ajax/groups/subscribe', 'id=${groupId}', null, 'script')"><span class="button-text">Subscribe</span></li>
-        %else:
-          <li class="button" onclick="$.post('/ajax/groups/unsubscribe', 'id=${groupId}', null, 'script')"><span class="button-text">Unsubscribe</span></li>
-          %if myKey in groupFollowers[groupId]:
-            <li class="button" onclick="$.post('/ajax/groups/unfollow', 'id=${groupId}', null, 'script')"><span class="button-text">UnFollow</span></li>
-          %else:
-            <li class="button" onclick="$.post('/ajax/groups/follow', 'id=${groupId}', null, 'script')"><span class="button-text">Follow</span></li>
-          %endif
-        %endif
-        </ul>
+      <div class="user-details-actions" id=${groupId}-user-actions>
+        ${self.userActions(groupId)}
       </div>
+
+
     </div>
   %endfor
 </%def>
