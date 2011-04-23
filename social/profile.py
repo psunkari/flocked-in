@@ -124,7 +124,10 @@ class ProfileResource(base.BaseResource):
             cols = yield Db.get_slice(userKey, "userItems", start = toFetchStart,
                                       reverse=True, count=toFetchCount)
             fetchedUserItem.extend(cols[0:count])
-            toFetchStart = cols[-1].column.name
+            if len(cols):
+                toFetchStart = cols[-1].column.name
+            else:
+                toFetchStart = ''
             if len(cols) == toFetchCount:
                 nextPageStart = toFetchStart
             else:
@@ -148,9 +151,8 @@ class ProfileResource(base.BaseResource):
                         convs.remove(convId)
             if len(cols) < toFetchCount:
                 break
-
         if nextPageStart:
-            nextPageStart = utils.encodeKey(toFetchStart)
+            nextPageStart = utils.encodeKey(nextPageStart)
 
         for col in fetchedUserItem:
             value = tuple(col.column.value.split(":"))
@@ -221,8 +223,8 @@ class ProfileResource(base.BaseResource):
 
         del args['myKey']
         data = {"entities": entities, "reasonStr": reasonStr,
-                "tags": tags, "myLikes": myLikes,
-                "userItems": userItems, "responses": responses}
+                "tags": tags, "myLikes": myLikes, "userItems": userItems,
+                "responses": responses, "nextPageStart":nextPageStart}
         args.update(data)
         defer.returnValue(args)
 
@@ -670,17 +672,25 @@ class ProfileResource(base.BaseResource):
         fetchedEntities = set()
         if detail == "notes":
             start = utils.getRequestArg(request, "start") or ''
+            fromFetchMore = ((not landing) and (not appchange) and start)
             userItems = yield self._getUserItems(request, userKey, start=start)
             args.update(userItems)
+
 
         if script:
             yield renderScriptBlock(request, "profile.mako", "tabs", landing,
                                     "#profile-tabs", "set", **args)
             handlers = {} if detail != "notes" \
                 else {"onload": "(function(obj){$$.items.load(obj);})(this);"}
-            yield renderScriptBlock(request, "profile.mako", "content", landing,
-                                    "#profile-content", "set", True,
-                                    handlers=handlers, **args)
+
+            if fromFetchMore and detail == "notes":
+                yield renderScriptBlock(request, "profile.mako", "content", landing,
+                                            "#next-load-wrapper", "replace", True,
+                                            handlers=handlers, **args)
+            else:
+                yield renderScriptBlock(request, "profile.mako", "content", landing,
+                                        "#profile-content", "set", True,
+                                        handlers=handlers, **args)
 
         if newId or not script:
             # List the user's subscriptions
