@@ -50,6 +50,12 @@
   %for convId in conversations:
     ${item.item_layout(convId, True, True)}
   %endfor
+  %if nextPageStart:
+    <% print nextPageStart %>
+    <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" _ref="/tags?id=${tagId}&start=${nextPageStart}">${_("Fetch older posts")}</a></div>
+  %else:
+    <div id="next-load-wrapper">No more posts to show</div>
+  %endif
 </%def>
 
 <%def name="tag_actions(tagId, showRemove=True)">

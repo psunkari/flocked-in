@@ -74,9 +74,14 @@ class TagsResource(base.BaseResource):
 
             tagItems = yield Db.get_slice(tagId, "tagItems", count=toFetchCount,
                                           start = toFetchStart, reverse=True)
-            toFetchStart = tagItems[-1].column.name
+            if tagItems and len(tagItems) == toFetchCount:
+                toFetchStart = tagItems[-1].column.name
+            else:
+                toFetchStart = ''
             if len(tagItems) == toFetchCount:
                 nextPageStart = toFetchStart
+            else:
+                nextPageStart = ''
             tagItems = [item.column.value for item in tagItems]
             convs.extend(tagItems)
             items = yield Db.multiget_slice(convs, "items", ["meta"])
@@ -168,6 +173,7 @@ class TagsResource(base.BaseResource):
                                     landing, "#mainbar", "set", **args)
 
         tagId = utils.getRequestArg(request, "id")
+        args["tagId"]=id
         request.addCookie('cu', tagId, path="/ajax/tags")
         if not tagId:
             raise errors.MissingParam()
@@ -192,12 +198,18 @@ class TagsResource(base.BaseResource):
 
         tagItems = yield self._getTagItems(request, tagId, start=start)
         args.update(tagItems)
+        fromFetchMore = ((not landing) and (not appchange) and start)
 
         if script:
             onload = "(function(obj){$$.items.load(obj);})(this);"
-            yield renderScriptBlock(request, "tags.mako", "items",
-                                    landing, "#tag-items", "set", True,
-                                    handlers={"onload": onload}, **args)
+            if fromFetchMore:
+                yield renderScriptBlock(request, "tags.mako", "items", landing,
+                                        "#next-load-wrapper", "replace", True,
+                                        handlers={"onload": onload}, **args)
+            else:
+                yield renderScriptBlock(request, "tags.mako", "items",
+                                        landing, "#tag-items", "set", True,
+                                        handlers={"onload": onload}, **args)
 
     @profile
     @dump_args

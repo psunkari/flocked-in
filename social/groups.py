@@ -20,11 +20,19 @@ class GroupsResource(base.BaseResource):
     @dump_args
     def _follow(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
+        landing = not self._ajax
         groupId = yield utils.getValidEntityId(request, "id", "group")
 
         try:
             cols = yield Db.get(myKey, "userGroups", groupId)
             yield Db.insert(groupId, "followers", "", myKey)
+            args["groupId"]=groupId
+            args["myGroups"] = [groupId]
+            args["pendingConnections"] = {}
+            args["groupFollowers"] = {groupId:[myKey]}
+            yield renderScriptBlock(request, "groups.mako", "userActions",
+                                    landing, "#user-actions-%s" %(groupId),
+                                    "replace", **args)
         except ttypes.NotFoundException:
             pass
 
@@ -33,10 +41,19 @@ class GroupsResource(base.BaseResource):
     @dump_args
     def _unfollow(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
+        landing = not self._ajax
         groupId = yield utils.getValidEntityId(request, "id", "group")
         try:
             cols = yield Db.get(myKey, "userGroups", groupId)
             yield Db.remove(groupId, "followers", myKey)
+
+            args["groupId"]=groupId
+            args["myGroups"] = [groupId]
+            args["pendingConnections"] = {}
+            args["groupFollowers"] = {groupId:[]}
+            yield renderScriptBlock(request, "groups.mako", "userActions",
+                                    landing, "#user-actions-%s" %(groupId),
+                                    "replace", **args)
         except ttypes.NotFoundException:
             pass
 
@@ -66,10 +83,15 @@ class GroupsResource(base.BaseResource):
     @dump_args
     def _subscribe(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
+        landing = not self._ajax
         myOrgId = args["orgKey"]
         groupId = yield utils.getValidEntityId(request, "id", "group")
         cols = yield Db.get(groupId, "entities", "access", "basic")
         access = cols.column.value
+        myGroups = []
+        pendingRequests = {}
+        groupFollowers = {groupId:[]}
+
 
         cols = yield Db.get_slice(groupId, "bannedUsers", [myKey])
         if cols:
@@ -82,9 +104,21 @@ class GroupsResource(base.BaseResource):
             #add to pending connections
             if access == "public":
                 yield self._addMember(request, groupId, myKey, myOrgId)
+                myGroups.append(groupId)
+                groupFollowers[groupId].append(myKey)
             else:
                 yield Db.insert(myKey, "pendingConnections", '0', groupId)
                 yield Db.insert(groupId, "pendingConnections", '1', myKey)
+                pendingRequests[groupId]=myKey
+            args["pendingConnections"] = pendingRequests
+            args["groupFollowers"] = groupFollowers
+            args["groupId"] = groupId
+            args["myGroups"] = myGroups
+            yield renderScriptBlock(request, "groups.mako", "userActions",
+                                    landing, "#user-actions-%s" %(groupId),
+                                    "replace", **args)
+
+
 
     @profile
     @defer.inlineCallbacks
@@ -175,6 +209,7 @@ class GroupsResource(base.BaseResource):
     @dump_args
     def _unsubscribe(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
+        landing = not self._ajax
         groupId = yield utils.getValidEntityId(request, "id", "group")
 
         groupMember = yield Db.get_slice(groupId, "groupMembers", [myKey])
@@ -189,6 +224,14 @@ class GroupsResource(base.BaseResource):
         yield Db.remove(groupId, "groupMembers", myKey)
         yield Db.remove(groupId, "followers", myKey)
         yield Db.remove(myKey, "userGroups", groupId)
+        args["pendingConnections"] = []
+        args["groupFollowers"] = {groupId:[]}
+        args["groupId"] = groupId
+        args["myGroups"] = []
+        yield renderScriptBlock(request, "groups.mako", "userActions",
+                                landing, "#user-actions-%s" %(groupId),
+                                "replace", **args)
+
 
 
     @profile
@@ -264,6 +307,9 @@ class GroupsResource(base.BaseResource):
         groups = yield Db.multiget_slice(toFetchGroups, "entities", ["basic"])
         groupFollowers = yield Db.multiget_slice(toFetchGroups, "followers")
 
+        cols = yield Db.get_slice(myKey, 'pendingConnections', toFetchGroups)
+        pendingConnections = dict((x.column.name, x.column.value) for x in cols)
+
         if script and landing:
             yield render(request,"groups.mako", **args)
         if script and appchange:
@@ -273,6 +319,7 @@ class GroupsResource(base.BaseResource):
         args["groups"] = utils.multiSuperColumnsToDict(groups)
         args["myGroups"] = myGroups
         args["groupFollowers"] = utils.multiColumnsToDict(groupFollowers)
+        args["pendingConnections"] = pendingConnections
 
         if script:
              yield renderScriptBlock(request, "groups.mako", "displayGroups",

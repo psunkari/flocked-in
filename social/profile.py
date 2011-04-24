@@ -12,6 +12,7 @@ from social.relations       import Relation
 from social                 import Db, auth, utils, base, plugins, _, __
 from social                 import constants, feed
 from social.logging         import dump_args, profile
+from social.isocial         import IAuthInfo
 
 @defer.inlineCallbacks
 def deleteAvatarItem(entity, isLogo=False):
@@ -89,29 +90,80 @@ class ProfileResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _getUserItems(self, userKey, myKey, count=10):
+    def _getUserItems(self, request, userKey, start='', count=10):
+
+        authinfo = request.getSession(IAuthInfo)
+        myKey = authinfo.username
+        myOrgId = authinfo.organization
+
         toFetchItems = set()
         toFetchEntities = set()
         toFetchTags = set()
         toFetchResponses = set()
+        toFetchCount = count + 1
+        toFetchStart = utils.decodeKey(start) if start else ''
+        fetchedUserItem = []
         responses = {}
         convs = []
         userItemsRaw = []
         userItems = []
         reasonStr = {}
+        nextPageStart = None
         args = {"myKey": myKey}
 
+        relation = Relation(myKey, [])
+        yield defer.DeferredList([relation.initFriendsList(),
+                                  relation.initSubscriptionsList(),
+                                  relation.initPendingList(),
+                                  relation.initFollowersList()])
+        userGroups = yield Db.get_slice(myKey, "userGroups")
+        userGroups = utils.columnsToDict(userGroups)
+
         toFetchEntities.add(userKey)
-        cols = yield Db.get_slice(userKey, "userItems", reverse=True, count=count)
-        for col in cols:
+        while len(convs) < count:
+            cols = yield Db.get_slice(userKey, "userItems", start = toFetchStart,
+                                      reverse=True, count=toFetchCount)
+            fetchedUserItem.extend(cols[0:count])
+            if len(cols):
+                toFetchStart = cols[-1].column.name
+            else:
+                toFetchStart = ''
+            if len(cols) == toFetchCount:
+                nextPageStart = toFetchStart
+            else:
+                nextPageStart = None
+
+            for col in cols:
+                value = tuple(col.column.value.split(":"))
+                rtype, itemId, convId, convType, convOwnerId, commentSnippet = value
+                convs.append(convId)
+            if len(cols) == toFetchCount:
+                convs = convs[0:count]
+
+            items = yield Db.multiget_slice(convs, "items", ["meta"])
+            items = utils.multiSuperColumnsToDict(items)
+            for convId in convs[:]:
+                    acl = items[convId]["meta"]["acl"]
+                    owner = items[convId]["meta"]["owner"]
+
+                    if not utils.checkAcl(myKey, acl, owner, relation,
+                                          myOrgId, userGroups.keys()):
+                        convs.remove(convId)
+            if len(cols) < toFetchCount:
+                break
+        if nextPageStart:
+            nextPageStart = utils.encodeKey(nextPageStart)
+
+        for col in fetchedUserItem:
             value = tuple(col.column.value.split(":"))
             rtype, itemId, convId, convType, convOwnerId, commentSnippet = value
+            if convId not in convs:
+                continue
             commentSnippet = """<span class="snippet"> "%s" </span>""" %(_(commentSnippet))
             toFetchEntities.add(convOwnerId)
             if rtype == 'I':
                 toFetchItems.add(convId)
                 toFetchResponses.add(convId)
-                convs.append(convId)
                 userItems.append(value)
             elif rtype == "L" and itemId == convId and convOwnerId != userKey:
                 reasonStr[value] = _("liked %s's %s")
@@ -171,8 +223,8 @@ class ProfileResource(base.BaseResource):
 
         del args['myKey']
         data = {"entities": entities, "reasonStr": reasonStr,
-                "tags": tags, "myLikes": myLikes,
-                "userItems": userItems, "responses": responses}
+                "tags": tags, "myLikes": myLikes, "userItems": userItems,
+                "responses": responses, "nextPageStart":nextPageStart}
         args.update(data)
         defer.returnValue(args)
 
@@ -619,17 +671,26 @@ class ProfileResource(base.BaseResource):
 
         fetchedEntities = set()
         if detail == "notes":
-            userItems = yield self._getUserItems(userKey, myKey)
+            start = utils.getRequestArg(request, "start") or ''
+            fromFetchMore = ((not landing) and (not appchange) and start)
+            userItems = yield self._getUserItems(request, userKey, start=start)
             args.update(userItems)
+
 
         if script:
             yield renderScriptBlock(request, "profile.mako", "tabs", landing,
                                     "#profile-tabs", "set", **args)
             handlers = {} if detail != "notes" \
                 else {"onload": "(function(obj){$$.items.load(obj);})(this);"}
-            yield renderScriptBlock(request, "profile.mako", "content", landing,
-                                    "#profile-content", "set", True,
-                                    handlers=handlers, **args)
+
+            if fromFetchMore and detail == "notes":
+                yield renderScriptBlock(request, "profile.mako", "content", landing,
+                                            "#next-load-wrapper", "replace", True,
+                                            handlers=handlers, **args)
+            else:
+                yield renderScriptBlock(request, "profile.mako", "content", landing,
+                                        "#profile-content", "set", True,
+                                        handlers=handlers, **args)
 
         if newId or not script:
             # List the user's subscriptions

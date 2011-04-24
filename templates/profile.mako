@@ -362,6 +362,12 @@
       elif convType in plugins:
         block.append(key)
   %>
+  %if nextPageStart:
+    <% print nextPageStart %>
+    <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" _ref="/profile?id=${userKey}&start=${nextPageStart}">${_("Fetch older posts")}</a></div>
+  %else:
+    <div id="next-load-wrapper">No more posts to show</div>
+  %endif
 </%def>
 
 <%def name="content()">
