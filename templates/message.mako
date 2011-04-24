@@ -158,7 +158,7 @@
     </div>
     <div style="display:table-cell;width:100%;padding-top:3px">
       <div style="display:table;width:100%">
-      <div style="display:table-cell;width:100px">${conversation["From"]|nameinemail}</div>
+      <div style="display:table-cell;width:80px">${conversation["From"]|nameinemail}</div>
       <div style="display:table-cell;width:130px">
         % if len(conversation["people"]) <= 2:
           ${", ".join(conversation["people"])}

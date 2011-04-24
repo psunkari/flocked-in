@@ -6,6 +6,7 @@ import email.utils
 from twisted.internet   import defer
 from twisted.web        import server
 from twisted.python     import log
+from twisted.cred.error import Unauthorized
 
 from telephus.cassandra     import ttypes
 
@@ -26,7 +27,7 @@ class MessagingResource(base.BaseResource):
             defer.returnValue(True)
         else:
             if folder.upper() in self._specialFolders:
-                folder = "%s:%s" %(myKey, folder.upper())
+                folder = "%s:%s" %(userId, folder.upper())
             try:
                 yield Db.get(key=userId, column_family="mUserFolders",
                              super_column=folder)
@@ -34,6 +35,17 @@ class MessagingResource(base.BaseResource):
                 defer.returnValue(False)
             else:
                 defer.returnValue(True)
+
+    @defer.inlineCallbacks
+    def _checkUserHasMessageAccess(self, userId, messageId):
+        #Check if user owns the message or has permission to access it(XXX)
+        try:
+            yield Db.get(key=userId, column_family="mUserMessages",
+                         super_column=messageId)
+        except ttypes.NotFoundException:
+            defer.returnValue(False)
+        else:
+            defer.returnValue(True)
 
     @defer.inlineCallbacks
     def _threadActions(self, request):
@@ -80,6 +92,7 @@ class MessagingResource(base.BaseResource):
                 if action not in _validActions:
                     raise errors.InvalidParams()
                 else:
+                    print "setting flags"
                     if action == "star":
                         self._setFlagOnMessage(myKey, parent, "star", "1")
                     elif action == "unstar":
@@ -89,14 +102,18 @@ class MessagingResource(base.BaseResource):
                     elif action == "unread":
                         self._setFlagOnMessage(myKey, parent, "read", "0")
                     if action in ["star", "unstar"]:
-                        print "starred"
                         request.redirect("/messages/thread?id=%s&fid=%s" %(parent, folder))
+                    else:
+                        request.redirect("/messages?fid=%s"%(folder))
             else:request.redirect("/messages?fid=%s"%(folder))
         else:request.redirect("/messages")
 
     @defer.inlineCallbacks
     def _setFlagOnMessage(self, user, message, flag, fValue):
-        #XXX:Check if user has access to this message
+        hasAccess = yield self._checkUserHasMessageAccess(user, message)
+        if not hasAccess:
+            raise Unauthorized
+
         yield Db.insert(key=user, column_family="mUserMessages",
                         value=fValue, column=flag,
                         super_column=message)
@@ -165,10 +182,11 @@ class MessagingResource(base.BaseResource):
         email = args['me']["basic"]["emailId"]
         from_header = "%s <%s>" %(name, email)
 
-        recipients, body, subject, parent = self._parseComposerArgs(request,
-                                                                    name)
+        recipients, body, subject, parent = self._parseComposerArgs(request)
         if len(recipients) == 0:
             raise "No recipients specified"
+        if not subject:
+            subject = "Private message from %s" %(name)
 
         date_header, epoch = self._createDateHeader()
         new_message_id = str(utils.getUniqueKey()) + "@synovel.com"
@@ -190,7 +208,10 @@ class MessagingResource(base.BaseResource):
                       'date_epoch': str(epoch)
                     }
         if parent:
-            #XXX: Check if user has access to this message via acl
+            hasAccess = yield self._checkUserHasMessageAccess(myKey, parent)
+            if not hasAccess:
+                raise Unauthorized
+
             parent = yield Db.get_slice(parent, "messages")
             parent = utils.columnsToDict(parent)
             if parent:
@@ -227,7 +248,10 @@ class MessagingResource(base.BaseResource):
                               landing, "#mainbar", "set", **args)
 
         if parent:
-            #XXX: The current user should have the rights to view the message
+            hasAccess = yield self._checkUserHasMessageAccess(myKey, parent)
+            if not hasAccess:
+                raise Unauthorized
+
             res = yield Db.multiget_slice(keys=[parent], column_family="messages")
             res = utils.multiColumnsToDict(res)
             if parent in res.keys():
@@ -350,7 +374,7 @@ class MessagingResource(base.BaseResource):
     def _renderThread(self, request):
         #Based on the request, render a message or a conversation
         thread = request.args.get("id", [None])[0]
-        folder = request.args.get("fid", [None])[0]
+        folder = request.args.get("fid", ["inbox"])[0]
         #XXXBased on the user's preference, the id can be a message id or a
         # conversation id. In a conversation view, a single message can only be
         # viewed in the context of the entire conversation it belongs to. If
@@ -373,8 +397,12 @@ class MessagingResource(base.BaseResource):
             renderScriptBlock(request, "message.mako", "layout",
                               landing, "#mainbar", "set", **args)
 
-        if thread and folder:
+        if thread:
             #XXX: the viewer needs to have the necessary acls to view this
+            hasAccess = yield self._checkUserHasMessageAccess(myKey, thread)
+            if not hasAccess:
+                raise Unauthorized
+
             res = yield Db.get_slice(key=thread, column_family="messages")
             msgs = utils.columnsToDict(res)
             if len(msgs) > 0:
@@ -502,14 +530,13 @@ class MessagingResource(base.BaseResource):
         recipient_header = ", ".join(recipient_strings)
         defer.returnValue((recipient_header, uids))
 
-    def _parseComposerArgs(self, request, myName):
+    def _parseComposerArgs(self, request):
         #Since we will deal with composer related forms.Take care of santizing
         # all the input and fill with safe defaults wherever needed.
         #To, CC, Subject, Body,
         body = utils.getRequestArg(request, "body")
         parent = utils.getRequestArg(request, "parent") #TODO
-        subject = utils.getRequestArg(request, "subject") or \
-            "Private message from %s" %(myName)
+        subject = utils.getRequestArg(request, "subject") or None
         recipients = utils.getRequestArg(request, "recipients")
         recipients = re.sub(',\s+', ',', recipients).split(",")
         return recipients, body, subject, parent
