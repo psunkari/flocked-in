@@ -207,7 +207,7 @@
       %endif
 
       %if myKey == userKey:
-        ${'<span id="edit-profile" class="summary-item"><a href="profile/edit">edit</a></span>'}
+        ${'<span id="edit-profile" class="summary-item"><a href="/profile/edit" class="ajax">edit</a></span>'}
       %endif
     </div>
   </div>
