@@ -215,19 +215,44 @@
 
 
 <%def name="conv_tag(convId, tagId, tagName)">
-  <span class="tag"><a class="ajax invisible" href="/tags?id=${tagId}">${tagName}</a></span>
+  <span class="tag" id="tag-${tagId}">
+    <a class="ajax" href="/tags?id=${tagId}">${tagName}</a>
+    <form class="ajax delete-tags" action="/item/untag">
+      <input type="hidden" name="id" value="${convId}"/>
+      <input type="hidden" name="tag" value="${tagId}"/>
+      <button type="submit" class="button-link">x</button>
+    </form>
+  </span>
 </%def>
 
 
 <%def name="conv_tags(convId)">
   <% itemTags = items[convId].get("tags", {}) %>
-  %if itemTags:
-  <div id="conv-tags-${convId}" class="conv-tags">
+  <div class="conv-tags">
+    <span id="conv-tags-${convId}">
     %for tagId in itemTags.keys():
-      <span class="tag"><a class="ajax invisible" href="/tags?id=${tagId}">${tags[tagId]["title"]}</a></span>
+      <span class="tag" id="tag-${tagId}">
+        <a class="ajax" href="/tags?id=${tagId}">${tags[tagId]["title"]}</a>
+        <form class="ajax delete-tags" action="/item/untag">
+          <input type="hidden" name="id" value="${convId}"/>
+          <input type="hidden" name="tag" value="${tagId}"/>
+          <button type="submit" class="button-link">x</button>
+        </form>
+      </span>
     %endfor
+    </span>
+    <form method="post" action="/item/tag" class="ajax edit-tags-form" autocomplete="off" id="addtag-form-${convId}">
+      <div class="input-wrap">
+        <input type="text" class="conv-tags-input" name="tag" value="" placeholder="${_('Add tag')}"></input>
+      </div>
+      <input type="hidden" name="id" value=${convId}></input>
+    </form>
+    <span id="edit-tags-${convId}" class="edit-tags-button">
+      <button type="button" class="button-link" title="${_('Edit Tags')}" onclick="$$.items.updateTags('${convId}');">
+        <div class="icon edit-tags-icon"></div>
+      </button>
+    </span>
   </div>
-  %endif
 </%def>
 
 <%def name="item_me()">

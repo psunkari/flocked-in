@@ -739,7 +739,6 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
  */
 .tag {
     display: inline-block;
-    color: #3D85C6;
     border-width: 1px;
     border-style: solid;
     border-color: #FFF #FFF #C3D9FF #C3D9FF;
@@ -747,4 +746,27 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     padding: 1px 6px 1px 4px;
     margin: 1px;
     border-radius: 3px;
+}
+
+.conv-tags {
+    position: relative;
+    padding-right: 25px;
+}
+.edit-tags-button {
+    position: absolute;
+    right: 5px;
+    top: 6px;
+}
+
+.edit-tags-icon {
+    background-position: 0 -240px;
+}
+
+.delete-tags,
+.edit-tags-form {
+    display: none;
+}
+.editing-tags .delete-tags,
+.editing-tags .edit-tags-form {
+    display: inline-block;
 }

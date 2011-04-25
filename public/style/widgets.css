@@ -5,6 +5,18 @@
     cursor: text;
 }
 
+.button-link {
+    border: 0px;
+    padding: 0px;
+    margin: 0px;
+    color: #3366CC;
+    vertical-align: middle;
+    background: transparent;
+}
+.button-link:hover, .button-link:active {
+    text-decoration: underline;
+}
+
 .button {
     font-family: inherit;
     border-width: 1px;

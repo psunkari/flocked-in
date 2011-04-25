@@ -361,6 +361,19 @@ var items = {
 
         // Auto expand comment boxes
         $('.comment-input').autogrow();
+    },
+
+    updateTags: function(convId) {
+        var $wrapper = $('#conv-tags-wrapper-'+convId),
+            $input = $wrapper.find('.conv-tags-input')
+
+        $('#conv-tags-wrapper-'+convId).toggleClass('editing-tags');
+        if (!$input.hasClass('ui-autocomplete-input')) {
+            $input.autocomplete({
+                source: '/auto/tags?itemId='+convId,
+                minLength: 2
+            });
+        }
     }
 };
 
