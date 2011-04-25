@@ -372,6 +372,38 @@ class ProfileResource(base.BaseResource):
 
         yield defer.DeferredList(deferreds)
 
+    @defer.inlineCallbacks
+    def _changePassword(self, request):
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        landing = not self._ajax
+        curr_passwd = utils.getRequestArg(request, "curr_passwd")
+        passwd1 = utils.getRequestArg(request, "passwd1")
+        passwd2 = utils.getRequestArg(request, "passwd2")
+
+
+        yield self._renderEditProfile(request)
+
+        args["errorMsg"] = ""
+        if not curr_passwd:
+            args["errorMsg"] = "Enter current password"
+        if passwd1 != passwd2:
+            args["errorMsg"] = "New password didn't match"
+        cols = yield Db.get(myKey, "entities", "emailId", "basic")
+        emailId = cols.column.value
+        col = yield Db.get(emailId, "userAuth", "passwordHash")
+        passwdHash = col.column.value
+        if curr_passwd and passwdHash != utils.md5(curr_passwd):
+            args["errorMsg"] ="Incorrect Password"
+
+        if args["errorMsg"]:
+            yield renderScriptBlock(request, "profile.mako", "changePasswd",
+                                    landing, "#profile-content", "set", **args)
+        else:
+            newPasswd = utils.md5(passwd1)
+            yield Db.insert(emailId, "userAuth", newPasswd, "passwordHash")
+            args["errorMsg"] = "password changed successfully"
+            yield renderScriptBlock(request, "profile.mako", "changePasswd",
+                                    landing, "#profile-content", "set", **args)
 
     @profile
     @defer.inlineCallbacks
@@ -381,6 +413,7 @@ class ProfileResource(base.BaseResource):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         userInfo = {}
         calls = []
+
 
         for cn in ("jobTitle", "location", "desc", "name", "firstname", "lastname"):
             val = utils.getRequestArg(request, cn)
@@ -517,12 +550,15 @@ class ProfileResource(base.BaseResource):
                 raise errors.InvalidRequest()
 
         action = request.postpath[0]
-        if action == "edit":
+        if action in ( "edit", "changePasswd") :
             headers = request.requestHeaders
             content_length = headers.getRawHeaders("content-length", [0])[0]
             if int(content_length) > constants.MAX_IMAGE_SIZE:
                 raise errors.LargeFile()
-            requestDeferred = self._edit(request)
+            if action == "edit":
+                requestDeferred = self._edit(request)
+            elif action == "changePasswd":
+                requestDeferred = self._changePassword(request)
             return self._epilogue(request, requestDeferred)
 
         requestDeferred = utils.getValidEntityId(request, "id", "user")
@@ -577,8 +613,11 @@ class ProfileResource(base.BaseResource):
         d = None
         if segmentCount == 0:
             d = self._render(request)
-        elif segmentCount == 1 and request.postpath[0]== 'edit':
+        elif segmentCount == 1 and request.postpath[0] == 'edit':
             d = self._renderEditProfile(request)
+        elif segmentCount == 1 and request.postpath[0] == 'changePasswd':
+            d = self._changePassword(request)
+
 
         return self._epilogue(request, d)
 
@@ -604,10 +643,15 @@ class ProfileResource(base.BaseResource):
                                     landing, "#profile-tabs", "set", **args)
             yield renderScriptBlock(request, "profile.mako", "editBasicInfo",
                                     landing, "#profile-content", "set", **args)
-        if detail == "detail":
+        elif detail == "detail":
             yield renderScriptBlock(request, "profile.mako", "editProfileTabs",
                                     landing, "#profile-tabs", "set", **args)
             yield renderScriptBlock(request, "profile.mako", "editDetail",
+                                    landing, "#profile-content", "set", **args)
+        elif detail == "passwd":
+            yield renderScriptBlock(request, "profile.mako", "editProfileTabs",
+                                    landing, "#profile-tabs", "set", **args)
+            yield renderScriptBlock(request, "profile.mako", "changePasswd",
                                     landing, "#profile-content", "set", **args)
 
 

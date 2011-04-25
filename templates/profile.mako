@@ -384,7 +384,7 @@
     <%
       path = "/profile/edit?id=%s&" % myKey
     %>
-    %for item, name in [('basic', 'Basic'), ('detail', 'Info')]:
+    %for item, name in [('basic', 'Basic'), ('detail', 'Info'), ('passwd', 'Change Password')]:
       %if detail == item:
         <li><a href="${path}dt=${item}" id="profile-tab-${item}" class="ajax selected">${_(name)}</a></li>
       %else:
@@ -437,6 +437,36 @@
       </ul>
     </div>
   </form>
+</%def>
+
+<%def name="changePasswd()">
+<div id="error_block" style="color:red">
+  % if errorMsg:
+    ${errorMsg}
+  %endif
+</div>
+<form action="/profile/changePasswd" method="post"  enctype="multipart/form-data">
+  <div class="edit-profile">
+    <ul>
+      <li><label for="curr_passwd"> Current Password: </label></li>
+      <li><input type="password" name="curr_passwd" id="curr_passwd"/></li>
+    </ul>
+    <ul>
+      <li><label for="passwd1"> Password: </label></li>
+      <li><input type="password" name="passwd1" id="passwd1"/></li>
+    </ul>
+    <ul>
+      <li><label for="passwd2"> Confirm Password: </label></li>
+      <li><input type="password" name="passwd2" id="passwd2"/></li>
+    </ul>
+    <ul>
+        <li></li>
+        <li><input type="submit" name="userInfo_submit" value="Save"/> </li>
+    </ul>
+    <input type="hidden" id = 'dt' name="dt" value="passwd"/>
+  </div>
+
+</form>
 </%def>
 
 
