@@ -670,9 +670,9 @@ class ProfileResource(base.BaseResource):
                                     landing, "#user-subactions", "set", **args)
 
         fetchedEntities = set()
+        start = utils.getRequestArg(request, "start") or ''
+        fromFetchMore = ((not landing) and (not appchange) and start)
         if detail == "notes":
-            start = utils.getRequestArg(request, "start") or ''
-            fromFetchMore = ((not landing) and (not appchange) and start)
             userItems = yield self._getUserItems(request, userKey, start=start)
             args.update(userItems)
 
