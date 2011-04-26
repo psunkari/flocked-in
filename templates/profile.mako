@@ -358,7 +358,7 @@
         if len(block) > 0:
           self.activity_block(block)
           block = []
-        item.item_layout(convId, True, True)
+        item.item_layout(convId)
       elif convType in plugins:
         block.append(key)
   %>

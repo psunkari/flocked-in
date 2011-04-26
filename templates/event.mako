@@ -37,7 +37,7 @@
   %if conversations:
     <div id="title"> <span class = "middle title"> Events </span> </div>
     %for convId in conversations:
-      ${item.item_layout(convId, True, True)}
+      ${item.item_layout(convId)}
     %endfor
   %endif
 </%def>
@@ -46,7 +46,7 @@
  %if inviItems:
     <div id="title"> <span class = "middle title"> Invitations </span> </div>
     %for convId in inviItems:
-      ${item.item_layout(convId, True, True)}
+      ${item.item_layout(convId)}
     %endfor
   %endif
 </%def>

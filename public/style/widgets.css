@@ -10,11 +10,15 @@
     padding: 0px;
     margin: 0px;
     color: #3366CC;
+    font-size: inherit;
+    font-family: inherit;
     vertical-align: middle;
     background: transparent;
 }
-.button-link:hover, .button-link:active {
-    text-decoration: underline;
+.button-link:hover, .button-link:active, .button-link:focus {
+    outline: none;
+    color: white;
+    background-color: #3366CC;
 }
 
 .button {

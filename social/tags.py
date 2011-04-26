@@ -201,7 +201,7 @@ class TagsResource(base.BaseResource):
         fromFetchMore = ((not landing) and (not appchange) and start)
 
         if script:
-            onload = "(function(obj){$$.items.load(obj);})(this);"
+            onload = "(function(obj){$$.convs.load(obj);})(this);"
             if fromFetchMore:
                 yield renderScriptBlock(request, "tags.mako", "items", landing,
                                         "#next-load-wrapper", "replace", True,

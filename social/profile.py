@@ -725,7 +725,7 @@ class ProfileResource(base.BaseResource):
             yield renderScriptBlock(request, "profile.mako", "tabs", landing,
                                     "#profile-tabs", "set", **args)
             handlers = {} if detail != "notes" \
-                else {"onload": "(function(obj){$$.items.load(obj);})(this);"}
+                else {"onload": "(function(obj){$$.convs.load(obj);})(this);"}
 
             if fromFetchMore and detail == "notes":
                 yield renderScriptBlock(request, "profile.mako", "content", landing,

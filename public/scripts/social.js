@@ -60,7 +60,7 @@ _initAjaxRequests: function _initAjaxRequests() {
     var self = this;
 
     /* Async Get */
-    $("a.ajax").live("click", function() {
+    $("a.ajax,button.ajax").live("click", function() {
         node = $(this);
         deferred = null;
 
@@ -76,7 +76,7 @@ _initAjaxRequests: function _initAjaxRequests() {
     });
 
     /* Async Post */
-    $("a.ajaxpost").live("click", function() {
+    $("a.ajaxpost,button.ajaxpost").live("click", function() {
         node = $(this);
         url = node.attr('_ref');
         parsed = social.parseUri(url);
@@ -350,11 +350,11 @@ $$.publisher = publisher;
 
 
 /*
- * Callback to be called when one or more items are loaded
+ * Callback to be called when one or more conversations are loaded
  * into the view. Initializes the item's display - the comment form etc;
  */
 (function($$, $) {
-var items = {
+var convs = {
     load: function(obj) {
         // Placeholders in comment input boxes
         $$.ui.placeholders('.comment-input');
@@ -363,21 +363,36 @@ var items = {
         $('.comment-input').autogrow();
     },
 
-    updateTags: function(convId) {
+    editTags: function(convId, addTag) {
         var $wrapper = $('#conv-tags-wrapper-'+convId),
             $input = $wrapper.find('.conv-tags-input')
 
-        $('#conv-tags-wrapper-'+convId).toggleClass('editing-tags');
+        $wrapper.addClass('editing-tags');
         if (!$input.hasClass('ui-autocomplete-input')) {
             $input.autocomplete({
                 source: '/auto/tags?itemId='+convId,
                 minLength: 2
             });
         }
+
+        $('#conv-meta-wrapper-'+convId).removeClass('no-tags');
+        if (addTag)
+          $input.focus();
+    },
+
+    doneTags: function(convId) {
+        $('#conv-tags-wrapper-'+convId).removeClass('editing-tags');
+        if ($('#conv-tags-'+convId).children().length == 0) 
+            $('#conv-meta-wrapper-'+convId).addClass('no-tags');
+    },
+
+    comment: function(convId) {
+        $('#conv-meta-wrapper-'+convId).removeClass('no-comments');
+        $('#comment-form-'+convId).find('.comment-input').focus();
     }
 };
 
-$$.items = items;
+$$.convs = convs;
 })(social, jQuery);
 
 

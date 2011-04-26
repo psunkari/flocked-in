@@ -42,13 +42,13 @@ class ItemResource(base.BaseResource):
         start = utils.getRequestArg(request, "start") or ''
         start = utils.decodeKey(start)
 
-        if script and landing:
-            yield render(request, "item.mako", **args)
-
         args['convId'] = convId
         args['items'] = {convId: conv}
         meta = conv["meta"]
         owner = meta["owner"]
+
+        if script and landing:
+            yield render(request, "item.mako", **args)
 
         relation = Relation(myKey, [])
         yield defer.DeferredList([relation.initFriendsList(),
@@ -142,9 +142,9 @@ class ItemResource(base.BaseResource):
             args["oldest"] = utils.encodeKey(nextPageStart)
 
         if script:
-            d = renderScriptBlock(request, "item.mako", 'item_footer',
+            d = renderScriptBlock(request, "item.mako", 'conv_footer',
                                   landing, '#item-footer-%s' % convId,
-                                  'set', args=[convId], **args)
+                                  'set', **args)
             renderers.append(d)
             d = renderScriptBlock(request, "item.mako", 'conv_tags',
                                   landing, '#conv-tags-wrapper-%s' % convId,
@@ -154,9 +154,10 @@ class ItemResource(base.BaseResource):
                                   landing, '#conv-comments-wrapper-%s' % convId,
                                   'set', **args)
             renderers.append(d)
+            onload = "(function(obj){$$.convs.load(obj);})(this);"
             d = renderScriptBlock(request, "item.mako", 'conv_comment_form',
-                                  landing, '#comment-form-wrapper-%s' % convId,
-                                  'set', **args)
+                            landing, '#comment-form-wrapper-%s' % convId,
+                            'set', True, handlers={"onload": onload}, **args)
             renderers.append(d)
 
         # Wait till the item is fully rendered.
@@ -219,9 +220,10 @@ class ItemResource(base.BaseResource):
 
             data = {"items":{convId:conv},
                     "entities":{myKey: me}, "script": True}
+            onload = "(function(obj){$$.convs.load(obj);})(this);"
             d1 = renderScriptBlock(request, "item.mako", "item_layout",
-                                   False, "#user-feed", "prepend",
-                                   args=[convId, True, True], **data)
+                            False, "#user-feed", "prepend", args=[convId],
+                            handlers={"onload":onload}, **data)
 
             defaultType = plugins.keys()[0]
             d2 = plugins[defaultType].renderShareBlock(request, True)

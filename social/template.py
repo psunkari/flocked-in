@@ -1,4 +1,5 @@
 
+import re
 import json
 import traceback
 
@@ -13,6 +14,9 @@ _collection = TemplateLookup(directories=['templates'],
                              output_encoding='utf-8',
                              default_filters=['decode.utf8'],
                              collection_size=100)
+
+
+_spaceRE = re.compile(r'(\n)\s+')
 
 
 def _getTemplate(path, dfn=None):
@@ -35,7 +39,7 @@ def render(request, path, *args, **data):
     try:
         template = yield threads.deferToThread(_getTemplate, path)
         text = template.render(*args, **kwargs)
-        request.write(text)
+        request.write(_spaceRE.sub(r'\1', text))
     except Exception, err:
         log.msg(traceback.print_exc())
         request.processingFailed(err)
@@ -46,7 +50,7 @@ def renderDef(request, path, dfn, *args, **data):
     try:
         template = yield threads.deferToThread(_getTemplate, path, dfn)
         text = template.render(*args, **data)
-        request.write(text)
+        request.write(_spaceRE.sub(r'\1', text))
     except Exception, err:
         log.msg(traceback.print_exc())
         request.processingFailed(err)
@@ -59,6 +63,7 @@ def renderScriptBlock(request, path, dfn, wrapInTags=False, parent=None,
     try:
         template = yield threads.deferToThread(_getTemplate, path, dfn)
         text = template.render(*args, **data)
+        text = _spaceRE.sub(r'\1', text)
     except Exception, err:
         log.msg(traceback.print_exc())
         request.processingFailed(err)
@@ -86,7 +91,7 @@ def getBlock(path, dfn, args=[], **data):
     try:
         template = _getTemplate(path, dfn)
         text =  template.render(*args, **data)
-        return text
+        return _spaceRE.sub(r'\1', text)
     except Exception, err:
         log.msg(traceback.print_exc())
         raise Exception(err)

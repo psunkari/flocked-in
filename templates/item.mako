@@ -5,6 +5,7 @@
 <%namespace name="widgets" file="widgets.mako"/>
 <%inherit file="base.mako"/>
 
+
 <%def name="layout()">
   <div class="contents has-left has-right">
     <div id="left">
@@ -32,62 +33,78 @@
       </div>
       <div id="center">
         <div class="center-contents">
-          % if convId:
-              ${self.item_layout(convId)}
-          % endif
+          %if script:
+            ${self.item_lazy_layout(convId)}
+          %else:
+            ${self.item_layout(convId)}
+          %endif
         </div>
       </div>
     </div>
   </div>
 </%def>
 
-<%def name="item_layout(convId, inline=False, isFeed=False)">
+
+<%def name="item_lazy_layout(convId)">
+  <div id="conv-${convId}" class="conv-item">
+    <div class="conv-avatar" id="conv-avatar-${convId}"></div>
+    <div class="conv-data">
+      <div id="conv-root-${convId}">
+        <div class="conv-summary"></div>
+        <div id="item-footer-${convId}" class="conv-footer busy-indicator"></div>
+      </div>
+      <div id="conv-tags-wrapper-${convId}"></div>
+      <div id="conv-likes-wrapper-${convId}"></div>
+      <div id="conv-comments-wrapper-${convId}"></div>
+      <div id="comment-form-wrapper-${convId}" class="comment-form-wrapper busy-indicator"></div>
+    </div>
+  </div>
+</%def>
+
+
+<%def name="item_layout(convId)">
   <div id="conv-${convId}" class="conv-item">
     <div class="conv-avatar" id="conv-avatar-${convId}">
-      %if inline or not script:
-        ${self.conv_owner(items[convId]['meta']['owner'])}
-      %endif
+      ${self.conv_owner(items[convId]['meta']['owner'])}
     </div>
     <div class="conv-data">
       <div id="conv-root-${convId}">
-        %if inline:
-          <% hasReason = reasonStr and reasonStr.has_key(convId) %>
-          %if hasReason:
-            <span class="conv-reason">${reasonStr[convId]}</span>
-          %endif
-          <div class="conv-summary${' conv-quote' if hasReason else ''}">
-            ${self.conv_root(convId, hasReason)}
-            <div id="item-footer-${convId}" class="conv-footer busy-indicator">
-              ${self.item_footer(convId)}
-            </div>
-          </div>
+        <%
+          hasReason = reasonStr and reasonStr.has_key(convId)
+          hasComments = responses and len(responses.get(convId, {}))
+          hasLikes = likeStr or False
+          hasTags = items and items[convId].get("tags", {})
+        %>
+        %if hasReason:
+          <span class="conv-reason">${reasonStr[convId]}</span>
+          <div class="conv-summary conv-quote">
         %else:
-          <div class="conv-summary"></div>
-          <div id="item-footer-${convId}" class="conv-footer busy-indicator"></div>
+          <div class="conv-summary">
         %endif
+          ${self.conv_root(convId, hasReason)}
+          <div id="item-footer-${convId}" class="conv-footer busy-indicator">
+            ${self.conv_footer(convId, hasComments, hasLikes, hasTags)}
+          </div>
+        </div>
       </div>
-      <div id="conv-tags-wrapper-${convId}">
-        %if inline or not script:
+      <div id="conv-meta-wrapper-${convId}" class="conv-meta-wrapper${' no-comments' if not hasComments else ''}${' no-tags' if not hasTags else ''}${' no-likes' if not hasLikes else ''}">
+        <div id="conv-tags-wrapper-${convId}" class="tags-wrapper">
           ${self.conv_tags(convId)}
-        %endif
-      </div>
-      <div id="conv-likes-wrapper-${convId}">
-        %if likeStr and likeStr.has_key(convId):
-          <div class="conv-likes">${likeStr[convId]}</div>
-        %endif
-      </div>
-      <div id="conv-comments-wrapper-${convId}">
-        %if inline or not script:
-          ${self.conv_comments(convId, isFeed)}
-        %endif
-      </div>
-      %if script:
-      <div id="comment-form-wrapper-${convId}" class="conv-comment-form busy-indicator">
-        %if inline:
+        </div>
+        <div id="conv-likes-wrapper-${convId}" class="likes-wrapper">
+          %if likeStr and likeStr.has_key(convId):
+            <div class="conv-likes">${likeStr[convId]}</div>
+          %endif
+        </div>
+        <div id="conv-comments-wrapper-${convId}" class="comments-wrapper">
+          ${self.conv_comments(convId, True)}
+        </div>
+        %if script:
+        <div id="comment-form-wrapper-${convId}" class="comment-form-wrapper busy-indicator">
           ${self.conv_comment_form(convId)}
+        </div>
         %endif
       </div>
-      %endif
     </div>
   </div>
 </%def>
@@ -106,29 +123,59 @@
   %endif
 </%def>
 
+
+<%def name="conv_footer(convId, hasComments=True, hasLikes=True, hasTags=True)">
+  <%
+    meta = items[convId]['meta']
+    timestamp = int(meta['timestamp'])
+    likesCount = 0 if hasLikes else int(meta.get('likesCount', '0'))
+    commentsCount = 0 if hasComments else int(meta.get('responseCount', '0'))
+  %>
+  ${utils.simpleTimestamp(timestamp)}\
+  ## If none of my friends liked it, show the count of likes (onclick show the likes)
+  %if (not hasLikes and likesCount) or (not hasComments and commentsCount):
+    &#183;
+  %endif
+  %if not hasLikes and likesCount > 0:
+    <button class="button-link" title="${likesCount} Likes"><div class="small-icon small-like"><div>${likesCount}</button>
+  %endif
+  ## Number of comments when none of my friends commented on it
+  %if not hasComments and commentsCount > 0:
+    <button class="button-link ajax" title="${commentsCount} Comments"><div class="small-icon small-comment"></div>${commentsCount}</button>
+  %endif
+  &#183;
+  ## Like this conversation
+  %if myLikes and myLikes.has_key(convId) and len(myLikes[convId]):
+    <button class="button-link ajax" _ref="/item/unlike?id=${convId}">${_("Unlike")}</button>&#183;<button
+  %else:
+    <button class="button-link ajax" _ref="/item/like?id=${convId}">${_("Like")}</button>&#183;<button
+  %endif
+  ## Comment on this conversation
+  class="button-link" onclick="$$.convs.comment('${convId}');" >${_("Comment")}</button>&#183;<button
+  ## Add a tag
+  class="button-link" title="${_('Add Tag')}" onclick="$$.convs.editTags('${convId}', true);">${_("Add Tag")}</button>
+</%def>
+
+
 <%def name="item_footer(itemId)">
   <%
     meta = items[itemId]['meta']
-    hasParent = meta.has_key('parent')
     timestamp = int(meta['timestamp'])
     likesCount = int(meta.get('likesCount', "0"))
   %>
   ${utils.simpleTimestamp(timestamp)}
-  &nbsp;&#183;&nbsp;
-  %if hasParent and likesCount > 0:
-    <span class="likes"><a class="ajax" _ref="/item/likes?id=${itemId}">${likesCount}</a></span>
-    &nbsp;&#183;&nbsp;
+  %if likesCount > 0:
+    &#183;
+    <button class="button-link" title="${likesCount} Likes"><div class="small-icon small-like"><div>${likesCount}</button>
   %endif
-  %if myLikes and myLikes.has_key(itemId) and len(myLikes[itemId]):
-    <span><a class="ajax" _ref="/item/unlike?id=${itemId}">${_("Unlike")}</a></span>
+  &#183;
+  %if myLikes and myLikes.has_key(convId) and len(myLikes[convId]):
+    <button class="button-link ajax" _ref="/item/unlike?id=${itemId}">${_("Unlike")}</button>
   %else:
-    <span><a class="ajax" _ref="/item/like?id=${itemId}">${_("Like")}</a></span>
-  %endif
-  <span><a class="ajax" _ref="/item/delete?id=${itemId}">${_("Delete")}</a></span>
-  % if not hasParent:
-    <span><a class="ajax" _ref="/item/remove?id=${itemId}">${_("Remove")}</a></span>
+    <button class="button-link ajax" _ref="/item/like?id=${itemId}">${_("Like")}</button>
   %endif
 </%def>
+
 
 <%def name="conv_comments_head(convId, total, showing, isFeed)">
   %if total > showing:
@@ -151,12 +198,14 @@
   %endif
 </%def>
 
+
 <%def name="conv_comments_only(convId)">
   <% responsesToShow = responses.get(convId, {}) if responses else [] %>
   %for responseId in responsesToShow:
     ${self.conv_comment(convId, responseId)}
   %endfor
 </%def>
+
 
 <%def name="conv_comments(convId, isFeed=False)">
   <%
@@ -173,6 +222,7 @@
   </div>
 </%def>
 
+
 <%def name="conv_comment_form(convId)">
   <form method="post" action="/item/comment" class="ajax" autocomplete="off" id="comment-form-${convId}">
     <div class="input-wrap">
@@ -188,6 +238,7 @@
     %endif
   </form>
 </%def>
+
 
 <%def name="conv_comment(convId, commentId)">
   <%
@@ -229,6 +280,7 @@
 <%def name="conv_tags(convId)">
   <% itemTags = items[convId].get("tags", {}) %>
   <div class="conv-tags">
+    <button class="button-link edit-tags-button" title="${_('Edit tags')}" onclick="$$.convs.editTags('${convId}');"><div class="icon edit-tags-icon"></div>Edit Tags</button>
     <span id="conv-tags-${convId}">
     %for tagId in itemTags.keys():
       <span class="tag" id="tag-${tagId}">
@@ -247,22 +299,22 @@
       </div>
       <input type="hidden" name="id" value=${convId}></input>
     </form>
-    <span id="edit-tags-${convId}" class="edit-tags-button">
-      <button type="button" class="button-link" title="${_('Edit Tags')}" onclick="$$.items.updateTags('${convId}');">
-        <div class="icon edit-tags-icon"></div>
-      </button>
-    </span>
+    <button class="button-link done-tags-button" title="${_('Done editing tags')}" onclick="$$.convs.doneTags('${convId}');"><div class="icon done-tags-icon"></div>Done</button>
   </div>
 </%def>
+
 
 <%def name="item_me()">
 </%def>
 
+
 <%def name="item_meta()">
 </%def>
 
+
 <%def name="item_subactions()">
 </%def>
+
 
 <%def name="render_status(convId, isQuoted=False)">
   <%
@@ -282,6 +334,7 @@
     %endif
   </div>
 </%def>
+
 
 <%def name="render_activity(convId, isQuoted=False)">
   <%
