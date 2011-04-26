@@ -106,7 +106,7 @@
 
 <%def name="feed()">
   %for convId in conversations:
-    ${item.item_layout(convId, True, True)}
+    ${item.item_layout(convId)}
   %endfor
   %if nextPageStart:
     <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" _ref="/feed?start=${nextPageStart}">${_("Fetch older posts")}</a></div>

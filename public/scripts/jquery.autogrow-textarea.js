@@ -18,6 +18,9 @@
                 minHeight   = $this.height(),
                 lineHeight  = $this.css('lineHeight');
 
+            if ($this.next().hasClass('autogrow-backplane'))
+                return;
+
             var shadow = $('<div></div>').css({
                 position:   'absolute',
                 top:        -10000,
@@ -27,7 +30,7 @@
                 fontFamily: $this.css('fontFamily'),
                 lineHeight: $this.css('lineHeight'),
                 resize:     'none'
-            }).appendTo(this.parentNode);
+            }).insertAfter(this).addClass('autogrow-backplane');
 
             var update = function(event) {
                 if (event && event.type === "keydown" && event.which === 13 && !event.shiftKey) {

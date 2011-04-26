@@ -140,12 +140,12 @@ class AutoCompleteResource(BaseResource):
         d2 = Db.get_slice(userId, "userGroups")
 
         cols = yield d1
-        meta = utils.columnsToDict(item)
-        if "parent" in item:    # This is a comment! Tags cannot exist here!!
+        meta = utils.columnsToDict(cols)
+        if "parent" in meta:    # This is a comment! Tags cannot exist here!!
             request.write("[]")
             return
 
-        acl = item.get("acl", {"accept": {"orgs":[orgId]}} if orgId else {})
+        acl = meta.get("acl", {"accept": {"orgs":[orgId]}} if orgId else {})
         if not acl:     # No acl on item and user is external
             request.write("[]")
             return
@@ -153,10 +153,10 @@ class AutoCompleteResource(BaseResource):
         acl = pickle.loads(acl)
         accept = acl.get("accept", {})
         containersInACL = set(accept.get("orgs"))
-        containersInACL.update(accept.get("groups"))
+        containersInACL.update(accept.get("groups", []))
 
         cols = yield d2
-        tagContainers.update([x.column.name for x in groups])
+        tagContainers.update([x.column.name for x in cols])
 
         containers = containersInACL.intersection(tagContainers)
 
@@ -178,14 +178,14 @@ class AutoCompleteResource(BaseResource):
         if toFetchEntities:
             results = yield Db.multiget_slice(toFetchEntities, "entities",
                         ["name", "allowExternalUsers"], super_column="basic")
-            entities.update(utils.multiSuperColumnsToDict(results))
+            entities.update(utils.multiColumnsToDict(results))
 
         output = []
         template = self._singleLineTemplate
         for tag in tags:
             title = tag["title"]
             data = {"title": title,
-                    "meta": entities[tag["org"]]["basic"]["name"]}
+                    "meta": entities[tag["org"]]["name"]}
             output.append({"value": title,
                            "label": template%data,
                            "href": "/tags?id=%s"%tag["id"]})

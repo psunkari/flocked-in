@@ -207,7 +207,7 @@
       %endif
 
       %if myKey == userKey:
-        ${'<span id="edit-profile" class="summary-item"><a href="profile/edit">edit</a></span>'}
+        ${'<span id="edit-profile" class="summary-item"><a href="/profile/edit" class="ajax">edit</a></span>'}
       %endif
     </div>
   </div>
@@ -358,7 +358,7 @@
         if len(block) > 0:
           self.activity_block(block)
           block = []
-        item.item_layout(convId, True, True)
+        item.item_layout(convId)
       elif convType in plugins:
         block.append(key)
   %>

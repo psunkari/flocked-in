@@ -48,7 +48,7 @@
 
 <%def name="items()">
   %for convId in conversations:
-    ${item.item_layout(convId, True, True)}
+    ${item.item_layout(convId)}
   %endfor
   %if nextPageStart:
     <% print nextPageStart %>

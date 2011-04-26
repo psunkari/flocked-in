@@ -248,7 +248,6 @@ class FeedResource(base.BaseResource):
         reasonTmpl = {}
         likes = {}
         responses = {}
-        toFetchResponses = set()
         for conversation in rawFeedItems:
             convId = conversation.super_column.name
             mostRecentItem = None
@@ -315,23 +314,6 @@ class FeedResource(base.BaseResource):
                     reasonTagId[convId] = tagId
                     reasonTmpl[convId] = "%s applied %s tag on %s's %s"
 
-                # Check if we have to fetch more responses for this conversation
-                if len(responses[convId]) < 2:
-
-                    toFetchResponses.add(convId)
-
-        # 2.1 Fetch more responses, if required
-        itemResponses = yield Db.multiget_slice(toFetchResponses,
-                                                "itemResponses",
-                                                reverse=True, count=2)
-        for convId, comments in itemResponses.items():
-            for comment in comments:
-                userKey_, itemKey = comment.column.value.split(':')
-                if itemKey not in toFetchItems and len(responses[convId]) < 2:
-                    responses[convId].append(itemKey)
-                    toFetchItems.add(itemKey)
-                    toFetchEntities.add(userKey_)
-
         # Concurrently fetch items and entities
         fetchedItems = yield Db.multiget_slice(toFetchItems, "items",
                                                ["meta", "tags"])
@@ -381,7 +363,6 @@ class FeedResource(base.BaseResource):
         myLikes = utils.multiColumnsToDict(fetchedMyLikes)
         fetchedTags = utils.supercolumnsToDict(fetchedTags)
         args["tags"] = fetchedTags
-
 
         # We got all our data, do the remaining processing before
         # rendering the template.
@@ -500,7 +481,7 @@ class FeedResource(base.BaseResource):
         args.update(feedItems)
 
         if script:
-            onload = "(function(obj){$$.items.load(obj);})(this);"
+            onload = "(function(obj){$$.convs.load(obj);})(this);"
             if fromFetchMore:
                 yield renderScriptBlock(request, "feed.mako", "feed", landing,
                                         "#next-load-wrapper", "replace", True,
