@@ -1,3 +1,4 @@
+import uuid
 from twisted.web        import server
 from twisted.python     import log
 from twisted.internet   import defer
@@ -109,6 +110,18 @@ class GroupsResource(base.BaseResource):
             else:
                 yield Db.insert(myKey, "pendingConnections", '0', groupId)
                 yield Db.insert(groupId, "pendingConnections", '1', myKey)
+                #notify admin of the group
+                cols = yield Db.get_slice(groupId, "entities", ["admins"])
+                admins = utils.supercolumnsToDict(cols)
+
+                for admin in admins["admins"]:
+                    commentOwner = myKey
+                    responseType = "G"
+                    value = ":".join([responseType, commentOwner, groupId, '', admin])
+                    timeUUID = uuid.uuid1().bytes
+                    yield Db.insert(admin, "notifications", groupId, timeUUID)
+                    yield Db.batch_insert(admin, "notificationItems", {groupId:{timeUUID:value}})
+
                 pendingRequests[groupId]=myKey
             args["pendingConnections"] = pendingRequests
             args["groupFollowers"] = groupFollowers
@@ -128,10 +141,10 @@ class GroupsResource(base.BaseResource):
         myOrgId = args["orgKey"]
         groupId = yield utils.getValidEntityId(request, "id", "group")
         userId = yield utils.getValidEntityId(request, "uid", "user")
-        group = yield Db.get_slice(groupId, "entities", ["basic"])
+        group = yield Db.get_slice(groupId, "entities", ["basic", "admins"])
         group = utils.supercolumnsToDict(group)
 
-        if myKey == group["basic"]["admin"]:
+        if myKey in group["admins"]:
             #or myKey in moderators #if i am moderator
             try:
                 cols = yield Db.get(groupId, "pendingConnections", userId)
@@ -148,10 +161,10 @@ class GroupsResource(base.BaseResource):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         groupId = yield utils.getValidEntityId(request, "id", "group")
         userId = yield utils.getValidEntityId(request, "uid", "user")
-        group = yield Db.get_slice(groupId, "entities", ["basic"])
+        group = yield Db.get_slice(groupId, "entities", ["basic", "admins"])
         group = utils.supercolumnsToDict(group)
 
-        if myKey == group["basic"]["admin"]:
+        if myKey in group["admins"]:
             #or myKey in moderators #if i am moderator
             try:
                 cols = yield Db.get(groupId, "pendingConnections", userId)
@@ -169,14 +182,15 @@ class GroupsResource(base.BaseResource):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         groupId = yield utils.getValidEntityId(request, "id", "group")
         userId = yield utils.getValidEntityId(request, "uid", "user")
-        group = yield Db.get_slice(groupId, "entities", ["basic"])
+        group = yield Db.get_slice(groupId, "entities", ["basic", "admins"])
         group = utils.supercolumnsToDict(group)
 
-        if myKey == userId and myKey == group["basic"]["admin"]:
+        if myKey == userId and myKey in group["admins"] \
+            and len(group["admins"]) == 1:
             log.msg("Admin can't be banned from group")
             raise errors.InvalidRequest()
 
-        if myKey == group["basic"]["admin"]:
+        if myKey in group["admins"]:
             # if the request is pending, remove the request
             yield Db.remove(groupId, "pendingConnections", userId)
             yield Db.remove(userId, "pendingConnections", groupId)
@@ -196,10 +210,10 @@ class GroupsResource(base.BaseResource):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         groupId = yield utils.getValidEntityId(request, "id", "group")
         userId = yield utils.getValidEntityId(request, "uid", "user")
-        group = yield Db.get_slice(groupId, "entities", ["basic"])
+        group = yield Db.get_slice(groupId, "entities", ["basic", "admins"])
         group = utils.supercolumnsToDict(group)
 
-        if myKey == group["basic"]["admin"]:
+        if myKey in group["admins"]:
             # if the request is pending, remove the request
             yield Db.remove(groupId, "bannedUsers", userId)
             log.msg("unblocked user %s from group %s"%(userId, groupId))
@@ -253,9 +267,10 @@ class GroupsResource(base.BaseResource):
             raise errors.MissingParams()
 
         groupId = utils.getUniqueKey()
-        meta = {"name":name, "admin":myKey, "type":"group",
+        meta = {"name":name, "type":"group",
                 "access":access, "orgKey":args["orgKey"],
                 "allowExternalUsers": allowExternal}
+        admins = {myKey:''}
         if description:
             meta["desc"] = description
 
@@ -264,7 +279,8 @@ class GroupsResource(base.BaseResource):
             avatar = yield saveAvatarItem(groupId, dp)
             meta["avatar"] = avatar
 
-        yield Db.batch_insert(groupId, "entities", {"basic": meta})
+        yield Db.batch_insert(groupId, "entities", {"basic": meta,
+                                                    "admins": admins})
         yield Db.insert(orgKey, "orgGroups", '', groupId)
         request.redirect("/feed?id=%s"%(groupId))
 
@@ -370,7 +386,7 @@ class GroupsResource(base.BaseResource):
 
         groupId = yield utils.getValidEntityId(request, "id", "group")
 
-        group = yield Db.get_slice(groupId, "entities", ["basic"])
+        group = yield Db.get_slice(groupId, "entities", ["basic", "admins"])
         group = utils.supercolumnsToDict(group)
 
         if script and landing:
@@ -380,8 +396,7 @@ class GroupsResource(base.BaseResource):
                                     landing, "#mainbar", "set", **args)
 
 
-
-        if myKey == group["basic"]["admin"]:
+        if myKey in group["admins"]:
             #or myKey in moderators #if i am moderator
             cols = yield Db.get_slice(groupId, "pendingConnections")
             cols = utils.columnsToDict(cols)

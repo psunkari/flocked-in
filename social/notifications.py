@@ -72,6 +72,7 @@ class NotificationsResource(base.BaseResource):
         pluginNotifications = {}
         toFetchUsers = set()
         toFetchGroups = set()
+        pendingRequests = {}
         fetchCount = count + 5
 
         while len(convs) < count:
@@ -112,12 +113,18 @@ class NotificationsResource(base.BaseResource):
                     pluginNotifications.setdefault(convType, {})
                     pluginNotifications[convType].setdefault(convId, [])
                     pluginNotifications[convType][convId].append(commentOwner)
+                elif responseType == "G":
+                    groupId = convId
+                    toFetchGroups.add(groupId)
+                    pendingRequests.setdefault(groupId, []).append(commentOwner)
+
 
         users = yield Db.multiget_slice(toFetchUsers, "entities", ["basic"])
         groups = yield Db.multiget_slice(toFetchGroups, "entities", ["basic"])
 
         users = utils.multiSuperColumnsToDict(users)
         groups = utils.multiSuperColumnsToDict(groups)
+        log.msg(groups)
 
         commentTemplate = {1: "%s commented on %s's %s",
                            2: "%s and %s commented on %s's %s",
@@ -131,6 +138,11 @@ class NotificationsResource(base.BaseResource):
                          2: "%s and %s likes a comment on  %s's %s",
                          3: "%s, %s and 1 other likes a comment on  %s's %s",
                          4: "%s, %s and %s others likes a comment on %s's %s"}
+        groupRequestsTemplate = {1: "%s subscribed to %s group. %s to approve the request ",
+                                 2: "%s and %s subscribed to %s group. %s to approve the request",
+                                 3: "%s and %s and 1 other subscribed to %s group. %s to approve the request.",
+                                 4: "%s and %s and %s others subscribed to %s group. %s to approve the request."}
+
 
         for convId in convs:
             reasonStr[convId] = []
@@ -156,6 +168,21 @@ class NotificationsResource(base.BaseResource):
                                                      pluginNotifications[convType][convId],
                                                      users)
                 reasonStr[convId].append(reason)
+        for groupId in pendingRequests:
+            groupName = groups[groupId]["basic"]["name"]
+            groupUrl = "<a href='/feed?id=%s'> %s</a>"%(groupId, groupName)
+            url = "<a href='/groups/admin?id=%s'>click here</a> "%(groupId)
+            reason = groupRequestsTemplate[len(pendingRequests[groupId])]
+            vals = [utils.userName(userId, users[userId]) for userId in pendingRequests[groupId][:2]]
+            if len(pendingRequests[groupId])>3:
+                vals.append(len(pendingRequests[groupId])-2)
+            vals.append(groupUrl)
+            vals.append(url)
+
+            log.msg(reason)
+            log.msg(vals)
+            log.msg(len(vals), len(pendingRequests[groupId]))
+            reasonStr[groupId].append(reason%(tuple(vals)))
 
         args["reasonStr"] = reasonStr
         args["groups"] = groups

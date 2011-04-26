@@ -291,7 +291,7 @@ def addSampleData(client):
                                     'example.com': '',
                                     'example.org': ''
                                 },
-                                'admins': {adminKey: ''}})
+                                'admins': {adminKey: williamKey}})
 
     # Map domains to organization
     yield client.insert('example.com', 'domainOrgMap', '', exampleKey)
@@ -304,9 +304,9 @@ def addSampleData(client):
                                     "name": "Management",
                                     "desc": "Group of all executives involved in policy making",
                                     "orgKey": exampleKey,
-                                    "admin": adminKey,
                                     "access": "private",
-                                    "type": "group" }})
+                                    "type": "group" },
+                                "admins":{adminKey:''}})
     yield client.insert(exampleKey, "orgGroups", '', managementGroupId)
 
     programmersGroupId = utils.getUniqueKey()
@@ -317,7 +317,8 @@ def addSampleData(client):
                                     "orgKey": exampleKey,
                                     "admin": adminKey,
                                     "access": "private",
-                                    "type": "group" }})
+                                    "type": "group" },
+                                    "admin":{adminKey:''}})
     yield client.insert(exampleKey, "orgGroups", '', programmersGroupId)
 
     # Index used to sort users in company user's list
