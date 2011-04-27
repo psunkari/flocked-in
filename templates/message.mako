@@ -12,21 +12,21 @@
   <%
     specialFolders = ["sent", "inbox", "trash", "drafts", "archives"]
     def navMenuItem(link, text, icon):
-        return '<li><a href="%(link)s" class="ajax busy-indicator"><span class="sidemenu-icon icon %(icon)s-icon"></span><span class="sidemenu-text">%(text)s</span></a></li>' % locals()
+        return '<li><a href="%(link)s" class="ajax busy-indicator"><span class="sidemenu-icon messaging-icon %(icon)s-icon"></span><span class="sidemenu-text">%(text)s</span></a></li>' % locals()
 
   %>
   <div id="mymenu-container" class="sidemenu-container">
     <ul class="v-links sidemenu">
-      ${navMenuItem("/feed", _("Back to Home"), "")}
+      ${navMenuItem("/feed", _("Back to Home"), "back")}
     </ul>
     <ul class="v-links sidemenu">
-      ${navMenuItem("/messages/write", _("Compose"), "")}
+      ${navMenuItem("/messages/write", _("Compose"), "compose")}
     </ul>
     <ul id="mymenu" class="v-links sidemenu">
-        ${navMenuItem("/messages?fid=INBOX", _("Inbox"), "")}
-        ${navMenuItem("/messages?fid=ARCHIVES", _("Archives"), "")}
-        ${navMenuItem("/messages?fid=TRASH", _("Trash"), "")}
-        ${navMenuItem("/messages?fid=SENT", _("Sent"), "")}
+        ${navMenuItem("/messages?fid=INBOX", _("Inbox"), "inbox")}
+        ${navMenuItem("/messages?fid=ARCHIVES", _("Archives"), "archive")}
+        ${navMenuItem("/messages?fid=TRASH", _("Trash"), "trash")}
+        ${navMenuItem("/messages?fid=SENT", _("Sent"), "sent")}
         <!--${navMenuItem("/messages?fid=DRAFTS", _("Drafts"), "")}-->
     </ul>
     <ul id="mymenu" class="v-links sidemenu">

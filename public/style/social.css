@@ -107,6 +107,15 @@ a:hover, a:active, a:focus {
     vertical-align: middle;
 }
 
+.messaging-icon {
+    height: 16px;
+    width: 16px;
+    background-image: url(/public/images/messaging_sprite.png);
+    background-repeat: no-repeat;
+    display: inline-block;
+    vertical-align: middle;
+}
+
 .input-wrap {
     background-color: white;
     border: 1px solid #C3D9FF;
@@ -288,6 +297,24 @@ a:hover, a:active, a:focus {
     background-position: 0 -144px;
 }
 
+.inbox-icon{
+    background-position: 0 -48px;
+}
+.compose-icon{
+    background-position: 0 -32px;
+}
+.sent-icon {
+    background-position: 0 -16px;
+}
+.archive-icon {
+    background-position: 0 -112px;
+}
+.back-icon {
+    background-position: 0 -96px;
+}
+.trash-icon {
+    background-position: 0 -80px;
+}
 .sidebar-title {
     font-weight: bold;
     margin: 0 10px 0 -10px;
