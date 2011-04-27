@@ -166,7 +166,7 @@
   ${utils.simpleTimestamp(timestamp)}
   %if likesCount > 0:
     &#183;
-    <button class="button-link" title="${likesCount} Likes"><div class="small-icon small-like"><div>${likesCount}</button>
+    <button class="button-link" title="${likesCount} Likes"><div class="small-icon small-like"></div>${likesCount}</button>
   %endif
   &#183;
   %if myLikes and myLikes.has_key(convId) and len(myLikes[convId]):
