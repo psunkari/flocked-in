@@ -256,7 +256,7 @@ def checkAcl(userId, acl, owner, relation, userOrgId=None):
     if userId in deny.get("users", []) or \
        userOrgId in deny.get("org", []) or \
        (deny.get("friends", []) and owner in relation.friends) or \
-       any([groupid in deny.get("groups", []) for groupid in relation.subscriptions]):
+       any([groupid in deny.get("groups", []) for groupid in relation.groups]):
         return False
 
     if "public" in accept:
