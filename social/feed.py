@@ -184,12 +184,13 @@ def updateFeedResponses(userKey, parentKey, itemKey, timeuuid, itemType,
 #    the currently logged in user.
 #  - Use feedItemsId to establish context of another user - may be used for
 #    administration purposes or when visiting other user's profile
+#  - If getFn is given, it is called to fetch the list of ids from the Db.
 #
 @profile
 @defer.inlineCallbacks
 @dump_args
 def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
-                 start='', count=10, getReason=True):
+                 getFn=None, start='', count=10, getReason=True):
     toFetchItems = set()    # Items and entities that need to be fetched
     toFetchEntities = set() #
     toFetchTags = set()     #
@@ -335,27 +336,39 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
         fetchCount = count + 2
         while len(convIds) < count:
             fetchedConvIds = []
-            cols = yield Db.get_slice(feedId, "feed", count=fetchCount,
-                                      start=fetchStart, reverse=True)
-            for col in cols:
-                value = col.column.value
-                if value not in allFetchedConvIds:
-                    fetchedConvIds.append(value)
-                    allFetchedConvIds.append(value)
-                    keysFromFeed.append(col.column.name)
 
-            if len(cols) < fetchCount:
-                break
+            # Use the getFn function if given.
+            if getFn:
+                results = yield getFn(start=fetchStart, count=fetchCount)
+                for name, value in results.items():
+                    if value not in allFetchedConvIds:
+                        fetchedConvIds.append(value)
+                        allFetchedConvIds.append(value)
+                        keysFromFeed.append(name)
 
-            fetchStart = cols[-1].column.name
+            # Fetch user's feed when getFn isn't given.
+            else:
+                results = yield Db.get_slice(feedId, "feed", count=fetchCount,
+                                          start=fetchStart, reverse=True)
+                for col in results:
+                    value = col.column.value
+                    if value not in allFetchedConvIds:
+                        fetchedConvIds.append(value)
+                        allFetchedConvIds.append(value)
+                        keysFromFeed.append(col.column.name)
+
+            fetchStart = keysFromFeed[-1]
             feedItems_d.append(fetchFeedItems(fetchedConvIds))
             filteredConvIds = yield fetchAndFilterConvs(fetchedConvIds, count)
             convIds.extend(filteredConvIds)
+
+            if len(results) < fetchCount:
+                break
         
         if len(keysFromFeed) > count:   # We have more items than count
             nextPageStart = utils.encodeKey(keysFromFeed[count])
             convIds = convIds[0:count]
-        elif len(cols) == fetchCount:   # We got duplicate items in feed
+        elif len(results) == fetchCount:   # We got duplicate items in feed
             nextPageStart = utils.encodeKey(keysFromFeed[-1])
             convIds = convIds[0:-1]
     else:
