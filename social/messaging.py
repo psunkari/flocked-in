@@ -244,8 +244,8 @@ class MessagingResource(base.BaseResource):
             yield render(request, "message.mako", **args)
 
         if appchange and script:
-            renderScriptBlock(request, "message.mako", "layout",
-                              landing, "#mainbar", "set", **args)
+            yield renderScriptBlock(request, "message.mako", "layout",
+                                    landing, "#mainbar", "set", **args)
 
         if parent:
             hasAccess = yield self._checkUserHasMessageAccess(myKey, parent)
@@ -303,8 +303,8 @@ class MessagingResource(base.BaseResource):
             yield render(request, "message.mako", **args)
 
         if appchange and script:
-            renderScriptBlock(request, "message.mako", "layout",
-                              landing, "#mainbar", "set", **args)
+            yield renderScriptBlock(request, "message.mako", "layout",
+                                    landing, "#mainbar", "set", **args)
 
         args.update({"fid":folderId})
 
@@ -394,8 +394,8 @@ class MessagingResource(base.BaseResource):
             yield render(request, "message.mako", **args)
 
         if appchange and script:
-            renderScriptBlock(request, "message.mako", "layout",
-                              landing, "#mainbar", "set", **args)
+            yield renderScriptBlock(request, "message.mako", "layout",
+                                    landing, "#mainbar", "set", **args)
 
         if thread:
             #XXX: the viewer needs to have the necessary acls to view this
