@@ -446,25 +446,28 @@ class FeedResource(base.BaseResource):
         myOrgId = args["orgKey"]
 
         if entityId:
-            entity = yield Db.get_slice(entityId, "entities", ["basic"])
-            entity = utils.supercolumnsToDict(entity)
-            entityType = entity["basic"]['type']
+            entity = yield Db.get_slice(entityId, "entities", super_column="basic")
+            entity = utils.columnsToDict(entity)
+            entityType = entity["type"]
             if entityType == "org":
                 if entityId != myOrgId:
                     errors.InvalidRequest()
-                args["heading"] = "Company Feed"
+                args["feedTitle"] = _("Company Feed: %s") % entity["name"]
             elif entityType == "group":
-                # XXX: Check if I am a member of this group!
-                args["heading"] = "Group Feed"
+                args["feedTitle"] = _("Group Feed: %s") % entity["name"]
             else:
                 errors.InvalidRequest()
+        else:
+            args["feedTitle"] = _("News Feed")
 
         if script and landing:
             yield render(request, "feed.mako", **args)
-
-        if script and appchange:
+        elif script and appchange:
             yield renderScriptBlock(request, "feed.mako", "layout",
                                     landing, "#mainbar", "set", **args)
+        elif script and "feedTitle" in args:
+            yield renderScriptBlock(request, "feed.mako", "feed_title",
+                                    landing, "#title", "set", **args)
 
         start = utils.getRequestArg(request, "start") or ''
         fromFetchMore = ((not landing) and (not appchange) and start)

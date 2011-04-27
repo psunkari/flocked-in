@@ -28,11 +28,7 @@
       <div id="center">
         <div class="center-header">
           <div class="titlebar">
-            %if heading:
-              <div id="title"><span class="middle title">${_(heading)}</span></div>
-            %else:
-              <div id="title"><span class="middle title">${_("News Feed")}</span></div>
-            %endif
+            <div id="title"><span class="middle title">${self.feed_title()}</span></div>
           </div>
           <div id="share-block">
             %if not script:
@@ -49,6 +45,10 @@
       </div>
     </div>
   </div>
+</%def>
+
+<%def name="feed_title()">
+  <span class="middle title">${feedTitle}</span>
 </%def>
 
 <%def name="acl_button(id, defaultVal, defaultLabel)">
