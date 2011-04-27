@@ -446,7 +446,7 @@ class FeedResource(base.BaseResource):
         myOrgId = args["orgKey"]
 
         if entityId:
-            entity = yield Db.get_slice(entityId, "entities", ["basic"])
+            entity = yield Db.get_slice(entityId, "entities", ["basic", "admins"])
             entity = utils.supercolumnsToDict(entity)
             entityType = entity["basic"]['type']
             if entityType == "org":
@@ -455,7 +455,7 @@ class FeedResource(base.BaseResource):
                 args["heading"] = "Company Feed"
             elif entityType == "group":
                 # XXX: Check if I am a member of this group!
-                args["heading"] = "Group Feed"
+                args["heading"] = "%s Group" %(entity["basic"]["name"])
             else:
                 errors.InvalidRequest()
 
@@ -490,6 +490,12 @@ class FeedResource(base.BaseResource):
                 yield renderScriptBlock(request, "feed.mako", "feed", landing,
                                         "#user-feed", "set", True,
                                         handlers={"onload": onload}, **args)
+            if entityId:
+
+                if entity["basic"]["type"] == "group" and myKey in entity["admins"]:
+                    args["groupId"] = entityId
+                    yield renderScriptBlock(request, "feed.mako", "groupLinks",
+                                            landing, "#admin", "set",  **args)
 
         if script and landing:
             request.write("</body></html>")

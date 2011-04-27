@@ -24,6 +24,8 @@
                 <input type="submit" id="submit" value="${_('Submit')}"/>
             </form>
         </div>
+        <div id ="admin" >
+        </div>
       </div>
       <div id="center">
         <div class="center-header">
@@ -49,6 +51,15 @@
       </div>
     </div>
   </div>
+</%def>
+
+<%def name="groupLinks()">
+  <div class="sidebar-title">${_("Manage")}</div>
+    <ul class="v-links">
+      <li><a class="ajax" href="/groups/invite?id=${groupId}">Invite</a></li>
+      <li><a class="ajax" href="/groups/admin?id=${groupId}">Pending Requests</a></li>
+      <li><a class="ajax" href="/groups/members?id=${groupId}">Members </a></li>
+    </ul>
 </%def>
 
 <%def name="acl_button(id, defaultVal, defaultLabel)">

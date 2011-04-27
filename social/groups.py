@@ -415,6 +415,55 @@ class GroupsResource(base.BaseResource):
             yield renderScriptBlock(request, "groups.mako", "pendingRequests",
                                     landing, "#groups-wrapper", "set", **args)
 
+    @defer.inlineCallbacks
+    def _inviteMember(self, request):
+        appchange, script, args, myKey = yield self._getBasicArgs(request)
+        myOrgId = args["orgKey"]
+        landing = not self._ajax
+
+        groupId = yield utils.getValidEntityId(request, "id", "group")
+        emailId = utils.getRequestArg(request, "uid")
+        cols = yield Db.get_slice(emailId, "userAuth", ["user"])
+        if not cols:
+            raise error.InvalidRequest()
+        userId = cols[0].column.value
+        group = yield Db.get_slice(groupId, "entities", ["basic", "admins"])
+        group = utils.supercolumnsToDict(group)
+        args["groupId"] = groupId
+        args["heading"] = group["basic"]["name"]
+
+        if script and landing:
+            yield render(request,"groups.mako", **args)
+        if script and appchange:
+            yield renderScriptBlock(request, "groups.mako", "layout",
+                                    landing, "#mainbar", "set", **args)
+
+        if myKey in group['admins']:
+            #TODO: dont add banned users
+            yield self._addMember(request, groupId, userId, myOrgId)
+            yield self._listGroupMembers(request)
+
+    @defer.inlineCallbacks
+    def _renderInviteMembers(self, request):
+        appchange, script, args, myKey = yield self._getBasicArgs(request)
+        myOrgId = args["orgKey"]
+        landing = not self._ajax
+
+        groupId = yield utils.getValidEntityId(request, "id", "group")
+        group = yield Db.get_slice(groupId, "entities", ["basic", "admins"])
+        group = utils.supercolumnsToDict(group)
+        args["groupId"]=groupId
+        args["heading"] = group["basic"]["name"]
+
+        if script and landing:
+            yield render(request,"groups.mako", **args)
+        if script and appchange:
+            yield renderScriptBlock(request, "groups.mako", "layout",
+                                    landing, "#mainbar", "set", **args)
+        if script:
+            yield renderScriptBlock(request, "groups.mako", "inviteMembers",
+                                    landing, "#groups-wrapper", "set", **args)
+
 
     @profile
     @dump_args
@@ -432,7 +481,8 @@ class GroupsResource(base.BaseResource):
             d = self._listPendingSubscriptions(request)
         elif segmentCount == 1 and request.postpath[0] == "unblock":
             d = self._unBlockUser(request)
-
+        elif segmentCount == 1 and request.postpath[0] == "invite":
+            d = self._renderInviteMembers(request)
         return self._epilogue(request, d)
 
     @profile
@@ -450,6 +500,8 @@ class GroupsResource(base.BaseResource):
             d = self._blockUser(request)
         elif segmentCount == 1 and request.postpath[0] == "unblock":
             d = self._unBlockUser(request)
+        elif segmentCount == 1 and request.postpath[0] == "invite":
+            d = self._inviteMember(request)
         elif segmentCount == 1:
             d = getattr(self, "_" + request.postpath[0])(request)
 
