@@ -492,10 +492,15 @@ class FeedResource(base.BaseResource):
                                         handlers={"onload": onload}, **args)
             if entityId:
 
-                if entity["basic"]["type"] == "group" and myKey in entity["admins"]:
+                if entity["basic"]["type"] == "group":
                     args["groupId"] = entityId
-                    yield renderScriptBlock(request, "feed.mako", "groupLinks",
-                                            landing, "#admin", "set",  **args)
+                    if myKey in entity["admins"]:
+                        yield renderScriptBlock(request, "feed.mako", "groupAdminLinks",
+                                                landing, "#admin", "set",  **args)
+                    else:
+                        yield renderScriptBlock(request, "feed.mako", "groupMembersLinks",
+                                                landing, "#admin", "set",  **args)
+
 
         if script and landing:
             request.write("</body></html>")

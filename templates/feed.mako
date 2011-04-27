@@ -53,11 +53,18 @@
   </div>
 </%def>
 
-<%def name="groupLinks()">
+<%def name="groupAdminLinks()">
   <div class="sidebar-title">${_("Manage")}</div>
     <ul class="v-links">
       <li><a class="ajax" href="/groups/invite?id=${groupId}">Invite</a></li>
       <li><a class="ajax" href="/groups/admin?id=${groupId}">Pending Requests</a></li>
+      <li><a class="ajax" href="/groups/members?id=${groupId}">Members </a></li>
+    </ul>
+</%def>
+
+<%def name="groupMembersLinks()">
+  <div class="sidebar-title">${_("")}</div>
+    <ul class="v-links">
       <li><a class="ajax" href="/groups/members?id=${groupId}">Members </a></li>
     </ul>
 </%def>
