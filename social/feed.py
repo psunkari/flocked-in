@@ -455,6 +455,8 @@ class FeedResource(base.BaseResource):
                 args["feedTitle"] = _("Company Feed: %s") % entity["basic"]["name"]
             elif entityType == "group":
                 args["feedTitle"] = _("Group Feed: %s") % entity["basic"]["name"]
+                args["groupAdmins"] = entity["admins"]
+                args["groupId"] = entityId
             else:
                 errors.InvalidRequest()
         else:
@@ -493,16 +495,8 @@ class FeedResource(base.BaseResource):
                 yield renderScriptBlock(request, "feed.mako", "feed", landing,
                                         "#user-feed", "set", True,
                                         handlers={"onload": onload}, **args)
-            if entityId:
-
-                if entity["basic"]["type"] == "group":
-                    args["groupId"] = entityId
-                    if myKey in entity["admins"]:
-                        yield renderScriptBlock(request, "feed.mako", "groupAdminLinks",
-                                                landing, "#admin", "set",  **args)
-                    else:
-                        yield renderScriptBlock(request, "feed.mako", "groupMembersLinks",
-                                                landing, "#admin", "set",  **args)
+            yield renderScriptBlock(request, "feed.mako", "groupLinks",
+                                    landing, "#group-links", "set",  **args)
 
 
         if script and landing:

@@ -24,7 +24,8 @@
                 <input type="submit" id="submit" value="${_('Submit')}"/>
             </form>
         </div>
-        <div id ="admin" >
+
+        <div id ="group-links" >
         </div>
       </div>
       <div id="center">
@@ -55,21 +56,22 @@
 </%def>
 
 
-<%def name="groupAdminLinks()">
-  <div class="sidebar-title">${_("Manage")}</div>
-    <ul class="v-links">
-      <li><a class="ajax" href="/groups/invite?id=${groupId}">Invite</a></li>
-      <li><a class="ajax" href="/groups/admin?id=${groupId}">Pending Requests</a></li>
-      <li><a class="ajax" href="/groups/members?id=${groupId}">Members </a></li>
-    </ul>
-</%def>
-
-
-<%def name="groupMembersLinks()">
-  <div class="sidebar-title">${_("")}</div>
-    <ul class="v-links">
-      <li><a class="ajax" href="/groups/members?id=${groupId}">Members </a></li>
-    </ul>
+<%def name="groupLinks()">
+  <% print "group links" %>
+  %if groupId:
+    %if myKey in groupAdmins:
+      <div class="sidebar-title">${_("Manage")}</div>
+    %else:
+      <div class="sidebar-title">${_("")}</div>
+    %endif
+      <ul class="v-links">
+        %if myKey in groupAdmins:
+          <li><a class="ajax" href="/groups/invite?id=${groupId}">Invite</a></li>
+          <li><a class="ajax" href="/groups/admin?id=${groupId}">Pending Requests</a></li>
+        %endif
+        <li><a class="ajax" href="/groups/members?id=${groupId}">Members </a></li>
+      </ul>
+  %endif
 </%def>
 
 
