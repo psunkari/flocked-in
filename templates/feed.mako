@@ -57,7 +57,6 @@
 
 
 <%def name="groupLinks()">
-  <% print "group links" %>
   %if groupId:
     %if myKey in groupAdmins:
       <div class="sidebar-title">${_("Manage")}</div>

@@ -73,10 +73,11 @@ class GroupsResource(base.BaseResource):
         relation = Relation(userId, [])
         responseType = "I"
         acl = {"accept":{"groups":[groupId], "orgs":[orgId]}}
+        _acl = pickle.dumps(acl)
 
         itemId = utils.getUniqueKey()
         item = utils.createNewItem(request, "activity", userId,
-                                   acl, "group", orgId)
+                                   acl, "groupJoin", orgId)
         item["meta"]["target"] = groupId
 
         d1 = Db.insert(userId, "userGroups", "", groupId)
@@ -90,7 +91,7 @@ class GroupsResource(base.BaseResource):
                              itemId, responseType, itemType, userId)
 
         d7 = feed.pushToOthersFeed(userId, item["meta"]["uuid"], itemId, itemId,
-                                   acl, responseType, itemType, userId)
+                                   _acl, responseType, itemType, userId)
         deferreds = [d1, d2, d3, d4, d5, d6, d7]
         yield defer.DeferredList(deferreds)
 
@@ -238,30 +239,44 @@ class GroupsResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _unsubscribe(self, request):
-        appchange, script, args, myKey = yield self._getBasicArgs(request)
+        appchange, script, args, myId = yield self._getBasicArgs(request)
         landing = not self._ajax
+        orgId = args["orgKey"]
+
         groupId = yield utils.getValidEntityId(request, "id", "group")
-
-        groupMember = yield Db.get_slice(groupId, "groupMembers", [myKey])
-        userGroup = yield Db.get_slice(myKey, "userGroups", [groupId])
-
-        if not groupMember or not userGroup:
+        userGroup = yield Db.get_slice(myId, "userGroups", [groupId])
+        if not userGroup:
             raise errors.InvalidRequest()
-        groupMember = utils.columnsToDict(groupMember)
-        itemId = groupMember[myKey]
 
-        #yield Db.remove(itemId, "items")
-        yield Db.remove(groupId, "groupMembers", myKey)
-        yield Db.remove(groupId, "followers", myKey)
-        yield Db.remove(myKey, "userGroups", groupId)
-        args["pendingConnections"] = []
-        args["groupFollowers"] = {groupId:[]}
+        itemType = "activity"
+        responseType = "I"
         args["groupId"] = groupId
         args["myGroups"] = []
-        yield renderScriptBlock(request, "groups.mako", "userActions",
+        args["groupFollowers"] = {groupId:[]}
+        args["pendingConnections"] = []
+
+        itemId = utils.getUniqueKey()
+        acl = {"accept":{"groups":[groupId], "orgs":[orgId]}}
+        _acl = pickle.dumps(acl)
+        item = utils.createNewItem(request, itemType, myId,
+                                   acl, "groupLeave", orgId)
+        item["meta"]["target"] = groupId
+
+        d1 = Db.remove(groupId, "followers", myId)
+        d2 = Db.remove(myId, "userGroups", groupId)
+        d3 = Db.batch_insert(itemId, 'items', item)
+        d4 = Db.insert(groupId, "groupMembers", itemId, myId)
+
+        d5 = feed.pushToFeed(myId, item["meta"]["uuid"], itemId,
+                             itemId, responseType, itemType, myId)
+
+        d6 = feed.pushToOthersFeed(myId, item["meta"]["uuid"], itemId, itemId,
+                                   _acl, responseType, itemType, myId)
+        d7 =  renderScriptBlock(request, "groups.mako", "userActions",
                                 landing, "#user-actions-%s" %(groupId),
                                 "replace", **args)
 
+        yield defer.DeferredList([d1, d2, d3, d4, d5, d6, d7])
 
 
     @profile
