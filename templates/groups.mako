@@ -199,3 +199,21 @@
     </div>
   </form>
 </%def>
+
+<%def name="inviteMembers()">
+  <form action="/groups/invite" class="ajax" method="post"  >
+    <div class="edit-profile">
+      <ul>
+        <li><label for="name"> EmailId: </label></li>
+        <li><input type="text" id="uid" name="uid" /></li>
+      </ul>
+      <ul>
+        <li><input type="hidden" value = ${groupId} name="id" /></li>
+      </ul>
+      <ul>
+        <li></li>
+        <li><input type="submit" name="userInfo_submit" value="Save"/> </li>
+      </ul>
+    </div>
+  </form>
+</%def>

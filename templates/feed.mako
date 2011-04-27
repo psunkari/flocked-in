@@ -24,6 +24,8 @@
                 <input type="submit" id="submit" value="${_('Submit')}"/>
             </form>
         </div>
+        <div id ="admin" >
+        </div>
       </div>
       <div id="center">
         <div class="center-header">
@@ -47,9 +49,29 @@
   </div>
 </%def>
 
+
 <%def name="feed_title()">
   <span class="middle title">${feedTitle}</span>
 </%def>
+
+
+<%def name="groupAdminLinks()">
+  <div class="sidebar-title">${_("Manage")}</div>
+    <ul class="v-links">
+      <li><a class="ajax" href="/groups/invite?id=${groupId}">Invite</a></li>
+      <li><a class="ajax" href="/groups/admin?id=${groupId}">Pending Requests</a></li>
+      <li><a class="ajax" href="/groups/members?id=${groupId}">Members </a></li>
+    </ul>
+</%def>
+
+
+<%def name="groupMembersLinks()">
+  <div class="sidebar-title">${_("")}</div>
+    <ul class="v-links">
+      <li><a class="ajax" href="/groups/members?id=${groupId}">Members </a></li>
+    </ul>
+</%def>
+
 
 <%def name="acl_button(id, defaultVal, defaultLabel)">
   <input type="hidden" id="${id}" name="acl" value="${defaultVal}"/>
