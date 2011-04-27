@@ -161,8 +161,8 @@ class ProfileResource(base.BaseResource):
                 continue
             commentSnippet = """<span class="snippet"> "%s" </span>""" %(_(commentSnippet))
             toFetchEntities.add(convOwnerId)
+            toFetchItems.add(convId)
             if rtype == 'I':
-                toFetchItems.add(convId)
                 toFetchResponses.add(convId)
                 userItems.append(value)
             elif rtype == "L" and itemId == convId and convOwnerId != userKey:

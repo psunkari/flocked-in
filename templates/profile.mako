@@ -361,6 +361,9 @@
         item.item_layout(convId)
       elif convType in plugins:
         block.append(key)
+    if block:
+      self.activity_block(block)
+
   %>
   %if nextPageStart:
     <% print nextPageStart %>
