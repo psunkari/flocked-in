@@ -113,11 +113,7 @@ class ProfileResource(base.BaseResource):
 
         relation = Relation(myKey, [])
         yield defer.DeferredList([relation.initFriendsList(),
-                                  relation.initSubscriptionsList(),
-                                  relation.initPendingList(),
-                                  relation.initFollowersList()])
-        userGroups = yield Db.get_slice(myKey, "userGroups")
-        userGroups = utils.columnsToDict(userGroups)
+                                  relation.initGroupsList()])
 
         toFetchEntities.add(userKey)
         while len(convs) < count:
@@ -146,8 +142,7 @@ class ProfileResource(base.BaseResource):
                     acl = items[convId]["meta"]["acl"]
                     owner = items[convId]["meta"]["owner"]
 
-                    if not utils.checkAcl(myKey, acl, owner, relation,
-                                          myOrgId, userGroups.keys()):
+                    if not utils.checkAcl(myKey, acl, owner, relation, myOrgId):
                         convs.remove(convId)
             if len(cols) < toFetchCount:
                 break
@@ -616,7 +611,6 @@ class ProfileResource(base.BaseResource):
             d = self._renderEditProfile(request)
         elif segmentCount == 1 and request.postpath[0] == 'changePasswd':
             d = self._changePassword(request)
-
 
         return self._epilogue(request, d)
 
