@@ -52,7 +52,7 @@ class Status(object):
             raise errors.MissingParams()
 
         convId = utils.getUniqueKey()
-        item = yield utils.createNewItem(request, self.itemType)
+        item = utils.createNewItem(request, self.itemType)
         meta = {"comment": comment}
         if target:
             meta["target"] = target

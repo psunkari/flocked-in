@@ -348,6 +348,8 @@
       activity = _("%s and %s are now friends.") % (fmtUser(userId, entities[userId]), fmtUser(target, entities[target]))
     elif subtype == "following":
       activity = _("%s started following %s.") % (fmtUser(userId, entities[userId]), fmtUser(target, entities[target]))
+    elif subtype == "group":
+      activity = _("%s joined the group: %s.") % (fmtUser(userId, entities[userId]), fmtUser(target, entities[target]))
   %>
   ${activity}
 </%def>

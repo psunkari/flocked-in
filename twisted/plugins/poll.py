@@ -219,7 +219,7 @@ class Poll(object):
             raise errors.InSufficientParams()
 
         convId = utils.getUniqueKey()
-        item = yield utils.createNewItem(request, self.itemType)
+        item = utils.createNewItem(request, self.itemType)
 
         options = dict([('%02d'%(x), options[x]) for x in range(len(options))])
         meta = {"question": question, "showResults": showResults}

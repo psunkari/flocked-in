@@ -319,7 +319,7 @@ class Event(object):
             raise errors.InvalidRequest()
 
         convId = utils.getUniqueKey()
-        item = yield utils.createNewItem(request, self.itemType)
+        item = utils.createNewItem(request, self.itemType)
 
         options = dict([('yes', '0'), ('maybe', '0'), ('no', '0')])
         meta = {"startTime": startTime}

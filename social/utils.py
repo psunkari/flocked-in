@@ -141,21 +141,19 @@ def getUniqueKey():
     return base64.urlsafe_b64encode(u.bytes)[:-2]
 
 
-@defer.inlineCallbacks
 def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
                   ownerOrgId=None, groupIds = None):
     owner = ownerId or request.getSession(IAuthInfo).username
     if not ownerOrgId:
         ownerOrgId = request.getSession(IAuthInfo).organization
-    if not ownerOrgId:
-        col = yield Db.get(owner, "entities", "org", "basic")
-        ownerOrgId = col.column.value
 
     if not acl:
         acl = getRequestArg(request, "acl")
         try:
-            acl = json.loads(acl);
+            acl = json.loads(acl)
         except:
+            if not ownerOrgId:
+                raise errors.MissingParams()
             acl = {"accept":{"orgs":[ownerOrgId]}}
 
     acl = pickle.dumps(acl)
@@ -171,7 +169,7 @@ def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
     }
     if subType:
         meta["meta"]["subType"] = subType
-    defer.returnValue(meta)
+    return meta
 
 
 @defer.inlineCallbacks

@@ -299,14 +299,13 @@ class ProfileResource(base.BaseResource):
             itemType = "activity"
             myItemId = utils.getUniqueKey()
             targetItemId = utils.getUniqueKey()
-            myItem = yield utils.createNewItem(request, itemType,
-                                               ownerId = myKey,
-                                               subType="connection",
-                                               ownerOrgId= users[myKey]["basic"]["org"])
-            targetItem = yield utils.createNewItem(request, itemType,
-                                                   ownerId= targetKey,
-                                                   subType="connection",
-                                                   ownerOrgId = users[targetKey]["basic"]["org"])
+            myItem = utils.createNewItem(request, itemType, ownerId = myKey,
+                                         subType="connection",
+                                         ownerOrgId= users[myKey]["basic"]["org"])
+            targetItem = utils.createNewItem(request, itemType,
+                                             ownerId= targetKey,
+                                             subType="connection",
+                                             ownerOrgId = users[targetKey]["basic"]["org"])
             targetItem["meta"]["target"] = myKey
             myItem["meta"]["target"] = targetKey
             d13 = Db.batch_insert(myItemId, "items", myItem)

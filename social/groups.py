@@ -1,8 +1,13 @@
+import json
 import uuid
 from twisted.web        import server
 from twisted.python     import log
 from twisted.internet   import defer
 from telephus.cassandra import ttypes
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
 
 from social             import base, Db, utils, errors, feed
@@ -61,22 +66,33 @@ class GroupsResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _addMember(self, request, groupId, userId, orgId, acl=None):
+    def _addMember(self, request, groupId, userId, orgId):
+
+        deferreds = []
+        itemType = "activity"
+        relation = Relation(userId, [])
+        responseType = "I"
+        acl = {"accept":{"groups":[groupId], "orgs":[orgId]}}
 
         itemId = utils.getUniqueKey()
-        item = yield utils.createNewItem(request, "activity", userId, acl, ownerOrgId = orgId)
-        item["meta"]["subType"] = "group"
+        item = utils.createNewItem(request, "activity", userId,
+                                   acl, "group", orgId)
         item["meta"]["target"] = groupId
-        yield Db.insert(userId, "userGroups", "", groupId)
-        yield Db.insert(groupId, "followers", "", userId)
-        yield Db.insert(groupId, "groupMembers", itemId, userId)
-        yield Db.batch_insert(itemId, 'items', item)
 
-        groupFollowers = yield Db.get_slice(groupId, "followers")
-        groupFollowers = utils.columnsToDict(groupFollowers)
+        d1 = Db.insert(userId, "userGroups", "", groupId)
+        d2 = Db.insert(groupId, "followers", "", userId)
+        d3 = Db.insert(groupId, "groupMembers", itemId, userId)
+        d4 = Db.batch_insert(itemId, 'items', item)
 
-        #update followers feed
-        #notify user
+        d5 = feed.pushToFeed(userId, item["meta"]["uuid"], itemId,
+                             itemId, responseType, itemType, userId)
+        d6 = feed.pushToFeed(groupId, item["meta"]["uuid"], itemId,
+                             itemId, responseType, itemType, userId)
+
+        d7 = feed.pushToOthersFeed(userId, item["meta"]["uuid"], itemId, itemId,
+                                   acl, responseType, itemType, userId)
+        deferreds = [d1, d2, d3, d4, d5, d6, d7]
+        yield defer.DeferredList(deferreds)
 
 
     @profile
