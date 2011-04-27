@@ -407,7 +407,11 @@ var ui = {
         /* Add a scroll to bottom handler */
         $(window).scroll(function(){
             if ($(window).scrollTop() > $(document).height() - (50 + $(window).height())){
-                $('#next-page-load').click();
+                $nextPageLoad = $('#next-page-load');
+                if (!$nextPageLoad.attr('requested')) {
+                    $nextPageLoad.click();
+                    $nextPageLoad.attr('requested', true);
+                }
             }
         });
 

@@ -604,6 +604,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     padding: 10px 20px;
     border: 1px solid #3D85C6;
     background-color: #E8EEFA;
+    margin-top: 25px;
 }
 
 .no-comments .comments-wrapper,
