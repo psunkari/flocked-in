@@ -31,7 +31,7 @@
       <div id="center">
         <div class="center-header">
           <div class="titlebar">
-            <div id="title"><span class="middle title">${self.feed_title()}</span></div>
+            <div id="title">${self.feed_title()}</div>
           </div>
           <div id="share-block">
             %if not script:
