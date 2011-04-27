@@ -200,7 +200,8 @@ class FeedResource(base.BaseResource):
         yield defer.DeferredList([relation.initFriendsList(),
                                   relation.initSubscriptionsList(),
                                   relation.initPendingList(),
-                                  relation.initFollowersList()])
+                                  relation.initFollowersList(),
+                                  relation.initGroupsList()])
 
         # Fetch entity(org/group) feed if entityId is given
         key = entityId if entityId else userKey
@@ -328,8 +329,7 @@ class FeedResource(base.BaseResource):
             meta = items[convId]["meta"]
             owner = meta["owner"]
 
-            if not utils.checkAcl(userKey, meta["acl"], owner, relation,
-                                  myOrgId, userGroups.keys()):
+            if not utils.checkAcl(userKey, meta["acl"], owner, relation, myOrgId):
                 convs.remove(convId)
                 # delete the items from feed
                 continue

@@ -16,6 +16,12 @@
 
   %>
   <div id="mymenu-container" class="sidemenu-container">
+    <ul class="v-links sidemenu">
+      ${navMenuItem("/feed", _("Back to Home"), "")}
+    </ul>
+    <ul class="v-links sidemenu">
+      ${navMenuItem("/messages/write", _("Compose"), "")}
+    </ul>
     <ul id="mymenu" class="v-links sidemenu">
         ${navMenuItem("/messages?fid=INBOX", _("Inbox"), "")}
         ${navMenuItem("/messages?fid=ARCHIVES", _("Archives"), "")}
@@ -279,7 +285,7 @@
       % if fid:
         <b style="float:right;padding:4px">Viewing ${_(folders[fid]['label'])}</b>
       % endif
-      <a style="padding:3px;color:white" href="/messages/write">New Message</a>
+<!--      <a style="padding:3px;color:white" href="/messages/write">New Message</a> -->
       <input type="submit" name="delete" value="Delete">
       <input type="submit" name="archive" value="Archive">
     </div>

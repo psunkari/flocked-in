@@ -303,8 +303,10 @@ class MessagingResource(base.BaseResource):
             yield render(request, "message.mako", **args)
 
         if appchange and script:
+            log.msg("rendering layout")
             renderScriptBlock(request, "message.mako", "layout",
                               landing, "#mainbar", "set", **args)
+            log.msg("rendered Layout")
 
         args.update({"fid":folderId})
 
@@ -365,6 +367,7 @@ class MessagingResource(base.BaseResource):
         args.update({"view":"messages"})
 
         if script:
+            log.msg("rendering messages list")
             yield renderScriptBlock(request, "message.mako", "center",
                                     landing, ".center-contents", "set", **args)
         else:
