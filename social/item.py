@@ -52,15 +52,10 @@ class ItemResource(base.BaseResource):
 
         relation = Relation(myKey, [])
         yield defer.DeferredList([relation.initFriendsList(),
-                                  relation.initSubscriptionsList(),
-                                  relation.initPendingList(),
-                                  relation.initFollowersList()])
-        userGroups = yield Db.get_slice(myKey, "userGroups")
-        userGroups = utils.columnsToDict(userGroups)
+                                  relation.initGroupsList()])
 
-        if not utils.checkAcl(myKey, meta["acl"], owner, relation,
-                             myOrgId, userGroups.keys()):
-            defer.returnValue(None)
+        if not utils.checkAcl(myKey, meta["acl"], owner, relation, myOrgId):
+            raise errors.NotAuthorized()
 
         if script and appchange:
             yield renderScriptBlock(request, "item.mako", "layout",
