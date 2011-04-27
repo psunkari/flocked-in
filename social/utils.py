@@ -252,8 +252,8 @@ def checkAcl(userId, acl, owner, relation, userOrgId=None):
     accept = acl.get("accept", {})
 
     # if userID is owner of the conversation, show the item irrespective of acl
-    #if userId == owner:
-    #    return True
+    if userId == owner:
+        return True
 
     if userId in deny.get("users", []) or \
        userOrgId in deny.get("org", []) or \
