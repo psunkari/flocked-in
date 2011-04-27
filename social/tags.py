@@ -7,6 +7,7 @@ from twisted.web        import server
 from twisted.python     import log
 
 from social             import Db, utils, _, __, base, plugins
+from social.feed        import getFeedItems
 from social.template    import render, renderDef, renderScriptBlock
 from social.isocial     import IAuthInfo
 from social.relations   import Relation
@@ -44,118 +45,15 @@ def ensureTag(request, tagName):
 class TagsResource(base.BaseResource):
     isLeaf = True
 
-    @profile
-    @defer.inlineCallbacks
-    @dump_args
     def _getTagItems(self, request, tagId, start='', count=10):
-        authinfo = request.getSession(IAuthInfo)
-        myId = authinfo.username
-        myOrgId = authinfo.organization
+        @defer.inlineCallbacks
+        def getter(start='', count=12):
+            items = yield Db.get_slice(tagId, "tagItems", count=count,
+                                       start=start, reverse=True)
+            defer.returnValue(utils.columnsToDict(items, ordered=True))
 
-        toFetchItems = set()
-        toFetchEntities = set()
-        toFetchTags = set()
-
-        toFetchStart = utils.decodeKey(start) if start else ''
-        nextPageStart = None
-        args = {"myKey": myId}
-        convs = []
-
-        relation = Relation(myId, [])
-        yield defer.DeferredList([relation.initFriendsList(),
-                                  relation.initSubscriptionsList(),
-                                  relation.initPendingList(),
-                                  relation.initFollowersList()])
-        userGroups = yield Db.get_slice(myId, "userGroups")
-        userGroups = utils.columnsToDict(userGroups)
-
-        toFetchCount = count + 1
-        while len(convs) <  count:
-
-            tagItems = yield Db.get_slice(tagId, "tagItems", count=toFetchCount,
-                                          start = toFetchStart, reverse=True)
-            if tagItems and len(tagItems) == toFetchCount:
-                toFetchStart = tagItems[-1].column.name
-            else:
-                toFetchStart = ''
-            if len(tagItems) == toFetchCount:
-                nextPageStart = toFetchStart
-            else:
-                nextPageStart = ''
-            tagItems = [item.column.value for item in tagItems]
-            convs.extend(tagItems)
-            items = yield Db.multiget_slice(convs, "items", ["meta"])
-            items = utils.multiSuperColumnsToDict(items)
-            if len(tagItems) == toFetchCount:
-                convs = convs[0:count]
-            for convId in convs[:]:
-                acl = items[convId]["meta"]["acl"]
-                owner = items[convId]["meta"]["owner"]
-                if not utils.checkAcl(myId, acl, owner, relation,
-                                      myOrgId, userGroups.keys()):
-                    convs.remove(convId)
-
-            if len(tagItems) < toFetchCount:
-                break
-        if nextPageStart:
-            nextPageStart = utils.encodeKey(nextPageStart)
-
-        if len(convs) >= toFetchCount:
-            convs = convs[0:count]
-        toFetchItems.update(convs)
-
-        responses = {}
-        itemResponses = yield Db.multiget_slice(toFetchItems, "itemResponses",
-                                                count=2, reverse=True)
-        for convId, comments in itemResponses.items():
-            responses[convId] = []
-            for comment in comments:
-                userKey_, itemKey = comment.column.value.split(':')
-                responses[convId].insert(0, itemKey)
-                toFetchItems.add(itemKey)
-                toFetchEntities.add(userKey_)
-
-        items = yield Db.multiget_slice(toFetchItems, "items", ["meta", "tags"])
-        items = utils.multiSuperColumnsToDict(items)
-        args["items"] = items
-        extraDataDeferreds = []
-
-        for convId in convs:
-            meta = items[convId]["meta"]
-            itemType = meta["type"]
-            toFetchEntities.add(meta["owner"])
-            if "target" in meta:
-                toFetchEntities.add(meta["target"])
-
-            toFetchTags.update(items[convId].get("tags", {}).keys())
-
-            if itemType in plugins:
-                d =  plugins[itemType].fetchData(args, convId)
-                extraDataDeferreds.append(d)
-
-        result = yield defer.DeferredList(extraDataDeferreds)
-        for success, ret in result:
-            if success:
-                toFetchEntities.update(ret)
-
-        fetchedEntities = yield Db.multiget(toFetchEntities, "entities", "basic")
-        entities = utils.multiSuperColumnsToDict(fetchedEntities)
-
-        tags = {}
-        if toFetchTags:
-            fetchedTags = yield Db.get_slice(myOrgId, "orgTags", toFetchTags)
-            tags = utils.supercolumnsToDict(fetchedTags)
-
-        fetchedLikes = yield Db.multiget(toFetchItems, "itemLikes", myId)
-        myLikes = utils.multiColumnsToDict(fetchedLikes)
-
-        data = {"entities": entities, "tags": tags,
-                "items": items, "myLikes": myLikes,
-                "responses": responses, "conversations": convs,
-                "nextPageStart": nextPageStart}
-        args.update(data)
-        defer.returnValue(args)
-
+        return getFeedItems(request, getFn=getter, start=start,
+                                 count=count, getReason=False)
 
     @profile
     @defer.inlineCallbacks
