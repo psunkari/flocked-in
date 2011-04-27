@@ -245,7 +245,7 @@ def expandAcl(userKey, acl, convOwnerId=None):
     defer.returnValue(keys)
 
 
-def checkAcl(userId, acl, owner, relation, userOrgId=None, userGroups=[]):
+def checkAcl(userId, acl, owner, relation, userOrgId=None):
 
     acl = pickle.loads(acl)
     deny = acl.get("deny", {})
@@ -266,7 +266,7 @@ def checkAcl(userId, acl, owner, relation, userOrgId=None, userGroups=[]):
     elif "orgs" in accept:
         return userOrgId in accept["orgs"]
     elif "groups" in accept:
-        return any([groupid in accept["groups"] for groupid in userGroups])
+        return any([groupid in accept["groups"] for groupid in relation.groups])
     elif "friends" in accept:
         return (userId == owner) or (owner in relation.friends)
     elif "users" in accept:

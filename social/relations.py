@@ -16,6 +16,7 @@ class Relation(object):
 
         self.friends = {}           # friend Id => list of tags
         self.pending = {}           # user Ids => "0" (remote) or "1" (local)
+        self.groups = []
         self.subscriptions = None   # subscription Ids
         self.followers = None       # follower Ids
 
@@ -71,3 +72,8 @@ class Relation(object):
         else:
             cols = yield Db.get_slice(self.me, 'pendingConnections')
         self.pending = dict((x.column.name, x.column.value) for x in cols)
+
+    @defer.inlineCallbacks
+    def initGroupsList(self):
+        cols = yield Db.get_slice(self.me, "userGroups")
+        self.groups = [col.column.name for col in cols]
