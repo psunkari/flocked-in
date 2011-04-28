@@ -35,6 +35,8 @@ def getPluggedResources(ajax=False):
 
 
 class RootResource(resource.Resource):
+    _noCookiesPaths = set(["avatar", "auto"])
+
     def __init__(self, isAjax=False):
         self._isAjax = isAjax
         self._initResources()
@@ -107,7 +109,7 @@ class RootResource(resource.Resource):
                 elif "_fp" in request.args:
                     cookiePath = request.postpath[0]
 
-                if cookiePath:
+                if cookiePath and cookiePath not in self._noCookiesPaths:
                     request.addCookie("_page", cookiePath, path="/")
 
         return match or resource.NoResource("Page not found")
