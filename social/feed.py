@@ -291,7 +291,8 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
                     mostRecentItem = update
                 elif x == "L":
                     mostRecentItem = update
-                    responses[convId].append(item)
+                    if item not in toFetchItems:
+                        responses[convId].append(item)
                     toFetchItems.add(item)
                 elif x == "T":
                     mostRecentItem = update
@@ -450,6 +451,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
                 reasonStr[convId] = _(template) % tuple(vals)
 
     results = yield defer.DeferredList(extraData_d)
+    # TODO: Fetch any extra entities that the plugins might ask for!
 
     data.update({"entities": entities, "responses": responses, "likes": likes,
                  "myLikes": myLikes, "conversations": convIds, "tags": tags,
