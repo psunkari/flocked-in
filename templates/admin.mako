@@ -17,9 +17,12 @@
     </ul>
     <ul id="mymenu" class="v-links sidemenu">
       ${navMenuItem("/admin/add", _("Add Users"), "add-user")}
-      ${navMenuItem("/admin/people", _("Block Users"), "block-user")}
+      ${navMenuItem("/admin/people", _("Manage Users"), "block-user")}
       ${navMenuItem("/admin/unblock", _("UnBlock Users "), "unblock-user")}
-
+      ${navMenuItem("", _("Manage Admins"), "manage-admins")}
+    </ul>
+    <ul id="mymenu" class="v-links sidemenu">
+      ${navMenuItem("", _("Manage Groups"), "manage-groups")}
     </ul>
     <ul id="mymenu" class="v-links sidemenu">
       ${navMenuItem("/admin/org", _("Update OrgInfo"), "update-orgInfo")}
@@ -43,8 +46,8 @@
       <div id="center">
         <div class="center-header">
           <div class="titlebar">
-            %if heading:
-              <div id="title"><span class="middle title">${_(heading)}</span></div>
+            %if title:
+              <div id="title"><span class="middle title">${_(title)}</span></div>
             %else:
               <div id="title"><span class="middle title">${_("Admin Console")}</span></div>
             %endif
@@ -60,6 +63,7 @@
     </div>
   </div>
 </%def>
+
 
 <%def name="list_blocked()">
   % if not entities:
@@ -92,7 +96,8 @@
 
 <%def name="addUsers()">
   <div class="edit-profile">
-    <form action="/admin/add" method="POST" enctype="multipart/form-data">
+    <h4> Add User:</h4>
+    <form action="/admin/add" method="POST" enctype="multipart/form-data" autocomplete="off">
     <!-- fileupload doesn't work with ajax request.
         TODO: find workaround to submit file in ajax request-->
 
@@ -151,7 +156,7 @@
         <li><input type="text" name="name"  value="${name}"/> </li>
       </ul>
       <ul>
-        <li><label for="dp"> Display Image: </label></li>
+        <li><label for="dp"> Logo: </label></li>
         <li><input type="file" name="dp" /> </li>
       </ul>
       <ul>

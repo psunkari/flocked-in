@@ -17,7 +17,7 @@ class Admin(base.BaseResource):
     isLeaf=True
 
     @defer.inlineCallbacks
-    def _validData(self, data, format, orgKey):
+    def _validData(self, data, format, orgId):
 
 
         if format in ("csv", "tsv"):
@@ -30,7 +30,7 @@ class Admin(base.BaseResource):
                     email, displayName, jobTitle, passwd = row
                     domain = email.split("@")[1]
                     userOrg = yield getOrgKey(domain)
-                    if userOrg != orgKey:
+                    if userOrg != orgId:
                         defer.returnValue(False)
             defer.returnValue(True)
         else:
@@ -41,10 +41,9 @@ class Admin(base.BaseResource):
     def _addUsers(self, request):
 
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        orgKey = args["orgKey"]
+        orgId = args["orgKey"]
 
-        isAdmin = yield utils.isAdmin(myKey, orgKey)
-        if not isAdmin:
+        if not args["isOrgAdmin"]:
             raise Unauthorized()
 
         format = utils.getRequestArg(request, 'format')
@@ -65,7 +64,7 @@ class Admin(base.BaseResource):
             data = ",".join([emailId, name, jobTitle, passwd])
             format = "csv"
 
-        isValidData = yield self._validData(data, format, orgKey)
+        isValidData = yield self._validData(data, format, orgId)
         if not isValidData:
           raise errors.InvalidData()
 
@@ -82,15 +81,16 @@ class Admin(base.BaseResource):
                                 "not adding it again"%(email))
                         continue
                     userKey = yield utils.addUser(email, displayName,
-                                                  passwd, orgKey, jobTitle)
+                                                  passwd, orgId, jobTitle)
+        request.redirect("/admin/people")
 
     @defer.inlineCallbacks
     def _blockUser(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        orgKey = args["orgKey"]
+        orgId = args["orgKey"]
         userId = utils.getRequestArg(request, "id")
 
-        admins = yield utils.getAdmins(orgKey)
+        admins = yield utils.getAdmins(orgId)
         if myKey not in admins:
             raise Unauthorized()
 
@@ -103,19 +103,18 @@ class Admin(base.BaseResource):
         emailId = userInfo.get("basic", {}).get("emailId", None)
         userOrg = userInfo.get("basic", {}).get("org", None)
 
-        if userOrg != orgKey:
+        if userOrg != orgId:
             log.msg("can't block users of other networks")
             raise errors.UnAuthoried()
         yield Db.insert(emailId, "userAuth", 'True', "isBlocked")
-        yield Db.insert(orgKey, "blockedUsers", '', userId)
+        yield Db.insert(orgId, "blockedUsers", '', userId)
 
     @defer.inlineCallbacks
     def _unBlockUser(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        orgKey = args["orgKey"]
+        orgId = args["orgKey"]
 
-        isAdmin = yield utils.isAdmin(myKey, orgKey)
-        if not isAdmin:
+        if not args["isOrgAdmin"]:
             raise Unauthorized()
 
         userId = utils.getRequestArg(request, "id")
@@ -124,19 +123,18 @@ class Admin(base.BaseResource):
         emailId = userInfo.get("basic", {}).get("emailId", None)
         userOrg = userInfo.get("basic", {}).get("org", None)
 
-        if userOrg != orgKey:
+        if userOrg != orgId:
             log.msg("can't unblock users of other networks")
             raise errors.UnAuthoried()
         yield Db.remove(emailId, "userAuth", "isBlocked")
-        yield Db.remove(orgKey, "blockedUsers", userId)
+        yield Db.remove(orgId, "blockedUsers", userId)
 
     @defer.inlineCallbacks
     def _deleteUser(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        orgKey = args["orgKey"]
+        orgId = args["orgKey"]
 
-        isAdmin = yield utils.isAdmin(myKey, orgKey)
-        if not isAdmin:
+        if not args["isOrgAdmin"]:
             raise Unauthorized()
 
         userId = utils.getRequestArg(request, "id")
@@ -145,7 +143,7 @@ class Admin(base.BaseResource):
         emailId = userInfo.get("basic", {}).get("emailId", None)
         userOrg = userInfo.get("basic", {}).get("org", None)
 
-        if userOrg != orgKey:
+        if userOrg != orgId:
             log.msg("can't unblock users of other networks")
             raise errors.UnAuthoried()
         if not emailId:
@@ -155,16 +153,16 @@ class Admin(base.BaseResource):
     @defer.inlineCallbacks
     def _updateOrgInfo(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        orgKey = args["orgKey"]
-        isAdmin = yield utils.isAdmin(myKey, orgKey)
-        if not isAdmin:
+        orgId = args["orgKey"]
+
+        if not args["isOrgAdmin"]:
             raise Unauthorized()
         name = utils.getRequestArg(request, "name")
         dp = utils.getRequestArg(request, "dp")
 
         orgInfo = {}
         if dp:
-            avatar = yield saveAvatarItem(orgKey, dp, isLogo=True)
+            avatar = yield saveAvatarItem(orgId, dp, isLogo=True)
             if not orgInfo.has_key("basic"):
                 orgInfo["basic"] = {}
             orgInfo["basic"]["logo"] = avatar
@@ -173,7 +171,7 @@ class Admin(base.BaseResource):
                 orgInfo["basic"] = {}
             orgInfo["basic"]["name"] = name
         if orgInfo:
-            yield Db.batch_insert(orgKey, "entities", orgInfo)
+            yield Db.batch_insert(orgId, "entities", orgInfo)
         request.redirect('/admin/org')
 
     @defer.inlineCallbacks
@@ -181,9 +179,10 @@ class Admin(base.BaseResource):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         orgId = args["orgKey"]
         landing = not self._ajax
-        isAdmin = yield utils.isAdmin(myId, orgId)
-        if not isAdmin:
+
+        if not args["isOrgAdmin"]:
             raise Unauthorized()
+        args['title'] = "Update Company Info:"
         if script and landing:
             yield render(request, "admin.mako", **args)
 
@@ -207,12 +206,12 @@ class Admin(base.BaseResource):
     @defer.inlineCallbacks
     def _renderAddUsers(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        orgKey = args["orgKey"]
         landing = not self._ajax
-        isAdmin = yield utils.isAdmin(myKey, orgKey)
-        if not isAdmin:
+
+        if not args["isOrgAdmin"]:
             request.write("UnAuthorized")
             raise Unauthorized()
+        args["title"] = "Add Users:"
         if script and landing:
             yield render(request, "admin.mako", **args)
 
@@ -230,13 +229,14 @@ class Admin(base.BaseResource):
     @defer.inlineCallbacks
     def _listBlockedUsers(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        orgKey = args["orgKey"]
+        orgId = args["orgKey"]
         landing = not self._ajax
-        isAdmin = yield utils.isAdmin(myKey, orgKey)
-        if not isAdmin:
+
+        if not args["isOrgAdmin"]:
             request.write("UnAuthorized")
             raise Unauthorized()
 
+        args["title"] = "UnBlock Users:"
         if script and landing:
             yield render(request, "admin.mako", **args)
 
@@ -245,7 +245,7 @@ class Admin(base.BaseResource):
                                     landing, "#mainbar", "set", **args)
 
         args["heading"] = "Admin Console - Blocked Users"
-        cols = yield Db.get_slice(orgKey, "blockedUsers")
+        cols = yield Db.get_slice(orgId, "blockedUsers")
         blockedUsers = utils.columnsToDict(cols).keys()
 
         cols = yield Db.multiget_slice(blockedUsers, "entities", ["basic"])
@@ -263,12 +263,14 @@ class Admin(base.BaseResource):
     @defer.inlineCallbacks
     def _listUsers(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        orgKey = args["orgKey"]
+        orgId = args["orgKey"]
         landing = not self._ajax
-        isAdmin = yield utils.isAdmin(myKey, orgKey)
-        if not isAdmin:
+
+        if not args["isOrgAdmin"]:
             raise Unauthorized()
+
         start = utils.getRequestArg(request, 'start') or ''
+        args["title"] = "Manage Users:"
 
         if script and landing:
             yield render(request, "admin.mako", **args)
@@ -276,10 +278,10 @@ class Admin(base.BaseResource):
         if script and appchange:
             yield renderScriptBlock(request, "admin.mako", "layout",
                                     landing, "#mainbar", "set", **args)
-        cols = yield Db.get_slice(orgKey, "blockedUsers")
+        cols = yield Db.get_slice(orgId, "blockedUsers")
         blockedUsers = utils.columnsToDict(cols).keys()
 
-        cols = yield Db.get_slice(orgKey, "displayNameIndex", start=start,
+        cols = yield Db.get_slice(orgId, "displayNameIndex", start=start,
                                   count=PEOPLE_PER_PAGE)
         employees = [col.column.name.split(":")[1] for col in cols]
 
