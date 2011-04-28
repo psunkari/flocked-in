@@ -17,6 +17,7 @@ class BaseResource(resource.Resource):
         auth = request.getSession(IAuthInfo)
         myKey = auth.username
         orgKey = auth.organization
+        isOrgAdmin = auth.isAdmin
 
         script = False if request.args.has_key('_ns') or\
                           request.getCookie('_ns') else True
@@ -30,7 +31,8 @@ class BaseResource(resource.Resource):
         org = utils.supercolumnsToDict(org)
 
         args = {"myKey": myKey, "orgKey": orgKey, "me": me,
-                "ajax": self._ajax, "script": script, "org": org}
+                "isOrgAdmin": isOrgAdmin, "ajax": self._ajax,
+                "script": script, "org": org}
         defer.returnValue((appchange, script, args, myKey))
 
     def _epilogue(self, request, deferred=None):
