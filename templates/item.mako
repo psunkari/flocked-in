@@ -173,7 +173,7 @@
     <button class="button-link" title="${likesCount} Likes"><div class="small-icon small-like"></div>${likesCount}</button>
   %endif
   &#183;
-  %if myLikes and myLikes.has_key(convId) and len(myLikes[convId]):
+  %if myLikes and myLikes.has_key(itemId) and len(myLikes[itemId]):
     <button class="button-link ajax" _ref="/item/unlike?id=${itemId}">${_("Unlike")}</button>
   %else:
     <button class="button-link ajax" _ref="/item/like?id=${itemId}">${_("Like")}</button>
