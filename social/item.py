@@ -122,7 +122,9 @@ class ItemResource(base.BaseResource):
         d3 = Db.multiget_slice(responseKeys + [convId], "itemLikes", [myKey])
         d4 = Db.get_slice(myOrgId, "orgTags", toFetchTags)\
                                     if toFetchTags else defer.succeed([])
-        d5 = Db.get_slice(convId, "itemLikes", relation.friends.keys())
+        d5 = Db.get_slice(convId, "itemLikes", relation.friends.keys()) \
+                            if relation.friends.keys() else defer.succeed([])
+
 
         fetchedEntities = yield d1
         fetchedItems = yield d2
