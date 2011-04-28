@@ -1,4 +1,5 @@
 <%! from social import utils, _, __, plugins, constants %>
+<%! from twisted.python import log %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -72,7 +73,7 @@
         <%
           hasReason = reasonStr and reasonStr.has_key(convId)
           hasComments = responses and len(responses.get(convId, {}))
-          hasLikes = likeStr or False
+          hasLikes = likes and len(likes.get(convId, {}))
           hasTags = items and items[convId].get("tags", {})
         %>
         %if hasReason:
@@ -92,9 +93,12 @@
           ${self.conv_tags(convId)}
         </div>
         <div id="conv-likes-wrapper-${convId}" class="likes-wrapper">
-          %if likeStr and likeStr.has_key(convId):
-            <div class="conv-likes">${likeStr[convId]}</div>
-          %endif
+          <%
+            count = int(items[convId]["meta"].get("likesCount", "0"))
+            if count:
+              iLike = myLikes and convId in myLikes and len(myLikes[convId])
+              self.conv_likes(convId, count, iLike, likes.get(convId, {}))
+          %>
         </div>
         <div id="conv-comments-wrapper-${convId}" class="comments-wrapper">
           ${self.conv_comments(convId, True)}
@@ -174,6 +178,60 @@
   %else:
     <button class="button-link ajax" _ref="/item/like?id=${itemId}">${_("Like")}</button>
   %endif
+</%def>
+
+
+<%def name="conv_likes(convId, count=0, me=False, users=None)">
+  <%
+    if not count:
+      return ''
+
+    likeStr = None
+    template = None
+    other = count
+
+    if me:
+      users.remove(myKey)
+      other -= (1 + len(users))
+      if other <= 0:
+        template = ["You like this",
+                    "You and %s like this",
+                    "You, %s and %s like this"][len(users)]
+      elif other == 1:
+        template = ["You and 1 other person like this",
+            "You, %s and 1 other person like this",
+            "You, %s, %s and 1 other person like this"][len(users)]
+      else:
+        template = ["You and %s other people like this",
+            "You, %s and %s other people like this",
+            "You, %s, %s and %s other people like this"][len(users)]
+    else:
+      other -= len(users)
+      if other == 0 and len(users) > 0:
+        template = ["%s likes this",
+                    "%s and %s like this"][len(users)-1]
+      if other == 1:
+        template = ["1 person likes this",
+            "%s and 1 other person like this",
+            "%s, %s and 1 other people like this"][len(users)]
+      elif other > 1:
+        template = ["%s people like this",
+            "%s and %s other people like this",
+            "%s, %s and %s other people like this"][len(users)]
+
+    if template:
+        vals = [utils.userName(id, entities[id]) for id in users]
+        if other > 1:
+            vals.append(str(other))
+
+        likeStr = _(template) % tuple(vals)
+
+    if not likeStr:
+      return ''
+  %>
+  <div class="conv-likes">
+    ${likeStr}
+  </div>
 </%def>
 
 
