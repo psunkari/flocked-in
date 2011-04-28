@@ -192,9 +192,9 @@
       <h2 style="display:inline">${message["Subject"]|h}</h2>
       <a style="display:inline-block;float:right">
         % if flags["star"] == "0":
-          <img width="16" height="16" src="/public/images/star-empty.png">
+          <span class="messaging-icon star-empty-icon"> </span>
         %else:
-          <img width="16" height="16" src="/public/images/star.png">
+          <span class="messaging-icon star-icon"> </span>
         % endif
       </a>
     </div>
