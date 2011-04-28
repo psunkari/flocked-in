@@ -191,7 +191,9 @@
     other = count
 
     if me:
-      users.remove(myKey)
+      try:
+        users.remove(myKey)
+      except: pass
       other -= (1 + len(users))
       if other <= 0:
         template = ["You like this",

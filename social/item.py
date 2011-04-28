@@ -122,11 +122,13 @@ class ItemResource(base.BaseResource):
         d3 = Db.multiget_slice(responseKeys + [convId], "itemLikes", [myKey])
         d4 = Db.get_slice(myOrgId, "orgTags", toFetchTags)\
                                     if toFetchTags else defer.succeed([])
+        d5 = Db.get_slice(convId, "itemLikes", relation.friends.keys())
 
         fetchedEntities = yield d1
         fetchedItems = yield d2
         myLikes = yield d3
         fetchedTags = yield d4
+        likes = yield d5
 
         args["items"].update(utils.multiSuperColumnsToDict(fetchedItems))
         args["entities"].update(utils.multiSuperColumnsToDict(fetchedEntities))
@@ -141,19 +143,32 @@ class ItemResource(base.BaseResource):
                                   landing, '#item-footer-%s' % convId,
                                   'set', **args)
             renderers.append(d)
+
             d = renderScriptBlock(request, "item.mako", 'conv_tags',
                                   landing, '#conv-tags-wrapper-%s' % convId,
                                   'set', **args)
             renderers.append(d)
+
             d = renderScriptBlock(request, "item.mako", 'conv_comments',
                                   landing, '#conv-comments-wrapper-%s' % convId,
                                   'set', **args)
             renderers.append(d)
+
             onload = "(function(obj){$$.convs.load(obj);})(this);"
             d = renderScriptBlock(request, "item.mako", 'conv_comment_form',
                             landing, '#comment-form-wrapper-%s' % convId,
                             'set', True, handlers={"onload": onload}, **args)
             renderers.append(d)
+
+            numLikes = int(conv["meta"].get("likesCount", "0"))
+            if numLikes:
+                numLikes = int(conv["meta"].get("likesCount", "0"))
+                iLike = convId in myLikes
+                d = renderScriptBlock(request, "item.mako", 'conv_likes',
+                            landing, '#conv-likes-wrapper-%s' % convId, 'set',
+                            args=[convId, numLikes, iLike,
+                                  [x.column.name for x in likes]])
+                renderers.append(d)
 
         # Wait till the item is fully rendered.
         if renderers:
