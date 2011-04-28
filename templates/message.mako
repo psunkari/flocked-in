@@ -156,9 +156,9 @@
     <div style="display:table-cell;vertical-align:top">
       <a>
         % if conversation["flags"]["star"] == "0":
-          <img height="16" width="16" src="/public/images/star-empty.png">
+          <span class="messaging-icon star-empty-icon"> </span>
         % else:
-          <img height="16" width="16" src="/public/images/star.png">
+          <span class="messaging-icon star-icon"> </span>
         % endif
       </a>
     </div>

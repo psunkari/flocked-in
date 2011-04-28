@@ -297,6 +297,7 @@ a:hover, a:active, a:focus {
     background-position: 0 -144px;
 }
 
+
 .inbox-icon{
     background-position: 0 -48px;
 }
@@ -314,6 +315,12 @@ a:hover, a:active, a:focus {
 }
 .trash-icon {
     background-position: 0 -80px;
+}
+.star-empty-icon {
+    background-position: 0 -128px;
+}
+.star-icon {
+    background-position: 0 -144px;
 }
 .sidebar-title {
     font-weight: bold;
