@@ -21,15 +21,15 @@
       <div id="right">
       </div>
       <div id="center">
-        ${self.content()}
+        <div class="notifications" id="notifications">
+          ${self.content()}
+        </div>
       </div>
     </div>
   </div>
 </%def>
 
 <%def name="content()">
-
-  <div class="notifications">
     % if conversations:
       %for convId in conversations:
         <div class="conv-item" >
@@ -39,8 +39,13 @@
             </div>
           %endfor
         </div>
-
       %endfor
+      %if nextPageStart:
+        <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" _ref="/notifications?start=${nextPageStart}">${_("Fetch older Notifications")}</a></div>
+      %else:
+        <div id="next-load-wrapper">No more Notifications to show</div>
+      %endif
+    % else:
+        <div id="next-load-wrapper">No more Notifications to show</div>
     %endif
-  </div>
 </%def>

@@ -45,7 +45,7 @@ class NotificationsResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _getNotifications(self, userKey, count=10):
+    def _getNotifications(self, request, count=15):
 
         def _getReasonStr(template, convId, itemType, itemOwnerId, usersList):
             vals = []
@@ -64,7 +64,6 @@ class NotificationsResource(base.BaseResource):
 
         args = {}
         convs = []
-        start = ""
         comments = {}
         reasonStr = {}
         convLikes = {}
@@ -73,24 +72,37 @@ class NotificationsResource(base.BaseResource):
         toFetchUsers = set()
         toFetchGroups = set()
         pendingRequests = {}
-        fetchCount = count + 5
+        fetchCount = count + 1
+        nextPageStart = None
+
+        myId = request.getSession(IAuthInfo).username
+        fetchStart = utils.getRequestArg(request, "start") or ''
+        if fetchStart:
+            fetchStart = utils.decodeKey(fetchStart)
 
         while len(convs) < count:
-            cols = yield Db.get_slice(userKey, "notifications", count=fetchCount,
-                                      start=start, reverse=True)
+            cols = yield Db.get_slice(myId, "notifications", count=fetchCount,
+                                      start=fetchStart, reverse=True)
             for col in cols:
                 value = col.column.value
                 if value not in convs:
                     convs.append(value)
+
+            fetchStart = cols[-1].column.name
+            if len(convs)> count:
+                nextPageStart = utils.encodeKey(fetchStart)
+
             if len(cols) < fetchCount:
                 break
-            start = cols[-1].column.name
+
+        if len(convs) > count:
+            convs = convs[0:count]
 
         args["conversations"] = convs
         if not convs:
             defer.returnValue(args)
 
-        rawNotifications = yield Db.get_slice(userKey, "notificationItems",
+        rawNotifications = yield Db.get_slice(myId, "notificationItems",
                                               convs, reverse=True)
         rawNotifications = utils.supercolumnsToDict(rawNotifications)
         for convId in rawNotifications:
@@ -124,7 +136,6 @@ class NotificationsResource(base.BaseResource):
 
         users = utils.multiSuperColumnsToDict(users)
         groups = utils.multiSuperColumnsToDict(groups)
-        log.msg(groups)
 
         commentTemplate = {1: "%s commented on %s's %s",
                            2: "%s and %s commented on %s's %s",
@@ -187,6 +198,7 @@ class NotificationsResource(base.BaseResource):
         args["reasonStr"] = reasonStr
         args["groups"] = groups
         args["users"] = users
+        args["nextPageStart"] = nextPageStart
 
         defer.returnValue(args)
 
@@ -204,12 +216,19 @@ class NotificationsResource(base.BaseResource):
         if script and appchange:
             yield renderScriptBlock(request, "notifications.mako", "layout",
                                     landing, "#mainbar", "set", **args)
-        data = yield self._getNotifications(myKey)
+        start = utils.getRequestArg(request, "start") or ''
+        fromFetchMore = ((not landing) and (not appchange) and start)
+        data = yield self._getNotifications(request)
         args.update(data)
 
         if script:
-            yield renderScriptBlock(request, "notifications.mako", "content",
-                                    landing, "#center", "set", **args)
+            if fromFetchMore:
+                yield renderScriptBlock(request, "notifications.mako", "content",
+                                        landing, "#next-load-wrapper", "replace",
+                                        True, handlers={}, **args)
+            else:
+                yield renderScriptBlock(request, "notifications.mako", "content",
+                                    landing, "#notifications", "set", **args)
 
     @profile
     @dump_args
