@@ -141,7 +141,7 @@
     &#183;
   %endif
   %if not hasLikes and likesCount > 0:
-    <button class="button-link" title="${likesCount} Likes"><div class="small-icon small-like"><div>${likesCount}</button>
+    <button class="button-link" title="${likesCount} Likes"><div class="small-icon small-like"></div>${likesCount}</button>
   %endif
   ## Number of comments when none of my friends commented on it
   %if not hasComments and commentsCount > 0:
