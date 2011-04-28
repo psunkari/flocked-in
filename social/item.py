@@ -252,6 +252,7 @@ class ItemResource(base.BaseResource):
 
         # Get the item and the conversation
         (itemId, item) = yield utils.getValidItemId(request, "id")
+        extraEntities = [item["meta"]["owner"]]
 
         # Check if I already liked the item
         try:
@@ -300,12 +301,12 @@ class ItemResource(base.BaseResource):
         if plugins.has_key(convType) and plugins[convType].hasIndex:
             yield Db.insert(myId, "userItems_"+convType, userItemValue, timeUUID)
 
-        yield feed.pushToFeed(myId, timeUUID, itemId, convId,
-                              responseType, convType, convOwnerId, myId)
+        yield feed.pushToFeed(myId, timeUUID, itemId, convId, responseType,
+                              convType, convOwnerId, myId, entities=extraEntities)
 
         # 4. update feed, feedItems, feed_* of user's followers/friends
         yield feed.pushToOthersFeed(myId, timeUUID, itemId, convId, convACL,
-                                    responseType, convType, convOwnerId)
+                                    responseType, convType, convOwnerId, entities=extraEntities)
 
         yield notifications.pushNotifications( itemId, convId, responseType, convType,
                                     convOwnerId, myId, timeUUID)

@@ -102,20 +102,21 @@ def deleteFromOthersFeed(userId, itemId, convId, itemType, acl,
 @dump_args
 def pushToOthersFeed(userKey, timeuuid, itemKey, parentKey,
                      acl, responseType, itemType, convOwner,
-                     others=None, tagId=''):
+                     others=None, tagId='', entities=None):
     if not others:
         others = yield utils.expandAcl(userKey, acl, convOwner)
     for key in others:
         yield pushToFeed(key, timeuuid, itemKey, parentKey,
                          responseType, itemType, convOwner,
-                         userKey, tagId)
+                         userKey, tagId, entities)
 
 
 @profile
 @defer.inlineCallbacks
 @dump_args
 def pushToFeed(userKey, timeuuid, itemKey, parentKey, responseType,
-                itemType, convOwner=None, commentOwner=None, tagId=''):
+                itemType, convOwner=None, commentOwner=None, tagId='',
+                entities=None):
     # Caveat: assume itemKey as parentKey if parentKey is None
     parentKey = itemKey if not parentKey else parentKey
     convOwner = userKey if not convOwner else convOwner
@@ -126,16 +127,24 @@ def pushToFeed(userKey, timeuuid, itemKey, parentKey, responseType,
         yield Db.insert(userKey, "feed_"+itemType, parentKey, timeuuid)
 
     yield updateFeedResponses(userKey, parentKey, itemKey, timeuuid, itemType,
-                               responseType, convOwner, commentOwner, tagId)
+                               responseType, convOwner, commentOwner, tagId,
+                               entities)
 
 
 @profile
 @defer.inlineCallbacks
 @dump_args
 def updateFeedResponses(userKey, parentKey, itemKey, timeuuid, itemType,
-                        responseType, convOwner, commentOwner, tagId=''):
+                        responseType, convOwner, commentOwner, tagId='',
+                        entities=None):
 
-    feedItemValue = ":".join([responseType, commentOwner, itemKey,'', tagId])
+    if not entities:
+        entities = [commentOwner]
+    else:
+        entities.extend([commentOwner])
+    entities = ",".join(entities)
+
+    feedItemValue = ":".join([responseType, commentOwner, itemKey, entities, tagId])
     tmp, oldest, latest = {}, None, None
 
     cols = yield Db.get_slice(userKey, "feedItems",
