@@ -116,6 +116,15 @@ a:hover, a:active, a:focus {
     vertical-align: middle;
 }
 
+.admin-icon {
+    height: 16px;
+    width: 16px;
+    background-image: url(/public/images/admin_sprite.png);
+    background-repeat: no-repeat;
+    display: inline-block;
+    vertical-align: middle;
+}
+
 .input-wrap {
     background-color: white;
     border: 1px solid #C3D9FF;
@@ -278,11 +287,11 @@ a:hover, a:active, a:focus {
 .feed-icon {
     background-position: 0 -48px;
 }
-.notifications-icon {
-    background-position: 0 -80px;
-}
 .messages-icon {
     background-position: 0 -64px;
+}
+.notifications-icon {
+    background-position: 0 -80px;
 }
 .events-icon {
     background-position: 0 -96px;
@@ -297,24 +306,38 @@ a:hover, a:active, a:focus {
     background-position: 0 -144px;
 }
 
+/*admin page icons*/
+.add-user-icon {
+    background-position: 0 -16px;
+}
+.block-user-icon {
+    background-position: 0 -32px;
+}
+.update-orgInfo-icon {
+    background-position: 0 -64px;
+}
+.unblock-user-icon {
+    background-position: 0 -112px;
+}
 
-.inbox-icon{
-    background-position: 0 -48px;
+/*message icons*/
+.sent-icon {
+    background-position: 0 -16px;
 }
 .compose-icon{
     background-position: 0 -32px;
 }
-.sent-icon {
-    background-position: 0 -16px;
+.inbox-icon{
+    background-position: 0 -48px;
 }
-.archive-icon {
-    background-position: 0 -112px;
+.trash-icon {
+    background-position: 0 -80px;
 }
 .back-icon {
     background-position: 0 -96px;
 }
-.trash-icon {
-    background-position: 0 -80px;
+.archive-icon {
+    background-position: 0 -112px;
 }
 .star-empty-icon {
     background-position: 0 -128px;
@@ -322,6 +345,13 @@ a:hover, a:active, a:focus {
 .star-icon {
     background-position: 0 -144px;
 }
+.read-icon {
+    background-position: 0 -160px;
+}
+.unread-icon {
+    background-position: 0 -172px;
+}
+
 .sidebar-title {
     font-weight: bold;
     margin: 0 10px 0 -10px;

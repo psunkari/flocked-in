@@ -111,7 +111,7 @@ class UserPasswordChecker():
             authinfo = session.getComponent(IAuthInfo)
             authinfo.username = auth["user"]
             authinfo.organization = auth["org"] if auth.has_key("org") else None
-            authinfo.isAdmin = auth["isAdmin"] if auth.has_key("isAdmin") else False
+            authinfo.isAdmin = True if auth.has_key("isAdmin") else False
             return authinfo.username
         d.addCallback(setCookie)
 

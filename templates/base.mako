@@ -98,6 +98,9 @@
       <div id="menubar-links-wrapper">
         <ul class="h-links">
           <li><a href="/feed" class="ajax">${_("Home")}</a></li>
+          %if isOrgAdmin:
+            <li><a href="/admin" class="ajax">${_("Admin")}</a></li>
+          %endif
           <li><a href="/profile?id=${myKey}" class="ajax">${_("My Profile")}</a></li>
           <li><a href="/signout">${_("Sign out")}</a></li>
         </ul>

@@ -9,17 +9,20 @@
 <%def name="nav_menu()">
   <%
     def navMenuItem(link, text, icon):
-        return '<li><a href="%(link)s" class="ajax busy-indicator"><span class="sidemenu-icon icon %(icon)s-icon"></span><span class="sidemenu-text">%(text)s</span></a></li>' % locals()
+        return '<li><a href="%(link)s" class="ajax busy-indicator"><span class="sidemenu-icon admin-icon %(icon)s-icon"></span><span class="sidemenu-text">%(text)s</span></a></li>' % locals()
   %>
   <div id="mymenu-container" class="sidemenu-container">
     <ul id="mymenu" class="v-links sidemenu">
-      ${navMenuItem("/admin/add", _("Add Users"), "")}
-      ${navMenuItem("/admin/people", _("Block Users"), "")}
-      ${navMenuItem("/admin/unblock", _("UnBlock Users "), "")}
+       ${navMenuItem("/feed", _("Back to Home"), "back")}
+    </ul>
+    <ul id="mymenu" class="v-links sidemenu">
+      ${navMenuItem("/admin/add", _("Add Users"), "add-user")}
+      ${navMenuItem("/admin/people", _("Block Users"), "block-user")}
+      ${navMenuItem("/admin/unblock", _("UnBlock Users "), "unblock-user")}
 
     </ul>
     <ul id="mymenu" class="v-links sidemenu">
-      ${navMenuItem("/admin/org", _("Update OrgInfo"), "")}
+      ${navMenuItem("/admin/org", _("Update OrgInfo"), "update-orgInfo")}
     </ul>
   </div>
 </%def>

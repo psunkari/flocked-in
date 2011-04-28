@@ -190,6 +190,7 @@ class RegisterResource(BaseResource):
             cols = yield Db.get_slice(orgKey, "entities", ["admins"])
             if not cols:
                 yield Db.insert(orgKey, "entities", "", userKey, "admins")
+                yield Db.insert(emailId, "userAuth", "True", "isAdmin")
 
         else:
             raise errors.ExistingUser

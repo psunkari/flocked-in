@@ -559,7 +559,8 @@ def addSampleData(client):
     yield client.batch_insert('william@example.com', 'userAuth', {
                                     'passwordHash': '1a79a4d60de6718e8e5b326e338ae533',
                                     'org': exampleKey,
-                                    'user': williamKey
+                                    'user': williamKey,
+                                    'isAdmin': 'True'
                                 })
     yield client.batch_insert('paul@example.com', 'userAuth', {
                                     'passwordHash': '1a79a4d60de6718e8e5b326e338ae533',
