@@ -107,6 +107,15 @@ a:hover, a:active, a:focus {
     vertical-align: middle;
 }
 
+.small-icon {
+    height: 10px;
+    width: 13px;
+    background-image: url(/public/images/sprite.png);
+    background-repeat: no-repeat;
+    display: inline-block;
+    vertical-align: middle;
+}
+
 .messaging-icon {
     height: 16px;
     width: 16px;
@@ -651,6 +660,22 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 .no-comments.no-likes.no-tags .comment-form-wrapper {
     display: none;
+}
+
+.button-link .small-icon {
+    margin-bottom: 2px;
+}
+.small-like {
+    background-position: -22px 0;
+}
+.small-comment {
+    background-position: -22px -20px;
+}
+.button-link:hover .small-like {
+    background-position: -22px -10px;
+}
+.button-link:hover .small-comment {
+    background-position: -22px -30px;
 }
 
 
