@@ -322,7 +322,6 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
                     reasonUserIds[convId] = set([userId])
                     reasonTagId[convId] = tagId
                     reasonTmpl[convId] = "%s added %s on %s's %s"
-                
 
     # If we don't have a list of conversations,
     # fetch the list of either the given feedId or from the user's feed
@@ -357,6 +356,9 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
                         allFetchedConvIds.append(value)
                         keysFromFeed.append(col.column.name)
 
+            if not keysFromFeed:
+                break
+
             fetchStart = keysFromFeed[-1]
             feedItems_d.append(fetchFeedItems(fetchedConvIds))
             filteredConvIds = yield fetchAndFilterConvs(fetchedConvIds, count)
@@ -364,7 +366,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
 
             if len(results) < fetchCount:
                 break
-        
+
         if len(keysFromFeed) > count:   # We have more items than count
             nextPageStart = utils.encodeKey(keysFromFeed[count])
             convIds = convIds[0:count]
