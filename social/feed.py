@@ -284,9 +284,13 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
                     toFetchEntities.update(entities.split(","))
 
                 if not getReason:
-                    if x == "C" or x == "L" and convId != item:
+                    if x == "C":
                         responses[convId].append(item)
                         toFetchItems.add(item)
+                    elif x == "L" and convId != item:
+                        if entities:
+                            responses[convId].append(item)
+                            toFetchItems.add(item)
                     elif x == "L":
                         likes[convId].append(user)
 
@@ -300,9 +304,10 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
                     mostRecentItem = update
                 elif x == "L":
                     mostRecentItem = update
-                    if item not in toFetchItems:
-                        responses[convId].append(item)
-                    toFetchItems.add(item)
+                    if entities:
+                        toFetchItems.add(item)
+                        if item not in toFetchItems:
+                            responses[convId].append(item)
                 elif x == "T":
                     mostRecentItem = update
                     if len(update) > 4 and update([4]):
