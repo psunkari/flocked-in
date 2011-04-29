@@ -463,7 +463,20 @@ class ItemResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _likes(self, request):
-        pass
+        itemId = utils.getRequestArg(request, "id")
+        if not itemId:
+            raise errors.MissingParams()
+        itemLikes = yield Db.get_slice(itemId, "itemLikes")
+        users = [col.column.name for col in itemLikes]
+        entities = {}
+        if users:
+            cols = yield Db.multiget_slice(users, "entities", ["basic"])
+            entities = utils.multiSuperColumnsToDict(cols)
+        args["entities"] = entities
+        args["itemId"] = itemId
+        yield renderScriptBlock(request, "item.mako", "people_likes", False,
+                                "#people-likes-%s"%(itemId), "set", **args)
+
 
 
     @profile

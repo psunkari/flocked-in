@@ -150,6 +150,8 @@
   &#183;
   ## Like this conversation
   %if myLikes and myLikes.has_key(convId) and len(myLikes[convId]):
+
+
     <button class="button-link ajax" _ref="/item/unlike?id=${convId}">${_("Unlike")}</button>&#183;<button
   %else:
     <button class="button-link ajax" _ref="/item/like?id=${convId}">${_("Like")}</button>&#183;<button
@@ -413,4 +415,7 @@
       activity = _("%s left the group: %s.") % (fmtUser(userId, entities[userId]), fmtUser(target, entities[target]))
   %>
   ${activity}
+</%def>
+
+<%def name="people_likes()">
 </%def>
