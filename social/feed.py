@@ -457,7 +457,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
                         for id in reasonUserIds[convId]]
                 if convId in reasonTagId:
                     tagId = reasonTagId[convId]
-                    tagname = fetchedTags[tagId]["title"]
+                    tagname = tags[tagId]["title"]
                     vals.append("<a class='ajax' href='/tags?id=%s'>%s</a>"%(tagId, tagname))
                 vals.append(userName(ownerId, entities[ownerId]))
                 itemType = conv["meta"]["type"]
