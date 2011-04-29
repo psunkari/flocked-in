@@ -473,6 +473,7 @@ class ItemResource(base.BaseResource):
         convId = utils.getRequestArg(request, "id")
         start = utils.getRequestArg(request, "start") or ''
         start = utils.decodeKey(start)
+        myId = request.getSession(IAuthInfo).username
 
         # A copy of this code for fetching comments is present in renderItem
         # Most changes here may need to be done there too.
@@ -494,7 +495,7 @@ class ItemResource(base.BaseResource):
             toFetchEntities.add(userKey)
         responseKeys.reverse()
 
-        d3 = Db.multiget_slice(responseKeys + [convId], "itemLikes")
+        d3 = Db.multiget_slice(responseKeys + [convId], "itemLikes", myId)
         d2 = Db.multiget_slice(responseKeys + [convId], "items", ["meta"])
         d1 = Db.multiget_slice(toFetchEntities, "entities", ["basic"])
 
