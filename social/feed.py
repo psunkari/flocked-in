@@ -310,7 +310,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
                             responses[convId].append(item)
                 elif x == "T":
                     mostRecentItem = update
-                    if len(update) > 4 and update([4]):
+                    if len(update) > 4 and update[4]:
                         tagId = update[4]
                         toFetchTags.add(tagId)
                 elif x == "I":
