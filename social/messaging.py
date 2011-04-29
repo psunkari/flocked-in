@@ -405,6 +405,7 @@ class MessagingResource(base.BaseResource):
         folders = yield Db.get_slice(myKey, "mUserFolders")
         folders = utils.supercolumnsToDict(folders)
         args["folders"] = folders
+        args.update({"fid":folder})
 
         if script and landing:
             yield render(request, "message.mako", **args)
@@ -435,7 +436,6 @@ class MessagingResource(base.BaseResource):
                 msgs.update({"people":people})
                 args.update({"message":msgs})
                 args.update({"id":thread})
-                args.update({"fid":folder})
                 args.update({"flags":flags})
                 args.update({"view":"message"})
                 if script:
