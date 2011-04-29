@@ -52,22 +52,34 @@ class MessagingResource(base.BaseResource):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
 
-        _validActions = ["delete", "star", "unstar", "read", "unread", "fullview"]
-        parent = utils.getRequestArg(request, "parent") or None
+        _validActions = ["delete", "star", "unstar", "read", "unread",
+                         "fullview", "archive", "reply", "replytoall",
+                         "forward"]
+        message = utils.getRequestArg(request, "message") or None
         folder = utils.getRequestArg(request, "fid") or None
-        delete = utils.getRequestArg(request, "delete")
-        archive = utils.getRequestArg(request, "archive")
-        isOtherActions = utils.getRequestArg(request, "other")
-        action = utils.getRequestArg(request, "more")
+        delete = utils.getRequestArg(request, "delete") or None
+        archive = utils.getRequestArg(request, "archive") or None
+        if delete:action = "delete"
+        elif archive:action = "archive"
+        else:action = utils.getRequestArg(request, "action")
 
-        if folder:
-            res = yield self._checkUserFolderACL(myKey, folder)
-            if not res:
-                request.redirect("/messages")
-        else:
+        print "Args Dumped: ",
+        print "%s %s %s " % (message, folder, action)
+
+        if action not in _validActions:
+            raise
+        if not (message or folder):
+            raise
+
+        res = yield self._checkUserHasMessageAccess(myKey, message)
+        if not res:
+            raise Unauthorized
+
+        res = yield self._checkUserFolderACL(myKey, folder)
+        if not res:
             request.redirect("/messages")
 
-        mids = [parent]
+        mids = [message]
         res = yield Db.get_slice(key=myKey, column_family="mUserMessages",
                                       names=mids)
         res = utils.supercolumnsToDict(res, ordered=True)
@@ -78,34 +90,28 @@ class MessagingResource(base.BaseResource):
 
         tids = [res[x]["timestamp"] for x in res.keys() if "timestamp" in res[x]]
 
-        if len(tids) > 0 and folder:
+        if len(tids) > 0:
             copyToFolder = ""
-            if delete:
+            if action == "delete":
                 copyToFolder = "%s:%s" %(myKey, "TRASH")
                 yield self._copyToFolder(copyToFolder, mids, tids)
                 yield self._deleteFromFolder(folder, tids)
-            elif archive:
+            elif action == "archive":
                 copyToFolder = "%s:%s" %(myKey, "ARCHIVES")
                 yield self._copyToFolder(copyToFolder, mids, tids)
                 yield self._deleteFromFolder(folder, tids)
-            elif isOtherActions:
-                if action not in _validActions:
-                    raise errors.InvalidParams()
-                else:
-                    print "setting flags"
-                    if action == "star":
-                        self._setFlagOnMessage(myKey, parent, "star", "1")
-                    elif action == "unstar":
-                        self._setFlagOnMessage(myKey, parent, "star", "0")
-                    elif action == "read":
-                        self._setFlagOnMessage(myKey, parent, "read", "1")
-                    elif action == "unread":
-                        self._setFlagOnMessage(myKey, parent, "read", "0")
-                    if action in ["star", "unstar"]:
-                        request.redirect("/messages/thread?id=%s&fid=%s" %(parent, folder))
-                    else:
-                        request.redirect("/messages?fid=%s"%(folder))
-            else:request.redirect("/messages?fid=%s"%(folder))
+            elif action == "star":
+                self._setFlagOnMessage(myKey, message, "star", "1")
+            elif action == "unstar":
+                self._setFlagOnMessage(myKey, message, "star", "0")
+            elif action == "read":
+                self._setFlagOnMessage(myKey, message, "read", "1")
+            elif action == "unread":
+                self._setFlagOnMessage(myKey, message, "read", "0")
+            if action in ["star", "unstar"]:
+                request.redirect("/messages/thread?id=%s&fid=%s" %(message, folder))
+            else:
+                request.redirect("/messages?fid=%s"%(folder))
         else:request.redirect("/messages")
 
     @defer.inlineCallbacks
@@ -603,6 +609,8 @@ class MessagingResource(base.BaseResource):
             d = self._renderComposer(request)
         elif segmentCount == 1 and request.postpath[0] == "thread":
             d = self._renderThread(request)
+        elif segmentCount == 1 and request.postpath[0] == "actions":
+            d = self._threadActions(request)
 
         return self._epilogue(request, d)
 
