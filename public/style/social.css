@@ -654,7 +654,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 
 .no-comments .comments-wrapper,
-.no-likes .likes-wrapper,
+.no-comments.no-likes .likes-wrapper,
 .no-tags .tags-wrapper {
     display: none;
 }

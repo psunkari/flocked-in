@@ -54,10 +54,12 @@
         <div class="conv-summary"></div>
         <div id="item-footer-${convId}" class="conv-footer busy-indicator"></div>
       </div>
-      <div id="conv-tags-wrapper-${convId}"></div>
-      <div id="conv-likes-wrapper-${convId}"></div>
-      <div id="conv-comments-wrapper-${convId}"></div>
-      <div id="comment-form-wrapper-${convId}" class="comment-form-wrapper busy-indicator"></div>
+      <div id="conv-meta-wrapper-${convId}" class="conv-meta-wrapper no-tags">
+        <div id="conv-tags-wrapper-${convId}" class="tags-wrapper"></div>
+        <div id="conv-likes-wrapper-${convId}" class="likes-wrapper"></div>
+        <div id="conv-comments-wrapper-${convId}" class="comments-wrapper"></div>
+        <div id="comment-form-wrapper-${convId}" class="comment-form-wrapper busy-indicator"></div>
+      </div>
     </div>
   </div>
 </%def>
@@ -145,7 +147,11 @@
   %endif
   ## Number of comments when none of my friends commented on it
   %if not hasComments and commentsCount > 0:
-    <button class="button-link ajax" title="${commentsCount} Comments"><div class="small-icon small-comment"></div>${commentsCount}</button>
+    %if commentsCount > constants.MAX_COMMENTS_IN_FEED:
+      <button class="button-link ajax" title="${commentsCount} Comments" href="/item?id=${convId}"><div class="small-icon small-comment"></div>${commentsCount}</button>
+    %else:
+      <button class="button-link ajax" title="${commentsCount} Comments" href="/item?id=${convId}" _ref="/item/responses?id=${convId}"><div class="small-icon small-comment"></div>${commentsCount}</button>
+    %endif
   %endif
   &#183;
   ## Like this conversation
