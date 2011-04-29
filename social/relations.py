@@ -3,7 +3,7 @@ from twisted.python     import log
 from twisted.internet   import defer
 from telephus.cassandra import ttypes
 
-from social import Db, utils, constants
+from social             import Db, constants
 from social.logging     import profile, dump_args
 
 #

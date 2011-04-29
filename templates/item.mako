@@ -147,11 +147,7 @@
   %endif
   ## Number of comments when none of my friends commented on it
   %if not hasComments and commentsCount > 0:
-    %if commentsCount > constants.MAX_COMMENTS_IN_FEED:
-      <button class="button-link ajax" title="${commentsCount} Comments" href="/item?id=${convId}"><div class="small-icon small-comment"></div>${commentsCount}</button>
-    %else:
-      <button class="button-link ajax" title="${commentsCount} Comments" href="/item?id=${convId}" _ref="/item/responses?id=${convId}"><div class="small-icon small-comment"></div>${commentsCount}</button>
-    %endif
+    <button class="button-link ajax" title="${commentsCount} Comments" href="/item?id=${convId}" _ref="/item/responses?id=${convId}"><div class="small-icon small-comment"></div>${commentsCount}</button>
   %endif
   &#183;
   ## Like this conversation
@@ -249,11 +245,7 @@
   %if total > showing:
     <div class="conv-comments-more" class="busy-indicator">
       %if isFeed:
-        %if total > constants.MAX_COMMENTS_IN_FEED or not script:
-          <a class="ajax" href="/item?id=${convId}">${_("View all %s comments &#187;") % (total)}</a>
-        %else:
-          <a class="ajax" href="/item?id=${convId}" _ref="/item/responses?id=${convId}">${_("View all %s comments &#187;") % (total)}</a>
-        %endif
+        <a class="ajax" href="/item?id=${convId}" _ref="/item/responses?id=${convId}">${_("View all %s comments &#187;") % (total)}</a>
       %else:
         <span class="num-comments">${_("%s of %s") % (showing, total)}</span>
         %if oldest:

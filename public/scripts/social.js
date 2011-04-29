@@ -41,6 +41,10 @@ fetchUri: function _fetchUri(str) {
     social._fetchUriOldPath = uri.path;
     return deferred;
 },
+ajaxRedirectUri: function _ajaxRedirectUri(uri) {
+    $.address.value(uri);
+    this.fetchUri(uri);
+},
 setBusy: function _setBusy(deferred, node) {
     busyIndicator = null;
     if (!deferred)

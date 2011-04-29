@@ -481,10 +481,16 @@ class ItemResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _responses(self, request):
-        convId = utils.getRequestArg(request, "id")
+        convId, conv = yield utils.getAccessibleItemId(request, "id")
         start = utils.getRequestArg(request, "start") or ''
         start = utils.decodeKey(start)
         myId = request.getSession(IAuthInfo).username
+        isFeed = False if request.getCookie("_page") == "item" else True
+        responseCount = int(conv["meta"].get("responseCount", "0"))
+
+        if isFeed and responseCount > constants.MAX_COMMENTS_IN_FEED:
+            request.write("$$.ajaxRedirectUri('/item?id=%s');"%convId)
+            return
 
         # A copy of this code for fetching comments is present in renderItem
         # Most changes here may need to be done there too.
@@ -514,7 +520,6 @@ class ItemResource(base.BaseResource):
         fetchedEntities = yield d1
         myLikes = yield d3
 
-        isFeed = False if request.getCookie("_page") == "item" else True
         args = {"convId": convId, "isFeed": isFeed, "items":{}, "entities": {}}
         args["items"].update(utils.multiSuperColumnsToDict(fetchedItems))
         args["entities"].update(utils.multiSuperColumnsToDict(fetchedEntities))

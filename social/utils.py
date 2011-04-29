@@ -17,6 +17,7 @@ from twisted.internet   import defer
 from twisted.python     import log
 
 from social             import Db, _, __
+from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.constants   import INFINITY
 from social.logging     import profile, dump_args
@@ -84,14 +85,15 @@ def getValidEntityId(request, arg, type="user"):
 
 
 @defer.inlineCallbacks
-def getValidItemId(request, arg, columns=[], type=None):
+def getValidItemId(request, arg, columns=None, type=None):
     itemId = getRequestArg(request, arg)
     if not itemId:
         raise errors.MissingParam()
 
-    item = yield Db.get_slice(itemId, "items", ["meta"].extend(columns))
+    item = yield Db.get_slice(itemId, "items",
+                              ["meta"].extend(columns if columns else []))
     if not item:
-        raise errors.InvalidEntity()
+        raise errors.InvalidItem()
 
     item = supercolumnsToDict(item)
     if not type:
@@ -99,7 +101,26 @@ def getValidItemId(request, arg, columns=[], type=None):
     elif type and item["meta"].get("type", None) == type:
         defer.returnValue((itemId, item))
     else:
-        raise errors.InvalidEntity()
+        raise errors.InvalidItem()
+
+
+@defer.inlineCallbacks
+def getAccessibleItemId(request, arg, columns=None, type=None):
+    (itemId, item) = yield getValidItemId(request, arg, columns, type)
+
+    authInfo = request.getSession(IAuthInfo)
+    orgId = authInfo.organization
+    userId = authInfo.username
+    meta = item["meta"]
+
+    relation = Relation(userId, [])
+    yield defer.DeferredList([relation.initFriendsList(),
+                              relation.initGroupsList()])
+
+    if not checkAcl(userId, meta["acl"], meta["owner"], relation, orgId):
+        raise errors.NotAuthorized()
+
+    defer.returnValue((itemId, item))
 
 
 @defer.inlineCallbacks
@@ -244,7 +265,6 @@ def expandAcl(userKey, acl, convOwnerId=None):
 
 
 def checkAcl(userId, acl, owner, relation, userOrgId=None):
-
     acl = pickle.loads(acl)
     deny = acl.get("deny", {})
     accept = acl.get("accept", {})
