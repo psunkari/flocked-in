@@ -147,19 +147,17 @@ class ItemResource(base.BaseResource):
             renderers.append(d)
 
             d = renderScriptBlock(request, "item.mako", 'conv_tags',
-                                  landing, '#conv-tags-wrapper-%s' % convId,
-                                  'set', **args)
+                        landing, '#conv-tags-wrapper-%s' % convId, 'set',
+                        handlers={"onload":"$('#conv-meta-wrapper-%s').removeClass('no-tags')"%convId} if toFetchTags else None, **args)
             renderers.append(d)
 
             d = renderScriptBlock(request, "item.mako", 'conv_comments',
-                                  landing, '#conv-comments-wrapper-%s' % convId,
-                                  'set', **args)
+                        landing, '#conv-comments-wrapper-%s' % convId, 'set', **args)
             renderers.append(d)
 
-            onload = "(function(obj){$$.convs.load(obj);})(this);"
             d = renderScriptBlock(request, "item.mako", 'conv_comment_form',
-                            landing, '#comment-form-wrapper-%s' % convId,
-                            'set', True, handlers={"onload": onload}, **args)
+                        landing, '#comment-form-wrapper-%s' % convId, 'set',
+                        True, handlers={"onload": "(function(obj){$$.convs.load(obj);})(this);"}, **args)
             renderers.append(d)
 
             numLikes = int(conv["meta"].get("likesCount", "0"))
@@ -528,7 +526,7 @@ class ItemResource(base.BaseResource):
         if isFeed:
             yield renderScriptBlock(request, "item.mako", 'conv_comments',
                         not self._ajax, '#conv-comments-wrapper-%s' % convId,
-                        'set', **args)
+                        'set', True, handlers={"onload":"$('#conv-meta-wrapper-%s').removeClass('no-comments')"%convId}, **args)
         else:
             landing = not self._ajax
             showing = utils.getRequestArg(request, "nc") or "0"
