@@ -117,7 +117,13 @@ _initAjaxRequests: function _initAjaxRequests() {
 
     /* Global ajax error handler */
     $(document).ajaxError(function(event, request, settings) {
-        alert("Error fetching: " + settings.url);
+        if (request.status == 401) {
+            currentUri = self.parseUri(window.location);
+            currentUri = escape(currentUri.relative)
+            window.location = '/signin?_r='+currentUri;
+        } else {
+            alert("Error fetching: " + settings.url);
+        }
     });
 
     /* If the browser support HTML5 states, use them */

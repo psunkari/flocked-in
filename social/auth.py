@@ -40,7 +40,7 @@ class SigninForm(resource.Resource):
     def render_GET(self, request):
         args = {"query": ""};
         if request.args.has_key("_r"):
-            args["query"] = "?_r=" + request.args["_r"][0]
+            args["query"] = "?_r=" + quote_plus(request.args["_r"][0])
 
         d = render(request, "signin.mako", **args)
         d.addCallback(lambda x: request.finish())
