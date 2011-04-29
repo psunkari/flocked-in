@@ -671,10 +671,14 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .small-comment {
     background-position: -22px -20px;
 }
-.button-link:hover .small-like {
+.button-link:hover .small-like,
+.button-link:active .small-like,
+.button-link:focus .small-like {
     background-position: -22px -10px;
 }
-.button-link:hover .small-comment {
+.button-link:hover .small-comment,
+.button-link:active .small-comment,
+.button-link:focus .small-comment {
     background-position: -22px -30px;
 }
 
