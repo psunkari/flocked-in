@@ -304,6 +304,7 @@ class MessagingResource(base.BaseResource):
         folders = yield Db.get_slice(myKey, "mUserFolders")
         folders = utils.supercolumnsToDict(folders)
         args["folders"] = folders
+        args.update({"fid":folderId})
 
         if script and landing:
             yield render(request, "message.mako", **args)
@@ -311,8 +312,6 @@ class MessagingResource(base.BaseResource):
         if appchange and script:
             yield renderScriptBlock(request, "message.mako", "layout",
                                     landing, "#mainbar", "set", **args)
-
-        args.update({"fid":folderId})
 
         res = yield Db.get_slice(key=folderId, column_family="mFolderMessages",
                                  start=start, count=11+int(back), reverse=reverse)
@@ -371,8 +370,19 @@ class MessagingResource(base.BaseResource):
         args.update({"view":"messages"})
 
         if script:
+            onload = """
+                     $('#sfmenu').children().each(function(index) {
+                         $(this).removeClass('sidemenu-selected')
+                     });
+                     $('#ufmenu').children().each(function(index) {
+                         $(this).removeClass('sidemenu-selected')
+                     });
+                     $('li#%s').addClass('sidemenu-selected')
+                     """ % folderId.rsplit(":", 1)[1].upper()
             yield renderScriptBlock(request, "message.mako", "center",
-                                    landing, ".center-contents", "set", **args)
+                                    landing, ".center-contents", "set", True,
+                                    handlers={"onload": onload},
+                                    **args)
         else:
             yield render(request, "message.mako", **args)
 

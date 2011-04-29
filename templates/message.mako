@@ -12,10 +12,10 @@
   <%
     specialFolders = ["sent", "inbox", "trash", "drafts", "archives"]
     def navMenuItem(id, link, text, icon, selected=False):
-      if selected: style = "background-color:#C3D9FF"
-      else: style = "background-color:transparent"
+      if selected: style = "sidemenu-selected"
+      else: style = ""
       return """
-              <li id="%(id)s" style="%(style)s">
+              <li id="%(id)s" class="%(style)s">
                 <a href="%(link)s" class="ajax busy-indicator">
                   <span class="sidemenu-icon messaging-icon %(icon)s-icon"></span>
                   <span class="sidemenu-text">%(text)s</span>
