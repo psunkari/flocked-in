@@ -11,28 +11,35 @@
 <%def name="nav_menu()">
   <%
     specialFolders = ["sent", "inbox", "trash", "drafts", "archives"]
-    def navMenuItem(link, text, icon):
-        return '<li><a href="%(link)s" class="ajax busy-indicator"><span class="sidemenu-icon messaging-icon %(icon)s-icon"></span><span class="sidemenu-text">%(text)s</span></a></li>' % locals()
-
+    def navMenuItem(id, link, text, icon, selected=False):
+      if selected: style = "background-color:#C3D9FF"
+      else: style = "background-color:transparent"
+      return """
+              <li id="%(id)s" style="%(style)s">
+                <a href="%(link)s" class="ajax busy-indicator">
+                  <span class="sidemenu-icon messaging-icon %(icon)s-icon"></span>
+                  <span class="sidemenu-text">%(text)s</span>
+                </a>
+              </li>
+              """ % locals()
   %>
   <div id="mymenu-container" class="sidemenu-container">
     <ul class="v-links sidemenu">
-      ${navMenuItem("/feed", _("Back to Home"), "back")}
+      ${navMenuItem("home", "/feed", _("Back to Home"), "back")}
     </ul>
     <ul class="v-links sidemenu">
-      ${navMenuItem("/messages/write", _("Compose"), "compose")}
+      ${navMenuItem("compose", "/messages/write", _("Compose"), "compose")}
     </ul>
-    <ul id="mymenu" class="v-links sidemenu">
-        ${navMenuItem("/messages?fid=INBOX", _("Inbox"), "inbox")}
-        ${navMenuItem("/messages?fid=ARCHIVES", _("Archives"), "archive")}
-        ${navMenuItem("/messages?fid=TRASH", _("Trash"), "trash")}
-        ${navMenuItem("/messages?fid=SENT", _("Sent"), "sent")}
-        <!--${navMenuItem("/messages?fid=DRAFTS", _("Drafts"), "")}-->
+    <ul id="sfmenu" class="v-links sidemenu">
+        ${navMenuItem("INBOX", "/messages?fid=INBOX", _("Inbox"), "inbox", fid.endswith(":INBOX"))}
+        ${navMenuItem("ARCHIVES", "/messages?fid=ARCHIVES", _("Archives"), "archive", fid.endswith(":ARCHIVES"))}
+        ${navMenuItem("TRASH", "/messages?fid=TRASH", _("Trash"), "trash", fid.endswith(":TRASH"))}
+        ${navMenuItem("SENT", "/messages?fid=SENT", _("Sent"), "sent", fid.endswith(":SENT"))}
     </ul>
-    <ul id="mymenu" class="v-links sidemenu">
+    <ul id="ufmenu" class="v-links sidemenu">
         % for folderId in folders:
           % if folders[folderId]['label'].lower() not in specialFolders:
-            ${navMenuItem("/messages?fid=%s"%(folderId), _(folders[folderId]['label']), "")}
+            ${navMenuItem(folderId, "/messages?fid=%s"%(folderId), _(folders[folderId]['label']), "", folderId == fid)}
           % endif
         % endfor
     </ul>
@@ -75,7 +82,7 @@
       date = message['Date']
       quoted_reply = "\n".join([">%s" %x for x in body.split('\n')]+['>'])
       prequotestring = "On %s, %s wrote" %(date, sender)
-      new_reply = "\n%s\n\n%s\n%s" %(reply, prequotestring, quoted_reply)
+      new_reply = "\n\n\n%s\n\n%s\n%s" %(reply, prequotestring, quoted_reply)
       return new_reply
 %>
 
@@ -148,7 +155,7 @@
       return "%s" %date
 %>
 
-<%def name="messages_layout(id, conversation, fid)">
+<%def name="messages_layout(script, id, conversation, fid)">
   <div id="conv-${id}" class="conv-item">
     <div style="display:table-cell;vertical-align:top">
       <input type="checkbox" name="selected" value="${id}"/>
@@ -174,9 +181,9 @@
       </div>
       <div style="display:table-cell;width:250px">
         % if conversation["flags"]["read"] == "0":
-          <a style="font-weight:bold" href="/messages/thread?id=${conversation['message-id']}&fid=${fid}">${conversation["Subject"]|h}</a>
+          <a style="font-weight:bold" class="${'ajax' if script else ''}" href="/messages/thread?id=${conversation['message-id']}&fid=${fid}">${conversation["Subject"]|h}</a>
         % else:
-          <a style="font-weight:normal" href="/messages/thread?id=${conversation['message-id']}&fid=${fid}">${conversation["Subject"]|h}</a>
+          <a style="font-weight:normal" class="${'ajax' if script else ''}" href="/messages/thread?id=${conversation['message-id']}&fid=${fid}">${conversation["Subject"]|h}</a>
         % endif
       </div>
       <abbr style="display:table-cell;width:130px">
@@ -190,13 +197,15 @@
 <%def name="message_layout(mid, message, flags, fid)">
     <div style="padding:4px 10px">
       <h2 style="display:inline">${message["Subject"]|h}</h2>
-      <a style="display:inline-block;float:right">
-        % if flags["star"] == "0":
-          <span class="messaging-icon star-empty-icon"> </span>
-        %else:
-          <span class="messaging-icon star-icon"> </span>
-        % endif
-      </a>
+      % if flags["star"] == "0":
+        <a style="display:inline-block;float:right" href="/messages/actions?action=star&message=${mid}&fid=${fid}">
+        <span class="messaging-icon star-empty-icon"> </span>
+        </a>
+      %else:
+        <a style="display:inline-block;float:right" href="/messages/actions?action=unstar&message=${mid}&fid=${fid}">
+        <span class="messaging-icon star-icon"> </span>
+        </a>
+      % endif
     </div>
     <div style="padding:4px 10px;background-color:#CCCCCC">
       % if len(message["people"]) <= 2:
@@ -210,8 +219,8 @@
       <a style="padding:3px" href="/messages/write?parent=${message["message-id"]}">Reply</a>
       <a style="padding:3px" href="/messages/write?parent=${message["message-id"]}&action=forward">Forward</a>
     </div>
-    <div style="margin:0;padding:10px">${message["body"] | newlinescape}</div>
-    <input type="hidden" name="parent" value="${message["message-id"]}">
+    <div style="margin:0;padding:10px;min-height:80px">${message["body"] | newlinescape}</div>
+    <input type="hidden" name="message" value="${message["message-id"]}">
 </%def>
 
 <%def name="conversation_layout(conversation, inline=False, isFeed=False)">
@@ -268,7 +277,7 @@
     <div style="background-color:#e0ecff">
       <div style="background-color:#c3d9ff"><b>Quick Reply</b></div>
       <div>
-          <textarea style="width:80ex;height:100px" name="body"></textarea>
+          <textarea style="width:80ex;height:100px;font-size:11px" name="body"></textarea>
           <input type="hidden" value="${msg["message-id"]}" name="parent"/>
           <input type="hidden" value="${formatSubjectForReply(msg['Subject'])}" name="subject"/>
           <input type="hidden" value="${msg["From"]}" name="recipients"/>
@@ -279,22 +288,21 @@
     </div>
 </%def>
 
-<%def name="toolbar_layout(view, fid=None, message=None)">
+<%def name="toolbar_layout(script, view, fid=None, message=None)">
   % if view == "messages":
-    <div style="background-color:#C3D9FF;padding-bottom:10px">
+    <div style="background-color:#C3D9FF;padding:4px 0">
       % if fid:
         <b style="float:right;padding:4px">Viewing ${_(folders[fid]['label'])}</b>
       % endif
-<!--      <a style="padding:3px;color:white" href="/messages/write">New Message</a> -->
       <input type="submit" name="delete" value="Delete">
       <input type="submit" name="archive" value="Archive">
     </div>
   % elif view == "message":
     <div style="background-color:#C3D9FF">
-        <a style="padding:3px" href="/messages?fid=${fid}">Go Back</a>
+        <a style="padding:3px" class="${'ajax' if script else ''}" href="/messages?fid=${fid}">Go Back</a>
         <input type="submit" name="delete" value="Delete">
         <input type="submit" name="archive" value="Archive">
-        <select name="more">
+        <select name="action">
           <option value="">More Actions</option>
           <option value="star">Add Star</option>
           <option value="unstar">Remove Star</option>
@@ -306,31 +314,31 @@
     </div>
   %elif view == "compose":
     <div style="background-color:#C3D9FF;padding:3px 0">
-      <a style="padding:3px;font-weight:bold" href="/messages?fid=${fid}">Go Back</a>
+      <a style="padding:3px;font-weight:bold" class="${'ajax' if script else ''}" href="/messages?fid=${fid}">Go Back</a>
     </div>
   % elif view == "reply":
     <div style="background-color:#C3D9FF;padding:3px 0">
-      <a style="padding:3px;font-weight:bold" href="/messages?fid=${fid}">Go Back</a>
+      <a style="padding:3px;font-weight:bold" class="${'ajax' if script else ''}" href="/messages?fid=${fid}">Go Back</a>
     </div>
   % endif
 </%def>
 
-<%def name="navigation_layout(view, start, end, fid)">
+<%def name="navigation_layout(script, view, start, end, fid)">
   % if view == "messages":
     <div style="display:table-row;float:right">
       <ul class="h-links">
         % if start !=0:
           %if fid:
-            <li style="padding: 0pt 4px;"><a href="/messages?start=${start}&fid=${fid}&back=True">Back</a></li>
+            <li style="padding: 0pt 4px;"><a class="${'ajax' if script else ''}" href="/messages?start=${start}&fid=${fid}&back=True">Back</a></li>
           %else:
-            <li style="padding: 0pt 4px;"><a href="/messages?start=${start}&back=True">Back</a></li>
+            <li style="padding: 0pt 4px;"><a class="${'ajax' if script else ''}" href="/messages?start=${start}&back=True">Back</a></li>
           %endif
         % endif
         % if end != 0:
           % if fid:
-            <li style="padding: 0pt 4px;"><a href="/messages?start=${end}&fid=${fid}">Next</a></li>
+            <li style="padding: 0pt 4px;"><a class="${'ajax' if script else ''}" href="/messages?start=${end}&fid=${fid}">Next</a></li>
           %else:
-            <li style="padding: 0pt 4px;"><a href="/messages?start=${end}">Next</a></li>
+            <li style="padding: 0pt 4px;"><a class="${'ajax' if script else ''}" href="/messages?start=${end}">Next</a></li>
           %endif
         % endif
       </ul>
@@ -346,16 +354,16 @@
     %endfor
   %elif view == "messages":
     <form method="post" action="/messages">
-    ${toolbar_layout(view, fid)}
-    ${navigation_layout(view, start, end, fid)}
+    ${toolbar_layout(script, view, fid)}
+    ${navigation_layout(script, view, start, end, fid)}
     %for mid in mids:
-      ${messages_layout(mid, messages[mid], fid)}
+      ${messages_layout(script, mid, messages[mid], fid)}
     %endfor
     <input type="hidden" name="fid" value="${fid}"/>
     </form>
   %elif view == "message":
     <form method="post" action="/messages/thread">
-    ${toolbar_layout(view, message=message, fid=fid)}
+    ${toolbar_layout(script, view, message=message, fid=fid)}
     ${message_layout(id, message, flags, fid)}
     <input type="hidden" name="fid" value="${fid}"/>
     </form>
@@ -365,17 +373,17 @@
     </form>
   %elif view == "compose":
     <form method="post" action="/messages/write">
-    ${toolbar_layout(view, fid=fid)}
+    ${toolbar_layout(script, view, fid=fid)}
     ${composer_layout(view, None)}
     </form>
   %elif view == "reply":
     <form method="post" action="/messages/write">
-    ${toolbar_layout(view, fid=fid, message=parent_msg)}
+    ${toolbar_layout(script, view, fid=fid, message=parent_msg)}
     ${composer_layout(view, parent_msg)}
     </form>
   %elif view == "forward":
     <form method="post" action="/messages/write">
-    ${toolbar_layout("reply", fid=fid, message=parent_msg)}
+    ${toolbar_layout(script, "reply", fid=fid, message=parent_msg)}
     ${composer_layout(view, parent_msg)}
     </form>
   %endif
