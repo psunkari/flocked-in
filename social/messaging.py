@@ -95,11 +95,11 @@ class MessagingResource(base.BaseResource):
             if action == "delete":
                 copyToFolder = "%s:%s" %(myKey, "TRASH")
                 yield self._copyToFolder(copyToFolder, mids, tids)
-                yield self._deleteFromFolder(folder, tids)
+                yield self._deleteFromFolder(folder, mids, tids)
             elif action == "archive":
                 copyToFolder = "%s:%s" %(myKey, "ARCHIVES")
                 yield self._copyToFolder(copyToFolder, mids, tids)
-                yield self._deleteFromFolder(folder, tids)
+                yield self._deleteFromFolder(folder, mids, tids)
             elif action == "star":
                 self._setFlagOnMessage(myKey, message, "star", "1")
             elif action == "unstar":
@@ -163,7 +163,7 @@ class MessagingResource(base.BaseResource):
                 copyToFolder = "%s:%s" %(myKey, "ARCHIVES")
 
             yield self._copyToFolder(copyToFolder, selected, tids)
-            yield self._deleteFromFolder(folder, tids)
+            yield self._deleteFromFolder(folder, selected, tids)
         request.redirect("/messages?fid=%s"%(folder))
 
     @defer.inlineCallbacks
@@ -171,13 +171,18 @@ class MessagingResource(base.BaseResource):
         message_map = {}
         for m in messages:
             message_map[timestamps[messages.index(m)]] = m
+            yield Db.insert(key=m, column_family="mInFolders",
+                                  column=destination, value="")
         yield Db.batch_insert(key=destination, column_family="mFolderMessages",
                               mapping=message_map)
 
     @defer.inlineCallbacks
-    def _deleteFromFolder(self, folder, timestamps):
+    def _deleteFromFolder(self, folder, messages, timestamps):
         cfmap = {"mFolderMessages":[folder]}
         yield Db.batch_remove(cfmap=cfmap, names=timestamps)
+        for m in messages:
+            yield Db.remove(key=m, column_family="mInFolders", column=folder)
+            res = yield Db.get_count(key=m, column_family="mInFolders")
 
     @defer.inlineCallbacks
     def _composeMessage(self, request):
@@ -493,6 +498,9 @@ class MessagingResource(base.BaseResource):
 
         #Insert the new message to the folders cf
         yield Db.insert(folderId, "mFolderMessages", messageId, timestamp)
+
+        #Update the folder into which the message was created in mInFolders cf
+        yield Db.insert(messageId, "mInFolders", "", folderId)
 
         #Insert this message into a new conversation
         yield Db.insert(conversationId, "mConversationMessages",

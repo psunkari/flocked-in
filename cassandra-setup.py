@@ -227,6 +227,11 @@ def createColumnFamilies(client):
     #mFolderMessagesByDate
     #mFolderMessagesByUnread
     #mUserConversations
+    mInFolders = CfDef(KEYSPACE, "mInFolders", "Standard", "UTF8Type",
+                            None,
+                            "A collection of all folders that a message is \
+                            being referenced in")
+    yield client.system_add_column_family(mInFolders)
 
     mUserFolders = CfDef(KEYSPACE, "mUserFolders", "Super", "UTF8Type",
                             "UTF8Type", "A collection of all folders of a \
@@ -721,7 +726,8 @@ def truncateColumnFamilies(client):
                "nameIndex", "displayNameIndex", "orgTags", "tagItems",
                "tagFollowers", "orgTagsByName", "messages", "mUserMessages",
                "mFolderMessages", "bannedUsers", "blockedUsers",
-               "mUserFolders", "mConversationMessages", "deletedConvs"]:
+               "mUserFolders", "mConversationMessages", "deletedConvs",
+               "mInFolders"]:
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 
