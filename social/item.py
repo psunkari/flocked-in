@@ -511,7 +511,7 @@ class ItemResource(base.BaseResource):
             toFetchEntities.add(userKey)
         responseKeys.reverse()
 
-        d3 = Db.multiget_slice(responseKeys + [convId], "itemLikes", myId)
+        d3 = Db.multiget_slice(responseKeys + [convId], "itemLikes", [myId])
         d2 = Db.multiget_slice(responseKeys + [convId], "items", ["meta"])
         d1 = Db.multiget_slice(toFetchEntities, "entities", ["basic"])
 
