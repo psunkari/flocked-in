@@ -99,7 +99,7 @@
             count = int(items[convId]["meta"].get("likesCount", "0"))
             if count:
               iLike = myLikes and convId in myLikes and len(myLikes[convId])
-              self.conv_likes(convId, count, iLike, likes.get(convId, {}) if likes else [])
+              self.conv_likes(count, iLike, likes.get(convId, {}) if likes else [])
           %>
         </div>
         <div id="conv-comments-wrapper-${convId}" class="comments-wrapper">
@@ -185,7 +185,7 @@
 </%def>
 
 
-<%def name="conv_likes(convId, count=0, me=False, users=None)">
+<%def name="conv_likes(count=0, iLike=False, users=None)">
   <%
     if not count:
       return ''
@@ -194,7 +194,7 @@
     template = None
     other = count
 
-    if me:
+    if iLike:
       try:
         users.remove(myKey)
       except: pass

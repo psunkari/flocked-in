@@ -117,20 +117,19 @@ class ItemResource(base.BaseResource):
             toFetchEntities.add(userKey)
         responseKeys.reverse()
 
+        likes = yield Db.get_slice(convId, "itemLikes", relation.friends.keys()) \
+                            if relation.friends.keys() else defer.succeed([])
+        toFetchEntities.update([x.column.name for x in likes])
         d1 = Db.multiget_slice(toFetchEntities, "entities", ["basic"])
         d2 = Db.multiget_slice(responseKeys, "items", ["meta"])
         d3 = Db.multiget_slice(responseKeys + [convId], "itemLikes", [myKey])
         d4 = Db.get_slice(myOrgId, "orgTags", toFetchTags)\
                                     if toFetchTags else defer.succeed([])
-        d5 = Db.get_slice(convId, "itemLikes", relation.friends.keys()) \
-                            if relation.friends.keys() else defer.succeed([])
-
 
         fetchedEntities = yield d1
         fetchedItems = yield d2
         myLikes = yield d3
         fetchedTags = yield d4
-        likes = yield d5
 
         args["items"].update(utils.multiSuperColumnsToDict(fetchedItems))
         args["entities"].update(utils.multiSuperColumnsToDict(fetchedEntities))
@@ -163,11 +162,11 @@ class ItemResource(base.BaseResource):
             numLikes = int(conv["meta"].get("likesCount", "0"))
             if numLikes:
                 numLikes = int(conv["meta"].get("likesCount", "0"))
-                iLike = convId in myLikes
+                iLike = myKey in args["myLikes"].get(convId, [])
                 d = renderScriptBlock(request, "item.mako", 'conv_likes',
                             landing, '#conv-likes-wrapper-%s' % convId, 'set',
-                            args=[convId, numLikes, iLike,
-                                  [x.column.name for x in likes]])
+                            args=[numLikes, iLike,
+                                  [x.column.name for x in likes]], **args)
                 renderers.append(d)
 
         # Wait till the item is fully rendered.
