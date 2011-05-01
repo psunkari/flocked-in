@@ -348,7 +348,7 @@ class ItemResource(base.BaseResource):
         yield Db.remove(itemId, "itemLikes", myId)
 
         # Update the likes count
-        likesCount = int(item.get("likesCount", "1"))
+        likesCount = int(item["meta"].get("likesCount", "1"))
         if likesCount % 5 == 0:
             likesCount = yield Db.get_count(itemId, "itemLikes")
         yield Db.insert(itemId, "items", str(likesCount -1), "likesCount", "meta")
