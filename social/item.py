@@ -469,6 +469,7 @@ class ItemResource(base.BaseResource):
         if users:
             cols = yield Db.multiget_slice(users, "entities", ["basic"])
             entities = utils.multiSuperColumnsToDict(cols)
+        args = {}
         args["entities"] = entities
         args["itemId"] = itemId
         yield renderScriptBlock(request, "item.mako", "people_likes", False,
