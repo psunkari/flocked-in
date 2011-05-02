@@ -10,7 +10,7 @@ from telephus.cassandra     import ttypes
 from social.template        import render, renderDef, renderScriptBlock
 from social.relations       import Relation
 from social                 import Db, auth, utils, base, plugins, _, __
-from social                 import constants, feed
+from social                 import constants, feed, errors
 from social.logging         import dump_args, profile
 from social.isocial         import IAuthInfo
 
@@ -261,11 +261,17 @@ class ProfileResource(base.BaseResource):
         # If yes, this just becomes accepting a local pending request
         # Else create a friend request that will be pending on the target user
         calls = []
+        responseType = "I"
+        itemType = "activity"
+        cols = yield Db.multiget_slice([myKey, targetKey], "entities",
+                                            ["basic"])
+        users = utils.multiSuperColumnsToDict(cols)
         try:
             cols = yield Db.get(myKey, "pendingConnections", targetKey)
-            cols = yield Db.multiget_slice([myKey, targetKey], "entities",
-                                            ["basic"])
-            users = utils.multiSuperColumnsToDict(cols)
+            pendingType = cols.column.value
+            if pendingType == '0':
+                raise errors.PendingRequest()
+
             d1 = Db.remove(myKey, "pendingConnections", targetKey)
             d2 = Db.remove(targetKey, "pendingConnections", myKey)
             d3 = Db.batch_insert(myKey, "connections", {targetKey: circlesMap})
@@ -290,8 +296,6 @@ class ProfileResource(base.BaseResource):
             d12 = utils._updateNameIndex(targetKey, myKey, targetLastName, None)
 
             #add to feed
-            responseType = "I"
-            itemType = "activity"
             myItemId = utils.getUniqueKey()
             targetItemId = utils.getUniqueKey()
             myItem = utils.createNewItem(request, itemType, ownerId = myKey,
@@ -319,14 +323,30 @@ class ProfileResource(base.BaseResource):
                                       itemType, targetKey, ""])
             d18 =  Db.insert(targetKey, "userItems", userItemValue,
                              targetItem["meta"]['uuid'])
-            #notify users
+
+            value = ":".join([responseType, myKey, targetItemId, itemType, targetKey])
+            d19  = Db.insert(targetKey, "notifications", targetItemId, targetItem["meta"]['uuid'])
+            d20 = Db.batch_insert(targetKey, "notificationItems", {targetItemId:{targetItem["meta"]['uuid']:value}})
 
             calls = [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13,
-                     d14, d15, d16, d17, d18]
+                     d14, d15, d16, d17, d18, d19, d20]
         except ttypes.NotFoundException:
+            itemId = utils.getUniqueKey()
+            item = utils.createNewItem(request, itemType,
+                                       ownerId= myKey,
+                                       subType="pendingConnection",
+                                       ownerOrgId = users[myKey]["basic"]["org"])
+            value = ":".join([responseType, myKey, itemId, itemType, targetKey])
+
             d1 = Db.insert(myKey, "pendingConnections", '0', targetKey)
             d2 = Db.insert(targetKey, "pendingConnections", '1', myKey)
-            calls = [d1, d2]
+            d3 = Db.batch_insert(itemId, "items", item)
+            d4  = Db.insert(targetKey, "notifications", itemId, item["meta"]['uuid'])
+            d5 = Db.batch_insert(targetKey, "notificationItems", {itemId:{item["meta"]['uuid']:value}})
+            calls = [d1, d2, d3, d4, d5]
+        except errors.PendingRequest:
+            pass
+
 
         yield defer.DeferredList(calls)
 
@@ -363,6 +383,8 @@ class ProfileResource(base.BaseResource):
             deferreds.append(utils.deleteNameIndex(myKey, targetFirstName, targetKey))
         if targetLastName:
             deferreds.append(utils.deleteNameIndex(myKey, targetLastName, targetKey))
+        # TODO: delete the notifications and items created while
+        # sending&accepting friend request
 
         yield defer.DeferredList(deferreds)
 

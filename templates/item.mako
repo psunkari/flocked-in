@@ -152,8 +152,6 @@
   &#183;
   ## Like this conversation
   %if myLikes and myLikes.has_key(convId) and len(myLikes[convId]):
-
-
     <button class="button-link ajax" _ref="/item/unlike?id=${convId}">${_("Unlike")}</button>&#183;<button
   %else:
     <button class="button-link ajax" _ref="/item/like?id=${convId}">${_("Like")}</button>&#183;<button
@@ -318,7 +316,7 @@
       <span class="comment-user">${utils.userName(userId, entities[userId])}</span>
       <span class="comment-text">${comment|normalize}</span>
     </div>
-    <div class="comment-meta">
+    <div class="comment-meta" id = "item-footer-${commentId}">
       ${self.item_footer(commentId)}
     </div>
   </div>
