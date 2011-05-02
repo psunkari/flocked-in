@@ -308,6 +308,62 @@ class ItemResource(base.BaseResource):
         yield notifications.pushNotifications( itemId, convId, responseType, convType,
                                     convOwnerId, myId, timeUUID)
 
+        args = {}
+        item["meta"]["likesCount"] = str(likesCount + 1)
+        args["items"] = {itemId: item}
+        args["myLikes"] = {itemId:[myId]}
+
+        if itemId != convId:
+            yield renderScriptBlock(request, "item.mako", "item_footer", False,
+                              "#item-footer-%s"%(itemId), "set",
+                              args=[itemId], **args)
+        else:
+
+            relation = Relation(myId, [])
+            yield defer.DeferredList([relation.initFriendsList(),
+                                  relation.initGroupsList()])
+            if relation.friends.keys():
+                likes = yield Db.get_slice(convId, "itemLikes", relation.friends.keys())
+                likes = [x.column.name for x in likes]
+            else:
+                likes = []
+
+            isFeed = False if request.getCookie("_page") == "item" else True
+            hasComments = False
+            hasLikes = False
+            toFetchEntities = set()
+            entities = {}
+            if not isFeed:
+                hasComments = True
+                hasLikes = True
+            else:
+                feedItems = yield Db.get_slice(myId, "feedItems", [convId])
+                feedItems = utils.supercolumnsToDict(feedItems)
+                for tuuid in feedItems.get(convId, {}):
+                    val = feedItems[convId][tuuid]
+                    rtype = val.split(":")[0]
+                    if rtype == "C":
+                        hasComments = True
+                    elif rtype == "L":
+                        hasLikes = True
+                        actors = val.split(":")[3].split(",")
+                        if actors[0] in relation.friends:
+                            toFetchEntities.update(val.split(":")[3].split(","))
+            if toFetchEntities:
+                entities = yield Db.multiget_slice(toFetchEntities, "entities", ["basic"])
+                entities = utils.multiSuperColumnsToDict(entities)
+            args["entities"] = entities
+
+
+            handler = {"onload":"(function(){$('#conv-meta-wrapper-%s').removeClass('no-likes')})();"%(convId)}
+            yield renderScriptBlock(request, "item.mako", "conv_footer", False,
+                                    "#item-footer-%s"%(itemId), "set",
+                                    args=[itemId, hasComments, hasLikes], **args)
+            yield renderScriptBlock(request, "item.mako", 'conv_likes', False,
+                                    '#conv-likes-wrapper-%s' % convId, 'set', True,
+                                    args=[likesCount+1, True, likes], handlers=handler, **args)
+
+
         # Finally, update the UI
         # TODO
 
@@ -328,8 +384,6 @@ class ItemResource(base.BaseResource):
             likeTimeUUID = cols.column.value
         except ttypes.NotFoundException:
             raise errors.InvalidRequest()
-
-
 
         convId = item["meta"].get("parent", None)
         conv = None
@@ -374,9 +428,63 @@ class ItemResource(base.BaseResource):
 
         yield notifications.deleteNofitications(convId, likeTimeUUID)
 
-        # Finally, update the UI
-        # TODO
 
+
+        args = {}
+        item["meta"]["likesCount"] = likesCount -1
+        args["items"] = {itemId: item}
+        args["myLikes"] = {itemId:[]}
+
+        if itemId != convId:
+             yield renderScriptBlock(request, "item.mako", "item_footer", False,
+                                     "#item-footer-%s"%(itemId), "set",
+                                     args=[itemId], **args)
+        else:
+
+            relation = Relation(myId, [])
+            yield defer.DeferredList([relation.initFriendsList(),
+                                  relation.initGroupsList()])
+            if relation.friends.keys():
+                likes = yield Db.get_slice(convId, "itemLikes", relation.friends.keys())
+                likes = [x.column.name for x in likes]
+
+            feedItems = yield Db.get_slice(myId, "feedItems", [convId])
+            feedItems = utils.supercolumnsToDict(feedItems)
+            likes = []
+            isFeed = False if request.getCookie("_page") == "item" else True
+            hasComments = False
+            hasLikes = False
+            toFetchEntities = set()
+            entities = {}
+            if not isFeed:
+                hasComments = True
+                hasComments = True
+            else:
+                feedItems = yield Db.get_slice(myId, "feedItems", [convId])
+                feedItems = utils.supercolumnsToDict(feedItems)
+                for tuuid in feedItems.get(convId, {}):
+                    val = feedItems[convId][tuuid]
+                    rtype = val.split(":")[0]
+                    if rtype == "C":
+                        hasComments = True
+                    elif rtype == "L":
+                        hasLikes = True
+                        actors = val.split(":")[3].split(",")
+                        if actors[0] in relation.friends:
+                            toFetchEntities.update(val.split(":")[3].split(","))
+            if toFetchEntities:
+                entities = yield Db.multiget_slice(toFetchEntities, "entities", ["basic"])
+                entities = utils.multiSuperColumnsToDict(entities)
+            args["entities"] = entities
+
+            handler = {"onload":"(function(){$('#conv-meta-wrapper-%s').addClass('no-likes')})();" %(convId)}
+            yield renderScriptBlock(request, "item.mako", "conv_footer", False,
+                                    "#item-footer-%s"%(itemId), "set",
+                                    args=[itemId, hasComments, hasLikes], **args)
+            yield renderScriptBlock(request, "item.mako", 'conv_likes', False,
+                                    '#conv-likes-wrapper-%s' % convId, 'set', True,
+                                    args=[likesCount-1, False,
+                                    [x.column.name for x in likes]], handlers=handler)
 
     @profile
     @defer.inlineCallbacks
