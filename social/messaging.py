@@ -2,6 +2,7 @@ import uuid
 import random, re
 import pytz, time, datetime
 import email.utils
+from email.header import make_header
 
 from twisted.internet   import defer
 from twisted.web        import server
@@ -197,7 +198,7 @@ class MessagingResource(base.BaseResource):
         if len(recipients) == 0:
             raise "No recipients specified"
         if not subject:
-            subject = "Private message from %s" %(name)
+            subject = u"Private message from %s" %(name)
 
         date_header, epoch = self._createDateHeader()
         new_message_id = str(utils.getUniqueKey()) + "@synovel.com"
@@ -206,17 +207,17 @@ class MessagingResource(base.BaseResource):
         fid = utils.getRequestArg(request, 'fid') or "INBOX"
         # TODO: use the folderId from cookie
         #yield self._renderMessages(request)
-
         message = {
                       'From': from_header,
                       'To': recipient_header,
                       'Subject': subject,
-                      'body':body,
+                      'body': body,
                       'message-id':new_message_id,
                       'Date':date_header,
                       'references':"",
                       'irt':"",
-                      'date_epoch': str(epoch)
+                      'date_epoch': str(epoch),
+                      'imap_subject': str(make_header([(subject, 'utf-8')]))
                     }
         if parent:
             hasAccess = yield self._checkUserHasMessageAccess(myKey, parent)
@@ -555,12 +556,14 @@ class MessagingResource(base.BaseResource):
         defer.returnValue((recipient_header, uids))
 
     def _parseComposerArgs(self, request):
-        #Since we will deal with composer related forms.Take care of santizing
+        #Since we will deal with composer related forms. Take care of santizing
         # all the input and fill with safe defaults wherever needed.
         #To, CC, Subject, Body,
         body = utils.getRequestArg(request, "body")
+        body = body.decode('utf-8').encode('utf-8', "replace")
         parent = utils.getRequestArg(request, "parent") #TODO
         subject = utils.getRequestArg(request, "subject") or None
+        if subject: subject.decode('utf-8').encode('utf-8', "replace")
         recipients = utils.getRequestArg(request, "recipients")
         recipients = re.sub(',\s+', ',', recipients).split(",")
         return recipients, body, subject, parent

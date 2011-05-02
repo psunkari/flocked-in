@@ -1,6 +1,7 @@
 <%! from social import utils, _, __, plugins, constants %>
 <%! import re, pytz %>
 <%! import email.utils %>
+<%! import cgi %>
 <%! import datetime; import dateutil.relativedelta%>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -67,7 +68,7 @@
 
 <%!
   def newlinescape(text):
-      return text.replace("\n", "<br>")
+      return utils.normalizeText(cgi.escape(text))
 %>
 
 <%!
