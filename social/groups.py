@@ -10,7 +10,7 @@ except:
     import pickle
 
 
-from social             import base, Db, utils, errors, feed
+from social             import base, Db, utils, errors, feed, people
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
@@ -71,6 +71,9 @@ class GroupsResource(base.BaseResource):
         deferreds = []
         itemType = "activity"
         relation = Relation(userId, [])
+        cols = yield Db.get_slice(userId, "entities", ["basic"])
+        userInfo = utils.supercolumnsToDict(cols)
+
         responseType = "I"
         acl = {"accept":{"groups":[groupId], "orgs":[orgId]}}
         _acl = pickle.dumps(acl)
@@ -92,7 +95,9 @@ class GroupsResource(base.BaseResource):
 
         d7 = feed.pushToOthersFeed(userId, item["meta"]["uuid"], itemId, itemId,
                                    _acl, responseType, itemType, userId)
-        deferreds = [d1, d2, d3, d4, d5, d6, d7]
+        d8 = utils.updateDisplayNameIndex(userId, [groupId],
+                                          userInfo['basic']['name'], None)
+        deferreds = [d1, d2, d3, d4, d5, d6, d7, d8]
         yield defer.DeferredList(deferreds)
 
 
@@ -265,7 +270,8 @@ class GroupsResource(base.BaseResource):
         d1 = Db.remove(groupId, "followers", myId)
         d2 = Db.remove(myId, "userGroups", groupId)
         d3 = Db.batch_insert(itemId, 'items', item)
-        d4 = Db.insert(groupId, "groupMembers", itemId, myId)
+        d4 = Db.remove(groupId, "groupMembers", myId)
+        #d4 = Db.insert(groupId, "groupMembers", itemId, myId)
 
         d5 = feed.pushToFeed(myId, item["meta"]["uuid"], itemId,
                              itemId, responseType, itemType, myId)
@@ -275,8 +281,10 @@ class GroupsResource(base.BaseResource):
         d7 =  renderScriptBlock(request, "groups.mako", "userActions",
                                 landing, "#user-actions-%s" %(groupId),
                                 "replace", **args)
+        d8 = utils.updateDisplayNameIndex(myId, [groupId], None,
+                                          args['me']['basic']['name'])
 
-        yield defer.DeferredList([d1, d2, d3, d4, d5, d6, d7])
+        yield defer.DeferredList([d1, d2, d3, d4, d5, d6, d7, d8])
 
 
     @profile
@@ -373,6 +381,16 @@ class GroupsResource(base.BaseResource):
                                     landing, "#groups-wrapper", "set", **args)
 
 
+    @defer.inlineCallbacks
+    def _getGroupMembersIds(self, groupId, start='', count=10):
+        cols = yield Db.get_slice(groupId, "displayNameIndex",
+                                  start=start, count=count)
+        userIds = [col.column.name.split(":")[1] for col in cols]
+        nextPageStart = None
+        if cols:
+            nextPageStart = cols[-1].column.name
+        defer.returnValue((userIds, nextPageStart))
+
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -380,9 +398,8 @@ class GroupsResource(base.BaseResource):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         landing = not self._ajax
         groupId = yield utils.getValidEntityId(request, "id", "group")
-
-        groupMembers = yield Db.get_slice(groupId, "groupMembers")
-        groupMembers = utils.columnsToDict(groupMembers).keys()
+        start = utils.getRequestArg(request, 'start') or ''
+        fromFetchMore = ((not landing) and (not appchange) and start)
 
         if script and landing:
             yield render(request,"groups.mako", **args)
@@ -390,23 +407,31 @@ class GroupsResource(base.BaseResource):
             yield renderScriptBlock(request, "groups.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-        users = yield Db.multiget_slice(groupMembers, "entities", ["basic"])
-        users = utils.multiSuperColumnsToDict(users)
-        relation = Relation(myKey, users.keys())
-        yield defer.DeferredList([relation.initFriendsList(),
-                                  relation.initPendingList(),
-                                  relation.initSubscriptionsList()])
+        users, relation, userIds, \
+            blockedUsers, nextPageStart = yield people.getPeople(myKey,
+                                                        groupId, args['orgKey'],
+                                                        start = start,
+                                                        fn= self._getGroupMembersIds)
         args["relations"] = relation
         args["users"] = users
+        args["userIds"] = userIds
+        args["blockedUsers"] = blockedUsers
+        args["nextPageStart"] = nextPageStart
+        args["groupId"] = groupId
         args["heading"] = "Members"
 
         if script:
-
             yield renderScriptBlock(request, "groups.mako", "titlebar",
                                     landing, "#titlebar", "set", **args)
-            yield renderScriptBlock(request, "groups.mako", "displayGroupMembers",
-                                    landing, "#groups-wrapper", "set", **args)
-
+            if fromFetchMore:
+                yield renderScriptBlock(request, "groups.mako",
+                                        "displayGroupMembers", landing,
+                                        "#next-load-wrapper", "replace", True,
+                                        handlers={}, **args)
+            else:
+                yield renderScriptBlock(request, "groups.mako",
+                                        "displayGroupMembers", landing,
+                                        "#groups-wrapper", "set", **args)
 
     @profile
     @defer.inlineCallbacks

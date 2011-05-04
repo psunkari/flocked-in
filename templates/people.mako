@@ -82,3 +82,21 @@
     </div>
   %endif
 </%def>
+
+<%def name="employees(showBlocked=False)">
+  ${self.content(showBlocked)}
+  %if nextPageStart:
+    <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" _ref="/people?start=${nextPageStart}">${_("Fetch More People")}</a></div>
+  %else:
+    <div id="next-load-wrapper"> </div>
+  %endif
+</%def>
+
+<%def name="friends(showBlocked=False)">
+  ${self.content(showBlocked)}
+  %if nextPageStart:
+    <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" _ref="/people/friends?start=${nextPageStart}">${_("Fetch More People")}</a></div>
+  %else:
+    <div id="next-load-wrapper"> </div>
+  %endif
+</%def>

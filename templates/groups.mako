@@ -46,7 +46,7 @@
 
 <%def name="displayGroupMembers()">
   <% counter = 0 %>
-  %for userId in users:
+  %for userId in userIds:
     %if counter % 2 == 0:
       <div class="users-row">
     %endif
@@ -58,6 +58,11 @@
   %endfor
   %if counter % 2 == 1:
     </div>
+  %endif
+  %if nextPageStart:
+    <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" _ref="/groups/members?id=${groupId}&start=${nextPageStart}">${_("Fetch More People")}</a></div>
+  %else:
+    <div id="next-load-wrapper"> </div>
   %endif
 </%def>
 

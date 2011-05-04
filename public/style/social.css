@@ -746,7 +746,6 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 
 .users-row {
-    float: left;
     width: 100%;
     min-height: 50px;
     padding: 0 0 10px 0;
