@@ -198,46 +198,47 @@ class MessagingResource(base.BaseResource):
         from_header = "%s <%s>" %(name, email)
 
         recipients, body, subject, parent = self._parseComposerArgs(request)
-        if len(recipients) == 0:
-            raise "No recipients specified"
         if not subject:
             subject = u"Private message from %s" %(name)
 
         date_header, epoch = self._createDateHeader()
         new_message_id = str(utils.getUniqueKey()) + "@synovel.com"
-        recipient_header, uids = yield self._createRecipientHeader(recipients)
-
-        message = {
-                      'From': from_header,
-                      'To': recipient_header,
-                      'Subject': subject,
-                      'body': body,
-                      'message-id':new_message_id,
-                      'Date':date_header,
-                      'references':"",
-                      'irt':"",
-                      'date_epoch': str(epoch),
-                      'imap_subject': str(make_header([(subject, 'utf-8')])),
-                      'timestamp': uuid.uuid1().bytes
-                    }
-        if parent:
-            hasAccess = yield self._checkUserHasMessageAccess(myKey, parent)
-            if not hasAccess:
-                raise Unauthorized
-
-            parent = yield Db.get_slice(parent, "messages")
-            parent = utils.columnsToDict(parent)
+        try:
+            recipient_header, uids = yield self._createRecipientHeader(recipients)
+        except Exception:
+            request.redirect("/messages/write")
+        else:
+            message = {
+                          'From': from_header,
+                          'To': recipient_header,
+                          'Subject': subject,
+                          'body': body,
+                          'message-id':new_message_id,
+                          'Date':date_header,
+                          'references':"",
+                          'irt':"",
+                          'date_epoch': str(epoch),
+                          'imap_subject': str(make_header([(subject, 'utf-8')])),
+                          'timestamp': uuid.uuid1().bytes
+                        }
             if parent:
-                message["references"] = parent["references"] + parent["message-id"]
-                message['irt'] = parent["message-id"]
-            else:
-                #Throw an error
-                parent = None
-                raise errors.InvalidParams()
+                hasAccess = yield self._checkUserHasMessageAccess(myKey, parent)
+                if not hasAccess:
+                    raise Unauthorized
 
-        yield Db.batch_insert(new_message_id, 'messages', message)
-        yield self._deliverMessage(request, message, uids)
-        request.redirect("/messages")
+                parent = yield Db.get_slice(parent, "messages")
+                parent = utils.columnsToDict(parent)
+                if parent:
+                    message["references"] = parent["references"] + parent["message-id"]
+                    message['irt'] = parent["message-id"]
+                else:
+                    #Throw an error
+                    parent = None
+                    raise errors.InvalidParams()
+
+            yield Db.batch_insert(new_message_id, 'messages', message)
+            yield self._deliverMessage(request, message, uids)
+            request.redirect("/messages")
 
     @defer.inlineCallbacks
     def _renderComposer(self, request):
@@ -679,7 +680,7 @@ class MessagingResource(base.BaseResource):
         #Update the total, unread and new messages stats for a folder
         #TODO: Update the flag stats for this folders
         res = yield Db.get_count(folderId, "mFolderMessages")
-        newFolderStats = {'total':str(res)}
+y        newFolderStats = {'total':str(res)}
         yield Db.batch_insert(userId, "mUserFolders",
                               mapping={folderId:newFolderStats})
 
