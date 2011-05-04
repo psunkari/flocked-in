@@ -680,7 +680,7 @@ class MessagingResource(base.BaseResource):
         #Update the total, unread and new messages stats for a folder
         #TODO: Update the flag stats for this folders
         res = yield Db.get_count(folderId, "mFolderMessages")
-y        newFolderStats = {'total':str(res)}
+        newFolderStats = {'total':str(res)}
         yield Db.batch_insert(userId, "mUserFolders",
                               mapping={folderId:newFolderStats})
 
