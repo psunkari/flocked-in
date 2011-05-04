@@ -467,8 +467,6 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
     results = yield defer.DeferredList(extraData_d)
     # TODO: Fetch any extra entities that the plugins might ask for!
 
-    log.msg(myLikes)
-
     data.update({"entities": entities, "responses": responses, "likes": likes,
                  "myLikes": myLikes, "conversations": convIds, "tags": tags,
                  "nextPageStart": nextPageStart, "reasonStr": reasonStr})
