@@ -25,7 +25,11 @@ class MessagingResource(base.BaseResource):
     def _checkUserFolderACL(self, userId, folder):
         #Check if user owns the folder or has permission to access it(XXX)
         res = yield Db.get_slice(folder, "mFolders", ["meta"])
-        folderMeta = utils.supercolumnsToDict(res)["meta"]
+        res = utils.supercolumnsToDict(res)
+        if "meta" in res.keys():
+            folderMeta = res["meta"]
+        else:
+            defer.returnValue(False)
         if userId == folderMeta["owner"]:
             defer.returnValue(True)
         else:
@@ -213,7 +217,8 @@ class MessagingResource(base.BaseResource):
                       'references':"",
                       'irt':"",
                       'date_epoch': str(epoch),
-                      'imap_subject': str(make_header([(subject, 'utf-8')]))
+                      'imap_subject': str(make_header([(subject, 'utf-8')])),
+                      'timestamp': uuid.uuid1().bytes
                     }
         if parent:
             hasAccess = yield self._checkUserHasMessageAccess(myKey, parent)
@@ -363,8 +368,8 @@ class MessagingResource(base.BaseResource):
         # Count the total number of messages in this folder
         #XXX: We don't really need to show the total number of messages at the
         # moment.
-        #res = yield Db.get_count(folder, "mFolderMessages")
         #args.update({"total":res})
+        yield self._updateFolderStats(myKey, folderId)
 
 
         if len(mids) > 0:
@@ -510,12 +515,13 @@ class MessagingResource(base.BaseResource):
 
         flags = {} if flags is None else flags
         messageId = message["message-id"]
-        timestamp = uuid.uuid1().bytes
+        timestamp = message["timestamp"]
 
         messageInfo = {}
         messageInfo["conversation"] = conversationId
         messageInfo["read"] = flags.get("read", "0")
         messageInfo["star"] = flags.get("star", "0")
+        messageInfo["new"] = flags.get("new", "1")
         messageInfo["timestamp"] = timestamp
 
         yield Db.batch_insert(userId, "mUserMessages", {messageId: messageInfo})
@@ -529,6 +535,9 @@ class MessagingResource(base.BaseResource):
         #Insert this message into a new conversation
         yield Db.insert(conversationId, "mConversationMessages",
                         messageId, timestamp)
+
+        #Update the total count for this folder
+        yield self._updateFolderStats(userId, folderId)
 
     def _preFormatBodyForReply(self, message, reply):
         body = message['body']
@@ -666,9 +675,14 @@ class MessagingResource(base.BaseResource):
         return folderId
 
     @defer.inlineCallbacks
-    def updateFolderStats(self, folderId, key, value):
+    def _updateFolderStats(self, userId, folderId):
         #Update the total, unread and new messages stats for a folder
-        pass
+        #TODO: Update the flag stats for this folders
+        res = yield Db.get_count(folderId, "mFolderMessages")
+        newFolderStats = {'total':str(res)}
+        yield Db.batch_insert(userId, "mUserFolders",
+                              mapping={folderId:newFolderStats})
+
 
     def render_GET(self, request):
         segmentCount = len(request.postpath)
