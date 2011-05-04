@@ -11,7 +11,7 @@ from twisted.cred.error import Unauthorized
 
 from telephus.cassandra     import ttypes
 
-from social             import Db, utils, base, auth, errors
+from social             import Db, utils, base, auth, errors, _, __
 from social.template    import render, renderScriptBlock
 from social.isocial     import IAuthInfo
 from social.constants   import PEOPLE_PER_PAGE
@@ -24,18 +24,14 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     def _checkUserFolderACL(self, userId, folder):
         #Check if user owns the folder or has permission to access it(XXX)
-        if folder.rfind(":") != -1 and folder.startswith(userId):
+        res = yield Db.get_slice(folder, "mFolders", ["meta"])
+        folderMeta = utils.supercolumnsToDict(res)["meta"]
+        if userId == folderMeta["owner"]:
             defer.returnValue(True)
         else:
-            if folder.upper() in self._specialFolders:
-                folder = "%s:%s" %(userId, folder.upper())
-            try:
-                yield Db.get(key=userId, column_family="mUserFolders",
-                             super_column=folder)
-            except ttypes.NotFoundException:
-                defer.returnValue(False)
-            else:
-                defer.returnValue(True)
+            #TODO:Check in the ACL if this user has access
+            acl = folderMeta["acl"]
+            defer.returnValue(False)
 
     @defer.inlineCallbacks
     def _checkUserHasMessageAccess(self, userId, messageId):
@@ -57,26 +53,23 @@ class MessagingResource(base.BaseResource):
                          "fullview", "archive", "reply", "replytoall",
                          "forward"]
         message = utils.getRequestArg(request, "message") or None
-        folder = utils.getRequestArg(request, "fid") or None
+        folderId = utils.getRequestArg(request, "fid") or None
         delete = utils.getRequestArg(request, "delete") or None
         archive = utils.getRequestArg(request, "archive") or None
         if delete:action = "delete"
         elif archive:action = "archive"
         else:action = utils.getRequestArg(request, "action")
 
-        print "Args Dumped: ",
-        print "%s %s %s " % (message, folder, action)
-
         if action not in _validActions:
             raise
-        if not (message or folder):
+        if not (message or folderId):
             raise
 
         res = yield self._checkUserHasMessageAccess(myKey, message)
         if not res:
             raise Unauthorized
 
-        res = yield self._checkUserFolderACL(myKey, folder)
+        res = yield self._checkUserFolderACL(myKey, folderId)
         if not res:
             request.redirect("/messages")
 
@@ -91,16 +84,19 @@ class MessagingResource(base.BaseResource):
 
         tids = [res[x]["timestamp"] for x in res.keys() if "timestamp" in res[x]]
 
-        if len(tids) > 0:
+        if len(tids) > 0 and folderId:
+            folders = yield self._getFolders(myKey)
             copyToFolder = ""
             if action == "delete":
-                copyToFolder = "%s:%s" %(myKey, "TRASH")
-                yield self._copyToFolder(copyToFolder, mids, tids)
-                yield self._deleteFromFolder(folder, mids, tids)
+                copyToFolder = self._getSpecialFolder(myKey, folders, "TRASH")
+                if folderId != copyToFolder:
+                    yield self._copyToFolder(copyToFolder, mids, tids)
+                yield self._deleteFromFolder(folderId, mids, tids)
             elif action == "archive":
-                copyToFolder = "%s:%s" %(myKey, "ARCHIVES")
-                yield self._copyToFolder(copyToFolder, mids, tids)
-                yield self._deleteFromFolder(folder, mids, tids)
+                copyToFolder = self._getSpecialFolder(myKey, folders, "ARCHIVES")
+                if folderId != copyToFolder:
+                    yield self._copyToFolder(copyToFolder, mids, tids)
+                    yield self._deleteFromFolder(folderId, mids, tids)
             elif action == "star":
                 self._setFlagOnMessage(myKey, message, "star", "1")
             elif action == "unstar":
@@ -110,9 +106,9 @@ class MessagingResource(base.BaseResource):
             elif action == "unread":
                 self._setFlagOnMessage(myKey, message, "read", "0")
             if action in ["star", "unstar"]:
-                request.redirect("/messages/thread?id=%s&fid=%s" %(message, folder))
+                request.redirect("/messages/thread?id=%s&fid=%s" %(message, folderId))
             else:
-                request.redirect("/messages?fid=%s"%(folder))
+                request.redirect("/messages?fid=%s"%(folderId))
         else:request.redirect("/messages")
 
     @defer.inlineCallbacks
@@ -130,7 +126,7 @@ class MessagingResource(base.BaseResource):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
 
-        folder = utils.getRequestArg(request, "fid")
+        folderId = utils.getRequestArg(request, "fid") or None
         delete = utils.getRequestArg(request, "delete")
         archive = utils.getRequestArg(request, "archive")
         selected = request.args.get("selected", None)
@@ -147,25 +143,27 @@ class MessagingResource(base.BaseResource):
             for mId in selected:
                 tids.append(res[mId]["timestamp"])
         else:
-            request.redirect("/messages?fid=%s"%(folder))
+            request.redirect("/messages?fid=%s"%(folderId))
 
-        if folder:
-            res = yield self._checkUserFolderACL(myKey, folder)
+        if folderId:
+            res = yield self._checkUserFolderACL(myKey, folderId)
             if not res:
                 request.redirect("/messages")
         else:
             request.redirect("/messages")
 
-        if tids and folder and (delete or archive):
+        if tids and folderId and (delete or archive):
+            folders = yield self._getFolders(myKey)
             copyToFolder = ""
             if delete:
-                copyToFolder = "%s:%s" %(myKey, "TRASH")
+                copyToFolder = self._getSpecialFolder(myKey, folders, "TRASH")
             elif archive:
-                copyToFolder = "%s:%s" %(myKey, "ARCHIVES")
+                copyToFolder = self._getSpecialFolder(myKey, folders, "ARCHIVES")
 
             yield self._copyToFolder(copyToFolder, selected, tids)
-            yield self._deleteFromFolder(folder, selected, tids)
-        request.redirect("/messages?fid=%s"%(folder))
+            if copyToFolder != folderId:
+                yield self._deleteFromFolder(folderId, selected, tids)
+        request.redirect("/messages?fid=%s"%(folderId))
 
     @defer.inlineCallbacks
     def _copyToFolder(self, destination, messages, timestamps):
@@ -189,6 +187,7 @@ class MessagingResource(base.BaseResource):
     def _composeMessage(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
+        #folderId = utils.getRequestArg(request, 'fid') or None
 
         name = args['me']["basic"]["name"]
         email = args['me']["basic"]["emailId"]
@@ -204,9 +203,6 @@ class MessagingResource(base.BaseResource):
         new_message_id = str(utils.getUniqueKey()) + "@synovel.com"
         recipient_header, uids = yield self._createRecipientHeader(recipients)
 
-        fid = utils.getRequestArg(request, 'fid') or "INBOX"
-        # TODO: use the folderId from cookie
-        #yield self._renderMessages(request)
         message = {
                       'From': from_header,
                       'To': recipient_header,
@@ -234,10 +230,9 @@ class MessagingResource(base.BaseResource):
                 parent = None
                 raise errors.InvalidParams()
 
-
         yield Db.batch_insert(new_message_id, 'messages', message)
         yield self._deliverMessage(request, message, uids)
-        request.redirect("/messages?fid=sent")
+        request.redirect("/messages")
 
     @defer.inlineCallbacks
     def _renderComposer(self, request):
@@ -245,12 +240,20 @@ class MessagingResource(base.BaseResource):
         landing = not self._ajax
         parent = utils.getRequestArg(request, "parent")
         action = utils.getRequestArg(request, "action") or "reply"
-        fid = request.args.get("fid", ["inbox"])[0]
-        args.update({"fid":fid})
+        folderId = utils.getRequestArg(request, "fid") or None
 
-        folders = yield Db.get_slice(myKey, "mUserFolders")
-        folders = utils.supercolumnsToDict(folders)
+        folders = yield self._getFolders(myKey)
+        if folderId is None:
+            #Find the Inbox of this user and set it.
+            folderId = self._getSpecialFolder(myKey, folders)
+        else:
+            # Make sure user has access to the folder
+            res = yield self._checkUserFolderACL(myKey, folderId)
+            if not res:
+                request.redirect("/messages")
+
         args["folders"] = folders
+        args.update({"fid":folderId})
 
         if script and landing:
             yield render(request, "message.mako", **args)
@@ -299,16 +302,22 @@ class MessagingResource(base.BaseResource):
         reverse = not back
 
         c_fid = None if (landing or appchange) else request.getCookie("fid")
-        folderId = utils.getRequestArg(request, "fid") or c_fid or "INBOX"
-        if folderId.upper() in self._specialFolders:
-            folderId = "%s:%s" %(myKey, folderId.upper())
+        folderId = utils.getRequestArg(request, "fid") or c_fid or None
 
         if folderId != c_fid :
             request.addCookie('fid', folderId, path="/ajax/messages")
 
-        yield self._checkStandardFolders(myKey)
-        folders = yield Db.get_slice(myKey, "mUserFolders")
-        folders = utils.supercolumnsToDict(folders)
+        yield self._checkStandardFolders(request, myKey)
+        folders = yield self._getFolders(myKey)
+        if folderId is None:
+            #Find the Inbox of this user and set it.
+            folderId = self._getSpecialFolder(myKey, folders)
+        else:
+            # Make sure user has access to the folder
+            res = yield self._checkUserFolderACL(myKey, folderId)
+            if not res:
+                request.redirect("/messages")
+
         args["folders"] = folders
         args.update({"fid":folderId})
 
@@ -384,7 +393,7 @@ class MessagingResource(base.BaseResource):
                          $(this).removeClass('sidemenu-selected')
                      });
                      $('li#%s').addClass('sidemenu-selected')
-                     """ % folderId.rsplit(":", 1)[1].upper()
+                     """ % folderId
             yield renderScriptBlock(request, "message.mako", "center",
                                     landing, ".center-contents", "set", True,
                                     handlers={"onload": onload},
@@ -396,7 +405,7 @@ class MessagingResource(base.BaseResource):
     def _renderThread(self, request):
         #Based on the request, render a message or a conversation
         thread = request.args.get("id", [None])[0]
-        folder = request.args.get("fid", ["inbox"])[0]
+        folderId = request.args.get("fid", [None])[0]
         #XXXBased on the user's preference, the id can be a message id or a
         # conversation id. In a conversation view, a single message can only be
         # viewed in the context of the entire conversation it belongs to. If
@@ -408,10 +417,21 @@ class MessagingResource(base.BaseResource):
         landing = not self._ajax
         conversationView = False
 
-        folders = yield Db.get_slice(myKey, "mUserFolders")
-        folders = utils.supercolumnsToDict(folders)
+        folders = yield self._getFolders(myKey)
+        if folderId is None:
+            #Find the Inbox of this user and set it.
+            for fId, fInfo in folders.iteritems():
+                if ("special" in fInfo) and (fInfo["special"] == "INBOX"):
+                    folderId = fId
+                    break
+        else:
+            # Make sure user has access to the folder
+            res = yield self._checkUserFolderACL(myKey, folderId)
+            if not res:
+                request.redirect("/messages")
+
         args["folders"] = folders
-        args.update({"fid":folder})
+        args.update({"fid":folderId})
 
         if script and landing:
             yield render(request, "message.mako", **args)
@@ -431,9 +451,9 @@ class MessagingResource(base.BaseResource):
             if len(msgs) > 0:
                 #Mark the message as read.XXX: This will change when
                 #   conversations are implemented
-                yield Db.insert(key=myKey, column_family="mUserMessages",
-                                value="1", column="read",
-                                super_column=thread)
+                yield self._setFlagOnMessage(myKey, thread, "read", "1")
+                yield self._setFlagOnMessage(myKey, thread, "new", "0")
+                #TODO: Update the flag stats for this folder
                 res = yield Db.get_slice(key=myKey,
                                          column_family="mUserMessages",
                                          names=[thread])
@@ -450,25 +470,28 @@ class MessagingResource(base.BaseResource):
                 else:
                     yield render(request, "message.mako", **args)
             else:
-                request.redirect("/messages?fid=%s"%(folder if folder else "inbox"))
+                request.redirect("/messages?fid=%s"%(folderId))
         else:
-            request.redirect("/messages?fid=%s"%(folder if folder else "inbox"))
+            request.redirect("/messages?fid=%s"%(folderId))
 
     @defer.inlineCallbacks
     def _deliverMessage(self, request, message, recipients):
         #Deliver the message to the sender's collection
         myKey = auth.getMyKey(request)
         flags = {"read":"1"}
-        folder = "%s:%s" %(myKey, "SENT")
-        yield self._checkStandardFolders(myKey)
-        yield self._deliverToUser(myKey, folder, message, flags)
+        folders = yield self._getFolders(myKey)
+        sentFolderId = self._getSpecialFolder(myKey, folders, "SENT")
+
+        yield self._checkStandardFolders(request, myKey)
+        yield self._deliverToUser(myKey, sentFolderId, message, flags)
 
         for recipient in recipients:
             #Deliver  to each recipient's Inbox
             #Check if the recipient has the standard folders
-            folder = "%s:%s" %(recipient, "INBOX")
-            yield self._checkStandardFolders(recipient)
-            yield self._deliverToUser(recipient, folder, message, None)
+            yield self._checkStandardFolders(request, recipient)
+            folders = yield self._getFolders(recipient)
+            inboxFolderId = self._getSpecialFolder(recipient, folders, "INBOX")
+            yield self._deliverToUser(recipient, inboxFolderId, message, None)
 
     @defer.inlineCallbacks
     def _deliverToUser(self, userId, folderId, message, flags):
@@ -598,27 +621,54 @@ class MessagingResource(base.BaseResource):
         defer.returnValue(people)
 
     @defer.inlineCallbacks
-    def _checkStandardFolders(self, userid):
+    def _checkStandardFolders(self, request, userId):
         #Standard folders have the same key as their labels.
-        try:
-            yield Db.get(key=userid, column_family='mUserFolders',
-                         super_column="%s:%s" %(userid, "INBOX"))
-        except ttypes.NotFoundException:
-            yield Db.insert(key=userid, column_family='mUserFolders',
-                            value="Inbox", column="label",
-                            super_column="%s:%s" %(userid, "INBOX"))
-            yield Db.insert(key=userid, column_family='mUserFolders',
-                            value="Sent", column="label",
-                            super_column="%s:%s" %(userid, "SENT"))
-            yield Db.insert(key=userid, column_family='mUserFolders',
-                            value="Trash", column="label",
-                            super_column="%s:%s" %(userid, "TRASH"))
-            yield Db.insert(key=userid, column_family='mUserFolders',
-                            value="Archives", column="label",
-                            super_column="%s:%s" %(userid, "ARCHIVES"))
-            yield Db.insert(key=userid, column_family='mUserFolders',
-                            value="Drafts", column="label",
-                            super_column="%s:%s" %(userid, "DRAFTS"))
+        res = yield Db.get_count(key=userId, column_family='mUserFolders')
+        if res == 0:
+            for sf in self._specialFolders:
+                yield self._createFolder(request, userId, _(sf.title()), sf)
+        else:
+            defer.returnValue(1)
+
+    @defer.inlineCallbacks
+    def _createFolder(self, request, userId, folderName, specialName=None):
+        acl = {'accept':{}}
+        folderItem = utils.createNewItem(request, "folder", userId, acl)
+        folderId = utils.getUniqueKey()
+        folderItem["props"] = {"label":folderName}
+        if specialName:
+            folderItem["props"]["special"] = specialName
+        userFolderItem = {"total":"0", "unread":"0", "new":"0", "nested":"0", "subscribed":"1"}
+        yield Db.batch_insert(folderId, "mFolders", mapping=folderItem)
+        yield Db.batch_insert(userId, "mUserFolders", {folderId:userFolderItem})
+
+    @defer.inlineCallbacks
+    def _getFolders(self, userId, subscribed=True):
+        #Return a list of folders belonging to a user. Later we will have
+        #   folders shared with him and public folders. Similar to namespaces
+        #   in IMAP4
+        folders = {}
+        res = yield Db.get_slice(userId, "mUserFolders")
+        userInfo = utils.supercolumnsToDict(res)
+        fIds = userInfo.keys()
+        res = yield Db.multiget_slice(fIds, "mFolders", ["props"])
+        folderInfo = utils.multiSuperColumnsToDict(res)
+        for fId in fIds:
+            folders[fId] = dict(userInfo[fId], **folderInfo[fId]["props"])
+        defer.returnValue(folders)
+
+    def _getSpecialFolder(self, userId, folders, folderType="INBOX"):
+        folderId = ""
+        for fId, fInfo in folders.iteritems():
+            if ("special" in fInfo) and (fInfo["special"] == folderType):
+                folderId = fId
+                break
+        return folderId
+
+    @defer.inlineCallbacks
+    def updateFolderStats(self, folderId, key, value):
+        #Update the total, unread and new messages stats for a folder
+        pass
 
     def render_GET(self, request):
         segmentCount = len(request.postpath)
