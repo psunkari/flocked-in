@@ -401,14 +401,15 @@
     subtype = conv["meta"]["subType"]
     target = conv["meta"]["target"]
     fmtUser = utils.userName
+    fmtGroup = utils.groupName
     if subtype == "connection":
       activity = _("%s and %s are now friends.") % (fmtUser(userId, entities[userId]), fmtUser(target, entities[target]))
     elif subtype == "following":
       activity = _("%s started following %s.") % (fmtUser(userId, entities[userId]), fmtUser(target, entities[target]))
     elif subtype == "groupJoin":
-      activity = _("%s joined the group: %s.") % (fmtUser(userId, entities[userId]), fmtUser(target, entities[target]))
+      activity = _("%s joined the group: %s.") % (fmtUser(userId, entities[userId]), fmtGroup(target, entities[target]))
     elif subtype == "groupLeave":
-      activity = _("%s left the group: %s.") % (fmtUser(userId, entities[userId]), fmtUser(target, entities[target]))
+      activity = _("%s left the group: %s.") % (fmtUser(userId, entities[userId]), fmtGroup(target, entities[target]))
   %>
   ${activity}
 </%def>
