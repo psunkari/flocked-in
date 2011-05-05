@@ -75,7 +75,7 @@ class GroupsResource(base.BaseResource):
         userInfo = utils.supercolumnsToDict(cols)
 
         responseType = "I"
-        acl = {"accept":{"groups":[groupId], "orgs":[orgId]}}
+        acl = {"accept":{"groups":[groupId], "followers":[], "friends":[]}}
         _acl = pickle.dumps(acl)
 
         itemId = utils.getUniqueKey()
@@ -261,7 +261,7 @@ class GroupsResource(base.BaseResource):
         args["pendingConnections"] = []
 
         itemId = utils.getUniqueKey()
-        acl = {"accept":{"groups":[groupId], "orgs":[orgId]}}
+        acl = {"accept":{"groups":[groupId], "followers":[], "friends":[]}}
         _acl = pickle.dumps(acl)
         item = utils.createNewItem(request, itemType, myId,
                                    acl, "groupLeave", orgId)

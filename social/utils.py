@@ -256,10 +256,11 @@ def expandAcl(userKey, acl, convOwnerId=None):
             keys.update(commonFriends)
         else:
             keys.update(friends)
-    if any([typ in ["orgs", "public"] for typ in accept]):
-        companyKey = yield getCompanyKey(userKey)
+    if any([typ in ["followers", "orgs", "public"] for typ in accept ]):
         followers = yield getFollowers(userKey, count=INFINITY)
         keys.update(followers)
+    if any([typ in ["orgs", "public"] for typ in accept]):
+        companyKey = yield getCompanyKey(userKey)
         keys.update(set([companyKey]))
     defer.returnValue(keys)
 
@@ -287,6 +288,8 @@ def checkAcl(userId, acl, owner, relation, userOrgId=None):
         return any([groupid in accept["groups"] for groupid in relation.groups])
     elif "friends" in accept:
         return (userId == owner) or (owner in relation.friends)
+    elif "followers" in accept:
+        return (userId == owner) or (relation.subscriptions and owner in relation.subscriptions)
     elif "users" in accept:
         return userId in accept["users"]
     return False
@@ -330,6 +333,10 @@ def itemLink(itemId, itemType, classes=None):
 def userName(id, user, classes=None):
     return "<span class='user%s'>" % (' '+classes if classes else "") +\
            "<a class='ajax' href='/profile?id=%s'>%s</a></span>"\
+           % (id, user["basic"]["name"])
+
+def groupName(id, user, classes=None):
+    return "<span><a class='ajax' href='/feed?id=%s'>%s</a></span>"\
            % (id, user["basic"]["name"])
 
 
