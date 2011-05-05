@@ -11,7 +11,23 @@
 
 <%def name="nav_menu()">
   <%
-    specialFolders = ["sent", "inbox", "trash", "drafts", "archives"]
+    SENT, INBOX, TRASH, DRAFTS, ARCHIVES = "", "", "", "", ""
+
+    customFolders = {}
+    for fId, fInfo in folders.iteritems():
+        if ("special" in fInfo) and (fInfo["special"] == "INBOX"):
+          INBOX = fId
+        elif ("special" in fInfo) and (fInfo["special"] == "SENT"):
+          SENT = fId
+        elif ("special" in fInfo) and (fInfo["special"] == "TRASH"):
+          TRASH = fId
+        elif ("special" in fInfo) and (fInfo["special"] == "DRAFTS"):
+          DRAFTS = fId
+        elif ("special" in fInfo) and (fInfo["special"] == "ARCHIVES"):
+          ARCHIVES = fId
+        else:
+          customFolders[fId] = fInfo
+
     def navMenuItem(id, link, text, icon, selected=False):
       if selected: style = "sidemenu-selected"
       else: style = ""
@@ -32,16 +48,15 @@
       ${navMenuItem("compose", "/messages/write", _("Compose"), "compose")}
     </ul>
     <ul id="sfmenu" class="v-links sidemenu">
-        ${navMenuItem("INBOX", "/messages?fid=INBOX", _("Inbox"), "inbox", fid.endswith(":INBOX"))}
-        ${navMenuItem("ARCHIVES", "/messages?fid=ARCHIVES", _("Archives"), "archive", fid.endswith(":ARCHIVES"))}
-        ${navMenuItem("TRASH", "/messages?fid=TRASH", _("Trash"), "trash", fid.endswith(":TRASH"))}
-        ${navMenuItem("SENT", "/messages?fid=SENT", _("Sent"), "sent", fid.endswith(":SENT"))}
+        ${navMenuItem(INBOX, "/messages?fid=%s" %(INBOX), _("Inbox"), "inbox", fid==INBOX)}
+        ${navMenuItem(ARCHIVES, "/messages?fid=%s" %(ARCHIVES), _("Archives"), "archive", fid==ARCHIVES)}
+        ${navMenuItem(SENT, "/messages?fid=%s" %(SENT), _("Sent"), "sent", fid==SENT)}
+        ${navMenuItem(TRASH, "/messages?fid=%s" %(TRASH), _("Trash"), "trash", fid==TRASH)}
     </ul>
     <ul id="ufmenu" class="v-links sidemenu">
-        % for folderId in folders:
-          % if folders[folderId]['label'].lower() not in specialFolders:
-            ${navMenuItem(folderId, "/messages?fid=%s"%(folderId), _(folders[folderId]['label']), "", folderId == fid)}
-          % endif
+        % for folderId in customFolders.keys():
+            ${navMenuItem(folderId, "/messages?fid=%s"%(folderId),
+              _(folders[folderId]['label']), "", folderId == fid)}
         % endfor
     </ul>
   </div>
