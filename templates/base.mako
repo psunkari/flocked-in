@@ -42,6 +42,7 @@
   <link rel="stylesheet" type="text/css" media="screen" href="/public/style/social.css"/>
   <link rel="stylesheet" type="text/css" media="screen" href="/public/style/widgets.css"/>
   <link rel="stylesheet" type="text/css" media="screen" href="/public/style/jquery.ui.css"/>
+  <link rel="stylesheet" type="text/css" media="screen" href="/public/style/messaging.css"/>
 %if script:
   <noscript>
     <meta http-equiv="refresh" content="0; URL=${noscriptUrl}"/>

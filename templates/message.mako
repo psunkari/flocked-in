@@ -73,7 +73,7 @@
     <div id="center-right">
       <div id="right"></div>
       <div id="center">
-        <div class="center-contents" style="padding:10px 0 0">
+        <div class="center-contents" style="padding:0">
           ${self.center()}
         </div>
       </div>
@@ -171,170 +171,172 @@
       return "%s" %date
 %>
 
-<%def name="messages_layout(script, id, conversation, fid)">
-  <div id="conv-${id}" class="conv-item">
-    <div style="display:table-cell;vertical-align:top">
+<%def name="messages_layout(script, id, thread, fid)">
+  <div id="thread-${id}" class="message-row ${'row-unread' if thread["flags"]["read"] == "0" else 'row-read'}">
+    <div class="message-row-cell message-row-select">
       <input type="checkbox" name="selected" value="${id}"/>
     </div>
-    <div style="display:table-cell;vertical-align:top">
+    <div class="message-row-cell message-row-star">
       <a>
-        % if conversation["flags"]["star"] == "0":
+        % if thread["flags"]["star"] == "0":
           <span class="messaging-icon star-empty-icon"> </span>
         % else:
           <span class="messaging-icon star-icon"> </span>
         % endif
       </a>
     </div>
-    <div style="display:table-cell;width:100%;padding-top:3px">
-      <div style="display:table;width:100%">
-      <div style="display:table-cell;width:80px">${conversation["From"]|nameinemail}</div>
-      <div style="display:table-cell;width:130px">
-        % if len(conversation["people"]) <= 2:
-          ${", ".join(conversation["people"])}
-        % else:
-          ${", ".join(conversation["people"][:2])} and ${len(conversation["people"])-2} others
-        % endif
-      </div>
-      <div style="display:table-cell;width:250px">
-        % if conversation["flags"]["read"] == "0":
-          <a style="font-weight:bold" class="${'ajax' if script else ''}" href="/messages/thread?id=${conversation['message-id']}&fid=${fid}">${conversation["Subject"]|h}</a>
-        % else:
-          <a style="font-weight:normal" class="${'ajax' if script else ''}" href="/messages/thread?id=${conversation['message-id']}&fid=${fid}">${conversation["Subject"]|h}</a>
-        % endif
-      </div>
-      <abbr style="display:table-cell;width:130px">
-        ${conversation["date_epoch"]|timeElapsedSince}
-      </abbr>
-      </div>
+    <div class="message-row-cell" style="width:80px">${thread["From"]|nameinemail}</div>
+    <div class="message-row-cell" style="width:130px">
+      % if len(thread["people"]) <= 2:
+        ${", ".join(thread["people"])}
+      % else:
+        ${", ".join(thread["people"][:2])} and ${len(thread["people"])-2} others
+      % endif
     </div>
+    <div class="message-row-cell" style="width:450px">
+      <a class="${'ajax' if script else ''} message-link" href="/messages/thread?id=${thread['message-id']}&fid=${fid}">${thread["Subject"]|h}</a>
+    </div>
+    <abbr class="message-row-cell time-label" style="width:130px">
+      ${thread["date_epoch"]|timeElapsedSince}
+    </abbr>
   </div>
 </%def>
 
 <%def name="message_layout(mid, message, flags, fid)">
-    <div style="padding:4px 10px">
-      <h2 style="display:inline">${message["Subject"]|h}</h2>
+    <div class="message-headline">
+      <h2 class="message-headline-subject">${message["Subject"]|h}</h2>
       % if flags["star"] == "0":
-        <a style="display:inline-block;float:right" href="/messages/actions?action=star&message=${mid}&fid=${fid}">
+        <a class="message-headline-star" href="/messages/actions?action=star&message=${mid}&fid=${fid}">
         <span class="messaging-icon star-empty-icon"> </span>
         </a>
       %else:
-        <a style="display:inline-block;float:right" href="/messages/actions?action=unstar&message=${mid}&fid=${fid}">
+        <a class="message-headline-star" href="/messages/actions?action=unstar&message=${mid}&fid=${fid}">
         <span class="messaging-icon star-icon"> </span>
         </a>
       % endif
     </div>
-    <div style="padding:4px 10px;background-color:#CCCCCC">
+    <div class="message-headers">
       % if len(message["people"]) <= 2:
-        <span>${message["From"]|nameinemail} wrote to ${", ".join(message["people"][:2])}</span>
+        <span class="message-headers-people">${message["From"]|nameinemail} wrote to ${", ".join(message["people"][:2])}</span>
       % else:
-        <span>${message["From"]|nameinemail} wrote to ${", ".join(message["people"][:2])} and ${len(message["people"])-2} others</span>
+        <span class="message-headers-people">${message["From"]|nameinemail} wrote to ${", ".join(message["people"][:2])} and ${len(message["people"])-2} others</span>
       % endif
-      <span style="float:right">${message["date_epoch"]|timeElapsedSince}</span>
+      <span class="time-label message-headers-time">${message["date_epoch"]|timeElapsedSince}</span>
     </div>
-    <div style="display:block;padding:4px 10px;background-color:#CCCCCC">
-      <a style="padding:3px" href="/messages/write?parent=${message["message-id"]}">Reply</a>
-      <a style="padding:3px" href="/messages/write?parent=${message["message-id"]}&action=forward">Forward</a>
+    <div class="message-actions">
+      <a class="action-link" href="/messages/write?parent=${message["message-id"]}">Reply</a>
+      <a class="action-link" href="/messages/write?parent=${message["message-id"]}&action=forward">Forward</a>
     </div>
-    <div style="margin:0;padding:10px;min-height:80px">${message["body"] | newlinescape}</div>
+    <div class="message-message">${message["body"] | newlinescape}</div>
     <input type="hidden" name="message" value="${message["message-id"]}">
 </%def>
 
-<%def name="conversation_layout(conversation, inline=False, isFeed=False)">
+<%def name="thread_layout(thread, inline=False, isFeed=False)">
 
 </%def>
 
-<%def name="composer_layout(view, msg)">
-    <div style="background-color:#e0ecff">
+<%def name="composer_layout(script, view, msg, fid)">
+    <div class="message-composer">
         % if msg:
-          <div style="display:table-row">
-            <div style="display:table-cell;vertical-align:top;font-weight:bold">Recipients</div>
-            <div style="display:table-cell;width:100%">
-              <textarea style="width:99%;font-size:11px" name="recipients" placeholder="${_('Enter your colleagues name or email address') |h}">${msg['From']}</textarea>
+          <div class="message-composer-row">
+            <div class="message-composer-label">Recipients</div>
+            <div class="message-composer-field">
+              <textarea class="message-composer-field-recipient" name="recipients" placeholder="${_('Enter your colleagues name or email address') |h}">${msg['From']}</textarea>
             </div>
           </div>
-          <div style="display:table-row">
-            <div style="display:table-cell;vertical-align:top;font-weight:bold">Subject</div>
-            <div style="display:table-cell;width:100%">
+          <div class="message-composer-row">
+            <div class="message-composer-label">Subject</div>
+            <div class="message-composer-field">
               % if view == "reply":
-                <input style="width:99%;font-size:11px" type="text" name="subject" value="${formatSubjectForReply(msg['Subject'])}" placeholder="${_('Enter a subject of your message') |h}"/>
+                <input class="message-composer-field-subject" type="text" name="subject" value="${formatSubjectForReply(msg['Subject'])}" placeholder="${_('Enter a subject of your message') |h}"/>
               % elif view == "forward":
-                <input style="width:99%;font-size:11px" type="text" name="subject" value="${formatSubjectForForward(msg['Subject'])}" placeholder="${_('Enter a subject of your message') |h}"/>
+                <input class="message-composer-field-subject" type="text" name="subject" value="${formatSubjectForForward(msg['Subject'])}" placeholder="${_('Enter a subject of your message') |h}"/>
               % endif
             </div>
           </div>
           % if view == "reply":
-            <textarea style="width:99%;height:400px;font-size:11px" name="body">${formatBodyForReply(msg, "")}</textarea>
+            <textarea class="message-composer-field-body" name="body">${formatBodyForReply(msg, "")}</textarea>
             <input type="hidden" value="${msg["message-id"]}" name="parent">
           % else:
-            <textarea style="width:99%;height:400px;font-size:11px" name="body">${formatBodyForForward(msg)}</textarea>
+            <textarea class="message-composer-field-body" name="body">${formatBodyForForward(msg)}</textarea>
           % endif
         % else:
-          <div style="display:table-row">
-            <div style="display:table-cell;vertical-align:top;font-weight:bold">Recipients</div>
-            <div style="display:table-cell;width:100%">
-              <textarea style="width:99%;font-size:11px" type="text" name="recipients" placeholder="${_('Enter name or email address') |h}"></textarea>
+          <div class="message-composer-row">
+            <div class="message-composer-label">Recipients</div>
+            <div class="message-composer-field">
+              <textarea class="message-composer-field-recipient" type="text" name="recipients" placeholder="${_('Enter name or email address') |h}"></textarea>
             </div>
           </div>
-          <div style="display:table-row">
-            <div style="display:table-cell;vertical-align:top;font-weight:bold">Subject</div>
-            <div style="display:table-cell;width:100%">
-              <input style="width:99%;font-size:11px" type="text" name="subject" placeholder="${_('Enter a subject of your message') |h}"/>
+          <div class="message-composer-row">
+            <div class="message-composer-label">Subject</div>
+            <div class="message-composer-field">
+              <input class="message-composer-field-subject" type="text" name="subject" placeholder="${_('Enter a subject of your message') |h}"/>
             </div>
           </div>
-          <textarea style="width:99%;height:400px;font-size:11px" placeholder="Write a message to your friends and colleagues" name="body"></textarea>
+          <div class="message-composer-field-body-wrapper">
+            <textarea class="message-composer-field-body" placeholder="Write a message to your friends and colleagues" name="body"></textarea>
+          </div>
         % endif
-    </div>
-    <div style="background-color:#e0ecff">
-      <input type="submit" name="send" value="Send">
+      <div class="message-composer-row">
+        <ul class="middle user-actions h-links message-composer-field">
+          <li class="button">
+            <input type="submit" name="send" value="Send" class="button default">
+          </li>
+          <li class="button">
+            % if msg:
+              <a class="ajax" href="/messages/thread?id=${msg['message-id']}&fid=${fid}">Cancel</a>
+            % else:
+              <a class="ajax" href="/messages?fid=${fid}">Cancel</a>
+            % endif
+          </li>
+        </ul>
+      </div>
     </div>
 </%def>
 
 <%def name="quick_reply_layout(msg)">
-    <div style="background-color:#e0ecff">
-      <div style="background-color:#c3d9ff"><b>Quick Reply</b></div>
-      <div>
-          <textarea style="width:80ex;height:100px;font-size:11px" name="body"></textarea>
-          <input type="hidden" value="${msg["message-id"]}" name="parent"/>
-          <input type="hidden" value="${formatSubjectForReply(msg['Subject'])}" name="subject"/>
-          <input type="hidden" value="${msg["From"]}" name="recipients"/>
-      </div>
+  <div class="message-composer">
+    <div class="message-composer-field"><b>Quick Reply</b></div>
+    <div class="message-composer-field-body-wrapper">
+        <textarea class="message-composer-field-body-quick" name="body"></textarea>
+        <input type="hidden" value="${msg["message-id"]}" name="parent"/>
+        <input type="hidden" value="${formatSubjectForReply(msg['Subject'])}" name="subject"/>
+        <input type="hidden" value="${msg["From"]}" name="recipients"/>
     </div>
-    <div style="background-color:#e0ecff">
-      <input type="submit" name="send" value="Send">
+    <div class="message-composer-field">
+      <input type="submit" name="send" value="${_('Reply')}" class="button ">
     </div>
+  </div>
 </%def>
 
 <%def name="toolbar_layout(script, view, fid=None, message=None)">
   % if view == "messages":
-    <div style="background-color:#C3D9FF;padding:4px 0">
-      % if fid:
-        <b style="float:right;padding:4px">Viewing ${_(folders[fid]['label'])}</b>
-      % endif
-      <input type="submit" name="delete" value="Delete">
-      <input type="submit" name="archive" value="Archive">
+    <div class="toolbar">
+      <input type="submit" name="delete" value="Delete" class="button ">
+      <input type="submit" name="archive" value="Archive" class="button ">
     </div>
   % elif view == "message":
-    <div style="background-color:#C3D9FF">
-        <a style="padding:3px" class="${'ajax' if script else ''}" href="/messages?fid=${fid}">Go Back</a>
-        <input type="submit" name="delete" value="Delete">
-        <input type="submit" name="archive" value="Archive">
-        <select name="action">
+    <div class="toolbar">
+        <a class="${'ajax' if script else ''} action-link" href="/messages?fid=${fid}">Go Back</a>
+        <input type="submit" name="delete" value="Delete" class="button ">
+        <input type="submit" name="archive" value="Archive" class="button ">
+        <select name="action" class="button ">
           <option value="">More Actions</option>
           <option value="star">Add Star</option>
           <option value="unstar">Remove Star</option>
           <option value="read">Mark as Read</option>
           <option value="unread">Mark as Unread</option>
         </select>
-        <input type="submit" value="Go" name="other">
+        <input type="submit" value="Go" name="other" class="button ">
         <span class="clear" style="display:block"></span>
     </div>
   %elif view == "compose":
-    <div style="background-color:#C3D9FF;padding:3px 0">
-      <a style="padding:3px;font-weight:bold" class="${'ajax' if script else ''}" href="/messages?fid=${fid}">Go Back</a>
+    <div class="toolbar">
+      <a class="${'ajax' if script else ''} action-link" href="/messages?fid=${fid}">Go Back</a>
     </div>
   % elif view == "reply":
-    <div style="background-color:#C3D9FF;padding:3px 0">
-      <a style="padding:3px;font-weight:bold" class="${'ajax' if script else ''}" href="/messages?fid=${fid}">Go Back</a>
+    <div class="toolbar">
+      <a class="${'ajax' if script else ''} action-link" href="/messages?fid=${fid}">Go Back</a>
     </div>
   % endif
 </%def>
@@ -364,9 +366,9 @@
 </%def>
 
 <%def name="center()">
-  % if view == "conversations":
-    %for conversation in conversations:
-      ${conversation_layout(conversation, msgs_map, True, True)}
+  % if view == "threads":
+    %for thread in threads:
+      ${thread_layout(thread, msgs_map, True, True)}
     %endfor
   %elif view == "messages":
     <form method="post" action="/messages">
@@ -390,17 +392,17 @@
   %elif view == "compose":
     <form method="post" action="/messages/write">
     ${toolbar_layout(script, view, fid=fid)}
-    ${composer_layout(view, None)}
+    ${composer_layout(script, view, None, fid)}
     </form>
   %elif view == "reply":
     <form method="post" action="/messages/write">
     ${toolbar_layout(script, view, fid=fid, message=parent_msg)}
-    ${composer_layout(view, parent_msg)}
+    ${composer_layout(script, view, parent_msg, fid)}
     </form>
   %elif view == "forward":
     <form method="post" action="/messages/write">
     ${toolbar_layout(script, "reply", fid=fid, message=parent_msg)}
-    ${composer_layout(view, parent_msg)}
+    ${composer_layout(script, view, parent_msg, fid)}
     </form>
   %endif
 </%def>
