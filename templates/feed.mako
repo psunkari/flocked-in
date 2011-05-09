@@ -82,8 +82,9 @@
   <input type="hidden" id="${id}" name="acl" value="${defaultVal}"/>
   %if script:
     <div id="${id}-wrapper">
-      <input type="button" class="acl-button" id="${id}-label"
-             value="${defaultLabel}" onclick="$$.acl.showACL(event, '${id}');"/>
+      <button type="button" class="acl-button button" id="${id}-label" onclick="$$.acl.showACL(event, '${id}'); return False">
+        <span class="button-text">${defaultLabel}</span>
+      </button>
       <ul id="${id}-menu" class="acl-menu" style="display:none;">
         <li><a class="acl-item" _acl="public"><div class="icon"></div>${_("Public")}</a></li>
         <li><a class="acl-item" _acl="org:${orgKey}"><div class="icon"></div>${_("Company")}</a></li>

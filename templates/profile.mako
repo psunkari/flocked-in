@@ -233,19 +233,19 @@
   %if myKey != userKey:
     %if userKey not in relations.friends:
       %if not relations.pending or userKey not in relations.pending:
-        <li class="button default" onclick="$.post('/ajax/profile/friend', 'id=${userKey}', null, 'script')"><span class="button-text">Add as Friend</span></li>
+        <button class="button default" onclick="$.post('/ajax/profile/friend', 'id=${userKey}', null, 'script')"><span class="button-text">Add as Friend</span></button>
       %elif relations.pending.get(userKey) == "1":
-        <li class="button default" onclick="$.post('/ajax/profile/friend', 'id=${userKey}', null, 'script')"><span class="button-text">Respond to Friend Request</span></li>
+        <button class="button default" onclick="$.post('/ajax/profile/friend', 'id=${userKey}', null, 'script')"><span class="button-text">Respond to Friend Request</span></button>
       %else:
-        <li class="button disabled"><span class="button-text">Friend request sent</span></li>
+        <button class="button disabled"><span class="button-text">Friend request sent</span></button>
       %endif
       %if userKey not in relations.subscriptions and relations.pending.get(userKey) != "1":
-        <li class="button" onclick="$.post('/ajax/profile/follow', 'id=${userKey}', null, 'script')"><span class="button-text">Follow User</span></li>
+        <button class="button" onclick="$.post('/ajax/profile/follow', 'id=${userKey}', null, 'script')"><span class="button-text">Follow User</span></button>
       %elif showRemove:
-        <li class="button" onclick="$.post('/ajax/profile/unfollow', 'id=${userKey}', null, 'script')"><span class="button-text">Unfollow User</span></li>
+        <button class="button" onclick="$.post('/ajax/profile/unfollow', 'id=${userKey}', null, 'script')"><span class="button-text">Unfollow User</span></button>
       %endif
     %elif showRemove:
-      <li class="button" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}', null, 'script')"><span class="button-text">Unfriend User</span></li>
+      <button class="button" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}', null, 'script')"><span class="button-text">Unfriend User</span></button>
     %endif
   %endif
 </%def>
