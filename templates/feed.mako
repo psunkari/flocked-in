@@ -20,7 +20,11 @@
         <div id="home-todo"></div>
         <div id="invite-ppl">
             <form method="post" action="/register" class="ajax">
-                <input type="text" name="emailId"/><br/>
+                <input type="text" name="user1"/><br/>
+                <% mailId = me['basic'].get('emailId', None) if me else None %>
+                %if mailId:
+                  <input type="hidden" name="sender" value = ${mailId} />
+                %endif
                 <input type="submit" id="submit" value="${_('Submit')}"/>
             </form>
         </div>

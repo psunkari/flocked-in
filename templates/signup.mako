@@ -7,53 +7,108 @@
 <head>
   <title>${_('Synovel SocialNet')}</title>
   <link rel="stylesheet" type="text/css" media="screen" href="/public/style/signin.css"/>
+  <link rel="stylesheet" type="text/css" media="screen" href="/public/style/social.css"/>
   <script type = "text/javascript">
   function validate()
   {
+
     return document.getElementById("password1").value == document.getElementById("password2").value
   }
   </script>
 </head>
 
 <body>
-  <table id="aligntable"><tr><td align="center" valign="middle">
-  <div id="outer">
-    <form action="/register/create" method="POST" class="loginfields" onsubmit="return validate()">
-      <div id="inner">
-        <table id="logintable" cellspacing="0" cellpadding="3" border="0" align="center">
-          <tr>
-            <td id="logintitle" colspan="2">
-              <img alt="Synovel" src="/public/images/synovel.png"/>
-            </td>
-          </tr>
-          <tr>
-            <td id="userlabel"><label for="username">${_('Username')}</label></td>
-            <td id="userfield"><label for="username">${emailId[0]}:</label></td>
-            <td id="userfield"><input id="username" type="hidden" class="textfield" name="emailId" value="${emailId[0]}"></input></td>
-          </tr>
-          <tr>
-            <td id="passlabel"><label for="password1">${_('Password')}</label></td>
-            <td id="passfield"><input id="password1" type="password" class="textfield" name="password"></input></td>
-          </tr>
-          <tr>
-            <td id="passlabel"><label for="password2">${_('Confirm Password')}</label></td>
-            <td id="passfield"><input id="password2" type="password" class="textfield" name="password3"></input></td>
-          </tr>
-          <tr>
-            <td colspan="2" id="submitbox"><input type="submit" id="submit" value="${_('Sign in')}"/>
-            </td>
-          </tr>
-          <tr>
-            <td colspan="2" id="footer">
-              ${_('&copy;2011 Synovel Software')}
-              &nbsp;|&nbsp;
-              <a href="http://www.synovel.com/social">${_('Synovel SocialNet')}</a>
-            </td>
-          </tr>
-        </table>
-      </div>
-    </form>
+  <div id="signup_form">
+    ${self.userInfo()}
   </div>
-  </td></tr></table>
 </body>
 </html>
+
+
+<%def name="userInfo()">
+ <form action="/register/create" method="POST" onsubmit="return validate()" >
+    <div class="edit-profile">
+      <ul>
+        <li id="logintitle">
+        <img alt="Synovel" src="/public/images/synovel.png"/>
+        </li>
+      </ul>
+      <ul><li></li></ul>
+      <ul><li></li></ul>
+      <ul>
+        <li><label for="emailId">${_('Email:')}</label></li>
+        <li><label for="emailId">${emailId}</label></li>
+        <li><input id="emailId" type="hidden" class="textfield" name="emailId" value="${emailId}"></input></li>
+      </ul>
+
+      <ul>
+        <li><label for="name">${_('Display Name:')}</label></li>
+        <li><input type="text" class="textfield" name="name" /></li>
+      </ul>
+
+      <ul>
+        <li><label for="fname">${_('First Name:')}</label></li>
+        <li><input type="text" class="textfield" name="fname" /></li>
+      </ul>
+
+      <ul>
+        <li><label for="lname">${_('Last Name:')}</label></li>
+        <li><input type="text" class="textfield" name="lname" /></li>
+      </ul>
+
+      <ul>
+        <li><label for="jobTitle">${_('Job Title:')}</label></li>
+        <li> <input name="jobTitle" id="jobTitle" type="text" /></li>
+      </ul>
+
+      <ul>
+        <li><label for="password">${_('Password:')}</label></li>
+        <li><input type="password" class="textfield" name="password"/></li>
+      </ul>
+
+      <ul>
+        <li><label for="password1">${_('Confirm Password:')}</label></li>
+        <li><input type="password" class="textfield" name="password1" /></li>
+      </ul>
+
+      <ul>
+        <li></li>
+        <li><input type="submit" id="submit" value="${_('Save')}"/></li>
+      </ul>
+      <ul>
+        <li  id="footer">
+          ${_('&copy;2011 Synovel Software')}
+          &nbsp;|&nbsp;
+          <a href="http://www.synovel.com/social">${_('Synovel SocialNet')}</a>
+        </li>
+      </ul>
+    </div>
+  </form>
+</%def>
+
+<%def name="invitePeople()">
+    <h3> Invite </h3>
+    <form action="/register/invite" method="POST">
+      <div class="edit-profile">
+        <ul>
+          <li><label for="user1" >email:</label></li>
+          <li><input type="text" name="user1" /></li>
+        </ul>
+        <ul>
+          <li><label for="user2" >email:</label></li>
+          <li><input type="text" name="user2" /></li></ul>
+        <ul>
+          <li><label for="user3" >email:</label></li>
+          <li><input type="text" name="user3" /></li></ul>
+        <ul>
+          <li><label for="user4" >email:</label></li>
+          <li><input type="text" name="user4" /></li></ul>
+        <ul>
+          <li><label for="user5" >email:</label></li>
+          <li><input type="text" name="user5" /></li></ul>
+        <ul><li><input type="submit" name="submit" value="Submit"/> </li></ul>
+        <ul><li><input type="submit" name="skip" value="Skip" /> </li></ul>
+        <ul><li><input type="hidden" name="sender" value=${emailId}/></li></ul>
+      </div>
+    </form>
+</%def>

@@ -14,7 +14,7 @@ import social.constants as constants
 from social.base        import BaseResource
 from social             import utils, Db, Config, whitelist, blacklist
 from social.isocial     import IAuthInfo
-from social.template    import render
+from social.template    import render, renderScriptBlock
 from social.logging     import dump_args, profile
 
 @profile
@@ -42,7 +42,7 @@ def send_email(emailId, token, username):
             "Click on the link to activate your account. "
             "%(rootUrl)s/register?emailId=%(emailId)s&token=%(token)s"%(locals()))
     #to_addr = 'praveen@synovel.com' if DEVMODE else emailId
-    to_addr = emailId
+    to_addr = 'praveen@synovel.com'
     from_addr = "social@synovel.com"
     msg['From'] = from_addr
     msg['To'] = to_addr
@@ -62,7 +62,8 @@ class RegisterResource(BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _isValidMailId(self, inviteeDomain, sender):
-        orgKey = yield utils.getCompanyKey(sender)
+        col = yield Db.get(sender, "userAuth", 'org')
+        orgKey = col.column.value
         cols = yield Db.get_slice(orgKey, "entities", super_column="domains")
         cols = utils.columnsToDict(cols)
         domains = cols.keys()
@@ -79,8 +80,10 @@ class RegisterResource(BaseResource):
         except:
             cols = yield Db.get_slice(emailId, "invitations")
             invitation = utils.columnsToDict(cols)
-            if invitation.get("token", None) == token:
-                yield render(request, "signup.mako", **request.args)
+            if token and invitation.get("token", None) == token:
+                args = request.args
+                args['emailId']=emailId
+                yield render(request, "signup.mako", **args)
             else:
                 raise Exception("Invalid Token")
 
@@ -118,13 +121,13 @@ class RegisterResource(BaseResource):
         name = None
         token = utils.getRandomKey('username')
         cols['token'] = token
-
         if sender:
-            cols = {'sender':sender}
-            userinfo = yield Db.get_slice(sender, "entities", ["name"], super_column="basic")
+            senderId = yield Db.get(sender, "userAuth", 'user')
+            senderId = senderId.column.value
+            cols['sender']= senderId
+            userinfo = yield Db.get_slice(senderId, "entities", ["name"], super_column="basic")
             userinfo = utils.columnsToDict(userinfo)
             name = userinfo['name'] if userinfo.has_key('name') else None
-
         yield Db.batch_insert(emailId, "invitations", cols)
         send_email(emailId, token, name)
 
@@ -132,15 +135,32 @@ class RegisterResource(BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _signup(self, request):
-        username = None
-        domain = None
-        emailId = utils.getRequestArg(request, 'emailId')
-        sender = request.getSession(IAuthInfo).username
 
-        try:
-            mailid, domain = emailId.split("@")
-        except ValueError, err:
-            raise err
+        domain = None
+        users = []
+        validUsers = []
+        user1 = utils.getRequestArg(request, 'user1')
+        user2 = utils.getRequestArg(request, 'user2')
+        user3 = utils.getRequestArg(request, 'user3')
+        user4 = utils.getRequestArg(request, 'user4')
+        user5 = utils.getRequestArg(request, 'user5')
+        sender = utils.getRequestArg(request, 'sender')
+        users = [user1, user2, user3, user4, user5]
+
+        if sender:
+            for user in users:
+                if user and len(user.split('@'))==2:
+                    valid = yield self._isValidMailId(user.split('@')[1], sender)
+                    if valid:
+                        validUsers.append(user)
+                    else:
+                        raise errors.InvalidEmailId()
+        else:
+            if len(user1.split('@')) == 2 :
+                mailid, domain = user1.split("@")
+                validUsers.append(user1)
+            else:
+                raise errors.InvalidEmailId()
 
         if Config.has_option("General", "WhiteListMode") and \
            Config.get("General", "WhiteListMode") == "True":
@@ -151,14 +171,7 @@ class RegisterResource(BaseResource):
                 request.write("'%s' is not whitelisted" %(domain))
                 raise Unauthorized()
 
-
-        if sender:
-            validMailId = yield self._isValidMailId(domain, sender)
-            if not validMailId:
-                raise errors.InvalidEmailId()
-
-        orgKey = yield getOrgKey(domain)
-        if not orgKey:
+        if domain:
             domains = {domain:''}
             basic = {"name":domain, "type":"org"}
             orgKey = utils.getUniqueKey()
@@ -166,8 +179,8 @@ class RegisterResource(BaseResource):
             yield Db.insert(domain, "domainOrgMap", '', orgKey)
 
         # TODO: check if email is already registered
-
-        yield self._sendInvitation(emailId, sender)
+        for emailId in validUsers:
+            yield self._sendInvitation(emailId, sender)
         if not sender:
             request.redirect('/signin')
 
@@ -175,22 +188,34 @@ class RegisterResource(BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _addUser(self, request):
+        landing = not self._ajax
         emailId = utils.getRequestArg(request, 'emailId')
         domain = emailId.split("@")[1]
         passwd = utils.getRequestArg(request, 'password')
+        passwd1 = utils.getRequestArg(request, 'password1')
         username = utils.getRequestArg(request, 'name')
+        title = utils.getRequestArg(request, 'jobTitle')
+
+        if passwd != passwd1:
+            raise errors.PasswordsNoMatch()
 
         username = username if username else emailId
         existingUser = yield Db.get_count(emailId, "userAuth")
         if not existingUser:
+            args={}
             orgKey = yield getOrgKey(domain)
-            userKey = yield utils.addUser(emailId, username, passwd, orgKey)
+            userKey = yield utils.addUser(emailId, username, passwd, orgKey, title)
             yield Db.remove(emailId, "invitations")
 
             cols = yield Db.get_slice(orgKey, "entities", ["admins"])
             if not cols:
                 yield Db.insert(orgKey, "entities", "", userKey, "admins")
                 yield Db.insert(emailId, "userAuth", "True", "isAdmin")
+            args['domain'] = domain
+            args['emailId'] = emailId
+
+            #yield renderScriptBlock(request, "signup.mako", "invitePeople",
+            #                        landing, "#signup_form", "set", **args)
 
         else:
             raise errors.ExistingUser
@@ -214,7 +239,7 @@ class RegisterResource(BaseResource):
         elif segmentCount == 1 and request.postpath[0]== 'create':
             d = self._addUser(request)
             def callback(response):
-                request.redirect('/profile/edit')
+                request.redirect('/people')
                 request.finish()
             def errback(err):
                 log.err(err)
@@ -222,6 +247,24 @@ class RegisterResource(BaseResource):
                 request.setResponseCode(500)
                 request.finish()
             d.addCallbacks(callback, errback)
+            return server.NOT_DONE_YET
+        elif segmentCount == 1 and request.postpath[0]== 'invite':
+            submit = utils.getRequestArg(request, "submit")
+            skip = utils.getRequestArg(request, "skip")
+            if submit:
+                d = self._signup(request)
+                def callback(response):
+                    request.redirect('/people')
+                    request.finish()
+                def errback(err):
+                    log.err(err)
+                    request.write("Error")
+                    request.setResponseCode(500)
+                    request.finish()
+                d.addCallbacks(callback, errback)
+            else:
+                request.redirect('/people')
+                request.finish()
             return server.NOT_DONE_YET
         else:
             return resource.NoResource("Page not Found")
