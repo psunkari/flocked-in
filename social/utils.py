@@ -231,12 +231,13 @@ def expandAcl(userKey, acl, convOwnerId=None):
     acl = pickle.loads(acl)
     accept = acl.get("accept", {})
     deny = acl.get('deny', {})
+    deniedUsers = deny.get("users", [])
 
     #if acl in ["friends", "company", "public"]:
     if "users" in accept:
         for uid in accept["users"]:
-            if uid not in deny.get("users", []) :
-                keys.update(accept["users"])
+            if uid not in deniedUsers:
+                keys.add(uid)
     if "groups" in accept:
         groups = accept["groups"][:]
         for groupId in groups[:]:
@@ -245,7 +246,8 @@ def expandAcl(userKey, acl, convOwnerId=None):
         groupMembers = yield Db.multiget_slice(groups,"followers")
         groupMembers = multiColumnsToDict(groupMembers)
         for groupId in groupMembers:
-            keys.update(set(groupMembers[groupId].keys()))
+            keys.update([uid for uid in groupMembers[groupId].keys() \
+                            if uid not in deniedUsers])
         keys.update(groups)
 
     if any([typ in ["friends", "orgs", "public"] for typ in accept]):
@@ -253,12 +255,12 @@ def expandAcl(userKey, acl, convOwnerId=None):
         if "friends"  in accept and convOwnerId:
             friends1 = yield getFriends(convOwnerId, count=INFINITY)
             commonFriends = friends.intersection(friends1)
-            keys.update(commonFriends)
+            keys.update([uid for uid in commonFriends if uid not in deniedUsers])
         else:
-            keys.update(friends)
+            keys.update([uid for uid in friends if uid not in deniedUsers])
     if any([typ in ["followers", "orgs", "public"] for typ in accept ]):
         followers = yield getFollowers(userKey, count=INFINITY)
-        keys.update(followers)
+        keys.update([uid for uid in followers if uid not in deniedUsers])
     if any([typ in ["orgs", "public"] for typ in accept]):
         companyKey = yield getCompanyKey(userKey)
         keys.update(set([companyKey]))
