@@ -12,7 +12,7 @@
           class="button ${classes} ${'has-tooltip' if tooltip else ''}">
   %if value:
     <span ${'' if not id else ('id="%s-content" ' % id)}
-          class="button-content">${value}</span>
+          class="button-text">${value}</span>
     %if tooltip:
     <div class="tooltip">
       <span ${'' if not id else ('id="%s-content" ' % id)}
