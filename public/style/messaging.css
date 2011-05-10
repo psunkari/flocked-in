@@ -42,7 +42,8 @@
 
 .message-row-star {
     vertical-align:top;
-    padding:0 2px
+    padding:0 2px;
+    cursor:pointer;
 }
 
 .message-headline {

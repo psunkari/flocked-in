@@ -171,17 +171,17 @@
       return "%s" %date
 %>
 
-<%def name="messages_layout(script, id, thread, fid)">
-  <div id="thread-${id}" class="message-row ${'row-unread' if thread["flags"]["read"] == "0" else 'row-read'}">
+<%def name="messages_layout(script, mid, thread, fid)">
+  <div id="thread-${mid}" class="message-row ${'row-unread' if thread["flags"]["read"] == "0" else 'row-read'}">
     <div class="message-row-cell message-row-select">
-      <input type="checkbox" name="selected" value="${id}"/>
+      <input type="checkbox" name="selected" value="${mid}"/>
     </div>
     <div class="message-row-cell message-row-star">
       <a>
         % if thread["flags"]["star"] == "0":
-          <span class="messaging-icon star-empty-icon"> </span>
+          <span onclick="$.post('/ajax/messages', 'fid=${fid}&action=star&selected=${mid}', null, 'script')" class="messaging-icon star-empty-icon"> </span>
         % else:
-          <span class="messaging-icon star-icon"> </span>
+          <span onclick="$.post('/ajax/messages', 'fid=${fid}&action=unstar&selected=${mid}', null, 'script')" class="messaging-icon star-icon"> </span>
         % endif
       </a>
     </div>
@@ -206,11 +206,11 @@
     <div class="message-headline">
       <h2 class="message-headline-subject">${message["Subject"]|h}</h2>
       % if flags["star"] == "0":
-        <a class="message-headline-star" href="/messages/actions?action=star&message=${mid}&fid=${fid}">
+        <a class="message-headline-star ajax" href="/messages/actions?action=star&message=${mid}&fid=${fid}">
         <span class="messaging-icon star-empty-icon"> </span>
         </a>
       %else:
-        <a class="message-headline-star" href="/messages/actions?action=unstar&message=${mid}&fid=${fid}">
+        <a class="message-headline-star ajax" href="/messages/actions?action=unstar&message=${mid}&fid=${fid}">
         <span class="messaging-icon star-icon"> </span>
         </a>
       % endif

@@ -102,14 +102,15 @@ class MessagingResource(base.BaseResource):
                     yield self._copyToFolder(copyToFolder, mids, tids)
                     yield self._deleteFromFolder(folderId, mids, tids)
             elif action == "star":
-                self._setFlagOnMessage(myKey, message, "star", "1")
+                yield self._setFlagOnMessage(myKey, message, "star", "1")
             elif action == "unstar":
-                self._setFlagOnMessage(myKey, message, "star", "0")
+                yield self._setFlagOnMessage(myKey, message, "star", "0")
             elif action == "read":
-                self._setFlagOnMessage(myKey, message, "read", "1")
+                yield self._setFlagOnMessage(myKey, message, "read", "1")
             elif action == "unread":
-                self._setFlagOnMessage(myKey, message, "read", "0")
+                yield self._setFlagOnMessage(myKey, message, "read", "0")
             if action in ["star", "unstar"]:
+                #XXX:We should partially render here
                 request.redirect("/messages/thread?id=%s&fid=%s" %(message, folderId))
             else:
                 request.redirect("/messages?fid=%s"%(folderId))
@@ -129,12 +130,24 @@ class MessagingResource(base.BaseResource):
     def _folderActions(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
-
+        _validActions = ["delete", "star", "unstar", "read", "unread",
+                         "fullview", "archive", "reply", "replytoall",
+                         "forward"]
         folderId = utils.getRequestArg(request, "fid") or None
         delete = utils.getRequestArg(request, "delete")
         archive = utils.getRequestArg(request, "archive")
         selected = request.args.get("selected", None)
         tids = None
+        if delete:action = "delete"
+        elif archive:action = "archive"
+        else:action = utils.getRequestArg(request, "action")
+
+        if action not in _validActions:
+            raise
+        if not (selected or folderId):
+            raise
+
+        #TODO: Check if user has access to all the selected ids
 
         if selected and len(selected) > 0:
             # Selected are mids of the selected mails. We find their respective
@@ -147,27 +160,63 @@ class MessagingResource(base.BaseResource):
             for mId in selected:
                 tids.append(res[mId]["timestamp"])
         else:
-            request.redirect("/messages?fid=%s"%(folderId))
+            if not script:
+                request.redirect("/messages?fid=%s"%(folderId))
 
         if folderId:
             res = yield self._checkUserFolderACL(myKey, folderId)
             if not res:
-                request.redirect("/messages")
+                raise
         else:
-            request.redirect("/messages")
+            if not script:
+                request.redirect("/messages")
 
-        if tids and folderId and (delete or archive):
+        if tids and folderId:
             folders = yield self._getFolders(myKey)
             copyToFolder = ""
-            if delete:
+            if action=="delete":
                 copyToFolder = self._getSpecialFolder(myKey, folders, "TRASH")
-            elif archive:
-                copyToFolder = self._getSpecialFolder(myKey, folders, "ARCHIVES")
-
-            yield self._copyToFolder(copyToFolder, selected, tids)
-            if copyToFolder != folderId:
+                if copyToFolder != folderId:
+                    yield self._copyToFolder(copyToFolder, selected, tids)
                 yield self._deleteFromFolder(folderId, selected, tids)
-        request.redirect("/messages?fid=%s"%(folderId))
+            elif action=="archive":
+                copyToFolder = self._getSpecialFolder(myKey, folders, "ARCHIVES")
+                yield self._copyToFolder(copyToFolder, selected, tids)
+                if copyToFolder != folderId:
+                    yield self._deleteFromFolder(folderId, selected, tids)
+            elif action == "star":
+                yield self._setFlagOnMessage(myKey, selected[0], "star", "1")
+            elif action == "unstar":
+                yield self._setFlagOnMessage(myKey, selected[0], "star", "0")
+            elif action == "read":
+                yield self._setFlagOnMessage(myKey, selected[0], "read", "1")
+            elif action == "unread":
+                yield self._setFlagOnMessage(myKey, selected[0], "read", "0")
+
+            if script:
+                mid = selected[0]
+                args.update({"mid":mid})
+                res = yield Db.get_slice(key=myKey, column_family="mUserMessages",
+                                              names=[mid])
+                messageFlags = utils.supercolumnsToDict(res)
+                res = yield Db.get_slice(key=mid, column_family="messages")
+                msgs = utils.columnsToDict(res, ordered=True)
+                people = yield self._generatePeopleInConversation(msgs, myKey)
+                msgs.update({"people":people})
+                msgs.update({"flags":messageFlags[mid]})
+                args.update({"thread":msgs})
+                args.update({"fid":folderId})
+                yield renderScriptBlock(request, "message.mako", "messages_layout",
+                                        landing,
+                                        "#thread-%s" %(mid.replace(".", "\\.")\
+                                                       .replace("@", "\\@")),
+                                        "replace", **args)
+            else:
+                request.redirect("/messages?fid=%s" %folderId)
+        else:
+            #XXX: instead of redirecting, we should render partly
+            if not script:
+                request.redirect("/messages")
 
     @defer.inlineCallbacks
     def _copyToFolder(self, destination, messages, timestamps):
@@ -307,11 +356,10 @@ class MessagingResource(base.BaseResource):
         start = utils.decodeKey(start)
         reverse = not back
 
-        c_fid = None if (landing or appchange) else request.getCookie("fid")
-        folderId = utils.getRequestArg(request, "fid") or c_fid or None
-
-        if folderId != c_fid :
-            request.addCookie('fid', folderId, path="/ajax/messages")
+        #c_fid = None if (landing or appchange) else request.getCookie("fid")
+        folderId = utils.getRequestArg(request, "fid") or None
+        #if folderId != c_fid :
+        #    request.addCookie('fid', folderId, path="/ajax/messages")
 
         yield self._checkStandardFolders(request, myKey)
         folders = yield self._getFolders(myKey)
@@ -322,7 +370,7 @@ class MessagingResource(base.BaseResource):
             # Make sure user has access to the folder
             res = yield self._checkUserFolderACL(myKey, folderId)
             if not res:
-                request.redirect("/messages")
+                raise
 
         args["folders"] = folders
         args.update({"fid":folderId})
@@ -365,7 +413,6 @@ class MessagingResource(base.BaseResource):
             if len(mids) == 11:
                 mids.pop(0)
         args.update({"start":startKey, "end":endKey})
-
         # Count the total number of messages in this folder
         #XXX: We don't really need to show the total number of messages at the
         # moment.
@@ -434,7 +481,7 @@ class MessagingResource(base.BaseResource):
             # Make sure user has access to the folder
             res = yield self._checkUserFolderACL(myKey, folderId)
             if not res:
-                request.redirect("/messages")
+                raise
 
         args["folders"] = folders
         args.update({"fid":folderId})
