@@ -60,8 +60,10 @@ class MessagingResource(base.BaseResource):
         folderId = utils.getRequestArg(request, "fid") or None
         delete = utils.getRequestArg(request, "delete") or None
         archive = utils.getRequestArg(request, "archive") or None
+        unread = utils.getRequestArg(request, "unread") or None
         if delete:action = "delete"
         elif archive:action = "archive"
+        elif unread:action = "unread"
         else:action = utils.getRequestArg(request, "action")
 
         if action not in _validActions:
@@ -678,6 +680,8 @@ class MessagingResource(base.BaseResource):
             pemail = uid_people[uid]
             people[pemail] = res[uid]
             people[pemail]["uid"] = uid
+            if uid == myKey:
+                people["self"] = pemail
         defer.returnValue(people)
 
     @defer.inlineCallbacks

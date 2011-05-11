@@ -138,3 +138,9 @@
     font-size:11px;
     padding-left:2px;
 }
+
+.message-composer-quick-actions {
+    display:block;
+    padding:4px 10px;
+    background-color:transparent;
+}

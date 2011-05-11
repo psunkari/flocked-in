@@ -89,6 +89,7 @@
 <%!
   def formatPeopleInConversation(message, short=False):
     recipients = message["To"].split(",")
+    senderEmailId = email.utils.parseaddr(message["From"])[1]
     rStrings = []
     for each in recipients:
         emailId = email.utils.parseaddr(each)[1]
@@ -96,24 +97,42 @@
             estring = "<a href='/profile?id=%s'>%s</a>" %(message["people"][emailId]["uid"],
                                                           message["people"][emailId]["basic"]["name"])
         else:
-            estring = "<span>%s</span>" %(message["people"][emailId]["basic"]["name"])
+            if emailId != senderEmailId:
+                estring = "<span>%s</span>" %(message["people"][emailId]["basic"]["name"])
+            else:
+                continue
+        if emailId == message["people"]["self"]:
+            estring = "<span>%s</span>" %("Me")
+
         rStrings.append(estring)
 
-    sId = email.utils.parseaddr(message["From"])[1]
     if short:
-        sString = "<span>%s</span>" %(message["people"][sId]["basic"]["name"])
+        sString = "<span>%s</span>" %(message["people"][senderEmailId]["basic"]["name"])
     else:
-        sString = "<a href='/profile?id=%s'>%s</a>" %(message["people"][sId]["uid"],
-                                                      message["people"][sId]["basic"]["name"])
+        sString = "<a href='/profile?id=%s'>%s</a>" %(message["people"][senderEmailId]["uid"],
+                                                      message["people"][senderEmailId]["basic"]["name"])
 
     if short:
-        rString = ", ".join(rStrings)
+        rString = ", ".join(set(rStrings))
         finalString = "%s, %s" %(sString, rString)
     else:
-        rString = ", ".join(rStrings)
+        rString = ", ".join(set(rStrings))
         finalString = "%s Wrote to %s" %(sString, rString)
 
     return finalString
+%>
+
+<%!
+    def formatRecipientList(message):
+        recipients = (message["From"]+", "+message["To"]).split(",")
+        rStrings = []
+        for each in recipients:
+            emailId = email.utils.parseaddr(each)[1]
+            if not emailId == message["people"]["self"]:
+                rStrings.append("%s <%s>" %(message["people"][emailId]["basic"]["name"],
+                                            emailId))
+
+        return ", ".join(set(rStrings))
 %>
 
 <%!
@@ -122,7 +141,7 @@
       sender = message['From']
       date = message['Date']
       quoted_reply = "\n".join([">%s" %x for x in body.split('\n')]+['>'])
-      prequotestring = "On %s, %s wrote" %(date, sender)
+      prequotestring = "%s wrote" %(sender)
       new_reply = "\r\n\r\n\r\n%s\r\n\r\n%s\r\n%s" %(reply, prequotestring, quoted_reply)
       return new_reply
 %>
@@ -251,12 +270,9 @@
       </span>
       <span class="time-label message-headers-time">${message["date_epoch"]|timeElapsedSince}</span>
     </div>
-    <div class="message-actions">
-      <a class="action-link" href="/messages/write?parent=${message["message-id"]}">Reply</a>
-      <a class="action-link" href="/messages/write?parent=${message["message-id"]}&action=forward">Forward</a>
-    </div>
     <div class="message-message">${message["body"] | newlinescape}</div>
-    <input type="hidden" name="message" value="${message["message-id"]}">
+    <input type="hidden" name="message" value="${message["message-id"]}"/>
+    <input type="hidden" name="_body" value="${formatBodyForReply(message, "")}"/>
 </%def>
 
 <%def name="thread_layout(thread, inline=False, isFeed=False)">
@@ -322,14 +338,18 @@
     </div>
 </%def>
 
-<%def name="quick_reply_layout(msg)">
+<%def name="quick_reply_layout(script, msg)">
   <div class="message-composer">
-    <div class="message-composer-field"><b>Quick Reply</b></div>
+    <div class="message-composer-quick-actions">
+      <a href="#" onclick="$('textarea[class=message-composer-field-body-quick]').attr('value', $('input[name=_body]').attr('value'))">
+        Quote Message
+      </a>
+    </div>
     <div class="message-composer-field-body-wrapper">
-        <textarea class="message-composer-field-body-quick" name="body"></textarea>
+        <textarea class="message-composer-field-body-quick" name="body" placeholder="Quickly reply to this message"></textarea>
         <input type="hidden" value="${msg["message-id"]}" name="parent"/>
         <input type="hidden" value="${formatSubjectForReply(msg['Subject'])}" name="subject"/>
-        <input type="hidden" value="${msg["From"]}" name="recipients"/>
+        <input type="hidden" value="${formatRecipientList(msg)}" name="recipients"/>
     </div>
     <div class="message-composer-field">
       <input type="submit" name="send" value="${_('Reply')}" class="button ">
@@ -340,21 +360,24 @@
 <%def name="toolbar_layout(script, view, fid, message=None)">
   % if view == "messages":
     <div class="toolbar">
-      <input type="submit" name="delete" value="Delete" class="button ">
-      <input type="submit" name="archive" value="Archive" class="button ">
+      <input type="submit" name="delete" value="Delete" class="button "/>
+      <input type="submit" name="archive" value="Archive" class="button "/>
     </div>
   % elif view == "message":
     <div class="toolbar">
         <a class="${'ajax' if script else ''} action-link" href="/messages?fid=${fid}">Go Back</a>
-        <input type="submit" name="delete" value="Delete" class="button ">
-        <input type="submit" name="archive" value="Archive" class="button ">
-        <select name="action" class="button ">
-          <option value="">More Actions</option>
-          <option value="star">Add Star</option>
-          <option value="unstar">Remove Star</option>
-          <option value="read">Mark as Read</option>
-          <option value="unread">Mark as Unread</option>
-        </select>
+        <input type="submit" name="delete" value="Delete" class="button "/>
+        <input type="submit" name="archive" value="Archive" class="button "/>
+        % if script:
+            <input type="submit" name="unread" value="Mark as Unread" class="button "/>
+        % else:
+            <select name="action" class="button ">
+              <option value="">More Actions</option>
+              <option value="star">Add Star</option>
+              <option value="unstar">Remove Star</option>
+              <option value="unread">Mark as Unread</option>
+            </select>
+        % endif
         <input type="submit" value="Go" name="other" class="button ">
         <span class="clear" style="display:block"></span>
     </div>
@@ -413,27 +436,27 @@
     </form>
   %elif view == "message":
     <form method="post" action="/messages/thread">
-    ${toolbar_layout(script, view, message=message, fid=fid)}
+    ${toolbar_layout(script, view, fid, message=message)}
     ${message_layout(id, message, flags, fid)}
     <input type="hidden" name="fid" value="${fid}"/>
     </form>
     <form method="post" action="/messages/write">
-    ${quick_reply_layout(message)}
+    ${quick_reply_layout(script, message)}
     <input type="hidden" name="fid" value="${fid}"/>
     </form>
   %elif view == "compose":
     <form method="post" action="/messages/write">
-    ${toolbar_layout(script, view, fid=fid)}
+    ${toolbar_layout(script, view, fid)}
     ${composer_layout(script, view, None, fid)}
     </form>
   %elif view == "reply":
     <form method="post" action="/messages/write">
-    ${toolbar_layout(script, view, fid=fid, message=parent_msg)}
+    ${toolbar_layout(script, view, fid, message=parent_msg)}
     ${composer_layout(script, view, parent_msg, fid)}
     </form>
   %elif view == "forward":
     <form method="post" action="/messages/write">
-    ${toolbar_layout(script, "reply", fid=fid, message=parent_msg)}
+    ${toolbar_layout(script, "reply", fid, message=parent_msg)}
     ${composer_layout(script, view, parent_msg, fid)}
     </form>
   %endif
