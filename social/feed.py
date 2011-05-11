@@ -270,6 +270,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
             mostRecentItem = None
             tagId = None
             responseUsers = []
+            answerUsers = []
             responses[convId] = []
             likes[convId] = []
 
@@ -284,7 +285,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
                     toFetchEntities.update(entities.split(","))
 
                 if not getReason:
-                    if x == "C":
+                    if x in ["C", "Q"]:
                         responses[convId].append(item)
                         toFetchItems.add(item)
                     elif x == "L" and convId != item:
@@ -294,8 +295,11 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
                     elif x == "L":
                         likes[convId].append(user)
 
-                elif x == "C":
-                    responseUsers.append(user)
+                elif x in ["C", "Q"]:
+                    if x == "C":
+                        responseUsers.append(user)
+                    elif x == 'Q':
+                        answerUsers.append(user)
                     responses[convId].append(item)
                     mostRecentItem = update
                     toFetchItems.add(item)
@@ -324,6 +328,13 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
                                           "%s and %s commented on %s's %s",
                                           "%s, %s and %s commented on %s's %s"]\
                                          [len(reasonUserIds[convId])-1]
+                elif x == 'Q':
+                    reasonUserIds[convId] = set(answerUsers)
+                    reasonTmpl[convId] = ["%s answered %s's %s",
+                                          "%s and %s answered %s's %s",
+                                          "%s, %s and %s answered %s's %s"]\
+                                         [len(reasonUserIds[convId])-1]
+
                 elif x == "L" and itemId == convId:
                     reasonUserIds[convId] = set(likes[convId])
                     reasonTmpl[convId] = ["%s liked %s's %s",

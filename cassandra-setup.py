@@ -159,7 +159,7 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(feedItems)
 
     # Index of feed by type
-    for itemType in ['status', 'link', 'document']:
+    for itemType in ['status', 'link', 'document', 'question']:
         columnFamily = "feed_" + str(itemType)
         feedType = CfDef(KEYSPACE, columnFamily, 'Standard', 'TimeUUIDType',
                          None, 'Feed of %s items'%(itemType))
@@ -731,7 +731,7 @@ def truncateColumnFamilies(client):
                "tagFollowers", "orgTagsByName", "messages", "mUserMessages",
                "mFolderMessages", "bannedUsers", "blockedUsers",
                "mUserFolders", "mConversationMessages", "deletedConvs",
-               "mInFolders", "mFolders"]:
+               "mInFolders", "mFolders", "feed_question"]:
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 

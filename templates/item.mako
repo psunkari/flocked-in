@@ -133,6 +133,7 @@
 <%def name="conv_footer(convId, hasComments=True, hasLikes=True, hasTags=True)">
   <%
     meta = items[convId]['meta']
+    convType = meta.get('type', 'status')
     timestamp = int(meta['timestamp'])
     likesCount = 0 if hasLikes else int(meta.get('likesCount', '0'))
     commentsCount = 0 if hasComments else int(meta.get('responseCount', '0'))
@@ -157,7 +158,8 @@
     <button class="button-link ajax" _ref="/item/like?id=${convId}">${_("Like")}</button>&#183;<button
   %endif
   ## Comment on this conversation
-  class="button-link" onclick="$$.convs.comment('${convId}');" >${_("Comment")}</button>&#183;<button
+  <% commentString = "Answer" if convType == "question" else "Comment" %>
+  class="button-link" onclick="$$.convs.comment('${convId}');" >${_(commentString)}</button>&#183;<button
   ## Add a tag
   class="button-link" title="${_('Add Tag')}" onclick="$$.convs.editTags('${convId}', true);">${_("Add Tag")}</button>
 </%def>
@@ -240,16 +242,17 @@
 
 
 <%def name="conv_comments_head(convId, total, showing, isFeed)">
+  <% commentString = "Answers" if items[convId]['meta']['type'] == "question" else "Comment" %>
   %if total > showing:
     <div class="conv-comments-more" class="busy-indicator">
       %if isFeed:
-        <a class="ajax" href="/item?id=${convId}" _ref="/item/responses?id=${convId}">${_("View all %s comments &#187;") % (total)}</a>
+        <a class="ajax" href="/item?id=${convId}" _ref="/item/responses?id=${convId}">${_("View all %s %s &#187;") % (total, commentString)}</a>
       %else:
         <span class="num-comments">${_("%s of %s") % (showing, total)}</span>
         %if oldest:
-          <a class="ajax" href="/item?id=${convId}&start=${oldest}" _ref="/item/responses?id=${convId}&nc=${showing}&start=${oldest}">${_("View older comments &#187;")}</a>
+          <a class="ajax" href="/item?id=${convId}&start=${oldest}" _ref="/item/responses?id=${convId}&nc=${showing}&start=${oldest}">${_("View older %s &#187;"%(commentString))}</a>
         %else:
-          <a class="ajax" href="/item?id=${convId}" _ref="/item/responses?id=${convId}&nc=${showing}">${_("View older comments &#187;")}</a>
+          <a class="ajax" href="/item?id=${convId}" _ref="/item/responses?id=${convId}&nc=${showing}">${_("View older %s &#187;"%(commentString))}</a>
         %endif
       %endif
     </div>

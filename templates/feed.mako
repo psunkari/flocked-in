@@ -132,6 +132,13 @@
   <input type="hidden" name="type" value="status"/>
 </%def>
 
+<%def name="share_question()">
+  <div class="input-wrap">
+    <textarea name="comment" placeholder="${_('Ask a question')}"/>
+  </div>
+  <input type="hidden" name="type" value="question"/>
+</%def>
+
 <%def name="feed()">
   %for convId in conversations:
     ${item.item_layout(convId)}

@@ -65,9 +65,11 @@ class NotificationsResource(base.BaseResource):
         args = {}
         convs = []
         comments = {}
+        answers = {}
         reasonStr = {}
         convLikes = {}
         commentLikes = {}
+        answerLikes = {}
         pluginNotifications = {}
         toFetchUsers = set()
         toFetchGroups = set()
@@ -119,8 +121,12 @@ class NotificationsResource(base.BaseResource):
                     convLikes.setdefault(key, [])
                     convLikes[key].append(commentOwner)
                 elif responseType == "L" and itemId != convId:
-                    commentLikes.setdefault(key, [])
-                    commentLikes[key].append(commentOwner)
+                    if convType == "question":
+                        answerLikes.setdefault(key, [])
+                        answerLikes[key].append(commentOwner)
+                    else:
+                        commentLikes.setdefault(key, [])
+                        commentLikes[key].append(commentOwner)
                 elif responseType == "I" and convType in plugins:
                     pluginNotifications.setdefault(convType, {})
                     pluginNotifications[convType].setdefault(convId, [])
@@ -129,6 +135,9 @@ class NotificationsResource(base.BaseResource):
                     groupId = convId
                     toFetchGroups.add(groupId)
                     pendingRequests.setdefault(groupId, []).append(commentOwner)
+                elif responseType == 'Q':
+                    answers.setdefault(key, [])
+                    answers[key].append(commentOwner)
 
 
         users = yield Db.multiget_slice(toFetchUsers, "entities", ["basic"])
@@ -153,6 +162,15 @@ class NotificationsResource(base.BaseResource):
                                  2: "%s and %s subscribed to %s group. %s to approve the request",
                                  3: "%s and %s and 1 other subscribed to %s group. %s to approve the request.",
                                  4: "%s and %s and %s others subscribed to %s group. %s to approve the request."}
+        answersTemplate = {1: "%s answered %s's %s",
+                           2: "%s and %s answered %s's %s",
+                           3: "%s, %s and 1 other answered %s's %s",
+                           4: "%s, %s and %s others answered %s's %s"}
+
+        answerLikesTemplate = {1: "%s likes an answer on %s's %s",
+                         2: "%s and %s likes an answer on  %s's %s",
+                         3: "%s, %s and 1 other likes an answer on  %s's %s",
+                         4: "%s, %s and %s others likes an answer on %s's %s"}
 
 
         for convId in convs:
@@ -163,16 +181,32 @@ class NotificationsResource(base.BaseResource):
             template = commentTemplate[len(set(comments[key]))]
             reason = _getReasonStr(template, convId, convType, convOwner, comments[key])
             reasonStr[convId].append(reason)
+
         for key in convLikes:
             convId, convType, convOwner = key
             template = likesTemplate[len(set(convLikes[key]))]
             reason = _getReasonStr(template, convId, convType, convOwner, convLikes[key])
             reasonStr[convId].append(reason)
+
         for key in commentLikes:
             convId, convType, convOwner = key
             template = commentLikesTemplate[len(set(commentLikes[key]))]
             reason = _getReasonStr(template, convId, convType, convOwner, commentLikes[key])
             reasonStr[convId].append(reason)
+
+        for key in answers:
+            convId, convType, convOwner = key
+            template = answersTemplate[len(set(answers[key]))]
+            reason = _getReasonStr(template, convId, convType, convOwner, answers[key])
+            reasonStr[convId].append(reason)
+
+        for key in answerLikes:
+            convId, convType, convOwner = key
+            template = answerLikesTemplate[len(set(answerLikes[key]))]
+            reason = _getReasonStr(template, convId, convType, convOwner, answerLikes[key])
+            reasonStr[convId].append(reason)
+
+
         for convType in pluginNotifications:
             for convId in pluginNotifications[convType]:
                 reason = yield plugins[convType].getReason(convId,
@@ -189,10 +223,6 @@ class NotificationsResource(base.BaseResource):
                 vals.append(len(pendingRequests[groupId])-2)
             vals.append(groupUrl)
             vals.append(url)
-
-            log.msg(reason)
-            log.msg(vals)
-            log.msg(len(vals), len(pendingRequests[groupId]))
             reasonStr[groupId].append(reason%(tuple(vals)))
 
         args["reasonStr"] = reasonStr

@@ -164,9 +164,10 @@ class ProfileResource(base.BaseResource):
                 reasonStr[value] = _("liked %s's %s")
                 userItems.append(value)
             elif rtype == "L"  and convOwnerId != userKey:
-                reasonStr[value] = _("liked") + "%s" %(commentSnippet) + _(" comment on %s's %s")
+                r = "answer" if convType == 'question' else 'comment'
+                reasonStr[value] = _("liked") + "%s" %(commentSnippet) + _("%s "%r) + _("on %s's %s")
                 userItems.append(value)
-            elif rtype == "C" and convOwnerId != userKey:
+            elif rtype in ["C", 'Q'] and convOwnerId != userKey:
                 reasonStr[value] = "%s"%(commentSnippet) + _(" on %s's %s")
                 userItems.append(value)
 

@@ -316,6 +316,7 @@ a:hover, a:active, a:focus {
     background-position: 0 -144px;
 }
 
+
 /*admin page icons*/
 .add-user-icon {
     background-position: 0 -16px;
@@ -329,6 +330,7 @@ a:hover, a:active, a:focus {
 .unblock-user-icon {
     background-position: 0 -112px;
 }
+
 
 /*message icons*/
 .sent-icon {
@@ -512,7 +514,9 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .event-icon {
     background-position: 0px -16px;
 }
-
+.question-icon {
+    background-position: 0 -368px;
+}
 #sharebar .input-wrap {
     padding: 4px;
     margin-bottom: 5px;

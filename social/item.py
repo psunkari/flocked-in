@@ -527,7 +527,7 @@ class ItemResource(base.BaseResource):
                         "%s:%s" % (myId, itemId), timeUUID)
 
         # 4. Update userItems and userItems_*
-        responseType = "C"
+        responseType = "Q" if convType == "question" else 'C'
         commentSnippet = utils.toSnippet(comment)
         userItemValue = ":".join([responseType, itemId, convId, convType,
                                   convOwnerId, commentSnippet])
@@ -547,17 +547,19 @@ class ItemResource(base.BaseResource):
         yield notifications.pushNotifications( itemId, convId, responseType,
                                               convType, convOwnerId, myId, timeUUID)
         # Finally, update the UI
+        entities = yield Db.get(myId, "entities", super_column="basic")
+        entities = {myId: utils.supercolumnsToDict([entities])}
+        items = {itemId: {"meta": meta}, convId:conv}
+        data = {"entities": entities, "items": items}
+
         numShowing = utils.getRequestArg(request, "nc") or "0"
         numShowing = int(numShowing) + 1
         isFeed = False if request.getCookie("_page") == "item" else True
         yield renderScriptBlock(request, 'item.mako', 'conv_comments_head',
                         False, '#comments-header-%s' % (convId), 'set',
-                        args=[convId, responseCount, numShowing, isFeed])
+                        args=[convId, responseCount, numShowing, isFeed], **data)
 
-        entities = yield Db.get(myId, "entities", super_column="basic")
-        entities = {myId: utils.supercolumnsToDict([entities])}
-        items = {itemId: {"meta": meta}}
-        data = {"entities": entities, "items": items}
+
         yield renderScriptBlock(request, 'item.mako', 'conv_comment', False,
                                 '#comments-%s' % convId, 'append', True,
                                 handlers={"onload": "(function(){$('.comment-input', '#comment-form-%s').val(''); $('[name=\"nc\"]', '#comment-form-%s').val('%s');})();" % (convId, convId, numShowing)},
