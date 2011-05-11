@@ -380,19 +380,28 @@
 <%def name="render_status(convId, isQuoted=False)">
   <%
     conv = items[convId]
+    convType = conv["meta"]["type"]
     userId = conv["meta"]["owner"]
     normalize = utils.normalizeText
+    has_icon = "has-icon" if convType == "question" else ''
+    itemTitleText = "item-title-text" if has_icon else ''
   %>
   %if not isQuoted:
     ${utils.userName(userId, entities[userId], "conv-user-cause")}
   %endif
-  <div class="item-title">
-    %if isQuoted:
-      ${utils.userName(userId, entities[userId])}
+  <div class="item-title ${has_icon}">
+    %if has_icon:
+      <span class="icon item-icon question-icon"></span>
     %endif
-    %if conv["meta"].has_key("comment"):
-      ${conv["meta"]["comment"]|normalize}
-    %endif
+
+    <div class="${itemTitleText}">
+      %if isQuoted and not has_icon:
+        ${utils.userName(userId, entities[userId])}
+      %endif
+      %if conv["meta"].has_key("comment"):
+        ${conv["meta"]["comment"]|normalize}
+      %endif
+    </div>
   </div>
 </%def>
 

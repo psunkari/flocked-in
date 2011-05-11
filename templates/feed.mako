@@ -134,7 +134,7 @@
 
 <%def name="share_question()">
   <div class="input-wrap">
-    <textarea name="comment" placeholder="${_('Ask a question')}"/>
+    <textarea name="comment" placeholder="${_('What is your question?')}"/>
   </div>
   <input type="hidden" name="type" value="question"/>
 </%def>
