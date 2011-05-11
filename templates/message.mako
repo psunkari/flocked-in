@@ -83,12 +83,37 @@
 
 <%!
   def newlinescape(text):
-      return utils.normalizeText(cgi.escape(text))
+    return utils.normalizeText(cgi.escape(text))
 %>
 
 <%!
-  def nameinemail(text):
-      return email.utils.parseaddr(text)[0]
+  def formatPeopleInConversation(message, short=False):
+    recipients = message["To"].split(",")
+    rStrings = []
+    for each in recipients:
+        emailId = email.utils.parseaddr(each)[1]
+        if not short:
+            estring = "<a href='/profile?id=%s'>%s</a>" %(message["people"][emailId]["uid"],
+                                                          message["people"][emailId]["basic"]["name"])
+        else:
+            estring = "<span>%s</span>" %(message["people"][emailId]["basic"]["name"])
+        rStrings.append(estring)
+
+    sId = email.utils.parseaddr(message["From"])[1]
+    if short:
+        sString = "<span>%s</span>" %(message["people"][sId]["basic"]["name"])
+    else:
+        sString = "<a href='/profile?id=%s'>%s</a>" %(message["people"][sId]["uid"],
+                                                      message["people"][sId]["basic"]["name"])
+
+    if short:
+        rString = ", ".join(rStrings)
+        finalString = "%s, %s" %(sString, rString)
+    else:
+        rString = ", ".join(rStrings)
+        finalString = "%s Wrote to %s" %(sString, rString)
+
+    return finalString
 %>
 
 <%!
@@ -98,7 +123,7 @@
       date = message['Date']
       quoted_reply = "\n".join([">%s" %x for x in body.split('\n')]+['>'])
       prequotestring = "On %s, %s wrote" %(date, sender)
-      new_reply = "\n\n\n%s\n\n%s\n%s" %(reply, prequotestring, quoted_reply)
+      new_reply = "\r\n\r\n\r\n%s\r\n\r\n%s\r\n%s" %(reply, prequotestring, quoted_reply)
       return new_reply
 %>
 
@@ -136,6 +161,11 @@
         return "%s %s" %("Fwd:", subject.strip("Re:"))
       else:
         return "%s %s" %("Fwd:", subject.strip())
+%>
+
+<%!
+    def formatBodyForViewing(text):
+        lines = text.split("\r\n")
 %>
 
 <%!
@@ -185,14 +215,7 @@
         % endif
       </a>
     </div>
-    <div class="message-row-cell" style="width:80px">${thread["From"]|nameinemail}</div>
-    <div class="message-row-cell" style="width:130px">
-      % if len(thread["people"]) <= 2:
-        ${", ".join(thread["people"])}
-      % else:
-        ${", ".join(thread["people"][:2])} and ${len(thread["people"])-2} others
-      % endif
-    </div>
+    <div class="message-row-cell" style="width:210px">${formatPeopleInConversation(thread, True)}</div>
     <div class="message-row-cell" style="width:450px">
       <a class="${'ajax' if script else ''} message-link" href="/messages/thread?id=${thread['message-id']}&fid=${fid}">${thread["Subject"]|h}</a>
     </div>
@@ -216,11 +239,16 @@
       % endif
     </div>
     <div class="message-headers">
-      % if len(message["people"]) <= 2:
-        <span class="message-headers-people">${message["From"]|nameinemail} wrote to ${", ".join(message["people"][:2])}</span>
-      % else:
-        <span class="message-headers-people">${message["From"]|nameinemail} wrote to ${", ".join(message["people"][:2])} and ${len(message["people"])-2} others</span>
-      % endif
+      <span class="message-headers-people">
+        <%
+            emailId = email.utils.parseaddr(message["From"])[1]
+            avatarURI = utils.userAvatar(message["people"][emailId]["uid"], message["people"][emailId]["basic"])
+        %>
+        %if avatarURI:
+          <img src="${avatarURI}" height="48" width="48" style="display:inline-block"/>
+        %endif
+        <span class="message-headers-people-list">${formatPeopleInConversation(message)}</span>
+      </span>
       <span class="time-label message-headers-time">${message["date_epoch"]|timeElapsedSince}</span>
     </div>
     <div class="message-actions">
@@ -309,7 +337,7 @@
   </div>
 </%def>
 
-<%def name="toolbar_layout(script, view, fid=None, message=None)">
+<%def name="toolbar_layout(script, view, fid, message=None)">
   % if view == "messages":
     <div class="toolbar">
       <input type="submit" name="delete" value="Delete" class="button ">
@@ -336,7 +364,11 @@
     </div>
   % elif view == "reply":
     <div class="toolbar">
-      <a class="${'ajax' if script else ''} action-link" href="/messages?fid=${fid}">Go Back</a>
+      <a class="${'ajax' if script else ''} action-link" href="/messages/thread?id=${message['message-id']}&fid=${fid}">Go Back</a>
+    </div>
+  % elif view == "forward":
+    <div class="toolbar">
+      <a class="${'ajax' if script else ''} action-link" href="/messages/thread?id=${message['message-id']}&fid=${fid}">Go Back</a>
     </div>
   % endif
 </%def>

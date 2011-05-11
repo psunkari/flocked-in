@@ -1,7 +1,7 @@
 import uuid
 import random, re
 import pytz, time, datetime
-import email.utils
+from email.utils import parseaddr
 from email.header import make_header
 
 from twisted.internet   import defer
@@ -613,7 +613,7 @@ class MessagingResource(base.BaseResource):
     def _createRecipientHeader(self, recipients):
         recipients_email = []
         for recipient in recipients:
-            name, mailId = email.utils.parseaddr(recipient)
+            name, mailId = parseaddr(recipient)
             if mailId is not '':
                 recipients_email.append(mailId)
             else:
@@ -655,26 +655,29 @@ class MessagingResource(base.BaseResource):
         cc = message.get("Cc", "")
         #The owner of the message can see who he shared this message with.
         shared = ""
-        people = re.sub(',\s+', ',', to+cc+shared).split(",")
-
+        people = re.sub(',\s+', ',', sender+","+to+cc+shared).split(",")
         people_ids = []
         for p in people:
-            rtuple = email.utils.parseaddr(p)
+            rtuple = parseaddr(p)
             remail = rtuple[1]
             people_ids.append(remail)
 
-        res = yield Db.multiget_slice(keys=people_ids, column_family="userAuth")
+        res = yield Db.multiget_slice(people_ids, "userAuth", ["user"])
         res = utils.multiColumnsToDict(res)
-        uids = [x['user'] for x in res.values() if 'user' in x]
-        res = yield Db.multiget_slice(keys=uids, column_family='entities')
+        people_map = {}
+        for p in res.keys():
+            people_map[p] = res[p]['user']
+        uid_people = {}
+        for p in res.keys():
+            uid_people[res[p]['user']] = p
+        uids = uid_people.keys()
+        res = yield Db.multiget_slice(uids, 'entities', ["basic"])
         res = utils.multiSuperColumnsToDict(res)
-        people = []
+        people = {}
         for uid in res.keys():
-            if uid == myKey:
-                people.append("me")
-            else:
-                people.append(res[uid]["basic"]["name"])
-
+            pemail = uid_people[uid]
+            people[pemail] = res[uid]
+            people[pemail]["uid"] = uid
         defer.returnValue(people)
 
     @defer.inlineCallbacks

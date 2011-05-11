@@ -60,18 +60,29 @@
 }
 
 .message-headers {
-    padding:4px 10px;
-    background-color:#CCCCCC;
+    padding:4px 10px 0px;
+    background-color:#F3F3F3;
+}
+
+.message-headers-people {
+    display:inline-block;
+}
+
+.message-headers-people-list {
+    display:inline-block;
+    vertical-align:top;
+    width:600px;
 }
 
 .message-headers-time {
     float:right;
+    display:inline-block;
 }
 
 .message-actions {
     display:block;
     padding:4px 10px;
-    background-color:#CCCCCC
+    background-color:#F3F3F3
 }
 
 .message-message {
