@@ -103,7 +103,8 @@
       <ul id="sharebar-links" class="h-links">
         <li>${_("Share:")}</li>
         <%
-          supported = [(name.capitalize(), name) for name in plugins if plugins[name].position > 0]
+          sortedList  = sorted(plugins.values(), key=lambda x: x.position)
+          supported = [(plugin.itemType.capitalize(), plugin.itemType) for plugin in sortedList if plugin.position > 0]
           itemName, itemType = supported[0]
         %>
         <li><a _ref="/feed/share/${itemType}" id="publisher-${itemType}" class="ajax selected"><span class="sharebar-icon icon ${itemType}-icon"></span><span class="sharebar-text">${_(itemName)}</span></a></li>
@@ -138,6 +139,14 @@
   </div>
   <input type="hidden" name="type" value="question"/>
 </%def>
+
+<%def name="share_link()">
+  <div class="input-wrap">
+    <textarea name="comment" placeholder="${_('Share a link..')}"/>
+  </div>
+  <input type="hidden" name="type" value="link"/>
+</%def>
+
 
 <%def name="feed()">
   %for convId in conversations:

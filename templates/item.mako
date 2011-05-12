@@ -383,7 +383,7 @@
     convType = conv["meta"]["type"]
     userId = conv["meta"]["owner"]
     normalize = utils.normalizeText
-    has_icon = "has-icon" if convType == "question" else ''
+    has_icon = "has-icon" if convType in ["question", 'link'] else ''
     itemTitleText = "item-title-text" if has_icon else ''
   %>
   %if not isQuoted:
@@ -391,7 +391,7 @@
   %endif
   <div class="item-title ${has_icon}">
     %if has_icon:
-      <span class="icon item-icon question-icon"></span>
+      <span class="icon item-icon ${convType}-icon"></span>
     %endif
 
     <div class="${itemTitleText}">

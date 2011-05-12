@@ -1,3 +1,4 @@
+
 import time
 import uuid
 
@@ -6,30 +7,25 @@ from twisted.python     import log
 from twisted.internet   import defer
 from twisted.plugin     import IPlugin
 
-from social             import Db, base, utils, errors
-from social.isocial     import IAuthInfo
+from social.template    import renderScriptBlock, render, getBlock
 from social.isocial     import IItemType
-from social.template    import render, renderScriptBlock, getBlock
+from social             import Db, base, utils, errors
 from social.logging     import profile, dump_args
 
-
-class Question(object):
+class Links(object):
     implements(IPlugin, IItemType)
-    itemType = "question"
-    position = 2
-    hasIndex = False
-
+    itemType = "link"
+    position = 3
+    hasIndex = True
     @defer.inlineCallbacks
     def renderShareBlock(self, request, isAjax):
         templateFile = "feed.mako"
-        renderDef = "share_question"
+        renderDef = "share_link"
 
         yield renderScriptBlock(request, templateFile, renderDef,
                                 not isAjax, "#sharebar", "set", True,
-                                attrs={"publisherName": "question"},
+                                attrs={"publisherName": "link"},
                                 handlers={"onload": "(function(obj){$$.publisher.load(obj)})(this);"})
-
-
     def rootHTML(self, convId, isQuoted, args):
         if "convId" in args:
             return getBlock("item.mako", "render_status", **args)
@@ -69,8 +65,4 @@ class Question(object):
 
     def getResource(self, isAjax):
         return None
-
-
-
-
-question = Question()
+links = Links()
