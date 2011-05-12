@@ -57,6 +57,7 @@
 .message-headline-star {
     display:inline-block;
     float:right;
+    cursor:pointer;
 }
 
 .message-headers {

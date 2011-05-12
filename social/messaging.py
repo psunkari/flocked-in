@@ -112,8 +112,15 @@ class MessagingResource(base.BaseResource):
             elif action == "unread":
                 yield self._setFlagOnMessage(myKey, message, "read", "0")
             if action in ["star", "unstar"]:
-                #XXX:We should partially render here
-                request.redirect("/messages/thread?id=%s&fid=%s" %(message, folderId))
+                if script:
+                    args.update({"action":action, "mid":message, "fid":folderId})
+                    yield renderScriptBlock(request, "message.mako",
+                                            "render_message_headline_star",
+                                            landing,
+                                            "span.message-headline-star",
+                                            "replace", **args)
+                else:
+                    request.redirect("/messages/thread?id=%s&fid=%s" %(message, folderId))
             else:
                 request.redirect("/messages?fid=%s"%(folderId))
         else:request.redirect("/messages")
@@ -162,16 +169,16 @@ class MessagingResource(base.BaseResource):
             for mId in selected:
                 tids.append(res[mId]["timestamp"])
         else:
-            if not script:
-                request.redirect("/messages?fid=%s"%(folderId))
+            request.redirect("/messages?fid=%s"%(folderId))
+            request.finish()
 
         if folderId:
             res = yield self._checkUserFolderACL(myKey, folderId)
             if not res:
                 raise
         else:
-            if not script:
-                request.redirect("/messages")
+            request.redirect("/messages")
+            request.finish()
 
         if tids and folderId:
             folders = yield self._getFolders(myKey)
@@ -215,10 +222,11 @@ class MessagingResource(base.BaseResource):
                                         "replace", **args)
             else:
                 request.redirect("/messages?fid=%s" %folderId)
+                request.finish()
         else:
             #XXX: instead of redirecting, we should render partly
-            if not script:
-                request.redirect("/messages")
+            request.redirect("/messages")
+            request.finish()
 
     @defer.inlineCallbacks
     def _copyToFolder(self, destination, messages, timestamps):

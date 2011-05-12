@@ -114,7 +114,7 @@
 
     if short:
         rString = ", ".join(set(rStrings))
-        finalString = "%s, %s" %(sString, rString)
+        finalString = "%s, %s" %(sString, rString) if len(rStrings) > 0 else sString
     else:
         rString = ", ".join(set(rStrings))
         finalString = "%s Wrote to %s" %(sString, rString)
@@ -248,13 +248,13 @@
     <div class="message-headline">
       <h2 class="message-headline-subject">${message["Subject"]|h}</h2>
       % if flags["star"] == "0":
-        <a class="message-headline-star ajax" href="/messages/actions?action=star&message=${mid}&fid=${fid}">
-        <span class="messaging-icon star-empty-icon"> </span>
-        </a>
+        <span class="message-headline-star ajax" onclick="$.post('/ajax/messages/thread', 'fid=${fid}&action=star&message=${mid}', null, 'script')" href="#">
+          <span class="messaging-icon star-empty-icon"> </span>
+        </span>
       %else:
-        <a class="message-headline-star ajax" href="/messages/actions?action=unstar&message=${mid}&fid=${fid}">
-        <span class="messaging-icon star-icon"> </span>
-        </a>
+        <span class="message-headline-star ajax"  onclick="$.post('/ajax/messages/thread', 'fid=${fid}&action=unstar&message=${mid}', null, 'script')" href="#">
+          <span class="messaging-icon star-icon"> </span>
+        </span>
       % endif
     </div>
     <div class="message-headers">
@@ -377,8 +377,8 @@
               <option value="unstar">Remove Star</option>
               <option value="unread">Mark as Unread</option>
             </select>
+            <input type="submit" value="Go" name="other" class="button ">
         % endif
-        <input type="submit" value="Go" name="other" class="button ">
         <span class="clear" style="display:block"></span>
     </div>
   %elif view == "compose":
@@ -459,5 +459,17 @@
     ${toolbar_layout(script, "reply", fid, message=parent_msg)}
     ${composer_layout(script, view, parent_msg, fid)}
     </form>
+  %endif
+</%def>
+
+<%def name="render_message_headline_star(action, mid, fid)">
+  %if action == "star":
+    <span class="message-headline-star ajax"  onclick="$.post('/ajax/messages/thread', 'fid=${fid}&action=unstar&message=${mid}', null, 'script')" href="#">
+      <span class="messaging-icon star-icon"> </span>
+    </span>
+  %else:
+    <span class="message-headline-star ajax" onclick="$.post('/ajax/messages/thread', 'fid=${fid}&action=star&message=${mid}', null, 'script')" href="#">
+      <span class="messaging-icon star-empty-icon"> </span>
+    </span>
   %endif
 </%def>
