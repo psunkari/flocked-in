@@ -1,7 +1,7 @@
 import uuid
 import random, re
 import pytz, time, datetime
-import email.utils
+from email.utils import parseaddr
 from email.header import make_header
 
 from twisted.internet   import defer
@@ -60,8 +60,10 @@ class MessagingResource(base.BaseResource):
         folderId = utils.getRequestArg(request, "fid") or None
         delete = utils.getRequestArg(request, "delete") or None
         archive = utils.getRequestArg(request, "archive") or None
+        unread = utils.getRequestArg(request, "unread") or None
         if delete:action = "delete"
         elif archive:action = "archive"
+        elif unread:action = "unread"
         else:action = utils.getRequestArg(request, "action")
 
         if action not in _validActions:
@@ -110,8 +112,15 @@ class MessagingResource(base.BaseResource):
             elif action == "unread":
                 yield self._setFlagOnMessage(myKey, message, "read", "0")
             if action in ["star", "unstar"]:
-                #XXX:We should partially render here
-                request.redirect("/messages/thread?id=%s&fid=%s" %(message, folderId))
+                if script:
+                    args.update({"action":action, "mid":message, "fid":folderId})
+                    yield renderScriptBlock(request, "message.mako",
+                                            "render_message_headline_star",
+                                            landing,
+                                            "span.message-headline-star",
+                                            "replace", **args)
+                else:
+                    request.redirect("/messages/thread?id=%s&fid=%s" %(message, folderId))
             else:
                 request.redirect("/messages?fid=%s"%(folderId))
         else:request.redirect("/messages")
@@ -160,16 +169,16 @@ class MessagingResource(base.BaseResource):
             for mId in selected:
                 tids.append(res[mId]["timestamp"])
         else:
-            if not script:
-                request.redirect("/messages?fid=%s"%(folderId))
+            request.redirect("/messages?fid=%s"%(folderId))
+            request.finish()
 
         if folderId:
             res = yield self._checkUserFolderACL(myKey, folderId)
             if not res:
                 raise
         else:
-            if not script:
-                request.redirect("/messages")
+            request.redirect("/messages")
+            request.finish()
 
         if tids and folderId:
             folders = yield self._getFolders(myKey)
@@ -213,10 +222,11 @@ class MessagingResource(base.BaseResource):
                                         "replace", **args)
             else:
                 request.redirect("/messages?fid=%s" %folderId)
+                request.finish()
         else:
             #XXX: instead of redirecting, we should render partly
-            if not script:
-                request.redirect("/messages")
+            request.redirect("/messages")
+            request.finish()
 
     @defer.inlineCallbacks
     def _copyToFolder(self, destination, messages, timestamps):
@@ -613,7 +623,7 @@ class MessagingResource(base.BaseResource):
     def _createRecipientHeader(self, recipients):
         recipients_email = []
         for recipient in recipients:
-            name, mailId = email.utils.parseaddr(recipient)
+            name, mailId = parseaddr(recipient)
             if mailId is not '':
                 recipients_email.append(mailId)
             else:
@@ -655,26 +665,31 @@ class MessagingResource(base.BaseResource):
         cc = message.get("Cc", "")
         #The owner of the message can see who he shared this message with.
         shared = ""
-        people = re.sub(',\s+', ',', to+cc+shared).split(",")
-
+        people = re.sub(',\s+', ',', sender+","+to+cc+shared).split(",")
         people_ids = []
         for p in people:
-            rtuple = email.utils.parseaddr(p)
+            rtuple = parseaddr(p)
             remail = rtuple[1]
             people_ids.append(remail)
 
-        res = yield Db.multiget_slice(keys=people_ids, column_family="userAuth")
+        res = yield Db.multiget_slice(people_ids, "userAuth", ["user"])
         res = utils.multiColumnsToDict(res)
-        uids = [x['user'] for x in res.values() if 'user' in x]
-        res = yield Db.multiget_slice(keys=uids, column_family='entities')
+        people_map = {}
+        for p in res.keys():
+            people_map[p] = res[p]['user']
+        uid_people = {}
+        for p in res.keys():
+            uid_people[res[p]['user']] = p
+        uids = uid_people.keys()
+        res = yield Db.multiget_slice(uids, 'entities', ["basic"])
         res = utils.multiSuperColumnsToDict(res)
-        people = []
+        people = {}
         for uid in res.keys():
+            pemail = uid_people[uid]
+            people[pemail] = res[uid]
+            people[pemail]["uid"] = uid
             if uid == myKey:
-                people.append("me")
-            else:
-                people.append(res[uid]["basic"]["name"])
-
+                people["self"] = pemail
         defer.returnValue(people)
 
     @defer.inlineCallbacks
