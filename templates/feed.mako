@@ -142,7 +142,7 @@
 
 <%def name="share_link()">
   <div class="input-wrap">
-    <textarea name="comment" placeholder="${_('Share a link..')}"/>
+    <textarea name="comment" placeholder="${_('http://')}"/>
   </div>
   <input type="hidden" name="type" value="link"/>
 </%def>
