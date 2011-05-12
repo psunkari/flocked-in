@@ -201,25 +201,28 @@ class MessagingResource(base.BaseResource):
                 yield self._setFlagOnMessage(myKey, selected[0], "read", "1")
             elif action == "unread":
                 yield self._setFlagOnMessage(myKey, selected[0], "read", "0")
-
-            if script:
-                mid = selected[0]
-                args.update({"mid":mid})
-                res = yield Db.get_slice(key=myKey, column_family="mUserMessages",
-                                              names=[mid])
-                messageFlags = utils.supercolumnsToDict(res)
-                res = yield Db.get_slice(key=mid, column_family="messages")
-                msgs = utils.columnsToDict(res, ordered=True)
-                people = yield self._generatePeopleInConversation(msgs, myKey)
-                msgs.update({"people":people})
-                msgs.update({"flags":messageFlags[mid]})
-                args.update({"thread":msgs})
-                args.update({"fid":folderId})
-                yield renderScriptBlock(request, "message.mako", "messages_layout",
-                                        landing,
-                                        "#thread-%s" %(mid.replace(".", "\\.")\
-                                                       .replace("@", "\\@")),
-                                        "replace", **args)
+            if action in ["star", "unstar"]:
+                if script:
+                    mid = selected[0]
+                    args.update({"mid":mid})
+                    res = yield Db.get_slice(key=myKey, column_family="mUserMessages",
+                                                  names=[mid])
+                    messageFlags = utils.supercolumnsToDict(res)
+                    res = yield Db.get_slice(key=mid, column_family="messages")
+                    msgs = utils.columnsToDict(res, ordered=True)
+                    people = yield self._generatePeopleInConversation(msgs, myKey)
+                    msgs.update({"people":people})
+                    msgs.update({"flags":messageFlags[mid]})
+                    args.update({"thread":msgs})
+                    args.update({"fid":folderId})
+                    yield renderScriptBlock(request, "message.mako", "messages_layout",
+                                            landing,
+                                            "#thread-%s" %(mid.replace(".", "\\.")\
+                                                           .replace("@", "\\@")),
+                                            "replace", **args)
+                else:
+                    request.redirect("/messages?fid=%s" %folderId)
+                    request.finish()
             else:
                 request.redirect("/messages?fid=%s" %folderId)
                 request.finish()

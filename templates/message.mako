@@ -223,7 +223,8 @@
 <%def name="messages_layout(script, mid, thread, fid)">
   <div id="thread-${mid}" class="message-row ${'row-unread' if thread["flags"]["read"] == "0" else 'row-read'}">
     <div class="message-row-cell message-row-select">
-      <input type="checkbox" name="selected" value="${mid}"/>
+      <input type="checkbox" name="selected" value="${mid}"
+        onchange="$('.thread-selector').attr('checked', false)"/>
     </div>
     <div class="message-row-cell message-row-star">
       <a>
@@ -360,6 +361,13 @@
 <%def name="toolbar_layout(script, view, fid, message=None)">
   % if view == "messages":
     <div class="toolbar">
+      % if script:
+       <div class="thread-selector-wrapper button">
+        <input class="thread-selector" type="checkbox" name="select" value="all"
+               onchange="$('.message-row input[name=selected]').attr('checked', this.checked)"/>
+       </div>
+      % else:
+      % endif
       <input type="submit" name="delete" value="Delete" class="button "/>
       <input type="submit" name="archive" value="Archive" class="button "/>
     </div>
@@ -465,11 +473,11 @@
 <%def name="render_message_headline_star(action, mid, fid)">
   %if action == "star":
     <span class="message-headline-star ajax"  onclick="$.post('/ajax/messages/thread', 'fid=${fid}&action=unstar&message=${mid}', null, 'script')" href="#">
-      <span class="messaging-icon star-icon"> </span>
+      <span class="messaging-icon star-icon">&nbsp</span>
     </span>
   %else:
     <span class="message-headline-star ajax" onclick="$.post('/ajax/messages/thread', 'fid=${fid}&action=star&message=${mid}', null, 'script')" href="#">
-      <span class="messaging-icon star-empty-icon"> </span>
+      <span class="messaging-icon star-empty-icon">&nbsp</span>
     </span>
   %endif
 </%def>
