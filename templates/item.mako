@@ -383,7 +383,7 @@
     convType = conv["meta"]["type"]
     userId = conv["meta"]["owner"]
     normalize = utils.normalizeText
-    has_icon = "has-icon" if convType in ["question", 'link'] else ''
+    has_icon = "has-icon" if convType in ["question"] else ''
     itemTitleText = "item-title-text" if has_icon else ''
   %>
   %if not isQuoted:
@@ -406,6 +406,35 @@
 </%def>
 
 
+<%def name="render_link(convId, isQuoted=False)">
+  <%
+    conv = items[convId]
+    convType = conv["meta"]["type"]
+    userId = conv["meta"]["owner"]
+    normalize = utils.normalizeText
+    url = conv["meta"].get("url", "")
+    title = conv["meta"].get("title", '')
+    summary = conv["meta"].get("summary", '')
+    summary = summary[:210] + "..." if len(summary) >210 else summary
+    title = title if title else url
+  %>
+  %if not isQuoted:
+    ${utils.userName(userId, entities[userId], "conv-user-cause")}
+  %endif
+  <div class="item-title has-icon">
+
+
+    <span class="icon item-icon link-icon"></span>
+    <div class="item-title-text">
+      %if conv["meta"].has_key("comment"):
+        ${conv["meta"]["comment"]|normalize}
+      %endif
+      <a href=${url} class="link-url" ><div class="link-title" > ${_(title)} </div></a>
+      <div id="summary" class="link-summary"> ${_(summary)}</div>
+    </div>
+  </div>
+</%def>
+
 <%def name="render_activity(convId, isQuoted=False)">
   <%
     conv = items[convId]
@@ -419,9 +448,9 @@
     elif subtype == "following":
       activity = _("%s started following %s.") % (fmtUser(userId, entities[userId]), fmtUser(target, entities[target]))
     elif subtype == "groupJoin":
-      activity = _("%s joined the group: %s.") % (fmtUser(userId, entities[userId]), fmtGroup(target, entities[target]))
+      activity = _("%s joined %s.") % (fmtUser(userId, entities[userId]), fmtGroup(target, entities[target]))
     elif subtype == "groupLeave":
-      activity = _("%s left the group: %s.") % (fmtUser(userId, entities[userId]), fmtGroup(target, entities[target]))
+      activity = _("%s left %s.") % (fmtUser(userId, entities[userId]), fmtGroup(target, entities[target]))
   %>
   ${activity}
 </%def>
