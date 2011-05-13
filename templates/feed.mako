@@ -142,11 +142,13 @@
 
 <%def name="share_link()">
   <div class="input-wrap">
-    <textarea name="comment" placeholder="${_('http://')}"/>
+    <textarea name="url" placeholder="${_('http://')}"/>
+    </div>
+  <div class="input-wrap">
+    <textarea name="comment" placeholder="${_('Say something about the link')}"/>
   </div>
   <input type="hidden" name="type" value="link"/>
 </%def>
-
 
 <%def name="feed()">
   %for convId in conversations:

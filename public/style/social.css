@@ -897,3 +897,22 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .editing-tags .edit-tags-form {
     display: inline-block;
 }
+
+.link-summary {
+    font-size: 11px;
+    font-family: inherit;
+    color: grey;
+    padding-left: 2px;
+
+}
+.link-title {
+    padding-top: 10px;
+    padding-left: 2px;
+    padding-bottom: 2px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.link-url {
+    font-size: smaller;
+}
