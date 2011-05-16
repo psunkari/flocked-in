@@ -518,10 +518,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     background-position: 0 -352px;
 }
 .link-icon {
-    background-position: 0 -384px;
-}
-.status-icon {
-    background-position: 0 -400px;
+    background-position: 0 -368px;
 }
 
 #sharebar .input-wrap {
