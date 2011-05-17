@@ -414,23 +414,26 @@
     normalize = utils.normalizeText
     url = conv["meta"].get("url", "")
     title = conv["meta"].get("title", '')
+    imgsrc = conv['meta'].get('imgSrc', '')
     summary = conv["meta"].get("summary", '')
-    summary = summary[:210] + "..." if len(summary) >210 else summary
     title = title if title else url
+
   %>
   %if not isQuoted:
     ${utils.userName(userId, entities[userId], "conv-user-cause")}
   %endif
   <div class="item-title has-icon">
-
-
     <span class="icon item-icon link-icon"></span>
     <div class="item-title-text">
       %if conv["meta"].has_key("comment"):
         ${conv["meta"]["comment"]|normalize}
       %endif
+      <div class="link">
+      <img src='${imgsrc}' class="link-image"></img>
       <a href=${url} class="link-url" ><div class="link-title" > ${_(title)} </div></a>
       <div id="summary" class="link-summary"> ${_(summary)}</div>
+      </div>
+
     </div>
   </div>
 </%def>

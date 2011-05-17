@@ -894,6 +894,10 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .editing-tags .edit-tags-form {
     display: inline-block;
 }
+.link {
+    padding-top: 2px;
+    padding-bottom: 1px;
+}
 
 .link-summary {
     font-size: 11px;
@@ -903,7 +907,6 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 
 }
 .link-title {
-    padding-top: 10px;
     padding-left: 2px;
     padding-bottom: 2px;
     font-size: 11px;
@@ -912,4 +915,12 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 
 .link-url {
     font-size: smaller;
+}
+
+.link-image {
+    float:left;
+    padding-right: 3px;
+    padding-bottom: 3px;
+    max-height: 75px;
+    max-width: 75px;
 }

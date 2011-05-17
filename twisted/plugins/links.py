@@ -15,6 +15,7 @@ from social.isocial     import IItemType
 from social             import Db, base, utils, errors
 from social.logging     import profile, dump_args
 
+
 class Links(object):
     implements(IPlugin, IItemType)
     itemType = "link"
@@ -47,10 +48,13 @@ class Links(object):
         comment = utils.getRequestArg(request, "comment")
         url = utils.getRequestArg(request, "url")
 
-        if not comment:
+        if not url:
             raise errors.MissingParams()
 
-        title, summary = self._summary(url)
+        if not (url.startswith("http://") or url.startswith("https://")):
+            url = "http://" + url
+
+        summary, title, image =  self._summary(url)
 
         convId = utils.getUniqueKey()
         item = utils.createNewItem(request, self.itemType)
@@ -61,6 +65,8 @@ class Links(object):
             meta["summary"] = summary
         if title:
             meta["title"] = title
+        if image:
+            meta['imgSrc'] = image
         meta["url"] = url
 
         item["meta"].update(meta)
@@ -81,23 +87,50 @@ class Links(object):
         parser = etree.HTMLParser()
         summary = None
         title = None
+        ogTitle = None
+        ogSummary = None
+        ogImage = None
+        image = None
         try:
-            data = urllib2.urlopen(url).read()
+            foo = urllib2.urlopen(url)
+            data = foo.read()
             parser.feed(data)
             tree = parser.close()
-            title = tree.xpath("head/title")
-            title = title[0].text if len(title) else ''
+            titleElement = tree.xpath("head/title")
+            if titleElement:
+                title = titleElement[0].text
             meta = tree.xpath("//meta")
             for element in meta:
+                if element.attrib.get('property','') == 'og:title':
+                    ogTitle = element.attrib.get('content', '')
+                    ogTitle = ogTitle.encode('utf-8')
+                if element.attrib.get('property', '') == 'og:description':
+                    ogSummary = element.attrib.get('content', '')
+                    ogSummary = ogSummary.encode('utf-8')
+
+                if element.attrib.get('property', '') == 'og:image':
+                    ogImage = element.attrib.get('content', '')
+
                 if element.attrib.get('name', '') in ['description']:
                     summary = element.attrib.get('content', '')
-                    return (title, summary)
-            for element in tree.xpath("body//p"):
-                if element.text:
-                    return (title, summary)
-            return (title, summary)
-        except:
-            return (title, summary)
+                    summary = summary.encode('utf-8')
+
+            if ((ogSummary or summary) and (ogTitle or title) and (ogImage)):
+                return (ogSummary or summary, ogTitle or title,  ogImage)
+            if not ogSummary or summary:
+                for element in tree.xpath("body//p"):
+                    if element.text:
+                        summary = element.text
+                        break
+            if not ogImage:
+                for element in tree.xpath("body//img"):
+                    if 'src' in element.attrib:
+                        image = element.attrib['src']
+                        break
+            return (ogSummary or summary, ogTitle or title,  ogImage or image)
+        except Exception as e:
+            log.msg(e)
+            return(ogSummary or summary, ogTitle or title,  ogImage or image)
 
 
 links = Links()
