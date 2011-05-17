@@ -276,11 +276,11 @@ a:hover, a:active, a:focus {
 }
 
 .sidemenu a:hover, .sidemenu a:active, .sidemenu a:focus {
-    background-color: #F0F0FF;
+    background-color: #E8EEFA;
 }
 
 .sidemenu-selected {
-    background-color: #C4D7ED;
+    background-color: #C3D9FF !important;
     font-weight:bold;
 }
 
