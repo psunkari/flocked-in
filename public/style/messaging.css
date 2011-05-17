@@ -61,8 +61,6 @@
 }
 
 .message-headers {
-    padding:4px 10px 0px;
-    background-color:#F3F3F3;
 }
 
 .message-headers-people {
@@ -88,12 +86,11 @@
 
 .message-message {
     margin:0;
-    padding:10px;
     min-height:80px;
 }
 
 .message-composer {
-    background-color:#e0ecff;
+    background-color:#C3D9FF;
 }
 
 .message-composer-label {
@@ -134,16 +131,17 @@
 }
 
 .message-composer-field-body-quick {
-    width:50%;
+    width:99%;
     height:80px;
     font-size:11px;
-    padding-left:2px;
+    outline:none;
 }
 
 .message-composer-quick-actions {
     display:block;
     padding:4px 10px;
     background-color:transparent;
+    text-align:right;
 }
 
 .thread-selector-wrapper {

@@ -64,14 +64,17 @@
 
 
 <%def name="layout()">
-  <div class="contents has-left">
+  <div class="contents has-left has-right">
     <div id="left">
       <div id="nav-menu">
         ${self.nav_menu()}
       </div>
     </div>
     <div id="center-right">
-      <div id="right"></div>
+      <div id="right">
+        <div class="right-contents">
+        </div>
+      </div>
       <div id="center">
         <div class="center-contents" style="padding:0">
           ${self.center()}
@@ -101,7 +104,7 @@
                 estring = "<span>%s</span>" %(message["people"][emailId]["basic"]["name"])
             else:
                 continue
-        if emailId == message["people"]["self"]:
+        if emailId == message["myself"]:
             estring = "<span>%s</span>" %("Me")
 
         rStrings.append(estring)
@@ -128,7 +131,7 @@
         rStrings = []
         for each in recipients:
             emailId = email.utils.parseaddr(each)[1]
-            if not emailId == message["people"]["self"]:
+            if not emailId == message["myself"]:
                 rStrings.append("%s <%s>" %(message["people"][emailId]["basic"]["name"],
                                             emailId))
 
@@ -210,12 +213,12 @@
         fmt = "%I:%M%p"
         date = dt.strftime(fmt)
         return "Yesterday at %s" %date
-    elif rc.years < 0:
+    elif rc.years < 1:
         fmt = "%b %d, at %I:%M%p"
         date = dt.strftime(fmt)
         return "%s" %date
     else:
-      fmt = "%x at %X"
+      fmt = "%b %d, Y at %X"
       date = dt.strftime(fmt)
       return "%s" %date
 %>
@@ -258,8 +261,8 @@
         </span>
       % endif
     </div>
-    <div class="message-headers">
-      <span class="message-headers-people">
+    <div>
+      <div class="conv-avatar">
         <%
             emailId = email.utils.parseaddr(message["From"])[1]
             avatarURI = utils.userAvatar(message["people"][emailId]["uid"], message["people"][emailId]["basic"])
@@ -267,11 +270,25 @@
         %if avatarURI:
           <img src="${avatarURI}" height="48" width="48" style="display:inline-block"/>
         %endif
-        <span class="message-headers-people-list">${formatPeopleInConversation(message)}</span>
-      </span>
-      <span class="time-label message-headers-time">${message["date_epoch"]|timeElapsedSince}</span>
+      </div>
+      <div class="conv-data">
+        <div>
+          <div class="conv-summary">
+            <div class="message-headers">
+            <span class="user conv-user-cause">
+                <a href="/profile?id=${message["people"][emailId]["uid"]}" class="ajax">
+                    ${message["people"][emailId]["basic"]["name"]}
+                </a>
+            </span>
+            <span class="time-label message-headers-time">${message["date_epoch"]|timeElapsedSince}</span>
+            </div>
+            <div class="message-message">
+                ${message["body"] | newlinescape}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="message-message">${message["body"] | newlinescape}</div>
     <input type="hidden" name="message" value="${message["message-id"]}"/>
     <input type="hidden" name="_body" value="${formatBodyForReply(message, "")}"/>
 </%def>
@@ -358,7 +375,7 @@
   </div>
 </%def>
 
-<%def name="toolbar_layout(script, view, fid, message=None)">
+<%def name="toolbar_layout(script, view, fid, message=None, start=None, end=None)">
   % if view == "messages":
     <div class="toolbar">
       % if script:
@@ -370,6 +387,7 @@
       % endif
       <input type="submit" name="delete" value="Delete" class="button "/>
       <input type="submit" name="archive" value="Archive" class="button "/>
+      ${navigation_layout(script, view, fid, start, end)}
     </div>
   % elif view == "message":
     <div class="toolbar">
@@ -404,9 +422,9 @@
   % endif
 </%def>
 
-<%def name="navigation_layout(script, view, start, end, fid)">
+<%def name="navigation_layout(script, view, fid, start, end)">
   % if view == "messages":
-    <div style="display:table-row;float:right">
+    <div style="float:right;margin-top:6px">
       <ul class="h-links">
         % if start !=0:
           %if fid:
@@ -435,8 +453,7 @@
     %endfor
   %elif view == "messages":
     <form method="post" action="/messages">
-    ${toolbar_layout(script, view, fid)}
-    ${navigation_layout(script, view, start, end, fid)}
+    ${toolbar_layout(script, view, fid, None, start, end)}
     %for mid in mids:
       ${messages_layout(script, mid, messages[mid], fid)}
     %endfor
@@ -480,4 +497,37 @@
       <span class="messaging-icon star-empty-icon">&nbsp</span>
     </span>
   %endif
+</%def>
+
+<%def name="right()">
+    % if view == "message":
+    <h2>People in this conversation</h2>
+    <div style="display:table">
+        <div style="display:table-row">
+            % for person in message["people"].keys():
+                <%
+                    emailId = person
+                    avatarURI = utils.userAvatar(message["people"][emailId]["uid"],
+                                                 message["people"][emailId]["basic"], "s")
+                %>
+                %if avatarURI:
+                  <img src="${avatarURI}" height="32" width="32" style="display:inline-block"/>
+                %endif
+            % endfor
+        </div>
+        <div style="display:table-row">
+            % for person in message["people"].keys():
+                <a href='/profile?id=${message["people"][emailId]["uid"]}'>
+                  ${message["people"][person]["basic"]["name"]}
+                </a>
+            % endfor
+        </div>
+    </div>
+    <ul style="list-style-type:none">
+        <li>
+        </li>
+    </ul>
+    %else:
+        <span>${view}</span>
+    %endif
 </%def>

@@ -210,9 +210,10 @@ class MessagingResource(base.BaseResource):
                     messageFlags = utils.supercolumnsToDict(res)
                     res = yield Db.get_slice(key=mid, column_family="messages")
                     msgs = utils.columnsToDict(res, ordered=True)
-                    people = yield self._generatePeopleInConversation(msgs, myKey)
+                    people, myself = yield self._generatePeopleInConversation(msgs, myKey)
                     msgs.update({"people":people})
                     msgs.update({"flags":messageFlags[mid]})
+                    msgs.update({"myself":myself})
                     args.update({"thread":msgs})
                     args.update({"fid":folderId})
                     yield renderScriptBlock(request, "message.mako", "messages_layout",
@@ -443,8 +444,9 @@ class MessagingResource(base.BaseResource):
         res = yield Db.multiget_slice(keys=mids, column_family="messages")
         msgs = utils.multiColumnsToDict(res, ordered=True)
         for mid, msg in msgs.iteritems():
-            people = yield self._generatePeopleInConversation(msg, myKey)
+            people, myself = yield self._generatePeopleInConversation(msg, myKey)
             msg.update({"people":people, "tid": tids[mids.index(mid)]})
+            msg.update({"myself":myself})
             msg.update({"flags":messageFlags[mid]})
         args.update({"messages":msgs})
         args.update({"mids":mids})
@@ -458,7 +460,8 @@ class MessagingResource(base.BaseResource):
                      $('#ufmenu').children().each(function(index) {
                          $(this).removeClass('sidemenu-selected')
                      });
-                     $('li#%s').addClass('sidemenu-selected')
+                     $('li#%s').addClass('sidemenu-selected');
+                     $('#mainbar .contents').removeClass("has-right");
                      """ % folderId
             yield renderScriptBlock(request, "message.mako", "center",
                                     landing, ".center-contents", "set", True,
@@ -524,13 +527,17 @@ class MessagingResource(base.BaseResource):
                                          column_family="mUserMessages",
                                          names=[thread])
                 flags = utils.supercolumnsToDict(res)[thread]
-                people = yield self._generatePeopleInConversation(msgs, myKey)
+                people, myself = yield self._generatePeopleInConversation(msgs, myKey)
                 msgs.update({"people":people})
+                msgs.update({"myself":myself})
                 args.update({"message":msgs})
                 args.update({"id":thread})
                 args.update({"flags":flags})
                 args.update({"view":"message"})
                 if script:
+                    yield renderScriptBlock(request, "message.mako", "right",
+                                            landing, ".right-contents", "set", **args)
+
                     yield renderScriptBlock(request, "message.mako", "center",
                                             landing, ".center-contents", "set", **args)
                 else:
@@ -686,14 +693,14 @@ class MessagingResource(base.BaseResource):
         uids = uid_people.keys()
         res = yield Db.multiget_slice(uids, 'entities', ["basic"])
         res = utils.multiSuperColumnsToDict(res)
-        people = {}
+        people, myself = {}, ""
         for uid in res.keys():
             pemail = uid_people[uid]
             people[pemail] = res[uid]
             people[pemail]["uid"] = uid
             if uid == myKey:
-                people["self"] = pemail
-        defer.returnValue(people)
+                myself = pemail
+        defer.returnValue((people, myself))
 
     @defer.inlineCallbacks
     def _checkStandardFolders(self, request, userId):
