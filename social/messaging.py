@@ -63,6 +63,8 @@ class MessagingResource(base.BaseResource):
             if deliver:
                 yield Db.insert(recipient, 'mUnreadConversations',  val, timeUUID)
                 yield Db.insert(recipient, 'mAllConversations',  val, timeUUID)
+                yield Db.insert(convId, "mConvFolders", '', 'mAllConversations', recipient)
+                yield Db.insert(convId, "mConvFolders", '', 'mUnreadConversations', recipient)
 
 
     def _createDateHeader(self):
@@ -99,8 +101,10 @@ class MessagingResource(base.BaseResource):
                  "body": body,
                  "uuid": timeUUID
                 }
+        people = set(recipients + [myId])
+        log.msg("people", people)
         yield Db.batch_insert(messageId, "messages", {'meta':meta})
-        yield self._deliverMessage(convId, recipients +[myId], timeUUID)
+        yield self._deliverMessage(convId, people, timeUUID)
 
 
     @defer.inlineCallbacks
