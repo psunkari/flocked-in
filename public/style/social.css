@@ -531,16 +531,6 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 #sharebar-submit {
     margin-left: 6px;
-    height:auto;
-}
-
-#sharebar-acl-label {
-    height: auto;
-    padding: 0;
-}
-
-#sharebar-acl-label span {
-    padding: 0 6px;
 }
 
 .acl-menu {
