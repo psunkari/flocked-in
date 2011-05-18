@@ -20,7 +20,7 @@ from social.fts             import FTSResource
 from social.tags            import TagsResource
 from social.auto            import AutoCompleteResource
 
-from social.messaging_new   import MessagingResource
+from social.messaging       import MessagingResource
 from social.admin           import Admin
 
 def getPluggedResources(ajax=False):

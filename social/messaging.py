@@ -10,6 +10,7 @@ from twisted.python     import log
 from twisted.web        import server
 
 from social             import Db, utils, base
+from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
 
@@ -48,18 +49,18 @@ class MessagingResource(base.BaseResource):
         val = "u:%s"%(convId)
 
         for recipient in recipients:
+            deliver = True
             cols = yield Db.get_slice(convId, 'mConvFolders', recipient)
+            cols = utils.supercolumnsToDict(cols)
             if oldTimeUUID:
-                folder = cols.column.value
-                if folder == 'delete':
-                    #don't add to recipient's inbox if the conv is deleted.
-                    pass
-                else:
-                    yield Db.remove(recipient, folders[folder], oldTimeUUID)
-                    yield Db.remove(recipient, folders['unread'], oldTimeUUID)
-                    yield Db.insert(recipient, 'mAllConversations',  val, timeUUID)
-                    yield Db.insert(recipient, 'mUnreadConversations',  val, timeUUID)
-            else:
+                for folder in cols[convId]:
+                    if folder == 'delete':
+                        #don't add to recipient's inbox if the conv is deleted.
+                        deliver = False
+                    else:
+                        cf = folders[folder] if folder else folder
+                        yield Db.remove(recipient, cf, oldTimeUUID)
+            if deliver:
                 yield Db.insert(recipient, 'mUnreadConversations',  val, timeUUID)
                 yield Db.insert(recipient, 'mAllConversations',  val, timeUUID)
 
@@ -137,12 +138,10 @@ class MessagingResource(base.BaseResource):
         for mid in messages:
             acl = pickle.loads(messages[mid]['meta']['acl'])
             users.update(acl['accept']['users'])
+            users.add(messages[mid]['meta']['owner'])
             messages[mid]['meta']['people'] = acl['accept']['users']
             messages[mid]['meta']['read'] = str(int(mid not in unread))
             m[mid]=messages[mid]['meta']
-
-        users.add(myKey)
-
 
         users = yield Db.multiget_slice(users, 'entities', ['basic'])
         users = utils.multiSuperColumnsToDict(users)
@@ -210,7 +209,8 @@ class MessagingResource(base.BaseResource):
                 folder = cols.column.value
                 yield Db.insert(myId, folders[folder], "r:%s"%(convId), timeUUID)
 
-            if not utils.checkAcl(myId, meta['acl'], meta['owner'], None):
+            relation = Relation(myId, [])
+            if not utils.checkAcl(myId, meta['acl'], meta['owner'], relation):
                 errors.AccessDenied()
 
             acl = pickle.loads(meta['acl'])

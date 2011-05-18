@@ -222,7 +222,7 @@ def createColumnFamilies(client):
     mDeleted = CfDef(KEYSPACE, "mDeletedConversations", "Standard", "TimeUUIDType", None,
                         "list of converstions marked for deletion")
 
-    mConvFolders = CfDef(KEYSPACE, "mConvFolders", "Standard", "UTF8Type", None,
+    mConvFolders = CfDef(KEYSPACE, "mConvFolders", "Super", "UTF8Type", "UTF8Type",
                         "list of converstions marked for deletion")
     yield client.system_add_column_family(mAllConvs)
     yield client.system_add_column_family(mUnread)
