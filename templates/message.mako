@@ -92,7 +92,6 @@
 
 <%!
   def formatPeopleInConversation(message, people, short=False):
-    print people.keys()
     recipients = message["people"]
     #senderEmailId = email.utils.parseaddr(message["owner"])[1]
     senderEmailId = message["owner"]
@@ -144,9 +143,9 @@
 
 <%!
     def formatBodyForReply(message, reply):
-      body = message['body']
-      sender = message['From']
-      date = message['Date']
+      body = message["meta"].get('body', '')
+      sender = message["meta"]['owner']
+      date = message["meta"]['Date']
       quoted_reply = "\n".join([">%s" %x for x in body.split('\n')]+['>'])
       prequotestring = "%s wrote" %(sender)
       new_reply = "\r\n\r\n\r\n%s\r\n\r\n%s\r\n%s" %(reply, prequotestring, quoted_reply)
@@ -248,22 +247,14 @@
 
 <%def name="message_layout(mid, message, flags, fid)">
     <div class="message-headline">
-      <h2 class="message-headline-subject">${message["Subject"]|h}</h2>
-      % if flags["star"] == "0":
-        <span class="message-headline-star ajax" onclick="$.post('/ajax/messages/thread', 'fid=${fid}&action=star&message=${mid}', null, 'script')" href="#">
-          <span class="messaging-icon star-empty-icon"> </span>
-        </span>
-      %else:
-        <span class="message-headline-star ajax"  onclick="$.post('/ajax/messages/thread', 'fid=${fid}&action=unstar&message=${mid}', null, 'script')" href="#">
-          <span class="messaging-icon star-icon"> </span>
-        </span>
-      % endif
+      <h2 class="message-headline-subject">${message["meta"]["subject"]|h}</h2>
     </div>
     <div>
       <div class="conv-avatar">
         <%
-            emailId = email.utils.parseaddr(message["From"])[1]
-            avatarURI = utils.userAvatar(message["people"][emailId]["uid"], message["people"][emailId]["basic"])
+            emailId = message["meta"]["owner"]
+            avatarURI = None
+            avatarURI = utils.userAvatar(emailId, people[emailId]["basic"])
         %>
         %if avatarURI:
           <img src="${avatarURI}" height="48" width="48" style="display:inline-block"/>
@@ -274,20 +265,20 @@
           <div class="conv-summary">
             <div class="message-headers">
             <span class="user conv-user-cause">
-                <a href="/profile?id=${message["people"][emailId]["uid"]}" class="ajax">
-                    ${message["people"][emailId]["basic"]["name"]}
+                <a href="/profile?id=${emailId}" class="ajax">
+                    ${people[emailId]["basic"]["name"]}
                 </a>
             </span>
-            <span class="time-label message-headers-time">${message["date_epoch"]|timeElapsedSince}</span>
+            <span class="time-label message-headers-time">${message["meta"]["date_epoch"]|timeElapsedSince}</span>
             </div>
             <div class="message-message">
-                ${message["body"] | newlinescape}
+                ${message["meta"].get("body", '') | newlinescape}
             </div>
           </div>
         </div>
       </div>
     </div>
-    <input type="hidden" name="message" value="${message["message-id"]}"/>
+    <input type="hidden" name="message" value="${mid}"/>
     <input type="hidden" name="_body" value="${formatBodyForReply(message, "")}"/>
 </%def>
 
@@ -363,9 +354,8 @@
     </div>
     <div class="message-composer-field-body-wrapper">
         <textarea class="message-composer-field-body-quick" name="body" placeholder="Quickly reply to this message"></textarea>
-        <input type="hidden" value="${msg["message-id"]}" name="parent"/>
-        <input type="hidden" value="${formatSubjectForReply(msg['Subject'])}" name="subject"/>
-        <input type="hidden" value="${formatRecipientList(msg)}" name="recipients"/>
+        <input type="hidden" value="test" name="parent"/>
+        <input type="hidden" value="${formatSubjectForReply(msg["meta"]['subject'])}" name="subject"/>
     </div>
     <div class="message-composer-field">
       <input type="submit" name="send" value="${_('Reply')}" class="button ">

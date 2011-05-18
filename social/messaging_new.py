@@ -1,5 +1,8 @@
 import uuid
 import pickle
+import re
+import pytz, time, datetime
+
 
 
 from twisted.internet   import defer
@@ -10,11 +13,17 @@ from social             import Db, utils, base
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
 
+folders = {'inbox':'mAllConversations',
+               'archive':'mArchivedConversations',
+               'delete':'mDeletedConversations',
+               'unread':'mUnreadConversations'}
 
 
 class MessagingResource(base.BaseResource):
 
     isLeaf = True
+
+
     def _parseComposerArgs(self, request):
         #Since we will deal with composer related forms. Take care of santizing
         # all the input and fill with safe defaults wherever needed.
@@ -30,11 +39,6 @@ class MessagingResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _deliverMessage(self, convId, recipients, timeUUID):
-
-        folders = {'inbox':'mAllConversations',
-                   'archive':'mArchivedConversations',
-                   'delete':'mDeletedConversations',
-                   'unread':'mUnreadConversations'}
 
         oldTimeUUID = None
         cols = yield Db.get_slice(convId, "messages", ["meta"])
@@ -60,7 +64,13 @@ class MessagingResource(base.BaseResource):
                 yield Db.insert(recipient, 'mAllConversations',  val, timeUUID)
 
 
-
+    def _createDateHeader(self):
+        tz = pytz.timezone("Asia/Kolkata")
+        dt = tz.localize(datetime.datetime.now())
+        fmt_2822 = "%a, %d %b %Y %H:%M:%S %Z%z"
+        date = dt.strftime(fmt_2822)
+        epoch = time.mktime(dt.timetuple())
+        return date, epoch
 
 
     @defer.inlineCallbacks
@@ -85,6 +95,7 @@ class MessagingResource(base.BaseResource):
                  'Date':dateHeader,
                  'date_epoch': str(epoch),
                  "subject": subject,
+                 "body": body,
                  "uuid": timeUUID
                 }
         yield Db.batch_insert(messageId, "messages", {'meta':meta})
@@ -109,9 +120,6 @@ class MessagingResource(base.BaseResource):
         if appchange and script:
             yield renderScriptBlock(request, "message.mako", "layout",
                                     landing, "#mainbar", "set", **args)
-
-
-
 
         unread = []
         convs = []
@@ -156,10 +164,6 @@ class MessagingResource(base.BaseResource):
 
 
     @defer.inlineCallbacks
-    def _renderConversation(self, request):
-        request.redirect('/messages')
-
-    @defer.inlineCallbacks
     def _reply(self, request):
         pass
 
@@ -180,22 +184,62 @@ class MessagingResource(base.BaseResource):
         request.redirect('/messages')
 
     @defer.inlineCallbacks
+    def _renderConversation(self, request):
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        landing = not self._ajax
+        convId = utils.getRequestArg(request, 'id')
+
+        if script and landing:
+            yield render(request, "message.mako", **args)
+
+
+        if appchange and script:
+            renderScriptBlock(request, "message.mako", "layout",
+                              landing, "#mainbar", "set", **args)
+
+        if convId:
+            cols = yield Db.get_slice(convId, "messages", ['meta'])
+            conv = utils.supercolumnsToDict(cols)
+            meta = conv['meta']
+
+            timeUUID = conv['meta']['uuid']
+            yield Db.remove(myId, "mUnreadConversations", timeUUID)
+            cols = yield Db.get_slice(myId, "mConvFolders", convId)
+            #FIX: make sure that there will be an entry of convId in mConvFolders
+            if cols:
+                folder = cols.column.value
+                yield Db.insert(myId, folders[folder], "r:%s"%(convId), timeUUID)
+
+            if not utils.checkAcl(myId, meta['acl'], meta['owner'], None):
+                errors.AccessDenied()
+
+            acl = pickle.loads(meta['acl'])
+            recipients = set(acl['accept']['users'] + [myId, meta['owner']])
+            people = yield Db.multiget_slice(recipients, "entities", ['basic'])
+            people = utils.multiSuperColumnsToDict(people)
+
+            args.update({"people":people})
+            args.update({"message":conv})
+            args.update({"id":convId})
+            args.update({"fid":None})
+            args.update({"flags":{}})
+            args.update({"view":"message"})
+            if script:
+                yield renderScriptBlock(request, "message.mako", "center",
+                                        landing, ".center-contents", "set", **args)
+            else:
+                yield render(request, "message.mako", **args)
+
+
+
+
+    @defer.inlineCallbacks
     def _renderComposer(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
         parent = utils.getRequestArg(request, "parent")
         action = utils.getRequestArg(request, "action") or "reply"
         folderId = utils.getRequestArg(request, "fid") or None
-
-        folders = yield self._getFolders(myKey)
-        if folderId is None:
-            #Find the Inbox of this user and set it.
-            folderId = self._getSpecialFolder(myKey, folders)
-        else:
-            # Make sure user has access to the folder
-            res = yield self._checkUserFolderACL(myKey, folderId)
-            if not res:
-                request.redirect("/messages")
 
         args["folders"] = folders
         args.update({"fid":folderId})
@@ -208,7 +252,7 @@ class MessagingResource(base.BaseResource):
                                     landing, "#mainbar", "set", **args)
 
         if parent:
-            hasAccess = yield self._checkUserHasMessageAccess(myKey, parent)
+            hasAccess = True
             if not hasAccess:
                 raise Unauthorized
 
@@ -238,8 +282,6 @@ class MessagingResource(base.BaseResource):
 
 
 
-
-
     def render_GET(self, request):
         segmentCount = len(request.postpath)
         d = None
@@ -258,7 +300,6 @@ class MessagingResource(base.BaseResource):
     def render_POST(self, request):
         segmentCount = len(request.postpath)
         d = None
-
         if segmentCount == 0:
             d = self._moveConversation(request)
         elif segmentCount == 1 and request.postpath[0] == "write":
