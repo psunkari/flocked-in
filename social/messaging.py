@@ -15,9 +15,9 @@ from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
 
 folders = {'inbox':'mAllConversations',
-               'archive':'mArchivedConversations',
-               'delete':'mDeletedConversations',
-               'unread':'mUnreadConversations'}
+           'archive':'mArchivedConversations',
+           'delete':'mDeletedConversations',
+           'unread':'mUnreadConversations'}
 
 
 class MessagingResource(base.BaseResource):
@@ -42,9 +42,10 @@ class MessagingResource(base.BaseResource):
     def _deliverMessage(self, convId, recipients, timeUUID):
 
         oldTimeUUID = None
-        cols = yield Db.get_slice(convId, "messages", ["meta"])
-        cols = utils.supercolumnsToDict(cols)
-        oldTimeUUID = cols['meta'].get('uuid', None)
+        cols = yield Db.get_slice(convId, "mConversations", ['uuid'])
+        cols = utils.columnsToDict(cols)
+
+        oldTimeUUID = cols.get('uuid', None)
         oldTimeUUID = None if timeUUID == oldTimeUUID else oldTimeUUID
         val = "u:%s"%(convId)
 
@@ -67,8 +68,9 @@ class MessagingResource(base.BaseResource):
                 yield Db.insert(convId, "mConvFolders", '', 'mUnreadConversations', recipient)
 
 
-    def _createDateHeader(self):
-        tz = pytz.timezone("Asia/Kolkata")
+    def _createDateHeader(self, timezone='Asia/Kolkata'):
+        #FIX: get the timezone from userInfo
+        tz = pytz.timezone(timezone)
         dt = tz.localize(datetime.datetime.now())
         fmt_2822 = "%a, %d %b %Y %H:%M:%S %Z%z"
         date = dt.strftime(fmt_2822)
@@ -79,33 +81,48 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     def _createConveration(self, request):
 
-        authInfo = request.getSession(IAuthInfo)
-        myId = authInfo.username
+        myId = request.getSession(IAuthInfo).username
+
         recipients, body, subject, parent = self._parseComposerArgs(request)
         dateHeader, epoch = self._createDateHeader()
+
         messageId = utils.getUniqueKey()
-        convId = messageId if not parent else parent
+        convId = utils.getUniqueKey() if not parent else parent
+
         cols = yield Db.multiget_slice(recipients, "entities", ['basic'])
         recipients = utils.multiSuperColumnsToDict(cols)
         recipients = [userId for userId in recipients if recipients[userId]]
-        if not recipients:
+
+        if not parent and not recipients:
             raise errors.MissingParams()
-        acl = pickle.dumps({'accept':{'users':recipients}})
+
+        if parent:
+            cols = yield Db.get_slice(parent, "mConversations", ['acl'])
+            recipients = pickle.loads(cols.column.value)['accept']['users']
+
         timeUUID = uuid.uuid1().bytes
-        meta = { "acl": acl,
-                 "owner": myId,
+        if not parent:
+            acl = pickle.dumps({'accept':{'users':recipients}})
+            conv_meta = {"acl": acl,
+                         "owner":myId,
+                         "timestamp": str(int(time.time())),
+                         "uuid": timeUUID,
+                         "subject": subject}
+            yield Db.batch_insert(convId, "mConversations", conv_meta)
+
+        meta = { "owner": myId,
                  "timestamp": str(int(time.time())),
                  'Date':dateHeader,
                  'date_epoch': str(epoch),
-                 "subject": subject,
                  "body": body,
                  "uuid": timeUUID
                 }
         people = set(recipients + [myId])
-        log.msg("people", people)
         yield Db.batch_insert(messageId, "messages", {'meta':meta})
         yield self._deliverMessage(convId, people, timeUUID)
-
+        if parent:
+            yield Db.insert(convId, "mConvMessages", messageId, timeUUID)
+            yield Db.insert(convId, "messages", timeUUID, "uuid", "meta")
 
     @defer.inlineCallbacks
     def _composeMessage(self, request):
@@ -169,6 +186,7 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     def _reply(self, request):
         pass
+
 
     @defer.inlineCallbacks
     def _addMembers(self, request):
