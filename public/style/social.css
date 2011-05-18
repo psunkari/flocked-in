@@ -276,11 +276,11 @@ a:hover, a:active, a:focus {
 }
 
 .sidemenu a:hover, .sidemenu a:active, .sidemenu a:focus {
-    background-color: #F0F0FF;
+    background-color: #E8EEFA;
 }
 
 .sidemenu-selected {
-    background-color: #C4D7ED;
+    background-color: #C3D9FF !important;
     font-weight:bold;
 }
 
@@ -531,16 +531,6 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 #sharebar-submit {
     margin-left: 6px;
-    height:auto;
-}
-
-#sharebar-acl-label {
-    height: auto;
-    padding: 0;
-}
-
-#sharebar-acl-label span {
-    padding: 0 6px;
 }
 
 .acl-menu {
