@@ -407,37 +407,36 @@
   <form action="/profile/edit" method="post"  enctype="multipart/form-data">
     <div class="edit-profile">
       <ul>
-        <li><label for="name"> Display Name: </label></li>
-        <li><input type="text" id="name" name="name" value= "${name}" /></li>
-      </ul>
-      <ul>
-        <li><label for="firstname"> First Name: </label></li>
-        <li><input type="text" id="firstname" name="firstname" value= "${firstname}" /></li>
-      </ul>
-      <ul>
-        <li><label for="lastname"> Last Name: </label></li>
-        <li><input type="text" id="lastname" name="lastname" value= "${lastname}" /></li>
-      </ul>
-      <ul>
-        <li><label for="jobTitle"> Job Title: </label></li>
-        <li><input type="text" id="jobTitle" name="jobTitle" value="${jobTitle}" /></li>
-      </ul>
-      <ul>
-        <li><label for="dp"> Photo </label> </li>
-        <li><input type="file" id="dp" name="dp" accept="image/jpx, image/png, image/gif" />
-      </ul>
-      <ul>
+        <li>
+            <label for="name"> Display Name: </label>
+            <input type="text" id="displayname" name="name" value= "${name}" />
+        </li>
+        <li>
+            <label for="firstname"> First Name: </label>
+            <input type="text" id="firstname" name="firstname" value= "${firstname}" />
+        </li>
+        <li>
+            <label for="lastname"> Last Name: </label>
+            <input type="text" id="lastname" name="lastname" value= "${lastname}" />
+        </li>
+        <li>
+            <label for="jobTitle"> Job Title: </label>
+            <input type="text" id="jobTitle" name="jobTitle" value="${jobTitle}" />
+        </li>
+        <li>
+            <label for="dp"> Photo </label>
+            <input type="file" id="dp" name="dp" accept="image/jpx, image/png, image/gif" />
+        </li>
         % if emailId and emailId[0]:
-        <li><input type="hidden" value = ${emailId[0]} name="emailId" /></li>
+        <input type="hidden" value = ${emailId[0]} name="emailId" />
         %endif
         % if myKey:
-        <li><input type="hidden" value = ${myKey} name="id" /></li>
+        <input type="hidden" value = ${myKey} name="id" />
         %endif
       </ul>
-      <ul>
-        <li></li>
-        <li><input type="submit" name="userInfo_submit" value="Save"/> </li>
-      </ul>
+    </div>
+    <div class="profile-save-wrapper">
+        <input type="submit" class="button default" name="userInfo_submit" value="Save"/>
     </div>
   </form>
 </%def>
@@ -451,24 +450,24 @@
 <form action="/profile/changePasswd" method="post"  enctype="multipart/form-data">
   <div class="edit-profile">
     <ul>
-      <li><label for="curr_passwd"> Current Password: </label></li>
-      <li><input type="password" name="curr_passwd" id="curr_passwd"/></li>
-    </ul>
-    <ul>
-      <li><label for="passwd1"> Password: </label></li>
-      <li><input type="password" name="passwd1" id="passwd1"/></li>
-    </ul>
-    <ul>
-      <li><label for="passwd2"> Confirm Password: </label></li>
-      <li><input type="password" name="passwd2" id="passwd2"/></li>
-    </ul>
-    <ul>
-        <li></li>
-        <li><input type="submit" name="userInfo_submit" value="Save"/> </li>
+      <li>
+        <label for="curr_passwd"> Current Password: </label>
+        <input type="password" name="curr_passwd" id="curr_passwd"/>
+      </li>
+      <li>
+        <label for="passwd1"> Password: </label>
+        <input type="password" name="passwd1" id="passwd1"/>
+      </li>
+      <li>
+        <label for="passwd2"> Confirm Password: </label>
+        <input type="password" name="passwd2" id="passwd2"/>
+      </li>
     </ul>
     <input type="hidden" id = 'dt' name="dt" value="passwd"/>
   </div>
-
+    <div class="profile-save-wrapper">
+        <input type="submit" class="button default" name="userInfo_submit" value="Save"/>
+    </div>
 </form>
 </%def>
 
@@ -477,113 +476,132 @@
 <form action="/profile/edit" method="post"  enctype="multipart/form-data">
     <div class="edit-profile">
       <div id="personal">
-        <h3> Personal </h3>
-        <ul>
-          <li> <label for ="bday"> DOB: </label></li>
-          <li> ${self.selectDay("dob_day")} </li>
-          <li> ${self.selectMonth("dob_mon")} </li>
-          <li> ${self.selectYear("dob_year")} </li>
-        </ul>
-        <ul>
-          <li><label for="p_email"> Email: </label> </li>
-          <li><input type ="text" id= "p_email" name = "p_email"/> </li>
-        </ul>
-        <ul>
-          <li><label for="p_phone"> Phone: </label> </li>
-          <li><input type ="text" id= "p_phone" name = "p_phone"/> </li>
-        </ul>
-        <ul>
-          <li><label for="p_mobile"> Mobile: </label> </li>
-          <li><input type ="text" id= "p_mobile" name = "p_mobile"/> </li>
-        </ul>
-        <ul>
-          <li><label for="hometown"> Hometown: </label> </li>
-          <li><input type ="text" id= "hometown" name = "hometown"/> </li>
-        </ul>
-        <ul>
-          <li><label for="currentCity"> Current City: </label> </li>
-          <li><input type ="text" id= "currentCity" name = "currentCity"/> </li>
-        </ul>
+        <fieldset>
+        <legend>Personal:</legend>
+            <ul>
+              <li>
+                <label for ="bday"> DOB: </label>
+                ${self.selectDay("dob_day")}
+                ${self.selectMonth("dob_mon")}
+                ${self.selectYear("dob_year")}
+              </li>
+              <li>
+                <label for="p_email"> Email: </label>
+                <input type ="text" id= "p_email" name = "p_email"/>
+              </li>
+              <li>
+                <label for="p_phone"> Phone: </label>
+                <input type ="text" id= "p_phone" name = "p_phone"/>
+              </li>
+              <li>
+                <label for="p_mobile"> Mobile: </label>
+                <input type ="text" id= "p_mobile" name = "p_mobile"/>
+              </li>
+              <li>
+                <label for="hometown"> Hometown: </label>
+                <input type ="text" id= "hometown" name = "hometown"/>
+              </li>
+              <li>
+                <label for="currentCity"> Current City: </label>
+                <input type ="text" id= "currentCity" name = "currentCity"/>
+              </li>
+            </ul>
+        </fieldset>
       </div>
       <div id="contacts">
-        <h3> Contacts </h3>
-        <ul>
-            <li> <label for="email"> Email: </label> </li>
-            <li> <input type ="text" id= "c_email" name = "c_email"/> </li>
-        </ul>
-        <ul>
-            <li> <label for="im"> IM: </label> </li>
-            <li> <input type ="text" id= "c_im" name = "c_im"/> </li>
-        </ul>
-        <ul>
-            <li> <label for="phone">Work Phone: </label> </li>
-            <li> <input type ="text" id= "c_phone" name = "c_phone"/> </li>
-        </ul>
-        <ul>
-            <li> <label for="c_mobile">Mobile: </label> </li>
-            <li> <input type ="text" id= "c_mobile" name = "c_mobile"/> </li>
-        </ul>
+        <fieldset>
+        <legend>Contacts:</legend>
+            <ul>
+                <li>
+                    <label for="email"> Email: </label>
+                    <input type ="text" id= "c_email" name = "c_email"/>
+                </li>
+            </ul>
+            <ul>
+                <li>
+                    <label for="im"> IM: </label>
+                    <input type ="text" id= "c_im" name = "c_im"/>
+                </li>
+                <li>
+                    <label for="phone">Work Phone: </label>
+                    <input type ="text" id= "c_phone" name = "c_phone"/>
+                </li>
+                <li>
+                    <label for="c_mobile">Mobile: </label>
+                    <input type ="text" id= "c_mobile" name = "c_mobile"/>
+                </li>
+            </ul>
+        </fieldset>
       </div>
       <div id="workNedu">
-        <h3> Work & Education </h3>
-        <div id="work">
-          <div>
-            <ul>
-              <li> <label for="employer"> Employer: </label> </li>
-              <li> <input type ="text" id= "employer" name = "employer"/> </li>
-            </ul>
-            <ul>
-              <li> <label for="emp_title"> Title: </label> </li>
-              <li> <input type ="text" id= "emp_title" name = "emp_title"/> </li>
-            </ul>
-            <ul>
-              <li> <label for="emp_desc"> Description: </label> </li>
-              <li> <input type ="text" id= "emp_desc" name = "emp_desc"/> </li>
-            </ul>
-            <ul>
-              <li> <label for="emp_start"> Years: </label> </li>
-              <li> ${self.selectYear("emp_start", "Start year")}</li>
-              <li> ${self.selectYear("emp_end", "End year")}</li>
-            </ul>
-          </div>
+        <fieldset>
+        <legend>Work and Education:</legend>
+            <div id="work">
+              <div>
+                <ul>
+                  <li>
+                    <label for="employer"> Employer: </label>
+                    <input type ="text" id= "employer" name = "employer"/>
+                  </li>
+                </ul>
+                <ul>
+                  <li>
+                    <label for="emp_title"> Title: </label>
+                    <input type ="text" id= "emp_title" name = "emp_title"/>
+                  </li>
+                </ul>
+                <ul>
+                  <li>
+                    <label for="emp_desc"> Description: </label>
+                    <input type ="text" id= "emp_desc" name = "emp_desc"/>
+                  </li>
+                </ul>
+                <ul>
+                  <li>
+                    <label for="emp_start"> Years: </label>
+                    ${self.selectYear("emp_start", "Start year")}
+                    ${self.selectYear("emp_end", "End year")}
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div id="education">
+              <div>
+                <ul>
+                  <li>
+                    <label for="college"> College: </label>
+                    <input type ="text" id= "college" name = "college"/>
+                  </li>
+                </ul>
+                <ul>
+                  <li>
+                    <label for="degree"> Degree: </label>
+                    <input type ="text" id= "degree" name = "degree"/>
+                  </li>
+                </ul>
+                <ul>
+                  <li>
+                    <label for="edu_end"> Year of Completion: </label>
+                    ${self.selectYear("edu_end","year")}
+                  </li>
+                </ul>
+              </div>
         </div>
-        <div>
-          <ul><li></li></ul>
-        </div>
-        <div id="education">
-          <div>
-            <ul>
-              <li> <label for="college"> College: </label> </li>
-              <li> <input type ="text" id= "college" name = "college"/> </li>
-            </ul>
-            <ul>
-              <li> <label for="degree"> Degree: </label> </li>
-              <li> <input type ="text" id= "degree" name = "degree"/> </li>
-            </ul>
-            <ul>
-              <li> <label for="edu_end"> Year of Completion: </label> </li>
-              <li> ${self.selectYear("edu_end","year")}</li>
-
-            </ul>
-          </div>
-        </div>
+        </fieldset>
       </div>
       <ul>
         % if emailId and emailId[0]:
-        <li><input type="hidden" value = ${emailId[0]} name="emailId" /></li>
+        <input type="hidden" value = ${emailId[0]} name="emailId" />
         %endif
         % if myKey:
-        <li><input type="hidden" value = ${myKey} name="id" /></li>
+        <input type="hidden" value = ${myKey} name="id" />
         %endif
       </ul>
-      <ul>
-        <li></li>
-        <li><input type="submit" name="userInfo_submit" value="Save"/> </li>
-      </ul>
-
+    </div>
+    <div class="profile-save-wrapper">
+        <input type="submit" class="button default" name="userInfo_submit" value="Save"/>
     </div>
   </form>
-
 </%def>
 
 <%def name="selectMonth(name)">

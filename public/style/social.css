@@ -728,35 +728,61 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
  */
 
 .edit-profile{
-    padding: 10px;
-    width: 500px;
+    width: 100%;
     display: table;
 }
 
 .edit-profile ul {
     list-style-type: none;
     margin: 0px;
-    padding: 0px;
-
+    padding-left: 15px;
 }
+
 .edit-profile li {
-    width:85px;
-    height:25px;
-    display: inline-block;
-    color: black;
-    text-align: right;
-    font-weight: 400;
-
+    padding:5px 0px;
+    height:26px;
 }
-.edit-profile select {
-    background-color:#FFF;
 
+.edit-profile label {
+    float:left;
+    font-size:11px;
+    width:15em;
+    display:inline-block;
+    line-height:2;
+    padding:2px;
+    font-weight:700;
+}
+
+.edit-profile input {
+    width:20em;
+    font-size:12px;
+    background-color: white;
+    border: 1px solid #C3D9FF;
+    padding: 2px;
+}
+
+.edit-profile select {
+    background-color: white;
+    border: 1px solid #C3D9FF;
+    padding: 2px;
+}
+
+.edit-profile fieldset {
+    border: none
+}
+
+.edit-profile legend {
+    text-decoration:underline;
 }
 
 .edu {
     background-color:#FFF;
 }
 
+.profile-save-wrapper {
+    border-top: 1px solid #C3D9FF;
+    padding-top: 4px;
+}
 
 /*
  * List of users - friends and people in organization
