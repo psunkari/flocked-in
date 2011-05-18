@@ -492,7 +492,7 @@ class FeedResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _render(self, request, entityId=None):
-        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
         myOrgId = args["orgKey"]
 
@@ -500,6 +500,7 @@ class FeedResource(base.BaseResource):
             entity = yield Db.get_slice(entityId, "entities", ["basic", "admins"])
             entity = utils.supercolumnsToDict(entity)
             entityType = entity["basic"]['type']
+
             if entityType == "org":
                 if entityId != myOrgId:
                     errors.InvalidRequest()
@@ -513,6 +514,9 @@ class FeedResource(base.BaseResource):
         else:
             args["feedTitle"] = _("News Feed")
 
+        feedId = entityId or myId
+        args["feedId"] = feedId
+
         if script and landing:
             yield render(request, "feed.mako", **args)
         elif script and appchange:
@@ -523,38 +527,41 @@ class FeedResource(base.BaseResource):
                                     landing, "#title", "set", **args)
 
         start = utils.getRequestArg(request, "start") or ''
-        fromFetchMore = ((not landing) and (not appchange) and start)
 
-        if script and not fromFetchMore:
+        if script:
             yield renderScriptBlock(request, "feed.mako", "share_block",
                                     landing, "#share-block", "set", **args)
             yield self._renderShareBlock(request, "status")
 
-        if entityId:
-            feedItems = yield getFeedItems(request, feedId=entityId, start=start)
-        else:
-            feedItems = yield getFeedItems(request, start=start)
+        feedItems = yield getFeedItems(request, feedId=feedId, start=start)
         args.update(feedItems)
 
         if script:
             onload = "(function(obj){$$.convs.load(obj);})(this);"
-            if fromFetchMore:
-                yield renderScriptBlock(request, "feed.mako", "feed", landing,
-                                        "#next-load-wrapper", "replace", True,
-                                        handlers={"onload": onload}, **args)
-            else:
-                yield renderScriptBlock(request, "feed.mako", "feed", landing,
-                                        "#user-feed", "set", True,
-                                        handlers={"onload": onload}, **args)
+            yield renderScriptBlock(request, "feed.mako", "feed", landing,
+                                    "#user-feed", "set", True,
+                                    handlers={"onload": onload}, **args)
             yield renderScriptBlock(request, "feed.mako", "groupLinks",
                                     landing, "#group-links", "set",  **args)
-
 
         if script and landing:
             request.write("</body></html>")
 
         if not script:
             yield render(request, "feed.mako", **args)
+
+
+    # The client has scripts and this is an ajax request
+    @defer.inlineCallbacks
+    def _renderMore(self, request, start, entityId):
+        feedItems = yield getFeedItems(request, feedId=entityId, start=start)
+        args = feedItems
+        args["feedId"] = entityId
+
+        onload = "(function(obj){$$.convs.load(obj);})(this);"
+        yield renderScriptBlock(request, "feed.mako", "feed", False,
+                                "#next-load-wrapper", "replace", True,
+                                handlers={"onload": onload}, **args)
 
 
     @profile
@@ -566,7 +573,6 @@ class FeedResource(base.BaseResource):
             yield plugin.renderShareBlock(request, self._ajax)
 
 
-
     @profile
     @dump_args
     def render_GET(self, request):
@@ -576,6 +582,10 @@ class FeedResource(base.BaseResource):
         if segmentCount == 0:
             entityId = utils.getRequestArg(request, "id")
             d = self._render(request, entityId)
+        elif segmentCount == 1 and request.postpath[0] == "more":
+            entityId = utils.getRequestArg(request, "id")
+            start = utils.getRequestArg(request, "start") or ""
+            d = self._renderMore(request, start, entityId)
         elif segmentCount == 2 and request.postpath[0] == "share":
             if self._ajax:
                 d = self._renderShareBlock(request, request.postpath[1])

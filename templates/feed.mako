@@ -28,7 +28,6 @@
                 <input type="submit" id="submit" value="${_('Submit')}"/>
             </form>
         </div>
-
         <div id ="group-links" >
         </div>
       </div>
@@ -82,16 +81,14 @@
   <input type="hidden" id="${id}" name="acl" value="${defaultVal}"/>
   %if script:
     <div id="${id}-wrapper">
-      <button type="button" class="acl-button button" id="${id}-label" onclick="$$.acl.showACL(event, '${id}'); return False">
-        <span class="button-text">${defaultLabel}</span>
-      </button>
+      <button class="acl-button button" id="${id}-label" onclick="$$.acl.showACL(event, '${id}');">${defaultLabel}</button>
       <ul id="${id}-menu" class="acl-menu" style="display:none;">
-        <li><a class="acl-item" _acl="public"><div class="icon"></div>${_("Public")}</a></li>
+##      <li><a class="acl-item" _acl="public"><div class="icon"></div>${_("Public")}</a></li>
         <li><a class="acl-item" _acl="org:${orgKey}"><div class="icon"></div>${_("Company")}</a></li>
         <li><a class="acl-item" _acl="friends"><div class="icon"></div>${_("Friends")}</a></li>
-        <li class="ui-menu-separator" id="${id}-groups-sep"></li>
-        <li class="ui-menu-separator"></li>
-        <li><a class="acl-item" _acl="custom"><div class="icon"></div>${_("Custom")}</a></li>
+##      <li class="ui-menu-separator" id="${id}-groups-sep"></li>
+##      <li class="ui-menu-separator"></li>
+##      <li><a class="acl-item" _acl="custom"><div class="icon"></div>${_("Custom")}</a></li>
       </ul>
     </div>
   %endif
@@ -155,7 +152,7 @@
     ${item.item_layout(convId)}
   %endfor
   %if nextPageStart:
-    <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" _ref="/feed?start=${nextPageStart}">${_("Fetch older posts")}</a></div>
+    <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" href="/feed?start=${nextPageStart}&id=${feedId}" _ref="/feed/more?start=${nextPageStart}&id=${feedId}">${_("Fetch older posts")}</a></div>
   %else:
     <div id="next-load-wrapper">No more posts to show</div>
   %endif

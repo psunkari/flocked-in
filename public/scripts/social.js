@@ -392,7 +392,7 @@ var convs = {
 
     doneTags: function(convId) {
         $('#conv-tags-wrapper-'+convId).removeClass('editing-tags');
-        if ($('#conv-tags-'+convId).children().length == 0) 
+        if ($('#conv-tags-'+convId).children().length == 0)
             $('#conv-meta-wrapper-'+convId).addClass('no-tags');
     },
 
@@ -602,12 +602,13 @@ var acl = {
         acl.refreshGroups(id);
         $menu.show().position({
                 my: "right top",
-                at: "right top",
+                at: "right bottom",
                 of: $target
             }).focus();
 
         $(document).one("click", function() {$menu.hide();});
         evt.stopPropagation();
+        evt.preventDefault();
     },
 
     updateACL: function(id, ui) {
@@ -632,7 +633,7 @@ var acl = {
         }
 
         $("#"+id).attr("value", $$.json.stringify(aclObj));
-        $("#"+id+"-label").attr("value", ui.item.text());
+        $("#"+id+"-label").text(ui.item.text());
     },
 
     /* Update list of groups displayed in the menu */
