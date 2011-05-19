@@ -216,20 +216,20 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(messages)
 
     mConversations = CfDef(KEYSPACE, "mConversations", "Standard", "UTF8Type", None,
-                          "conversation info")
+                          "A collection of all conversations")
     mAllConvs = CfDef(KEYSPACE, "mAllConversations", "Standard", "TimeUUIDType", None,
-                     "list of all unread and read conversations")
+                     "list of all unread and read conversations of a user")
     mUnread = CfDef(KEYSPACE, "mUnreadConversations","Standard", "TimeUUIDType", None,
-                    "list of all unread conversations")
+                    "list of all unread conversations of a user")
     mArchived = CfDef(KEYSPACE, "mArchivedConversations", "Standard", "TimeUUIDType", None,
-                         "list of archived messages")
+                         "list of archived conversations of a user")
     mDeleted = CfDef(KEYSPACE, "mDeletedConversations", "Standard", "TimeUUIDType", None,
-                        "list of converstions marked for deletion")
+                        "list of converstions marked for deletion of a user")
     mConvMessages = CfDef(KEYSPACE, "mConvMessages", "Standard", "TimeUUIDType", None,
-                        "list of replies of a conversation")
-
+                        "list of all messages in a conversation")
     mConvFolders = CfDef(KEYSPACE, "mConvFolders", "Super", "UTF8Type", "UTF8Type",
-                        "list of converstions marked for deletion")
+                        "list of folders in which a converstions belongs per user")
+
     yield client.system_add_column_family(mConversations)
     yield client.system_add_column_family(mAllConvs)
     yield client.system_add_column_family(mUnread)
@@ -238,41 +238,6 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(mConvMessages)
     yield client.system_add_column_family(mConvFolders)
 
-
-
-    mUserMessages = CfDef(KEYSPACE, "mUserMessages", "Super", "UTF8Type",
-                              "UTF8Type",
-                              "A super collection of per user information about a message")
-    yield client.system_add_column_family(mUserMessages)
-
-    mFolderMessages = CfDef(KEYSPACE, "mFolderMessages", "Standard", "TimeUUIDType",
-                            None, "A collection of all messages in a user folder")
-    yield client.system_add_column_family(mFolderMessages)
-
-    #mFolderMessagesByStar
-    #mFolderMessagesByDate
-    #mFolderMessagesByUnread
-    #mUserConversations
-    mFolders = CfDef(KEYSPACE, "mFolders", "Super", "UTF8Type",
-                     "UTF8Type", "A collection of all folders in the system")
-    yield client.system_add_column_family(mFolders)
-
-    mInFolders = CfDef(KEYSPACE, "mInFolders", "Standard", "UTF8Type",
-                            None,
-                            "A collection of all folders that a message is \
-                            being referenced in")
-    yield client.system_add_column_family(mInFolders)
-
-    mUserFolders = CfDef(KEYSPACE, "mUserFolders", "Super", "UTF8Type",
-                            "UTF8Type", "A collection of all folders of a \
-                                          user and related information about \
-                                          each folder")
-    yield client.system_add_column_family(mUserFolders)
-
-    mConversationMessages = CfDef(KEYSPACE, "mConversationMessages", "Standard", "TimeUUIDType",
-                            None, "A collection of all messages belonging to a \
-                                    conversation.")
-    yield client.system_add_column_family(mConversationMessages)
     # Tags
     orgTags = CfDef(KEYSPACE, "orgTags", "Super", "BytesType", "UTF8Type",
                     "List of tags by organization")
@@ -754,13 +719,12 @@ def truncateColumnFamilies(client):
                'eventResponses', "userEventInvitations", "userEventResponse",
                'eventInvitations',"notifications", "notificationItems",
                "nameIndex", "displayNameIndex", "orgTags", "tagItems",
-               "tagFollowers", "orgTagsByName", "messages", "mUserMessages",
-               "mFolderMessages", "bannedUsers", "blockedUsers",
-               "mUserFolders", "mConversationMessages", "deletedConvs",
-               "mInFolders", "mFolders", "feed_question"]:
+               "tagFollowers", "orgTagsByName", "messages", "bannedUsers",
+               "blockedUsers", "deletedConvs", "feed_question",
+               "mConversations", "mAllConvs", "mUnread", "mArchived", "mDeleted",
+               "mConvMessages", "mConvFolders"]:
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
-
 
 if __name__ == '__main__':
     def usage():
