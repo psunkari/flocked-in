@@ -505,14 +505,17 @@ class FeedResource(base.BaseResource):
                 if entityId != myOrgId:
                     errors.InvalidRequest()
                 args["feedTitle"] = _("Company Feed: %s") % entity["basic"]["name"]
+                args["menuId"] = "org"
             elif entityType == "group":
                 args["feedTitle"] = _("Group Feed: %s") % entity["basic"]["name"]
                 args["groupAdmins"] = entity["admins"]
                 args["groupId"] = entityId
+                args["menuId"] = "groups"
             else:
                 errors.InvalidRequest()
         else:
             args["feedTitle"] = _("News Feed")
+            args["menuId"] = "feed"
 
         feedId = entityId or myId
         args["feedId"] = feedId
@@ -524,7 +527,8 @@ class FeedResource(base.BaseResource):
                                     landing, "#mainbar", "set", **args)
         elif script and "feedTitle" in args:
             yield renderScriptBlock(request, "feed.mako", "feed_title",
-                                    landing, "#title", "set", **args)
+                                    landing, "#title", "set", True,
+                                    handlers={"onload": "$$.menu.selectItem('%s')"%args["menuId"]}, **args)
 
         start = utils.getRequestArg(request, "start") or ''
 

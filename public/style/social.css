@@ -267,12 +267,14 @@ a:hover, a:active, a:focus {
 }
 
 .sidemenu a {
-    padding: 1px 2px 1px 5px;
+    padding: 1px 2px 1px 8px;
+    margin-left: -3px;
     line-height: 20px;
     display: block;
     color: #333;
     text-decoration: none;
     position: relative;
+    border-radius: 3px 0 0 3px;
 }
 
 .sidemenu a:hover, .sidemenu a:active, .sidemenu a:focus {

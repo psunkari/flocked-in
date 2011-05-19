@@ -295,7 +295,10 @@ _initChunkLoader: function _initChunkLoader(resources) {
                         if (handlers.onload) {
                             try {
                                 (new Function(handlers.onload)).apply(value);
-                            } catch(ex) {}
+                            } catch(ex) {
+                                if (console)
+                                    console.log(ex);
+                            }
                         }
                     }
                 }.bind(chunkLoader));
@@ -544,6 +547,24 @@ $$.json = json;
 })(social, jQuery);
 
 
+/*
+ * Sidemenu related utilities
+ */
+(function($$, $) {
+var menu = {
+    selectItem: function(itemId) {
+        var selected = $('.sidemenu-selected'),
+            newItemClass = itemId+'-sideitem';
+
+        if (selected.hasClass(newItemClass))
+            return;
+
+        selected.removeClass('sidemenu-selected');
+        $('.'+newItemClass).addClass('sidemenu-selected');
+    }
+};
+$$.menu = menu;
+})(social, jQuery);
 
 
 /*

@@ -33,10 +33,10 @@ __ = gettext.ngettext
 
 
 # Map of all item type plugins
-_pluginList = sorted([x for x in getPlugins(IItemType)], key=lambda x: x.position)
 plugins = {}
-for plg in _pluginList:
-    plugins[plg.itemType] = plg
+for plg in getPlugins(IItemType):
+    if not hasattr(plg, "disabled") or not plg.disabled:
+        plugins[plg.itemType] = plg
 
 
 whitelist = []
