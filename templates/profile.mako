@@ -52,7 +52,7 @@
           %endif
         </div>
         <div class="center-contents">
-          <div id="profile-tabs" class="busy-indicator">
+          <div id="profile-tabs" class="tabs busy-indicator">
           %if not script:
             ${self.tabs()}
           %endif
@@ -207,7 +207,7 @@
       %endif
 
       %if myKey == userKey:
-        ${'<span id="edit-profile" class="summary-item"><a href="/profile/edit" class="ajax">edit</a></span>'}
+        ${'<span id="edit-profile" class="summary-item"><a href="/profile/edit" class="ajax">Edit Profile</a></span>'}
       %endif
     </div>
   </div>
@@ -215,7 +215,7 @@
 </%def>
 
 <%def name="tabs()">
-  <ul id="profile-tablinks" class="h-links">
+  <ul id="profile-tablinks" class="tablinks h-links">
     <%
       path = "/profile?id=%s&" % userKey
     %>
@@ -383,7 +383,7 @@
 </%def>
 
 <%def name="editProfileTabs()">
-  <ul id="profile-tablinks" class="h-links">
+  <ul class="tablinks h-links">
     <%
       path = "/profile/edit?id=%s&" % myKey
     %>

@@ -445,7 +445,9 @@ a:hover, a:active, a:focus {
 #profile-content {
     padding-top: 15px;
 }
-#profile-tabs {
+
+
+.tabs {
     background-color: #E8EEFA;
     border-bottom: 1px solid #C3D9FF;
     height: 20px;
@@ -454,7 +456,9 @@ a:hover, a:active, a:focus {
     margin: -10px -10px 0;
     padding: 0 15px;
 }
-#profile-tablinks a {
+.tablinks {
+}
+.tablinks a {
     padding: 0 10px;
     margin: 0 2px;
     height: 20px;
@@ -465,11 +469,11 @@ a:hover, a:active, a:focus {
     border-color: transparent;
     border-radius: 2px 2px 0 0;
 }
-#profile-tablinks a:hover,
-#profile-tablinks a:active, #profile-tablinks a:focus {
+.tablinks a:hover,
+.tablinks a:active, .tablinks a:focus {
     border-color: #C3D9FF #C3D9FF transparent;
 }
-#profile-tablinks .selected {
+.tablinks .selected {
     margin-bottom: -1px;
     border-color: #C3D9FF #C3D9FF transparent !important;
     background-color: white;
