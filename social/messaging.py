@@ -9,7 +9,7 @@ from twisted.internet   import defer
 from twisted.python     import log
 from twisted.web        import server
 
-from social             import Db, utils, base
+from social             import Db, utils, base, errors
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
@@ -41,33 +41,33 @@ class MessagingResource(base.BaseResource):
         return recipients, body, subject, parent
 
     @defer.inlineCallbacks
-    def _deliverMessage(self, convId, recipients, timeUUID):
+    def _deliverMessage(self, convId, recipients, timeUUID, owner):
 
-        oldTimeUUID = None
+        dontDeliver = set()
         cols = yield Db.get_slice(convId, "mConversations", ['uuid'])
         cols = utils.columnsToDict(cols)
 
-        oldTimeUUID = cols.get('uuid', None)
-        oldTimeUUID = None if timeUUID == oldTimeUUID else oldTimeUUID
-        val = "u:%s"%(convId)
+        oldTimeUUID = cols['uuid']
 
         cols = yield Db.get_slice(convId, 'mConvFolders', recipients)
         cols = utils.supercolumnsToDict(cols)
         for recipient in cols:
-            deliver = True
-            if oldTimeUUID:
-                for folder in cols[recipient]:
-                    if folder == 'delete':
-                        #don't add to recipient's inbox if the conv is deleted.
-                        deliver = False
-                    else:
-                        cf = folders[folder] if folder in folders else folder
-                        yield Db.remove(recipient, cf, oldTimeUUID)
-            if deliver:
-                yield Db.insert(recipient, 'mUnreadConversations',  val, timeUUID)
+            for folder in cols[recipient]:
+                if folder == 'delete':
+                    #don't add to recipient's inbox if the conv is deleted.
+                    dontDeliver.add(recipient)
+                else:
+                    cf = folders[folder] if folder in folders else folder
+                    yield Db.remove(recipient, cf, oldTimeUUID)
+
+        for recipient in recipients:
+            if recipient not in dontDeliver:
+                val = "u:%s"%(convId) if recipient!= owner else 'r:%s'%(convId)
+                if recipient != owner:
+                    yield Db.insert(recipient, 'mUnreadConversations',  val, timeUUID)
+                    yield Db.insert(convId, "mConvFolders", '', 'mUnreadConversations', recipient)
                 yield Db.insert(recipient, 'mAllConversations',  val, timeUUID)
                 yield Db.insert(convId, "mConvFolders", '', 'mAllConversations', recipient)
-                yield Db.insert(convId, "mConvFolders", '', 'mUnreadConversations', recipient)
 
 
     def _createDateHeader(self, timezone='Asia/Kolkata'):
@@ -79,50 +79,11 @@ class MessagingResource(base.BaseResource):
         epoch = time.mktime(dt.timetuple())
         return date, epoch
 
-
     @defer.inlineCallbacks
-    def _createConveration(self, request):
-
-        myId = request.getSession(IAuthInfo).username
-
-        recipients, body, subject, parent = self._parseComposerArgs(request)
-
-        dateHeader, epoch = self._createDateHeader()
+    def _newMessage(self, ownerId, timeUUID, body, dateHeader, epoch):
 
         messageId = utils.getUniqueKey()
-        convId = utils.getUniqueKey() if not parent else parent
-
-        if not parent and not recipients:
-            raise errors.MissingParams()
-
-        if not parent:
-            cols = yield Db.multiget_slice(recipients, "entities", ['basic'])
-            recipients = utils.multiSuperColumnsToDict(cols)
-            recipients = [userId for userId in recipients if recipients[userId]]
-            if not recipients:
-                raise errors.MissingParams()
-            recipients.append(myId)
-
-        if parent:
-            cols = yield Db.get_slice(parent, "mConversations", ['acl'])
-            if not cols:
-                raise errors.InvalidRequest()
-
-            recipients = pickle.loads(cols[0].column.value)['accept']['users']
-
-
-
-        timeUUID = uuid.uuid1().bytes
-        if not parent:
-            acl = pickle.dumps({'accept':{'users':recipients}})
-            conv_meta = {"acl": acl,
-                         "owner":myId,
-                         "timestamp": str(int(time.time())),
-                         "uuid": timeUUID,
-                         "subject": subject}
-            yield Db.batch_insert(convId, "mConversations", conv_meta)
-
-        meta = { "owner": myId,
+        meta =  { "owner": ownerId,
                  "timestamp": str(int(time.time())),
                  'Date':dateHeader,
                  'date_epoch': str(epoch),
@@ -130,9 +91,79 @@ class MessagingResource(base.BaseResource):
                  "uuid": timeUUID
                 }
         yield Db.batch_insert(messageId, "messages", {'meta':meta})
-        yield self._deliverMessage(convId, recipients, timeUUID)
+        defer.returnValue(messageId)
+
+    @defer.inlineCallbacks
+    def _newConversation(self, ownerId, recipients, timeUUID,
+                         subject, dateHeader, epoch):
+
+        acl = pickle.dumps({'accept':{'users':recipients}})
+        conv_meta = {"acl": acl,
+                     "owner":ownerId,
+                     "timestamp": str(int(time.time())),
+                     "uuid": timeUUID,
+                     "Date": dateHeader,
+                     "date_epoch" : str(epoch),
+                     "subject": subject}
+        convId = utils.getUniqueKey()
+        yield Db.batch_insert(convId, "mConversations", conv_meta)
+        defer.returnValue(convId)
+
+    @defer.inlineCallbacks
+    def _reply(self, request):
+
+        myId = request.getSession(IAuthInfo).username
+        recipients, body, subject, convId = self._parseComposerArgs(request)
+        dateHeader, epoch = self._createDateHeader()
+
+        if not convId and not recipients:
+            raise errors.MissingParams()
+
+        cols = yield Db.get_slice(convId, "mConversations", ['acl'])
+        if not cols:
+            raise errors.InvalidRequest()
+
+        recipients = pickle.loads(cols[0].column.value)['accept']['users']
+        timeUUID = uuid.uuid1().bytes
+
+        messageId = yield self._newMessage(myId, timeUUID, body, dateHeader, epoch)
+        yield self._deliverMessage(convId, recipients, timeUUID, myId)
         yield Db.insert(convId, "mConvMessages", messageId, timeUUID)
-        yield Db.insert(convId, "mConversations", timeUUID, "uuid")
+        yield Db.batch_insert(convId, "mConversations", {'uuid': timeUUID,
+                                                         'Date': dateHeader,
+                                                         'date_epoch': str(epoch)})
+        request.redirect('/messages')
+
+
+    @defer.inlineCallbacks
+    def _createConveration(self, request):
+
+        myId = request.getSession(IAuthInfo).username
+        recipients, body, subject, parent = self._parseComposerArgs(request)
+        dateHeader, epoch = self._createDateHeader()
+
+        if not parent and not recipients:
+            raise errors.MissingParams()
+
+        cols = yield Db.multiget_slice(recipients, "entities", ['basic'])
+        recipients = utils.multiSuperColumnsToDict(cols)
+        recipients = set([userId for userId in recipients if recipients[userId]])
+
+        if not recipients:
+            raise errors.MissingParams()
+        recipients.add(myId)
+        recipients = list(recipients)
+
+        timeUUID = uuid.uuid1().bytes
+        convId = yield self._newConversation(myId, recipients, timeUUID,
+                                             subject, dateHeader, epoch)
+        messageId = yield self._newMessage(myId, timeUUID, body, dateHeader, epoch)
+        yield self._deliverMessage(convId, recipients, timeUUID, myId)
+        yield Db.insert(convId, "mConvMessages", messageId, timeUUID)
+        yield Db.batch_insert(convId, "mConversations", {'uuid': timeUUID,
+                                                         'Date': dateHeader,
+                                                         'date_epoch': str(epoch)})
+        log.msg('updated conversations')
 
     @defer.inlineCallbacks
     def _composeMessage(self, request):
@@ -196,11 +227,6 @@ class MessagingResource(base.BaseResource):
 
 
     @defer.inlineCallbacks
-    def _reply(self, request):
-        pass
-
-
-    @defer.inlineCallbacks
     def _addMembers(self, request):
         pass
 
@@ -236,7 +262,13 @@ class MessagingResource(base.BaseResource):
 
             timeUUID = conv['uuid']
             yield Db.remove(myId, "mUnreadConversations", timeUUID)
-            cols = yield Db.get_slice(myId, "mConvFolders", convId)
+            cols = yield Db.get_slice(convId, "mConvFolders", [myId])
+            cols = utils.supercolumnsToDict(cols)
+            for folder in cols[myId]:
+                if folder in folders:
+                    folder = folders[folder]
+                yield Db.insert(myId, folder, "r:%s"%(convId), timeUUID)
+
             #FIX: make sure that there will be an entry of convId in mConvFolders
 
             relation = Relation(myId, [])
@@ -344,6 +376,9 @@ class MessagingResource(base.BaseResource):
             d = self._moveConversation(request)
         elif segmentCount == 1 and request.postpath[0] == "write":
             d = self._composeMessage(request)
+        elif segmentCount == 1 and request.postpath[0] == "reply":
+            d = self._reply(request)
+
         elif segmentCount == 1 and request.postpath[0] == "thread":
             d = self._moveConversation(request)
 

@@ -452,7 +452,7 @@
     ${message_layout(id, conv, messageIds, messages, flags, fid)}
     <input type="hidden" name="fid" value="${fid}"/>
     </form>
-    <form method="post" action="/messages/write">
+    <form method="post" action="/messages/reply">
     ${quick_reply_layout(script, messages[messageIds[-1]], id)}
     <input type="hidden" name="fid" value="${fid}"/>
     </form>
