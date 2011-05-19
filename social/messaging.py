@@ -48,17 +48,18 @@ class MessagingResource(base.BaseResource):
         cols = utils.columnsToDict(cols)
 
         oldTimeUUID = cols['uuid']
+        val = "u:%s" %(convId)
 
         cols = yield Db.get_slice(convId, 'mConvFolders', recipients)
         cols = utils.supercolumnsToDict(cols)
         for recipient in cols:
             for folder in cols[recipient]:
-                if folder == 'delete':
+                cf = folders[folder] if folder in folders else folder
+                yield Db.remove(recipient, cf, oldTimeUUID)
+                if cf == 'mDeletedConversations':
+                    yield Db.insert(recipient, cf,  val, timeUUID)
                     #don't add to recipient's inbox if the conv is deleted.
                     dontDeliver.add(recipient)
-                else:
-                    cf = folders[folder] if folder in folders else folder
-                    yield Db.remove(recipient, cf, oldTimeUUID)
 
         for recipient in recipients:
             if recipient not in dontDeliver:
@@ -163,7 +164,6 @@ class MessagingResource(base.BaseResource):
         yield Db.batch_insert(convId, "mConversations", {'uuid': timeUUID,
                                                          'Date': dateHeader,
                                                          'date_epoch': str(epoch)})
-        log.msg('updated conversations')
 
     @defer.inlineCallbacks
     def _composeMessage(self, request):
@@ -176,6 +176,8 @@ class MessagingResource(base.BaseResource):
     def _listConversations(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
+        folder = utils.getRequestArg(request, 'filter')
+        folder = folders[folder] if folder in folders else folders['inbox']
 
         if script and landing:
             yield render(request, "message.mako", **args)
@@ -188,7 +190,7 @@ class MessagingResource(base.BaseResource):
         convs = []
         users = set()
 
-        cols = yield Db.get_slice(myKey, 'mAllConversations', reverse=True)
+        cols = yield Db.get_slice(myKey, folder, reverse=True)
         for col in cols:
             x, convId = col.column.value.split(':')
             convs.append(convId)
@@ -228,18 +230,113 @@ class MessagingResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _addMembers(self, request):
-        pass
+
+        newMembers, body, subject, convId = self._parseComposerArgs(request)
+        if not (convId or  recipients):
+            raise errors.MissingParams()
+        conv = yield Db.get_slice(convId, "mConversations")
+        if not conv:
+            raise errors.MissingParams()
+        conv = utils.columnsToDict(conv)
+
+        cols = yield Db.multiget_slice(newMembers, "entities", ['basic'])
+        newMembers = set([userId for userId in cols if cols[userId]])
+        recipients =  set(pickle.loads(conv['acl'])['accept']['users'])
+        newMembers = newMembers - recipients
+        recipients.update(newMembers)
+        acl = pickle.dumps({"accept":{"users":list(recipients)}})
+        yield Db.insert(convId, "mConversations", acl, 'acl')
+        yield self._deliverMessage(convId, newMembers, conv['uuid'], conv['owner'])
+
 
     @defer.inlineCallbacks
     def _deleteMembers(self, request):
-        pass
+        members, body, subject, convId = self._parseComposerArgs(request)
+        if not (convId or  recipients):
+            raise errors.MissingParams()
+        if not conv:
+            raise errors.MissingParams()
+        conv = utils.columnsToDict(conv)
+        cols = yield Db.multiget_slice(members, "entities", ['basic'])
+        members = set([userId for userId in cols if cols[userId]])
+        recipients =  set(pickle.loads(conv['acl'])['accept']['users'])
+        members = members.intersection(recipients)
+        new_recipients = list(recipients - members)
+
+        cols = yield Db.multiget_slice(newMembers, "entities", ['basic'])
+        acl = pickle.dumps({"accept":{"users":new_recipients}})
+        yield Db.insert(convId, "mConversations", acl, 'acl')
+
+        cols = yield Db.get_slice(convId, 'mConvFolders', members)
+        cols = utils.supercolumnsToDict(cols)
+        for recipient in cols:
+            for folder in cols[recipient]:
+                cf = folders[folder] if folder in folders else folder
+                yield Db.remove(recipient, cf, conv['uuid'])
 
     @defer.inlineCallbacks
-    def deleteConversation(self, request):
-        pass
+    def _actions(self, request):
+
+        convIds = request.args.get('selected', [])
+
+        delete = utils.getRequestArg(request, "delete")
+        archive = utils.getRequestArg(request, "archive")
+        unread = utils.getRequestArg(request, "unread")
+        unArchive = utils.getRequestArg(request, "inbox")
+        if not convIds:
+            raise errors.MissingParams()
+        if delete:
+            yield self._markAsDelete(request)
+        if archive:
+            yield self._moveConversation(request, convIds, 'archive')
+        if unread:
+            yield self._moveConversation(request, convIds, 'unread')
+        if unArchive:
+            yield self._moveConversation(request, convIds, 'inbox')
+
+
 
     @defer.inlineCallbacks
-    def _moveConversation(self, request):
+    def _markAsDelete(self, request):
+        defer.returnValue(True)
+
+    @defer.inlineCallbacks
+    def _moveConversation(self, request, convIds, toFolder):
+
+
+        myId = request.getSession(IAuthInfo).username
+
+        for convId in convIds:
+            conv = yield Db.get_slice(convId, "mConversations")
+            if not conv:
+                raise errors.InvalidRequest()
+            conv = utils.columnsToDict(conv)
+            timeUUID = conv['uuid']
+
+            val = "%s:%s"%( 'u' if toFolder == 'unread' else 'r', convId)
+
+            cols = yield Db.get_slice(convId, 'mConvFolders', [myId])
+            cols = utils.supercolumnsToDict(cols)
+            for folder in cols[myId]:
+                cf = folders[folder] if folder in folders else folder
+                if toFolder!='unread':
+                    if folder!= 'mUnreadConversations':
+                        col = yield Db.get(myId, cf, timeUUID)
+                        val = col.column.value
+                        yield Db.remove(myId, cf, timeUUID)
+                        yield Db.remove(convId, "mConvFolders", cf, myId)
+                else:
+                        yield Db.insert(myId, cf, "u:%s"%(convId), timeUUID)
+
+
+            if toFolder == 'unread':
+                val = "u:%s"%(convId)
+                yield Db.insert(convId, 'mConvFolders', '', 'mUnreadConversations', myId)
+                yield Db.insert(myId, 'mUnreadConversations', val, timeUUID)
+            else:
+                folder = folders[toFolder]
+                yield Db.insert(myId, folder, val, timeUUID)
+                yield Db.insert(convId, 'mConvFolders', '', folder, myId)
         request.redirect('/messages')
 
     @defer.inlineCallbacks
@@ -262,6 +359,7 @@ class MessagingResource(base.BaseResource):
 
             timeUUID = conv['uuid']
             yield Db.remove(myId, "mUnreadConversations", timeUUID)
+            yield Db.remove(convId, "mConvFolders", 'mUnreadConversations', myId)
             cols = yield Db.get_slice(convId, "mConvFolders", [myId])
             cols = utils.supercolumnsToDict(cols)
             for folder in cols[myId]:
@@ -365,7 +463,7 @@ class MessagingResource(base.BaseResource):
         elif segmentCount == 1 and request.postpath[0] == "thread":
             d = self._renderConversation(request)
         elif segmentCount == 1 and request.postpath[0] == "actions":
-            d = self._threadActions(request)
+            d = self._actions(request)
 
         return self._epilogue(request, d)
 
@@ -373,14 +471,13 @@ class MessagingResource(base.BaseResource):
         segmentCount = len(request.postpath)
         d = None
         if segmentCount == 0:
-            d = self._moveConversation(request)
+            d = self._actions(request)
         elif segmentCount == 1 and request.postpath[0] == "write":
             d = self._composeMessage(request)
         elif segmentCount == 1 and request.postpath[0] == "reply":
             d = self._reply(request)
 
         elif segmentCount == 1 and request.postpath[0] == "thread":
-            d = self._moveConversation(request)
+            d = self._actions(request)
 
         return self._epilogue(request, d)
-        pass
