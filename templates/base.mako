@@ -11,8 +11,9 @@
 
 <%def name="nav_menu()">
   <%
-    def navMenuItem(link, text, icon):
-        return '<li><a href="%(link)s" class="ajax busy-indicator"><span class="sidemenu-icon icon %(icon)s-icon"></span><span class="sidemenu-text">%(text)s</span></a></li>' % locals()
+    def navMenuItem(link, text, id):
+      cls = "sidemenu-selected" if id == menuId else ''
+      return '<li><a href="%(link)s" class="ajax busy-indicator %(id)s-sideitem %(cls)s"><span class="sidemenu-icon icon %(id)s-icon"></span><span class="sidemenu-text">%(text)s</span></a></li>' % locals()
   %>
   <div id="mymenu-container" class="sidemenu-container">
     <ul id="mymenu" class="v-links sidemenu">

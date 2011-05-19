@@ -42,6 +42,7 @@ class GroupsResource(base.BaseResource):
         except ttypes.NotFoundException:
             pass
 
+
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -63,11 +64,11 @@ class GroupsResource(base.BaseResource):
         except ttypes.NotFoundException:
             pass
 
+
     @profile
     @defer.inlineCallbacks
     @dump_args
     def _addMember(self, request, groupId, userId, orgId):
-
         deferreds = []
         itemType = "activity"
         relation = Relation(userId, [])
@@ -154,7 +155,6 @@ class GroupsResource(base.BaseResource):
                                     "replace", **args)
 
 
-
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -175,6 +175,7 @@ class GroupsResource(base.BaseResource):
                 yield self._addMember(request, groupId, userId, myOrgId)
             except ttypes.NotFoundException:
                 pass
+
 
     @profile
     @defer.inlineCallbacks
@@ -224,11 +225,11 @@ class GroupsResource(base.BaseResource):
 
             yield Db.insert(groupId, "bannedUsers", '', userId)
 
+
     @profile
     @defer.inlineCallbacks
     @dump_args
     def _unBlockUser(self, request):
-
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         groupId = yield utils.getValidEntityId(request, "id", "group")
         userId = yield utils.getValidEntityId(request, "uid", "user")
@@ -239,6 +240,7 @@ class GroupsResource(base.BaseResource):
             # if the request is pending, remove the request
             yield Db.remove(groupId, "bannedUsers", userId)
             log.msg("unblocked user %s from group %s"%(userId, groupId))
+
 
     @profile
     @defer.inlineCallbacks
@@ -323,6 +325,7 @@ class GroupsResource(base.BaseResource):
         yield Db.insert(orgKey, "orgGroups", '', groupId)
         request.redirect("/feed?id=%s"%(groupId))
 
+
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -348,6 +351,7 @@ class GroupsResource(base.BaseResource):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         landing = not self._ajax
         orgKey = args["orgKey"]
+        args["menuId"] = "groups"
 
         toFetchGroups = set()
 
@@ -380,6 +384,9 @@ class GroupsResource(base.BaseResource):
              yield renderScriptBlock(request, "groups.mako", "displayGroups",
                                     landing, "#groups-wrapper", "set", **args)
 
+        if not script:
+            yield render(request, "groups.mako", **args)
+
 
     @defer.inlineCallbacks
     def _getGroupMembersIds(self, groupId, start='', count=10):
@@ -390,6 +397,7 @@ class GroupsResource(base.BaseResource):
         if cols:
             nextPageStart = cols[-1].column.name
         defer.returnValue((userIds, nextPageStart))
+
 
     @profile
     @defer.inlineCallbacks
@@ -432,6 +440,7 @@ class GroupsResource(base.BaseResource):
                 yield renderScriptBlock(request, "groups.mako",
                                         "displayGroupMembers", landing,
                                         "#groups-wrapper", "set", **args)
+
 
     @profile
     @defer.inlineCallbacks
@@ -499,6 +508,7 @@ class GroupsResource(base.BaseResource):
             yield self._addMember(request, groupId, userId, myOrgId)
             yield self._listGroupMembers(request)
 
+
     @defer.inlineCallbacks
     def _renderInviteMembers(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
@@ -544,7 +554,6 @@ class GroupsResource(base.BaseResource):
     @profile
     @dump_args
     def render_POST(self, request):
-
         segmentCount = len(request.postpath)
         d = None
 

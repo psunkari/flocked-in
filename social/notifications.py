@@ -139,7 +139,6 @@ class NotificationsResource(base.BaseResource):
                     answers.setdefault(key, [])
                     answers[key].append(commentOwner)
 
-
         users = yield Db.multiget_slice(toFetchUsers, "entities", ["basic"])
         groups = yield Db.multiget_slice(toFetchGroups, "entities", ["basic"])
 
@@ -166,12 +165,10 @@ class NotificationsResource(base.BaseResource):
                            2: "%s and %s answered %s's %s",
                            3: "%s, %s and 1 other answered %s's %s",
                            4: "%s, %s and %s others answered %s's %s"}
-
         answerLikesTemplate = {1: "%s likes an answer on %s's %s",
                          2: "%s and %s likes an answer on  %s's %s",
                          3: "%s, %s and 1 other likes an answer on  %s's %s",
                          4: "%s, %s and %s others likes an answer on %s's %s"}
-
 
         for convId in convs:
             reasonStr[convId] = []
@@ -206,13 +203,13 @@ class NotificationsResource(base.BaseResource):
             reason = _getReasonStr(template, convId, convType, convOwner, answerLikes[key])
             reasonStr[convId].append(reason)
 
-
         for convType in pluginNotifications:
             for convId in pluginNotifications[convType]:
                 reason = yield plugins[convType].getReason(convId,
                                                      pluginNotifications[convType][convId],
                                                      users)
                 reasonStr[convId].append(reason)
+
         for groupId in pendingRequests:
             groupName = groups[groupId]["basic"]["name"]
             groupUrl = "<a href='/feed?id=%s'> %s</a>"%(groupId, groupName)
@@ -239,6 +236,7 @@ class NotificationsResource(base.BaseResource):
     def _renderNotifications(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
+        args["menuId"] = "notifications"
 
         if script and landing:
             yield render(request, "notifications.mako", **args)

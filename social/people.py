@@ -65,6 +65,7 @@ class PeopleResource(base.BaseResource):
         fromFetchMore = ((not landing) and (not appchange) and start)
         args["entities"] = {}
         args["heading"] = _("Organization People")
+        args["menuId"] = "people"
 
         if not orgKey:
             errors.MissingParams()
@@ -137,6 +138,7 @@ class PeopleResource(base.BaseResource):
         fromFetchMore = ((not landing) and (not appchange) and start)
         args["entities"] = {}
         args["heading"] = _("My Friends")
+        args["menuId"] = "friends"
 
         if script and landing:
             yield render(request,"people.mako", **args)

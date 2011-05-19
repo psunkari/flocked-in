@@ -91,7 +91,6 @@ class ProfileResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _getUserItems(self, request, userKey, start='', count=10):
-
         authinfo = request.getSession(IAuthInfo)
         myKey = authinfo.username
         myOrgId = authinfo.organization
@@ -356,7 +355,6 @@ class ProfileResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _unfriend(self, myKey, targetKey):
-
         cols = yield Db.multiget_slice([myKey, targetKey], "entities",
                                         ["basic"])
         users = utils.multiSuperColumnsToDict(cols)
@@ -426,11 +424,9 @@ class ProfileResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _edit(self, request):
-
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         userInfo = {}
         calls = []
-
 
         for cn in ("jobTitle", "location", "desc", "name", "firstname", "lastname"):
             val = utils.getRequestArg(request, cn)
@@ -457,7 +453,6 @@ class ProfileResource(base.BaseResource):
 
         if calls:
             yield defer.DeferredList(calls)
-
 
         if "basic" in userInfo:
             basic_acl = utils.getRequestArg(request, "basic_acl") or 'public'
@@ -503,7 +498,6 @@ class ProfileResource(base.BaseResource):
             userInfo["contact"]["im"] = c_im
         if c_phone:
             userInfo["contact"]["phone"] = c_phone
-
 
         interests = utils.getRequestArg(request, "interests")
         interests_acl = utils.getRequestArg(request, "interests_acl") or 'public'
@@ -693,6 +687,7 @@ class ProfileResource(base.BaseResource):
         detail = utils.getRequestArg(request, "dt") or "notes"
         args["detail"] = detail
         args["userKey"] = userKey
+        args["menuId"] = "people"
 
         # When scripts are enabled, updates are sent to the page as
         # and when we get the required data from the database.
