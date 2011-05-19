@@ -373,6 +373,8 @@
       % endif
       <input type="submit" name="delete" value="Delete" class="button "/>
       <input type="submit" name="archive" value="Archive" class="button "/>
+      <input type="submit" name="unread" value="UnRead" class="button "/>
+      <input type="submit" name="inbox" value="UnArchive" class="button "/>
       ${navigation_layout(script, view, fid, start, end)}
     </div>
   % elif view == "message":
