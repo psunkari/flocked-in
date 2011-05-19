@@ -742,7 +742,8 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     display:inline-block;
     line-height:2;
     padding:2px;
-    font-weight:700;
+    margin-right:10px;
+    text-align:right;
 }
 
 .edit-profile input {
@@ -764,7 +765,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 
 .edit-profile legend {
-    text-decoration:underline;
+    font-weight:700
 }
 
 .edu {
@@ -774,6 +775,8 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .profile-save-wrapper {
     border-top: 1px solid #C3D9FF;
     padding-top: 4px;
+    margin-bottom:20px;
+    text-align:right;
 }
 
 /*

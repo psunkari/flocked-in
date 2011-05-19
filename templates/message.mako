@@ -14,6 +14,7 @@
     SENT, INBOX, TRASH, DRAFTS, ARCHIVES = "", "", "", "", ""
 
     customFolders = {}
+    folders = {}
     for fId, fInfo in folders.iteritems():
         if ("special" in fInfo) and (fInfo["special"] == "INBOX"):
           INBOX = fId
@@ -90,30 +91,32 @@
 %>
 
 <%!
-  def formatPeopleInConversation(message, short=False):
-    recipients = message["To"].split(",")
-    senderEmailId = email.utils.parseaddr(message["From"])[1]
+  def formatPeopleInConversation(message, people, short=False):
+    recipients = message["people"]
+    #senderEmailId = email.utils.parseaddr(message["owner"])[1]
+    senderEmailId = message["owner"]
     rStrings = []
     for each in recipients:
-        emailId = email.utils.parseaddr(each)[1]
+        #emailId = email.utils.parseaddr(each)[1]
+        emailId = each
         if not short:
-            estring = "<a href='/profile?id=%s'>%s</a>" %(message["people"][emailId]["uid"],
-                                                          message["people"][emailId]["basic"]["name"])
+            estring = "<a href='/profile?id=%s'>%s</a>" %(message["people"][each],
+                                                          people[each]["basic"]["name"])
         else:
             if emailId != senderEmailId:
-                estring = "<span>%s</span>" %(message["people"][emailId]["basic"]["name"])
+                estring = "<span>%s</span>" %(people[emailId]["basic"]["name"])
             else:
                 continue
-        if emailId == message["myself"]:
+        if emailId == message["owner"]:
             estring = "<span>%s</span>" %("Me")
 
         rStrings.append(estring)
 
     if short:
-        sString = "<span>%s</span>" %(message["people"][senderEmailId]["basic"]["name"])
+        sString = "<span>%s</span>" %(people[senderEmailId]["basic"]["name"])
     else:
-        sString = "<a href='/profile?id=%s'>%s</a>" %(message["people"][senderEmailId]["uid"],
-                                                      message["people"][senderEmailId]["basic"]["name"])
+        sString = "<a href='/profile?id=%s'>%s</a>" %(senderEmailId,
+                                                      people[senderEmailId]["basic"]["name"])
 
     if short:
         rString = ", ".join(set(rStrings))
@@ -140,9 +143,9 @@
 
 <%!
     def formatBodyForReply(message, reply):
-      body = message['body']
-      sender = message['From']
-      date = message['Date']
+      body = message["meta"].get('body', '')
+      sender = message["meta"]['owner']
+      date = message["meta"]['Date']
       quoted_reply = "\n".join([">%s" %x for x in body.split('\n')]+['>'])
       prequotestring = "%s wrote" %(sender)
       new_reply = "\r\n\r\n\r\n%s\r\n\r\n%s\r\n%s" %(reply, prequotestring, quoted_reply)
@@ -224,23 +227,17 @@
 %>
 
 <%def name="messages_layout(script, mid, thread, fid)">
-  <div id="thread-${mid}" class="message-row ${'row-unread' if thread["flags"]["read"] == "0" else 'row-read'}">
+  <div id="thread-${mid}" class="message-row ${'row-unread' if thread["read"] == "0" else 'row-read'}">
     <div class="message-row-cell message-row-select">
       <input type="checkbox" name="selected" value="${mid}"
         onchange="$('.thread-selector').attr('checked', false)"/>
     </div>
     <div class="message-row-cell message-row-star">
-      <a>
-        % if thread["flags"]["star"] == "0":
-          <span onclick="$.post('/ajax/messages', 'fid=${fid}&action=star&selected=${mid}', null, 'script')" class="messaging-icon star-empty-icon"> </span>
-        % else:
-          <span onclick="$.post('/ajax/messages', 'fid=${fid}&action=unstar&selected=${mid}', null, 'script')" class="messaging-icon star-icon"> </span>
-        % endif
-      </a>
+
     </div>
-    <div class="message-row-cell" style="width:210px">${formatPeopleInConversation(thread, True)}</div>
+    <div class="message-row-cell" style="width:210px">${formatPeopleInConversation(thread, people, True)}</div>
     <div class="message-row-cell" style="width:450px">
-      <a class="${'ajax' if script else ''} message-link" href="/messages/thread?id=${thread['message-id']}&fid=${fid}">${thread["Subject"]|h}</a>
+      <a class="${'ajax' if script else ''} message-link" href="/messages/thread?id=${mid}&fid=${fid}">${thread["subject"]|h}</a>
     </div>
     <abbr class="message-row-cell time-label" style="width:130px">
       ${thread["date_epoch"]|timeElapsedSince}
@@ -250,22 +247,14 @@
 
 <%def name="message_layout(mid, message, flags, fid)">
     <div class="message-headline">
-      <h2 class="message-headline-subject">${message["Subject"]|h}</h2>
-      % if flags["star"] == "0":
-        <span class="message-headline-star ajax" onclick="$.post('/ajax/messages/thread', 'fid=${fid}&action=star&message=${mid}', null, 'script')" href="#">
-          <span class="messaging-icon star-empty-icon"> </span>
-        </span>
-      %else:
-        <span class="message-headline-star ajax"  onclick="$.post('/ajax/messages/thread', 'fid=${fid}&action=unstar&message=${mid}', null, 'script')" href="#">
-          <span class="messaging-icon star-icon"> </span>
-        </span>
-      % endif
+      <h2 class="message-headline-subject">${message["meta"]["subject"]|h}</h2>
     </div>
     <div>
       <div class="conv-avatar">
         <%
-            emailId = email.utils.parseaddr(message["From"])[1]
-            avatarURI = utils.userAvatar(message["people"][emailId]["uid"], message["people"][emailId]["basic"])
+            emailId = message["meta"]["owner"]
+            avatarURI = None
+            avatarURI = utils.userAvatar(emailId, people[emailId]["basic"])
         %>
         %if avatarURI:
           <img src="${avatarURI}" height="48" width="48" style="display:inline-block"/>
@@ -276,20 +265,20 @@
           <div class="conv-summary">
             <div class="message-headers">
             <span class="user conv-user-cause">
-                <a href="/profile?id=${message["people"][emailId]["uid"]}" class="ajax">
-                    ${message["people"][emailId]["basic"]["name"]}
+                <a href="/profile?id=${emailId}" class="ajax">
+                    ${people[emailId]["basic"]["name"]}
                 </a>
             </span>
-            <span class="time-label message-headers-time">${message["date_epoch"]|timeElapsedSince}</span>
+            <span class="time-label message-headers-time">${message["meta"]["date_epoch"]|timeElapsedSince}</span>
             </div>
             <div class="message-message">
-                ${message["body"] | newlinescape}
+                ${message["meta"].get("body", '') | newlinescape}
             </div>
           </div>
         </div>
       </div>
     </div>
-    <input type="hidden" name="message" value="${message["message-id"]}"/>
+    <input type="hidden" name="message" value="${mid}"/>
     <input type="hidden" name="_body" value="${formatBodyForReply(message, "")}"/>
 </%def>
 
@@ -365,9 +354,8 @@
     </div>
     <div class="message-composer-field-body-wrapper">
         <textarea class="message-composer-field-body-quick" name="body" placeholder="Quickly reply to this message"></textarea>
-        <input type="hidden" value="${msg["message-id"]}" name="parent"/>
-        <input type="hidden" value="${formatSubjectForReply(msg['Subject'])}" name="subject"/>
-        <input type="hidden" value="${formatRecipientList(msg)}" name="recipients"/>
+        <input type="hidden" value="test" name="parent"/>
+        <input type="hidden" value="${formatSubjectForReply(msg["meta"]['subject'])}" name="subject"/>
     </div>
     <div class="message-composer-field">
       <input type="submit" name="send" value="${_('Reply')}" class="button ">
