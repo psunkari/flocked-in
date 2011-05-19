@@ -228,6 +228,7 @@ class Event(object):
     implements(IPlugin, IItemType)
     itemType = "event"
     position = 4
+    disabled = True
     hasIndex = False
 
     @profile

@@ -20,7 +20,7 @@
       ${navMenuItem("/feed", _("News Feed"), "feed")}
       ${navMenuItem("/notifications", _("Notifications"), "notifications")}
       ${navMenuItem("/messages", _("Messages"), "messages")}
-      ${navMenuItem("/events", _("Events"), "events")}
+##      ${navMenuItem("/events", _("Events"), "events")}
       ${navMenuItem("/people/friends", _("Friends"), "people")}
     </ul>
   </div>
