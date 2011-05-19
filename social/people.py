@@ -56,19 +56,14 @@ class PeopleResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _renderPeople(self, request, ):
+    def _render(self, request, viewType, start):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
 
-        orgKey = args["orgKey"]
+        orgId = args["orgKey"]
         start = utils.getRequestArg(request, "start") or ''
-        fromFetchMore = ((not landing) and (not appchange) and start)
         args["entities"] = {}
-        args["heading"] = _("Organization People")
         args["menuId"] = "people"
-
-        if not orgKey:
-            errors.MissingParams()
 
         if script and landing:
             yield render(request, "people.mako", **args)
@@ -77,25 +72,28 @@ class PeopleResource(base.BaseResource):
             yield renderScriptBlock(request, "people.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-        users, relation, userIds, \
-            blockedUsers, nextPageStart = yield getPeople(myId, args["orgKey"],
-                                                    args["orgKey"],
-                                                    start=start)
+        d = None
+        if viewType == "all":
+            d = getPeople(myId, orgId, orgId, start=start)
+        elif viewType == "friends":
+            d = getPeople(myId, myId, orgId, start=start, fn=self._getFriends)
+        else:
+            raise errors.InvalidRequest()
+
+        users, relations, userIds, blockedUsers, nextPageStart = yield d
 
         # First result tuple contains the list of user objects.
         args["entities"] = users
-        args["relations"] = relation
+        args["relations"] = relations
         args["people"] = userIds
         args["nextPageStart"] = nextPageStart
+        args["viewType"] = viewType
 
         if script:
-            if fromFetchMore:
-                yield renderScriptBlock(request, "people.mako", "employees", landing,
-                                        "#next-load-wrapper", "replace", True,
-                                        handlers={}, **args)
-            else:
-                yield renderScriptBlock(request, "people.mako", "employees",
-                                        landing, "#users-wrapper", "set", **args)
+            yield renderScriptBlock(request, "people.mako", "viewOptions",
+                                landing, "#people-view", "set", args=[viewType])
+            yield renderScriptBlock(request, "people.mako", "listPeople",
+                                    landing, "#users-wrapper", "set", **args)
 
         if not script:
             yield render(request, "people.mako", **args)
@@ -103,6 +101,7 @@ class PeopleResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _getFriends(self, userId, start, count=PEOPLE_PER_PAGE):
+        log.msg("Getting friends")
         cols = yield Db.get_slice(userId, "connections")
         friends = [x.super_column.name for x in cols]
 
@@ -127,47 +126,6 @@ class PeopleResource(base.BaseResource):
 
         defer.returnValue((ret, nextPageStart))
 
-    @profile
-    @defer.inlineCallbacks
-    @dump_args
-    def _renderFriends(self, request):
-        (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        landing = not self._ajax
-
-        start = utils.getRequestArg(request, "start") or ''
-        fromFetchMore = ((not landing) and (not appchange) and start)
-        args["entities"] = {}
-        args["heading"] = _("My Friends")
-        args["menuId"] = "friends"
-
-        if script and landing:
-            yield render(request,"people.mako", **args)
-        if script and appchange:
-            yield renderScriptBlock(request, "people.mako", "layout",
-                                    landing, "#mainbar", "set", **args)
-
-
-        users, relation, userIds, \
-            blockedUsers, nextPageStart = yield getPeople(myId, myId,
-                                                            args["orgKey"],
-                                                            start=start,
-                                                            fn=self._getFriends)
-        args["entities"] = users
-        args["relations"] = relation
-        args["people"] = userIds
-        args["nextPageStart"] = nextPageStart
-
-        if script:
-            if fromFetchMore:
-                yield renderScriptBlock(request, "people.mako", "friends", landing,
-                                        "#next-load-wrapper", "replace", True,
-                                        handlers={}, **args)
-            else:
-                yield renderScriptBlock(request, "people.mako", "friends",
-                                        landing, "#users-wrapper", "set", **args)
-
-        if not script:
-            yield render(request, "people.mako", **args)
 
     @profile
     @dump_args
@@ -176,8 +134,8 @@ class PeopleResource(base.BaseResource):
         d = None
 
         if segmentCount == 0:
-            d = self._renderPeople(request)
-        elif segmentCount == 1 and request.postpath[0]=="friends":
-            d = self._renderFriends(request)
+            viewType = utils.getRequestArg(request, "type") or "friends"
+            start = utils.getRequestArg(request, "start")
+            d = self._render(request, viewType, start)
 
         return self._epilogue(request, d)

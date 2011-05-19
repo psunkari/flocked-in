@@ -787,15 +787,21 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
  * List of users - friends and people in organization
  */
 #users-wrapper {
-    padding: 20px;
+    padding: 10px;
 }
 
 .users-row {
     width: 100%;
     min-height: 50px;
-    padding: 0 0 10px 0;
-    margin: 0 0 10px 0;
-    border-bottom: 1px solid #EEE;
+    padding: 10px 0 0;
+    margin: 10px 0 0;
+    border-top: 1px solid #EEE;
+}
+
+.users-row-first {
+    padding: 0;
+    margin: 0;
+    border-top: none !important;
 }
 
 .users-user {
@@ -819,6 +825,32 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 
 .user-details-actions {
     margin-top: 6px;
+}
+
+#people-view {
+    margin: 5px;
+    padding: 0 5px 10px;
+    border-bottom: 1px solid #C3D9FF;
+}
+
+.view-options {
+    font-weight: bold;
+    color: #888888;
+}
+
+.view-options .selected {
+    color: black !important;
+    border: 1px solid #C3D9FF;
+    background-color: #E8EEFA;
+    border-radius: 4px;
+    padding: 2px 3px;
+    margin: 0 2px;
+}
+
+.view-options a {
+    padding: 2px 3px;
+    margin: 0 2px;
+    border: 1px solid transparent;
 }
 
 

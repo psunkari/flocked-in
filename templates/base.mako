@@ -21,18 +21,9 @@
       ${navMenuItem("/notifications", _("Notifications"), "notifications")}
       ${navMenuItem("/messages", _("Messages"), "messages")}
 ##      ${navMenuItem("/events", _("Events"), "events")}
-      ${navMenuItem("/people/friends", _("Friends"), "people")}
-    </ul>
-  </div>
-  <div id="grpmenu-container" class="sidemenu-container">
-    <ul id="grpmenu" class="v-links sidemenu">
-      ${navMenuItem("/groups", _("Groups"), "groups")}
-    </ul>
-  </div>
-  <div id="orgmenu-container" class="sidemenu-container">
-    <ul id="orgmenu" class="v-links sidemenu">
-      ${navMenuItem("/feed?id=%s" % orgKey, _("Company Feed"), "org")}
       ${navMenuItem("/people", _("People"), "people")}
+      ${navMenuItem("/feed?id=%s" % orgKey, _("Company Feed"), "org")}
+      ${navMenuItem("/groups", _("Groups"), "groups")}
     </ul>
   </div>
 </%def>

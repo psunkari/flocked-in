@@ -23,21 +23,36 @@
       <div id="center">
         <div class="center-header">
           <div class="titlebar">
-            %if heading:
-              <div id="title"><span class="middle title">${heading}</span></div>
-            %else:
-              <div id="title"><span class="middle title">${_('People')}</span></div>
-            %endif
+            <span class="middle title">${_('People')}</span>
           </div>
         </div>
-        <div id="users-wrapper" class="center-contents">
-          %if not script:
-            ${self.content()}
-          %endif
+        <div class="center-contents">
+          <div id="people-view">
+            %if not script:
+              ${viewOptions(viewType)}
+            %endif
+          </div>
+          <div id="users-wrapper">
+            %if not script:
+              ${self.content()}
+            %endif
+          </div>
         </div>
       </div>
     </div>
   </div>
+</%def>
+
+<%def name="viewOptions(selected)">
+  <ul class="h-links view-options">
+    %for item, display in [('friends', 'My friends'), ('all', 'All users')]:
+      %if selected == item:
+        <li class="selected">${_(display)}</li>
+      %else:
+        <li><a href="/people?type=${item}" class="ajax">${_(display)}</a></li>
+      %endif
+    %endfor
+  </ul>
 </%def>
 
 <%def name="_displayUser(userId, showBlocked=False)">
@@ -67,10 +82,18 @@
 </%def>
 
 <%def name="content(showBlocked=False)">
-  <% counter = 0 %>
+  <%
+    counter = 0
+    firstRow = True
+  %>
   %for userId in people:
     %if counter % 2 == 0:
-      <div class="users-row">
+      %if firstRow:
+        <div class="users-row users-row-first">
+        <% firstRow = False %>
+      %else:
+        <div class="users-row">
+      %endif
     %endif
     <div class="users-user">${_displayUser(userId, showBlocked)}</div>
     %if counter % 2 == 1:
@@ -83,20 +106,9 @@
   %endif
 </%def>
 
-<%def name="employees(showBlocked=False)">
+<%def name="listPeople(showBlocked=False)">
   ${self.content(showBlocked)}
   %if nextPageStart:
     <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" _ref="/people?start=${nextPageStart}">${_("Fetch More People")}</a></div>
-  %else:
-    <div id="next-load-wrapper"> </div>
-  %endif
-</%def>
-
-<%def name="friends(showBlocked=False)">
-  ${self.content(showBlocked)}
-  %if nextPageStart:
-    <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" _ref="/people/friends?start=${nextPageStart}">${_("Fetch More People")}</a></div>
-  %else:
-    <div id="next-load-wrapper"> </div>
   %endif
 </%def>
