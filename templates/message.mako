@@ -240,46 +240,45 @@
       <a class="${'ajax' if script else ''} message-link" href="/messages/thread?id=${mid}&fid=${fid}">${thread["subject"]|h}</a>
     </div>
     <abbr class="message-row-cell time-label" style="width:130px">
-      ${thread["date_epoch"]|timeElapsedSince}
+      ##${thread["date_epoch"]|timeElapsedSince}
     </abbr>
   </div>
 </%def>
 
-<%def name="message_layout(mid, message, flags, fid)">
+<%def name="message_layout(convId, conv, mids, message, flags, fid)">
     <div class="message-headline">
-      <h2 class="message-headline-subject">${message["meta"]["subject"]|h}</h2>
+      <h2 class="message-headline-subject">${conv["subject"]|h}</h2>
     </div>
-    <div>
+
+    % for mid in messageIds:
       <div class="conv-avatar">
-        <%
-            emailId = message["meta"]["owner"]
-            avatarURI = None
-            avatarURI = utils.userAvatar(emailId, people[emailId]["basic"])
-        %>
-        %if avatarURI:
-          <img src="${avatarURI}" height="48" width="48" style="display:inline-block"/>
-        %endif
+      <%
+        emailId = messages[mid]['meta']["owner"]
+        avatarURI = None
+        avatarURI = utils.userAvatar(emailId, people[emailId]["basic"])
+      %>
+      %if avatarURI:
+        <img src="${avatarURI}" height="48" width="48" style="display:inline-block"/>
+      %endif
       </div>
       <div class="conv-data">
-        <div>
-          <div class="conv-summary">
-            <div class="message-headers">
+        <div class="conv-summary">
+          <div class="message-headers">
             <span class="user conv-user-cause">
-                <a href="/profile?id=${emailId}" class="ajax">
-                    ${people[emailId]["basic"]["name"]}
-                </a>
+              <a href="/profile?id=${emailId}" class="ajax">
+                ${people[messages[mid]['meta']['owner']]["basic"]["name"]}
+              </a>
             </span>
-            <span class="time-label message-headers-time">${message["meta"]["date_epoch"]|timeElapsedSince}</span>
-            </div>
-            <div class="message-message">
-                ${message["meta"].get("body", '') | newlinescape}
-            </div>
+            <span class="time-label message-headers-time">${messages[mid]["meta"]["date_epoch"]|timeElapsedSince}</span>
+          </div>
+          <div class="message-message">
+            ${messages[mid]["meta"].get("body", '') | newlinescape}
           </div>
         </div>
       </div>
-    </div>
-    <input type="hidden" name="message" value="${mid}"/>
-    <input type="hidden" name="_body" value="${formatBodyForReply(message, "")}"/>
+    % endfor
+    <input type="hidden" name="message" value="${convId}"/>
+    <input type="hidden" name="_body" value="${formatBodyForReply(messages[mid], "")}"/>
 </%def>
 
 <%def name="thread_layout(thread, inline=False, isFeed=False)">
@@ -345,7 +344,7 @@
     </div>
 </%def>
 
-<%def name="quick_reply_layout(script, msg)">
+<%def name="quick_reply_layout(script, msg, convId)">
   <div class="message-composer">
     <div class="message-composer-quick-actions">
       <a href="#" onclick="$('textarea[class=message-composer-field-body-quick]').attr('value', $('input[name=_body]').attr('value'))">
@@ -354,8 +353,7 @@
     </div>
     <div class="message-composer-field-body-wrapper">
         <textarea class="message-composer-field-body-quick" name="body" placeholder="Quickly reply to this message"></textarea>
-        <input type="hidden" value="test" name="parent"/>
-        <input type="hidden" value="${formatSubjectForReply(msg["meta"]['subject'])}" name="subject"/>
+        <input type="hidden" value=${convId} name="parent"/>
     </div>
     <div class="message-composer-field">
       <input type="submit" name="send" value="${_('Reply')}" class="button ">
@@ -448,13 +446,14 @@
     <input type="hidden" name="fid" value="${fid}"/>
     </form>
   %elif view == "message":
+
     <form method="post" action="/messages/thread">
-    ${toolbar_layout(script, view, fid, message=message)}
-    ${message_layout(id, message, flags, fid)}
+    ${toolbar_layout(script, view, fid, message=messages)}
+    ${message_layout(id, conv, messageIds, messages, flags, fid)}
     <input type="hidden" name="fid" value="${fid}"/>
     </form>
     <form method="post" action="/messages/write">
-    ${quick_reply_layout(script, message)}
+    ${quick_reply_layout(script, messages[messageIds[-1]], id)}
     <input type="hidden" name="fid" value="${fid}"/>
     </form>
   %elif view == "compose":
