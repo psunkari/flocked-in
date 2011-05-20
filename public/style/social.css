@@ -827,10 +827,21 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     margin-top: 6px;
 }
 
-#people-view {
+.viewbar {
     margin: 5px;
     padding: 0 5px 10px;
     border-bottom: 1px solid #C3D9FF;
+}
+
+.pagingbar {
+    margin: 10px 5px 5px;
+    padding: 10px 5px;
+    border-top: 1px solid #C3D9FF;
+    text-align: right;
+}
+
+.pagingbar .button {
+    margin-left: 5px;
 }
 
 .view-options {
