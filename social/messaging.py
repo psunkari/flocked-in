@@ -286,7 +286,7 @@ class MessagingResource(base.BaseResource):
         if not convIds:
             raise errors.MissingParams()
         if delete:
-            yield self._markAsDelete(request)
+            yield self._moveConversation(request, convIds, 'delete')
         if archive:
             yield self._moveConversation(request, convIds, 'archive')
         if unread:
@@ -294,11 +294,6 @@ class MessagingResource(base.BaseResource):
         if unArchive:
             yield self._moveConversation(request, convIds, 'inbox')
 
-
-
-    @defer.inlineCallbacks
-    def _markAsDelete(self, request):
-        defer.returnValue(True)
 
     @defer.inlineCallbacks
     def _moveConversation(self, request, convIds, toFolder):
@@ -476,7 +471,6 @@ class MessagingResource(base.BaseResource):
             d = self._composeMessage(request)
         elif segmentCount == 1 and request.postpath[0] == "reply":
             d = self._reply(request)
-
         elif segmentCount == 1 and request.postpath[0] == "thread":
             d = self._actions(request)
 
