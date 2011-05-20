@@ -27,14 +27,19 @@
           </div>
         </div>
         <div class="center-contents">
-          <div id="people-view">
+          <div id="people-view" class="viewbar">
             %if not script:
               ${viewOptions(viewType)}
             %endif
           </div>
           <div id="users-wrapper">
             %if not script:
-              ${self.content()}
+              ${listPeople()}
+            %endif
+          </div>
+          <div id="people-paging" class="pagingbar">
+            %if not script:
+              ${paging()}
             %endif
           </div>
         </div>
@@ -52,6 +57,21 @@
         <li><a href="/people?type=${item}" class="ajax">${_(display)}</a></li>
       %endif
     %endfor
+  </ul>
+</%def>
+
+<%def name="paging()">
+  <ul class="h-links">
+    %if prevPageStart:
+      <li class="button"><a class="ajax" href="/people?type=${viewType}&start=${prevPageStart}">${_("&#9666; Previous")}</a></li>
+    %else:
+      <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
+    %endif
+    %if nextPageStart:
+      <li class="button"><a class="ajax" href="/people?type=${viewType}&start=${nextPageStart}">${_("Next &#9656;")}</a></li>
+    %else:
+      <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
+    %endif
   </ul>
 </%def>
 
@@ -81,7 +101,7 @@
   </div>
 </%def>
 
-<%def name="content(showBlocked=False)">
+<%def name="listPeople(showBlocked=False)">
   <%
     counter = 0
     firstRow = True
@@ -103,12 +123,5 @@
   %endfor
   %if counter % 2 == 1:
     </div>
-  %endif
-</%def>
-
-<%def name="listPeople(showBlocked=False)">
-  ${self.content(showBlocked)}
-  %if nextPageStart:
-    <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" _ref="/people?start=${nextPageStart}">${_("Fetch More People")}</a></div>
   %endif
 </%def>

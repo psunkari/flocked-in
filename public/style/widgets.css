@@ -45,7 +45,14 @@
     text-align: center;
     vertical-align: middle;
     white-space: nowrap;
-    
+    text-shadow: 1px 1px white;
+    box-shadow: 1px 1px 2px #CCC;
+}
+
+.button.disabled {
+    color: #888;
+    background: #E3E3E3 !important;
+    text-shadow: none;
 }
 
 .button-content {
@@ -63,12 +70,13 @@
 }
 
 .button.default {
-    background: #dbdbdb url(/public/images/ui.png) no-repeat right -256px;
-    background-position: -1px -321px;
-    background-color: #3D85C6;
-    border-color: #204573;
+    background: #3D85C6 url(/public/images/ui.png) no-repeat -1px -321px;
+    background: -moz-linear-gradient(center top , #3D85C6, #3366CC) repeat scroll 0 0 transparent;
+    background: -webkit-gradient(linear,0% 40%,0% 70%,from(#3D85C6),to(#3366CC));
+    border-color: #3366CC #3366CC #204573;
     color: white;
-    font-weight: bold;
+    text-shadow: 1px 1px #204573;
+    box-shadow: 1px 1px 2px #888;
 }
 
 .default > .button-content {
@@ -83,9 +91,9 @@
 
 .button.default:active, .button.default:focus, .button.default:hover {
     border-color: #204573;
-    background: #dbdbdb url(/public/images/ui.png) no-repeat right -256px;
-    background-position: -1px -321px;
-    background-color: #3D85C6;
+    background: #3D85C6 url(/public/images/ui.png) no-repeat right -1px -321px;
+    background: -moz-linear-gradient(center top , #3366CC, #3D85C6) repeat scroll 0 0 transparent;
+    background: -webkit-gradient(linear,0% 40%,0% 70%,to(#3D85C6),from(#3366CC));
 }
 
 /*

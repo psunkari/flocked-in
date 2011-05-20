@@ -19,7 +19,7 @@ from social.profile     import saveAvatarItem
 
 
 class GroupsResource(base.BaseResource):
-    isLeaf= True
+    isLeaf = True
 
     @profile
     @defer.inlineCallbacks
@@ -388,17 +388,6 @@ class GroupsResource(base.BaseResource):
             yield render(request, "groups.mako", **args)
 
 
-    @defer.inlineCallbacks
-    def _getGroupMembersIds(self, groupId, start='', count=10):
-        cols = yield Db.get_slice(groupId, "displayNameIndex",
-                                  start=start, count=count)
-        userIds = [col.column.name.split(":")[1] for col in cols]
-        nextPageStart = None
-        if cols:
-            nextPageStart = cols[-1].column.name
-        defer.returnValue((userIds, nextPageStart))
-
-
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -415,16 +404,15 @@ class GroupsResource(base.BaseResource):
             yield renderScriptBlock(request, "groups.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-        users, relation, userIds, \
-            blockedUsers, nextPageStart = yield people.getPeople(myKey,
-                                                        groupId, args['orgKey'],
-                                                        start = start,
-                                                        fn= self._getGroupMembersIds)
+        users, relation, userIds, blockedUsers, nextPageStart,\
+            prevPageStart = yield people.getPeople(myKey, groupId,
+                                               args['orgKey'], start = start)
         args["relations"] = relation
         args["users"] = users
         args["userIds"] = userIds
         args["blockedUsers"] = blockedUsers
         args["nextPageStart"] = nextPageStart
+        args["prevPageStart"] = prevPageStart
         args["groupId"] = groupId
         args["heading"] = "Members"
 
@@ -460,7 +448,6 @@ class GroupsResource(base.BaseResource):
             yield renderScriptBlock(request, "groups.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-
         if myKey in group["admins"]:
             #or myKey in moderators #if i am moderator
             cols = yield Db.get_slice(groupId, "pendingConnections")
@@ -479,6 +466,7 @@ class GroupsResource(base.BaseResource):
                                     landing, "#titlebar", "set", **args)
             yield renderScriptBlock(request, "groups.mako", "pendingRequests",
                                     landing, "#groups-wrapper", "set", **args)
+
 
     @defer.inlineCallbacks
     def _inviteMember(self, request):
@@ -550,6 +538,7 @@ class GroupsResource(base.BaseResource):
         elif segmentCount == 1 and request.postpath[0] == "invite":
             d = self._renderInviteMembers(request)
         return self._epilogue(request, d)
+
 
     @profile
     @dump_args

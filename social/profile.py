@@ -369,10 +369,8 @@ class ProfileResource(base.BaseResource):
                      Db.remove(targetKey, "connections", None, myKey),
                      Db.remove(myKey, "pendingConnections", targetKey),
                      Db.remove(targetKey, "pendingConnections", myKey),
-                     Db.remove(myKey, "displayNameIndex",
-                               ":".join([targetDisplayName, targetKey])),
-                     Db.remove(targetKey, "displayNameIndex",
-                               ":".join([myDisplayName, myKey]))]
+                     utils._updateDisplayNameIndex(myKey, targetKey, None, myDisplayName),
+                     utils._updateDisplayNameIndex(targetKey, myKey, None, targetDisplayName)]
         if myFirstName:
             deferreds.append(utils.deleteNameIndex(targetKey, myFirstName, myKey))
         if myLastName:
