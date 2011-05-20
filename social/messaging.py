@@ -30,7 +30,8 @@ class MessagingResource(base.BaseResource):
         # all the input and fill with safe defaults wherever needed.
         #To, CC, Subject, Body,
         body = utils.getRequestArg(request, "body")
-        body = body.decode('utf-8').encode('utf-8', "replace")
+        if body:
+            body = body.decode('utf-8').encode('utf-8', "replace")
         parent = utils.getRequestArg(request, "parent") #TODO
         subject = utils.getRequestArg(request, "subject") or None
         if subject: subject.decode('utf-8').encode('utf-8', "replace")
@@ -231,8 +232,9 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     def _addMembers(self, request):
 
+        myId = request.getSession(IAuthInfo).username
         newMembers, body, subject, convId = self._parseComposerArgs(request)
-        if not (convId or  recipients):
+        if not (convId and newMembers):
             raise errors.MissingParams()
         conv = yield Db.get_slice(convId, "mConversations")
         if not conv:
@@ -242,37 +244,49 @@ class MessagingResource(base.BaseResource):
         cols = yield Db.multiget_slice(newMembers, "entities", ['basic'])
         newMembers = set([userId for userId in cols if cols[userId]])
         recipients =  set(pickle.loads(conv['acl'])['accept']['users'])
+        if myId not in recipients:
+            raise errors.AccessDenied()
+
         newMembers = newMembers - recipients
-        recipients.update(newMembers)
-        acl = pickle.dumps({"accept":{"users":list(recipients)}})
-        yield Db.insert(convId, "mConversations", acl, 'acl')
-        yield self._deliverMessage(convId, newMembers, conv['uuid'], conv['owner'])
+        if newMembers:
+            recipients.update(newMembers)
+            acl = pickle.dumps({"accept":{"users":list(recipients)}})
+            yield Db.insert(convId, "mConversations", acl, 'acl')
+            yield self._deliverMessage(convId, newMembers, conv['uuid'], conv['owner'])
 
 
     @defer.inlineCallbacks
     def _deleteMembers(self, request):
+
+        myId = request.getSession(IAuthInfo).username
         members, body, subject, convId = self._parseComposerArgs(request)
-        if not (convId or  recipients):
+        if not (convId and  members):
             raise errors.MissingParams()
+        conv = yield Db.get_slice(convId, "mConversations")
         if not conv:
             raise errors.MissingParams()
         conv = utils.columnsToDict(conv)
         cols = yield Db.multiget_slice(members, "entities", ['basic'])
         members = set([userId for userId in cols if cols[userId]])
         recipients =  set(pickle.loads(conv['acl'])['accept']['users'])
+
+        if myId not in recipients:
+            raise errors.AccessDenied()
+
         members = members.intersection(recipients)
         new_recipients = list(recipients - members)
 
-        cols = yield Db.multiget_slice(newMembers, "entities", ['basic'])
         acl = pickle.dumps({"accept":{"users":new_recipients}})
         yield Db.insert(convId, "mConversations", acl, 'acl')
 
-        cols = yield Db.get_slice(convId, 'mConvFolders', members)
-        cols = utils.supercolumnsToDict(cols)
-        for recipient in cols:
-            for folder in cols[recipient]:
-                cf = folders[folder] if folder in folders else folder
-                yield Db.remove(recipient, cf, conv['uuid'])
+
+        if members:
+            cols = yield Db.get_slice(convId, 'mConvFolders', members)
+            cols = utils.supercolumnsToDict(cols)
+            for recipient in cols:
+                for folder in cols[recipient]:
+                    cf = folders[folder] if folder in folders else folder
+                    yield Db.remove(recipient, cf, conv['uuid'])
 
     @defer.inlineCallbacks
     def _actions(self, request):
@@ -352,6 +366,10 @@ class MessagingResource(base.BaseResource):
             cols = yield Db.get_slice(convId, "mConversations")
             conv = utils.columnsToDict(cols)
 
+            relation = Relation(myId, [])
+            if not utils.checkAcl(myId, conv['acl'], conv['owner'], relation):
+                errors.AccessDenied()
+
             timeUUID = conv['uuid']
             yield Db.remove(myId, "mUnreadConversations", timeUUID)
             yield Db.remove(convId, "mConvFolders", 'mUnreadConversations', myId)
@@ -364,9 +382,6 @@ class MessagingResource(base.BaseResource):
 
             #FIX: make sure that there will be an entry of convId in mConvFolders
 
-            relation = Relation(myId, [])
-            if not utils.checkAcl(myId, conv['acl'], conv['owner'], relation):
-                errors.AccessDenied()
 
             acl = pickle.loads(conv['acl'])
             recipients = set(acl['accept']['users'] + [myId, conv['owner']])
@@ -473,5 +488,9 @@ class MessagingResource(base.BaseResource):
             d = self._reply(request)
         elif segmentCount == 1 and request.postpath[0] == "thread":
             d = self._actions(request)
+        elif segmentCount == 1 and request.postpath[0] == "addMembers":
+            d = self._addMembers(request)
+        elif segmentCount == 1 and request.postpath[0] == "deleteMembers":
+            d = self._deleteMembers(request)
 
         return self._epilogue(request, d)
