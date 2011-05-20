@@ -178,6 +178,8 @@ class MessagingResource(base.BaseResource):
         landing = not self._ajax
         folder = utils.getRequestArg(request, 'filter')
         folder = folders[folder] if folder in folders else folders['inbox']
+        start = utils.getRequestArg(request, "start") or ''
+        start = utils.decodeKey(start)
 
         if script and landing:
             yield render(request, "message.mako", **args)
@@ -189,13 +191,27 @@ class MessagingResource(base.BaseResource):
         unread = []
         convs = []
         users = set()
+        count = 10
+        fetchCount = count + 1
+        nextPageStart = ''
+        prevPageStart = ''
 
-        cols = yield Db.get_slice(myKey, folder, reverse=True)
+        cols = yield Db.get_slice(myKey, folder, reverse=True, start=start, count=fetchCount)
         for col in cols:
             x, convId = col.column.value.split(':')
             convs.append(convId)
             if x == 'u':
                 unread.append(convId)
+        if len(cols) == fetchCount:
+            nextPageStart = utils.encodeKey(col.column.name)
+            convs = convs[:count]
+
+        ###XXX: try to avoid extra fetch
+        cols = yield Db.get_slice(myKey, folder, count=fetchCount, start=start)
+        if cols and len(cols)>1 and start:
+            prevPageStart = utils.encodeKey(cols[-1].column.name)
+
+
         cols = yield Db.multiget_slice(convs, 'mConversations')
         conversations = utils.multiSuperColumnsToDict(cols)
         m={}
@@ -216,8 +232,8 @@ class MessagingResource(base.BaseResource):
         args.update({"people":users})
         args.update({"mids": convs})
         args.update({"fid": None})
-        args['start']=''
-        args['end']=''
+        args['nextPageStart']= nextPageStart
+        args['prevPageStart']= prevPageStart
         folderId=None
 
         if script:

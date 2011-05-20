@@ -358,7 +358,7 @@
   </div>
 </%def>
 
-<%def name="toolbar_layout(script, view, fid, message=None, start=None, end=None)">
+<%def name="toolbar_layout(script, view, fid, message=None, nextPageStart=None, prevPageStart=None)">
   % if view == "messages":
     <div class="toolbar">
       % if script:
@@ -372,7 +372,7 @@
       <input type="submit" name="archive" value="Archive" class="button "/>
       <input type="submit" name="unread" value="UnRead" class="button "/>
       <input type="submit" name="inbox" value="UnArchive" class="button "/>
-      ${navigation_layout(script, view, fid, start, end)}
+      ${navigation_layout(script, view, fid, nextPageStart, prevPageStart)}
     </div>
   % elif view == "message":
     <div class="toolbar">
@@ -407,22 +407,22 @@
   % endif
 </%def>
 
-<%def name="navigation_layout(script, view, fid, start, end)">
+<%def name="navigation_layout(script, view, fid, nextPageStart, prevPageStart)">
   % if view == "messages":
     <div style="float:right;margin-top:6px">
       <ul class="h-links">
-        % if start !=0:
+        % if prevPageStart != '':
           %if fid:
-            <li style="padding: 0pt 4px;"><a class="${'ajax' if script else ''}" href="/messages?start=${start}&fid=${fid}&back=True">Back</a></li>
+            <li style="padding: 0pt 4px;"><a class="${'ajax' if script else ''}" href="/messages?start=${prevPageStart}&fid=${fid}">Back</a></li>
           %else:
-            <li style="padding: 0pt 4px;"><a class="${'ajax' if script else ''}" href="/messages?start=${start}&back=True">Back</a></li>
+            <li style="padding: 0pt 4px;"><a class="${'ajax' if script else ''}" href="/messages?start=${prevPageStart}">Back</a></li>
           %endif
         % endif
-        % if end != 0:
+        % if nextPageStart != '':
           % if fid:
-            <li style="padding: 0pt 4px;"><a class="${'ajax' if script else ''}" href="/messages?start=${end}&fid=${fid}">Next</a></li>
+            <li style="padding: 0pt 4px;"><a class="${'ajax' if script else ''}" href="/messages?start=${nextPageStart}&fid=${fid}">Next</a></li>
           %else:
-            <li style="padding: 0pt 4px;"><a class="${'ajax' if script else ''}" href="/messages?start=${end}">Next</a></li>
+            <li style="padding: 0pt 4px;"><a class="${'ajax' if script else ''}" href="/messages?start=${nextPageStart}">Next</a></li>
           %endif
         % endif
       </ul>
@@ -438,7 +438,7 @@
     %endfor
   %elif view == "messages":
     <form method="post" action="/messages">
-    ${toolbar_layout(script, view, fid, None, start, end)}
+    ${toolbar_layout(script, view, fid, None, nextPageStart, prevPageStart)}
     %for mid in mids:
       ${messages_layout(script, mid, messages[mid], fid)}
     %endfor
