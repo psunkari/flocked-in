@@ -91,23 +91,21 @@
 %>
 
 <%!
-  def formatPeopleInConversation(message, people, short=False):
-    recipients = message["people"]
-    #senderEmailId = email.utils.parseaddr(message["owner"])[1]
-    senderEmailId = message["owner"]
+  def formatPeopleInConversation(conv, people, short=False):
+    recipients = conv["people"]
+    senderEmailId = conv["meta"]["owner"]
     rStrings = []
     for each in recipients:
-        #emailId = email.utils.parseaddr(each)[1]
         emailId = each
         if not short:
-            estring = "<a href='/profile?id=%s'>%s</a>" %(message["people"][each],
+            estring = "<a href='/profile?id=%s'>%s</a>" %(recipients[each],
                                                           people[each]["basic"]["name"])
         else:
             if emailId != senderEmailId:
                 estring = "<span>%s</span>" %(people[emailId]["basic"]["name"])
             else:
                 continue
-        if emailId == message["owner"]:
+        if emailId == conv["meta"]["owner"]:
             estring = "<span>%s</span>" %("Me")
 
         rStrings.append(estring)
@@ -124,7 +122,6 @@
     else:
         rString = ", ".join(set(rStrings))
         finalString = "%s Wrote to %s" %(sString, rString)
-
     return finalString
 %>
 
@@ -226,28 +223,28 @@
       return "%s" %date
 %>
 
-<%def name="messages_layout(script, mid, thread, fid)">
-  <div id="thread-${mid}" class="message-row ${'row-unread' if thread["read"] == "0" else 'row-read'}">
+<%def name="messages_layout(script, convId, conv, filter)">
+  <div id="thread-${convId}" class="message-row ${'row-unread' if conv["read"] == "0" else 'row-read'}">
     <div class="message-row-cell message-row-select">
-      <input type="checkbox" name="selected" value="${mid}"
+      <input type="checkbox" name="selected" value="${convId}"
         onchange="$('.thread-selector').attr('checked', false)"/>
     </div>
     <div class="message-row-cell message-row-star">
 
     </div>
-    <div class="message-row-cell" style="width:210px">${formatPeopleInConversation(thread, people, True)}</div>
+    <div class="message-row-cell" style="width:210px">${formatPeopleInConversation(conv, people, True)}</div>
     <div class="message-row-cell" style="width:450px">
-      <a class="${'ajax' if script else ''} message-link" href="/messages/thread?id=${mid}&fid=${fid}">${thread["subject"]|h}</a>
+      <a class="${'ajax' if script else ''} message-link" href="/messages/thread?id=${convId}">${conv["meta"]["subject"]|h}</a>
     </div>
     <abbr class="message-row-cell time-label" style="width:130px">
-      ##${thread["date_epoch"]|timeElapsedSince}
+      ${conv['meta']["date_epoch"]|timeElapsedSince}
     </abbr>
   </div>
 </%def>
 
 <%def name="message_layout(convId, conv, mids, message, flags, fid)">
     <div class="message-headline">
-      <h2 class="message-headline-subject">${conv["subject"]|h}</h2>
+      <h2 class="message-headline-subject">${conv["meta"]["subject"]|h}</h2>
     </div>
 
     % for mid in messageIds:
@@ -454,6 +451,18 @@
     ${message_layout(id, conv, messageIds, messages, flags, fid)}
     <input type="hidden" name="fid" value="${fid}"/>
     </form>
+    <form action="/messages/addMembers" method="post" class="ajax">
+      <input type="text" name="recipients" />
+      <input type="hidden" name='parent' value=${id} />
+      <input type="submit" value="submit" />
+
+    </form>
+    <form action="/messages/deleteMembers" method="post" class="ajax">
+      <input type="text" name="recipients" />
+      <input type="hidden" name='parent' value=${id} />
+      <input type="submit" value="submit" />
+    </form>
+
     <form method="post" action="/messages/reply">
     ${quick_reply_layout(script, messages[messageIds[-1]], id)}
     <input type="hidden" name="fid" value="${fid}"/>

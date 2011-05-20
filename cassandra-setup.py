@@ -215,8 +215,8 @@ def createColumnFamilies(client):
 
     yield client.system_add_column_family(messages)
 
-    mConversations = CfDef(KEYSPACE, "mConversations", "Standard", "UTF8Type", None,
-                          "A collection of all conversations")
+    mConversations = CfDef(KEYSPACE, "mConversations", "Super", "UTF8Type",
+                          "UTF8Type", "A collection of all conversations")
     mAllConvs = CfDef(KEYSPACE, "mAllConversations", "Standard", "TimeUUIDType", None,
                      "list of all unread and read conversations of a user")
     mUnread = CfDef(KEYSPACE, "mUnreadConversations","Standard", "TimeUUIDType", None,

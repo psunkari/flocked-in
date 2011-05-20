@@ -45,10 +45,10 @@ class MessagingResource(base.BaseResource):
     def _deliverMessage(self, convId, recipients, timeUUID, owner):
 
         dontDeliver = set()
-        cols = yield Db.get_slice(convId, "mConversations", ['uuid'])
-        cols = utils.columnsToDict(cols)
+        conv = yield Db.get_slice(convId, "mConversations", ['meta'])
+        conv = utils.supercolumnsToDict(conv)
 
-        oldTimeUUID = cols['uuid']
+        oldTimeUUID = conv['meta']['uuid']
         val = "u:%s" %(convId)
 
         cols = yield Db.get_slice(convId, 'mConvFolders', recipients)
@@ -96,19 +96,19 @@ class MessagingResource(base.BaseResource):
         defer.returnValue(messageId)
 
     @defer.inlineCallbacks
-    def _newConversation(self, ownerId, recipients, timeUUID,
+    def _newConversation(self, ownerId, participants, timeUUID,
                          subject, dateHeader, epoch):
 
-        acl = pickle.dumps({'accept':{'users':recipients}})
-        conv_meta = {"acl": acl,
-                     "owner":ownerId,
+        participants = dict ([(userId, '') for userId in participants])
+        conv_meta = {"owner":ownerId,
                      "timestamp": str(int(time.time())),
                      "uuid": timeUUID,
                      "Date": dateHeader,
                      "date_epoch" : str(epoch),
                      "subject": subject}
         convId = utils.getUniqueKey()
-        yield Db.batch_insert(convId, "mConversations", conv_meta)
+        yield Db.batch_insert(convId, "mConversations", {"meta": conv_meta,
+                                                "participants": participants})
         defer.returnValue(convId)
 
     @defer.inlineCallbacks
@@ -118,22 +118,22 @@ class MessagingResource(base.BaseResource):
         recipients, body, subject, convId = self._parseComposerArgs(request)
         dateHeader, epoch = self._createDateHeader()
 
-        if not convId and not recipients:
+        if not convId:
             raise errors.MissingParams()
 
-        cols = yield Db.get_slice(convId, "mConversations", ['acl'])
+        cols = yield Db.get_slice(convId, "mConversations", ['participants'])
+        cols = utils.supercolumnsToDict(cols)
         if not cols:
             raise errors.InvalidRequest()
 
-        recipients = pickle.loads(cols[0].column.value)['accept']['users']
+        participants = cols['participants'].keys()
         timeUUID = uuid.uuid1().bytes
+        meta = {'uuid': timeUUID, 'Date': dateHeader, 'date_epoch': str(epoch)}
 
         messageId = yield self._newMessage(myId, timeUUID, body, dateHeader, epoch)
-        yield self._deliverMessage(convId, recipients, timeUUID, myId)
+        yield self._deliverMessage(convId, participants, timeUUID, myId)
         yield Db.insert(convId, "mConvMessages", messageId, timeUUID)
-        yield Db.batch_insert(convId, "mConversations", {'uuid': timeUUID,
-                                                         'Date': dateHeader,
-                                                         'date_epoch': str(epoch)})
+        yield Db.batch_insert(convId, "mConversations", {'meta':meta})
         request.redirect('/messages')
 
 
@@ -154,17 +154,16 @@ class MessagingResource(base.BaseResource):
         if not recipients:
             raise errors.MissingParams()
         recipients.add(myId)
-        recipients = list(recipients)
+        participants = list(recipients)
 
         timeUUID = uuid.uuid1().bytes
-        convId = yield self._newConversation(myId, recipients, timeUUID,
+        meta = {'uuid': timeUUID, 'Date': dateHeader, 'date_epoch': str(epoch)}
+        convId = yield self._newConversation(myId, participants, timeUUID,
                                              subject, dateHeader, epoch)
         messageId = yield self._newMessage(myId, timeUUID, body, dateHeader, epoch)
-        yield self._deliverMessage(convId, recipients, timeUUID, myId)
+        yield self._deliverMessage(convId, participants, timeUUID, myId)
         yield Db.insert(convId, "mConvMessages", messageId, timeUUID)
-        yield Db.batch_insert(convId, "mConversations", {'uuid': timeUUID,
-                                                         'Date': dateHeader,
-                                                         'date_epoch': str(epoch)})
+        yield Db.batch_insert(convId, "mConversations", {'meta':meta})
 
     @defer.inlineCallbacks
     def _composeMessage(self, request):
@@ -198,17 +197,16 @@ class MessagingResource(base.BaseResource):
             if x == 'u':
                 unread.append(convId)
         cols = yield Db.multiget_slice(convs, 'mConversations')
-        messages = utils.multiColumnsToDict(cols)
+        conversations = utils.multiSuperColumnsToDict(cols)
         m={}
-        for mid in messages:
-            if not messages[mid]:
+        for convId in conversations:
+            if not conversations[convId]:
                 continue
-            acl = pickle.loads(messages[mid]['acl'])
-            users.update(acl['accept']['users'])
-            users.add(messages[mid]['owner'])
-            messages[mid]['people'] = acl['accept']['users']
-            messages[mid]['read'] = str(int(mid not in unread))
-            m[mid]=messages[mid]
+            participants = conversations[convId]['participants'].keys()
+            users.update(participants)
+            conversations[convId]['people'] = participants
+            conversations[convId]['read'] = str(int(convId not in unread))
+            m[convId]=conversations[convId]
 
         users = yield Db.multiget_slice(users, 'entities', ['basic'])
         users = utils.multiSuperColumnsToDict(users)
@@ -239,20 +237,21 @@ class MessagingResource(base.BaseResource):
         conv = yield Db.get_slice(convId, "mConversations")
         if not conv:
             raise errors.MissingParams()
-        conv = utils.columnsToDict(conv)
+
+        conv = utils.supercolumnsToDict(conv)
+        participants =  set(conv['participants'].keys())
+
+        if myId not in participants:
+            raise errors.AccessDenied()
 
         cols = yield Db.multiget_slice(newMembers, "entities", ['basic'])
         newMembers = set([userId for userId in cols if cols[userId]])
-        recipients =  set(pickle.loads(conv['acl'])['accept']['users'])
-        if myId not in recipients:
-            raise errors.AccessDenied()
+        newMembers = newMembers - participants
 
-        newMembers = newMembers - recipients
         if newMembers:
-            recipients.update(newMembers)
-            acl = pickle.dumps({"accept":{"users":list(recipients)}})
-            yield Db.insert(convId, "mConversations", acl, 'acl')
-            yield self._deliverMessage(convId, newMembers, conv['uuid'], conv['owner'])
+            newMembers = dict([(userId, '') for userId in newMembers])
+            yield Db.batch_insert(convId, "mConversations", {'participants':newMembers})
+            yield self._deliverMessage(convId, newMembers, conv['meta']['uuid'], conv['meta']['owner'])
 
 
     @defer.inlineCallbacks
@@ -260,33 +259,42 @@ class MessagingResource(base.BaseResource):
 
         myId = request.getSession(IAuthInfo).username
         members, body, subject, convId = self._parseComposerArgs(request)
+
         if not (convId and  members):
             raise errors.MissingParams()
+
         conv = yield Db.get_slice(convId, "mConversations")
         if not conv:
             raise errors.MissingParams()
-        conv = utils.columnsToDict(conv)
+
+        conv = utils.supercolumnsToDict(conv)
+        participants = conv['participants'].keys()
+
+        if myId not in participants:
+            raise errors.UnAuthorized()
+
         cols = yield Db.multiget_slice(members, "entities", ['basic'])
         members = set([userId for userId in cols if cols[userId]])
-        recipients =  set(pickle.loads(conv['acl'])['accept']['users'])
+        members = members.intersection(participants)
 
-        if myId not in recipients:
-            raise errors.AccessDenied()
+        if len(members) == len(participants):
+            members.remove(conv['meta']['owner'])
 
-        members = members.intersection(recipients)
-        new_recipients = list(recipients - members)
-
-        acl = pickle.dumps({"accept":{"users":new_recipients}})
-        yield Db.insert(convId, "mConversations", acl, 'acl')
-
-
+        deferreds = []
         if members:
+            for member in members:
+                d = Db.remove(convId, 'mConversations', member, 'participants')
+                deferreds.append(d)
+
             cols = yield Db.get_slice(convId, 'mConvFolders', members)
             cols = utils.supercolumnsToDict(cols)
             for recipient in cols:
                 for folder in cols[recipient]:
                     cf = folders[folder] if folder in folders else folder
-                    yield Db.remove(recipient, cf, conv['uuid'])
+                    d = Db.remove(recipient, cf, conv['meta']['uuid'])
+                    deferreds.append(d)
+            if deferreds:
+                yield deferreds
 
     @defer.inlineCallbacks
     def _actions(self, request):
@@ -319,8 +327,8 @@ class MessagingResource(base.BaseResource):
             conv = yield Db.get_slice(convId, "mConversations")
             if not conv:
                 raise errors.InvalidRequest()
-            conv = utils.columnsToDict(conv)
-            timeUUID = conv['uuid']
+            conv = utils.supercolumnsToDict(conv)
+            timeUUID = conv['meta']['uuid']
 
             val = "%s:%s"%( 'u' if toFolder == 'unread' else 'r', convId)
 
@@ -364,13 +372,13 @@ class MessagingResource(base.BaseResource):
 
         if convId:
             cols = yield Db.get_slice(convId, "mConversations")
-            conv = utils.columnsToDict(cols)
+            conv = utils.supercolumnsToDict(cols)
+            participants = set(conv['participants'])
 
-            relation = Relation(myId, [])
-            if not utils.checkAcl(myId, conv['acl'], conv['owner'], relation):
-                errors.AccessDenied()
+            if myId not in participants:
+                raise errors.UnAuthorized()
 
-            timeUUID = conv['uuid']
+            timeUUID = conv['meta']['uuid']
             yield Db.remove(myId, "mUnreadConversations", timeUUID)
             yield Db.remove(convId, "mConvFolders", 'mUnreadConversations', myId)
             cols = yield Db.get_slice(convId, "mConvFolders", [myId])
@@ -381,20 +389,16 @@ class MessagingResource(base.BaseResource):
                 yield Db.insert(myId, folder, "r:%s"%(convId), timeUUID)
 
             #FIX: make sure that there will be an entry of convId in mConvFolders
-
-
-            acl = pickle.loads(conv['acl'])
-            recipients = set(acl['accept']['users'] + [myId, conv['owner']])
-            people = yield Db.multiget_slice(recipients, "entities", ['basic'])
-            people = utils.multiSuperColumnsToDict(people)
-
             cols = yield Db.get_slice(convId, "mConvMessages")
             mids = []
             for col in cols:
                 mids.append(col.column.value)
             messages = yield Db.multiget_slice(mids, "messages", ["meta"])
             messages = utils.multiSuperColumnsToDict(messages)
+            participants.update([messages[mid]['meta']['owner'] for mid in messages])
 
+            people = yield Db.multiget_slice(participants, "entities", ['basic'])
+            people = utils.multiSuperColumnsToDict(people)
 
             args.update({"people":people})
             args.update({"conv":conv})
