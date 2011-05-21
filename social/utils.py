@@ -526,50 +526,36 @@ def deleteNameIndex(userKey, name, targetKey):
 @profile
 @defer.inlineCallbacks
 @dump_args
-def _updateDisplayNameIndex(userKey, targetKey, newName, oldName):
-    calls = []
-    if oldName:
-        d1 =  Db.remove(targetKey, "displayNameIndex", oldName.lower() + ":" + userKey)
-        calls.append(d1)
-    if newName:
-        d2 =  Db.insert(targetKey, "displayNameIndex", "", newName.lower() + ':' + userKey)
-        calls.append(d2)
-    if calls:
-        yield defer.DeferredList(calls)
-
-
-@profile
-@defer.inlineCallbacks
-@dump_args
 def updateDisplayNameIndex(userKey, targetKeys, newName, oldName):
     calls = []
+    muts = {}
+
     for targetKey in targetKeys:
-        d = _updateDisplayNameIndex(userKey, targetKey, newName, oldName)
-        calls.append(d)
-    yield defer.DeferredList(calls)
-
-
-@profile
-@defer.inlineCallbacks
-@dump_args
-def _updateNameIndex(userKey, targetKey, newName, oldName):
-    calls = []
-    if oldName:
-        d1 =  Db.remove(targetKey, "nameIndex", oldName.lower() + ":" + userKey)
-        calls.append(d1)
-    if newName:
-        d2 =  Db.insert(targetKey, "nameIndex", "", newName.lower() + ":" + userKey)
-        calls.append(d2)
-    if calls:
-        yield defer.DeferredList(calls)
+        if oldName or newName:
+            muts[targetKey] = {'displayNameIndex':{}}
+        if oldName:
+            colName = oldName.lower() + ":" + userKey
+            muts[targetKey]['displayNameIndex'][colName] = None
+        if newName:
+            colName = newName.lower() + ':' + userKey
+            muts[targetKey]['displayNameIndex'][colName] = ''
+    if muts:
+        yield Db.batch_mutate(muts)
 
 
 @profile
 @defer.inlineCallbacks
 @dump_args
 def updateNameIndex(userKey, targetKeys, newName, oldName):
-    calls = []
+    muts = {}
     for targetKey in targetKeys:
-        d = _updateNameIndex(userKey, targetKey, newName, oldName)
-        calls.append(d)
-    yield defer.DeferredList(calls)
+        if oldName or newName:
+            muts[targetKey] = {'nameIndex':{}}
+        if oldName :
+            colName = oldName.lower() + ":" + userKey
+            muts[targetKey]['nameIndex'][colName] = None
+        if newName:
+            colName = newName.lower() + ":" + userKey
+            muts[targetKey]['nameIndex'][colName] = ''
+    if muts:
+        yield Db.batch_mutate(muts)

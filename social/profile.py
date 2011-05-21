@@ -50,7 +50,6 @@ def saveAvatarItem(entityId, data, isLogo=False):
     largesize = constants.LOGO_SIZE_LARGE if isLogo else constants.AVATAR_SIZE_LARGE
     mediumsize = constants.LOGO_SIZE_MEDIUM if isLogo else constants.AVATAR_SIZE_MEDIUM
     smallsize = constants.LOGO_SIZE_SMALL if isLogo else constants.AVATAR_SIZE_SMALL
-    log.msg(largesize, smallsize, mediumsize)
 
     image.scale(largesize)
     image.write(large)
@@ -284,16 +283,21 @@ class ProfileResource(base.BaseResource):
             targetFirstName = users[targetKey]["basic"].get("firstname", None)
             targetLastName = users[targetKey]["basic"].get("lastname", None)
 
-            d5 = utils._updateDisplayNameIndex(targetKey, myKey, targetName, None)
-            d6 = utils._updateDisplayNameIndex(myKey, targetKey, myName, None)
+            d5 = utils.updateDisplayNameIndex(targetKey, [myKey], targetName, None)
+            d6 = utils.updateDisplayNameIndex(myKey, [targetKey], myName, None)
 
-            d7 = utils._updateNameIndex(myKey, targetKey,  myName, None)
-            d8 = utils._updateNameIndex(myKey, targetKey, myFirstName, None)
-            d9 = utils._updateNameIndex(myKey,targetKey,  myLastName, None)
+            mutMap = {}
+            for field in ['name', 'firstname', 'lastname']:
+                name = users[myKey]["basic"].get(field, None)
+                if name:
+                    colName = name.lower() + ":" + myKey
+                    mutMap.setdefault(targetKey, {}).setdefault('nameIndex', {})[colName]=''
+                name = users[targetKey]['basic'].get(field, None)
+                if name:
+                    colName = name.lower() + ":" + targetKey
+                    mutMap.setdefault(myKey, {}).setdefault('nameIndex', {})[colName] = ''
+            d7 = Db.batch_mutate(mutMap)
 
-            d10 = utils._updateNameIndex(targetKey, myKey, targetName, None)
-            d11 = utils._updateNameIndex(targetKey, myKey, targetFirstName, None)
-            d12 = utils._updateNameIndex(targetKey, myKey, targetLastName, None)
 
             #add to feed
             myItemId = utils.getUniqueKey()
@@ -307,29 +311,29 @@ class ProfileResource(base.BaseResource):
                                              ownerOrgId = users[targetKey]["basic"]["org"])
             targetItem["meta"]["target"] = myKey
             myItem["meta"]["target"] = targetKey
-            d13 = Db.batch_insert(myItemId, "items", myItem)
-            d14 = Db.batch_insert(targetItemId, "items", targetItem)
-            d15 = feed.pushToFeed(myKey, myItem["meta"]["uuid"], myItemId,
+            d8 = Db.batch_insert(myItemId, "items", myItem)
+            d9 = Db.batch_insert(targetItemId, "items", targetItem)
+            d10 = feed.pushToFeed(myKey, myItem["meta"]["uuid"], myItemId,
                                   myItemId, responseType, itemType, myKey)
-            d16 = feed.pushToFeed(targetKey, targetItem["meta"]["uuid"],
+            d11 = feed.pushToFeed(targetKey, targetItem["meta"]["uuid"],
                                   targetItemId, targetItemId, responseType,
                                   itemType, targetKey)
 
             userItemValue = ":".join([responseType, myItemId,
                                       myItemId, "activity", myKey, ""])
-            d17 =  Db.insert(myKey, "userItems", userItemValue,
+            d12 =  Db.insert(myKey, "userItems", userItemValue,
                              myItem["meta"]['uuid'])
             userItemValue = ":".join([responseType, targetItemId, targetItemId,
                                       itemType, targetKey, ""])
-            d18 =  Db.insert(targetKey, "userItems", userItemValue,
+            d13 =  Db.insert(targetKey, "userItems", userItemValue,
                              targetItem["meta"]['uuid'])
 
             value = ":".join([responseType, myKey, targetItemId, itemType, targetKey])
-            d19  = Db.insert(targetKey, "notifications", targetItemId, targetItem["meta"]['uuid'])
-            d20 = Db.batch_insert(targetKey, "notificationItems", {targetItemId:{targetItem["meta"]['uuid']:value}})
+            d14  = Db.insert(targetKey, "notifications", targetItemId, targetItem["meta"]['uuid'])
+            d15 = Db.batch_insert(targetKey, "notificationItems", {targetItemId:{targetItem["meta"]['uuid']:value}})
 
-            calls = [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13,
-                     d14, d15, d16, d17, d18, d19, d20]
+            calls = [d1, d2, d3, d4, d5, d6, d7, d8,
+                     d9, d10, d11, d12, d13, d14, d15]
         except ttypes.NotFoundException:
             itemId = utils.getUniqueKey()
             item = utils.createNewItem(request, itemType,
@@ -346,7 +350,6 @@ class ProfileResource(base.BaseResource):
             calls = [d1, d2, d3, d4, d5]
         except errors.PendingRequest:
             pass
-
 
         yield defer.DeferredList(calls)
 
@@ -369,8 +372,10 @@ class ProfileResource(base.BaseResource):
                      Db.remove(targetKey, "connections", None, myKey),
                      Db.remove(myKey, "pendingConnections", targetKey),
                      Db.remove(targetKey, "pendingConnections", myKey),
-                     utils._updateDisplayNameIndex(myKey, targetKey, None, myDisplayName),
-                     utils._updateDisplayNameIndex(targetKey, myKey, None, targetDisplayName)]
+                     utils.updateDisplayNameIndex(myKey, [targetKey], None, myDisplayName),
+                     utils.updateDisplayNameIndex(targetKey, [myKey], None, targetDisplayName)]
+        if myDisplayName:
+            deferreds.append(utils.deleteNameIndex(targetKey, myDisplayName, myKey))
         if myFirstName:
             deferreds.append(utils.deleteNameIndex(targetKey, myFirstName, myKey))
         if myLastName:
@@ -380,6 +385,9 @@ class ProfileResource(base.BaseResource):
             deferreds.append(utils.deleteNameIndex(myKey, targetFirstName, targetKey))
         if targetLastName:
             deferreds.append(utils.deleteNameIndex(myKey, targetLastName, targetKey))
+        if targetDisplayName:
+            deferreds.append(utils.deleteNameIndex(myKey, targetDisplayName, targetKey))
+
         # TODO: delete the notifications and items created while
         # sending&accepting friend request
 
