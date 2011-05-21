@@ -44,32 +44,42 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     def _deliverMessage(self, convId, recipients, timeUUID, owner):
 
-        dontDeliver = set()
+        convFolderMap = {}
+        userFolderMap = {}
         conv = yield Db.get_slice(convId, "mConversations", ['meta'])
         conv = utils.supercolumnsToDict(conv)
 
         oldTimeUUID = conv['meta']['uuid']
-        val = "u:%s" %(convId)
+        unread = "u:%s"%(convId)
+        read = "r:%s"%(convId)
 
         cols = yield Db.get_slice(convId, 'mConvFolders', recipients)
         cols = utils.supercolumnsToDict(cols)
-        for recipient in cols:
-            for folder in cols[recipient]:
+        for recipient in recipients:
+            deliverToInbox = True
+            # for a new message, mConvFolders will be empty
+            # so recipient may not necessarily be present in cols
+            for folder in cols.get(recipient, []):
                 cf = folders[folder] if folder in folders else folder
                 yield Db.remove(recipient, cf, oldTimeUUID)
                 if cf == 'mDeletedConversations':
-                    yield Db.insert(recipient, cf,  val, timeUUID)
                     #don't add to recipient's inbox if the conv is deleted.
-                    dontDeliver.add(recipient)
-
-        for recipient in recipients:
-            if recipient not in dontDeliver:
-                val = "u:%s"%(convId) if recipient!= owner else 'r:%s'%(convId)
+                    deliverToInbox = False
+                else:
+                    yield Db.remove(convId, 'mConvFolders', folder, recipient)
+            if deliverToInbox:
+                convFolderMap[recipient] = {'mAllConversations':{timeUUID:unread}}
+                userFolderMap[recipient]= {'mAllConversations':''}
                 if recipient != owner:
-                    yield Db.insert(recipient, 'mUnreadConversations',  val, timeUUID)
-                    yield Db.insert(convId, "mConvFolders", '', 'mUnreadConversations', recipient)
-                yield Db.insert(recipient, 'mAllConversations',  val, timeUUID)
-                yield Db.insert(convId, "mConvFolders", '', 'mAllConversations', recipient)
+                    convFolderMap[recipient]['mUnreadConversations'] = {timeUUID:read}
+                    userFolderMap[recipient]['mUnreadConversations'] = ''
+            else:
+                val = unread if recipient != owner else read
+                convFolderMap[recipient] = {'mDeletedConversations':{timeUUID:val}}
+
+
+        yield Db.batch_mutate(convFolderMap)
+        yield Db.batch_insert(convId, "mConvFolders", userFolderMap)
 
 
     def _createDateHeader(self, timezone='Asia/Kolkata'):
@@ -298,9 +308,10 @@ class MessagingResource(base.BaseResource):
 
         deferreds = []
         if members:
-            for member in members:
-                d = Db.remove(convId, 'mConversations', member, 'participants')
-                deferreds.append(d)
+            d =  Db.batch_remove({"mConversations":[convId]},
+                                    names=members,
+                                    supercolumn='participants')
+            deferreds.append(d)
 
             cols = yield Db.get_slice(convId, 'mConvFolders', members)
             cols = utils.supercolumnsToDict(cols)
