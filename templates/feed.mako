@@ -152,7 +152,8 @@
     ${item.item_layout(convId)}
   %endfor
   %if nextPageStart:
-    <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" href="/feed?start=${nextPageStart}&id=${feedId}" _ref="/feed/more?start=${nextPageStart}&id=${feedId}">${_("Fetch older posts")}</a></div>
+    <% typ_filter = '&type=%s' %(itemType) if itemType else '' %>
+    <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" href="/feed?start=${nextPageStart}&id=${feedId}" _ref="/feed/more?start=${nextPageStart}&id=${feedId}${typ_filter}">${_("Fetch older posts")}</a></div>
   %else:
     <div id="next-load-wrapper">No more posts to show</div>
   %endif

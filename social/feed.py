@@ -555,6 +555,7 @@ class FeedResource(base.BaseResource):
         else:
             feedItems = yield getFeedItems(request, feedId=feedId, start=start)
         args.update(feedItems)
+        args['itemType']=itemType
 
         if script:
             onload = "(function(obj){$$.convs.load(obj);})(this);"
@@ -573,10 +574,14 @@ class FeedResource(base.BaseResource):
 
     # The client has scripts and this is an ajax request
     @defer.inlineCallbacks
-    def _renderMore(self, request, start, entityId):
-        feedItems = yield getFeedItems(request, feedId=entityId, start=start)
+    def _renderMore(self, request, start, entityId, itemType=None):
+        if itemType and itemType in plugins and plugins[itemType].hasIndex:
+            feedItems = yield _feedFilter(request, entityId, itemType, start)
+        else:
+            feedItems = yield getFeedItems(request, feedId=entityId, start=start)
         args = feedItems
         args["feedId"] = entityId
+        args['itemType'] = itemType
 
         onload = "(function(obj){$$.convs.load(obj);})(this);"
         yield renderScriptBlock(request, "feed.mako", "feed", False,
@@ -604,7 +609,8 @@ class FeedResource(base.BaseResource):
         elif segmentCount == 1 and request.postpath[0] == "more":
             entityId = utils.getRequestArg(request, "id")
             start = utils.getRequestArg(request, "start") or ""
-            d = self._renderMore(request, start, entityId)
+            itemType = utils.getRequestArg(request, 'type')
+            d = self._renderMore(request, start, entityId, itemType)
         elif segmentCount == 2 and request.postpath[0] == "share":
             if self._ajax:
                 d = self._renderShareBlock(request, request.postpath[1])
