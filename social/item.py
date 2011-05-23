@@ -569,9 +569,9 @@ class ItemResource(base.BaseResource):
             raise errors.InvalidRequest()
 
         entities = {}
-        if users:
-            cols = yield Db.multiget_slice(users, "entities", ["basic"])
-            entities = utils.multiSuperColumnsToDict(cols)
+        owner = item["meta"].get("owner")
+        cols = yield Db.multiget_slice(users+[owner], "entities", ["basic"])
+        entities = utils.multiSuperColumnsToDict(cols)
 
         args = {"itemId": itemId, "likedBy": users,
                 "items": {itemId: item}, "entities": entities}
