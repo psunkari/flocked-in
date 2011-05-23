@@ -98,6 +98,39 @@ class PollResource(base.BaseResource):
         yield renderScriptBlock(request, "poll.mako", 'poll_options',
                                 False, '#poll-contents-%s'%convId, 'set',
                                 args=[convId, voted], **data)
+    @defer.inlineCallbacks
+    def _listVoters(self, request):
+        convId = utils.getRequestArg(request, "id");
+        option = utils.getRequestArg(request, "option")
+        if not convId:
+            raise errors.InvalidRequest()
+
+        conv = yield Db.get_slice(convId, "items", ['meta'])
+        conv = utils.supercolumnsToDict(conv)
+        if conv['meta']['type'] != 'poll':
+            raise errors.InvalidRequest()
+
+        if option:
+            votes = yield Db.get_slice(convId, "votes", [option])
+        else:
+            votes = yield Db.get_slice(convId, "votes")
+
+        votes = utils.supercolumnsToDict(votes)
+        voters = set()
+        if votes:
+            for option in votes:
+                voters.update(votes[option])
+        args = {}
+        args['entities'] = {}
+        if voters:
+            people = yield Db.multiget_slice(voters, "entities", ["basic"])
+            people = utils.multiSuperColumnsToDict(people)
+            args['entities'] = people
+        #render voters
+
+
+
+
 
     @profile
     @dump_args
@@ -125,6 +158,8 @@ class PollResource(base.BaseResource):
                 d = self._results(request)
             elif request.postpath[0] == 'change':
                 d = self._change(request)
+            elif request.postpath[0] == 'voters':
+                d = self._listVoters(request)
 
         if d:
             def success(response):
