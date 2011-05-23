@@ -167,3 +167,74 @@
   border-bottom: 1px solid #CCC;
   clear: left;
 }
+
+/*
+ * Dialog
+ */
+
+.ui-dlg-outer {
+  position: absolute;
+  background-color: rgba(0,0,0,0.5);
+  padding: 10px;
+  border-radius: 6px;
+  width: 400px;
+}
+
+.ui-dlg-inner {
+  background-color: white;
+  border: 1px solid black;
+}
+
+.ui-dlg-title {
+  border-bottom: 1px solid #C3D9FF;
+  padding: 10px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.ui-dlg-buttonbox {
+  padding: 5px 10px;
+  background-color: #F9F9F9;
+  border-top: 1px solid #CCC;
+  text-align: right;
+}
+
+.ui-dlg-center {
+  max-height: 200px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+
+/*
+ * Lists in the dialogs
+ */
+
+.ui-listitem {
+  position: relative;
+  display: block;
+  margin: 2px 0;
+  padding: 2px 0;
+  border-bottom: 1px dotted #DDD;
+  min-height: 38px;
+}
+.ui-listitem:last-child {
+  border-bottom: none;
+}
+.ui-list-icon {
+  height: 32px;
+  width: 32px;
+  top: 4px;
+  left: 6px;
+  position: absolute;
+}
+.ui-list-title {
+  padding-left: 44px;
+  font-weight: bold;
+  padding-top: 6px;
+}
+.ui-list-meta {
+  padding-left: 44px;
+  font-size: 90%;
+  color: #999;
+}
