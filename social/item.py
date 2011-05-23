@@ -244,7 +244,6 @@ class ItemResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _like(self, request):
-
         myId = request.getSession(IAuthInfo).username
 
         # Get the item and the conversation
@@ -364,16 +363,10 @@ class ItemResource(base.BaseResource):
                                     args=[likesCount+1, True, likes], handlers=handler, **args)
 
 
-        # Finally, update the UI
-        # TODO
-
-
-
     @profile
     @defer.inlineCallbacks
     @dump_args
     def _unlike(self, request):
-
         myId = request.getSession(IAuthInfo).username
 
         # Get the item and the conversation
@@ -427,8 +420,6 @@ class ItemResource(base.BaseResource):
             yield Db.remove(myId, "userItems_"+ convType, likeTimeUUID)
 
         yield notifications.deleteNofitications(convId, likeTimeUUID)
-
-
 
         args = {}
         item["meta"]["likesCount"] = likesCount -1
@@ -486,6 +477,7 @@ class ItemResource(base.BaseResource):
                                     args=[likesCount-1, False,
                                     [x.column.name for x in likes]], handlers=handler)
 
+
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -522,7 +514,6 @@ class ItemResource(base.BaseResource):
                                                 "followers": followers})
 
         # 3. Add item as response to parent
-
         yield Db.insert(convId, "itemResponses",
                         "%s:%s" % (myId, itemId), timeUUID)
 
@@ -566,24 +557,26 @@ class ItemResource(base.BaseResource):
                                 args=[convId, itemId], **data)
         d = fts.solr.updateIndex(itemId, {'meta':meta})
 
+
     @profile
     @defer.inlineCallbacks
     @dump_args
     def _likes(self, request):
-        itemId = utils.getRequestArg(request, "id")
-        if not itemId:
-            raise errors.MissingParams()
+        itemId, item = yield utils.getValidItemId(request, "id")
         itemLikes = yield Db.get_slice(itemId, "itemLikes")
         users = [col.column.name for col in itemLikes]
+        if len(users) <= 0:
+            raise errors.InvalidRequest()
+
         entities = {}
         if users:
             cols = yield Db.multiget_slice(users, "entities", ["basic"])
             entities = utils.multiSuperColumnsToDict(cols)
-        args = {}
-        args["entities"] = entities
-        args["itemId"] = itemId
-        yield renderScriptBlock(request, "item.mako", "people_likes", False,
-                                "#people-likes-%s"%(itemId), "set", **args)
+
+        args = {"itemId": itemId, "likedBy": users,
+                "items": {itemId: item}, "entities": entities}
+        yield renderScriptBlock(request, "item.mako", "like_list", False,
+                                "#likes-dlg-%s"%(itemId), "set", **args)
 
 
 
