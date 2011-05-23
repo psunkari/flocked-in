@@ -484,6 +484,16 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
     defer.returnValue(data)
 
 
+def _feedFilter(request, feedId, itemType, start='', count=10):
+
+    @defer.inlineCallbacks
+    def getFn(start='', count=12):
+        cf = "feed_%s"%(itemType)
+        items = yield Db.get_slice(feedId, cf, start=start, count=count)
+        defer.returnValue(utils.columnsToDict(items, ordered=True))
+    return getFeedItems(request, getFn= getFn, start=start)
+
+
 class FeedResource(base.BaseResource):
     isLeaf = True
     resources = {}
@@ -491,8 +501,11 @@ class FeedResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _render(self, request, entityId=None):
+    def _render(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        itemType = utils.getRequestArg(request, 'type')
+        entityId = utils.getRequestArg(request, 'id')
+
         landing = not self._ajax
         myOrgId = args["orgKey"]
 
@@ -537,7 +550,10 @@ class FeedResource(base.BaseResource):
                                     landing, "#share-block", "set", **args)
             yield self._renderShareBlock(request, "status")
 
-        feedItems = yield getFeedItems(request, feedId=feedId, start=start)
+        if itemType and itemType in plugins and plugins[itemType].hasIndex:
+            feedItems = yield _feedFilter(request, feedId, itemType, start)
+        else:
+            feedItems = yield getFeedItems(request, feedId=feedId, start=start)
         args.update(feedItems)
 
         if script:
@@ -584,8 +600,7 @@ class FeedResource(base.BaseResource):
         d = None
 
         if segmentCount == 0:
-            entityId = utils.getRequestArg(request, "id")
-            d = self._render(request, entityId)
+            d = self._render(request)
         elif segmentCount == 1 and request.postpath[0] == "more":
             entityId = utils.getRequestArg(request, "id")
             start = utils.getRequestArg(request, "start") or ""

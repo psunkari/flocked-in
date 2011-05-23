@@ -17,7 +17,7 @@ class Question(object):
     implements(IPlugin, IItemType)
     itemType = "question"
     position = 2
-    hasIndex = False
+    hasIndex = True
 
     @defer.inlineCallbacks
     def renderShareBlock(self, request, isAjax):
