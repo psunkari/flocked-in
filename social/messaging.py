@@ -14,16 +14,13 @@ from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
 
-folders = {'inbox':'mAllConversations',
-           'archive':'mArchivedConversations',
-           'delete':'mDeletedConversations',
-           'unread':'mUnreadConversations'}
-
-
 class MessagingResource(base.BaseResource):
 
     isLeaf = True
-
+    _folders = {'inbox':'mAllConversations',
+                'archive':'mArchivedConversations',
+                'delete':'mDeletedConversations',
+                'unread':'mUnreadConversations'}
 
     def _parseComposerArgs(self, request):
         #Since we will deal with composer related forms. Take care of santizing
@@ -40,6 +37,18 @@ class MessagingResource(base.BaseResource):
         if recipients:
             recipients = re.sub(',\s+', ',', recipients).split(",")
         return recipients, body, subject, parent
+
+    def _fetchSnippet(self, body):
+        #XXX:obviously we need a better regex than matching ":wrote"
+        lines = body.split("\n")
+        snippet = ""
+        for line in lines:
+            if not line.startswith(">") or not "wrote:" in line:
+                snippet = line[:120]
+                break
+            else:
+                continue
+        return snippet
 
     @defer.inlineCallbacks
     def _deliverMessage(self, convId, recipients, timeUUID, owner):
@@ -60,7 +69,7 @@ class MessagingResource(base.BaseResource):
             # for a new message, mConvFolders will be empty
             # so recipient may not necessarily be present in cols
             for folder in cols.get(recipient, []):
-                cf = folders[folder] if folder in folders else folder
+                cf = self._folders[folder] if folder in self._folders else folder
                 yield Db.remove(recipient, cf, oldTimeUUID)
                 if cf == 'mDeletedConversations':
                     #don't add to recipient's inbox if the conv is deleted.
@@ -80,7 +89,6 @@ class MessagingResource(base.BaseResource):
 
         yield Db.batch_mutate(convFolderMap)
         yield Db.batch_insert(convId, "mConvFolders", userFolderMap)
-
 
     def _createDateHeader(self, timezone='Asia/Kolkata'):
         #FIX: get the timezone from userInfo
@@ -138,14 +146,15 @@ class MessagingResource(base.BaseResource):
 
         participants = cols['participants'].keys()
         timeUUID = uuid.uuid1().bytes
-        meta = {'uuid': timeUUID, 'Date': dateHeader, 'date_epoch': str(epoch)}
+        snippet = self._fetchSnippet(body)
+        meta = {'uuid': timeUUID, 'Date': dateHeader, 'date_epoch': str(epoch),
+                "snippet":snippet}
 
         messageId = yield self._newMessage(myId, timeUUID, body, dateHeader, epoch)
         yield self._deliverMessage(convId, participants, timeUUID, myId)
         yield Db.insert(convId, "mConvMessages", messageId, timeUUID)
         yield Db.batch_insert(convId, "mConversations", {'meta':meta})
         request.redirect('/messages')
-
 
     @defer.inlineCallbacks
     def _createConveration(self, request):
@@ -167,7 +176,10 @@ class MessagingResource(base.BaseResource):
         participants = list(recipients)
 
         timeUUID = uuid.uuid1().bytes
-        meta = {'uuid': timeUUID, 'Date': dateHeader, 'date_epoch': str(epoch)}
+        snippet = self._fetchSnippet(body)
+        print "snippet is %s" %snippet
+        meta = {'uuid': timeUUID, 'Date': dateHeader, 'date_epoch': str(epoch),
+                "snippet":snippet}
         convId = yield self._newConversation(myId, participants, timeUUID,
                                              subject, dateHeader, epoch)
         messageId = yield self._newMessage(myId, timeUUID, body, dateHeader, epoch)
@@ -177,17 +189,19 @@ class MessagingResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _composeMessage(self, request):
-        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        landing = not self._ajax
-        yield self._createConveration(request)
-        request.redirect('/messages')
+        parent = utils.getRequestArg(request, "parent") or None
+        if parent:
+            yield self._reply(request)
+        else:
+            yield self._createConveration(request)
 
     @defer.inlineCallbacks
     def _listConversations(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
-        folder = utils.getRequestArg(request, 'filter')
-        folder = folders[folder] if folder in folders else folders['inbox']
+        filter = utils.getRequestArg(request, 'filter')
+        folder = self._folders[filter] if filter in self._folders else \
+            self._folders['inbox']
         start = utils.getRequestArg(request, "start") or ''
         start = utils.decodeKey(start)
 
@@ -232,30 +246,46 @@ class MessagingResource(base.BaseResource):
             users.update(participants)
             conversations[convId]['people'] = participants
             conversations[convId]['read'] = str(int(convId not in unread))
+            messageCount = yield Db.get_count(convId, "mConvMessages")
+            conversations[convId]['count'] = messageCount
             m[convId]=conversations[convId]
 
         users = yield Db.multiget_slice(users, 'entities', ['basic'])
         users = utils.multiSuperColumnsToDict(users)
 
+
         args.update({"view":"messages"})
         args.update({"messages":m})
         args.update({"people":users})
         args.update({"mids": convs})
-        args.update({"fid": None})
+        args.update({"menuId": "messages"})
+
+        args.update({"filter": filter or "all"})
         args['nextPageStart']= nextPageStart
         args['prevPageStart']= prevPageStart
-        folderId=None
 
         if script:
+            onload = """
+                     $$.menu.selectItem('%s');
+                     $('#mainbar .contents').removeClass("has-right");
+                     """ %args["menuId"]
             yield renderScriptBlock(request, "message.mako", "center", landing,
-                                    ".center-contents", "set", True, **args)
+                                    ".center-contents", "set", True,
+                                    handlers={"onload": onload}, **args)
         else:
             yield render(request, "message.mako", **args)
 
+    @defer.inlineCallbacks
+    def _members(self, request):
+        action = utils.getRequestArg(request, "action")
+        if action == "add":
+            yield self._addMembers(request)
+        elif action == "remove":
+            yield self._removeMemebers(request)
 
     @defer.inlineCallbacks
     def _addMembers(self, request):
-
+        print "adding"
         myId = request.getSession(IAuthInfo).username
         newMembers, body, subject, convId = self._parseComposerArgs(request)
         if not (convId and newMembers):
@@ -279,9 +309,8 @@ class MessagingResource(base.BaseResource):
             yield Db.batch_insert(convId, "mConversations", {'participants':newMembers})
             yield self._deliverMessage(convId, newMembers, conv['meta']['uuid'], conv['meta']['owner'])
 
-
     @defer.inlineCallbacks
-    def _deleteMembers(self, request):
+    def _removeMembers(self, request):
 
         myId = request.getSession(IAuthInfo).username
         members, body, subject, convId = self._parseComposerArgs(request)
@@ -317,7 +346,7 @@ class MessagingResource(base.BaseResource):
             cols = utils.supercolumnsToDict(cols)
             for recipient in cols:
                 for folder in cols[recipient]:
-                    cf = folders[folder] if folder in folders else folder
+                    cf = self._folders[folder] if folder in self._folders else folder
                     d = Db.remove(recipient, cf, conv['meta']['uuid'])
                     deferreds.append(d)
             if deferreds:
@@ -343,7 +372,6 @@ class MessagingResource(base.BaseResource):
         if unArchive:
             yield self._moveConversation(request, convIds, 'inbox')
 
-
     @defer.inlineCallbacks
     def _moveConversation(self, request, convIds, toFolder):
 
@@ -362,7 +390,7 @@ class MessagingResource(base.BaseResource):
             cols = yield Db.get_slice(convId, 'mConvFolders', [myId])
             cols = utils.supercolumnsToDict(cols)
             for folder in cols[myId]:
-                cf = folders[folder] if folder in folders else folder
+                cf = self._folders[folder] if folder in self._folders else folder
                 if toFolder!='unread':
                     if folder!= 'mUnreadConversations':
                         col = yield Db.get(myId, cf, timeUUID)
@@ -378,7 +406,7 @@ class MessagingResource(base.BaseResource):
                 yield Db.insert(convId, 'mConvFolders', '', 'mUnreadConversations', myId)
                 yield Db.insert(myId, 'mUnreadConversations', val, timeUUID)
             else:
-                folder = folders[toFolder]
+                folder = self._folders[toFolder]
                 yield Db.insert(myId, folder, val, timeUUID)
                 yield Db.insert(convId, 'mConvFolders', '', folder, myId)
         request.redirect('/messages')
@@ -411,8 +439,8 @@ class MessagingResource(base.BaseResource):
             cols = yield Db.get_slice(convId, "mConvFolders", [myId])
             cols = utils.supercolumnsToDict(cols)
             for folder in cols[myId]:
-                if folder in folders:
-                    folder = folders[folder]
+                if folder in self._folders:
+                    folder = self._folders[folder]
                 yield Db.insert(myId, folder, "r:%s"%(convId), timeUUID)
 
             #FIX: make sure that there will be an entry of convId in mConvFolders
@@ -432,66 +460,38 @@ class MessagingResource(base.BaseResource):
             args.update({"messageIds": mids})
             args.update({'messages': messages})
             args.update({"id":convId})
-            args.update({"fid":None})
             args.update({"flags":{}})
             args.update({"view":"message"})
             if script:
+                onload = """
+                         $('#mainbar .contents').addClass("has-right");
+                         """
                 yield renderScriptBlock(request, "message.mako", "center",
-                                        landing, ".center-contents", "set", **args)
+                                        landing, ".center-contents", "set", True,
+                                        handlers={"onload":onload}, **args)
+                yield renderScriptBlock(request, "message.mako", "right",
+                                        landing, ".right-contents", "set", **args)
             else:
                 yield render(request, "message.mako", **args)
-
-
-
 
     @defer.inlineCallbacks
     def _renderComposer(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
-        parent = utils.getRequestArg(request, "parent")
-        action = utils.getRequestArg(request, "action") or "reply"
-        folderId = utils.getRequestArg(request, "fid") or None
-
-        args["folders"] = folders
-        args.update({"fid":folderId})
+        args.update({"view":"compose"})
 
         if script and landing:
             yield render(request, "message.mako", **args)
 
-        if appchange and script:
-            yield renderScriptBlock(request, "message.mako", "layout",
-                                    landing, "#mainbar", "set", **args)
+        if script:
+            onload = """
 
-        if parent:
-            hasAccess = True
-            if not hasAccess:
-                raise Unauthorized
-
-            res = yield Db.multiget_slice(keys=[parent], column_family="messages")
-            res = utils.multiColumnsToDict(res)
-            if parent in res.keys():
-                parent_msg = res[parent]
-            else:
-                parent_msg = None
-            args.update({"parent_msg":parent_msg})
-            if action == "forward":
-                args.update({"view":"forward"})
-            else:
-                args.update({"view":"reply"})
-            if script:
-                yield renderScriptBlock(request, "message.mako", "center",
-                                        landing, ".center-contents", "set", **args)
-            else:
-                yield render(request, "message.mako", **args)
+                     $('#mainbar .contents').removeClass("has-right");
+                     """
+            yield renderScriptBlock(request, "message.mako", "viewComposer",
+                                    landing, "#composer", "set", **args)
         else:
-            args.update({"view":"compose"})
-            if script:
-                yield renderScriptBlock(request, "message.mako", "center",
-                                        landing, ".center-contents", "set", **args)
-            else:
-                yield render(request, "message.mako", **args)
-
-
+            yield render(request, "message.mako", **args)
 
     def render_GET(self, request):
         segmentCount = len(request.postpath)
@@ -515,13 +515,9 @@ class MessagingResource(base.BaseResource):
             d = self._actions(request)
         elif segmentCount == 1 and request.postpath[0] == "write":
             d = self._composeMessage(request)
-        elif segmentCount == 1 and request.postpath[0] == "reply":
-            d = self._reply(request)
         elif segmentCount == 1 and request.postpath[0] == "thread":
             d = self._actions(request)
-        elif segmentCount == 1 and request.postpath[0] == "addMembers":
-            d = self._addMembers(request)
-        elif segmentCount == 1 and request.postpath[0] == "deleteMembers":
-            d = self._deleteMembers(request)
+        elif segmentCount == 1 and request.postpath[0] == "members":
+            d = self._members(request)
 
         return self._epilogue(request, d)
