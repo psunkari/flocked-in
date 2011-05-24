@@ -458,20 +458,14 @@
   ${activity}
 </%def>
 
-<%def name="like_list()">
+<%def name="userListDialog()">
   <%
     userName = utils.userName
     userAvatar = utils.userAvatar
-
-    item = items[itemId]["meta"]
-    itemType = 'comment' if "parent" in item else item.get('type')
-
-    owner = item.get('owner')
-    owner = userName(owner, entities[owner])
   %>
-  <div class="ui-dlg-title">${_("People who like %s's %s") % (owner, itemType)}</div>
+  <div class="ui-dlg-title">${title}</div>
   <div class="ui-list ui-dlg-center">
-    %for uid in likedBy:
+    %for uid in users:
       <%
         userMeta = entities[uid]
         jobTitle = userMeta["basic"].get("jobTitle", "")

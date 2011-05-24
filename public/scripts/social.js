@@ -407,14 +407,6 @@ var convs = {
     showItemLikes: function(itemId) {
         var dialogOptions = {
             id: 'likes-dlg-'+itemId,
-            buttons: [
-                {
-                    text: 'Close',
-                    click: function() {
-                        $$.dialog.close(dialogOptions.id, true);
-                    }
-                }
-            ]
         };
         $$.dialog.create(dialogOptions);
         $.getScript('/ajax/item/likes?id='+itemId);
@@ -577,7 +569,15 @@ var dialog = {
             at: 'center top',
             of: window,
             offset: '210px 200px'
-        }
+        },
+        buttons: [
+            {
+                text: 'Close',
+                click: function() {
+                    $$.dialog.close(this, true);
+                }
+            }
+        ]
     },
 
     _template: '<div class="ui-dlg-outer">' +
@@ -620,7 +620,7 @@ var dialog = {
             $template = dialog._dialogs[dlgId];
             $template.show();
         } else {
-            $template.attr('id', dlgId + '-outer');
+            $template.attr('id', dlgId + '-outer').attr('dlgId', dlgId);
             $('.ui-dlg-inner', $template).attr('id', dlgId + '-inner');
             $('.ui-dlg-contents', $template).attr('id', dlgId);
 
@@ -635,8 +635,19 @@ var dialog = {
         dialog._counter += 1;
     },
 
-    close: function(id, destroy) {
-        $dialog = dialog._dialogs[id]
+    close: function(dlg, destroy) {
+        var $dialog, id;
+        if (typeof dlg == "string") {
+            $dialog = dialog._dialogs[dlg];
+            id = dlg;
+        } else {
+            $dialog = dlg;
+            id = dlg.attr('dlgId');
+        }
+
+        if (!$dialog.length)
+            return;
+
         $dialog.hide();
         if (destroy) {
             $dialog.remove();

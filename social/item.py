@@ -9,7 +9,7 @@ from twisted.web        import server
 from twisted.python     import log
 
 from social             import base, Db, utils, feed, plugins, constants, tags, fts
-from social             import notifications
+from social             import notifications, _
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
@@ -573,11 +573,14 @@ class ItemResource(base.BaseResource):
         cols = yield Db.multiget_slice(users+[owner], "entities", ["basic"])
         entities = utils.multiSuperColumnsToDict(cols)
 
-        args = {"itemId": itemId, "likedBy": users,
-                "items": {itemId: item}, "entities": entities}
-        yield renderScriptBlock(request, "item.mako", "like_list", False,
-                                "#likes-dlg-%s"%(itemId), "set", **args)
+        args = {"users": users, "entities": entities}
+        itemMeta = item['meta']
+        itemType = 'comment' if 'parent' in itemMeta else itemMeta.get('type')
+        args['title'] = _("People who like %s's %s") %\
+                          (utils.userName(owner, entities[owner]), _(itemType))
 
+        yield renderScriptBlock(request, "item.mako", "userListDialog", False,
+                                "#likes-dlg-%s"%(itemId), "set", **args)
 
 
     @profile

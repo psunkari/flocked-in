@@ -7,7 +7,7 @@ from twisted.internet   import defer
 from twisted.python     import log
 from twisted.web        import server
 
-from social             import Db, utils, base, errors
+from social             import Db, utils, base, errors, _
 from social.template    import renderScriptBlock, render, getBlock
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
@@ -21,37 +21,28 @@ class PollResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _vote(self, request):
-        convId = utils.getRequestArg(request, 'id')
+        convId, conv = yield utils.getAccessibleItemId(request,
+                                                'id', ['options'], 'poll')
         vote = utils.getRequestArg(request, 'option')
-        myKey = request.getSession(IAuthInfo).username
+        if not vote or vote not in conv.get("options", {}):
+            raise errors.InvalidRequest()
+
         optionCounts = {}
+        myId = request.getSession(IAuthInfo).username
 
-        if not vote:
-            raise errors.InvalidRequest()
-
-        item = yield Db.get_slice(convId, "items")
-        item = utils.supercolumnsToDict(item)
-
-        if not item:
-            raise errors.MissingParams()
-
-        if (item["meta"].has_key("type") and item["meta"]["type"] != "poll"):
-            raise errors.InvalidRequest()
-
-        prevVote = yield Db.get_slice(myKey, "userVotes", [convId])
+        prevVote = yield Db.get_slice(myId, "userVotes", [convId])
         prevVote = prevVote[0].column.value if prevVote else False
-
         if prevVote == vote:
             yield self._results(request)
             return
 
         if prevVote:
-            yield Db.remove(convId, "votes", myKey, prevVote)
+            yield Db.remove(convId, "votes", myId, prevVote)
             prevOptionCount = yield Db.get_count(convId, "votes", prevVote)
             optionCounts[prevVote] = str(prevOptionCount)
 
-        yield Db.insert(myKey, "userVotes", vote, convId)
-        yield Db.insert(convId, "votes",  '', myKey, vote)
+        yield Db.insert(myId, "userVotes", vote, convId)
+        yield Db.insert(convId, "votes",  '', myId, vote)
 
         voteCount = yield Db.get_count(convId, "votes", vote)
         optionCounts[vote] = str(voteCount)
@@ -98,38 +89,39 @@ class PollResource(base.BaseResource):
         yield renderScriptBlock(request, "poll.mako", 'poll_options',
                                 False, '#poll-contents-%s'%convId, 'set',
                                 args=[convId, voted], **data)
+
     @defer.inlineCallbacks
     def _listVoters(self, request):
-        convId = utils.getRequestArg(request, "id");
+        convId, item = yield utils.getValidItemId(request, "id",
+                                                  ["options"], "poll")
+
+        myId = request.getSession(IAuthInfo).username
+        myVote = yield Db.get_slice(myId, "userVotes", [convId])
+        myVote = myVote[0].column.value if myVote else None
+        if not myVote:
+            raise errors.InvalidRequest();
+
         option = utils.getRequestArg(request, "option")
-        if not convId:
-            raise errors.InvalidRequest()
+        if not option or option not in item.get("options", {}):
+            raise errors.MissingParams();
 
-        conv = yield Db.get_slice(convId, "items", ['meta'])
-        conv = utils.supercolumnsToDict(conv)
-        if conv['meta']['type'] != 'poll':
-            raise errors.InvalidRequest()
-
-        if option:
-            votes = yield Db.get_slice(convId, "votes", [option])
-        else:
-            votes = yield Db.get_slice(convId, "votes")
-
+        votes = yield Db.get_slice(convId, "votes", [option])
         votes = utils.supercolumnsToDict(votes)
         voters = set()
         if votes:
             for option in votes:
-                voters.update(votes[option])
-        args = {}
-        args['entities'] = {}
+                voters.update(votes[option].keys())
+
+        args = {'entities': {}, 'users': voters}
+        args['title'] = _('List of people who voted for "%s"')\
+                                                    % item["options"][option]
         if voters:
             people = yield Db.multiget_slice(voters, "entities", ["basic"])
             people = utils.multiSuperColumnsToDict(people)
             args['entities'] = people
-        #render voters
 
-
-
+        yield renderScriptBlock(request, "item.mako", "userListDialog", False,
+                            "#poll-users-%s-%s"%(option, convId), "set", **args)
 
 
     @profile
@@ -203,7 +195,7 @@ class Poll(object):
     @dump_args
     def fetchData(self, args, convId=None, userId=None, columns=[]):
         convId = convId or args["convId"]
-        myKey = userId or args.get("myKey", None)
+        myId = userId or args.get("myKey", None)
 
         conv = yield Db.get_slice(convId, "items",
                                   ['options', 'counts'].extend(columns))
@@ -216,7 +208,7 @@ class Poll(object):
         if not options:
             raise errors.InvalidRequest()
 
-        myVote = yield Db.get_slice(myKey, "userVotes", [convId])
+        myVote = yield Db.get_slice(myId, "userVotes", [convId])
         myVote = myVote[0].column.value if myVote else None
 
         startTime = conv['meta'].get('start', None)
@@ -239,7 +231,7 @@ class Poll(object):
     @defer.inlineCallbacks
     @dump_args
     def create(self, request):
-        myKey = request.getSession(IAuthInfo).username
+        myId = request.getSession(IAuthInfo).username
 
         end = utils.getRequestArg(request, "end")
         start = utils.getRequestArg(request, "start")
