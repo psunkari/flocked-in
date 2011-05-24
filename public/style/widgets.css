@@ -248,3 +248,15 @@
   font-size: 90%;
   color: #999;
 }
+
+/*
+ * Toolbar
+ */
+.toolbar {
+    border-bottom: 1px solid #C3D9FF;
+    padding: 3px;
+    background-color: #F9F9F9;
+}
+.toolbar .button {
+    box-shadow: none;
+}

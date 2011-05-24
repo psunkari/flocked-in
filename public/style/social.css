@@ -788,6 +788,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
  */
 #users-wrapper {
     padding: 10px;
+    min-height: 280px !important;
 }
 
 .users-row {
@@ -828,14 +829,18 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 
 .viewbar {
-    margin: 5px;
-    padding: 0 5px 10px;
+    margin: 0;
+    padding: 0 0 10px;
     border-bottom: 1px solid #C3D9FF;
 }
 
+.paged-container {
+    min-height: 300px;
+}
+
 .pagingbar {
-    margin: 10px 5px 5px;
-    padding: 10px 5px;
+    margin: 10px 0 5px;
+    padding: 10px 0;
     border-top: 1px solid #C3D9FF;
     text-align: right;
 }

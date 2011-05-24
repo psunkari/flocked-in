@@ -35,7 +35,7 @@
               ${viewOptions(viewType)}
             %endif
           </div>
-          <div id="users-wrapper">
+          <div id="users-wrapper" class="paged-container">
             %if not script:
               ${listPeople()}
             %endif

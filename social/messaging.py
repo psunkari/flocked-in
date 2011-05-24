@@ -15,12 +15,11 @@ from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
 
 class MessagingResource(base.BaseResource):
-
     isLeaf = True
-    _folders = {'inbox':'mAllConversations',
-                'archive':'mArchivedConversations',
-                'delete':'mDeletedConversations',
-                'unread':'mUnreadConversations'}
+    _folders = {'inbox': 'mAllConversations',
+                'archive': 'mArchivedConversations',
+                'trash': 'mDeletedConversations',
+                'unread': 'mUnreadConversations'}
 
     def _parseComposerArgs(self, request):
         #Since we will deal with composer related forms. Take care of santizing
@@ -199,9 +198,9 @@ class MessagingResource(base.BaseResource):
     def _listConversations(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
-        filter = utils.getRequestArg(request, 'filter')
-        folder = self._folders[filter] if filter in self._folders else \
-            self._folders['inbox']
+        filterType = utils.getRequestArg(request, 'type')
+        folder = self._folders[filterType] if filterType in self._folders else\
+                                                         self._folders['inbox']
         start = utils.getRequestArg(request, "start") or ''
         start = utils.decodeKey(start)
 
@@ -260,9 +259,9 @@ class MessagingResource(base.BaseResource):
         args.update({"mids": convs})
         args.update({"menuId": "messages"})
 
-        args.update({"filter": filter or "all"})
-        args['nextPageStart']= nextPageStart
-        args['prevPageStart']= prevPageStart
+        args.update({"filterType": filterType or "all"})
+        args['nextPageStart'] = nextPageStart
+        args['prevPageStart'] = prevPageStart
 
         if script:
             onload = """
@@ -357,14 +356,14 @@ class MessagingResource(base.BaseResource):
 
         convIds = request.args.get('selected', [])
 
-        delete = utils.getRequestArg(request, "delete")
+        trash = utils.getRequestArg(request, "trash")
         archive = utils.getRequestArg(request, "archive")
         unread = utils.getRequestArg(request, "unread")
         unArchive = utils.getRequestArg(request, "inbox")
         if not convIds:
             raise errors.MissingParams()
-        if delete:
-            yield self._moveConversation(request, convIds, 'delete')
+        if trash:
+            yield self._moveConversation(request, convIds, 'trash')
         if archive:
             yield self._moveConversation(request, convIds, 'archive')
         if unread:

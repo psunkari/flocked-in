@@ -37,7 +37,7 @@
             %endif
           </div>
         </div>
-        <div class="center-contents" style="padding:0">
+        <div class="center-contents">
           %if view != "compose":
             %if not script:
               ${center()}
@@ -261,40 +261,41 @@
 </%def>
 
 <%def name="toolbar_layout(view, nextPageStart=None, prevPageStart=None)">
-  % if view == "messages":
-    <div class="toolbar">
-      % if script:
-       <div class="thread-selector-wrapper button">
-        <input class="thread-selector" type="checkbox" name="select" value="all"
+  %if view == "messages":
+    <div id="msg-toolbar" class="toolbar">
+      %if script:
+        <input id="thread-selector" type="checkbox" name="select" value="all"
                onchange="$('.message-row input[name=selected]').attr('checked', this.checked)"/>
-       </div>
-      % else:
-      % endif
-      <span style="float:right">
-      <input type="submit" name="delete" value="Delete" class="button "/>
+      %endif
+      %if filterType != "trash":
+        <input type="submit" name="trash" value="Trash" class="button"/>
+      %endif
+      %if filterType != "archive" and filterType != "trash":
+        <input type="submit" name="archive" value="Archive" class="button"/>
+      %endif
+      %if filterType != "unread":
+        <input type="submit" name="unread" value="Mark as Unread" class="button"/>
+      %endif
+      %if filterType != "all":
+        <input type="submit" name="inbox" value="Move to Inbox" class="button"/>
+      %endif
+    </div>
+  %elif view == "message":
+    <div class="toolbar">
+      <a class="${'ajax' if script else ''} action-link" href="/messages">Go Back</a>
+      <input type="submit" name="trash" value="Trash" class="button "/>
       <input type="submit" name="archive" value="Archive" class="button "/>
       <input type="submit" name="unread" value="Mark as Unread" class="button "/>
-      % if filter == "archive":
-          <input type="submit" name="inbox" value="Move to Inbox" class="button "/>
-      % endif
-      </span>
+      <span class="clear" style="display:block"></span>
     </div>
-  % elif view == "message":
-    <div class="toolbar">
-        <a class="${'ajax' if script else ''} action-link" href="/messages">Go Back</a>
-        <input type="submit" name="delete" value="Delete" class="button "/>
-        <input type="submit" name="archive" value="Archive" class="button "/>
-        <input type="submit" name="unread" value="Mark as Unread" class="button "/>
-        <span class="clear" style="display:block"></span>
-    </div>
-  % endif
+  %endif
 </%def>
 
 <%def name="viewListing()">
   <div id="people-view" class="viewbar">
-      ${viewOptions()}
+    ${viewOptions()}
   </div>
-  <div id="center-wrapper" style="margin-top:-5px">
+  <div id="center-wrapper" class="paged-container">
     <form action="/messages/thread" method="post" class="ajax">
         ${toolbar_layout(view, nextPageStart, prevPageStart)}
         <div class="conversation-layout-container">
@@ -328,11 +329,11 @@
 
 <%def name="viewOptions()">
   <ul class="h-links view-options">
-    %for item, display in [('all', 'Inbox'), ('unread', 'Unread'), ('archive', 'Archive'), ('delete', 'Trash')]:
-      %if filter == item:
+    %for item, display in [('all', 'Inbox'), ('unread', 'Unread'), ('archive', 'Archive'), ('trash', 'Trash')]:
+      %if filterType == item:
         <li class="selected">${_(display)}</li>
       %else:
-        <li><a href="/messages?filter=${item}" class="ajax">${_(display)}</a></li>
+        <li><a href="/messages?type=${item}" class="ajax">${_(display)}</a></li>
       %endif
     %endfor
   </ul>
@@ -341,12 +342,12 @@
 <%def name="paging()">
   <ul class="h-links">
     %if prevPageStart:
-      <li class="button"><a class="ajax" href="/messages?filter=${filter}&start=${prevPageStart}">${_("&#9666; Previous")}</a></li>
+      <li class="button"><a class="ajax" href="/messages?type=${filterType}&start=${prevPageStart}">${_("&#9666; Previous")}</a></li>
     %else:
       <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
     %endif
     %if nextPageStart:
-      <li class="button"><a class="ajax" href="/messages?filter=${filter}&start=${nextPageStart}">${_("Next &#9656;")}</a></li>
+      <li class="button"><a class="ajax" href="/messages?type=${filterType}&start=${nextPageStart}">${_("Next &#9656;")}</a></li>
     %else:
       <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
     %endif
