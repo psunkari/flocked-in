@@ -1,5 +1,5 @@
 
-from urllib                     import quote_plus, unquote_plus
+import base64
 
 from zope.interface             import Interface, Attribute, implements
 from twisted.cred.portal        import IRealm, Portal
@@ -40,7 +40,7 @@ class SigninForm(resource.Resource):
     def render_GET(self, request):
         args = {"query": ""};
         if request.args.has_key("_r"):
-            args["query"] = "?_r=" + quote_plus(request.args["_r"][0])
+            args["query"] = "?_r=" + request.args["_r"][0]
 
         d = render(request, "signin.mako", **args)
         d.addCallback(lambda x: request.finish())
@@ -118,7 +118,7 @@ class UserPasswordChecker():
         def addRedirectURL(username):
             redirectURL = "/"
             if cred.request.args.has_key("_r"):
-                redirectURL = unquote_plus(cred.request.args["_r"][0])
+                redirectURL = base64.urlsafe_b64decode(cred.request.args["_r"][0])
             return (username, redirectURL)
         d.addCallback(addRedirectURL)
 
@@ -272,7 +272,7 @@ class AuthWrapper(object):
             if request.path == "/signin":
                 afterLogin = utils.getRequestArg(request, "_r")
             elif request.path != "/":
-                afterLogin = request.uri
+                afterLogin = base64.urlsafe_b64encode(request.uri)
 
             if issubclass(failure, LoginFailed):
                 errorCode = "InvalidCredentials"
