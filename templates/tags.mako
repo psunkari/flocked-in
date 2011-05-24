@@ -25,10 +25,17 @@
             ${self.header()}
           %endif
         </div>
-        <div id="tag-items" class="center-contents">
-          %if not script:
-            ${self.items()}
-          %endif
+        <div id = "content">
+          <div id="tag-items" class="center-contents">
+            %if not script:
+              ${self.items()}
+            %endif
+          </div>
+        </div>
+        <div id="tags-paging" class="pagingbar">
+              %if not script:
+                ${paging()}
+              %endif
         </div>
       </div>
     </div>
@@ -38,10 +45,14 @@
 <%def name="header(tagId)">
   <div class="titlebar">
     <div id="title">
-      <span class="middle title">${tags[tagId]["title"]}</span>
-      <ul id="tag-actions-${tagId}" class="middle user-actions h-links">
-        ${tag_actions(tagId)}
-      </ul>
+      % if tagId:
+        <span class="middle title">${tags[tagId]["title"]}</span>
+        <ul id="tag-actions-${tagId}" class="middle user-actions h-links">
+          ${tag_actions(tagId)}
+        </ul>
+      % else:
+        <span class="middle title">${"Organization Tags:"}</span>
+      % endif
     </div>
   </div>
 </%def>
@@ -51,12 +62,12 @@
     ${item.item_layout(convId)}
   %endfor
   %if nextPageStart:
-    <% print nextPageStart %>
     <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" _ref="/tags?id=${tagId}&start=${nextPageStart}">${_("Fetch older posts")}</a></div>
   %else:
     <div id="next-load-wrapper">No more posts to show</div>
   %endif
 </%def>
+
 
 <%def name="tag_actions(tagId, showRemove=True)">
   %if not tagFollowing:
@@ -64,4 +75,61 @@
   %elif showRemove:
     <li class="button" onclick="$.post('/ajax/tags/unfollow', 'id=${tagId}', null, 'script')"><span class="button-text">Unfollow</span></li>
   %endif
+</%def>
+
+<%def name="paging()">
+  <ul class="h-links">
+    %if prevPageStart:
+      <li class="button"><a class="ajax" href="/tags?start=${prevPageStart}">${_("&#9666; Previous")}</a></li>
+    %else:
+      <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
+    %endif
+    %if nextPageStart:
+      <li class="button"><a class="ajax" href="/tags?start=${nextPageStart}">${_("Next &#9656;")}</a></li>
+    %else:
+      <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
+    %endif
+  </ul>
+</%def>
+
+<%def name="listTags()">
+
+  <%
+    counter = 0
+    firstRow = True
+  %>
+  %for tagname in tags:
+    %if counter % 2 == 0:
+      %if firstRow:
+        <div class="users-row users-row-first">
+        <% firstRow = False %>
+      %else:
+        <div class="users-row">
+      %endif
+    %endif
+    <div class="users-user">${_displaytag(tagname)}</div>
+    %if counter % 2 == 1:
+      </div>
+    %endif
+    <% counter += 1 %>
+  %endfor
+  %if counter % 2 == 1:
+    </div>
+  %endif
+</%def>
+
+<%def name="_displaytag(tagname)" >
+
+  <% tagId = tags[tagname] %>
+  <div class = 'tags-row user-details-actions' >
+    <div class="user-details-name"><a class = "ajax" href="/tags/items?id=${tagId}"> ${tagname} </a>
+    <ul class="middle user-actions h-links">
+    % if tagId in tagsFollowing:
+      <li class="button" onclick="$.post('/ajax/tags/unfollow', 'id=${tagId}', null, 'script')"><span class="button-text">Unfollow</span></li>
+    % else:
+      <li class="button default" onclick="$.post('/ajax/tags/follow', 'id=${tagId}', null, 'script')"><span class="button-text">Follow</span></li>
+    % endif
+    </ul>
+    </div>
+  </div>
 </%def>

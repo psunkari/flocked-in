@@ -71,7 +71,7 @@ class TagsResource(base.BaseResource):
                                     landing, "#mainbar", "set", **args)
 
         tagId = utils.getRequestArg(request, "id")
-        args["tagId"]=id
+        args["tagId"]=tagId
         request.addCookie('cu', tagId, path="/ajax/tags")
         if not tagId:
             raise errors.MissingParam()
@@ -109,6 +109,70 @@ class TagsResource(base.BaseResource):
                                         landing, "#tag-items", "set", True,
                                         handlers={"onload": onload}, **args)
 
+
+    @defer.inlineCallbacks
+    def _listTags(self, request):
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        landing = not self._ajax
+        myOrgId = args["orgKey"]
+
+        start = utils.getRequestArg(request, 'start') or ''
+        nextPageStart = ''
+        prevPageStart = ''
+        count = 10
+        toFetchCount = count + 1
+        start = utils.decodeKey(start)
+
+        if script and landing:
+            yield render(request, "tags.mako", **args)
+
+        if script and appchange:
+            yield renderScriptBlock(request, "tags.mako", "layout",
+                                    landing, "#mainbar", "set", **args)
+
+        tags = yield Db.get_slice(myOrgId, "orgTagsByName", start=start, count= toFetchCount)
+        tags = utils.columnsToDict(tags, ordered=True)
+
+        if len(tags) > count:
+            nextPageStart = utils.encodeKey(tags.keys()[-1])
+            del tags[tags.keys()[-1]]
+
+
+        if start:
+            prevCols = yield Db.get_slice(myOrgId, "orgTagsByName",
+                                          start=start, reverse=True,
+                                          count= toFetchCount)
+            if len(prevCols) > 1:
+                prevPageStart = utils.encodeKey(prevCols[-1].column.name)
+
+        tagsFollowing = []
+
+        if tags:
+            tagIds = tags.values()
+            cols = yield Db.multiget_slice(tagIds, "tagFollowers")
+            cols = utils.multiColumnsToDict(cols)
+            for tagId in cols:
+                if myId in cols[tagId]:
+                    tagsFollowing.append(tagId)
+
+
+        args['tags'] = tags
+        args['tagsFollowing'] = tagsFollowing
+        args['nextPageStart'] = nextPageStart
+        args['prevPageStart'] = prevPageStart
+
+        if script:
+
+            yield renderScriptBlock(request, "tags.mako", "header",
+                                    landing, "#tags-header", "set", args=[None], **args )
+
+            yield renderScriptBlock(request, "tags.mako", "listTags",
+                                    landing, "#content", "set", **args)
+
+            yield renderScriptBlock(request, "tags.mako", "paging",
+                                landing, "#tags-paging", "set", **args)
+
+
     @profile
     @dump_args
     def render_GET(self, request):
@@ -116,6 +180,8 @@ class TagsResource(base.BaseResource):
         d = None
 
         if segmentCount == 0:
+            d = self._listTags(request)
+        if segmentCount == 1 and request.postpath[0] == 'items':
             d = self._render(request)
 
         return self._epilogue(request, d)
