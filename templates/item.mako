@@ -144,7 +144,7 @@
     &#183;
   %endif
   %if not hasLikes and likesCount > 0:
-    <button class="button-link" title="${likesCount} Likes"><div class="small-icon small-like"></div>${likesCount}</button>
+    <button class="button-link" title="${likesCount} Likes" onclick="$$.convs.showItemLikes('${convId}')"><div class="small-icon small-like"></div>${likesCount}</button>
   %endif
   ## Number of comments when none of my friends commented on it
   %if not hasComments and commentsCount > 0:
@@ -174,7 +174,7 @@
   ${utils.simpleTimestamp(timestamp)}
   %if likesCount > 0:
     &#183;
-    <button class="button-link" title="${likesCount} Likes"><div class="small-icon small-like"></div>${likesCount}</button>
+    <button class="button-link" title="${likesCount} Likes" onclick="$$.convs.showItemLikes('${itemId}')"><div class="small-icon small-like"></div>${likesCount}</button>
   %endif
   &#183;
   %if myLikes and myLikes.has_key(itemId) and len(myLikes[itemId]):
@@ -458,5 +458,23 @@
   ${activity}
 </%def>
 
-<%def name="people_likes()">
+<%def name="userListDialog()">
+  <%
+    userName = utils.userName
+    userAvatar = utils.userAvatar
+  %>
+  <div class="ui-dlg-title">${title}</div>
+  <div class="ui-list ui-dlg-center">
+    %for uid in users:
+      <%
+        userMeta = entities[uid]
+        jobTitle = userMeta["basic"].get("jobTitle", "")
+      %>
+      <div class="ui-listitem">
+        <div class="ui-list-icon"><img src="${userAvatar(uid, userMeta, 'small')}"/></div>
+        <div class="ui-list-title">${userName(uid, userMeta)}</div>
+        <div class="ui-list-meta">${jobTitle}</div>
+      </div>
+    %endfor
+  </div>
 </%def>

@@ -402,6 +402,14 @@ var convs = {
     comment: function(convId) {
         $('#conv-meta-wrapper-'+convId).removeClass('no-comments');
         $('#comment-form-'+convId).find('.comment-input').focus();
+    },
+
+    showItemLikes: function(itemId) {
+        var dialogOptions = {
+            id: 'likes-dlg-'+itemId,
+        };
+        $$.dialog.create(dialogOptions);
+        $.getScript('/ajax/item/likes?id='+itemId);
     }
 };
 
@@ -548,6 +556,125 @@ $$.json = json;
 
 
 /*
+ * Dialogs
+ */
+(function($$, $) {
+var dialog = {
+    _counter: 0,
+    _dialogs: {},
+
+    _options: {
+        position: {
+            my: 'right top',
+            at: 'center top',
+            of: window,
+            offset: '210px 200px'
+        },
+        buttons: [
+            {
+                text: 'Close',
+                click: function() {
+                    $$.dialog.close(this, true);
+                }
+            }
+        ]
+    },
+
+    _template: '<div class="ui-dlg-outer">' +
+                 '<div class="ui-dlg-inner">' +
+                   '<div class="ui-dlg-contents"/>' +
+                 '</div>' +
+               '</div>',
+
+    _createButtons: function($dialog, dlgId, options) {
+        if (!options.buttons || !$.isArray(options.buttons))
+            return;
+
+        var $buttonBox = $("<div>").addClass("ui-dlg-buttonbox")
+                                   .attr('id', dlgId+'-buttonbox')
+                                   .appendTo($dialog.find('.ui-dlg-inner')),
+            $buttonset = $("<div>").addClass("ui-dlg-buttonset")
+                                   .attr('id', dlgId+'-buttonset')
+                                   .appendTo($buttonBox);
+
+        $.each(options.buttons, function(idx, props) {
+            if (typeof props !== "object")
+                return;
+
+            $("<button type='button'>").attr(props, true)
+                            .unbind("click")
+                            .click(function() {
+                                props.click.apply($dialog, arguments);
+                            })
+                            .addClass('button')
+                            .appendTo($buttonset);
+        });
+    },
+
+    create: function(obj) {
+        var $template = $(dialog._template),
+            options = $.extend({}, dialog._options, obj)
+            dlgId = options.id || "dialog-" + dialog._counter
+
+        if (dialog._dialogs[dlgId]) {
+            $template = dialog._dialogs[dlgId];
+            $template.show();
+        } else {
+            $template.attr('id', dlgId + '-outer').attr('dlgId', dlgId);
+            $('.ui-dlg-inner', $template).attr('id', dlgId + '-inner');
+            $('.ui-dlg-contents', $template).attr('id', dlgId);
+
+            dialog._dialogs[dlgId] = $template;
+            dialog._createButtons($template, dlgId, options);
+            $('body').append($template);
+        }
+
+        $template.css('z-index', 1000+dialog._counter)
+        $template.position(options.position);
+
+        dialog._counter += 1;
+    },
+
+    close: function(dlg, destroy) {
+        var $dialog, id;
+        if (typeof dlg == "string") {
+            $dialog = dialog._dialogs[dlg];
+            id = dlg;
+        } else {
+            $dialog = dlg;
+            id = dlg.attr('dlgId');
+        }
+
+        if (!$dialog.length)
+            return;
+
+        $dialog.hide();
+        if (destroy) {
+            $dialog.remove();
+            delete dialog._dialogs[id];
+        }
+    },
+
+    closeAll: function(destroy) {
+        $.each(dialog._dialogs, function(key, value) {
+            value.hide();
+            if (destroy)
+                value.remove();
+        });
+        dialog._dialogs = {};
+    }
+};
+
+// Close all dialogs when we navigate to a different page.
+$.address.change(function(event) {
+    dialog.closeAll(true);
+});
+
+$$.dialog = dialog;
+})(social, jQuery);
+
+
+/*
  * Sidemenu related utilities
  */
 (function($$, $) {
@@ -617,7 +744,7 @@ var acl = {
                          acl.updateACL(id, ui);
                      }
                  })
-                 .css("z-index", 1000);
+                 .css("z-index", 2000);
         }
 
         acl.refreshGroups(id);

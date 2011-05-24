@@ -51,7 +51,11 @@
           <div class="poll-bar-wrapper">
             <div class="poll-bar option-${int(option)%10}" style="width:${percent}%;">&nbsp;</div>
           </div>
-          <div class="poll-percent">${"%d%%"%percent}</div>
+          %if percent > 0:
+            <div class="poll-percent"><button class="button-link" onclick="$$.dialog.create({id:'poll-users-${option}-${convId}'});$.getScript('/ajax/poll/voters?id=${convId}&option=${option}');">${"%d%%"%percent}</button></div>
+          %else:
+            <div class="poll-percent"><button class="button-link">${"%d%%"%percent}</button></div>
+          %endif
         </div>
       </li>
     %endfor

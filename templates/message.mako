@@ -9,63 +9,8 @@
 <%namespace name="widgets" file="widgets.mako"/>
 <%inherit file="base.mako"/>
 
-<%def name="nav_menu()">
-  <%
-    SENT, INBOX, TRASH, DRAFTS, ARCHIVES = "", "", "", "", ""
-
-    customFolders = {}
-    folders = {}
-    for fId, fInfo in folders.iteritems():
-        if ("special" in fInfo) and (fInfo["special"] == "INBOX"):
-          INBOX = fId
-        elif ("special" in fInfo) and (fInfo["special"] == "SENT"):
-          SENT = fId
-        elif ("special" in fInfo) and (fInfo["special"] == "TRASH"):
-          TRASH = fId
-        elif ("special" in fInfo) and (fInfo["special"] == "DRAFTS"):
-          DRAFTS = fId
-        elif ("special" in fInfo) and (fInfo["special"] == "ARCHIVES"):
-          ARCHIVES = fId
-        else:
-          customFolders[fId] = fInfo
-
-    def navMenuItem(id, link, text, icon, selected=False):
-      if selected: style = "sidemenu-selected"
-      else: style = ""
-      return """
-              <li id="%(id)s" class="%(style)s">
-                <a href="%(link)s" class="ajax busy-indicator">
-                  <span class="sidemenu-icon messaging-icon %(icon)s-icon"></span>
-                  <span class="sidemenu-text">%(text)s</span>
-                </a>
-              </li>
-              """ % locals()
-  %>
-  <div id="mymenu-container" class="sidemenu-container">
-    <ul class="v-links sidemenu">
-      ${navMenuItem("home", "/feed", _("Back to Home"), "back")}
-    </ul>
-    <ul class="v-links sidemenu">
-      ${navMenuItem("compose", "/messages/write", _("Compose"), "compose")}
-    </ul>
-    <ul id="sfmenu" class="v-links sidemenu">
-        ${navMenuItem(INBOX, "/messages?fid=%s" %(INBOX), _("Inbox"), "inbox", fid==INBOX)}
-        ${navMenuItem(ARCHIVES, "/messages?fid=%s" %(ARCHIVES), _("Archives"), "archive", fid==ARCHIVES)}
-        ${navMenuItem(SENT, "/messages?fid=%s" %(SENT), _("Sent"), "sent", fid==SENT)}
-        ${navMenuItem(TRASH, "/messages?fid=%s" %(TRASH), _("Trash"), "trash", fid==TRASH)}
-    </ul>
-    <ul id="ufmenu" class="v-links sidemenu">
-        % for folderId in customFolders.keys():
-            ${navMenuItem(folderId, "/messages?fid=%s"%(folderId),
-              _(folders[folderId]['label']), "", folderId == fid)}
-        % endfor
-    </ul>
-  </div>
-</%def>
-
-
 <%def name="layout()">
-  <div class="contents has-left has-right">
+  <div class="contents has-left">
     <div id="left">
       <div id="nav-menu">
         ${self.nav_menu()}
@@ -77,8 +22,27 @@
         </div>
       </div>
       <div id="center">
+        <div class="center-header">
+          <div class="titlebar">
+            <span class="middle title">${_('Messages')}</span>
+            <span class="button" style="float:right;font-size:15px;font-weight:bold">
+              <a class="ajax" href="/messages/write">New Message</a>
+            </span>
+          </div>
+          <div id="composer">
+            %if view == "compose":
+              %if not script:
+                ${viewComposer()}
+              %endif
+            %endif
+          </div>
+        </div>
         <div class="center-contents" style="padding:0">
-          ${self.center()}
+          %if view != "compose":
+            %if not script:
+              ${center()}
+            %endif
+          %endif
         </div>
       </div>
     </div>
@@ -91,56 +55,21 @@
 %>
 
 <%!
-  def formatPeopleInConversation(conv, people, short=False):
-    recipients = conv["people"]
-    senderEmailId = conv["meta"]["owner"]
-    rStrings = []
-    for each in recipients:
-        emailId = each
-        if not short:
-            estring = "<a href='/profile?id=%s'>%s</a>" %(recipients[each],
-                                                          people[each]["basic"]["name"])
-        else:
-            if emailId != senderEmailId:
-                estring = "<span>%s</span>" %(people[emailId]["basic"]["name"])
-            else:
-                continue
-        if emailId == conv["meta"]["owner"]:
-            estring = "<span>%s</span>" %("Me")
+  def formatPeopleInConversation(conv, people_info):
+    participants = conv["people"]
+    sender = people_info[conv["meta"]["owner"]]["basic"]["name"]
+    people_without_sender = set(participants) - set([sender,])
+    last_sent_by = people_info[list(people_without_sender)[-1]]["basic"]["name"]
 
-        rStrings.append(estring)
-
-    if short:
-        sString = "<span>%s</span>" %(people[senderEmailId]["basic"]["name"])
+    if len(people_without_sender) > 1:
+        return "%s...%s(%d)" %(sender, last_sent_by, len(participants)-1)
     else:
-        sString = "<a href='/profile?id=%s'>%s</a>" %(senderEmailId,
-                                                      people[senderEmailId]["basic"]["name"])
-
-    if short:
-        rString = ", ".join(set(rStrings))
-        finalString = "%s, %s" %(sString, rString) if len(rStrings) > 0 else sString
-    else:
-        rString = ", ".join(set(rStrings))
-        finalString = "%s Wrote to %s" %(sString, rString)
-    return finalString
-%>
-
-<%!
-    def formatRecipientList(message):
-        recipients = (message["From"]+", "+message["To"]).split(",")
-        rStrings = []
-        for each in recipients:
-            emailId = email.utils.parseaddr(each)[1]
-            if not emailId == message["myself"]:
-                rStrings.append("%s <%s>" %(message["people"][emailId]["basic"]["name"],
-                                            emailId))
-
-        return ", ".join(set(rStrings))
+        return "%s and %s" %(sender, last_sent_by)
 %>
 
 <%!
     def formatBodyForReply(message, reply):
-      body = message["meta"].get('body', '')
+      body = cgi.escape(message["meta"].get('body', ''))
       sender = message["meta"]['owner']
       date = message["meta"]['Date']
       quoted_reply = "\n".join([">%s" %x for x in body.split('\n')]+['>'])
@@ -163,31 +92,6 @@
       lines.append(message["body"])
       new_reply = "\n".join(lines)
       return new_reply
-%>
-
-<%!
-    def formatSubjectForReply(subject):
-      reply_re = r"""(?i)^Re:\s+\w"""
-      match = re.search(reply_re, subject)
-      if match:
-        return subject
-      else:
-        return "%s %s" %("Re:", subject.strip())
-%>
-
-<%!
-    def formatSubjectForForward(subject):
-      reply_re = r"""(?i)^Re|Fwd:\s+\w"""
-      match = re.search(reply_re, subject)
-      if match:
-        return "%s %s" %("Fwd:", subject.strip("Re:"))
-      else:
-        return "%s %s" %("Fwd:", subject.strip())
-%>
-
-<%!
-    def formatBodyForViewing(text):
-        lines = text.split("\r\n")
 %>
 
 <%!
@@ -223,122 +127,120 @@
       return "%s" %date
 %>
 
-<%def name="messages_layout(script, convId, conv, filter)">
+<%!
+    def getSenderAvatar(conv, people, size="m"):
+        senderId = conv["meta"]["owner"]
+        avatarURI = None
+        avatarURI = utils.userAvatar(senderId, people[senderId], size)
+        if avatarURI:
+          return '<img src="%s" height="48" width="48" style="display:inline-block"/>' %avatarURI
+        else:
+          return ''
+%>
+
+<%def name="conversation_row_layout(script, convId, conv)">
   <div id="thread-${convId}" class="message-row ${'row-unread' if conv["read"] == "0" else 'row-read'}">
     <div class="message-row-cell message-row-select">
       <input type="checkbox" name="selected" value="${convId}"
         onchange="$('.thread-selector').attr('checked', false)"/>
     </div>
-    <div class="message-row-cell message-row-star">
-
+    <div class="message-row-cell message-row-sender">
+        ${getSenderAvatar(conv, people)}
     </div>
-    <div class="message-row-cell" style="width:210px">${formatPeopleInConversation(conv, people, True)}</div>
-    <div class="message-row-cell" style="width:450px">
-      <a class="${'ajax' if script else ''} message-link" href="/messages/thread?id=${convId}">${conv["meta"]["subject"]|h}</a>
+    <div class="message-row-cell message-row-info" style="height:100%;width:100%;cursor:pointer">
+        <div style="display:block;width:100%;height:100%">
+            <div style="display:inline-block;padding:2px;width:650px" onclick="alert('clicked')">
+                <span style="padding:4px 0 0 4px;width:150px">${formatPeopleInConversation(conv, people)}</span>
+                <span style="width:450px;font-size:11px;color:#777;padding-left:4px">${conv['meta']["date_epoch"]|timeElapsedSince}</span>
+            </div>
+            <div style="display:inline-block;padding:2px">
+                <span>Actions</span>
+            </div>
+            <a class="ajax message-link" href="/messages/thread?id=${convId}" style="display:block;padding:7px;width:700px;vertical-align:bottom">
+                <div style="display:inline">${conv["meta"]["subject"]|h}</div>
+                <div style="color:#777;overflow:hidden;display:inline-block;vertical-align:bottom;white-space:nowrap;width:660px"> - ${conv["meta"]["snippet"]}</div>
+                <span style="float:right;cursor:default;color:#000;position:absolute">
+                    <span title="There are ${conv['count']} messages in this conversation">${conv['count']}</span>
+                </span>
+            </a>
+        </div>
     </div>
-    <abbr class="message-row-cell time-label" style="width:130px">
-      ${conv['meta']["date_epoch"]|timeElapsedSince}
-    </abbr>
   </div>
 </%def>
 
-<%def name="message_layout(convId, conv, mids, message, flags, fid)">
-    <div class="message-headline">
-      <h2 class="message-headline-subject">${conv["meta"]["subject"]|h}</h2>
-    </div>
-
-    % for mid in messageIds:
-      <div class="conv-avatar">
-      <%
-        emailId = messages[mid]['meta']["owner"]
-        avatarURI = None
-        avatarURI = utils.userAvatar(emailId, people[emailId]["basic"])
-      %>
-      %if avatarURI:
-        <img src="${avatarURI}" height="48" width="48" style="display:inline-block"/>
-      %endif
-      </div>
-      <div class="conv-data">
-        <div class="conv-summary">
-          <div class="message-headers">
-            <span class="user conv-user-cause">
-              <a href="/profile?id=${emailId}" class="ajax">
-                ${people[messages[mid]['meta']['owner']]["basic"]["name"]}
-              </a>
-            </span>
-            <span class="time-label message-headers-time">${messages[mid]["meta"]["date_epoch"]|timeElapsedSince}</span>
-          </div>
-          <div class="message-message">
-            ${messages[mid]["meta"].get("body", '') | newlinescape}
-          </div>
+<%def name="viewConversation()">
+    <form method="post" action="/messages/thread">
+        ${toolbar_layout(view)}
+        <div class="message-headline">
+          <h2 class="message-headline-subject">${conv["meta"]["subject"]|h}</h2>
         </div>
-      </div>
-    % endfor
-    <input type="hidden" name="message" value="${convId}"/>
-    <input type="hidden" name="_body" value="${formatBodyForReply(messages[mid], "")}"/>
+        <div class="conversation-wrapper" style="padding:4px;border:1px solid #BCBCBC;border-radius:7px;margin:2px; padding:4px">
+            % for mid in messageIds:
+            <div class="conversation-message-wraper" style="padding-bottom:2px; margin-bottom:2px; border-bottom:1px solid #E2e2e2">
+              <div class="comment-avatar">
+                ${getSenderAvatar(messages[mid], people)}
+              </div>
+              <div class="conv-data">
+                <div class="conv-summary">
+                  <div class="message-headers">
+                    <span class="user conv-user-cause">
+                      <a href="/profile?id=${messages[mid]['meta']['owner']}" class="ajax">
+                        ${people[messages[mid]['meta']['owner']]["basic"]["name"]}
+                      </a>
+                    </span>
+                    <span class="time-label message-headers-time">${messages[mid]["meta"]["date_epoch"]|timeElapsedSince}</span>
+                  </div>
+                  <div class="message-message">
+                    ${messages[mid]["meta"].get("body", '') | newlinescape}
+                  </div>
+                </div>
+              </div>
+              </div>
+            % endfor
+        <input type="hidden" name="selected" value="${id}"/>
+        <!--<input type="hidden" name="_body" value="${formatBodyForReply(messages[mid], '')}"/>-->
+    </form>
+    <form action="/messages/members" method="post" class="ajax">
+      <input type="text" name="recipients" />
+      <input type="hidden" name='parent' value=${id} />
+      <input type="submit" value="submit" />
+      <input type="hidden" name="action" value="add" />
+    </form>
+    <form action="/messages/members" method="post" class="ajax">
+      <input type="text" name="recipients" />
+      <input type="hidden" name='parent' value=${id} />
+      <input type="submit" value="submit" />
+      <input type="hidden" name="action" value="remove" />
+    </form>
+    <form action="/messages/write" method="post" class="ajax">
+        ${quick_reply_layout(script, messages[messageIds[-1]], id)}
+    </form>
 </%def>
 
-<%def name="thread_layout(thread, inline=False, isFeed=False)">
-
-</%def>
-
-<%def name="composer_layout(script, view, msg, fid)">
+<%def name="viewComposer()">
+  <form method="post" action="/messages/write">
     <div class="message-composer">
-        % if msg:
-          <div class="message-composer-row">
-            <div class="message-composer-label">Recipients</div>
-            <div class="message-composer-field">
-              <textarea class="message-composer-field-recipient" name="recipients" placeholder="${_('Enter your colleagues name or email address') |h}">${msg['From']}</textarea>
-            </div>
-          </div>
-          <div class="message-composer-row">
-            <div class="message-composer-label">Subject</div>
-            <div class="message-composer-field">
-              % if view == "reply":
-                <input class="message-composer-field-subject" type="text" name="subject" value="${formatSubjectForReply(msg['Subject'])}" placeholder="${_('Enter a subject of your message') |h}"/>
-              % elif view == "forward":
-                <input class="message-composer-field-subject" type="text" name="subject" value="${formatSubjectForForward(msg['Subject'])}" placeholder="${_('Enter a subject of your message') |h}"/>
-              % endif
-            </div>
-          </div>
-          % if view == "reply":
-            <textarea class="message-composer-field-body" name="body">${formatBodyForReply(msg, "")}</textarea>
-            <input type="hidden" value="${msg["message-id"]}" name="parent">
-          % else:
-            <textarea class="message-composer-field-body" name="body">${formatBodyForForward(msg)}</textarea>
-          % endif
-        % else:
-          <div class="message-composer-row">
-            <div class="message-composer-label">Recipients</div>
-            <div class="message-composer-field">
-              <textarea class="message-composer-field-recipient" type="text" name="recipients" placeholder="${_('Enter name or email address') |h}"></textarea>
-            </div>
-          </div>
-          <div class="message-composer-row">
-            <div class="message-composer-label">Subject</div>
-            <div class="message-composer-field">
-              <input class="message-composer-field-subject" type="text" name="subject" placeholder="${_('Enter a subject of your message') |h}"/>
-            </div>
-          </div>
-          <div class="message-composer-field-body-wrapper">
-            <textarea class="message-composer-field-body" placeholder="Write a message to your friends and colleagues" name="body"></textarea>
-          </div>
-        % endif
-      <div class="message-composer-row">
+      <div class="input-wrap message-composer-field">
+        <textarea class="message-composer-field-recipient" type="text" name="recipients" placeholder="${_('Enter name or email address') |h}"></textarea>
+      </div>
+      <div class="input-wrap message-composer-field">
+        <input class="message-composer-field-subject" type="text" name="subject" placeholder="${_('Enter a subject of your message') |h}"/>
+      </div>
+      <div class="input-wrap message-composer-field">
+        <textarea class="message-composer-field-body" placeholder="Write a message to your friends and colleagues" name="body"></textarea>
+      </div>
+      <div id="sharebar-actions">
         <ul class="middle user-actions h-links message-composer-field">
           <li class="button">
             <input type="submit" name="send" value="Send" class="button default">
           </li>
           <li class="button">
-            % if msg:
-              <a class="ajax" href="/messages/thread?id=${msg['message-id']}&fid=${fid}">Cancel</a>
-            % else:
-              <a class="ajax" href="/messages?fid=${fid}">Cancel</a>
-            % endif
+            <a class="ajax" href="/messages">Cancel</a>
           </li>
         </ul>
-      </div>
+       </div>
     </div>
+  </form>
 </%def>
 
 <%def name="quick_reply_layout(script, msg, convId)">
@@ -358,7 +260,7 @@
   </div>
 </%def>
 
-<%def name="toolbar_layout(script, view, fid, message=None, nextPageStart=None, prevPageStart=None)">
+<%def name="toolbar_layout(view, nextPageStart=None, prevPageStart=None)">
   % if view == "messages":
     <div class="toolbar">
       % if script:
@@ -368,164 +270,85 @@
        </div>
       % else:
       % endif
+      <span style="float:right">
       <input type="submit" name="delete" value="Delete" class="button "/>
       <input type="submit" name="archive" value="Archive" class="button "/>
-      <input type="submit" name="unread" value="UnRead" class="button "/>
-      <input type="submit" name="inbox" value="UnArchive" class="button "/>
-      ${navigation_layout(script, view, fid, nextPageStart, prevPageStart)}
+      <input type="submit" name="unread" value="Mark as Unread" class="button "/>
+      % if filter == "archive":
+          <input type="submit" name="inbox" value="Move to Inbox" class="button "/>
+      % endif
+      </span>
     </div>
   % elif view == "message":
     <div class="toolbar">
-        <a class="${'ajax' if script else ''} action-link" href="/messages?fid=${fid}">Go Back</a>
+        <a class="${'ajax' if script else ''} action-link" href="/messages">Go Back</a>
         <input type="submit" name="delete" value="Delete" class="button "/>
         <input type="submit" name="archive" value="Archive" class="button "/>
-        % if script:
-            <input type="submit" name="unread" value="Mark as Unread" class="button "/>
-        % else:
-            <select name="action" class="button ">
-              <option value="">More Actions</option>
-              <option value="star">Add Star</option>
-              <option value="unstar">Remove Star</option>
-              <option value="unread">Mark as Unread</option>
-            </select>
-            <input type="submit" value="Go" name="other" class="button ">
-        % endif
+        <input type="submit" name="unread" value="Mark as Unread" class="button "/>
         <span class="clear" style="display:block"></span>
-    </div>
-  %elif view == "compose":
-    <div class="toolbar">
-      <a class="${'ajax' if script else ''} action-link" href="/messages?fid=${fid}">Go Back</a>
-    </div>
-  % elif view == "reply":
-    <div class="toolbar">
-      <a class="${'ajax' if script else ''} action-link" href="/messages/thread?id=${message['message-id']}&fid=${fid}">Go Back</a>
-    </div>
-  % elif view == "forward":
-    <div class="toolbar">
-      <a class="${'ajax' if script else ''} action-link" href="/messages/thread?id=${message['message-id']}&fid=${fid}">Go Back</a>
     </div>
   % endif
 </%def>
 
-<%def name="navigation_layout(script, view, fid, nextPageStart, prevPageStart)">
-  % if view == "messages":
-    <div style="float:right;margin-top:6px">
-      <ul class="h-links">
-        % if prevPageStart != '':
-          %if fid:
-            <li style="padding: 0pt 4px;"><a class="${'ajax' if script else ''}" href="/messages?start=${prevPageStart}&fid=${fid}">Back</a></li>
-          %else:
-            <li style="padding: 0pt 4px;"><a class="${'ajax' if script else ''}" href="/messages?start=${prevPageStart}">Back</a></li>
-          %endif
-        % endif
-        % if nextPageStart != '':
-          % if fid:
-            <li style="padding: 0pt 4px;"><a class="${'ajax' if script else ''}" href="/messages?start=${nextPageStart}&fid=${fid}">Next</a></li>
-          %else:
-            <li style="padding: 0pt 4px;"><a class="${'ajax' if script else ''}" href="/messages?start=${nextPageStart}">Next</a></li>
-          %endif
-        % endif
-      </ul>
-    </div>
-    <span class="clear" style="display:block"></span>
-  % endif
+<%def name="viewListing()">
+  <div id="people-view" class="viewbar">
+      ${viewOptions()}
+  </div>
+  <div id="center-wrapper" style="margin-top:-5px">
+    <form action="/messages/thread" method="post" class="ajax">
+        ${toolbar_layout(view, nextPageStart, prevPageStart)}
+        <div class="conversation-layout-container">
+            %for mid in mids:
+              ${conversation_row_layout(script, mid, messages[mid])}
+            %endfor
+        </div>
+    </form>
+  </div>
+  <div id="people-paging" class="pagingbar">
+      ${paging()}
+  </div>
 </%def>
 
 <%def name="center()">
-  % if view == "threads":
-    %for thread in threads:
-      ${thread_layout(thread, msgs_map, True, True)}
-    %endfor
-  %elif view == "messages":
-    <form method="post" action="/messages">
-    ${toolbar_layout(script, view, fid, None, nextPageStart, prevPageStart)}
-    %for mid in mids:
-      ${messages_layout(script, mid, messages[mid], fid)}
-    %endfor
-    <input type="hidden" name="fid" value="${fid}"/>
-    </form>
+  %if view == "messages":
+    ${viewListing()}
   %elif view == "message":
-
-    <form method="post" action="/messages/thread">
-    ${toolbar_layout(script, view, fid, message=messages)}
-    ${message_layout(id, conv, messageIds, messages, flags, fid)}
-    <input type="hidden" name="fid" value="${fid}"/>
-    </form>
-    <form action="/messages/addMembers" method="post" class="ajax">
-      <input type="text" name="recipients" />
-      <input type="hidden" name='parent' value=${id} />
-      <input type="submit" value="submit" />
-
-    </form>
-    <form action="/messages/deleteMembers" method="post" class="ajax">
-      <input type="text" name="recipients" />
-      <input type="hidden" name='parent' value=${id} />
-      <input type="submit" value="submit" />
-    </form>
-
-    <form method="post" action="/messages/reply">
-    ${quick_reply_layout(script, messages[messageIds[-1]], id)}
-    <input type="hidden" name="fid" value="${fid}"/>
-    </form>
-  %elif view == "compose":
-    <form method="post" action="/messages/write">
-    ${toolbar_layout(script, view, fid)}
-    ${composer_layout(script, view, None, fid)}
-    </form>
-  %elif view == "reply":
-    <form method="post" action="/messages/write">
-    ${toolbar_layout(script, view, fid, message=parent_msg)}
-    ${composer_layout(script, view, parent_msg, fid)}
-    </form>
-  %elif view == "forward":
-    <form method="post" action="/messages/write">
-    ${toolbar_layout(script, "reply", fid, message=parent_msg)}
-    ${composer_layout(script, view, parent_msg, fid)}
-    </form>
-  %endif
-</%def>
-
-<%def name="render_message_headline_star(action, mid, fid)">
-  %if action == "star":
-    <span class="message-headline-star ajax"  onclick="$.post('/ajax/messages/thread', 'fid=${fid}&action=unstar&message=${mid}', null, 'script')" href="#">
-      <span class="messaging-icon star-icon">&nbsp</span>
-    </span>
-  %else:
-    <span class="message-headline-star ajax" onclick="$.post('/ajax/messages/thread', 'fid=${fid}&action=star&message=${mid}', null, 'script')" href="#">
-      <span class="messaging-icon star-empty-icon">&nbsp</span>
-    </span>
+    ${viewConversation()}
   %endif
 </%def>
 
 <%def name="right()">
     % if view == "message":
     <h2>People in this conversation</h2>
-    <div style="display:table">
-        <div style="display:table-row">
-            % for person in message["people"].keys():
-                <%
-                    emailId = person
-                    avatarURI = utils.userAvatar(message["people"][emailId]["uid"],
-                                                 message["people"][emailId]["basic"], "s")
-                %>
-                %if avatarURI:
-                  <img src="${avatarURI}" height="32" width="32" style="display:inline-block"/>
-                %endif
-            % endfor
-        </div>
-        <div style="display:table-row">
-            % for person in message["people"].keys():
-                <a href='/profile?id=${message["people"][emailId]["uid"]}'>
-                  ${message["people"][person]["basic"]["name"]}
-                </a>
-            % endfor
-        </div>
-    </div>
-    <ul style="list-style-type:none">
-        <li>
-        </li>
-    </ul>
+    <div>There are people in this conversation</div>
     %else:
         <span>${view}</span>
     %endif
+</%def>
+
+<%def name="viewOptions()">
+  <ul class="h-links view-options">
+    %for item, display in [('all', 'Inbox'), ('unread', 'Unread'), ('archive', 'Archive'), ('delete', 'Trash')]:
+      %if filter == item:
+        <li class="selected">${_(display)}</li>
+      %else:
+        <li><a href="/messages?filter=${item}" class="ajax">${_(display)}</a></li>
+      %endif
+    %endfor
+  </ul>
+</%def>
+
+<%def name="paging()">
+  <ul class="h-links">
+    %if prevPageStart:
+      <li class="button"><a class="ajax" href="/messages?filter=${filter}&start=${prevPageStart}">${_("&#9666; Previous")}</a></li>
+    %else:
+      <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
+    %endif
+    %if nextPageStart:
+      <li class="button"><a class="ajax" href="/messages?filter=${filter}&start=${nextPageStart}">${_("Next &#9656;")}</a></li>
+    %else:
+      <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
+    %endif
+  </ul>
 </%def>
