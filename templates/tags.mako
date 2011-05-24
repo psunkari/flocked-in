@@ -42,7 +42,7 @@
   </div>
 </%def>
 
-<%def name="header(tagId)">
+<%def name="header(tagId=None)">
   <div class="titlebar">
     <div id="title">
       % if tagId:
@@ -51,7 +51,7 @@
           ${tag_actions(tagId)}
         </ul>
       % else:
-        <span class="middle title">${"Organization Tags:"}</span>
+        <span class="middle title">${"Tags"}</span>
       % endif
     </div>
   </div>
@@ -67,7 +67,6 @@
     <div id="next-load-wrapper">No more posts to show</div>
   %endif
 </%def>
-
 
 <%def name="tag_actions(tagId, showRemove=True)">
   %if not tagFollowing:
@@ -93,7 +92,6 @@
 </%def>
 
 <%def name="listTags()">
-
   <%
     counter = 0
     firstRow = True
@@ -119,7 +117,6 @@
 </%def>
 
 <%def name="_displaytag(tagname)" >
-
   <% tagId = tags[tagname] %>
   <div class = 'tags-row user-details-actions' >
     <div class="user-details-name"><a class = "ajax" href="/tags/items?id=${tagId}"> ${tagname} </a>

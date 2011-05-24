@@ -62,6 +62,7 @@ class TagsResource(base.BaseResource):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
         myOrgId = args["orgKey"]
+        args["menuId"] = "tags"
 
         if script and landing:
             yield render(request, "tags.mako", **args)
@@ -123,6 +124,7 @@ class TagsResource(base.BaseResource):
         toFetchCount = count + 1
         start = utils.decodeKey(start)
 
+        args["menuId"] = "tags"
         if script and landing:
             yield render(request, "tags.mako", **args)
 
@@ -136,7 +138,6 @@ class TagsResource(base.BaseResource):
         if len(tags) > count:
             nextPageStart = utils.encodeKey(tags.keys()[-1])
             del tags[tags.keys()[-1]]
-
 
         if start:
             prevCols = yield Db.get_slice(myOrgId, "orgTagsByName",
@@ -155,14 +156,12 @@ class TagsResource(base.BaseResource):
                 if myId in cols[tagId]:
                     tagsFollowing.append(tagId)
 
-
         args['tags'] = tags
         args['tagsFollowing'] = tagsFollowing
         args['nextPageStart'] = nextPageStart
         args['prevPageStart'] = prevPageStart
 
         if script:
-
             yield renderScriptBlock(request, "tags.mako", "header",
                                     landing, "#tags-header", "set", args=[None], **args )
 
@@ -171,6 +170,9 @@ class TagsResource(base.BaseResource):
 
             yield renderScriptBlock(request, "tags.mako", "paging",
                                 landing, "#tags-paging", "set", **args)
+
+        if not script:
+            yield render(request, "tags.mako", **args)
 
 
     @profile
@@ -185,6 +187,7 @@ class TagsResource(base.BaseResource):
             d = self._render(request)
 
         return self._epilogue(request, d)
+
 
     @profile
     @dump_args
@@ -215,3 +218,4 @@ class TagsResource(base.BaseResource):
 
         requestDeferred.addCallback(callback)
         return self._epilogue(request, requestDeferred)
+

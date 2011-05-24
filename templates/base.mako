@@ -24,7 +24,7 @@
       ${navMenuItem("/people", _("People"), "people")}
       ${navMenuItem("/feed?id=%s" % orgKey, _("Company Feed"), "org")}
       ${navMenuItem("/groups", _("Groups"), "groups")}
-      ${navMenuItem("/tags", _("Tags"), "edit-tags")}
+      ${navMenuItem("/tags", _("Tags"), "tags")}
     </ul>
   </div>
 </%def>

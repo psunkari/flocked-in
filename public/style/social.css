@@ -946,6 +946,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     vertical-align: middle;
 }
 
+.tags-icon,
 .edit-tags-icon {
     background-position: 0 -240px;
 }
