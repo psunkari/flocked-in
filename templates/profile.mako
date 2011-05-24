@@ -179,16 +179,6 @@
         %>
         ${'<span id="summary-work" class="summary-item">' + __('Worked on %s', 'Worked on %s and %s', length) % ((keys[0]) if length == 1 else (keys[1], keys[0])) + '</span>'}
       %endif
-      %if user.has_key('education'):
-        <%
-          keys = [x.split(':')[1] for x in user['education'].keys()]
-          length = len(keys)
-        %>
-        ${'<span id="summary-education" class="summary-item">' + __('Studied at %s', 'Studied at %s and %s', length) % ((keys[0]) if length == 1 else (keys[1], keys[0])) + '</span>'}
-      %endif
-      %if user.get('personal', {}).has_key('currentCity'):
-        ${'<span id="summary-lives" class="summary-item">' + _('Lives in %s') % user['personal']['currentCity'] + '</span>'}
-      %endif
       %if user.get('personal', {}).has_key('birthday'):
         <%
           stamp = user['personal']['birthday']  ## YYYYMMDD
