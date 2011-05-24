@@ -15,7 +15,7 @@
   </div>
   <div id="wrapper">
     <div id="inner">
-      <form action="/signin${query}" method="POST">
+      <form action="/signin" method="POST">
       <div id="signin">
         <table id="signin-table" cellspacing="0" cellpadding="3" border="0" align="center">
           <tr>
@@ -36,7 +36,11 @@
             <td id="rememberlabel"><label for="remember">${_('Keep me logged in')}</label></td>
           </tr>
           <tr>
-            <td colspan="2" id="signin-submitbox"><input type="submit" id="submit" value="${_('Sign in')}"/>
+            <td colspan="2" id="signin-submitbox">
+              %if redirect:
+              <input type="hidden" id="_r" value="${redirect}" name="_r"/>
+              %endif
+              <input type="submit" id="submit" value="${_('Sign in')}"/>
             </td>
           </tr>
           <tr>
