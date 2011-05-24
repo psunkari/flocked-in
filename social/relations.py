@@ -75,5 +75,5 @@ class Relation(object):
 
     @defer.inlineCallbacks
     def initGroupsList(self):
-        cols = yield Db.get_slice(self.me, "userGroups")
+        cols = yield Db.get_slice(self.me, "entityGroupsMap")
         self.groups = [col.column.name for col in cols]
