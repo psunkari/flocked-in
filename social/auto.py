@@ -152,7 +152,7 @@ class AutoCompleteResource(BaseResource):
 
         acl = pickle.loads(acl)
         accept = acl.get("accept", {})
-        containersInACL = set(accept.get("orgs"))
+        containersInACL = set(accept.get("orgs", []))
         containersInACL.update(accept.get("groups", []))
 
         cols = yield d2
