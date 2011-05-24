@@ -509,6 +509,9 @@ class FeedResource(base.BaseResource):
         landing = not self._ajax
         myOrgId = args["orgKey"]
 
+        args["feedTitle"] = _("News Feed")
+        args["menuId"] = "feed"
+
         if entityId:
             entity = yield Db.get_slice(entityId, "entities", ["basic", "admins"])
             entity = utils.supercolumnsToDict(entity)
@@ -524,11 +527,8 @@ class FeedResource(base.BaseResource):
                 args["groupAdmins"] = entity["admins"]
                 args["groupId"] = entityId
                 args["menuId"] = "groups"
-            else:
+            elif entityId != myId:
                 errors.InvalidRequest()
-        else:
-            args["feedTitle"] = _("News Feed")
-            args["menuId"] = "feed"
 
         feedId = entityId or myId
         args["feedId"] = feedId
