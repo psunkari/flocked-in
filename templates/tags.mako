@@ -22,21 +22,27 @@
       <div id="center">
         <div class="center-header" id="tags-header">
           %if not script:
-            ${self.header()}
+            ${self.header(tagId)}
           %endif
         </div>
-        <div id = "content">
-          <div id="tag-items" class="center-contents">
+        %if tagId:
+          <div id="content">
             %if not script:
-              ${self.items()}
+              ${self.itemsLayout()}
             %endif
           </div>
-        </div>
-        <div id="tags-paging" class="pagingbar">
-              %if not script:
-                ${paging()}
-              %endif
-        </div>
+        %else:
+          <div id = "content" class="center-contents">
+            %if not script:
+              ${self.listTags()}
+            %endif
+          </div>
+          <div id="tags-paging" class="pagingbar">
+            %if not script:
+              ${self.paging()}
+            %endif
+          </div>
+        %endif
       </div>
     </div>
   </div>
@@ -45,15 +51,21 @@
 <%def name="header(tagId=None)">
   <div class="titlebar">
     <div id="title">
-      % if tagId:
+      %if tagId:
         <span class="middle title">${tags[tagId]["title"]}</span>
         <ul id="tag-actions-${tagId}" class="middle user-actions h-links">
           ${tag_actions(tagId)}
         </ul>
-      % else:
+      %else:
         <span class="middle title">${"Tags"}</span>
-      % endif
+      %endif
     </div>
+  </div>
+</%def>
+
+<%def name="itemsLayout()">
+  <div id="tag-items" class="center-contents">
+    ${self.items()}
   </div>
 </%def>
 
@@ -62,7 +74,7 @@
     ${item.item_layout(convId)}
   %endfor
   %if nextPageStart:
-    <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" _ref="/tags?id=${tagId}&start=${nextPageStart}">${_("Fetch older posts")}</a></div>
+    <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" href="/tags?id=${tagId}&start=${nextPageStart}" _ref="/tags/more?id=${tagId}&start=${nextPageStart}">${_("Fetch older posts")}</a></div>
   %else:
     <div id="next-load-wrapper">No more posts to show</div>
   %endif
@@ -119,7 +131,7 @@
 <%def name="_displaytag(tagname)" >
   <% tagId = tags[tagname] %>
   <div class = 'tags-row user-details-actions' >
-    <div class="user-details-name"><a class = "ajax" href="/tags/items?id=${tagId}"> ${tagname} </a>
+    <div class="user-details-name"><a class = "ajax" href="/tags?id=${tagId}">${tagname}</a>
     <ul class="middle user-actions h-links">
     % if tagId in tagsFollowing:
       <li class="button" onclick="$.post('/ajax/tags/unfollow', 'id=${tagId}', null, 'script')"><span class="button-text">Unfollow</span></li>

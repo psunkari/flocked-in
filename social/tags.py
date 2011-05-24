@@ -1,5 +1,6 @@
 
 import uuid
+from email.utils        import formatdate
 
 from telephus.cassandra import ttypes
 from twisted.internet   import defer
@@ -58,11 +59,12 @@ class TagsResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _render(self, request):
+    def _render(self, request, tagId):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
         myOrgId = args["orgKey"]
         args["menuId"] = "tags"
+        args["tagId"]=tagId
 
         if script and landing:
             yield render(request, "tags.mako", **args)
@@ -71,12 +73,7 @@ class TagsResource(base.BaseResource):
             yield renderScriptBlock(request, "tags.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-        tagId = utils.getRequestArg(request, "id")
-        args["tagId"]=tagId
         request.addCookie('cu', tagId, path="/ajax/tags")
-        if not tagId:
-            raise errors.MissingParam()
-
         newId = (request.getCookie('cu') != tagId) or appchange
         if newId or not script:
             tagInfo = yield Db.get_slice(myOrgId, "orgTags", super_column=tagId)
@@ -97,19 +94,27 @@ class TagsResource(base.BaseResource):
 
         tagItems = yield self._getTagItems(request, tagId, start=start)
         args.update(tagItems)
-        fromFetchMore = ((not landing) and (not appchange) and start)
 
         if script:
             onload = "(function(obj){$$.convs.load(obj);})(this);"
-            if fromFetchMore:
-                yield renderScriptBlock(request, "tags.mako", "items", landing,
-                                        "#next-load-wrapper", "replace", True,
-                                        handlers={"onload": onload}, **args)
-            else:
-                yield renderScriptBlock(request, "tags.mako", "items",
-                                        landing, "#tag-items", "set", True,
-                                        handlers={"onload": onload}, **args)
+            yield renderScriptBlock(request, "tags.mako", "itemsLayout",
+                                    landing, "#content", "set", True,
+                                    handlers={"onload": onload}, **args)
 
+        if not script:
+            yield render(request, "tags.mako", **args)
+
+
+    @defer.inlineCallbacks
+    def _renderMore(self, request, start, tagId):
+        tagItems = yield self._getTagItems(request, tagId, start=start)
+        args = tagItems
+        args["tagId"] = tagId
+
+        onload = "(function(obj){$$.convs.load(obj);})(this);"
+        yield renderScriptBlock(request, "tags.mako", "items", False,
+                                "#next-load-wrapper", "replace", True,
+                                handlers={"onload": onload}, **args)
 
     @defer.inlineCallbacks
     def _listTags(self, request):
@@ -123,6 +128,7 @@ class TagsResource(base.BaseResource):
         count = 10
         toFetchCount = count + 1
         start = utils.decodeKey(start)
+        request.addCookie('cu', '', path="/ajax/tags", expires=formatdate(0))
 
         args["menuId"] = "tags"
         if script and landing:
@@ -131,6 +137,10 @@ class TagsResource(base.BaseResource):
         if script and appchange:
             yield renderScriptBlock(request, "tags.mako", "layout",
                                     landing, "#mainbar", "set", **args)
+
+        if script:
+            yield renderScriptBlock(request, "tags.mako", "header",
+                                    landing, "#tags-header", "set", **args )
 
         tags = yield Db.get_slice(myOrgId, "orgTagsByName", start=start, count= toFetchCount)
         tags = utils.columnsToDict(tags, ordered=True)
@@ -162,12 +172,8 @@ class TagsResource(base.BaseResource):
         args['prevPageStart'] = prevPageStart
 
         if script:
-            yield renderScriptBlock(request, "tags.mako", "header",
-                                    landing, "#tags-header", "set", args=[None], **args )
-
             yield renderScriptBlock(request, "tags.mako", "listTags",
                                     landing, "#content", "set", **args)
-
             yield renderScriptBlock(request, "tags.mako", "paging",
                                 landing, "#tags-paging", "set", **args)
 
@@ -182,9 +188,15 @@ class TagsResource(base.BaseResource):
         d = None
 
         if segmentCount == 0:
-            d = self._listTags(request)
-        if segmentCount == 1 and request.postpath[0] == 'items':
-            d = self._render(request)
+            tagId = utils.getRequestArg(request, 'id');
+            if tagId:
+                d = self._render(request, tagId)
+            else:
+                d = self._listTags(request)
+        elif segmentCount == 1 and request.postpath[0] == "more":
+            tagId = utils.getRequestArg(request, 'id')
+            start = utils.getRequestArg(request, 'start') or ""
+            d = self._renderMore(request, start, tagId)
 
         return self._epilogue(request, d)
 
