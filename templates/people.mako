@@ -24,6 +24,9 @@
         <div class="center-header">
           <div class="titlebar">
             <span class="middle title">${_('People')}</span>
+            <span class="button title-button">
+              <a class="ajax">${_('Invite more people')}</a>
+            </span>
           </div>
         </div>
         <div class="center-contents">

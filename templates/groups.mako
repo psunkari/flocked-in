@@ -38,9 +38,12 @@
 
 <%def name="titlebar()" >
   %if heading:
-    <div id="title"><span class="middle title">${heading}</span></div>
+    <span class="middle title">${heading}</span>
   %else:
-    <div id="title"><span class="middle title">${_('Group')}</span></div>
+    <span class="middle title">${_('Groups')}</span>
+    <span class="button title-button">
+      <a class="ajax">${_('New Group')}</a>
+    </span>
   %endif
 </%def>
 
