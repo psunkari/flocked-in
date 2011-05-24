@@ -219,7 +219,7 @@
     <%
       path = "/profile?id=%s&" % userKey
     %>
-    %for item, name in [('notes', 'Notes'), ('info', 'Info'), ('docs', 'Documents')]:
+    %for item, name in [('activity', 'Activity'), ('info', 'Info'), ('docs', 'Documents')]:
       %if detail == item:
         <li><a href="${path}dt=${item}" id="profile-tab-${item}" class="ajax selected">${_(name)}</a></li>
       %else:
@@ -349,7 +349,7 @@
   </div>
 </%def>
 
-<%def name="content_notes()">
+<%def name="content_activity()">
   <%
     block = []
     for key in userItems:
@@ -377,8 +377,8 @@
   %if detail == 'info':
     ${content_info()}
   %endif
-  % if detail == 'notes':
-    ${content_notes()}
+  % if detail == 'activity':
+    ${content_activity()}
   %endif
 </%def>
 

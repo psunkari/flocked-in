@@ -690,7 +690,7 @@ class ProfileResource(base.BaseResource):
         else:
             raise errors.UnknownUser()
 
-        detail = utils.getRequestArg(request, "dt") or "notes"
+        detail = utils.getRequestArg(request, "dt") or "activity"
         args["detail"] = detail
         args["userKey"] = userKey
         args["menuId"] = "people"
@@ -733,7 +733,7 @@ class ProfileResource(base.BaseResource):
         fetchedEntities = set()
         start = utils.getRequestArg(request, "start") or ''
         fromFetchMore = ((not landing) and (not appchange) and start)
-        if detail == "notes":
+        if detail == "activity":
             userItems = yield self._getUserItems(request, userKey, start=start)
             args.update(userItems)
 
@@ -741,10 +741,10 @@ class ProfileResource(base.BaseResource):
         if script:
             yield renderScriptBlock(request, "profile.mako", "tabs", landing,
                                     "#profile-tabs", "set", **args)
-            handlers = {} if detail != "notes" \
+            handlers = {} if detail != "activity" \
                 else {"onload": "(function(obj){$$.convs.load(obj);})(this);"}
 
-            if fromFetchMore and detail == "notes":
+            if fromFetchMore and detail == "activity":
                 yield renderScriptBlock(request, "profile.mako", "content", landing,
                                             "#next-load-wrapper", "replace", True,
                                             handlers=handlers, **args)
