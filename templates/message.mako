@@ -25,8 +25,8 @@
         <div class="center-header">
           <div class="titlebar">
             <span class="middle title">${_('Messages')}</span>
-            <span class="button" style="float:right;font-size:15px;font-weight:bold">
-              <a class="ajax" href="/messages/write">New Message</a>
+            <span class="button title-button">
+              <a class="ajax" href="/messages/write" _ref="/messages/write">${_('New Message')}</a>
             </span>
           </div>
           <div id="composer">
@@ -218,8 +218,8 @@
 </%def>
 
 <%def name="viewComposer()">
-  <form method="post" action="/messages/write">
-    <div class="message-composer">
+  <div class="message-composer">
+    <form method="post" action="/messages/write">
       <div class="input-wrap message-composer-field">
         <textarea class="message-composer-field-recipient" type="text" name="recipients" placeholder="${_('Enter name or email address') |h}"></textarea>
       </div>
@@ -235,12 +235,12 @@
             <input type="submit" name="send" value="Send" class="button default">
           </li>
           <li class="button">
-            <a class="ajax" href="/messages">Cancel</a>
+            <a class="ajax" href="/messages">${'Cancel'}</a>
           </li>
         </ul>
-       </div>
-    </div>
-  </form>
+      </div>
+    </form>
+  </div>
 </%def>
 
 <%def name="quick_reply_layout(script, msg, convId)">
