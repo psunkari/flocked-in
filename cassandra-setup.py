@@ -99,11 +99,10 @@ def createColumnFamilies(client):
                             'UTF8Type', 'Official connections amoung users')
     yield client.system_add_column_family(enterpriseLinks)
 
-    # List of groups that a user is a member of
-    # groupKey => <subscribed>:<activityKey>
-    userGroups = CfDef(KEYSPACE, 'userGroups', 'Standard', 'UTF8Type', None,
-                       'List of groups that a user is a member of')
-    yield client.system_add_column_family(userGroups)
+    # entity -> group map
+    entityGroupsMap = CfDef(KEYSPACE, 'entityGroupsMap', 'Standard', 'UTF8Type', None,
+                            'entity->groups map')
+    yield client.system_add_column_family(entityGroupsMap)
 
     bannedUsers = CfDef(KEYSPACE, "bannedUsers", "Standard", "UTF8Type", None,
                      "List of users banned from a group")
@@ -711,7 +710,7 @@ def truncateColumnFamilies(client):
     for cf in ["entities", "orgUsers", "orgGroups", "userAuth",
                "sessions", "invitations", "connections",
                "connectionsByTag", "pendingConnections", "subscriptions",
-               "followers", "enterpriseLinks", "userGroups", "groupMembers",
+               "followers", "enterpriseLinks", "entityGroupsMap", "groupMembers",
                "items", "itemLikes", "itemResponses", "userItems", "feed",
                "userItems_status", "userItems_link", "userItems_document",
                "feed_status", "feed_link","feed_document", "feedItems",
