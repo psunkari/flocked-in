@@ -21,6 +21,8 @@ def deleteAvatarItem(entity, isLogo=False):
     itemId = None
     imgFmt = None
     col = None
+    if not entity:
+        defer.returnValue(None)
     if isLogo:
         col = entity["basic"].get("logo", None)
     else:
