@@ -25,26 +25,15 @@
             ${self.header(tagId)}
           %endif
         </div>
-        %if tagId:
-          <div id="content">
-            %if not script:
+        <div id="content" class="center-contents">
+          %if not script:
+            %if tagId:
               ${self.itemsLayout()}
+            %else:
+              ${self.tagsListLayout()}
             %endif
-          </div>
-        %else:
-          <div id="content" class="center-contents">
-            <div id="tags-wrapper" class="paged-container">
-              %if not script:
-                ${self.listTags()}
-              %endif
-            </div>
-            <div id="tags-paging" class="pagingbar">
-              %if not script:
-                ${self.paging()}
-              %endif
-            </div>
-          </div>
-        %endif
+          %endif
+        </div>
       </div>
     </div>
   </div>
@@ -103,6 +92,15 @@
       <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
     %endif
   </ul>
+</%def>
+
+<%def name="tagsListLayout()">
+  <div id="tags-wrapper" class="paged-container">
+    ${self.listTags()}
+  </div>
+  <div id="tags-paging" class="pagingbar">
+    ${self.paging()}
+  </div>
 </%def>
 
 <%def name="listTags()">

@@ -7,7 +7,7 @@ from twisted.internet   import defer
 from twisted.web        import server
 from twisted.python     import log
 
-from social             import Db, utils, _, __, base, plugins
+from social             import Db, utils, _, __, base, plugins, constants
 from social.feed        import getFeedItems
 from social.template    import render, renderDef, renderScriptBlock
 from social.isocial     import IAuthInfo
@@ -125,9 +125,11 @@ class TagsResource(base.BaseResource):
         start = utils.getRequestArg(request, 'start') or ''
         nextPageStart = ''
         prevPageStart = ''
-        count = 10
+        count = constants.PEOPLE_PER_PAGE
         toFetchCount = count + 1
         start = utils.decodeKey(start)
+        
+        renderLayout = (not appchange and request.getCookie('cu')) or appchange
         request.addCookie('cu', '', path="/ajax/tags", expires=formatdate(0))
 
         args["menuId"] = "tags"
@@ -172,10 +174,14 @@ class TagsResource(base.BaseResource):
         args['prevPageStart'] = prevPageStart
 
         if script:
-            yield renderScriptBlock(request, "tags.mako", "listTags",
-                                    landing, "#tags-wrapper", "set", **args)
-            yield renderScriptBlock(request, "tags.mako", "paging",
-                                landing, "#tags-paging", "set", **args)
+            if renderLayout:
+                yield renderScriptBlock(request, "tags.mako", "tagsListLayout",
+                                        landing, "#content", "set", **args)
+            else:
+                yield renderScriptBlock(request, "tags.mako", "listTags",
+                                        landing, "#tags-wrapper", "set", **args)
+                yield renderScriptBlock(request, "tags.mako", "paging",
+                                    landing, "#tags-paging", "set", **args)
 
         if not script:
             yield render(request, "tags.mako", **args)
