@@ -6,6 +6,7 @@
 
 <%inherit file="base.mako"/>
 <%namespace name="profile" file="profile.mako"/>
+<%namespace name="people" file="people.mako"/>
 
 ##
 ## People page is displayed in a 3-column layout.
@@ -32,16 +33,16 @@
               ${viewOptions(viewType)}
             %endif
           </div>
-          <div id="groups-wrapper">
+          <div id="groups-wrapper" class="paged-container">
             %if not script:
-              ${self.displayGroups()}
+              ${self.listGroups()}
             %endif
           </div>
-        </div>
-        <div id="groups-paging" class="pagingbar">
-          %if not script:
-            ${paging()}
-          %endif
+          <div id="groups-paging" class="pagingbar">
+            %if not script:
+              ${paging()}
+            %endif
+          </div>
         </div>
       </div>
     </div>
@@ -65,7 +66,7 @@
     %if counter % 2 == 0:
       <div class="users-row">
     %endif
-    <div class="users-user">${_displayUser(userId)}</div>
+    <div class="users-user">${people._displayUser(userId)}</div>
     %if counter % 2 == 1:
       </div>
     %endif
@@ -79,26 +80,6 @@
   %else:
     <div id="next-load-wrapper"> </div>
   %endif
-</%def>
-
-
-<%def name="_displayUser(userId)">
-  <% button_class = 'default' %>
-    <div class="users-avatar">
-    <% avatarURI = utils.userAvatar(userId, users[userId], "medium") %>
-    %if avatarURI:
-      <img src="${avatarURI}" height='48' width='48'></img>
-    %endif
-    </div>
-    <div class="users-details">
-      <div class="user-details-name">${utils.userName(userId, users[userId])}</div>
-      <div class="user-details-title">${users[userId]["basic"].get("jobTitle", '')}</div>
-      <div class="user-details-actions">
-        <ul id="user-actions-${userId}" class="middle user-actions h-links">
-          ${profile.user_actions(userId, True)}
-        </ul>
-      </div>
-    </div>
 </%def>
 
 <%def name="pendingRequests()">
@@ -127,41 +108,66 @@
   %endfor
 </%def>
 
-<%def name="userActions(groupId)">
-        <ul id="user-actions-${groupId}" class="middle user-actions h-links">
-        %if groupId in pendingConnections:
-          <button class="button disabled"><span class="button-text">Request Pending</span></button>
-        % elif groupId not in myGroups:
-          <button class="button default" onclick="$.post('/ajax/groups/subscribe', 'id=${groupId}', null, 'script')"><span class="button-text">Subscribe</span></button>
-        %else:
-          <button class="button" onclick="$.post('/ajax/groups/unsubscribe', 'id=${groupId}', null, 'script')"><span class="button-text">Unsubscribe</span></button>
-          %if myKey in groupFollowers[groupId]:
-            <button class="button" onclick="$.post('/ajax/groups/unfollow', 'id=${groupId}', null, 'script')"><span class="button-text">UnFollow</span></button>
-          %else:
-            <button class="button default" onclick="$.post('/ajax/groups/follow', 'id=${groupId}', null, 'script')"><span class="button-text">Follow</span></button>
-          %endif
-        %endif
-        </ul>
+<%def name="group_actions(groupId)">
+  %if groupId in pendingConnections:
+    <button class="button disabled"><span class="button-text">${_('Request Pending')}</span></button>
+  %elif groupId not in myGroups:
+    <button class="button default" onclick="$.post('/ajax/groups/subscribe', 'id=${groupId}', null, 'script')"><span class="button-text">${('Subscribe')}</span></button>
+  %else:
+    <button class="button" onclick="$.post('/ajax/groups/unsubscribe', 'id=${groupId}', null, 'script')"><span class="button-text">${('Unsubscribe')}</span></button>
+    %if myKey in groupFollowers[groupId]:
+      <button class="button" onclick="$.post('/ajax/groups/unfollow', 'id=${groupId}', null, 'script')"><span class="button-text">${('UnFollow')}</span></button>
+    %else:
+      <button class="button default" onclick="$.post('/ajax/groups/follow', 'id=${groupId}', null, 'script')"><span class="button-text">${('Follow')}</span></button>
+    %endif
+  %endif
 </%def>
 
-<%def name="displayGroups()">
-  % for groupId in groupIds:
-    <div class="user-avatar">
-      <% avatarURI = utils.userAvatar(groupId, groups[groupId], "large") %>
-      %if avatarURI:
-        <!--<img src="${avatarURI}" width=64 height=64/>-->
+<%def name="listGroups()">
+  <%
+    counter = 0
+    firstRow = True
+  %>
+  %for groupId in groupIds:
+    %if counter % 2 == 0:
+      %if firstRow:
+        <div class="users-row users-row-first">
+        <% firstRow = False %>
+      %else:
+        <div class="users-row">
       %endif
-    </div>
-    <div class="user-details">
-      <%
-        groupName = groups[groupId]["basic"].get("name", "no name")
-      %>
-      <div class="user-details-name"><a href ="/feed?id=${groupId}">${groupName}</a></div>
-      <div class="user-details-actions" id=${groupId}-user-actions>
-        ${self.userActions(groupId)}
+    %endif
+    <div class="users-user">${_displayGroup(groupId)}</div>
+    %if counter % 2 == 1:
       </div>
-    </div>
+    %endif
+    <% counter += 1 %>
   %endfor
+  %if counter % 2 == 1:
+    </div>
+  %endif
+</%def>
+
+<%def name="_displayGroup(groupId)">
+  <% button_class = 'default' %>
+  <div class="users-avatar">
+    <% avatarURI = utils.groupAvatar(groupId, groups[groupId], "medium") %>
+    %if avatarURI:
+      <img src="${avatarURI}" height='48' width='48'></img>
+    %endif
+  </div>
+  <div class="users-details">
+    <%
+      groupName = groups[groupId]["basic"].get("name", "no name")
+    %>
+    <div class="user-details-name"><a href ="/feed?id=${groupId}">${groupName}</a></div>
+    <div class="user-details-title"></div>
+    <div class="user-details-actions">
+      <ul id="group-actions-${groupId}" class="middle user-actions h-links">
+        ${group_actions(groupId)}
+      </ul>
+    </div>
+  </div>
 </%def>
 
 <%def name="viewOptions(selected)">

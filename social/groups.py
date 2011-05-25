@@ -420,7 +420,7 @@ class GroupsResource(base.BaseResource):
         if script:
             yield renderScriptBlock(request, "groups.mako", "viewOptions",
                                 landing, "#groups-view", "set", args=[viewType])
-            yield renderScriptBlock(request, "groups.mako", "displayGroups",
+            yield renderScriptBlock(request, "groups.mako", "listGroups",
                                     landing, "#groups-wrapper", "set", **args)
             yield renderScriptBlock(request, "groups.mako", "paging",
                                 landing, "#groups-paging", "set", **args)
