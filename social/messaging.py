@@ -130,6 +130,9 @@ class MessagingResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _reply(self, request):
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        convId = utils.getRequestArg(request, 'id')
+        landing = not self._ajax
 
         myId = request.getSession(IAuthInfo).username
         recipients, body, subject, convId = self._parseComposerArgs(request)
@@ -153,7 +156,32 @@ class MessagingResource(base.BaseResource):
         yield self._deliverMessage(convId, participants, timeUUID, myId)
         yield Db.insert(convId, "mConvMessages", messageId, timeUUID)
         yield Db.batch_insert(convId, "mConversations", {'meta':meta})
-        request.redirect('/messages')
+
+        #XXX:We currently only fetch the message we inserted. Later we may fetch
+        # all messages delivered since we last rendered the conversation
+        cols = yield Db.get_slice(convId, "mConversations")
+        conv = utils.supercolumnsToDict(cols)
+        participants = set(conv['participants'])
+        mids = [messageId]
+        messages = yield Db.multiget_slice(mids, "messages", ["meta"])
+        messages = utils.multiSuperColumnsToDict(messages)
+        participants.update([messages[mid]['meta']['owner'] for mid in messages])
+
+        people = yield Db.multiget_slice(participants, "entities", ['basic'])
+        people = utils.multiSuperColumnsToDict(people)
+
+        args.update({"people":people})
+        args.update({"messageIds": mids})
+        args.update({'messages': messages})
+        if script:
+            yield renderScriptBlock(request, "message.mako",
+                                            "render_conversation_messages",
+                                            landing,
+                                            ".conversation-messages-wrapper",
+                                            "append", **args)
+        else:
+            request.redirect('/messages')
+            request.finish()
 
     @defer.inlineCallbacks
     def _createConveration(self, request):
