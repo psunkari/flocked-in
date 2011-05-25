@@ -276,15 +276,35 @@ class MessagingResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _members(self, request):
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        landing = not self._ajax
         action = utils.getRequestArg(request, "action")
+        convId = utils.getRequestArg(request, 'parent') or None
+
         if action == "add":
             yield self._addMembers(request)
         elif action == "remove":
-            yield self._removeMemebers(request)
+            yield self._removeMembers(request)
+
+        if convId:
+            cols = yield Db.get_slice(convId, "mConversations")
+            conv = utils.supercolumnsToDict(cols)
+            participants = set(conv['participants'])
+            people = yield Db.multiget_slice(participants, "entities", ['basic'])
+            people = utils.multiSuperColumnsToDict(people)
+
+            args.update({"people":people})
+            args.update({"conv":conv})
+            args.update({"id":convId})
+            args.update({"view":"message"})
+            if script:
+                yield renderScriptBlock(request, "message.mako", "right",
+                                        landing, ".right-contents", "set", **args)
+        else:
+            print "none"
 
     @defer.inlineCallbacks
     def _addMembers(self, request):
-        print "adding"
         myId = request.getSession(IAuthInfo).username
         newMembers, body, subject, convId = self._parseComposerArgs(request)
         if not (convId and newMembers):
@@ -419,7 +439,6 @@ class MessagingResource(base.BaseResource):
         if script and landing:
             yield render(request, "message.mako", **args)
 
-
         if appchange and script:
             renderScriptBlock(request, "message.mako", "layout",
                               landing, "#mainbar", "set", **args)
@@ -464,6 +483,7 @@ class MessagingResource(base.BaseResource):
             if script:
                 onload = """
                          $('#mainbar .contents').addClass("has-right");
+                         $('.conversation-reply').autogrow();
                          """
                 yield renderScriptBlock(request, "message.mako", "center",
                                         landing, ".center-contents", "set", True,

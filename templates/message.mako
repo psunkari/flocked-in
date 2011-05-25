@@ -132,10 +132,19 @@
         senderId = conv["meta"]["owner"]
         avatarURI = None
         avatarURI = utils.userAvatar(senderId, people[senderId], size)
+        avatarSize = "48" if size == "m" else "32"
         if avatarURI:
-          return '<img src="%s" height="48" width="48" style="display:inline-block"/>' %avatarURI
+          return '<img src="%s" height="%s" width="%s" style="display:inline-block"/>' \
+            %(avatarURI, avatarSize, avatarSize)
         else:
           return ''
+%>
+
+<%!
+    def getAvatarImg(avatarURI, size="m"):
+        avatarSize = "48" if size == "m" else "32"
+        return '<img src="%s" height="%s" width="%s" style="display:inline-block"/>' \
+            %(avatarURI, avatarSize, avatarSize)
 %>
 
 <%def name="conversation_row_layout(script, convId, conv)">
@@ -169,18 +178,18 @@
 </%def>
 
 <%def name="viewConversation()">
-    <form method="post" action="/messages/thread">
+    <form class="ajax" method="post" action="/messages/thread">
         ${toolbar_layout(view)}
         <div class="message-headline">
           <h2 class="message-headline-subject">${conv["meta"]["subject"]|h}</h2>
         </div>
-        <div class="conversation-wrapper" style="padding:4px;border:1px solid #BCBCBC;border-radius:7px;margin:2px; padding:4px">
+        <div class="conversation-wrapper" style="padding:2px;border:1px solid #BCBCBC;border-radius:7px">
             % for mid in messageIds:
-            <div class="conversation-message-wraper" style="padding-bottom:2px; margin-bottom:2px; border-bottom:1px solid #E2e2e2">
+            <div class="conversation-message-wrapper" style="padding-bottom:2px; margin-bottom:2px; border-bottom:1px solid #E2e2e2">
               <div class="comment-avatar">
-                ${getSenderAvatar(messages[mid], people)}
+                ${getSenderAvatar(messages[mid], people, "s")}
               </div>
-              <div class="conv-data">
+              <div class="comment-container">
                 <div class="conv-summary">
                   <div class="message-headers">
                     <span class="user conv-user-cause">
@@ -198,23 +207,31 @@
               </div>
             % endfor
         <input type="hidden" name="selected" value="${id}"/>
-        <!--<input type="hidden" name="_body" value="${formatBodyForReply(messages[mid], '')}"/>-->
-    </form>
-    <form action="/messages/members" method="post" class="ajax">
-      <input type="text" name="recipients" />
-      <input type="hidden" name='parent' value=${id} />
-      <input type="submit" value="submit" />
-      <input type="hidden" name="action" value="add" />
-    </form>
-    <form action="/messages/members" method="post" class="ajax">
-      <input type="text" name="recipients" />
-      <input type="hidden" name='parent' value=${id} />
-      <input type="submit" value="submit" />
-      <input type="hidden" name="action" value="remove" />
+        <!--XXX:<input type="hidden" name="_body" value="${formatBodyForReply(messages[mid], '')}"/>-->
     </form>
     <form action="/messages/write" method="post" class="ajax">
         ${quick_reply_layout(script, messages[messageIds[-1]], id)}
     </form>
+</%def>
+
+<%def name="quick_reply_layout(script, msg, convId)">
+  <div class="message-composer">
+<!--    XXX:<div class="message-composer-quick-actions">
+      <a href="#" onclick="$('textarea[class=message-composer-field-body-quick]').attr('value', $('input[name=_body]').attr('value'))">
+        Quote Message
+      </a>
+    </div>-->
+    <div class="conv-avatar">
+        ${getAvatarImg(utils.userAvatar(myKey, people[myKey]))}
+    </div>
+    <div class="input-wrap" style="margin-left:60px">
+        <textarea class="conversation-reply" style="min-height:60px" name="body" placeholder="Quickly reply to this message"></textarea>
+        <input type="hidden" value=${convId} name="parent"/>
+    </div>
+    <div style="text-align:right;padding:4px 0">
+      <input type="submit" name="send" value="${_('Reply')}" class="button"/>
+    </div>
+  </div>
 </%def>
 
 <%def name="viewComposer()">
@@ -235,28 +252,17 @@
             <input type="submit" name="send" value="Send" class="button default">
           </li>
           <li class="button">
-            <a class="ajax" href="/messages">${'Cancel'}</a>
+            %if script:
+                <button type="button" class="button" onclick="$('#composer').empty()">
+                    ${'Cancel'}
+                </button>
+            %else:
+                <a class="ajax" _ref="/messages">${'Cancel'}</a>
+            %endif
           </li>
         </ul>
       </div>
     </form>
-  </div>
-</%def>
-
-<%def name="quick_reply_layout(script, msg, convId)">
-  <div class="message-composer">
-    <div class="message-composer-quick-actions">
-      <a href="#" onclick="$('textarea[class=message-composer-field-body-quick]').attr('value', $('input[name=_body]').attr('value'))">
-        Quote Message
-      </a>
-    </div>
-    <div class="message-composer-field-body-wrapper">
-        <textarea class="message-composer-field-body-quick" name="body" placeholder="Quickly reply to this message"></textarea>
-        <input type="hidden" value=${convId} name="parent"/>
-    </div>
-    <div class="message-composer-field">
-      <input type="submit" name="send" value="${_('Reply')}" class="button ">
-    </div>
   </div>
 </%def>
 
@@ -320,8 +326,41 @@
 
 <%def name="right()">
     % if view == "message":
-    <h2>People in this conversation</h2>
-    <div>There are people in this conversation</div>
+        <div class="sidebar-chunk">
+          <div class="sidebar-title">People in this conversation</div>
+          <ul class="v-links peoplemenu">
+            %for person in conv["participants"]:
+                <li>
+                    <div style="display:table-cell">${getAvatarImg(utils.userAvatar(conv, people[person], "s"), "s")}</div>
+                    <div style="display:table-cell;vertical-align:middle;padding-left:15px;width:160px"><a href="/profile?id=${person}">${people[person]["basic"]["name"]}</a></div>
+                    <%
+                        if (person == myKey) or (person == conv["meta"]["owner"]):
+                            showDelete = False
+                        else:
+                            showDelete = True
+                    %>
+                    %if showDelete:
+                        <div style="display:table-cell;vertical-align:middle;font-weight:bold;cursor:pointer;font-size:15px;vertical-align:middle" class="busy-indicator"
+                             onclick="$.post('/ajax/messages/members', 'action=remove&parent=${id}&recipients=${person}', null, 'script')" title="Remove ${people[person]["basic"]["name"]} from this conversation"><span>X</span></div>
+                    %else:
+                        <div style="display:table-cell;vertical-align:middle;font-weight:bold">&nbsp</div>
+                    %endif
+                </li>
+            %endfor
+          </ul>
+        </div>
+        <div class="sidebar-chunk">
+            <div class="sidebar-title">Add someone to this conversation</div>
+            <div style="margin-top:4px">
+                <form class="ajax" action="/messages/members" style="font-size:11px;width:185px">
+                    <input type="hidden" name='parent' value=${id} />
+                    <input type="hidden" name="action" value="add" />
+                    <div class="input-wrap">
+                        <input type="text" name="recipients" placeHolder="Your friend's name"/>
+                    </div>
+                </form>
+            </div>
+        </div>
     %else:
         <span>${view}</span>
     %endif

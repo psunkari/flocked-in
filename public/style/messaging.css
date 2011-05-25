@@ -1,8 +1,9 @@
 
 #msg-toolbar {
+  position: relative;
   text-align: right;
   position: relative;
-}
+ }
 
 #thread-selector {
   position: absolute;
@@ -13,4 +14,8 @@
 #threads-wrapper {
   padding: 0;
   min-height: 320px;
+}
+
+.peoplemenu {
+    margin-top: 4px;
 }
