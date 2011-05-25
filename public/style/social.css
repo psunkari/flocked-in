@@ -964,7 +964,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .editing-tags .edit-tags-form {
     display: inline-block;
 }
-.link {
+.link-item {
     padding-top: 2px;
     padding-bottom: 1px;
 }

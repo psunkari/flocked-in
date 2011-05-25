@@ -26,9 +26,21 @@
             ${self.titlebar()}
           </div>
         </div>
-        <div id="groups-wrapper" class="center-contents">
+        <div class="center-contents" id="center-content">
+          <div id="groups-view" class="viewbar">
+            %if not script:
+              ${viewOptions(viewType)}
+            %endif
+          </div>
+          <div id="groups-wrapper">
+            %if not script:
+              ${self.displayGroups()}
+            %endif
+          </div>
+        </div>
+        <div id="groups-paging" class="pagingbar">
           %if not script:
-            ${self.displayGroups()}
+            ${paging()}
           %endif
         </div>
       </div>
@@ -72,7 +84,6 @@
 
 <%def name="_displayUser(userId)">
   <% button_class = 'default' %>
-
     <div class="users-avatar">
     <% avatarURI = utils.userAvatar(userId, users[userId], "medium") %>
     %if avatarURI:
@@ -95,10 +106,7 @@
     counter = 0
   %>
   %for userId in entities:
-
-
     <div class="users-user">
-
       <div class="users-avatar">
       <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
       %if avatarURI:
@@ -116,14 +124,10 @@
         </div>
       </div>
     </div>
-
   %endfor
-
 </%def>
 
 <%def name="userActions(groupId)">
-
-
         <ul id="user-actions-${groupId}" class="middle user-actions h-links">
         %if groupId in pendingConnections:
           <button class="button disabled"><span class="button-text">Request Pending</span></button>
@@ -138,14 +142,10 @@
           %endif
         %endif
         </ul>
-
-
 </%def>
 
 <%def name="displayGroups()">
-
-  % for groupId in groups:
-
+  % for groupId in groupIds:
     <div class="user-avatar">
       <% avatarURI = utils.userAvatar(groupId, groups[groupId], "large") %>
       %if avatarURI:
@@ -160,10 +160,35 @@
       <div class="user-details-actions" id=${groupId}-user-actions>
         ${self.userActions(groupId)}
       </div>
-
-
     </div>
   %endfor
+</%def>
+
+<%def name="viewOptions(selected)">
+  <ul class="h-links view-options">
+    %for item, display in [('myGroups', 'My Groups'), ('allGroups', 'All Groups')]:
+      %if selected == item:
+        <li class="selected">${_(display)}</li>
+      %else:
+        <li><a href="/groups?type=${item}" class="ajax">${_(display)}</a></li>
+      %endif
+    %endfor
+  </ul>
+</%def>
+
+<%def name="paging()">
+  <ul class="h-links">
+    %if prevPageStart:
+      <li class="button"><a class="ajax" href="/groups?type=${viewType}&start=${prevPageStart}">${_("&#9666; Previous")}</a></li>
+    %else:
+      <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
+    %endif
+    %if nextPageStart:
+      <li class="button"><a class="ajax" href="/groups?type=${viewType}&start=${nextPageStart}">${_("Next &#9656;")}</a></li>
+    %else:
+      <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
+    %endif
+  </ul>
 </%def>
 
 
@@ -183,7 +208,6 @@
         <li><input type="radio" id="access" name="access" value= "public" > Public</input></li>
         <li><input type="radio" id="access" name="access" value= "private" > Private</input></li>
       </ul>
-
       <ul>
         <li><label for="external"> external users allowed: </label></li>
         <li><input type="radio" id="external" name="external" value= "open"> Yes</input>  </li>
@@ -207,6 +231,8 @@
     </div>
   </form>
 </%def>
+
+
 
 <%def name="inviteMembers()">
   <form action="/groups/invite" class="ajax" method="post"  >

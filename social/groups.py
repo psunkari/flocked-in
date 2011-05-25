@@ -30,7 +30,7 @@ class GroupsResource(base.BaseResource):
         groupId = yield utils.getValidEntityId(request, "id", "group")
 
         try:
-            cols = yield Db.get(myKey, "userGroups", groupId)
+            cols = yield Db.get(myKey, "entityGroupsMap", groupId)
             yield Db.insert(groupId, "followers", "", myKey)
             args["groupId"]=groupId
             args["myGroups"] = [groupId]
@@ -51,7 +51,7 @@ class GroupsResource(base.BaseResource):
         landing = not self._ajax
         groupId = yield utils.getValidEntityId(request, "id", "group")
         try:
-            cols = yield Db.get(myKey, "userGroups", groupId)
+            cols = yield Db.get(myKey, "entityGroupsMap", groupId)
             yield Db.remove(groupId, "followers", myKey)
 
             args["groupId"]=groupId
@@ -84,7 +84,7 @@ class GroupsResource(base.BaseResource):
                                    acl, "groupJoin", orgId)
         item["meta"]["target"] = groupId
 
-        d1 = Db.insert(userId, "userGroups", "", groupId)
+        d1 = Db.insert(userId, "entityGroupsMap", "", groupId)
         d2 = Db.insert(groupId, "followers", "", userId)
         d3 = Db.insert(groupId, "groupMembers", itemId, userId)
         d4 = Db.batch_insert(itemId, 'items', item)
@@ -123,7 +123,7 @@ class GroupsResource(base.BaseResource):
             raise errors.UserBanned()
 
         try:
-            cols = yield Db.get(myKey, "userGroups", groupId)
+            cols = yield Db.get(myKey, "entityGroupsMap", groupId)
         except ttypes.NotFoundException:
             #add to pending connections
             if access == "public":
@@ -221,7 +221,7 @@ class GroupsResource(base.BaseResource):
             # if the users is already a member, remove the user from the group
             yield Db.remove(groupId, "groupMembers", userId)
             yield Db.remove(groupId, "followers", userId)
-            yield Db.remove(userId, "userGroups", groupId)
+            yield Db.remove(userId, "entityGroupsMap", groupId)
 
             yield Db.insert(groupId, "bannedUsers", '', userId)
 
@@ -251,7 +251,7 @@ class GroupsResource(base.BaseResource):
         orgId = args["orgKey"]
 
         groupId = yield utils.getValidEntityId(request, "id", "group")
-        userGroup = yield Db.get_slice(myId, "userGroups", [groupId])
+        userGroup = yield Db.get_slice(myId, "entityGroupsMap", [groupId])
         if not userGroup:
             raise errors.InvalidRequest()
 
@@ -270,7 +270,7 @@ class GroupsResource(base.BaseResource):
         item["meta"]["target"] = groupId
 
         d1 = Db.remove(groupId, "followers", myId)
-        d2 = Db.remove(myId, "userGroups", groupId)
+        d2 = Db.remove(myId, "entityGroupsMap", groupId)
         d3 = Db.batch_insert(itemId, 'items', item)
         d4 = Db.remove(groupId, "groupMembers", myId)
         #d4 = Db.insert(groupId, "groupMembers", itemId, myId)
@@ -322,7 +322,7 @@ class GroupsResource(base.BaseResource):
 
         yield Db.batch_insert(groupId, "entities", {"basic": meta,
                                                     "admins": admins})
-        yield Db.insert(orgKey, "orgGroups", '', groupId)
+        yield Db.insert(orgKey, "entityGroupsMap", '', groupId)
         request.redirect("/feed?id=%s"%(groupId))
 
 
@@ -341,33 +341,67 @@ class GroupsResource(base.BaseResource):
                                     landing, "#mainbar", "set", **args)
         if script:
              yield renderScriptBlock(request, "groups.mako", "createGroup",
-                                    landing, "#groups-wrapper", "set", **args)
+                                    landing, "#center-content", "set", **args)
 
 
     @profile
     @defer.inlineCallbacks
     @dump_args
     def _listGroups(self, request):
-        appchange, script, args, myKey = yield self._getBasicArgs(request)
+        appchange, script, args, myId = yield self._getBasicArgs(request)
         landing = not self._ajax
-        orgKey = args["orgKey"]
+        orgId = args["orgKey"]
+
+        viewType = utils.getRequestArg(request, 'type') or 'myGroups'
+        start = utils.getRequestArg(request, 'start') or ''
+        start = utils.decodeKey(start)
+
+        viewTypes = ['myGroups', 'allGroups']
+        viewType = 'myGroups' if viewType not in viewTypes else viewType
+        count = 110
+        toFetchCount = count+1
+
         args["menuId"] = "groups"
-
+        args['viewType']  = viewType
+        groups = {}
+        groupIds = []
+        myGroupsIds = []
+        groupFollowers = {}
+        pendingConnections = {}
         toFetchGroups = set()
+        nextPageStart = ''
+        prevPageStart = ''
+        entityId = None
+        entityId = orgId if viewType == 'allGroups' else myId
 
-        cols = yield Db.get_slice(orgKey, 'orgGroups')
-        orgGroupIds = utils.columnsToDict(cols).keys()
-        toFetchGroups.update(set(orgGroupIds))
+        #TODO: list the groups in sorted order.
+        cols = yield Db.get_slice(entityId, 'entityGroupsMap',
+                                  start=start, count=toFetchCount)
+        groupIds = utils.columnsToDict(cols, ordered=True).keys()
+        toFetchGroups.update(set(groupIds))
 
-        myGroups = yield Db.get_slice(myKey, "userGroups")
-        myGroups = utils.columnsToDict(myGroups).keys()
-        toFetchGroups.update(set(myGroups))
+        cols = yield Db.get_slice(myId, "entityGroupsMap",
+                                  start=start, count=toFetchCount)
+        myGroupsIds = utils.columnsToDict(cols, ordered=True).keys()
 
-        groups = yield Db.multiget_slice(toFetchGroups, "entities", ["basic"])
-        groupFollowers = yield Db.multiget_slice(toFetchGroups, "followers")
+        if len(groupIds) > count:
+            nextPageStart = utils.encodeKey(groupIds[-1])
+            groupIds = groupIds[0:count]
 
-        cols = yield Db.get_slice(myKey, 'pendingConnections', toFetchGroups)
-        pendingConnections = dict((x.column.name, x.column.value) for x in cols)
+        if start:
+            cols = yield Db.get_slice(entityId, 'entityGroupsMap', start=start,
+                                      count=toFetchCount,  reverse=True)
+            if len(cols) > 1:
+                prevPageStart = utils.encodeKey(cols[-1].column.name)
+
+        if toFetchGroups:
+            groups = yield Db.multiget_slice(toFetchGroups, "entities", ["basic"])
+            groups = utils.multiSuperColumnsToDict(groups)
+            groupFollowers = yield Db.multiget_slice(toFetchGroups, "followers", names=[myId])
+            groupFollowers = utils.multiColumnsToDict(groupFollowers)
+            cols = yield Db.get_slice(myId, 'pendingConnections', toFetchGroups)
+            pendingConnections = dict((x.column.name, x.column.value) for x in cols)
+
 
         if script and landing:
             yield render(request,"groups.mako", **args)
@@ -375,14 +409,21 @@ class GroupsResource(base.BaseResource):
             yield renderScriptBlock(request, "groups.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-        args["groups"] = utils.multiSuperColumnsToDict(groups)
-        args["myGroups"] = myGroups
-        args["groupFollowers"] = utils.multiColumnsToDict(groupFollowers)
+        args["groups"] = groups
+        args["groupIds"] = groupIds
+        args["myGroups"] = myGroupsIds
+        args["groupFollowers"] = groupFollowers
         args["pendingConnections"] = pendingConnections
+        args['nextPageStart'] = nextPageStart
+        args['prevPageStart'] = prevPageStart
 
         if script:
-             yield renderScriptBlock(request, "groups.mako", "displayGroups",
+            yield renderScriptBlock(request, "groups.mako", "viewOptions",
+                                landing, "#groups-view", "set", args=[viewType])
+            yield renderScriptBlock(request, "groups.mako", "displayGroups",
                                     landing, "#groups-wrapper", "set", **args)
+            yield renderScriptBlock(request, "groups.mako", "paging",
+                                landing, "#groups-paging", "set", **args)
 
         if not script:
             yield render(request, "groups.mako", **args)
