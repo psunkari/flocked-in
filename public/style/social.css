@@ -393,6 +393,7 @@ a:hover, a:active, a:focus {
 .title {
     font-size: 20px;
     font-weight: bold;
+    margin-right: 20px;
 }
 .subtitle {
     color: gray;
@@ -421,11 +422,6 @@ a:hover, a:active, a:focus {
     background-color: white;
     float: right;
 }
-
-#userprofile .title {
-    margin-right: 20px;
-}
-
 #profile-summary {
     margin-bottom: -21px;
 }
@@ -480,7 +476,10 @@ a:hover, a:active, a:focus {
 }
 
 
-
+#share-block {
+    border-top: 1px solid #C3D9FF;
+    padding-top: 5px;
+}
 #sharebar-links li {
     padding: 5px 5px 5px 0;
     font-weight: bold;
