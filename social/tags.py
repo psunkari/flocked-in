@@ -160,13 +160,13 @@ class TagsResource(base.BaseResource):
 
         tagsFollowing = []
 
+        # TODO: We need an index of all tags that the user is following
+        #       Probably convert the 'subscriptions' column family to 'Super'
+        #       and have people and tags in the same column family.
         if tags:
             tagIds = tags.values()
-            cols = yield Db.multiget_slice(tagIds, "tagFollowers")
-            cols = utils.multiColumnsToDict(cols)
-            for tagId in cols:
-                if myId in cols[tagId]:
-                    tagsFollowing.append(tagId)
+            cols = yield Db.multiget(tagIds, "tagFollowers", myId)
+            tagsFollowing = [x for x in cols.keys() if cols[x]]
 
         args['tags'] = tags
         args['tagsFollowing'] = tagsFollowing

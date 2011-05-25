@@ -45,7 +45,7 @@
       %if tagId:
         <span class="middle title">${tags[tagId]["title"]}</span>
         <ul id="tag-actions-${tagId}" class="middle user-actions h-links">
-          ${tag_actions(tagId)}
+          ${tag_actions(tagId, tagFollowing)}
         </ul>
       %else:
         <span class="middle title">${"Tags"}</span>
@@ -71,10 +71,10 @@
   %endif
 </%def>
 
-<%def name="tag_actions(tagId, showRemove=True)">
+<%def name="tag_actions(tagId, tagFollowing)">
   %if not tagFollowing:
     <button class="button default" onclick="$.post('/ajax/tags/follow', 'id=${tagId}', null, 'script')"><span class="button-text">Follow</span></li>
-  %elif showRemove:
+  %else:
     <button class="button" onclick="$.post('/ajax/tags/unfollow', 'id=${tagId}', null, 'script')"><span class="button-text">Unfollow</span></li>
   %endif
 </%def>
@@ -133,8 +133,8 @@
   <div class = 'user-details'>
     <div class="user-details-name"><a class="ajax" href="/tags?id=${tagId}">${tagname}</a></div>
     <div class="user-details-actions">
-      <ul id='tag-details-${tagId}' class="middle h-links">
-        ${tag_actions(tagId)}
+      <ul id='tag-actions-${tagId}' class="middle h-links">
+        ${tag_actions(tagId, tagId in tagsFollowing)}
       </ul>
     </div>
   </div>
