@@ -91,11 +91,11 @@
     <div class="user-details-title">${entities[userId]["basic"].get("jobTitle", '')}</div>
     <div class="user-details-actions">
       <ul id="user-actions-${userId}" class="middle user-actions h-links">
-        % if showBlocked:
-          % if userId not in blockedUsers:
-            <li class="button default" onclick="$.post('/ajax/admin/block', 'id=${userId}', null, 'script')"><span class="button-text">Block</span></li>
+        %if showBlocked:
+          %if userId not in blockedUsers:
+            <button class="button default" onclick="$.post('/ajax/admin/block', 'id=${userId}', null, 'script')"><span class="button-text">Block</span></li>
           %endif
-          <li class="button default" onclick="$.post('/ajax/admin/delete', 'id=${userId}', null, 'script')"><span class="button-text">Remove</span></li>
+          <button class="button default" onclick="$.post('/ajax/admin/delete', 'id=${userId}', null, 'script')"><span class="button-text">Remove</span></li>
         %else:
           ${profile.user_actions(userId, True)}
         %endif

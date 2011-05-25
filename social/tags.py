@@ -173,7 +173,7 @@ class TagsResource(base.BaseResource):
 
         if script:
             yield renderScriptBlock(request, "tags.mako", "listTags",
-                                    landing, "#content", "set", **args)
+                                    landing, "#tags-wrapper", "set", **args)
             yield renderScriptBlock(request, "tags.mako", "paging",
                                 landing, "#tags-paging", "set", **args)
 

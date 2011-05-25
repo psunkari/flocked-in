@@ -295,7 +295,7 @@
   <div id="people-view" class="viewbar">
     ${viewOptions()}
   </div>
-  <div id="center-wrapper" class="paged-container">
+  <div id="threads-wrapper" class="paged-container">
     <form action="/messages/thread" method="post" class="ajax">
         ${toolbar_layout(view, nextPageStart, prevPageStart)}
         <div class="conversation-layout-container">

@@ -32,15 +32,17 @@
             %endif
           </div>
         %else:
-          <div id = "content" class="center-contents">
-            %if not script:
-              ${self.listTags()}
-            %endif
-          </div>
-          <div id="tags-paging" class="pagingbar">
-            %if not script:
-              ${self.paging()}
-            %endif
+          <div id="content" class="center-contents">
+            <div id="tags-wrapper" class="paged-container">
+              %if not script:
+                ${self.listTags()}
+              %endif
+            </div>
+            <div id="tags-paging" class="pagingbar">
+              %if not script:
+                ${self.paging()}
+              %endif
+            </div>
           </div>
         %endif
       </div>
@@ -82,9 +84,9 @@
 
 <%def name="tag_actions(tagId, showRemove=True)">
   %if not tagFollowing:
-    <li class="button default" onclick="$.post('/ajax/tags/follow', 'id=${tagId}', null, 'script')"><span class="button-text">Follow</span></li>
+    <button class="button default" onclick="$.post('/ajax/tags/follow', 'id=${tagId}', null, 'script')"><span class="button-text">Follow</span></li>
   %elif showRemove:
-    <li class="button" onclick="$.post('/ajax/tags/unfollow', 'id=${tagId}', null, 'script')"><span class="button-text">Unfollow</span></li>
+    <button class="button" onclick="$.post('/ajax/tags/unfollow', 'id=${tagId}', null, 'script')"><span class="button-text">Unfollow</span></li>
   %endif
 </%def>
 
@@ -130,15 +132,12 @@
 
 <%def name="_displaytag(tagname)" >
   <% tagId = tags[tagname] %>
-  <div class = 'tags-row user-details-actions' >
-    <div class="user-details-name"><a class = "ajax" href="/tags?id=${tagId}">${tagname}</a>
-    <ul class="middle user-actions h-links">
-    % if tagId in tagsFollowing:
-      <li class="button" onclick="$.post('/ajax/tags/unfollow', 'id=${tagId}', null, 'script')"><span class="button-text">Unfollow</span></li>
-    % else:
-      <li class="button default" onclick="$.post('/ajax/tags/follow', 'id=${tagId}', null, 'script')"><span class="button-text">Follow</span></li>
-    % endif
-    </ul>
+  <div class = 'user-details'>
+    <div class="user-details-name"><a class="ajax" href="/tags?id=${tagId}">${tagname}</a></div>
+    <div class="user-details-actions">
+      <ul id='tag-details-${tagId}' class="middle h-links">
+        ${tag_actions(tagId)}
+      </ul>
     </div>
   </div>
 </%def>

@@ -786,11 +786,6 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 /*
  * List of users - friends and people in organization
  */
-#users-wrapper {
-    padding: 10px;
-    min-height: 280px !important;
-}
-
 .users-row {
     width: 100%;
     min-height: 50px;
@@ -836,6 +831,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 
 .paged-container {
     min-height: 300px;
+    padding: 10px;
 }
 
 .pagingbar {
