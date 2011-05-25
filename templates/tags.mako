@@ -73,9 +73,9 @@
 
 <%def name="tag_actions(tagId, tagFollowing)">
   %if not tagFollowing:
-    <button class="button default" onclick="$.post('/ajax/tags/follow', 'id=${tagId}', null, 'script')"><span class="button-text">Follow</span></li>
+    <button class="button default" onclick="$.post('/ajax/tags/follow', 'id=${tagId}', null, 'script')"><span class="button-text">Follow</span></button>
   %else:
-    <button class="button" onclick="$.post('/ajax/tags/unfollow', 'id=${tagId}', null, 'script')"><span class="button-text">Unfollow</span></li>
+    <button class="button" onclick="$.post('/ajax/tags/unfollow', 'id=${tagId}', null, 'script')"><span class="button-text">Unfollow</span></button>
   %endif
 </%def>
 
@@ -117,7 +117,7 @@
         <div class="users-row">
       %endif
     %endif
-    <div class="users-user">${_displaytag(tagname)}</div>
+    <div class="users-user">${_displayTag(tagname)}</div>
     %if counter % 2 == 1:
       </div>
     %endif
@@ -128,7 +128,7 @@
   %endif
 </%def>
 
-<%def name="_displaytag(tagname)" >
+<%def name="_displayTag(tagname)" >
   <% tagId = tags[tagname] %>
   <div class = 'user-details'>
     <div class="user-details-name"><a class="ajax" href="/tags?id=${tagId}">${tagname}</a></div>
