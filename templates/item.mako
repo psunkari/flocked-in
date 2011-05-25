@@ -418,6 +418,8 @@
     summary = conv["meta"].get("summary", '')
     title = title if title else url
 
+    print convId, imgsrc, 'image source'
+
   %>
   %if not isQuoted:
     ${utils.userName(userId, entities[userId], "conv-user-cause")}
@@ -428,8 +430,10 @@
       %if conv["meta"].has_key("comment"):
         ${conv["meta"]["comment"]|normalize}
       %endif
-      <div class="link">
-      <img src='${imgsrc}' class="link-image"></img>
+      <div class="link-item">
+        %if imgsrc:
+          <img src='${imgsrc}' class="link-image"></img>
+        %endif
       <a href=${url} class="link-url" ><div class="link-title" > ${_(title)} </div></a>
       <div id="summary" class="link-summary"> ${_(summary)}</div>
       </div>
