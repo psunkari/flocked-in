@@ -18,15 +18,20 @@
         <div id="home-notifications"></div>
         <div id="home-events"></div>
         <div id="home-todo"></div>
-        <div id="invite-ppl">
+        <div id="invite-people-block">
+          <div class="sidebar-chunk">
+            <div class="sidebar-title">${_("Invite people")}</div>
             <form method="post" action="/register" class="ajax">
-                <input type="text" name="user1"/><br/>
-                <% mailId = me['basic'].get('emailId', None) if me else None %>
-                %if mailId:
-                  <input type="hidden" name="sender" value = ${mailId} />
-                %endif
-                <input type="submit" id="submit" value="${_('Submit')}"/>
+              <div class="input-wrap">
+                <input type="text" name="user1"/>
+              </div>
+              <% mailId = me['basic'].get('emailId', None) if me else None %>
+              %if mailId:
+                <input type="hidden" name="sender" value=${mailId}/>
+              %endif
+              <input class="button" type="submit" id="submit" value="${_('Submit')}"/>
             </form>
+          </div>
         </div>
         <div id ="group-links" >
         </div>
@@ -61,18 +66,20 @@
 
 <%def name="groupLinks()">
   %if groupId:
+    <div class="sidebar-chunk">
     %if myKey in groupAdmins:
-      <div class="sidebar-title">${_("Manage")}</div>
+      <div class="sidebar-title">${_("Manage group")}</div>
     %else:
-      <div class="sidebar-title">${_("")}</div>
+      <div class="sidebar-title">${_("Group")}</div>
     %endif
       <ul class="v-links">
         %if myKey in groupAdmins:
-          <li><a class="ajax" href="/groups/invite?id=${groupId}">Invite</a></li>
-          <li><a class="ajax" href="/groups/pending?id=${groupId}">Pending Requests</a></li>
+          <li><a class="ajax" href="/groups/pending?id=${groupId}">Pending requests</a></li>
+          <li><a class="ajax" href="/groups/invite?id=${groupId}">Invite more people</a></li>
         %endif
-        <li><a class="ajax" href="/groups/members?id=${groupId}">Members </a></li>
+        <li><a class="ajax" href="/groups/members?id=${groupId}">Members list</a></li>
       </ul>
+    </div>
   %endif
 </%def>
 
