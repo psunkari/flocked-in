@@ -25,9 +25,15 @@
       ${navMenuItem("/feed?id=%s" % orgKey, _("Company Feed"), "org")}
       ${navMenuItem("/groups", _("Groups"), "groups")}
       ${navMenuItem("/tags", _("Tags"), "tags")}
-       <li> <button class="button-link" title="feedback" onclick="$$.feedback.showFeedback()">feedback</button></li>
     </ul>
   </div>
+%if script:
+  <div id="feedbackmenu-container" class="sidemenu-container">
+    <ul id="feedbackmenu" class="v-links sidemenu">
+      <li><a title="Feedback" onclick="$$.feedback.showFeedback()"><span class="sidemenu-icon icon feedback-icon"></span><span class="sidemenu-text">${_('Feedback')}</span></a></li>
+    </ul>
+  </div>
+%endif
 </%def>
 
 <html>

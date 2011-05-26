@@ -317,6 +317,9 @@ a:hover, a:active, a:focus {
 .org-icon {
     background-position: 0 -144px;
 }
+.feedback-icon {
+    background-position: 0 -384px;
+}
 
 
 /*admin page icons*/
