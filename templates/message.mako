@@ -61,7 +61,7 @@
     people_without_sender = set(participants) - set([sender,])
     last_sent_by = people_info[list(people_without_sender)[-1]]["basic"]["name"]
 
-    if len(people_without_sender) > 1:
+    if len(people_without_sender) > 2:
         return "%s...%s(%d)" %(sender, last_sent_by, len(participants))
     else:
         return "%s and %s" %(sender, last_sent_by)

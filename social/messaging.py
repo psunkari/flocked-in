@@ -76,10 +76,11 @@ class MessagingResource(base.BaseResource):
                 else:
                     yield Db.remove(convId, 'mConvFolders', folder, recipient)
             if deliverToInbox:
-                convFolderMap[recipient] = {'mAllConversations':{timeUUID:unread}}
+                val = unread if recipient != owner else read
+                convFolderMap[recipient] = {'mAllConversations':{timeUUID:val}}
                 userFolderMap[recipient]= {'mAllConversations':''}
                 if recipient != owner:
-                    convFolderMap[recipient]['mUnreadConversations'] = {timeUUID:read}
+                    convFolderMap[recipient]['mUnreadConversations'] = {timeUUID:unread}
                     userFolderMap[recipient]['mUnreadConversations'] = ''
             else:
                 val = unread if recipient != owner else read
@@ -456,7 +457,9 @@ class MessagingResource(base.BaseResource):
                 request.write("""
                               $('#thread-%s').removeClass('row-read').addClass('row-unread');
                               $('#thread-%s .messaging-read-icon').removeClass('messaging-read-icon').addClass('messaging-unread-icon');
-                              """ % (convIds[0], convIds[0]))
+                              $('#thread-%s .messaging-unread-icon').attr("title", "Mark this conversation as read")
+                              $('#thread-%s .messaging-unread-icon')[0].onclick = function(event) { $.post('/ajax/messages/thread', 'action=read&selected=%s&filterType=%s', null, 'script') }
+                              """ % (convIds[0], convIds[0], convIds[0], convIds[0], convIds[0], filterType))
                 #request.finish()
             elif action == "read":
                 # If we are in unread view, remove the conv else swap the styles
@@ -464,7 +467,9 @@ class MessagingResource(base.BaseResource):
                     request.write("""
                                   $('#thread-%s').removeClass('row-unread').addClass('row-read');
                                   $('#thread-%s .messaging-unread-icon').removeClass('messaging-unread-icon').addClass('messaging-read-icon');
-                                  """ % (convIds[0], convIds[0]))
+                                  $('#thread-%s .messaging-read-icon').attr("title", "Mark this conversation as unread")
+                                  $('#thread-%s .messaging-read-icon')[0].onclick = function(event) { $.post('/ajax/messages/thread', 'action=unread&selected=%s&filterType=%s', null, 'script') }
+                                  """ % (convIds[0], convIds[0], convIds[0], convIds[0], convIds[0], filterType))
                 else:
                     request.write("$('#thread-%s').remove()" %convIds[0])
 
