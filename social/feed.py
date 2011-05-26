@@ -575,11 +575,12 @@ class FeedResource(base.BaseResource):
     # The client has scripts and this is an ajax request
     @defer.inlineCallbacks
     def _renderMore(self, request, start, entityId, itemType=None):
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
         if itemType and itemType in plugins and plugins[itemType].hasIndex:
             feedItems = yield _feedFilter(request, entityId, itemType, start)
         else:
             feedItems = yield getFeedItems(request, feedId=entityId, start=start)
-        args = feedItems
+        args.update(feedItems)
         args["feedId"] = entityId
         args['itemType'] = itemType
 
