@@ -36,9 +36,9 @@ class GroupsResource(base.BaseResource):
             args["myGroups"] = [groupId]
             args["pendingConnections"] = {}
             args["groupFollowers"] = {groupId:[myKey]}
-            yield renderScriptBlock(request, "groups.mako", "userActions",
-                                    landing, "#user-actions-%s" %(groupId),
-                                    "replace", **args)
+            yield renderScriptBlock(request, "groups.mako", "group_actions",
+                                    landing, "#group-actions-%s" %(groupId),
+                                    "set", **args)
         except ttypes.NotFoundException:
             pass
 
@@ -58,9 +58,9 @@ class GroupsResource(base.BaseResource):
             args["myGroups"] = [groupId]
             args["pendingConnections"] = {}
             args["groupFollowers"] = {groupId:[]}
-            yield renderScriptBlock(request, "groups.mako", "userActions",
-                                    landing, "#user-actions-%s" %(groupId),
-                                    "replace", **args)
+            yield renderScriptBlock(request, "groups.mako", "group_actions",
+                                    landing, "#group-actions-%s" %(groupId),
+                                    "set", **args)
         except ttypes.NotFoundException:
             pass
 
@@ -150,9 +150,9 @@ class GroupsResource(base.BaseResource):
             args["groupFollowers"] = groupFollowers
             args["groupId"] = groupId
             args["myGroups"] = myGroups
-            yield renderScriptBlock(request, "groups.mako", "userActions",
-                                    landing, "#user-actions-%s" %(groupId),
-                                    "replace", **args)
+            yield renderScriptBlock(request, "groups.mako", "group_actions",
+                                    landing, "#group-actions-%s" %(groupId),
+                                    "set", **args)
 
 
     @profile
@@ -280,9 +280,9 @@ class GroupsResource(base.BaseResource):
 
         d6 = feed.pushToOthersFeed(myId, item["meta"]["uuid"], itemId, itemId,
                                    _acl, responseType, itemType, myId)
-        d7 =  renderScriptBlock(request, "groups.mako", "userActions",
-                                landing, "#user-actions-%s" %(groupId),
-                                "replace", **args)
+        d7 =  renderScriptBlock(request, "groups.mako", "group_actions",
+                                landing, "#group-actions-%s" %(groupId),
+                                "set", **args)
         d8 = utils.updateDisplayNameIndex(myId, [groupId], None,
                                           args['me']['basic']['name'])
 
