@@ -3,6 +3,7 @@
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <%! from social import utils, _, __, plugins %>
 <%! from social import relations as r %>
+<%! from pytz import common_timezones %>
 
 <%inherit file="base.mako"/>
 <%namespace name="item" file="item.mako"/>
@@ -393,6 +394,7 @@
   firstname = me.get("basic", {}).get("firstname", '')
   lastname = me.get("basic", {}).get("lastname", '')
   jobTitle = me.get("basic", {}).get("jobTitle", '')
+  myTimezone = me.get("basic", {}).get("timezone", "")
   %>
   <form action="/profile/edit" method="post"  enctype="multipart/form-data">
     <div class="edit-profile">
@@ -414,9 +416,22 @@
             <input type="text" id="jobTitle" name="jobTitle" value="${jobTitle}" />
         </li>
         <li>
+          <label for="timezone">Timezone </label>
+          <select name="timezone">
+            % for timezone in common_timezones:
+              % if timezone == myTimezone:
+                <option value = "${timezone}" selected="">${timezone}</option>
+              % else:
+                <option value = "${timezone}" >${timezone}</option>
+              % endif
+            % endfor
+          </select>
+        </li>
+        <li>
             <label for="dp"> Photo </label>
             <input type="file" id="dp" name="dp" accept="image/jpx, image/png, image/gif" />
         </li>
+
         % if emailId and emailId[0]:
         <input type="hidden" value = ${emailId[0]} name="emailId" />
         %endif
@@ -455,9 +470,9 @@
     </ul>
     <input type="hidden" id = 'dt' name="dt" value="passwd"/>
   </div>
-    <div class="profile-save-wrapper">
-        <input type="submit" class="button default" name="userInfo_submit" value="Save"/>
-    </div>
+  <div class="profile-save-wrapper">
+    <input type="submit" class="button default" name="userInfo_submit" value="Save"/>
+  </div>
 </form>
 </%def>
 

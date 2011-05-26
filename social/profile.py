@@ -369,31 +369,35 @@ class ProfileResource(base.BaseResource):
         myLastName = users[myKey]["basic"].get("lastname", None)
         targetFirstName = users[targetKey]["basic"].get("firstname", None)
         targetLastName = users[targetKey]["basic"].get("lastname", None)
+        _getColName = lambda name,Id: ":".join([name.lower(), Id])
 
-        deferreds = [Db.remove(myKey, "connections", None, targetKey),
-                     Db.remove(targetKey, "connections", None, myKey),
-                     Db.remove(myKey, "pendingConnections", targetKey),
-                     Db.remove(targetKey, "pendingConnections", myKey),
-                     utils.updateDisplayNameIndex(myKey, [targetKey], None, myDisplayName),
-                     utils.updateDisplayNameIndex(targetKey, [myKey], None, targetDisplayName)]
-        if myDisplayName:
-            deferreds.append(utils.deleteNameIndex(targetKey, myDisplayName, myKey))
-        if myFirstName:
-            deferreds.append(utils.deleteNameIndex(targetKey, myFirstName, myKey))
-        if myLastName:
-            deferreds.append(utils.deleteNameIndex(targetKey, myLastName, myKey))
 
-        if targetFirstName:
-            deferreds.append(utils.deleteNameIndex(myKey, targetFirstName, targetKey))
-        if targetLastName:
-            deferreds.append(utils.deleteNameIndex(myKey, targetLastName, targetKey))
-        if targetDisplayName:
-            deferreds.append(utils.deleteNameIndex(myKey, targetDisplayName, targetKey))
+        mutations = {myKey:{}, targetKey:{}}
+        mutations[myKey]["connections"] = {targetKey: None}
+        mutations[myKey]["pendingConnections"] = {targetKey:None}
+        mutations[myKey]["displayNameIndex"] = {_getColName(targetDisplayName, targetKey):None}
+        mutations[targetKey]["connections"] = {myKey:None}
+        mutations[targetKey]["pendingConnections"] = {myKey:None}
+        mutations[targetKey]["displayNameIndex"] = {_getColName(myDisplayName, myKey):None}
 
+        if any([myDisplayName, myFirstName, myLastName]):
+            mutations[targetKey]["nameIndex"]={}
+        if any([targetDisplayName, targetFirstName, targetLastName]):
+            mutations[myKey]["nameIndex"] = {}
+
+        for name in [myDisplayName, myFirstName, myLastName]:
+            if name:
+                colname = _getColName(name, myKey)
+                mutations[targetKey]["nameIndex"][colname] = None
+        for name in [targetDisplayName, targetFirstName, targetLastName]:
+            if name:
+                colname = _getColName(name, targetKey)
+                mutations[myKey]["nameIndex"][colname] = None
+
+        yield Db.batch_mutate(mutations)
         # TODO: delete the notifications and items created while
         # sending&accepting friend request
 
-        yield defer.DeferredList(deferreds)
 
     @defer.inlineCallbacks
     def _changePassword(self, request):
@@ -436,7 +440,7 @@ class ProfileResource(base.BaseResource):
         userInfo = {}
         calls = []
 
-        for cn in ("jobTitle", "location", "desc", "name", "firstname", "lastname"):
+        for cn in ("jobTitle", "location", "desc", "name", "firstname", "lastname", "timezone"):
             val = utils.getRequestArg(request, cn)
             if val:
                 userInfo.setdefault("basic", {})[cn] = val

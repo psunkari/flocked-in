@@ -1,4 +1,5 @@
 <%! from gettext import gettext as _ %>
+<%! from pytz import common_timezones %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -59,6 +60,15 @@
       <ul>
         <li><label for="jobTitle">${_('Job Title:')}</label></li>
         <li> <input name="jobTitle" id="jobTitle" type="text" /></li>
+      </ul>
+      <ul>
+        <li><label for="timezone">${_('Timezone')}</label></li>
+        <li> <select name="timezone">
+                % for timezone in common_timezones:
+                  <option value="${timezone}"> ${timezone} </option>
+                % endfor
+            </select>
+        </li>
       </ul>
 
       <ul>
