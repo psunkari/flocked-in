@@ -416,6 +416,35 @@ var convs = {
 $$.convs = convs;
 })(social, jQuery);
 
+(function($$, $){
+var feedback = {
+   showFeedback: function(){
+        var dialogOptions = {
+            id: 'feedback-dlg',
+            buttons: [
+                {
+                    text:'Submit',
+                    click : function(){
+                        comment =  $("#feedback-comment").val();
+                        category = $("#feedback-category").val();
+                        $.post("/feedback", {'comment':comment, "category":category});
+                        $$.dialog.close(this, true)
+                        }
+                },
+                {
+                    text:'Cancel',
+                    click : function(){
+                        $$.dialog.close(this, true)
+                    }
+                }
+            ]
+        };
+        $$.dialog.create(dialogOptions);
+        $.getScript('/ajax/feedback');
+    }
+};
+$$.feedback = feedback;
+})(social, jQuery);
 
 
 

@@ -417,9 +417,6 @@
     imgsrc = conv['meta'].get('imgSrc', '')
     summary = conv["meta"].get("summary", '')
     title = title if title else url
-
-    print convId, imgsrc, 'image source'
-
   %>
   %if not isQuoted:
     ${utils.userName(userId, entities[userId], "conv-user-cause")}
@@ -481,4 +478,24 @@
       </div>
     %endfor
   </div>
+</%def>
+
+
+<%def name="feedbackDialog()">
+    <div id="ui-feedback-dlg">
+      <div class='ui-dlg-title'> ${_("Feedback")} </div>
+      <div class='ui-list ui-dlg-center'>
+        <div class="ui-listitem">
+          <div style="padding:5px">
+            <label for="feedback-category"> ${_("Category")}</label>
+            <select id="feedback-category" name='feedback-category'  >
+              <option value="UI">User Interface</option>
+              <option value="feature">Feature</option>
+              <option value="Misc" selected="">Misc</option>
+            </select>
+            <textarea row=2 cols=34 name="feedback-comment" id="feedback-comment" placeholder="${_('Say Something')}"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
 </%def>

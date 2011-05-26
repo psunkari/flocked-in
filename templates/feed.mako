@@ -69,7 +69,7 @@
       <ul class="v-links">
         %if myKey in groupAdmins:
           <li><a class="ajax" href="/groups/invite?id=${groupId}">Invite</a></li>
-          <li><a class="ajax" href="/groups/admin?id=${groupId}">Pending Requests</a></li>
+          <li><a class="ajax" href="/groups/pending?id=${groupId}">Pending Requests</a></li>
         %endif
         <li><a class="ajax" href="/groups/members?id=${groupId}">Members </a></li>
       </ul>

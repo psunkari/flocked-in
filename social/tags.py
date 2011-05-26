@@ -18,10 +18,10 @@ from social.logging     import profile, dump_args
 @profile
 @defer.inlineCallbacks
 @dump_args
-def ensureTag(request, tagName):
+def ensureTag(request, tagName, orgId=None):
     authInfo = request.getSession(IAuthInfo)
     myId = authInfo.username
-    myOrgId = authInfo.organization
+    myOrgId = authInfo.organization if not orgId else orgId
     consistency = ttypes.ConsistencyLevel
 
     try:
@@ -128,7 +128,7 @@ class TagsResource(base.BaseResource):
         count = constants.PEOPLE_PER_PAGE
         toFetchCount = count + 1
         start = utils.decodeKey(start)
-        
+
         renderLayout = (not appchange and request.getCookie('cu')) or appchange
         request.addCookie('cu', '', path="/ajax/tags", expires=formatdate(0))
 

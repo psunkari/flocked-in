@@ -19,6 +19,7 @@ from social.groups          import GroupsResource
 from social.fts             import FTSResource
 from social.tags            import TagsResource
 from social.auto            import AutoCompleteResource
+from social.feedback        import FeedbackResource
 
 from social.messaging       import MessagingResource
 from social.admin           import Admin
@@ -53,6 +54,7 @@ class RootResource(resource.Resource):
         self._fts = FTSResource(self._isAjax)
         self._admin = Admin(self._isAjax)
         self._pluginResources = getPluggedResources(self._isAjax)
+        self._feedback = FeedbackResource(self._isAjax)
         if not self._isAjax:
             self._ajax = RootResource(True)
             self._avatars = AvatarResource()
@@ -89,6 +91,8 @@ class RootResource(resource.Resource):
             match = self._messages
         elif path == "admin":
             match = self._admin
+        elif path == 'feedback':
+            match = self._feedback
         elif path == "events":
             if "event" in plugins and self._pluginResources.has_key("event"):
                 match = self._pluginResources["event"]
