@@ -25,9 +25,9 @@ class Admin(base.BaseResource):
             reader = csv.reader(data.split("\n"), dialect=dialect)
             for row in reader:
                 if row:
-                    if len(row) < 4:
+                    if len(row) < 5:
                         defer.returnValue(False)
-                    email, displayName, jobTitle, passwd = row
+                    email, displayName, jobTitle, passwd, timezone = row
                     domain = email.split("@")[1]
                     userOrg = yield getOrgKey(domain)
                     if userOrg != orgId:
@@ -52,16 +52,18 @@ class Admin(base.BaseResource):
         emailId = utils.getRequestArg(request, "email")
         passwd = utils.getRequestArg(request, "passwd")
         jobTitle = utils.getRequestArg(request, "jobTitle")
+        timezone = utils.getRequestArg(request, "timezone")
+        log.msg(name, emailId, passwd, jobTitle, timezone)
 
 
         if all([format, data, name, emailId, passwd, jobTitle]):
             raise errors.TooManyParams()
 
-        if not (format and data) and not all([name, emailId, passwd, jobTitle]):
+        if not (format and data) and not all([name, emailId, passwd, jobTitle, timezone]):
             raise errors.MissingParams()
 
-        if all([name, emailId, passwd, jobTitle]):
-            data = ",".join([emailId, name, jobTitle, passwd])
+        if all([name, emailId, passwd, jobTitle, timezone]):
+            data = ",".join([emailId, name, jobTitle, passwd, timezone])
             format = "csv"
 
         isValidData = yield self._validData(data, format, orgId)
@@ -74,15 +76,15 @@ class Admin(base.BaseResource):
 
             for row in reader:
                 if row:
-                    email, displayName, jobTitle, passwd = row
+                    email, displayName, jobTitle, passwd, timezone = row
                     existingUser = yield utils.existingUser(email)
                     if existingUser:
                         log.msg("%s is already a member of the network."
                                 "not adding it again"%(email))
                         continue
-                    userKey = yield utils.addUser(email, displayName,
-                                                  passwd, orgId, jobTitle)
-        request.redirect("/admin/people")
+                    userKey = yield utils.addUser(email, displayName, passwd,
+                                                  orgId, jobTitle, timezone)
+        request.redirect("/people?type=all")
 
     @defer.inlineCallbacks
     def _blockUser(self, request):

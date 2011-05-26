@@ -195,6 +195,7 @@ class RegisterResource(BaseResource):
         passwd1 = utils.getRequestArg(request, 'password1')
         username = utils.getRequestArg(request, 'name')
         title = utils.getRequestArg(request, 'jobTitle')
+        timezone = utils.getRequestArg(request, 'timezone')
 
         if passwd != passwd1:
             raise errors.PasswordsNoMatch()
@@ -204,7 +205,8 @@ class RegisterResource(BaseResource):
         if not existingUser:
             args={}
             orgKey = yield getOrgKey(domain)
-            userKey = yield utils.addUser(emailId, username, passwd, orgKey, title)
+            userKey = yield utils.addUser(emailId, username, passwd,
+                                          orgKey, title, timezone)
             yield Db.remove(emailId, "invitations")
 
             cols = yield Db.get_slice(orgKey, "entities", ["admins"])

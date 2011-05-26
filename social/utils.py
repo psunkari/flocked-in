@@ -470,7 +470,7 @@ def existingUser(emailId):
     defer.returnValue(False)
 
 @defer.inlineCallbacks
-def addUser(emailId, displayName, passwd, orgKey, jobTitle = None):
+def addUser(emailId, displayName, passwd, orgKey, jobTitle = None, timezone=None):
     userId = getUniqueKey()
 
     userInfo = {'basic': {'name': displayName, 'org':orgKey,
@@ -479,6 +479,8 @@ def addUser(emailId, displayName, passwd, orgKey, jobTitle = None):
 
     if jobTitle:
         userInfo["basic"]["jobTitle"] = jobTitle
+    if timezone:
+        userInfo["basic"]["timezone"] = timezone
 
     yield Db.insert(orgKey, "orgUsers", '', userId)
     yield Db.batch_insert(userId, "entities", userInfo)

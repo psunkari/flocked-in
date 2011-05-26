@@ -440,7 +440,7 @@ class ProfileResource(base.BaseResource):
         userInfo = {}
         calls = []
 
-        for cn in ("jobTitle", "location", "desc", "name", "firstname", "lastname"):
+        for cn in ("jobTitle", "location", "desc", "name", "firstname", "lastname", "timezone"):
             val = utils.getRequestArg(request, cn)
             if val:
                 userInfo.setdefault("basic", {})[cn] = val

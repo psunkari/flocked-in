@@ -1,4 +1,5 @@
 <%! from social import utils, _, __, plugins %>
+<%! from pytz import common_timezones %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -95,6 +96,7 @@
 
 
 <%def name="addUsers()">
+  <% myTimezone  = me.get("basic", {}).get("timezone", "") %>
   <div class="edit-profile">
     <h4> Add User:</h4>
     <form action="/admin/add" method="POST" enctype="multipart/form-data" autocomplete="off">
@@ -112,6 +114,20 @@
       <ul>
         <li><label for="jobTitle"> JobTitle: </label></li>
         <li><input type="text" name="jobTitle" /> </li>
+      </ul>
+      <ul>
+        <li> <label for="timezone">Timezone </label> </li>
+        <li>
+          <select name="timezone">
+            % for timezone in common_timezones:
+              % if timezone == myTimezone:
+                <option value = "${timezone}" selected="">${timezone}</option>
+              % else:
+                <option value = "${timezone}" >${timezone}</option>
+              % endif
+            % endfor
+          </select>
+        </li>
       </ul>
       <ul>
         <li><label for="passwd">  Password: </label></li>
