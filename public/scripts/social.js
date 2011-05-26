@@ -416,6 +416,7 @@ var convs = {
 $$.convs = convs;
 })(social, jQuery);
 
+
 (function($$, $){
 var feedback = {
    showFeedback: function(){
@@ -429,7 +430,7 @@ var feedback = {
                         category = $("#feedback-category").val();
                         $.post("/feedback", {'comment':comment, "category":category});
                         $$.dialog.close(this, true)
-                        }
+                    }
                 },
                 {
                     text:'Cancel',
@@ -445,7 +446,6 @@ var feedback = {
 };
 $$.feedback = feedback;
 })(social, jQuery);
-
 
 
 /*
