@@ -786,7 +786,7 @@ class ProfileResource(base.BaseResource):
             args["rawUserData"] = rawUserData
 
             # List the user's groups (and look for groups common with me)
-            cols = yield Db.multiget_slice([myKey, userKey], "userGroups")
+            cols = yield Db.multiget_slice([myKey, userKey], "entityGroupsMap")
             myGroups = set(utils.columnsToDict(cols[userKey]).keys())
             userGroups = set(utils.columnsToDict(cols[userKey]).keys())
             commonGroups = myGroups.intersection(userGroups)

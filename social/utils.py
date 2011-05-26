@@ -353,7 +353,16 @@ def userAvatar(id, userInfo, size=None):
         sex = "m" if sex != "f" else "f"
         return "/public/images/avatar_%s_%s.png" % (sex, size)
 
-    return None
+
+def groupAvatar(id, groupInfo, size=None):
+    size = size[0] if (size and len(size) != 0) else "m"
+    avatar = groupInfo.get("basic", {}).get("avatar", None)
+    if avatar:
+        imgType, itemId = avatar.split(":")
+        return "/avatar/%s_%s.%s" % (size, itemId, imgType)
+    else:
+        return "/public/images/avatar_g_%s.png" % size
+
 
 def companyLogo(orgInfo, size=None):
     size = size[0] if (size and len(size) != 0) else "m"

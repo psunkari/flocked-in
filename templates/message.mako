@@ -158,17 +158,21 @@
     </div>
     <div class="message-row-cell message-row-info" style="height:100%;width:100%;cursor:pointer">
         <div style="display:block;width:100%;height:100%">
-            <div style="display:inline-block;padding:2px;width:650px" onclick="alert('clicked')">
+            <div style="display:inline-block;padding:2px;width:635px" onclick="alert('clicked')">
                 <span style="padding:4px 0 0 4px;width:150px">${formatPeopleInConversation(conv, people)}</span>
                 <span style="width:450px;font-size:11px;color:#777;padding-left:4px">${conv['meta']["date_epoch"]|timeElapsedSince}</span>
             </div>
             <div style="display:inline-block;padding:2px">
-                <span>Actions</span>
+                <span>
+                    <div class="messaging-icon" style="display:inline-block;width:19px;height:19px;background-position:0px -175px;box-shadow:1px 0 2px #CCCCCC" title="Mark this conversation as unread">&nbsp</div>
+                    <div class="messaging-icon" style="display:inline-block;width:19px;height:19px;background-position:0px -110px;box-shadow:1px 0 2px #CCCCCC" title="Archive this conversation">&nbsp</div>
+                    <div class="messaging-icon" style="display:inline-block;width:19px;height:19px;background-position:0px -78px;box-shadow:1px 0 2px #CCCCCC" title="Delete this conversation">&nbsp</div>
+                </span>
             </div>
-            <a class="ajax message-link" href="/messages/thread?id=${convId}" style="display:block;padding:7px;width:700px;vertical-align:bottom">
+            <a class="ajax message-link" href="/messages/thread?id=${convId}" style="display:block;padding:2px;position:relative">
                 <div style="display:inline">${conv["meta"]["subject"]|h}</div>
-                <div style="color:#777;overflow:hidden;display:inline-block;vertical-align:bottom;white-space:nowrap;width:660px"> - ${conv["meta"]["snippet"]}</div>
-                <span style="float:right;cursor:default;color:#000;position:absolute">
+                <div style="color:#777;overflow:hidden;display:inline-block;vertical-align:bottom;white-space:nowrap;min-width:640px"> - ${conv["meta"]["snippet"]}</div>
+                <span style="position:absolute;right:1px;bottom:-4px;cursor:default;color:#000">
                     <span title="There are ${conv['count']} messages in this conversation">${conv['count']}</span>
                 </span>
             </a>
@@ -180,58 +184,59 @@
 <%def name="viewConversation()">
     <form class="ajax" method="post" action="/messages/thread">
         ${toolbar_layout(view)}
-        <div class="message-headline">
-          <h2 class="message-headline-subject">${conv["meta"]["subject"]|h}</h2>
-        </div>
-        <div class="conversation-wrapper" style="padding:2px;border:1px solid #BCBCBC;border-radius:7px">
-            % for mid in messageIds:
-            <div class="conversation-message-wrapper" style="padding-bottom:2px; margin-bottom:2px; border-bottom:1px solid #E2e2e2">
-              <div class="comment-avatar">
-                ${getSenderAvatar(messages[mid], people, "s")}
-              </div>
-              <div class="comment-container">
-                <div class="conv-summary">
-                  <div class="message-headers">
-                    <span class="user conv-user-cause">
-                      <a href="/profile?id=${messages[mid]['meta']['owner']}" class="ajax">
-                        ${people[messages[mid]['meta']['owner']]["basic"]["name"]}
-                      </a>
-                    </span>
-                    <span class="time-label message-headers-time">${messages[mid]["meta"]["date_epoch"]|timeElapsedSince}</span>
-                  </div>
-                  <div class="message-message">
-                    ${messages[mid]["meta"].get("body", '') | newlinescape}
-                  </div>
-                </div>
-              </div>
-              </div>
-            % endfor
         <input type="hidden" name="selected" value="${id}"/>
-        <!--XXX:<input type="hidden" name="_body" value="${formatBodyForReply(messages[mid], '')}"/>-->
     </form>
-    <form action="/messages/write" method="post" class="ajax">
+    <div class="message-headline">
+        <h2 class="message-headline-subject">${conv["meta"]["subject"]|h}</h2>
+    </div>
+    <div class="conversation-wrapper" style="padding:2px;border:1px solid #BCBCBC;border-radius:7px">
+        <div class="conversation-messages-wrapper">
+            ${render_conversation_messages()}
+        </div>
         ${quick_reply_layout(script, messages[messageIds[-1]], id)}
-    </form>
+    </div>
+</%def>
+
+<%def name="render_conversation_messages()">
+    % for mid in messageIds:
+        <div class="conversation-message-wrapper" style="padding-bottom:2px; margin-bottom:2px; border-bottom:1px solid #E2e2e2">
+          <div class="comment-avatar">
+            ${getSenderAvatar(messages[mid], people, "s")}
+          </div>
+          <div class="comment-container">
+            <div class="conv-summary">
+              <div class="message-headers">
+                <span class="user conv-user-cause">
+                  <a href="/profile?id=${messages[mid]['meta']['owner']}" class="ajax">
+                    ${people[messages[mid]['meta']['owner']]["basic"]["name"]}
+                  </a>
+                </span>
+                <span class="time-label message-headers-time">${messages[mid]["meta"]["date_epoch"]|timeElapsedSince}</span>
+              </div>
+              <div class="message-message">
+                ${messages[mid]["meta"].get("body", '') | newlinescape}
+              </div>
+            </div>
+          </div>
+        </div>
+    % endfor
 </%def>
 
 <%def name="quick_reply_layout(script, msg, convId)">
-  <div class="message-composer">
-<!--    XXX:<div class="message-composer-quick-actions">
-      <a href="#" onclick="$('textarea[class=message-composer-field-body-quick]').attr('value', $('input[name=_body]').attr('value'))">
-        Quote Message
-      </a>
-    </div>-->
-    <div class="conv-avatar">
-        ${getAvatarImg(utils.userAvatar(myKey, people[myKey]))}
+  <form method="post" class="ajax" action="/messages/write">
+    <div class="message-composer">
+      <div class="conv-avatar">
+          ${getAvatarImg(utils.userAvatar(myKey, people[myKey]))}
+      </div>
+      <div class="input-wrap" style="margin-left:60px">
+          <textarea class="conversation-reply" style="min-height:60px" name="body" placeholder="Quickly reply to this message"></textarea>
+          <input type="hidden" value=${convId} name="parent"/>
+      </div>
+      <div style="text-align:right;padding:4px 0">
+        <input type="submit" name="send" value="${_('Reply')}" class="button"/>
+      </div>
     </div>
-    <div class="input-wrap" style="margin-left:60px">
-        <textarea class="conversation-reply" style="min-height:60px" name="body" placeholder="Quickly reply to this message"></textarea>
-        <input type="hidden" value=${convId} name="parent"/>
-    </div>
-    <div style="text-align:right;padding:4px 0">
-      <input type="submit" name="send" value="${_('Reply')}" class="button"/>
-    </div>
-  </div>
+  </form>
 </%def>
 
 <%def name="viewComposer()">
