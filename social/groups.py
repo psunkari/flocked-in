@@ -372,7 +372,7 @@ class GroupsResource(base.BaseResource):
         nextPageStart = ''
         prevPageStart = ''
         entityId = None
-        entityId = orgId if viewType == 'allGroups' else myId
+        entityId = myId if viewType == 'myGroups' else orgId
 
         #TODO: list the groups in sorted order.
         cols = yield Db.get_slice(entityId, 'entityGroupsMap',
@@ -572,7 +572,7 @@ class GroupsResource(base.BaseResource):
             d = self._listGroupMembers(request)
         elif segmentCount == 1 and request.postpath[0] == "create":
             d = self._renderCreate(request)
-        elif segmentCount == 1 and request.postpath[0] == "admin":
+        elif segmentCount == 1 and request.postpath[0] == "pending":
             d = self._listPendingSubscriptions(request)
         elif segmentCount == 1 and request.postpath[0] == "unblock":
             d = self._unBlockUser(request)

@@ -25,6 +25,7 @@
       ${navMenuItem("/feed?id=%s" % orgKey, _("Company Feed"), "org")}
       ${navMenuItem("/groups", _("Groups"), "groups")}
       ${navMenuItem("/tags", _("Tags"), "tags")}
+       <li> <button class="button-link" title="feedback" onclick="$$.feedback.showFeedback()">feedback</button></li>
     </ul>
   </div>
 </%def>

@@ -93,6 +93,7 @@ class Links(object):
         image = None
         try:
             foo = urllib2.urlopen(url)
+            domain = url.split('/', 3)[2]
             data = foo.read()
             parser.feed(data)
             tree = parser.close()
@@ -124,9 +125,11 @@ class Links(object):
                         break
             if not ogImage:
                 for element in tree.xpath("body//img"):
-                    if 'src' in element.attrib:
-                        image = element.attrib['src']
-                        break
+                    if 'src' in element.attrib \
+                        and element.attrib['src'].startswith('http://') \
+                        and domain in element.attrib['src']:
+                            image = element.attrib['src']
+                            break
             return (ogSummary or summary, ogTitle or title,  ogImage or image)
         except Exception as e:
             log.msg(e)
