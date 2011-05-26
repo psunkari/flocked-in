@@ -449,7 +449,7 @@ class GroupsResource(base.BaseResource):
             prevPageStart = yield people.getPeople(myKey, groupId,
                                                args['orgKey'], start = start)
         args["relations"] = relation
-        args["users"] = users
+        args["entities"] = users
         args["userIds"] = userIds
         args["blockedUsers"] = blockedUsers
         args["nextPageStart"] = nextPageStart
