@@ -137,8 +137,9 @@
     timestamp = int(meta['timestamp'])
     likesCount = 0 if hasLikes else int(meta.get('likesCount', '0'))
     commentsCount = 0 if hasComments else int(meta.get('responseCount', '0'))
+    myTimezone = me['basic'].get("timezone", None)
   %>
-  ${utils.simpleTimestamp(timestamp)}\
+  ${utils.simpleTimestamp(timestamp, myTimezone)}\
   ## If none of my friends liked it, show the count of likes (onclick show the likes)
   %if (not hasLikes and likesCount) or (not hasComments and commentsCount):
     &#183;
@@ -170,8 +171,9 @@
     meta = items[itemId]['meta']
     timestamp = int(meta['timestamp'])
     likesCount = int(meta.get('likesCount', "0"))
+    myTimezone = me['basic'].get("timezone", None)
   %>
-  ${utils.simpleTimestamp(timestamp)}
+  ${utils.simpleTimestamp(timestamp, myTimezone)}
   %if likesCount > 0:
     &#183;
     <button class="button-link" title="${likesCount} Likes" onclick="$$.convs.showItemLikes('${itemId}')"><div class="small-icon small-like"></div>${likesCount}</button>

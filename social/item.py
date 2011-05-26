@@ -187,10 +187,10 @@ class ItemResource(base.BaseResource):
     @dump_args
     def createItem(self, request):
         convType = utils.getRequestArg(request, "type")
-        myKey = request.getSession(IAuthInfo).username
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
 
         parent = None
-        convOwner = myKey
+        convOwner = myId
         responseType = 'I'
 
         if convType in plugins:
@@ -201,38 +201,37 @@ class ItemResource(base.BaseResource):
 
             commentSnippet = ""
             userItemValue = ":".join([responseType, convId, convId,
-                                      convType, myKey, commentSnippet])
+                                      convType, myId, commentSnippet])
 
             deferreds = []
-            d = feed.pushToFeed(myKey, timeUUID, convId, parent,
-                                responseType, convType, convOwner, myKey)
+            d = feed.pushToFeed(myId, timeUUID, convId, parent,
+                                responseType, convType, convOwner, myId)
             deferreds.append(d)
 
-            d = feed.pushToOthersFeed(myKey, timeUUID, convId,
+            d = feed.pushToOthersFeed(myId, timeUUID, convId,
                                       parent, convACL, responseType,
                                       convType, convOwner)
             deferreds.append(d)
 
-            d = Db.insert(myKey, "userItems", userItemValue, timeUUID)
+            d = Db.insert(myId, "userItems", userItemValue, timeUUID)
             deferreds.append(d)
 
             if plugins[convType].hasIndex:
-                d = Db.insert(myKey, "userItems_%s"%(convType),
+                d = Db.insert(myId, "userItems_%s"%(convType),
                               userItemValue, timeUUID)
                 deferreds.append(d)
 
-            cols = yield Db.get_slice(myKey, "entities", ["basic"])
-            me = utils.supercolumnsToDict(cols)
 
             deferredList = defer.DeferredList(deferreds)
             yield deferredList
 
             data = {"items":{convId:conv},
-                    "entities":{myKey: me}, "script": True}
+                    "entities":{myId: args['me']}, "script": True}
+            args.update(data)
             onload = "(function(obj){$$.convs.load(obj);})(this);"
             d1 = renderScriptBlock(request, "item.mako", "item_layout",
                             False, "#user-feed", "prepend", args=[convId],
-                            handlers={"onload":onload}, **data)
+                            handlers={"onload":onload}, **args)
 
             defaultType = plugins.keys()[0]
             d2 = plugins[defaultType].renderShareBlock(request, True)
@@ -245,6 +244,7 @@ class ItemResource(base.BaseResource):
     @dump_args
     def _like(self, request):
         myId = request.getSession(IAuthInfo).username
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
 
         # Get the item and the conversation
         (itemId, item) = yield utils.getValidItemId(request, "id")
@@ -307,7 +307,6 @@ class ItemResource(base.BaseResource):
         yield notifications.pushNotifications( itemId, convId, responseType, convType,
                                     convOwnerId, myId, timeUUID)
 
-        args = {}
         item["meta"]["likesCount"] = str(likesCount + 1)
         args["items"] = {itemId: item}
         args["myLikes"] = {itemId:[myId]}
@@ -367,7 +366,7 @@ class ItemResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _unlike(self, request):
-        myId = request.getSession(IAuthInfo).username
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
 
         # Get the item and the conversation
         (itemId, item) = yield utils.getValidItemId(request, "id", ["tags"])
@@ -421,7 +420,6 @@ class ItemResource(base.BaseResource):
 
         yield notifications.deleteNofitications(convId, likeTimeUUID)
 
-        args = {}
         item["meta"]["likesCount"] = likesCount -1
         args["items"] = {itemId: item}
         args["myLikes"] = {itemId:[]}
@@ -482,7 +480,7 @@ class ItemResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _comment(self, request):
-        myId = request.getSession(IAuthInfo).username
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
         comment = utils.getRequestArg(request, "comment")
         if not comment:
             raise errors.MissingParam()
@@ -541,20 +539,21 @@ class ItemResource(base.BaseResource):
         entities = yield Db.get(myId, "entities", super_column="basic")
         entities = {myId: utils.supercolumnsToDict([entities])}
         items = {itemId: {"meta": meta}, convId:conv}
-        data = {"entities": entities, "items": items}
+        args.update({"entities": entities, "items": items})
+
 
         numShowing = utils.getRequestArg(request, "nc") or "0"
         numShowing = int(numShowing) + 1
         isFeed = False if request.getCookie("_page") == "item" else True
         yield renderScriptBlock(request, 'item.mako', 'conv_comments_head',
                         False, '#comments-header-%s' % (convId), 'set',
-                        args=[convId, responseCount, numShowing, isFeed], **data)
+                        args=[convId, responseCount, numShowing, isFeed], **args)
 
 
         yield renderScriptBlock(request, 'item.mako', 'conv_comment', False,
                                 '#comments-%s' % convId, 'append', True,
                                 handlers={"onload": "(function(){$('.comment-input', '#comment-form-%s').val(''); $('[name=\"nc\"]', '#comment-form-%s').val('%s');})();" % (convId, convId, numShowing)},
-                                args=[convId, itemId], **data)
+                                args=[convId, itemId], **args)
         d = fts.solr.updateIndex(itemId, {'meta':meta})
 
 
@@ -590,7 +589,7 @@ class ItemResource(base.BaseResource):
         convId, conv = yield utils.getAccessibleItemId(request, "id")
         start = utils.getRequestArg(request, "start") or ''
         start = utils.decodeKey(start)
-        myId = request.getSession(IAuthInfo).username
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
         isFeed = False if request.getCookie("_page") == "item" else True
         responseCount = int(conv["meta"].get("responseCount", "0"))
 
@@ -626,7 +625,7 @@ class ItemResource(base.BaseResource):
         fetchedEntities = yield d1
         myLikes = yield d3
 
-        args = {"convId": convId, "isFeed": isFeed, "items":{}, "entities": {}}
+        args.update({"convId": convId, "isFeed": isFeed, "items":{}, "entities": {}})
         args["items"].update(utils.multiSuperColumnsToDict(fetchedItems))
         args["entities"].update(utils.multiSuperColumnsToDict(fetchedEntities))
         args["myLikes"] = utils.multiColumnsToDict(myLikes)
