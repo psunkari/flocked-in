@@ -7,7 +7,8 @@ from twisted.internet   import defer
 from twisted.web        import server
 from twisted.python     import log
 
-from social             import Db, utils, _, __, base, plugins, constants
+from social             import Db, utils, _, __, base, plugins
+from social             import constants, errors
 from social.feed        import getFeedItems
 from social.template    import render, renderDef, renderScriptBlock
 from social.isocial     import IAuthInfo
@@ -77,6 +78,8 @@ class TagsResource(base.BaseResource):
         newId = (request.getCookie('cu') != tagId) or appchange
         if newId or not script:
             tagInfo = yield Db.get_slice(myOrgId, "orgTags", super_column=tagId)
+            if not tagInfo:
+                raise errors.InvalidTag()
             tagInfo = utils.columnsToDict(tagInfo)
             args["tags"] = {tagId: tagInfo}
             args["tagId"] = tagId
