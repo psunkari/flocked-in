@@ -49,7 +49,7 @@ class AutoCompleteResource(BaseResource):
 
         # Fetch list of containers that I belong to and names
         # that match the given term
-        d1 = Db.get_slice(userId, "userGroups")
+        d1 = Db.get_slice(userId, "entityGroupsMap")
         d2 = Db.get_slice(orgId, "nameIndex",
                           start=term, finish=finish, count=10)
 
@@ -137,7 +137,7 @@ class AutoCompleteResource(BaseResource):
         # 1. Fetch item and get the list of tag containers (groups & orgs)
         # 2. See if I belong to any of those containers
         d1 = Db.get_slice(itemId, "items", super_column="meta")
-        d2 = Db.get_slice(userId, "userGroups")
+        d2 = Db.get_slice(userId, "entityGroupsMap")
 
         cols = yield d1
         meta = utils.columnsToDict(cols)
@@ -206,7 +206,7 @@ class AutoCompleteResource(BaseResource):
     @defer.inlineCallbacks
     def _myGroups(self, request):
         myId = request.getSession(IAuthInfo).username
-        cols = yield Db.get_slice(myId, "userGroups")
+        cols = yield Db.get_slice(myId, "entityGroupsMap")
         groupIds = [x.column.name for x in cols]
 
         groups = {}
