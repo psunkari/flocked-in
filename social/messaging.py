@@ -204,7 +204,6 @@ class MessagingResource(base.BaseResource):
 
         timeUUID = uuid.uuid1().bytes
         snippet = self._fetchSnippet(body)
-        print "snippet is %s" %snippet
         meta = {'uuid': timeUUID, 'Date': dateHeader, 'date_epoch': str(epoch),
                 "snippet":snippet}
         convId = yield self._newConversation(myId, participants, timeUUID,
@@ -401,23 +400,73 @@ class MessagingResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _actions(self, request):
-
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        print request.args
+        print self._ajax
         convIds = request.args.get('selected', [])
+        filterType = utils.getRequestArg(request, "filterType") or "all"
+        trash = utils.getRequestArg(request, "trash") or None
+        archive = utils.getRequestArg(request, "archive") or None
+        unread = utils.getRequestArg(request, "unread") or None
+        inbox = utils.getRequestArg(request, "inbox") or None
 
-        trash = utils.getRequestArg(request, "trash")
-        archive = utils.getRequestArg(request, "archive")
-        unread = utils.getRequestArg(request, "unread")
-        unArchive = utils.getRequestArg(request, "inbox")
-        if not convIds:
-            raise errors.MissingParams()
-        if trash:
-            yield self._moveConversation(request, convIds, 'trash')
-        if archive:
-            yield self._moveConversation(request, convIds, 'archive')
-        if unread:
-            yield self._moveConversation(request, convIds, 'unread')
-        if unArchive:
-            yield self._moveConversation(request, convIds, 'inbox')
+        if trash:action = "trash"
+        elif archive:action = "archive"
+        elif unread:action = "unread"
+        elif inbox:action = "inbox"
+        else:action = utils.getRequestArg(request, "action")
+
+        if convIds:
+            print "I am in %s" %action
+            if action in self._folders.keys():
+                yield self._moveConversation(request, convIds, action)
+            elif action == "read":
+                #Remove it from unreadIndex and mark it as unread in all other
+                # folders
+                convId = convIds[0]
+                cols = yield Db.get_slice(convId, "mConversations")
+                conv = utils.supercolumnsToDict(cols)
+                timeUUID = conv['meta']['uuid']
+                yield Db.remove(myId, "mUnreadConversations", timeUUID)
+                yield Db.remove(convId, "mConvFolders", 'mUnreadConversations', myId)
+                cols = yield Db.get_slice(convId, "mConvFolders", [myId])
+                cols = utils.supercolumnsToDict(cols)
+                for folder in cols[myId]:
+                    if folder in self._folders:
+                        folder = self._folders[folder]
+                    yield Db.insert(myId, folder, "r:%s"%(convId), timeUUID)
+
+        if not self._ajax:
+            #Not all actions on message(s) happen over ajax, for them do a redirect
+            request.redirect("/messages?type=%s" %filterType)
+            request.finish()
+        else:
+            #For all actions other than read/unread, since the action won't be
+            # available to the user in same view; i.e, archive won't be on
+            # archive view, we can simply remove the conv.
+            # We are assuming action is always on a single thread
+            if action == "inbox":
+                request.write("$('#thread-%s').remove()" %convIds[0])
+            elif action == "archive":
+                request.write("$('#thread-%s').remove()" %convIds[0])
+            elif action == "trash":
+                request.write("$('#thread-%s').remove()" %convIds[0])
+            elif action == "unread":
+                print "Marking as unread"
+                request.write("""
+                              $('#thread-%s').removeClass('row-read').addClass('row-unread');
+                              $('#thread-%s .messaging-read-icon').removeClass('messaging-read-icon').addClass('messaging-unread-icon');
+                              """ % (convIds[0], convIds[0]))
+                #request.finish()
+            elif action == "read":
+                # If we are in unread view, remove the conv else swap the styles
+                if filterType != "unread":
+                    request.write("""
+                                  $('#thread-%s').removeClass('row-unread').addClass('row-read');
+                                  $('#thread-%s .messaging-unread-icon').removeClass('messaging-unread-icon').addClass('messaging-read-icon');
+                                  """ % (convIds[0], convIds[0]))
+                else:
+                    request.write("$('#thread-%s').remove()" %convIds[0])
 
     @defer.inlineCallbacks
     def _moveConversation(self, request, convIds, toFolder):
@@ -456,7 +505,6 @@ class MessagingResource(base.BaseResource):
                 folder = self._folders[toFolder]
                 yield Db.insert(myId, folder, val, timeUUID)
                 yield Db.insert(convId, 'mConvFolders', '', folder, myId)
-        request.redirect('/messages')
 
     @defer.inlineCallbacks
     def _renderConversation(self, request):
@@ -508,11 +556,14 @@ class MessagingResource(base.BaseResource):
             args.update({"id":convId})
             args.update({"flags":{}})
             args.update({"view":"message"})
+            args.update({"menuId": "messages"})
+
             if script:
                 onload = """
+                         $$.menu.selectItem('%s');
                          $('#mainbar .contents').addClass("has-right");
                          $('.conversation-reply').autogrow();
-                         """
+                         """ %args["menuId"]
                 yield renderScriptBlock(request, "message.mako", "center",
                                         landing, ".center-contents", "set", True,
                                         handlers={"onload":onload}, **args)
@@ -535,7 +586,7 @@ class MessagingResource(base.BaseResource):
 
                      $('#mainbar .contents').removeClass("has-right");
                      """
-            yield renderScriptBlock(request, "message.mako", "viewComposer",
+            yield renderScriptBlock(request, "message.mako", "render_composer",
                                     landing, "#composer", "set", **args)
         else:
             yield render(request, "message.mako", **args)

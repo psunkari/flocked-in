@@ -19,6 +19,10 @@
     margin-top: 4px;
 }
 
+.peoplemenu li {
+    margin-bottom:1px;
+}
+
 .message-row {
    /*display:table-row;*/
    height:4em;
@@ -93,4 +97,26 @@
 .thread-selector {
    display:table-cell;
    vertical-align:top;
+}
+
+.messaging-icon {
+    display:inline-block;
+    width:19px;
+    height:19px;
+}
+
+.messaging-archive-icon {
+    background-position:0px -110px;
+}
+
+.messaging-unread-icon {
+    background-position:0px -175px;
+}
+
+.messaging-read-icon {
+    background-position:0px -160px;
+}
+
+.messaging-delete-icon {
+    background-position:0px -78px;
 }

@@ -32,7 +32,7 @@
           <div id="composer">
             %if view == "compose":
               %if not script:
-                ${viewComposer()}
+                ${render_composer()}
               %endif
             %endif
           </div>
@@ -62,7 +62,7 @@
     last_sent_by = people_info[list(people_without_sender)[-1]]["basic"]["name"]
 
     if len(people_without_sender) > 1:
-        return "%s...%s(%d)" %(sender, last_sent_by, len(participants)-1)
+        return "%s...%s(%d)" %(sender, last_sent_by, len(participants))
     else:
         return "%s and %s" %(sender, last_sent_by)
 %>
@@ -147,7 +147,7 @@
             %(avatarURI, avatarSize, avatarSize)
 %>
 
-<%def name="conversation_row_layout(script, convId, conv)">
+<%def name="render_conversation_row(script, convId, conv)">
   <div id="thread-${convId}" class="message-row ${'row-unread' if conv["read"] == "0" else 'row-read'}">
     <div class="message-row-cell message-row-select">
       <input type="checkbox" name="selected" value="${convId}"
@@ -158,20 +158,43 @@
     </div>
     <div class="message-row-cell message-row-info" style="height:100%;width:100%;cursor:pointer">
         <div style="display:block;width:100%;height:100%">
-            <div style="display:inline-block;padding:2px;width:635px" onclick="alert('clicked')">
+            <div style="display:inline-block;padding:2px;width:635px"
+                 onclick="var url='/messages/thread?id=${convId}';$.address.value(url); $$.fetchUri(url); ">
                 <span style="padding:4px 0 0 4px;width:150px">${formatPeopleInConversation(conv, people)}</span>
                 <span style="width:450px;font-size:11px;color:#777;padding-left:4px">${conv['meta']["date_epoch"]|timeElapsedSince}</span>
             </div>
             <div style="display:inline-block;padding:2px">
                 <span>
-                    <div class="messaging-icon" style="display:inline-block;width:19px;height:19px;background-position:0px -175px;box-shadow:1px 0 2px #CCCCCC" title="Mark this conversation as unread">&nbsp</div>
-                    <div class="messaging-icon" style="display:inline-block;width:19px;height:19px;background-position:0px -110px;box-shadow:1px 0 2px #CCCCCC" title="Archive this conversation">&nbsp</div>
-                    <div class="messaging-icon" style="display:inline-block;width:19px;height:19px;background-position:0px -78px;box-shadow:1px 0 2px #CCCCCC" title="Delete this conversation">&nbsp</div>
+                    %if filterType != "unread":
+                    <%
+                      readStatus = 'unread' if conv['read']=='0' else 'read'
+                      readAction = 'read' if conv['read']=='0' else 'unread'
+                    %>
+                    <div class="messaging-icon messaging-${readStatus}-icon"
+                         title="Mark this conversation as ${readAction}"
+                         onclick="$.post('/ajax/messages/thread', 'action=${readAction}&selected=${convId}&filterType=${filterType}', null, 'script')">&nbsp</div>
+                    %elif filterType == "unread":
+                    <div class="messaging-icon messaging-unread-icon"
+                         title="Mark this conversation as read"
+                         onclick="$.post('/ajax/messages/thread', 'action=read&selected=${convId}&filterType=${filterType}', null, 'script')">&nbsp</div>
+                    %endif
+                    %if filterType != "archive":
+                    <div class="messaging-icon messaging-archive-icon"
+                         title="Archive this conversation"
+                         onclick="$.post('/ajax/messages/thread', 'action=archive&selected=${convId}&filterType=${filterType}', null, 'script')">&nbsp</div>
+                    %endif
+                    %if filterType != "trash":
+                    <div class="messaging-icon messaging-delete-icon"
+                         title="Delete this conversation"
+                         onclick="$.post('/ajax/messages/thread', 'action=trash&selected=${convId}&filterType=${filterType}', null, 'script')">&nbsp</div>
+                    %endif
                 </span>
             </div>
             <a class="ajax message-link" href="/messages/thread?id=${convId}" style="display:block;padding:2px;position:relative">
-                <div style="display:inline">${conv["meta"]["subject"]|h}</div>
-                <div style="color:#777;overflow:hidden;display:inline-block;vertical-align:bottom;white-space:nowrap;min-width:640px"> - ${conv["meta"]["snippet"]}</div>
+                <div>
+                    <span>${conv["meta"]["subject"]|h}</span>
+                    <span style="color:#777;overflow:hidden;vertical-align:bottom;white-space:nowrap;min-width:600px"> - ${conv["meta"]["snippet"]}</span>
+                </div>
                 <span style="position:absolute;right:1px;bottom:-4px;cursor:default;color:#000">
                     <span title="There are ${conv['count']} messages in this conversation">${conv['count']}</span>
                 </span>
@@ -181,11 +204,8 @@
   </div>
 </%def>
 
-<%def name="viewConversation()">
-    <form class="ajax" method="post" action="/messages/thread">
-        ${toolbar_layout(view)}
-        <input type="hidden" name="selected" value="${id}"/>
-    </form>
+<%def name="render_conversation()">
+    ${toolbar_layout(view)}
     <div class="message-headline">
         <h2 class="message-headline-subject">${conv["meta"]["subject"]|h}</h2>
     </div>
@@ -193,7 +213,7 @@
         <div class="conversation-messages-wrapper">
             ${render_conversation_messages()}
         </div>
-        ${quick_reply_layout(script, messages[messageIds[-1]], id)}
+        ${render_conversation_reply(script, messages[messageIds[-1]], id)}
     </div>
 </%def>
 
@@ -222,7 +242,7 @@
     % endfor
 </%def>
 
-<%def name="quick_reply_layout(script, msg, convId)">
+<%def name="render_conversation_reply(script, msg, convId)">
   <form method="post" class="ajax" action="/messages/write">
     <div class="message-composer">
       <div class="conv-avatar">
@@ -239,9 +259,9 @@
   </form>
 </%def>
 
-<%def name="viewComposer()">
+<%def name="render_composer()">
   <div class="message-composer">
-    <form method="post" action="/messages/write">
+    <form method="post" action="/messages/write" class="ajax">
       <div class="input-wrap message-composer-field">
         <textarea class="message-composer-field-recipient" type="text" name="recipients" placeholder="${_('Enter name or email address') |h}"></textarea>
       </div>
@@ -274,46 +294,52 @@
 <%def name="toolbar_layout(view, nextPageStart=None, prevPageStart=None)">
   %if view == "messages":
     <div id="msg-toolbar" class="toolbar">
-      %if script:
-        <input id="thread-selector" type="checkbox" name="select" value="all"
-               onchange="$('.message-row input[name=selected]').attr('checked', this.checked)"/>
-      %endif
-      %if filterType != "trash":
-        <input type="submit" name="trash" value="Trash" class="button"/>
-      %endif
-      %if filterType != "archive" and filterType != "trash":
-        <input type="submit" name="archive" value="Archive" class="button"/>
-      %endif
-      %if filterType != "unread":
-        <input type="submit" name="unread" value="Mark as Unread" class="button"/>
-      %endif
-      %if filterType != "all":
-        <input type="submit" name="inbox" value="Move to Inbox" class="button"/>
-      %endif
+          %if script:
+            <input id="thread-selector" type="checkbox" name="select" value="all"
+                   onchange="$('.message-row input[name=selected]').attr('checked', this.checked)"/>
+            <input id="toolbarAction" name="action" value="" type="hidden"/>
+          %endif
+          %if filterType != "trash":
+            <input type="submit" name="trash" value="Trash" class="button" onclick="$('#toolbarAction').attr('value', 'trash')"/>
+          %endif
+          %if filterType != "archive" and filterType != "trash":
+            <input type="submit" name="archive" value="Archive" class="button" onclick="$('#toolbarAction').attr('value', 'archive')"/>
+          %endif
+          %if filterType != "unread":
+            <input type="submit" name="unread" value="Mark as Unread" class="button" onclick="$('#toolbarAction').attr('value', 'unread')"/>
+          %endif
+          %if filterType != "all":
+            <input type="submit" name="inbox" value="Move to Inbox" class="button" onclick="$('#toolbarAction').attr('value', 'inbox')"/>
+          %endif
     </div>
   %elif view == "message":
     <div class="toolbar">
       <a class="${'ajax' if script else ''} action-link" href="/messages">Go Back</a>
-      <input type="submit" name="trash" value="Trash" class="button "/>
-      <input type="submit" name="archive" value="Archive" class="button "/>
-      <input type="submit" name="unread" value="Mark as Unread" class="button "/>
+        <form method="post" action="/messages/thread">
+            <input type="hidden" name="selected" value="${id}"/>
+            <input id="toolbarAction" name="action" value="" type="hidden"/>
+            <input type="submit" name="trash" value="Trash" class="button" onclick="$('#toolbarAction').attr('value', 'trash')"/>
+            <input type="submit" name="archive" value="Archive" class="button" onclick="$('#toolbarAction').attr('value', 'archive')"/>
+            <input type="submit" name="unread" value="Mark as Unread" class="button" onclick="$('#toolbarAction').attr('value', 'unread')"/>
+        </form>
       <span class="clear" style="display:block"></span>
     </div>
   %endif
 </%def>
 
-<%def name="viewListing()">
+<%def name="render_conversations()">
   <div id="people-view" class="viewbar">
     ${viewOptions()}
   </div>
   <div id="threads-wrapper" class="paged-container">
-    <form action="/messages/thread" method="post" class="ajax">
+    <form action="/messages/thread" method="post">
         ${toolbar_layout(view, nextPageStart, prevPageStart)}
         <div class="conversation-layout-container">
             %for mid in mids:
-              ${conversation_row_layout(script, mid, messages[mid])}
+              ${render_conversation_row(script, mid, messages[mid])}
             %endfor
         </div>
+        <input type="hidden" name="filterType" value="${filterType}"/>
     </form>
   </div>
   <div id="people-paging" class="pagingbar">
@@ -323,9 +349,9 @@
 
 <%def name="center()">
   %if view == "messages":
-    ${viewListing()}
+    ${render_conversations()}
   %elif view == "message":
-    ${viewConversation()}
+    ${render_conversation()}
   %endif
 </%def>
 
