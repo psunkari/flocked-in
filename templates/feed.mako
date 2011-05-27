@@ -27,7 +27,7 @@
               </div>
               <% mailId = me['basic'].get('emailId', None) if me else None %>
               %if mailId:
-                <input type="hidden" name="sender" value=${mailId}/>
+                <input type="hidden" name="sender" value="${mailId}" />
               %endif
               <input class="button" type="submit" id="submit" value="${_('Submit')}"/>
             </form>

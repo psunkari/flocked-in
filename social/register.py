@@ -203,21 +203,10 @@ class RegisterResource(BaseResource):
         username = username if username else emailId
         existingUser = yield Db.get_count(emailId, "userAuth")
         if not existingUser:
-            args={}
             orgKey = yield getOrgKey(domain)
             userKey = yield utils.addUser(emailId, username, passwd,
                                           orgKey, title, timezone)
             yield Db.remove(emailId, "invitations")
-
-            cols = yield Db.get_slice(orgKey, "entities", ["admins"])
-            if not cols:
-                yield Db.insert(orgKey, "entities", "", userKey, "admins")
-                yield Db.insert(emailId, "userAuth", "True", "isAdmin")
-            args['domain'] = domain
-            args['emailId'] = emailId
-
-            #yield renderScriptBlock(request, "signup.mako", "invitePeople",
-            #                        landing, "#signup_form", "set", **args)
 
         else:
             raise errors.ExistingUser
