@@ -426,16 +426,16 @@ var feedback = {
             id: 'feedback-dlg',
             buttons: [
                 {
-                    text: 'Cancel',
-                    click: function() {
-                        $$.dialog.close(this, true)
-                    }
-                },
-                {
                     text:'Submit',
                     click : function() {
                         comment = $("#feedback-desc").val();
                         $.post("/feedback", {comment:comment, mood:feedback._mood});
+                        $$.dialog.close(this, true)
+                    }
+                },
+                {
+                    text: 'Cancel',
+                    click: function() {
                         $$.dialog.close(this, true)
                     }
                 }
