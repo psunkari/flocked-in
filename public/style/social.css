@@ -1005,3 +1005,61 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     max-height: 75px;
     max-width: 75px;
 }
+
+
+/*
+ * Feedback dialog
+ */
+#feedback-center {
+    padding: 10px;
+}
+#feedback-mood-wrapper {
+    text-align: center;
+}
+
+.feedback-mood {
+    width: 33.3%;
+    float: left;
+    padding: 6px 0;
+    font-weight: bold;
+    display: inline-block;
+    cursor: pointer;
+}
+.feedback-mood:focus, .feedback-mood:hover {
+    background-color: #F0F0F0;
+}
+.feedback-mood-selected {
+    background-color: #E8EEFA !important;
+    box-shadow: inset 2px 2px 5px #888;
+}
+.feedback-mood-icon {
+    background-image: url(/public/images/feedback.png);
+    width: 48px;
+    height: 48px;
+    margin: 0 auto;
+}
+
+.happy-icon {
+    background-position: 0 0;
+}
+.sad-icon {
+    background-position: -48px 0;
+}
+.idea-icon {
+    background-position: -96px 0;
+}
+
+#feedback-type {
+    font-weight: bold;
+    color: #888;
+}
+#feedback-desc-page {
+    padding: 10px 0 0;
+}
+#feedback-desc {
+    resize: none;
+    height: 60px;
+    width: 100%;
+    border: 1px solid #C3D9FF;
+    font-size: inherit;
+}

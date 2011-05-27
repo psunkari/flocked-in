@@ -68,7 +68,14 @@
 <%def name="item_layout(convId)">
   <div id="conv-${convId}" class="conv-item">
     <div class="conv-avatar" id="conv-avatar-${convId}">
-      ${self.conv_owner(items[convId]['meta']['owner'])}
+      <%
+        convMeta = items[convId]['meta']
+      %>
+      %if convMeta['type'] != 'feedback':
+        ${self.conv_owner(convMeta['owner'])}
+      %else:
+        ${self.feedback_icon(convMeta['subType'])}
+      %endif
     </div>
     <div class="conv-data">
       <div id="conv-root-${convId}">
@@ -115,12 +122,14 @@
   </div>
 </%def>
 
+
 <%def name="conv_owner(ownerId)">
   <% avatarURI = utils.userAvatar(ownerId, entities[ownerId]) %>
   %if avatarURI:
     <img src="${avatarURI}" height="48" width="48"/>
   %endif
 </%def>
+
 
 <%def name="conv_root(convId, isQuoted=False)">
   <% itemType = items[convId]["meta"]["type"] %>
@@ -408,6 +417,36 @@
 </%def>
 
 
+<%def name="feedback_icon(type)">
+  <div class="feedback-mood-icon ${type}-icon"></div>
+</%def>
+
+
+<%def name="render_feedback(convId, isQuoted=False)">
+  <%
+    conv = items[convId]
+    mood = conv["meta"]["subType"]
+    normalize = utils.normalizeText
+    owner = conv["meta"]["owner"]
+    print entities
+    print owner
+  %>
+  %if not isQuoted:
+    ${utils.userName(owner, entities[owner], "conv-user-cause")}
+  %endif
+  <div class="item-title">
+    <div>
+      %if isQuoted:
+        ${utils.userName(owner, entities[owner])}
+      %endif
+      %if conv["meta"].has_key("comment"):
+        ${conv["meta"]["comment"]|normalize}
+      %endif
+    </div>
+  </div>
+</%def>
+
+
 <%def name="render_link(convId, isQuoted=False)">
   <%
     conv = items[convId]
@@ -441,6 +480,7 @@
   </div>
 </%def>
 
+
 <%def name="render_activity(convId, isQuoted=False)">
   <%
     conv = items[convId]
@@ -460,6 +500,7 @@
   %>
   ${activity}
 </%def>
+
 
 <%def name="userListDialog()">
   <%
@@ -484,20 +525,32 @@
 
 
 <%def name="feedbackDialog()">
-    <div id="ui-feedback-dlg">
-      <div class='ui-dlg-title'> ${_("Feedback")} </div>
-      <div class='ui-list ui-dlg-center'>
-        <div class="ui-listitem">
-          <div style="padding:5px">
-            <label for="feedback-category"> ${_("Category")}</label>
-            <select id="feedback-category" name='feedback-category'  >
-              <option value="UI">User Interface</option>
-              <option value="feature">Feature</option>
-              <option value="Misc" selected="">Misc</option>
-            </select>
-            <textarea row=2 cols=34 name="feedback-comment" id="feedback-comment" placeholder="${_('Say Something')}"></textarea>
+  <div id="ui-feedback-dlg">
+    <div class='ui-dlg-title' id='feedback-dlg-title'>${_("flocked.in made me happy!")}</div>
+    <div class='ui-dlg-center' id='feedback-center'>
+      <div id="feedback-mood-wrapper">
+        <div id="feedback-mood-inner">
+          <div id="feedback-happy" class="feedback-mood feedback-mood-selected" onclick="$$.feedback.mood('happy');">
+            <div class="feedback-mood-icon happy-icon"></div>
+            Made me Happy
           </div>
+          <div id="feedback-sad" class="feedback-mood" onclick="$$.feedback.mood('sad');">
+            <div class="feedback-mood-icon sad-icon"></div>
+            Made me Sad
+          </div>
+          <div id="feedback-idea" class="feedback-mood" onclick="$$.feedback.mood('idea');">
+            <div class="feedback-mood-icon idea-icon"></div>
+            I have an Idea
+          </div>
+          <div style="clear:both;"></div>
+        </div>
+      </div>
+      <div id="feedback-desc-page">
+        <div>
+          <label id="feedback-type">${_('Please describe what you liked')}</label>
+          <textarea rows="2" id="feedback-desc"></textarea>
         </div>
       </div>
     </div>
+  </div>
 </%def>

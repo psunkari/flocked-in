@@ -419,29 +419,51 @@ $$.convs = convs;
 
 (function($$, $){
 var feedback = {
-   showFeedback: function(){
+    _mood: null,
+    showFeedback: function() {
+        feedback._mood = 'happy';
         var dialogOptions = {
             id: 'feedback-dlg',
             buttons: [
                 {
-                    text:'Submit',
-                    click : function(){
-                        comment =  $("#feedback-comment").val();
-                        category = $("#feedback-category").val();
-                        $.post("/feedback", {'comment':comment, "category":category});
+                    text: 'Cancel',
+                    click: function() {
                         $$.dialog.close(this, true)
                     }
                 },
                 {
-                    text:'Cancel',
-                    click : function(){
+                    text:'Submit',
+                    click : function() {
+                        comment = $("#feedback-desc").val();
+                        $.post("/feedback", {comment:comment, mood:feedback._mood});
                         $$.dialog.close(this, true)
                     }
                 }
             ]
         };
         $$.dialog.create(dialogOptions);
-        $.getScript('/ajax/feedback');
+        $.getScript('/ajax/feedback', function() {feedback.mood('happy');});
+    },
+
+    _descriptionLabels: {
+        happy: 'Please describe what you liked',
+        sad: 'Please describe your problem below',
+        idea: 'Please describe your idea'
+    },
+    _titles: {
+        happy: 'flocked.in made me happy!',
+        sad: 'flocked.in made me sad',
+        idea: 'I have an idea for flocked.in'
+    },
+
+    mood: function(mood) {
+        feedback._mood = mood;
+
+        $('.feedback-mood-selected').removeClass('feedback-mood-selected');
+        $('#feedback-'+mood).addClass('feedback-mood-selected');
+        
+        $('#feedback-dlg-title').text(feedback._titles[mood]);
+        $('#feedback-type').text(feedback._descriptionLabels[mood]);
     }
 };
 $$.feedback = feedback;
@@ -615,10 +637,12 @@ var dialog = {
                  '</div>' +
                '</div>',
 
-    _createButtons: function($dialog, dlgId, options) {
-        if (!options.buttons || !$.isArray(options.buttons))
+    createButtons: function($dialog, dlgId, options) {
+        if (!options.buttons || !$.isArray(options.buttons) ||
+             options.buttons.length == 0)
             return;
 
+        $('#'+dlgId+'-buttonbox').remove();   // Remove if buttons already exist
         var $buttonBox = $("<div>").addClass("ui-dlg-buttonbox")
                                    .attr('id', dlgId+'-buttonbox')
                                    .appendTo($dialog.find('.ui-dlg-inner')),
@@ -654,7 +678,7 @@ var dialog = {
             $('.ui-dlg-contents', $template).attr('id', dlgId);
 
             dialog._dialogs[dlgId] = $template;
-            dialog._createButtons($template, dlgId, options);
+            dialog.createButtons($template, dlgId, options);
             $('body').append($template);
         }
 
