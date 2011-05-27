@@ -1,8 +1,6 @@
-<%! from social import utils, _, __, plugins, constants %>
-<%! import re, pytz %>
-<%! import email.utils %>
+<%! from social import utils, _, __, constants %>
+<%! import re %>
 <%! import cgi %>
-<%! import datetime; import dateutil.relativedelta%>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -79,55 +77,6 @@
 %>
 
 <%!
-    def formatBodyForForward(message):
-      lines = []
-      lines.append("")
-      lines.append("")
-      lines.append("-------- Original Message --------")
-      lines.append("Subject: %s" %message["Subject"])
-      lines.append("Date: %s" %message["Date"])
-      lines.append("From: %s" %message["From"])
-      lines.append("To: %s" %message["To"])
-      lines.append("")
-      lines.append(message["body"])
-      new_reply = "\n".join(lines)
-      return new_reply
-%>
-
-<%!
-  def timeElapsedSince(then_string):
-    then = float(then_string)
-    then = datetime.datetime.fromtimestamp(then)
-    now = datetime.datetime.now()
-    weekday = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
-                "Saturday", "Sunday"]
-    rc = dateutil.relativedelta.relativedelta(now, then)
-    tz = pytz.timezone("Asia/Kolkata")
-    dt = tz.localize(then)
-
-    if rc.days < 1:
-      if rc.days == 0:
-        fmt = "%I:%M%p"
-        date = dt.strftime(fmt)
-        if then.day == now.day:
-          return "Today at %s" %date
-        else:
-          return "Yesterday at %s" %date
-      else:
-        fmt = "%I:%M%p"
-        date = dt.strftime(fmt)
-        return "Yesterday at %s" %date
-    elif rc.years < 1:
-        fmt = "%b %d, at %I:%M%p"
-        date = dt.strftime(fmt)
-        return "%s" %date
-    else:
-      fmt = "%b %d, Y at %X"
-      date = dt.strftime(fmt)
-      return "%s" %date
-%>
-
-<%!
     def getSenderAvatar(conv, people, size="m"):
         senderId = conv["meta"]["owner"]
         avatarURI = None
@@ -161,7 +110,7 @@
             <div style="display:inline-block;padding:2px;width:635px"
                  onclick="var url='/messages/thread?id=${convId}';$.address.value(url); $$.fetchUri(url); ">
                 <span style="padding:4px 0 0 4px;width:150px">${formatPeopleInConversation(conv, people)}</span>
-                <span style="width:450px;font-size:11px;color:#777;padding-left:4px">${conv['meta']["date_epoch"]|timeElapsedSince}</span>
+                <span style="width:450px;font-size:11px;color:#777;padding-left:4px">${utils.simpleTimestamp(float(conv['meta']["date_epoch"]), people[myKey]["basic"]["timezone"])}</span>
             </div>
             <div style="display:inline-block;padding:2px">
                 <span>
@@ -231,7 +180,7 @@
                     ${people[messages[mid]['meta']['owner']]["basic"]["name"]}
                   </a>
                 </span>
-                <span class="time-label message-headers-time">${messages[mid]["meta"]["date_epoch"]|timeElapsedSince}</span>
+                <span class="time-label message-headers-time">${utils.simpleTimestamp(float(messages[mid]["meta"]["date_epoch"]), people[myKey]["basic"]["timezone"])}</span>
               </div>
               <div class="message-message">
                 ${messages[mid]["meta"].get("body", '') | newlinescape}
