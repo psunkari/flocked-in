@@ -812,6 +812,18 @@ var acl = {
         evt.preventDefault();
     },
 
+    switchACL: function(id, type, entityId, entityName){
+        var aclObj = {accept:{}}
+        if (type == "group"){
+            aclObj.accept.groups = [entityId];
+            $("#"+id).attr("value", $$.json.stringify(aclObj));
+            $("#"+id+"-label").text(entityName);
+            $("#"+id+"-label").attr("disabled", 'disabled');
+        }
+        return ;
+
+    },
+
     updateACL: function(id, ui) {
         var type = ui.item.children("a").first().attr("_acl"),
             aclObj = {accept:{}},

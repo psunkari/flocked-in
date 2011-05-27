@@ -546,8 +546,14 @@ class FeedResource(base.BaseResource):
         start = utils.getRequestArg(request, "start") or ''
 
         if script:
+            handlers = {}
+            if "groupId" in args:
+                groupName = args["feedTitle"].split(":")[1].strip()
+                groupId = args['feedId']
+                handlers["onload"] = "$$.acl.switchACL('sharebar-acl', 'group','%s', '%s')" %(groupId, groupName)
+
             yield renderScriptBlock(request, "feed.mako", "share_block",
-                                    landing, "#share-block", "set", **args)
+                                    landing, "#share-block", "set", handlers=handlers, **args)
             yield self._renderShareBlock(request, "status")
 
         if itemType and itemType in plugins and plugins[itemType].hasIndex:
