@@ -464,6 +464,7 @@ var feedback = {
         
         $('#feedback-dlg-title').text(feedback._titles[mood]);
         $('#feedback-type').text(feedback._descriptionLabels[mood]);
+        $('#feedback-desc').focus()
     }
 };
 $$.feedback = feedback;
