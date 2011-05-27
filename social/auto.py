@@ -195,11 +195,52 @@ class AutoCompleteResource(BaseResource):
 
     @defer.inlineCallbacks
     def _users(self, request, term, myFriendsOnly=False):
-        pass
+        if len(term) < 2:
+            request.write("[]")
+            return
+
+        authInfo = request.getSession(IAuthInfo)
+        userId = authInfo.username
+        orgId = authInfo.organization
+        finish = _getFinishTerm(term)
+
+        # List of matching names in the company
+        d1 = Db.get_slice(orgId, "nameIndex",
+                          start=term, finish=finish, count=5)
+
+        toFetchEntities = set()
+        users = []
+
+        # List of users that match the given term
+        matchedUsers = yield d1
+        for user in matchedUsers:
+            name, uid = user.column.name.rsplit(':')
+            users.append(uid)
+            toFetchEntities.add(uid)
+
+        # Fetch the required entities
+        entities = {}
+        if toFetchEntities:
+            results = yield Db.multiget(toFetchEntities, "entities", "basic")
+            entities.update(utils.multiSuperColumnsToDict(results))
+
+        output = []
+        template = self._template
+        avatar = utils.userAvatar
+
+        for uid in users:
+            if uid in entities:
+                name = entities[uid]["basic"]["name"]
+                data = {"icon": avatar(uid, entities[uid], "s"), "title": name,
+                        "meta": entities[uid]["basic"].get("jobTitle", "")}
+                output.append({"value": name,
+                               "label": template%data})
+
+        request.write(json.dumps(output))
 
 
     @defer.inlineCallbacks
-    def _groups(self, request, term, myGroupsOnly=False):
+    def _groups(self, request, term):
         pass
 
 
