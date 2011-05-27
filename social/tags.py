@@ -66,16 +66,18 @@ class TagsResource(base.BaseResource):
         myOrgId = args["orgKey"]
         args["menuId"] = "tags"
         args["tagId"]=tagId
+        prevDisplayedTag = request.getCookie('cu')
+        request.addCookie('cu', tagId, path="/ajax/tags")
 
         if script and landing:
             yield render(request, "tags.mako", **args)
 
+        appchange = appchange or not prevDisplayedTag
         if script and appchange:
             yield renderScriptBlock(request, "tags.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-        request.addCookie('cu', tagId, path="/ajax/tags")
-        newId = (request.getCookie('cu') != tagId) or appchange
+        newId = (prevDisplayedTag != tagId) or appchange
         if newId or not script:
             tagInfo = yield Db.get_slice(myOrgId, "orgTags", super_column=tagId)
             if not tagInfo:
@@ -132,7 +134,7 @@ class TagsResource(base.BaseResource):
         toFetchCount = count + 1
         start = utils.decodeKey(start)
 
-        renderLayout = (not appchange and request.getCookie('cu')) or appchange
+        appchange = appchange or request.getCookie('cu')
         request.addCookie('cu', '', path="/ajax/tags", expires=formatdate(0))
 
         args["menuId"] = "tags"
@@ -147,44 +149,48 @@ class TagsResource(base.BaseResource):
             yield renderScriptBlock(request, "tags.mako", "header",
                                     landing, "#tags-header", "set", **args )
 
-        tags = yield Db.get_slice(myOrgId, "orgTagsByName", start=start, count= toFetchCount)
-        tags = utils.columnsToDict(tags, ordered=True)
+        tagsByName = yield Db.get_slice(myOrgId, "orgTagsByName", start=start, count=toFetchCount)
+        tagIds = [x.column.value for x in tagsByName]
 
-        if len(tags) > count:
-            nextPageStart = utils.encodeKey(tags.keys()[-1])
-            del tags[tags.keys()[-1]]
+        if len(tagsByName) > count:
+            nextPageStart = utils.encodeKey(tagsByName[-1].column.name)
+            tagIds = tagIds[:-1]
 
         if start:
             prevCols = yield Db.get_slice(myOrgId, "orgTagsByName",
                                           start=start, reverse=True,
-                                          count= toFetchCount)
+                                          count=toFetchCount)
             if len(prevCols) > 1:
                 prevPageStart = utils.encodeKey(prevCols[-1].column.name)
 
-        tagsFollowing = []
+        tags = {}
+        if tagIds:
+            tags = yield Db.get_slice(myOrgId, "orgTags", tagIds)
+            tags = utils.supercolumnsToDict(tags)
 
         # TODO: We need an index of all tags that the user is following
         #       Probably convert the 'subscriptions' column family to 'Super'
         #       and have people and tags in the same column family.
-        if tags:
-            tagIds = tags.values()
+        tagsFollowing = []
+        if tagIds:
             cols = yield Db.multiget(tagIds, "tagFollowers", myId)
             tagsFollowing = [x for x in cols.keys() if cols[x]]
-
+        
         args['tags'] = tags
+        args['tagIds'] = tagIds
         args['tagsFollowing'] = tagsFollowing
         args['nextPageStart'] = nextPageStart
         args['prevPageStart'] = prevPageStart
 
         if script:
-            if renderLayout:
+            if appchange:
                 yield renderScriptBlock(request, "tags.mako", "tagsListLayout",
                                         landing, "#content", "set", **args)
             else:
                 yield renderScriptBlock(request, "tags.mako", "listTags",
                                         landing, "#tags-wrapper", "set", **args)
                 yield renderScriptBlock(request, "tags.mako", "paging",
-                                    landing, "#tags-paging", "set", **args)
+                                        landing, "#tags-paging", "set", **args)
 
         if not script:
             yield render(request, "tags.mako", **args)

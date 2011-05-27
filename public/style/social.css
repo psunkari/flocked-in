@@ -1063,3 +1063,19 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     border: 1px solid #C3D9FF;
     font-size: inherit;
 }
+
+/*
+ * Tags listing
+ */
+.tag-items-count {
+    height: 48px;
+    width: 48px;
+    line-height: 45px;
+    text-shadow: 0px 0px 2px black;
+    background-color: #DDD;
+    border: 1px solid #CCC;
+    color: white;
+    text-align: center;
+    font-size: 20px;
+    overflow: hidden;
+}

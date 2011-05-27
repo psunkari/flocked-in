@@ -7,7 +7,11 @@
 <%inherit file="base.mako"/>
 
 <%def name="layout()">
+  %if tagId:
   <div class="contents has-left has-right">
+  %else:
+  <div class="contents has-left">
+  %endif
     <div id="left">
       <div id="nav-menu">
         ${self.nav_menu()}
@@ -55,7 +59,7 @@
 </%def>
 
 <%def name="itemsLayout()">
-  <div id="tag-items" class="center-contents">
+  <div id="tag-items">
     ${self.items()}
   </div>
 </%def>
@@ -108,7 +112,7 @@
     counter = 0
     firstRow = True
   %>
-  %for tagname in tags:
+  %for tagId in tagIds:
     %if counter % 2 == 0:
       %if firstRow:
         <div class="users-row users-row-first">
@@ -117,7 +121,7 @@
         <div class="users-row">
       %endif
     %endif
-    <div class="users-user">${_displayTag(tagname)}</div>
+    <div class="users-user">${_displayTag(tagId)}</div>
     %if counter % 2 == 1:
       </div>
     %endif
@@ -128,10 +132,13 @@
   %endif
 </%def>
 
-<%def name="_displayTag(tagname)" >
-  <% tagId = tags[tagname] %>
-  <div class = 'user-details'>
-    <div class="user-details-name"><a class="ajax" href="/tags?id=${tagId}">${tagname}</a></div>
+<%def name="_displayTag(tagId)" >
+  <% tagName = tags[tagId]["title"] %>
+  <div class="users-avatar">
+    <div class="tag-items-count"><span>${tags[tagId].get("itemsCount", "0")}</span></div>
+  </div>
+  <div class = 'users-details'>
+    <div class="user-details-name"><a class="ajax" href="/tags?id=${tagId}">${tagName}</a></div>
     <div class="user-details-actions">
       <ul id='tag-actions-${tagId}' class="middle h-links">
         ${tag_actions(tagId, tagId in tagsFollowing)}
