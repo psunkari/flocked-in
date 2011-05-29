@@ -223,9 +223,10 @@
 
 <%def name="render_composer()">
   <div class="message-composer">
-    <form method="post" action="/messages/write" class="ajax">
+    <form method="post" action="/messages/write" class="ajax" onsubmit="return false">
       <div class="input-wrap message-composer-field">
-        <textarea class="message-composer-field-recipient" type="text" name="recipients" placeholder="${_('Enter name or email address') |h}"></textarea>
+        <div class="message-composer-recipients"></div>
+        <input class="message-composer-field-recipient" type="text" placeholder="${_('Enter name or email address') |h}"/>
       </div>
       <div class="input-wrap message-composer-field">
         <input class="message-composer-field-subject" type="text" name="subject" placeholder="${_('Enter a subject of your message') |h}"/>
@@ -234,8 +235,18 @@
         <textarea class="message-composer-field-body" placeholder="Write a message to your friends and colleagues" name="body"></textarea>
       </div>
       <div style="text-align:right;padding:4px 0">
-        <input type="submit" name="send" value="Send" class="button default">
         %if script:
+            <%
+                onclickscript = """
+                    var recipients = $('.message-composer-recipients').data('recipients');
+                    var subject = $('.message-composer-field-subject').attr('value');
+                    var body = $('.message-composer-field-body').attr('value');
+                    var urlpostdata = 'recipients='+recipients+'&subject='+subject+'&body='+body;
+                    $.post('/ajax/messages/write', urlpostdata, null, 'script')
+            """%>
+            <button type="button" class="button default" onclick="${onclickscript}">
+                ${_('Send')}
+            </button>
             <button type="button" class="button" onclick="$('#composer').empty()">
                 ${'Cancel'}
             </button>

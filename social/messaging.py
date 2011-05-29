@@ -598,11 +598,26 @@ class MessagingResource(base.BaseResource):
 
         if script:
             onload = """
-
-                     $('#mainbar .contents').removeClass("has-right");
+                    $('.message-composer-field-recipient').autocomplete({
+                        source: '/auto/users',
+                        minLength: 2,
+                        select: function( event, ui ) {
+                            $('.message-composer-recipients').append("<span style='padding:0 4px'>"+ ui.item.value +"</span>")
+                            var rcpts = $('.message-composer-recipients').data('recipients')
+                            if (jQuery.isArray(rcpts)){
+                                rcpts.push(ui.item.uid)
+                            }else{
+                                rcpts = [ui.item.uid]
+                            }
+                            $('.message-composer-recipients').data('recipients', rcpts)
+                            this.value = ""
+                            return false;
+                    }
+                    });
                      """
             yield renderScriptBlock(request, "message.mako", "render_composer",
-                                    landing, "#composer", "set", **args)
+                                    landing, "#composer", "set", True,
+                                    handlers={"onload":onload}, **args)
         else:
             yield render(request, "message.mako", **args)
 

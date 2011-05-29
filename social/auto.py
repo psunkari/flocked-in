@@ -233,7 +233,7 @@ class AutoCompleteResource(BaseResource):
                 name = entities[uid]["basic"]["name"]
                 data = {"icon": avatar(uid, entities[uid], "s"), "title": name,
                         "meta": entities[uid]["basic"].get("jobTitle", "")}
-                output.append({"value": name,
+                output.append({"value": name, "uid":uid,
                                "label": template%data})
 
         request.write(json.dumps(output))
