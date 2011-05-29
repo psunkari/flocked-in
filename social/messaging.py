@@ -295,6 +295,7 @@ class MessagingResource(base.BaseResource):
             onload = """
                      $$.menu.selectItem('%s');
                      $('#mainbar .contents').removeClass("has-right");
+                     $('.center-contents').removeClass("nopad");
                      """ %args["menuId"]
             yield renderScriptBlock(request, "message.mako", "center", landing,
                                     ".center-contents", "set", True,
@@ -567,13 +568,22 @@ class MessagingResource(base.BaseResource):
                 onload = """
                          $$.menu.selectItem('%s');
                          $('#mainbar .contents').addClass("has-right");
+                         $('.center-contents').addClass("nopad")
                          $('.conversation-reply').autogrow();
+                         $('.message-message').not(':last').each(function(i, v){
+                             $(v).toggle();
+                             $(v).siblings().children('.message-headers-snippet').
+                                toggleClass('message-headers-snippet-show');
+                          });
                          """ %args["menuId"]
                 yield renderScriptBlock(request, "message.mako", "center",
                                         landing, ".center-contents", "set", True,
                                         handlers={"onload":onload}, **args)
+
+                onload = "$('#expandAll').data('isExpand', true);"
                 yield renderScriptBlock(request, "message.mako", "right",
-                                        landing, ".right-contents", "set", **args)
+                                        landing, ".right-contents", "set", True,
+                                        handlers={"onload":onload}, **args)
             else:
                 yield render(request, "message.mako", **args)
 

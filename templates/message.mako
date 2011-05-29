@@ -35,7 +35,7 @@
             %endif
           </div>
         </div>
-        <div class="center-contents">
+        <div class="center-contents nopad">
           %if view != "compose":
             %if not script:
               ${center()}
@@ -50,6 +50,19 @@
 <%!
   def newlinescape(text):
     return utils.normalizeText(cgi.escape(text))
+%>
+
+<%!
+  def makeSnippet(body):
+    lines = body.split("\n")
+    snippet = ""
+    for line in lines:
+        if not line.startswith(">") or not "wrote:" in line:
+            snippet = line[:120]
+            break
+        else:
+            continue
+    return snippet
 %>
 
 <%!
@@ -140,9 +153,8 @@
                 </span>
             </div>
             <a class="ajax message-link" href="/messages/thread?id=${convId}" style="display:block;padding:2px;position:relative">
-                <div>
-                    <span>${conv["meta"]["subject"]|h}</span>
-                    <span style="color:#777;overflow:hidden;vertical-align:bottom;white-space:nowrap;min-width:600px"> - ${conv["meta"]["snippet"]}</span>
+                <div style="overflow: hidden;white-space: nowrap;width: 667px;color:#777;">
+                    <span style="color:#000">${conv["meta"]["subject"]|h}</span> - ${conv["meta"]["snippet"]}
                 </div>
                 <span style="position:absolute;right:1px;bottom:-4px;cursor:default;color:#000">
                     <span title="There are ${conv['count']} messages in this conversation">${conv['count']}</span>
@@ -155,10 +167,10 @@
 
 <%def name="render_conversation()">
     ${toolbar_layout(view)}
-    <div class="message-headline">
-        <h2 class="message-headline-subject">${conv["meta"]["subject"]|h}</h2>
+    <div class="conversation-headline">
+        <h2 class="conversation-headline-subject">${conv["meta"]["subject"]|h}</h2>
     </div>
-    <div class="conversation-wrapper" style="padding:2px;border:1px solid #BCBCBC;border-radius:7px">
+    <div class="conversation-wrapper">
         <div class="conversation-messages-wrapper">
             ${render_conversation_messages()}
         </div>
@@ -168,19 +180,20 @@
 
 <%def name="render_conversation_messages()">
     % for mid in messageIds:
-        <div class="conversation-message-wrapper" style="padding-bottom:2px; margin-bottom:2px; border-bottom:1px solid #E2e2e2">
+        <div class="conversation-message-wrapper" style="padding:2px; margin:2px; border:1px solid #E2e2e2">
           <div class="comment-avatar">
             ${getSenderAvatar(messages[mid], people, "s")}
           </div>
-          <div class="comment-container">
+          <div class="comment-container" style="padding-top:0px;min-height:32px;padding-bottom:0px">
             <div class="conv-summary">
-              <div class="message-headers">
-                <span class="user conv-user-cause">
+              <div class="message-headers" onclick="var _self=this;$(this).siblings().toggle(1, function(){$(_self).children('.message-headers-snippet').toggleClass('message-headers-snippet-show')});">
+                <div class="user message-headers-sender">
                   <a href="/profile?id=${messages[mid]['meta']['owner']}" class="ajax">
                     ${people[messages[mid]['meta']['owner']]["basic"]["name"]}
                   </a>
-                </span>
-                <span class="time-label message-headers-time">${utils.simpleTimestamp(float(messages[mid]["meta"]["date_epoch"]), people[myKey]["basic"]["timezone"])}</span>
+                </div>
+                <div class="message-headers-snippet">${messages[mid]["meta"].get("body", '') | makeSnippet}</div>
+                <nobr class="time-label message-headers-time">${utils.simpleTimestamp(float(messages[mid]["meta"]["date_epoch"]), people[myKey]["basic"]["timezone"])}</nobr>
               </div>
               <div class="message-message">
                 ${messages[mid]["meta"].get("body", '') | newlinescape}
@@ -220,21 +233,15 @@
       <div class="input-wrap message-composer-field">
         <textarea class="message-composer-field-body" placeholder="Write a message to your friends and colleagues" name="body"></textarea>
       </div>
-      <div id="sharebar-actions">
-        <ul class="middle user-actions h-links message-composer-field">
-          <li class="button">
-            <input type="submit" name="send" value="Send" class="button default">
-          </li>
-          <li class="button">
-            %if script:
-                <button type="button" class="button" onclick="$('#composer').empty()">
-                    ${'Cancel'}
-                </button>
-            %else:
-                <a class="ajax" _ref="/messages">${'Cancel'}</a>
-            %endif
-          </li>
-        </ul>
+      <div style="text-align:right;padding:4px 0">
+        <input type="submit" name="send" value="Send" class="button default">
+        %if script:
+            <button type="button" class="button" onclick="$('#composer').empty()">
+                ${'Cancel'}
+            </button>
+        %else:
+            <a class="ajax" _ref="/messages">${'Cancel'}</a>
+        %endif
       </div>
     </form>
   </div>
@@ -262,8 +269,8 @@
           %endif
     </div>
   %elif view == "message":
-    <div class="toolbar">
-      <a class="${'ajax' if script else ''} action-link" href="/messages">Go Back</a>
+    <div id="msg-toolbar" class="toolbar">
+      <a class="${'ajax' if script else ''} back-link" href="/messages">Go Back</a>
         <form method="post" action="/messages/thread">
             <input type="hidden" name="selected" value="${id}"/>
             <input id="toolbarAction" name="action" value="" type="hidden"/>
@@ -291,7 +298,7 @@
         <input type="hidden" name="filterType" value="${filterType}"/>
     </form>
   </div>
-  <div id="people-paging" class="pagingbar">
+  <div id="people-paging" class="pagingbar" style="margin-top:0">
       ${paging()}
   </div>
 </%def>
@@ -306,6 +313,34 @@
 
 <%def name="right()">
     % if view == "message":
+        <div class="sidebar-chunk">
+            <ul class="v-links peoplemenu middle user-subactions">
+                <li>
+                    <%
+                       toggleMessagesScript = """
+                          var isExpand = $(this).data('isExpand')
+                          console.log(isExpand)
+                          $('.message-message').not(':last').each(function(i, v){
+                            if (isExpand == true){
+                                $(v).show();
+                                $(v).siblings().children('.message-headers-snippet').
+                                   removeClass('message-headers-snippet-show');
+                                $('#expandAll').html('Collapse All');
+                            }
+                            else{
+                                $(v).hide();
+                                $(v).siblings().children('.message-headers-snippet').
+                                   addClass('message-headers-snippet-show');
+                                $('#expandAll').html('Expand All');
+                            }
+                          });
+                          $(this).data('isExpand', !isExpand)
+                          """
+                    %>
+                    <a id="expandAll" href="#" onclick="${toggleMessagesScript}; $.event.fix(event).preventDefault();">Expand All</a>
+                </li>
+            </ul>
+        </div>
         <div class="sidebar-chunk">
           <div class="sidebar-title">People in this conversation</div>
           <ul class="v-links peoplemenu">

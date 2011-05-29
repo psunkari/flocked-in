@@ -6,13 +6,15 @@
 
 #thread-selector {
   position: absolute;
-  left: 2px;
-  top: 2px;
+  left: 0px;
+  top: 7px;
 }
 
 #threads-wrapper {
   padding: 0;
   min-height: 320px;
+  border-left: 1px solid #C3D9FF;
+  border-right: 1px solid #C3D9FF;
 }
 
 .peoplemenu {
@@ -47,14 +49,12 @@
 }
 
 .message-link {
-   /*display:block;*/
    text-decoration:none !important;
 }
 
 .toolbar {
    border-bottom: 1px solid #C3D9FF;
-   /*margin-bottom: 10px;*/
-   padding: 5px 0;
+   padding: 5px;
 }
 
 .time-label {
@@ -65,11 +65,17 @@
    vertical-align:middle;
 }
 
-.message-headline {
+.back-link {
+  position: absolute;
+  left: 2px;
+  top: 10px;
+}
+
+.conversation-headline {
    padding:4px 10px
 }
 
-.message-headline-subject {
+.conversation-headline-subject {
    display:inline;
 }
 
@@ -77,11 +83,44 @@
    background-color: #E8EEFA;
    margin-bottom: 4px;
    padding: 4px 0;
+   cursor:pointer;
+   position:relative;
 }
 
 .message-headers-time {
    float:right;
    display:inline-block;
+   background-color: #E8EEFA;
+   position:absolute;
+   right:0;
+   top:4px;
+   z-index:1000;
+   padding-left:3px;
+}
+
+.message-headers-sender {
+   display:inline-block;
+   font-weight:bold;
+   float:left;
+}
+
+.message-headers-snippet-show {
+    visibility:visible !important;
+}
+
+.message-headers-snippet {
+   display:inline-block;
+   width:380px;
+   overflow:hidden;
+   white-space:nowrap;
+   margin-left:8px;
+   color:#777777;
+   font-size:11px;
+   visibility:hidden;
+}
+
+.message-headers-snippet:after {
+    content: "...";
 }
 
 .message-message {
@@ -119,4 +158,12 @@
 
 .messaging-delete-icon {
     background-position:0px -78px;
+}
+
+.nopad {
+    padding: 0;
+}
+
+.message-composer-field {
+    padding:5px;
 }
