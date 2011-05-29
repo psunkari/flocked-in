@@ -353,7 +353,7 @@ class ItemResource(base.BaseResource):
             args["entities"] = entities
 
 
-            handler = {"onload":"(function(){$('#conv-meta-wrapper-%s').removeClass('no-likes')})();"%(convId)}
+            handler = {"onload":"(function(){$$.convs.showHideComponent('%s', 'likes', true)})();"%(convId)}
             yield renderScriptBlock(request, "item.mako", "conv_footer", False,
                                     "#item-footer-%s"%(itemId), "set",
                                     args=[itemId, hasComments, hasLikes], **args)

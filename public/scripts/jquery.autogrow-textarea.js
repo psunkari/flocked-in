@@ -4,9 +4,10 @@
  * http://onehackoranother.com/projects/jquery/jquery-grab-bag
  *
  * Changes (Prasad)
- *   1. The shadow div is inserted at the end of textarea's parent instead
+ *   1. The shadow div is inserted immediately after the textarea instead
  *      of to the body to make it more probable that the shadow is removed
  *      whenever the nodes around textarea are cleared.
+ * 
  */
 
 (function($) {
@@ -25,7 +26,7 @@
                 position:   'absolute',
                 top:        -10000,
                 left:       -10000,
-                width:      $(this).width() - parseInt($this.css('paddingLeft')) - parseInt($this.css('paddingRight')),
+                width:      $this.width() - parseInt($this.css('paddingLeft')) - parseInt($this.css('paddingRight')),
                 fontSize:   $this.css('fontSize'),
                 fontFamily: $this.css('fontFamily'),
                 lineHeight: $this.css('lineHeight'),

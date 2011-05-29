@@ -388,7 +388,7 @@ var convs = {
             });
         }
 
-        $('#conv-meta-wrapper-'+convId).removeClass('no-tags');
+        convs.showHideComponent(convId, 'tags', true);
         if (addTag)
           $input.focus();
     },
@@ -396,11 +396,11 @@ var convs = {
     doneTags: function(convId) {
         $('#conv-tags-wrapper-'+convId).removeClass('editing-tags');
         if ($('#conv-tags-'+convId).children().length == 0)
-            $('#conv-meta-wrapper-'+convId).addClass('no-tags');
+            convs.showHideComponent(convId, 'tags', false);
     },
 
     comment: function(convId) {
-        $('#conv-meta-wrapper-'+convId).removeClass('no-comments');
+        convs.showHideComponent(convId, 'comments', true);
         $('#comment-form-'+convId).find('.comment-input').focus();
     },
 
@@ -410,6 +410,33 @@ var convs = {
         };
         $$.dialog.create(dialogOptions);
         $.getScript('/ajax/item/likes?id='+itemId);
+    },
+
+    showHideComponent: function(convId, component, show) {
+        var className = 'no-'+component,
+            wrapper = $('#conv-meta-wrapper-'+convId);
+
+        if (show && wrapper.hasClass(className)) {
+            wrapper.removeClass(className);
+            convs._commentFormVisible(convId);
+        } else if (!wrapper.hasClass(className)) {
+            wrapper.addClass(className);
+        }
+    },
+
+    /* Reset the sizes of autogrow-backplane and placeholder */
+    /* XXX: This copied some code from those respective modules directly */
+    _commentFormVisible: function(convId) {
+        var input = $('.comment-input', '#comment-form-wrapper-'+convId);
+        if (input.next().hasClass('autogrow-backplane')) {
+            backplane = input.next();
+            backplane.width(input.width() - parseInt(input.css('paddingLeft')) - parseInt(input.css('paddingRight')));
+        }
+        if (input.prev().hasClass("ui-ph-label")) {
+            label = input.prev();
+            label.height(input.outerHeight());
+            label.width(input.outerWidth());
+        }
     }
 };
 
@@ -547,7 +574,7 @@ var ui = {
             var $this, text, label, $label, inputHeight;
 
             $this = $(this);
-            if ($(this.previousSibling).hasClass("ui-ph-label"))
+            if ($this.prev().hasClass("ui-ph-label"))
                 return;
 
             text = $this.attr('placeholder');
