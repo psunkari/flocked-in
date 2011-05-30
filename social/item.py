@@ -165,8 +165,7 @@ class ItemResource(base.BaseResource):
                 iLike = myKey in args["myLikes"].get(convId, [])
                 d = renderScriptBlock(request, "item.mako", 'conv_likes',
                             landing, '#conv-likes-wrapper-%s' % convId, 'set',
-                            args=[numLikes, iLike,
-                                  [x.column.name for x in likes]], **args)
+                            args=[convId, numLikes, iLike, [x.column.name for x in likes]])
                 renderers.append(d)
 
         # Wait till the item is fully rendered.
