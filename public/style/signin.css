@@ -71,7 +71,7 @@ a:link, a:visited {
 #userfield, #passfield, #rememberlabel, #emailfield {
   width: 225px;
 }
-#username, #password, #emailId {
+#username, #password, #user1 {
   width: 225px;
 }
 #signin-submitbox, #signup-submitbox {
@@ -88,4 +88,9 @@ a:link, a:visited {
   color: #BBB;
   text-align: right;
   font-size: 80%;
+}
+
+.signin-error {
+  color: #C60000;
+  text-align: center;
 }

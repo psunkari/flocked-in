@@ -9,7 +9,7 @@ from twisted.web                import resource, util, http, server, static
 from twisted.internet           import defer, threads, reactor
 from twisted.python             import log, components
 
-from social                     import Config, Db, utils
+from social                     import Config, Db, utils, _
 from social.template            import render
 from social.isocial             import IAuthInfo
 
@@ -37,10 +37,22 @@ def getMyKey(request):
 class SigninForm(resource.Resource):
     isLeaf = True
 
+    def _getError(self, code):
+        if code == "InvalidCredentials":
+            return _('Username and password do not match')
+        elif code == "MissingFields":
+            return _('Please enter both username and password')
+        else:
+            return _('Unknown Error. Please try after sometime')
+
     def render_GET(self, request):
-        args = {"redirect": ""};
+        args = {};
+
         if request.args.has_key("_r"):
             args["redirect"] = urllib.quote(request.args["_r"][0], '*@+/')
+
+        if request.args.has_key("_e"):
+            args["reason"] = self._getError(utils.getRequestArg(request, '_e'))
 
         d = render(request, "signin.mako", **args)
         d.addCallback(lambda x: request.finish())

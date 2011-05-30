@@ -20,9 +20,16 @@
         <table id="signin-table" cellspacing="0" cellpadding="3" border="0" align="center">
           <tr>
             <td colspan="2" class="title">
-              Signin to your account
+              ${_('Signin to your account')}
             </td>
           </tr>
+          %if reason:
+          <tr>
+            <td colspan="2" class="signin-error">
+              <span class="signin-error">${reason}</span>
+            </td>
+          </tr>
+          %endif
           <tr>
             <td id="userlabel"><label for="username">${_('Username')}:</label></td>
             <td id="userfield"><input id="username" type="text" class="textfield" name="u"></input></td>
