@@ -47,27 +47,14 @@ class AutoCompleteResource(BaseResource):
         orgId = authInfo.organization
         finish = _getFinishTerm(term)
 
-        # Fetch list of containers that I belong to and names
-        # that match the given term
-        d1 = Db.get_slice(userId, "entityGroupsMap")
+        # Fetch list of tags and names that match the given term
+        d1 = Db.get_slice(orgId, "orgTagsByName",
+                          start=term, finish=finish, count=10)
         d2 = Db.get_slice(orgId, "nameIndex",
                           start=term, finish=finish, count=10)
 
-        tagContainers = [orgId] if orgId else []
         toFetchEntities = set()
         users = []
-
-        # Various containers that I belong to
-        cols = yield d1
-        for col in cols:
-            gid = col.column.name
-            tagContainers.append(gid)
-            toFetchEntities.add(gid)
-
-        # Fetch tags only from the containers that I belong to
-        d3 = defer.succeed({}) if not tagContainers \
-             else Db.multiget_slice(tagContainers, "orgTagsByName",
-                                    start=term, finish=finish, count=10)
 
         # List of users that match the given term
         matchedUsers = yield d2
@@ -78,12 +65,10 @@ class AutoCompleteResource(BaseResource):
 
         # List of tags that match the given term
         tags = []
-        matchedTags = yield d3
-        for container, matches in matchedTags.items():
-            toFetchEntities.add(container)
-            for match in matches:
-                tags.append({"title": match.column.name,
-                             "id": match.column.value, "org": container})
+        matchedTags = yield d1
+        for match in matchedTags:
+            tags.append({"title": match.column.name,
+                         "id": match.column.value})
         tags.sort(key=itemgetter("title"))
 
         # Fetch the required entities
@@ -108,7 +93,7 @@ class AutoCompleteResource(BaseResource):
         for tag in tags:
             title = tag["title"]
             data = {"icon": "", "title": title,
-                    "meta": entities[tag["org"]]["basic"]["name"]}
+                    "meta": ''}
             output.append({"value": title,
                            "label": template%data,
                            "href": "/tags?id=%s"%tag["id"]})
@@ -131,61 +116,23 @@ class AutoCompleteResource(BaseResource):
             request.write("[]")
             return
 
-        tagContainers = set([orgId]) if orgId else set()
         toFetchTags = set()
 
-        # 1. Fetch item and get the list of tag containers (groups & orgs)
-        # 2. See if I belong to any of those containers
-        d1 = Db.get_slice(itemId, "items", super_column="meta")
-        d2 = Db.get_slice(userId, "entityGroupsMap")
-
-        cols = yield d1
-        meta = utils.columnsToDict(cols)
-        if "parent" in meta:    # This is a comment! Tags cannot exist here!!
-            request.write("[]")
-            return
-
-        acl = meta.get("acl", {"accept": {"orgs":[orgId]}} if orgId else {})
-        if not acl:     # No acl on item and user is external
-            request.write("[]")
-            return
-
-        acl = pickle.loads(acl)
-        accept = acl.get("accept", {})
-        containersInACL = set(accept.get("orgs", []))
-        containersInACL.update(accept.get("groups", []))
-
-        cols = yield d2
-        tagContainers.update([x.column.name for x in cols])
-
-        containers = containersInACL.intersection(tagContainers)
-
-        # 3. Get list of tags from these containers that match the criteria
-        d3 = defer.succeed({}) if not containers \
-             else Db.multiget_slice(containers, "orgTagsByName",
-                                    start=term, finish=finish, count=10)
+        d1 = Db.get_slice(orgId, "orgTagsByName",
+                          start=term, finish=finish, count=10)
         tags = []
-        toFetchEntities = set()
-        matchedTags = yield d3
-        for container, matches in matchedTags.items():
-            toFetchEntities.add(container)
-            for match in matches:
-                tags.append({"title": match.column.name,
-                             "id": match.column.value, "org": container})
+        matchedTags = yield d1
+        for match in matchedTags:
+            tags.append({"title": match.column.name,
+                         "id": match.column.value})
         tags.sort(key=itemgetter("title"))
-
-        entities = {}
-        if toFetchEntities:
-            results = yield Db.multiget_slice(toFetchEntities, "entities",
-                        ["name", "allowExternalUsers"], super_column="basic")
-            entities.update(utils.multiColumnsToDict(results))
 
         output = []
         template = self._singleLineTemplate
         for tag in tags:
             title = tag["title"]
             data = {"title": title,
-                    "meta": entities[tag["org"]]["name"]}
+                    "meta": ''}
             output.append({"value": title,
                            "label": template%data,
                            "href": "/tags?id=%s"%tag["id"]})
