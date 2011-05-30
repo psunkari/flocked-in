@@ -60,8 +60,9 @@ class AutoCompleteResource(BaseResource):
         matchedUsers = yield d2
         for user in matchedUsers:
             name, uid = user.column.name.rsplit(':')
-            users.append(uid)
-            toFetchEntities.add(uid)
+            if uid not in toFetchEntities:
+                users.append(uid)
+                toFetchEntities.add(uid)
 
         # List of tags that match the given term
         tags = []
@@ -162,8 +163,9 @@ class AutoCompleteResource(BaseResource):
         matchedUsers = yield d1
         for user in matchedUsers:
             name, uid = user.column.name.rsplit(':')
-            users.append(uid)
-            toFetchEntities.add(uid)
+            if uid not in toFetchEntities:
+                users.append(uid)
+                toFetchEntities.add(uid)
 
         # Fetch the required entities
         entities = {}
