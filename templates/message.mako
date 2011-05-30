@@ -243,6 +243,7 @@
                     var body = $('.message-composer-field-body').attr('value');
                     var urlpostdata = 'recipients='+recipients+'&subject='+subject+'&body='+body;
                     $.post('/ajax/messages/write', urlpostdata, null, 'script')
+                    $('#composer').empty()
             """%>
             <button type="button" class="button default" onclick="${onclickscript}">
                 ${_('Send')}
@@ -381,8 +382,9 @@
                 <form class="ajax" action="/messages/members" style="font-size:11px;width:185px">
                     <input type="hidden" name='parent' value=${id} />
                     <input type="hidden" name="action" value="add" />
+                    <input type="hidden" name="recipients" id="conversation_recipients"/>
                     <div class="input-wrap">
-                        <input type="text" name="recipients" placeHolder="Your friend's name"/>
+                        <input type="text" placeHolder="Your friend's name" id="conversation_add_member"/>
                     </div>
                 </form>
             </div>

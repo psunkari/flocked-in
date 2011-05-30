@@ -167,3 +167,11 @@
 .message-composer-field {
     padding:5px;
 }
+
+.message-composer-field-body {
+    min-height:80px;
+}
+
+.message-composer-recipients {
+    padding: 0px 0 4px 0;
+}

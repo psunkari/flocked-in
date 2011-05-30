@@ -327,8 +327,18 @@ class MessagingResource(base.BaseResource):
             args.update({"id":convId})
             args.update({"view":"message"})
             if script:
+                onload = """
+                         $('#conversation_add_member').autocomplete({
+                               source: '/auto/users',
+                               minLength: 2,
+                               select: function( event, ui ) {
+                                   $('#conversation_recipients').attr('value', ui.item.uid)
+                               }
+                          });
+                         """
                 yield renderScriptBlock(request, "message.mako", "right",
-                                        landing, ".right-contents", "set", **args)
+                                        landing, ".right-contents", "set", True,
+                                        handlers={"onload":onload}, **args)
         else:
             print "none"
 
@@ -566,7 +576,7 @@ class MessagingResource(base.BaseResource):
 
             if script:
                 onload = """
-                         $$.menu.selectItem('%s');
+                         $$.menu.selectItem("messages");
                          $('#mainbar .contents').addClass("has-right");
                          $('.center-contents').addClass("nopad")
                          $('.conversation-reply').autogrow();
@@ -575,12 +585,21 @@ class MessagingResource(base.BaseResource):
                              $(v).siblings().children('.message-headers-snippet').
                                 toggleClass('message-headers-snippet-show');
                           });
-                         """ %args["menuId"]
+                         """
                 yield renderScriptBlock(request, "message.mako", "center",
                                         landing, ".center-contents", "set", True,
                                         handlers={"onload":onload}, **args)
 
-                onload = "$('#expandAll').data('isExpand', true);"
+                onload = """
+                         $('#expandAll').data('isExpand', true);
+                         $('#conversation_add_member').autocomplete({
+                               source: '/auto/users',
+                               minLength: 2,
+                               select: function( event, ui ) {
+                                   $('#conversation_recipients').attr('value', ui.item.uid)
+                               }
+                          });
+                        """
                 yield renderScriptBlock(request, "message.mako", "right",
                                         landing, ".right-contents", "set", True,
                                         handlers={"onload":onload}, **args)
@@ -602,7 +621,7 @@ class MessagingResource(base.BaseResource):
                         source: '/auto/users',
                         minLength: 2,
                         select: function( event, ui ) {
-                            $('.message-composer-recipients').append("<span style='padding:0 4px'>"+ ui.item.value +"</span>")
+                            $('.message-composer-recipients').append($$.messaging.formatUser(ui.item.value, ui.item.uid))
                             var rcpts = $('.message-composer-recipients').data('recipients')
                             if (jQuery.isArray(rcpts)){
                                 rcpts.push(ui.item.uid)
@@ -614,6 +633,7 @@ class MessagingResource(base.BaseResource):
                             return false;
                     }
                     });
+                    $('.message-composer-field-body').autogrow();
                      """
             yield renderScriptBlock(request, "message.mako", "render_composer",
                                     landing, "#composer", "set", True,
