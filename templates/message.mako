@@ -35,7 +35,7 @@
             %endif
           </div>
         </div>
-        <div class="center-contents nopad">
+        <div class="center-contents">
           %if view != "compose":
             %if not script:
               ${center()}

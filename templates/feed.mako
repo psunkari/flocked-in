@@ -41,11 +41,11 @@
           <div class="titlebar">
             <div id="title">${self.feed_title()}</div>
           </div>
+          %if script:
           <div id="share-block">
-            %if not script:
-              ${self.share_block()}
-            %endif
+            ${self.share_block()}
           </div>
+          %endif
         </div>
         <div id="user-feed" class="center-contents">
           %if not script:
@@ -74,10 +74,10 @@
     %endif
       <ul class="v-links">
         %if myKey in groupAdmins:
-          <li><a class="ajax" href="/groups/pending?id=${groupId}">Pending requests</a></li>
-          <li><a class="ajax" href="/groups/invite?id=${groupId}">Invite more people</a></li>
+          <li><a class="ajax" href="/groups/pending?id=${groupId}">${_('Pending requests')}</a></li>
+          <li><a class="ajax" href="/groups/invite?id=${groupId}">${_('Invite more people')}</a></li>
         %endif
-        <li><a class="ajax" href="/groups/members?id=${groupId}">Members list</a></li>
+        <li><a class="ajax" href="/groups/members?id=${groupId}">${_('Members list')}</a></li>
       </ul>
     </div>
   %endif
