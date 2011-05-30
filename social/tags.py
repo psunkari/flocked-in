@@ -112,8 +112,9 @@ class TagsResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _renderMore(self, request, start, tagId):
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         tagItems = yield self._getTagItems(request, tagId, start=start)
-        args = tagItems
+        args.update(tagItems)
         args["tagId"] = tagId
 
         onload = "(function(obj){$$.convs.load(obj);})(this);"
@@ -175,7 +176,7 @@ class TagsResource(base.BaseResource):
         if tagIds:
             cols = yield Db.multiget(tagIds, "tagFollowers", myId)
             tagsFollowing = [x for x in cols.keys() if cols[x]]
-        
+
         args['tags'] = tags
         args['tagIds'] = tagIds
         args['tagsFollowing'] = tagsFollowing
