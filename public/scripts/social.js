@@ -419,7 +419,7 @@ var convs = {
         if (show && wrapper.hasClass(className)) {
             wrapper.removeClass(className);
             convs._commentFormVisible(convId);
-        } else if (!wrapper.hasClass(className)) {
+        } else if (!show && !wrapper.hasClass(className)) {
             wrapper.addClass(className);
         }
     },

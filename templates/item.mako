@@ -106,7 +106,7 @@
             count = int(items[convId]["meta"].get("likesCount", "0"))
             if count:
               iLike = myLikes and convId in myLikes and len(myLikes[convId])
-              self.conv_likes(count, iLike, likes.get(convId, {}) if likes else [])
+              self.conv_likes(convId, count, iLike, likes.get(convId, {}) if likes else [])
           %>
         </div>
         <div id="conv-comments-wrapper-${convId}" class="comments-wrapper">
@@ -196,7 +196,7 @@
 </%def>
 
 
-<%def name="conv_likes(count=0, iLike=False, users=None)">
+<%def name="conv_likes(convId, count=0, iLike=False, users=None)">
   <%
     if not count:
       return ''
@@ -204,6 +204,9 @@
     likeStr = None
     template = None
     other = count
+    
+    def linkifyLikes(txt):
+      return '<a class="ajax" onclick="$$.convs.showItemLikes(\'%s\')">%s</a>' % (convId, txt)
 
     if iLike:
       try:
@@ -214,34 +217,37 @@
         template = ["You like this",
                     "You and %s like this",
                     "You, %s and %s like this"][len(users)]
-      elif other == 1:
-        template = ["You and 1 other person like this",
-            "You, %s and 1 other person like this",
-            "You, %s, %s and 1 other person like this"][len(users)]
       else:
-        template = ["You and %s other people like this",
-            "You, %s and %s other people like this",
-            "You, %s, %s and %s other people like this"][len(users)]
+        template = ["You and %s like this",
+            "You, %s and %s like this",
+            "You, %s, %s and %s like this"][len(users)]
     else:
       other -= len(users)
       if other == 0 and len(users) > 0:
-        template = ["%s likes this",
-                    "%s and %s like this"][len(users)-1]
-      if other == 1:
-        template = ["1 person likes this",
-            "%s and 1 other person like this",
-            "%s, %s and 1 other people like this"][len(users)]
+        template = ["",
+                    "%s likes this",
+                    "%s and %s like this"][len(users)]
+      if other == 1 and len(users) == 0:
+        template = "%s likes this"
       elif other > 1:
-        template = ["%s people like this",
-            "%s and %s other people like this",
-            "%s, %s and %s other people like this"][len(users)]
+        template = ["%s like this",
+            "%s and %s like this",
+            "%s, %s and %s like this"][len(users)]
 
     if template:
-        vals = [utils.userName(id, entities[id]) for id in users]
-        if other > 1:
-            vals.append(str(other))
+      vals = [utils.userName(id, entities[id]) for id in users]
+      if other == 1:
+        if len(users) == 0 and not iLike:
+          vals.append(linkifyLikes(_("1 person")))
+        else:
+          vals.append(linkifyLikes(_("1 other person")))
+      elif other > 1:
+        if len(users) == 0:
+          vals.append(linkifyLikes(_("%s people")%other))
+        else:
+          vals.append(linkifystr(_("%s other people")%other))
 
-        likeStr = _(template) % tuple(vals)
+      likeStr = _(template) % tuple(vals)
 
     if not likeStr:
       return ''
