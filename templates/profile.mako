@@ -210,7 +210,7 @@
     <%
       path = "/profile?id=%s&" % userKey
     %>
-    %for item, name in [('activity', 'Activity'), ('info', 'Info'), ('docs', 'Documents')]:
+    %for item, name in [('activity', 'Activity'), ('info', 'Info')]:
       %if detail == item:
         <li><a href="${path}dt=${item}" id="profile-tab-${item}" class="ajax selected">${_(name)}</a></li>
       %else:
