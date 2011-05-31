@@ -417,7 +417,7 @@ class ItemResource(base.BaseResource):
         if plugins.has_key(convType) and plugins[convType].hasIndex:
             yield Db.remove(myId, "userItems_"+ convType, likeTimeUUID)
 
-        yield notifications.deleteNofitications(convId, likeTimeUUID)
+        yield notifications.deleteNotifications(convId, likeTimeUUID)
 
         item["meta"]["likesCount"] = likesCount -1
         args["items"] = {itemId: item}
@@ -812,7 +812,7 @@ class ItemResource(base.BaseResource):
             yield feed.deleteUserFeed(userId, itemType, tuuid)
             yield feed.deleteFeed(userId, itemId, convId, convType, convACL,
                                      convOwnerId, responseType, deleteAll=deleteAll)
-            yield notifications.deleteNofitications(convId, tuuid)
+            yield notifications.deleteNotifications(convId, tuuid)
 
         # if conv is being deleted, delete feed corresponding to commentLikes also.
         if itemId == convId:
@@ -826,7 +826,7 @@ class ItemResource(base.BaseResource):
                     yield feed.deleteFeed(userId, responseId, convId,
                                              convType, convACL, convOwnerId,
                                              responseType, deleteAll=deleteAll)
-                    yield notifications.deleteNofitications(convId, tuuid)
+                    yield notifications.deleteNotifications(convId, tuuid)
 
         #remove from itemResponses
         responseType = "C"
@@ -841,7 +841,7 @@ class ItemResource(base.BaseResource):
                 if deleteAll:
                     yield Db.insert(convId, "deletedConvs", '', responseId)
                     yield Db.remove(convId, "itemResponses", tuuid)
-                yield notifications.deleteNofitications(convId, tuuid)
+                yield notifications.deleteNotifications(convId, tuuid)
 
         #update itemResponse Count
         if itemId != convId and deleteAll:
@@ -854,7 +854,7 @@ class ItemResource(base.BaseResource):
             yield feed.deleteFeed(convOwnerId, convId, convId, convType,
                                      convACL, convOwnerId, responseType,
                                      deleteAll=deleteAll)
-            yield notifications.deleteNofitications(convId, conv["meta"]["uuid"])
+            yield notifications.deleteNotifications(convId, conv["meta"]["uuid"])
 
         #TODO: update UI
 

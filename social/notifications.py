@@ -15,7 +15,7 @@ from social.logging     import dump_args, profile
 @profile
 @defer.inlineCallbacks
 @dump_args
-def pushNotifications( itemId, convId, responseType,
+def pushNotifications(itemId, convId, responseType,
                       convType, convOwner, commentOwner, timeUUID):
     # value = responseType:commentOwner:itemKey:convType:convOwner:
     value = ":".join([responseType, commentOwner, itemId, convType, convOwner])
@@ -31,7 +31,7 @@ def pushNotifications( itemId, convId, responseType,
 @profile
 @defer.inlineCallbacks
 @dump_args
-def deleteNofitications(convId, timeUUID):
+def deleteNotifications(convId, timeUUID):
     followers = yield Db.get_slice(convId, "items", super_column="followers")
     for follower in followers:
         userKey = follower.column.name
@@ -46,7 +46,6 @@ class NotificationsResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _getNotifications(self, request, count=15):
-
         def _getReasonStr(template, convId, itemType, itemOwnerId, usersList):
             vals = []
             noOfUsers = len(set(usersList))
