@@ -186,10 +186,11 @@ class MessagingResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _createConveration(self, request):
-
-        myId = request.getSession(IAuthInfo).username
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        landing = not self._ajax
         recipients, body, subject, parent = self._parseComposerArgs(request)
         dateHeader, epoch = self._createDateHeader()
+        filterType = utils.getRequestArg(request, "filterType") or None
 
         if not parent and not recipients:
             raise errors.MissingParams()
@@ -212,7 +213,29 @@ class MessagingResource(base.BaseResource):
         messageId = yield self._newMessage(myId, timeUUID, body, dateHeader, epoch)
         yield self._deliverMessage(convId, participants, timeUUID, myId)
         yield Db.insert(convId, "mConvMessages", messageId, timeUUID)
+        #XXX:Is this a duplicate batch insert ?
         yield Db.batch_insert(convId, "mConversations", {'meta':meta})
+
+        if script and filterType is not None and filterType == "all":
+            col = yield Db.get_slice(convId, 'mConversations')
+            conversation = utils.supercolumnsToDict(col)
+            args.update({"convId":convId})
+
+            conv = {"people":participants, "read":1, "count":1,
+                    "meta":conversation['meta']}
+            args.update({"conv":conv})
+
+            users = participants
+            users = yield Db.multiget_slice(users, 'entities', ['basic'])
+            users = utils.multiSuperColumnsToDict(users)
+            args.update({"people":users})
+
+            args.update({"filterType":"all"})
+            yield renderScriptBlock(request, "message.mako",
+                                    "render_conversation_row", landing,
+                                    ".conversation-layout-container",
+                                    "prepend", **args)
+
 
     @defer.inlineCallbacks
     def _composeMessage(self, request):
@@ -413,8 +436,6 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     def _actions(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        print request.args
-        print self._ajax
         convIds = request.args.get('selected', [])
         filterType = utils.getRequestArg(request, "filterType") or "all"
         trash = utils.getRequestArg(request, "trash") or None
@@ -429,7 +450,6 @@ class MessagingResource(base.BaseResource):
         else:action = utils.getRequestArg(request, "action")
 
         if convIds:
-            print "I am in %s" %action
             if action in self._folders.keys():
                 yield self._moveConversation(request, convIds, action)
             elif action == "read":
@@ -464,7 +484,6 @@ class MessagingResource(base.BaseResource):
             elif action == "trash":
                 request.write("$('#thread-%s').remove()" %convIds[0])
             elif action == "unread":
-                print "Marking as unread"
                 request.write("""
                               $('#thread-%s').removeClass('row-read').addClass('row-unread');
                               $('#thread-%s .messaging-read-icon').removeClass('messaging-read-icon').addClass('messaging-unread-icon');

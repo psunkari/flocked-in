@@ -241,7 +241,11 @@
                     var recipients = $('.message-composer-recipients').data('recipients');
                     var subject = $('.message-composer-field-subject').attr('value');
                     var body = $('.message-composer-field-body').attr('value');
-                    var urlpostdata = 'recipients='+recipients+'&subject='+subject+'&body='+body;
+                    var filterType = $('[name=filterType]').attr('value');
+                    if (filterType == undefined){
+                        filterType = ''
+                    }
+                    var urlpostdata = 'recipients='+recipients+'&subject='+subject+'&body='+body+'&filterType='+filterType;
                     $.post('/ajax/messages/write', urlpostdata, null, 'script')
                     $('#composer').empty()
             """%>
