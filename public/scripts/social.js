@@ -916,16 +916,16 @@ $$.acl = acl;
 (function($$, $) {
 var messaging = {
     removeUser: function(self, user_id){
-        var recipients = $('.message-composer-recipients').data('recipients');
+        var recipients = $('.conversation-composer-recipients').data('recipients');
         var user_idx = jQuery.inArray(user_id, recipients);
         recipients.splice(user_idx, 1);
-        $('.message-composer-recipients').data('recipients', recipients);
+        $('.conversation-composer-recipients').data('recipients', recipients);
         $(self).parent().remove();
     },
     formatUser: function(user_string, user_id){
-        return "<div style='display:table-cell' class='tag'>"+
-            "<span style='padding:0 4px'>"+ user_string +"</span>"+
-            "<span style='padding:0 2px' class='button-link' "+
+        return "<div class='conversation-composer-recipient-wrapper tag'>"+
+            "<span class='conversation-composer-recipient-label'>"+ user_string +"</span>"+
+            "<span class='conversation-composer-recipient-remove button-link' "+
                 "onclick='$$.messaging.removeUser(this, \""+user_id+"\")'>X</span></div>"
     }
 };

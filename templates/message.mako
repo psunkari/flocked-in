@@ -69,9 +69,8 @@
   def formatPeopleInConversation(conv, people_info):
     participants = conv["people"]
     sender = people_info[conv["meta"]["owner"]]["basic"]["name"]
-    people_without_sender = set(participants) - set([sender,])
+    people_without_sender = set(participants) - set([conv["meta"]["owner"],])
     last_sent_by = people_info[list(people_without_sender)[-1]]["basic"]["name"]
-
     if len(people_without_sender) > 2:
         return "%s...%s(%d)" %(sender, last_sent_by, len(participants))
     else:
@@ -111,21 +110,20 @@
 
 <%def name="render_conversation_row(script, convId, conv)">
   <div id="thread-${convId}" class="message-row ${'row-unread' if conv["read"] == "0" else 'row-read'}">
-    <div class="message-row-cell message-row-select">
+    <div class="conversation-row-cell conversation-row-select">
       <input type="checkbox" name="selected" value="${convId}"
         onchange="$('.thread-selector').attr('checked', false)"/>
     </div>
-    <div class="message-row-cell message-row-sender">
+    <div class="conversation-row-cell conversation-row-sender">
         ${getSenderAvatar(conv, people)}
     </div>
-    <div class="message-row-cell message-row-info" style="height:100%;width:100%;cursor:pointer">
-        <div style="display:block;width:100%;height:100%">
-            <div style="display:inline-block;padding:2px;width:635px"
+    <div class="conversation-row-cell conversation-row-info">
+            <div class="conversation-row-headers"
                  onclick="var url='/messages/thread?id=${convId}';$.address.value(url); $$.fetchUri(url); ">
-                <span style="padding:4px 0 0 4px;width:150px">${formatPeopleInConversation(conv, people)}</span>
-                <span style="width:450px;font-size:11px;color:#777;padding-left:4px">${utils.simpleTimestamp(float(conv['meta']["date_epoch"]), people[myKey]["basic"]["timezone"])}</span>
+                <span class="conversation-row-people">${formatPeopleInConversation(conv, people)}</span>
+                <span class="conversation-row-time">${utils.simpleTimestamp(float(conv['meta']["date_epoch"]), people[myKey]["basic"]["timezone"])}</span>
             </div>
-            <div style="display:inline-block;padding:2px">
+            <div class="conversation-row-actions">
                 <span>
                     %if filterType != "unread":
                     <%
@@ -152,15 +150,14 @@
                     %endif
                 </span>
             </div>
-            <a class="ajax message-link" href="/messages/thread?id=${convId}" style="display:block;padding:2px;position:relative">
-                <div style="overflow: hidden;white-space: nowrap;width: 667px;color:#777;">
-                    <span style="color:#000">${conv["meta"]["subject"]|h}</span> - ${conv["meta"]["snippet"]}
+            <a class="ajax conversation-row-link" href="/messages/thread?id=${convId}">
+                <div class="conversation-row-subject-wrapper">
+                    <span class="conversation-row-snippet" >${conv["meta"]["subject"]|h}</span> - ${conv["meta"]["snippet"]}
                 </div>
-                <span style="position:absolute;right:1px;bottom:-4px;cursor:default;color:#000">
+                <span class="conversation-row-count">
                     <span title="There are ${conv['count']} messages in this conversation">${conv['count']}</span>
                 </span>
             </a>
-        </div>
     </div>
   </div>
 </%def>
@@ -180,22 +177,23 @@
 
 <%def name="render_conversation_messages()">
     % for mid in messageIds:
-        <div class="conversation-message-wrapper" style="padding:2px; margin:2px; border:1px solid #E2e2e2">
+        <div class="conv-item conversation-message-wrapper">
           <div class="comment-avatar">
             ${getSenderAvatar(messages[mid], people, "s")}
           </div>
-          <div class="comment-container" style="padding-top:0px;min-height:32px;padding-bottom:0px">
+          <div class="comment-container conversation-message-container">
             <div class="conv-summary">
-              <div class="message-headers" onclick="var _self=this;$(this).siblings().toggle(1, function(){$(_self).children('.message-headers-snippet').toggleClass('message-headers-snippet-show')});">
-                <div class="user message-headers-sender">
+              <!--<div class="message-headers" onclick="var _self=this;$(this).siblings().toggle(1, function(){$(_self).children('.message-headers-snippet').toggleClass('message-headers-snippet-show')});">-->
+              <div class="conversation-message-headers">
+                <div class="user conversation-message-headers-sender">
                   <a href="/profile?id=${messages[mid]['meta']['owner']}" class="ajax">
                     ${people[messages[mid]['meta']['owner']]["basic"]["name"]}
                   </a>
                 </div>
-                <div class="message-headers-snippet">${messages[mid]["meta"].get("body", '') | makeSnippet}</div>
-                <nobr class="time-label message-headers-time">${utils.simpleTimestamp(float(messages[mid]["meta"]["date_epoch"]), people[myKey]["basic"]["timezone"])}</nobr>
+                <!--<div class="message-headers-snippet">${messages[mid]["meta"].get("body", '') | makeSnippet}</div>-->
+                <nobr class="time-label conversation-message-headers-time">${utils.simpleTimestamp(float(messages[mid]["meta"]["date_epoch"]), people[myKey]["basic"]["timezone"])}</nobr>
               </div>
-              <div class="message-message">
+              <div class="conversation-message-message">
                 ${messages[mid]["meta"].get("body", '') | newlinescape}
               </div>
             </div>
@@ -206,15 +204,15 @@
 
 <%def name="render_conversation_reply(script, msg, convId)">
   <form method="post" class="ajax" action="/messages/write">
-    <div class="message-composer">
+    <div class="conversation-composer">
       <div class="conv-avatar">
           ${getAvatarImg(utils.userAvatar(myKey, people[myKey]))}
       </div>
-      <div class="input-wrap" style="margin-left:60px">
-          <textarea class="conversation-reply" style="min-height:60px" name="body" placeholder="Quickly reply to this message"></textarea>
+      <div class="input-wrap conversation-reply-wrapper">
+          <textarea class="conversation-reply" name="body" placeholder="Quickly reply to this message"></textarea>
           <input type="hidden" value=${convId} name="parent"/>
       </div>
-      <div style="text-align:right;padding:4px 0">
+      <div class="conversation-reply-actions">
         <input type="submit" name="send" value="${_('Reply')}" class="button"/>
       </div>
     </div>
@@ -222,25 +220,27 @@
 </%def>
 
 <%def name="render_composer()">
-  <div class="message-composer">
+  <div class="conversation-composer">
     <form method="post" action="/messages/write" class="ajax" onsubmit="return false">
-      <div class="input-wrap message-composer-field">
-        <div class="message-composer-recipients"></div>
-        <input class="message-composer-field-recipient" type="text" placeholder="${_('Enter name or email address') |h}"/>
+      <div class="input-wrap conversation-composer-field">
+        <div class="conversation-composer-recipients"></div>
+        <div>
+            <input class="conversation-composer-field-recipient" type="text" placeholder="${_('Enter name or email address') |h}"/>
+        </div>
       </div>
-      <div class="input-wrap message-composer-field">
-        <input class="message-composer-field-subject" type="text" name="subject" placeholder="${_('Enter a subject of your message') |h}"/>
+      <div class="input-wrap conversation-composer-field">
+        <input class="conversation-composer-field-subject" type="text" name="subject" placeholder="${_('Enter a subject of your message') |h}"/>
       </div>
-      <div class="input-wrap message-composer-field">
-        <textarea class="message-composer-field-body" placeholder="Write a message to your friends and colleagues" name="body"></textarea>
+      <div class="input-wrap conversation-composer-field">
+        <textarea class="conversation-composer-field-body" placeholder="Write a message to your friends and colleagues" name="body"></textarea>
       </div>
-      <div style="text-align:right;padding:4px 0">
+      <div class="conversation-composer-actions">
         %if script:
             <%
                 onclickscript = """
-                    var recipients = $('.message-composer-recipients').data('recipients');
-                    var subject = $('.message-composer-field-subject').attr('value');
-                    var body = $('.message-composer-field-body').attr('value');
+                    var recipients = $('.conversation-composer-recipients').data('recipients');
+                    var subject = $('.conversation-composer-field-subject').attr('value');
+                    var body = $('.conversation-composer-field-body').attr('value');
                     var filterType = $('[name=filterType]').attr('value');
                     if (filterType == undefined){
                         filterType = ''
@@ -314,7 +314,7 @@
         <input type="hidden" name="filterType" value="${filterType}"/>
     </form>
   </div>
-  <div id="people-paging" class="pagingbar" style="margin-top:0">
+  <div id="people-paging" class="pagingbar">
       ${paging()}
   </div>
 </%def>
@@ -330,40 +330,12 @@
 <%def name="right()">
     % if view == "message":
         <div class="sidebar-chunk">
-            <ul class="v-links peoplemenu middle user-subactions">
-                <li>
-                    <%
-                       toggleMessagesScript = """
-                          var isExpand = $(this).data('isExpand')
-                          console.log(isExpand)
-                          $('.message-message').not(':last').each(function(i, v){
-                            if (isExpand == true){
-                                $(v).show();
-                                $(v).siblings().children('.message-headers-snippet').
-                                   removeClass('message-headers-snippet-show');
-                                $('#expandAll').html('Collapse All');
-                            }
-                            else{
-                                $(v).hide();
-                                $(v).siblings().children('.message-headers-snippet').
-                                   addClass('message-headers-snippet-show');
-                                $('#expandAll').html('Expand All');
-                            }
-                          });
-                          $(this).data('isExpand', !isExpand)
-                          """
-                    %>
-                    <a id="expandAll" href="#" onclick="${toggleMessagesScript}; $.event.fix(event).preventDefault();">Expand All</a>
-                </li>
-            </ul>
-        </div>
-        <div class="sidebar-chunk">
           <div class="sidebar-title">People in this conversation</div>
           <ul class="v-links peoplemenu">
             %for person in conv["participants"]:
                 <li>
-                    <div style="display:table-cell">${getAvatarImg(utils.userAvatar(conv, people[person], "s"), "s")}</div>
-                    <div style="display:table-cell;vertical-align:middle;padding-left:15px;width:160px"><a href="/profile?id=${person}">${people[person]["basic"]["name"]}</a></div>
+                    <div class="conversation-people-avatar">${getAvatarImg(utils.userAvatar(conv, people[person], "s"), "s")}</div>
+                    <div class="conversation-people-profile"><a href="/profile?id=${person}">${people[person]["basic"]["name"]}</a></div>
                     <%
                         if (person == myKey) or (person == conv["meta"]["owner"]):
                             showDelete = False
@@ -371,19 +343,19 @@
                             showDelete = True
                     %>
                     %if showDelete:
-                        <div style="display:table-cell;vertical-align:middle;font-weight:bold;cursor:pointer;font-size:15px;vertical-align:middle" class="busy-indicator"
+                        <div class="conversation-people-remove" class="busy-indicator"
                              onclick="$.post('/ajax/messages/members', 'action=remove&parent=${id}&recipients=${person}', null, 'script')" title="Remove ${people[person]["basic"]["name"]} from this conversation"><span>X</span></div>
                     %else:
-                        <div style="display:table-cell;vertical-align:middle;font-weight:bold">&nbsp</div>
+                        <div class="conversation-people-no-remove">&nbsp</div>
                     %endif
                 </li>
             %endfor
           </ul>
         </div>
         <div class="sidebar-chunk">
-            <div class="sidebar-title">Add someone to this conversation</div>
-            <div style="margin-top:4px">
-                <form class="ajax" action="/messages/members" style="font-size:11px;width:185px">
+            <div class="sidebar-title">${_("Add your colleague")}</div>
+            <div class="conversation-people-add-wrapper">
+                <form class="ajax" action="/messages/members">
                     <input type="hidden" name='parent' value=${id} />
                     <input type="hidden" name="action" value="add" />
                     <input type="hidden" name="recipients" id="conversation_recipients"/>

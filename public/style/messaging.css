@@ -13,8 +13,6 @@
 #threads-wrapper {
   padding: 0;
   min-height: 320px;
-  border-left: 1px solid #C3D9FF;
-  border-right: 1px solid #C3D9FF;
 }
 
 .peoplemenu {
@@ -35,9 +33,52 @@
     border-top:none;
 }
 
-.message-row-cell {
+.conversation-row-headers {
+    display:inline-block;
+    padding:2px;
+    width:635px;
+}
+
+.conversation-row-actions {
+    display:inline-block;
+    padding:2px;
+}
+
+.conversation-row-cell {
    display:table-cell;
    vertical-align:middle;
+}
+
+.conversation-row-people {
+    padding:4px 0 0 4px;
+    width:150px;
+}
+
+.conversation-row-sender {
+
+}
+
+.conversation-row-info {
+    height:100%;width:100%;cursor:pointer;
+}
+
+.conversation-row-time {
+    width:450px;
+    font-size:11px;
+    color:#777;
+    padding-left:4px;
+}
+
+.conversation-row-subject-wrapper {
+    overflow: hidden;white-space: nowrap;width: 667px;color:#777;
+}
+
+.conversation-row-snippet {
+    color:#000;
+}
+
+.conversation-row-count {
+    position:absolute;right:1px;bottom:-4px;cursor:default;color:#000;
 }
 
 .row-read {
@@ -48,8 +89,15 @@
 .row-unread {
 }
 
-.message-link {
+.conversation-row-link {
    text-decoration:none !important;
+   display:block;
+   padding:2px;
+   position:relative;
+}
+
+.conversation-row-link:active, .conversation-row-link:focus {
+    outline: medium none;
 }
 
 .toolbar {
@@ -61,7 +109,7 @@
    font-size: 11px;
 }
 
-.message-row-select {
+.conversation-row-select {
    vertical-align:middle;
 }
 
@@ -79,18 +127,17 @@
    display:inline;
 }
 
-.message-headers {
-   background-color: #E8EEFA;
+.conversation-message-headers {
+   /*background-color: #E8EEFA;*/
    margin-bottom: 4px;
    padding: 4px 0;
-   cursor:pointer;
    position:relative;
 }
 
-.message-headers-time {
+.conversation-message-headers-time {
    float:right;
    display:inline-block;
-   background-color: #E8EEFA;
+   /*background-color: #E8EEFA;*/
    position:absolute;
    right:0;
    top:4px;
@@ -98,17 +145,16 @@
    padding-left:3px;
 }
 
-.message-headers-sender {
+.conversation-message-headers-sender {
    display:inline-block;
    font-weight:bold;
-   float:left;
 }
 
-.message-headers-snippet-show {
+.conversation-message-headers-snippet-show {
     visibility:visible !important;
 }
 
-.message-headers-snippet {
+.conversation-message-headers-snippet {
    display:inline-block;
    width:380px;
    overflow:hidden;
@@ -119,13 +165,13 @@
    visibility:hidden;
 }
 
-.message-headers-snippet:after {
+.conversation-message-headers-snippet:after {
     content: "...";
 }
 
-.message-message {
+.conversation-message-message {
    margin:0;
-   min-height:80px;
+   /*min-height:80px;*/
 }
 
 .thread-selector-wrapper {
@@ -164,14 +210,91 @@
     padding: 0;
 }
 
-.message-composer-field {
+.conversation-composer-field {
     padding:5px;
+    min-height:20px;
 }
 
-.message-composer-field-body {
+.conversation-composer-field-body {
     min-height:80px;
 }
 
-.message-composer-recipients {
-    padding: 0px 0 4px 0;
+.conversation-composer-recipients {
+    float:left;
+}
+
+.conversation-composer-recipient-wrapper {
+}
+
+.conversation-composer-recipient-label {
+    padding:0 4px;
+}
+
+.conversation-composer-recipient-remove {
+    padding:0 2px;
+    font-size:9px;
+}
+
+.conversation-composer-field-recipient {
+    width:auto !important;
+    height:auto !important;
+    margin-top:2px;
+}
+
+.conversation-composer-field-subject {
+    height: auto !important;
+}
+
+.conversation-composer-actions {
+    text-align:right;padding:4px 0;
+}
+
+.conversation-message-container {
+    padding-top:0px;min-height:32px;padding-bottom:0px;
+}
+
+.conversation-message-wrapper {
+    /*padding:2px; margin:2px; border:1px solid #E2e2e2;*/
+}
+
+.conversation-reply-wrapper {
+    margin-left:60px;
+}
+
+.conversation-reply {
+    min-height:60px;
+}
+
+.conversation-reply-actions {
+    text-align:right;padding:4px 0;
+}
+
+.conversation-people-add-wrapper {
+    margin-top:4px;font-size:11px;width:185px;
+}
+
+.conversation-people-avatar {
+    display:table-cell
+}
+
+.conversation-people-profile {
+    display:table-cell;
+    vertical-align:middle;
+    padding-left:15px;
+    width:160px;
+}
+
+.conversation-people-remove {
+    display:table-cell;
+    vertical-align:middle;
+    font-weight:bold;
+    cursor:pointer;
+    font-size:15px;
+    vertical-align:middle;
+}
+
+.conversation-people-no-remove {
+    display:table-cell;
+    vertical-align:middle;
+    font-weight:bold;
 }

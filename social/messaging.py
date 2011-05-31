@@ -175,11 +175,15 @@ class MessagingResource(base.BaseResource):
         args.update({"messageIds": mids})
         args.update({'messages': messages})
         if script:
+            onload = """
+                        $('.conversation-reply').attr('value', '');
+                    """
             yield renderScriptBlock(request, "message.mako",
                                             "render_conversation_messages",
                                             landing,
                                             ".conversation-messages-wrapper",
-                                            "append", **args)
+                                            "append", True,
+                                            handlers={"onload":onload}, **args)
         else:
             request.redirect('/messages')
             request.finish()
@@ -235,7 +239,6 @@ class MessagingResource(base.BaseResource):
                                     "render_conversation_row", landing,
                                     ".conversation-layout-container",
                                     "prepend", **args)
-
 
     @defer.inlineCallbacks
     def _composeMessage(self, request):
@@ -318,7 +321,6 @@ class MessagingResource(base.BaseResource):
             onload = """
                      $$.menu.selectItem('%s');
                      $('#mainbar .contents').removeClass("has-right");
-                     $('.center-contents').removeClass("nopad");
                      """ %args["menuId"]
             yield renderScriptBlock(request, "message.mako", "center", landing,
                                     ".center-contents", "set", True,
@@ -597,20 +599,13 @@ class MessagingResource(base.BaseResource):
                 onload = """
                          $$.menu.selectItem("messages");
                          $('#mainbar .contents').addClass("has-right");
-                         $('.center-contents').addClass("nopad")
                          $('.conversation-reply').autogrow();
-                         $('.message-message').not(':last').each(function(i, v){
-                             $(v).toggle();
-                             $(v).siblings().children('.message-headers-snippet').
-                                toggleClass('message-headers-snippet-show');
-                          });
                          """
                 yield renderScriptBlock(request, "message.mako", "center",
                                         landing, ".center-contents", "set", True,
                                         handlers={"onload":onload}, **args)
 
                 onload = """
-                         $('#expandAll').data('isExpand', true);
                          $('#conversation_add_member').autocomplete({
                                source: '/auto/users',
                                minLength: 2,
@@ -636,23 +631,23 @@ class MessagingResource(base.BaseResource):
 
         if script:
             onload = """
-                    $('.message-composer-field-recipient').autocomplete({
+                    $('.conversation-composer-field-recipient').autocomplete({
                         source: '/auto/users',
                         minLength: 2,
                         select: function( event, ui ) {
-                            $('.message-composer-recipients').append($$.messaging.formatUser(ui.item.value, ui.item.uid))
-                            var rcpts = $('.message-composer-recipients').data('recipients')
+                            $('.conversation-composer-recipients').append($$.messaging.formatUser(ui.item.value, ui.item.uid))
+                            var rcpts = $('.conversation-composer-recipients').data('recipients')
                             if (jQuery.isArray(rcpts)){
                                 rcpts.push(ui.item.uid)
                             }else{
                                 rcpts = [ui.item.uid]
                             }
-                            $('.message-composer-recipients').data('recipients', rcpts)
+                            $('.conversation-composer-recipients').data('recipients', rcpts)
                             this.value = ""
                             return false;
                     }
                     });
-                    $('.message-composer-field-body').autogrow();
+                    $('.conversation-composer-field-body').autogrow();
                      """
             yield renderScriptBlock(request, "message.mako", "render_composer",
                                     landing, "#composer", "set", True,
