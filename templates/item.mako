@@ -204,7 +204,7 @@
     likeStr = None
     template = None
     other = count
-    
+
     def linkifyLikes(txt):
       return '<a class="ajax" onclick="$$.convs.showItemLikes(\'%s\')">%s</a>' % (convId, txt)
 
@@ -245,7 +245,7 @@
         if len(users) == 0:
           vals.append(linkifyLikes(_("%s people")%other))
         else:
-          vals.append(linkifystr(_("%s other people")%other))
+          vals.append(linkifyLikes(_("%s other people")%other))
 
       likeStr = _(template) % tuple(vals)
 
