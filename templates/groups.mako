@@ -55,7 +55,7 @@
   %else:
     <span class="middle title">${_('Groups')}</span>
     <span class="button title-button">
-      <a class="ajax">${_('New Group')}</a>
+      <a class="ajax" href="/groups/create" _ref="/groups/create">${_('New Group')}</a>
     </span>
   %endif
 </%def>
@@ -202,39 +202,35 @@
   <form action="/groups/create" method="post"  enctype="multipart/form-data">
     <div class="edit-profile">
       <ul>
-        <li><label for="name"> Group Name: </label></li>
-        <li><input type="text" id="name" name="name" value= "" /></li>
-      </ul>
-      <ul>
-        <li><label for="desc"> Description: </label></li>
-        <li><textarea id="desc" name="desc" /></li>
-      </ul>
-      <ul>
-        <li><label for="access"> Group Type : </label></li>
-        <li><input type="radio" id="access" name="access" value= "public" > Public</input></li>
-        <li><input type="radio" id="access" name="access" value= "private" > Private</input></li>
-      </ul>
-      <ul>
-        <li><label for="external"> external users allowed: </label></li>
-        <li><input type="radio" id="external" name="external" value= "open"> Yes</input>  </li>
-        <li><input type="radio" id="external" name="external" value= "closed"> No </input></li>
-      </ul>
-      <ul><li></li></ul>
-
-      <ul>
-        <li><label for="dp"> Photo </label> </li>
-        <li><input type="file" id="dp" name="dp" accept="image/jpx, image/png, image/gif" />
-      </ul>
-      <ul>
-        % if myKey:
-        <li><input type="hidden" value = ${myKey} name="id" /></li>
-        %endif
-      </ul>
-      <ul>
-        <li></li>
-        <li><input type="submit" name="userInfo_submit" value="Save"/> </li>
+        <li>
+            <label for="name"> Group Name</label>
+            <input type="text" id="groupname" name="name" value= ""/>
+        </li>
+        <li>
+            <label for="desc"> Description</label>
+            <textarea class="input-wrap" id="desc" name="desc"></textarea>
+        </li>
+        <li>
+            <label for="access"> Group Visibility</label>
+            <input type="radio" id="access" name="access" value= "public" > Public</input>
+            <input type="radio" id="access" name="access" value= "private" > Private</input>
+        </li>
+        <li>
+            <label for="external">Allow External Users?</label>
+            <input type="radio" id="external" name="external" value= "open"> Yes</input>
+            <input type="radio" id="external" name="external" value= "closed"> No </input>
+        </li>
+        <li>
+            <label for="dp">Group Logo</label>
+            <input type="file" id="dp" name="dp" accept="image/jpx, image/png, image/gif"/>
       </ul>
     </div>
+    <div class="profile-save-wrapper">
+        <input type="submit" name="userInfo_submit" value="Save" class="button default"/>
+    </div>
+    % if myKey:
+    <input type="hidden" value = ${myKey} name="id" />
+    %endif
   </form>
 </%def>
 

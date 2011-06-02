@@ -746,7 +746,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 
 .edit-profile li {
     padding:5px 0px;
-    height:26px;
+    min-height:26px;
 }
 
 .edit-profile label {

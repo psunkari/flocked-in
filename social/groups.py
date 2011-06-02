@@ -333,6 +333,7 @@ class GroupsResource(base.BaseResource):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         landing = not self._ajax
         orgKey = args["orgKey"]
+        args["menuId"] = "groups"
 
         if script and landing:
             yield render(request,"groups.mako", **args)
