@@ -318,21 +318,20 @@ class ItemResource(base.BaseResource):
 
             relation = Relation(myId, [])
             yield defer.DeferredList([relation.initFriendsList(),
-                                  relation.initGroupsList()])
-            if relation.friends.keys():
-                likes = yield Db.get_slice(convId, "itemLikes", relation.friends.keys())
+                                  relation.initSubscriptionsList() ])
+            friends_subscriptions = relation.friends.keys() + list(relation.subscriptions)
+            if friends_subscriptions:
+                likes = yield Db.get_slice(convId, "itemLikes", friends_subscriptions)
                 likes = [x.column.name for x in likes]
             else:
                 likes = []
 
             isFeed = False if request.getCookie("_page") == "item" else True
             hasComments = False
-            hasLikes = False
-            toFetchEntities = set()
-            entities = {}
+            hasLikes = True if likes else False
+            toFetchEntities = set(likes)
             if not isFeed:
                 hasComments = True
-                hasLikes = True
             else:
                 feedItems = yield Db.get_slice(myId, "feedItems", [convId])
                 feedItems = utils.supercolumnsToDict(feedItems)
@@ -341,11 +340,8 @@ class ItemResource(base.BaseResource):
                     rtype = val.split(":")[0]
                     if rtype == "C":
                         hasComments = True
-                    elif rtype == "L":
-                        hasLikes = True
-                        actors = val.split(":")[3].split(",")
-                        if actors[0] in relation.friends:
-                            toFetchEntities.update(val.split(":")[3].split(","))
+
+            entities = {}
             if toFetchEntities:
                 entities = yield Db.multiget_slice(toFetchEntities, "entities", ["basic"])
                 entities = utils.multiSuperColumnsToDict(entities)
@@ -429,12 +425,14 @@ class ItemResource(base.BaseResource):
                                      args=[itemId], **args)
         else:
             relation = Relation(myId, [])
-            yield relation.initFriendsList()
+            yield defer.DeferredList([relation.initFriendsList(),
+                                      relation.initSubscriptionsList()])
 
             toFetchEntities = set()
             likes = []
-            if relation.friends.keys():
-                likes = yield Db.get_slice(convId, "itemLikes", relation.friends.keys())
+            friends_subscriptions = relation.friends.keys() + list(relation.subscriptions)
+            if friends_subscriptions:
+                likes = yield Db.get_slice(convId, "itemLikes", friends_subscriptions)
                 likes = [x.column.name for x in likes]
                 toFetchEntities = set(likes)
 
@@ -459,6 +457,7 @@ class ItemResource(base.BaseResource):
                 entities = utils.multiSuperColumnsToDict(entities)
 
             args["entities"] = entities
+            log.msg(likes, entities.keys())
 
             handler = {"onload":"(function(){$$.convs.showHideComponent('%s', 'likes', false)})();" %(convId)} if not likes else None
             yield renderScriptBlock(request, "item.mako", "conv_footer", False,
@@ -466,7 +465,7 @@ class ItemResource(base.BaseResource):
                                     args=[itemId, hasComments, likes], **args)
             yield renderScriptBlock(request, "item.mako", 'conv_likes', False,
                                     '#conv-likes-wrapper-%s' % convId, 'set', True,
-                                    args=[itemId, likesCount-1, False, likes], handlers=handler)
+                                    args=[itemId, likesCount-1, False, likes], handlers=handler, **args)
 
 
     @profile

@@ -17,8 +17,8 @@ class Relation(object):
         self.friends = {}           # friend Id => list of tags
         self.pending = {}           # user Ids => "0" (remote) or "1" (local)
         self.groups = []
-        self.subscriptions = None   # subscription Ids
-        self.followers = None       # follower Ids
+        self.subscriptions = set()  # subscription Ids
+        self.followers = set()       # follower Ids
 
 
     # Initialize self.following
