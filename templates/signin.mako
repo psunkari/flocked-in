@@ -67,8 +67,8 @@
             </td>
           </tr>
           <tr>
-            <td id="emaillabel"><label for="user1">${_('Email')}</label></td>
-            <td id="emailfield"><input id="user1" type="text" class="textfield" name="user1"></input></td>
+            <td id="emaillabel"><label for="emailId">${_('Email')}</label></td>
+            <td id="emailfield"><input id="emailId" type="text" class="textfield" name="emailId"></input></td>
 
           </tr>
           <tr>

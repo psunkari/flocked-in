@@ -16,6 +16,7 @@ from social             import utils, Db, Config, whitelist, blacklist
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
 from social.logging     import dump_args, profile
+from social.isocial     import IAuthInfo
 
 @profile
 @defer.inlineCallbacks
@@ -54,7 +55,6 @@ def send_email(emailId, token, username):
 
 
 
-
 class RegisterResource(BaseResource):
     isLeaf = True
 
@@ -73,7 +73,9 @@ class RegisterResource(BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _isValidToken(self, request, token, emailId):
+    def _isValidToken(self, request):
+        emailId = utils.getRequestArg(request, "emailId")
+        token = utils.getRequestArg(request, "token")
         try:
             userKey = yield Db.get(emailId, "userAuth", "user")
             request.redirect("/signin")
@@ -83,35 +85,11 @@ class RegisterResource(BaseResource):
             if token and invitation.get("token", None) == token:
                 args = request.args
                 args['emailId']=emailId
+                args['view'] = 'userinfo'
                 yield render(request, "signup.mako", **args)
             else:
-                raise Exception("Invalid Token")
+                raise errors.InvalidToken()
 
-    @profile
-    @dump_args
-    def render_GET(self, request):
-        def errback(err):
-            log.err(err)
-            request.setResponseCode(500)
-            request.finish()
-        def callback(response):
-            request.finish()
-
-        segmentCount = len(request.postpath)
-        if segmentCount == 0:
-            emailId = utils.getRequestArg(request, "emailId")
-            token = utils.getRequestArg(request, "token")
-            d = self._isValidToken(request, token, emailId)
-            d.addCallbacks(callback, errback)
-            return server.NOT_DONE_YET
-        elif segmentCount == 1 and request.postpath[0]== 'signup':
-            d =  render(request, "register.mako", **request.args)
-            d.addCallbacks(callback, errback)
-            return server.NOT_DONE_YET
-        elif segmentCount == 1 and request.postpath[0]== 'basic':
-            d =  render(request, "signup-info.mako", **request.args)
-            d.addCallbacks(callback, errback)
-            return server.NOT_DONE_YET
 
     @profile
     @defer.inlineCallbacks
@@ -131,63 +109,61 @@ class RegisterResource(BaseResource):
         yield Db.batch_insert(emailId, "invitations", cols)
         send_email(emailId, token, name)
 
-    @profile
+
     @defer.inlineCallbacks
-    @dump_args
-    def _signup(self, request):
+    def _invite(self, request):
+        deferreds = []
+        validEmailIds = []
 
-        domain = None
-        users = []
-        validUsers = []
-        user1 = utils.getRequestArg(request, 'user1')
-        user2 = utils.getRequestArg(request, 'user2')
-        user3 = utils.getRequestArg(request, 'user3')
-        user4 = utils.getRequestArg(request, 'user4')
-        user5 = utils.getRequestArg(request, 'user5')
+        emailIds = request.args.get('emailId', [])
         sender = utils.getRequestArg(request, 'sender')
-        users = [user1, user2, user3, user4, user5]
+        submit = utils.getRequestArg(request, 'submit')
+        skip = utils.getRequestArg(request, 'skip')
 
-        if sender:
-            for user in users:
-                if user and len(user.split('@'))==2:
-                    valid = yield self._isValidMailId(user.split('@')[1], sender)
-                    if valid:
-                        validUsers.append(user)
+        for emailId in emailIds:
+            if len(emailId.split('@'))==2:
+                domain = emailId.split('@')[1]
+                if sender:
+                    valid = yield self._isValidMailId(domain, sender)
+                else:
+                    valid = True
+                if valid:
+                    if Config.has_option("General", "WhiteListMode") and \
+                        Config.get("General", "WhiteListMode") == "True":
+                        if  domain in whitelist and domain not in blacklist:
+                            validEmailIds.append(emailId)
                     else:
-                        raise errors.InvalidEmailId()
-        else:
-            if len(user1.split('@')) == 2 :
-                mailid, domain = user1.split("@")
-                validUsers.append(user1)
-            else:
-                raise errors.InvalidEmailId()
+                        validEmailIds.append(emailId)
+                else:
+                    raise errors.InvalidEmailId()
+        for emailId in validEmailIds:
+            d =  self._sendInvitation(emailId, sender)
+            deferreds.append(d)
 
-        if Config.has_option("General", "WhiteListMode") and \
-           Config.get("General", "WhiteListMode") == "True":
-            if domain and domain in blacklist:
-                request.write("'%s' is a blacklisted domain"%(domain))
-                raise Unauthorized()
-            if domain and domain not in whitelist:
-                request.write("'%s' is not whitelisted" %(domain))
-                raise Unauthorized()
-
-        if domain:
-            domains = {domain:''}
-            basic = {"name":domain, "type":"org"}
-            orgKey = utils.getUniqueKey()
-            yield Db.batch_insert(orgKey, "entities", {"basic": basic, "domains":domains})
-            yield Db.insert(domain, "domainOrgMap", '', orgKey)
-
-        # TODO: check if email is already registered
-        for emailId in validUsers:
-            yield self._sendInvitation(emailId, sender)
-        if not sender:
+        prevPage = request.getCookie("_page")
+        if prevPage == "register":
+            request.redirect('/people?type=all')
+        elif not prevPage:
             request.redirect('/signin')
+        else:
+            request.redirect('/'+prevPage)
+
+        # instead of redirecting, render a mesg saying that a mail is sent to the given emailIds.
 
     @profile
     @defer.inlineCallbacks
     @dump_args
     def _addUser(self, request):
+        def setCookie(userId, orgId=None):
+            session = request.getSession()
+            session.sessionTimeout = 14400  # Timeout of 4 hours
+            authinfo = session.getComponent(IAuthInfo)
+            authinfo.username = userId
+            authinfo.organization = orgId
+            authinfo.isAdmin = False
+
+
+
         landing = not self._ajax
         emailId = utils.getRequestArg(request, 'emailId')
         domain = emailId.split("@")[1]
@@ -196,6 +172,7 @@ class RegisterResource(BaseResource):
         username = utils.getRequestArg(request, 'name')
         title = utils.getRequestArg(request, 'jobTitle')
         timezone = utils.getRequestArg(request, 'timezone')
+        args= {'emailId': emailId, 'view':'invite'}
 
         if passwd != passwd1:
             raise errors.PasswordsNoMatch()
@@ -204,58 +181,49 @@ class RegisterResource(BaseResource):
         existingUser = yield Db.get_count(emailId, "userAuth")
         if not existingUser:
             orgKey = yield getOrgKey(domain)
+            if not orgKey:
+                orgKey = utils.getUniqueKey()
+                domains = {domain:''}
+                basic = {"name":domain, "type":"org"}
+                yield Db.batch_insert(orgKey, "entities", {"basic": basic, "domains":domains})
+                yield Db.insert(domain, "domainOrgMap", '', orgKey)
+
             userKey = yield utils.addUser(emailId, username, passwd,
                                           orgKey, title, timezone)
             yield Db.remove(emailId, "invitations")
+            setCookie(userKey, orgKey)
+            yield render(request, "signup.mako", **args)
 
         else:
-            raise errors.ExistingUser
+            request.redirect('/signup')
+            raise errors.ExistingUser()
+
+
+    @profile
+    @dump_args
+    def render_GET(self, request):
+
+        segmentCount = len(request.postpath)
+        d = None
+
+        if segmentCount == 0:
+            d = self._isValidToken(request)
+
+        return self._epilogue(request, d)
+
+
 
     @profile
     @dump_args
     def render_POST(self, request):
 
         segmentCount = len(request.postpath)
-        if segmentCount == 0:
-            d = self._signup(request)
-            def errback(err):
-                log.err(err)
-                request.setResponseCode(500)
-                request.finish()
-            def callback(response):
-                request.finish()
-            d.addCallbacks(callback, errback)
-            return server.NOT_DONE_YET
-
+        if segmentCount == 0 or \
+           segmentCount == 1 and request.postpath[0]== 'invite' :
+            d = self._invite(request)
         elif segmentCount == 1 and request.postpath[0]== 'create':
             d = self._addUser(request)
-            def callback(response):
-                request.redirect('/people')
-                request.finish()
-            def errback(err):
-                log.err(err)
-                request.write("Error")
-                request.setResponseCode(500)
-                request.finish()
-            d.addCallbacks(callback, errback)
-            return server.NOT_DONE_YET
-        elif segmentCount == 1 and request.postpath[0]== 'invite':
-            submit = utils.getRequestArg(request, "submit")
-            skip = utils.getRequestArg(request, "skip")
-            if submit:
-                d = self._signup(request)
-                def callback(response):
-                    request.redirect('/people')
-                    request.finish()
-                def errback(err):
-                    log.err(err)
-                    request.write("Error")
-                    request.setResponseCode(500)
-                    request.finish()
-                d.addCallbacks(callback, errback)
-            else:
-                request.redirect('/people')
-                request.finish()
-            return server.NOT_DONE_YET
         else:
             return resource.NoResource("Page not Found")
+
+        return self._epilogue(request, d)

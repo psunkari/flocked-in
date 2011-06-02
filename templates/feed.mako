@@ -21,9 +21,9 @@
         <div id="invite-people-block">
           <div class="sidebar-chunk">
             <div class="sidebar-title">${_("Invite people")}</div>
-            <form method="post" action="/register" class="ajax">
+            <form method="post" action="/register" class="ajax" autocomplete="off" >
               <div class="input-wrap">
-                <input type="text" name="user1"/>
+                <input type="text" name="emailId"/>
               </div>
               <% mailId = me['basic'].get('emailId', None) if me else None %>
               %if mailId:
