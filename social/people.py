@@ -36,9 +36,7 @@ def getPeople(myId, entityId, orgId, start='',
 
         # Start of previous page
         if start and d2:
-            log.msg("Have start and d2")
             prevCols = yield d2
-            log.msg(prevCols)
             if prevCols and len(prevCols) > 1:
                 prevPageStart = prevCols[-1].column.name
     else:
