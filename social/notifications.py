@@ -153,9 +153,9 @@ class NotificationsResource(base.BaseResource):
                          3: "%s, %s and 1 other likes %s's %s",
                          4: "%s, %s and %s others likes %s's %s"}
         commentLikesTemplate = {1: "%s likes a comment on %s's %s",
-                         2: "%s and %s likes a comment on  %s's %s",
-                         3: "%s, %s and 1 other likes a comment on  %s's %s",
-                         4: "%s, %s and %s others likes a comment on %s's %s"}
+                                 2: "%s and %s likes a comment on  %s's %s",
+                                 3: "%s, %s and 1 other likes a comment on  %s's %s",
+                                 4: "%s, %s and %s others likes a comment on %s's %s"}
         groupRequestsTemplate = {1: "%s subscribed to %s group. %s to approve the request ",
                                  2: "%s and %s subscribed to %s group. %s to approve the request",
                                  3: "%s and %s and 1 other subscribed to %s group. %s to approve the request.",
@@ -165,40 +165,40 @@ class NotificationsResource(base.BaseResource):
                            3: "%s, %s and 1 other answered %s's %s",
                            4: "%s, %s and %s others answered %s's %s"}
         answerLikesTemplate = {1: "%s likes an answer on %s's %s",
-                         2: "%s and %s likes an answer on  %s's %s",
-                         3: "%s, %s and 1 other likes an answer on  %s's %s",
-                         4: "%s, %s and %s others likes an answer on %s's %s"}
+                                 2: "%s and %s likes an answer on  %s's %s",
+                                 3: "%s, %s and 1 other likes an answer on  %s's %s",
+                                 4: "%s, %s and %s others likes an answer on %s's %s"}
 
         for convId in convs:
             reasonStr[convId] = []
 
         for key in comments:
             convId, convType, convOwner = key
-            template = commentTemplate[len(set(comments[key]))]
+            template = commentTemplate[len(set(comments[key][:4]))]
             reason = _getReasonStr(template, convId, convType, convOwner, comments[key])
             reasonStr[convId].append(reason)
 
         for key in convLikes:
             convId, convType, convOwner = key
-            template = likesTemplate[len(set(convLikes[key]))]
+            template = likesTemplate[len(set(convLikes[key][:4]))]
             reason = _getReasonStr(template, convId, convType, convOwner, convLikes[key])
             reasonStr[convId].append(reason)
 
         for key in commentLikes:
             convId, convType, convOwner = key
-            template = commentLikesTemplate[len(set(commentLikes[key]))]
+            template = commentLikesTemplate[len(set(commentLikes[key][:4]))]
             reason = _getReasonStr(template, convId, convType, convOwner, commentLikes[key])
             reasonStr[convId].append(reason)
 
         for key in answers:
             convId, convType, convOwner = key
-            template = answersTemplate[len(set(answers[key]))]
+            template = answersTemplate[len(set(answers[key][:4]))]
             reason = _getReasonStr(template, convId, convType, convOwner, answers[key])
             reasonStr[convId].append(reason)
 
         for key in answerLikes:
             convId, convType, convOwner = key
-            template = answerLikesTemplate[len(set(answerLikes[key]))]
+            template = answerLikesTemplate[len(set(answerLikes[key][:4]))]
             reason = _getReasonStr(template, convId, convType, convOwner, answerLikes[key])
             reasonStr[convId].append(reason)
 
