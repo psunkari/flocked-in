@@ -141,7 +141,7 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(userItems)
 
     # Index of posts by type
-    for itemType in ['status', 'link', 'document']:
+    for itemType in ['status', 'link', 'document', 'question']:
         columnFamily = "userItems_" + str(itemType)
         userItemsType = CfDef(KEYSPACE, columnFamily, 'Standard',
                               'TimeUUIDType', None,
