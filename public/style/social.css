@@ -116,15 +116,6 @@ a:hover, a:active, a:focus {
     vertical-align: middle;
 }
 
-.messaging-icon {
-    height: 16px;
-    width: 16px;
-    background-image: url(/public/images/messaging_sprite.png);
-    background-repeat: no-repeat;
-    display: inline-block;
-    vertical-align: middle;
-}
-
 .admin-icon {
     height: 16px;
     width: 16px;

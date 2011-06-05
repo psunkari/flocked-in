@@ -1,18 +1,27 @@
 
+.messaging-icon {
+    height: 16px;
+    width: 16px;
+    background-image: url(/public/images/messaging_sprite.png);
+    background-repeat: no-repeat;
+    display: inline-block;
+    vertical-align: middle;
+}
+
 #msg-toolbar {
-  position: relative;
-  text-align: right;
- }
+    position: relative;
+    text-align: right;
+}
 
 #thread-selector {
-  position: absolute;
-  left: 0px;
-  top: 7px;
+    position: absolute;
+    left: 0px;
+    top: 7px;
 }
 
 #threads-wrapper {
-  padding: 0;
-  min-height: 320px;
+    padding: 0;
+    min-height: 320px;
 }
 
 .peoplemenu {
@@ -23,94 +32,75 @@
     margin-bottom:1px;
 }
 
-.message-row {
-   /*display:table-row;*/
-   height:4em;
-   border-top:1px dotted #CCCCCC;
+.conversation-layout-container {
+    width: 100%;
+    display: table;
 }
 
-.message-row:first-child {
-    border-top:none;
-}
-
-.conversation-row-headers {
-    display:inline-block;
-    padding:2px;
-    width:635px;
-}
-
-.conversation-row-actions {
-    display:inline-block;
-    padding:2px;
+.conversation-row {
+    display: table-row;
 }
 
 .conversation-row-cell {
-   display:table-cell;
-   vertical-align:middle;
-}
-
-.conversation-row-people {
-    padding:4px 0 0 4px;
-    width:150px;
-}
-
-.conversation-row-sender {
-
-}
-
-.conversation-row-info {
-    height:100%;width:100%;cursor:pointer;
-}
-
-.conversation-row-time {
-    width:450px;
-    font-size:11px;
-    color:#777;
-    padding-left:4px;
-}
-
-.conversation-row-subject-wrapper {
-    overflow: hidden;white-space: nowrap;width: 667px;color:#777;
-}
-
-.conversation-row-snippet {
-    color:#000;
-}
-
-.conversation-row-count {
-    position:absolute;right:1px;bottom:-4px;cursor:default;color:#000;
-}
-
-.row-read {
-   background:none repeat scroll 0 0 #EDF0F9;
-   color:#000000;
-}
-
-.row-unread {
-}
-
-.conversation-row-link {
-   text-decoration:none !important;
-   display:block;
-   padding:2px;
-   position:relative;
-}
-
-.conversation-row-link:active, .conversation-row-link:focus {
-    outline: medium none;
-}
-
-.toolbar {
-   border-bottom: 1px solid #C3D9FF;
-   padding: 5px;
-}
-
-.time-label {
-   font-size: 11px;
+    display: table-cell;
+    vertical-align: middle;
+    border-collapse: collapse;
+    border-bottom: 1px dotted #DDD;
+    padding: 4px 0;
 }
 
 .conversation-row-select {
-   vertical-align:middle;
+    width: 22px;
+}
+.conversation-row-sender {
+    width: 48px;
+}
+.conversation-row-actions {
+    width: 75px;
+    text-align: right;
+}
+.conversation-row-info {
+    padding-left: 8px;
+    text-decoration: none !important;
+    color: #555555 !important;
+    line-height: 1.6em;
+}
+
+.conversation-row-time {
+    font-size: 11px;
+    color: #999999;
+    padding-left: 4px;
+}
+.conversation-row-time abbr {
+    border: medium none;
+}
+
+.conversation-row-subject-wrapper {
+    overflow: hidden;
+    white-space: nowrap;
+}
+.conversation-row-snippet {
+    color: #999999;
+    white-space: nowrap;
+    overflow: hidden;
+}
+.conversation-row-subject {
+    font-weight: bold;
+    color: #3366CC;
+}
+
+.row-unread {
+    background-color: #E8EEFA;
+    color: #3366CC;
+}
+
+
+/*
+ * Conversation Display
+ */
+
+.time-label {
+   font-size: 11px;
 }
 
 .back-link {
@@ -151,43 +141,32 @@
 }
 
 .conversation-message-headers-snippet-show {
-    visibility:visible !important;
+    visibility: visible !important;
 }
 
 .conversation-message-headers-snippet {
-   display:inline-block;
-   width:380px;
-   overflow:hidden;
-   white-space:nowrap;
-   margin-left:8px;
-   color:#777777;
-   font-size:11px;
-   visibility:hidden;
-}
-
-.conversation-message-headers-snippet:after {
-    content: "...";
+   display: inline-block;
+   width: 380px;
+   overflow: hidden;
+   white-space: nowrap;
+   margin-left: 8px;
+   color: #777777;
+   font-size: 11px;
+   visibility: hidden;
 }
 
 .conversation-message-message {
    margin:0;
-   /*min-height:80px;*/
 }
 
 .thread-selector-wrapper {
-   display:inline-block;
-   margin-left:2px;
+   display: inline-block;
+   margin-left: 2px;
 }
 
 .thread-selector {
-   display:table-cell;
-   vertical-align:top;
-}
-
-.messaging-icon {
-    display:inline-block;
-    width:19px;
-    height:19px;
+   display: table-cell;
+   vertical-align: top;
 }
 
 .messaging-archive-icon {

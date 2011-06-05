@@ -53,111 +53,89 @@
 %>
 
 <%!
-  def makeSnippet(body):
-    lines = body.split("\n")
-    snippet = ""
-    for line in lines:
-        if not line.startswith(">") or not "wrote:" in line:
-            snippet = line[:120]
-            break
-        else:
-            continue
-    return snippet
-%>
-
-<%!
-  def formatPeopleInConversation(conv, people_info):
+  def formatPeopleInConversation(conv, people):
     participants = conv["people"]
-    sender = people_info[conv["meta"]["owner"]]["basic"]["name"]
-    people_without_sender = set(participants) - set([conv["meta"]["owner"],])
-    last_sent_by = people_info[list(people_without_sender)[-1]]["basic"]["name"]
-    if len(people_without_sender) > 2:
-        return "%s...%s(%d)" %(sender, last_sent_by, len(participants))
+    owner = conv["meta"]["owner"]
+    others = [x for x in participants if x != owner]
+
+    numOthers = len(others)
+    def userName(userId):
+      return people[userId]["basic"]["name"]
+
+    if numOthers > 2:
+      return _("%s, %s and %d others") % (userName(owner), userName(others[0]), numOthers-1)
+    elif numOthers == 2:
+      return _("%s, %s and %s") % (userName(owner), userName(others[0]), userName(others[1]))
+    elif numOthers == 1:
+      return _("%s, %s") % (userName(owner), userName(others[0]))
     else:
-        return "%s and %s" %(sender, last_sent_by)
+      return _("%s") % (userName(owner))
 %>
 
 <%!
-    def formatBodyForReply(message, reply):
-      body = cgi.escape(message["meta"].get('body', ''))
-      sender = message["meta"]['owner']
-      date = message["meta"]['Date']
-      quoted_reply = "\n".join([">%s" %x for x in body.split('\n')]+['>'])
-      prequotestring = "%s wrote" %(sender)
-      new_reply = "\r\n\r\n\r\n%s\r\n\r\n%s\r\n%s" %(reply, prequotestring, quoted_reply)
-      return new_reply
+  def getSenderAvatar(conv, people, size="m"):
+    senderId = conv["meta"]["owner"]
+    avatarURI = None
+    avatarURI = utils.userAvatar(senderId, people[senderId], size)
+    avatarSize = "48" if size == "m" else "32"
+    if avatarURI:
+      return '<img src="%s" height="%s" width="%s" style="display:inline-block"/>' \
+        %(avatarURI, avatarSize, avatarSize)
+    else:
+      return ''
 %>
 
 <%!
-    def getSenderAvatar(conv, people, size="m"):
-        senderId = conv["meta"]["owner"]
-        avatarURI = None
-        avatarURI = utils.userAvatar(senderId, people[senderId], size)
-        avatarSize = "48" if size == "m" else "32"
-        if avatarURI:
-          return '<img src="%s" height="%s" width="%s" style="display:inline-block"/>' \
-            %(avatarURI, avatarSize, avatarSize)
-        else:
-          return ''
-%>
-
-<%!
-    def getAvatarImg(avatarURI, size="m"):
-        avatarSize = "48" if size == "m" else "32"
-        return '<img src="%s" height="%s" width="%s" style="display:inline-block"/>' \
-            %(avatarURI, avatarSize, avatarSize)
+  def getAvatarImg(avatarURI, size="m"):
+    avatarSize = "48" if size == "m" else "32"
+    return '<img src="%s" height="%s" width="%s" style="display:inline-block"/>' \
+        %(avatarURI, avatarSize, avatarSize)
 %>
 
 <%def name="render_conversation_row(script, convId, conv)">
-  <div id="thread-${convId}" class="message-row ${'row-unread' if conv["read"] == "0" else 'row-read'}">
+  <div id="thread-${convId}" class="conversation-row ${'row-unread' if conv["read"] == "0" else ''}">
     <div class="conversation-row-cell conversation-row-select">
-      <input type="checkbox" name="selected" value="${convId}"
-        onchange="$('.thread-selector').attr('checked', false)"/>
+      <input type="checkbox" name="selected" value="${convId}" onchange="$('.thread-selector').attr('checked', false)"/>
     </div>
     <div class="conversation-row-cell conversation-row-sender">
         ${getSenderAvatar(conv, people)}
     </div>
-    <div class="conversation-row-cell conversation-row-info">
-            <div class="conversation-row-headers"
-                 onclick="var url='/messages/thread?id=${convId}';$.address.value(url); $$.fetchUri(url); ">
-                <span class="conversation-row-people">${formatPeopleInConversation(conv, people)}</span>
-                <span class="conversation-row-time">${utils.simpleTimestamp(float(conv['meta']["date_epoch"]), people[myKey]["basic"]["timezone"])}</span>
-            </div>
-            <div class="conversation-row-actions">
-                <span>
-                    %if filterType != "unread":
-                    <%
-                      readStatus = 'unread' if conv['read']=='0' else 'read'
-                      readAction = 'read' if conv['read']=='0' else 'unread'
-                    %>
-                    <div class="messaging-icon messaging-${readStatus}-icon"
-                         title="Mark this conversation as ${readAction}"
-                         onclick="$.post('/ajax/messages/thread', 'action=${readAction}&selected=${convId}&filterType=${filterType}', null, 'script')">&nbsp</div>
-                    %elif filterType == "unread":
-                    <div class="messaging-icon messaging-unread-icon"
-                         title="Mark this conversation as read"
-                         onclick="$.post('/ajax/messages/thread', 'action=read&selected=${convId}&filterType=${filterType}', null, 'script')">&nbsp</div>
-                    %endif
-                    %if filterType != "archive":
-                    <div class="messaging-icon messaging-archive-icon"
-                         title="Archive this conversation"
-                         onclick="$.post('/ajax/messages/thread', 'action=archive&selected=${convId}&filterType=${filterType}', null, 'script')">&nbsp</div>
-                    %endif
-                    %if filterType != "trash":
-                    <div class="messaging-icon messaging-delete-icon"
-                         title="Delete this conversation"
-                         onclick="$.post('/ajax/messages/thread', 'action=trash&selected=${convId}&filterType=${filterType}', null, 'script')">&nbsp</div>
-                    %endif
-                </span>
-            </div>
-            <a class="ajax conversation-row-link" href="/messages/thread?id=${convId}">
-                <div class="conversation-row-subject-wrapper">
-                    <span class="conversation-row-snippet" >${conv["meta"]["subject"]|h}</span> - ${conv["meta"]["snippet"]}
-                </div>
-                <span class="conversation-row-count">
-                    <span title="There are ${conv['count']} messages in this conversation">${conv['count']}</span>
-                </span>
-            </a>
+    <a class="conversation-row-cell conversation-row-info ajax" href="/messages/thread?id=${convId}">
+      <div class="conversation-row-headers">
+        <span class="conversation-row-people">${formatPeopleInConversation(conv, people)}</span>
+        <span class="conversation-row-time">&ndash;&nbsp; ${utils.simpleTimestamp(float(conv['meta']["date_epoch"]), people[myKey]["basic"]["timezone"])}</span>
+      </div>
+      <div class="conversation-row-subject-wrapper">
+        <span class="conversation-row-subject">${conv["meta"]["subject"]|h}</span>
+        <span class="conversation-row-snippet">${conv["meta"]["snippet"]}</span>
+      </div>
+    </a>
+    <div class="conversation-row-cell conversation-row-actions">
+      <span>
+        %if filterType != "unread":
+        <%
+          readStatus = 'unread' if conv['read']=='0' else 'read'
+          readAction = 'read' if conv['read']=='0' else 'unread'
+        %>
+        <div class="messaging-icon messaging-${readStatus}-icon"
+             title="Mark this conversation as ${readAction}"
+             onclick="$.post('/ajax/messages/thread', 'action=${readAction}&selected=${convId}&filterType=${filterType}', null, 'script')">&nbsp;</div>
+        %elif filterType == "unread":
+        <div class="messaging-icon messaging-unread-icon"
+             title="Mark this conversation as read"
+             onclick="$.post('/ajax/messages/thread', 'action=read&selected=${convId}&filterType=${filterType}', null, 'script')">&nbsp;</div>
+        %endif
+        %if filterType != "archive":
+        <div class="messaging-icon messaging-archive-icon"
+             title="Archive this conversation"
+             onclick="$.post('/ajax/messages/thread', 'action=archive&selected=${convId}&filterType=${filterType}', null, 'script')">&nbsp;</div>
+        %endif
+        %if filterType != "trash":
+        <div class="messaging-icon messaging-delete-icon"
+             title="Delete this conversation"
+             onclick="$.post('/ajax/messages/thread', 'action=trash&selected=${convId}&filterType=${filterType}', null, 'script')">&nbsp;</div>
+        %endif
+      </span>
     </div>
   </div>
 </%def>
@@ -176,30 +154,31 @@
 </%def>
 
 <%def name="render_conversation_messages()">
-    % for mid in messageIds:
-        <div class="conv-item conversation-message-wrapper">
-          <div class="comment-avatar">
-            ${getSenderAvatar(messages[mid], people, "s")}
-          </div>
-          <div class="comment-container conversation-message-container">
-            <div class="conv-summary">
-              <!--<div class="message-headers" onclick="var _self=this;$(this).siblings().toggle(1, function(){$(_self).children('.message-headers-snippet').toggleClass('message-headers-snippet-show')});">-->
-              <div class="conversation-message-headers">
-                <div class="user conversation-message-headers-sender">
-                  <a href="/profile?id=${messages[mid]['meta']['owner']}" class="ajax">
-                    ${people[messages[mid]['meta']['owner']]["basic"]["name"]}
-                  </a>
-                </div>
-                <!--<div class="message-headers-snippet">${messages[mid]["meta"].get("body", '') | makeSnippet}</div>-->
-                <nobr class="time-label conversation-message-headers-time">${utils.simpleTimestamp(float(messages[mid]["meta"]["date_epoch"]), people[myKey]["basic"]["timezone"])}</nobr>
-              </div>
-              <div class="conversation-message-message">
-                ${messages[mid]["meta"].get("body", '') | newlinescape}
-              </div>
+  %for mid in messageIds:
+    <div class="conv-item conversation-message-wrapper">
+      <div class="comment-avatar">
+        ${getSenderAvatar(messages[mid], people, "s")}
+      </div>
+      <div class="comment-container conversation-message-container">
+        <div class="conv-summary">
+          <!--<div class="message-headers" onclick="var _self=this;$(this).siblings().toggle(1, function(){$(_self).children('.message-headers-snippet').toggleClass('message-headers-snippet-show')});">-->
+          <div class="conversation-message-headers">
+            <div class="user conversation-message-headers-sender">
+              <a href="/profile?id=${messages[mid]['meta']['owner']}" class="ajax">
+                ${people[messages[mid]['meta']['owner']]["basic"]["name"]}
+              </a>
             </div>
+            <nobr class="time-label conversation-message-headers-time">
+              ${utils.simpleTimestamp(float(messages[mid]["meta"]["date_epoch"]), people[myKey]["basic"]["timezone"])}
+            </nobr>
+          </div>
+          <div class="conversation-message-message">
+            ${messages[mid]["meta"].get("body", '')|newlinescape}
           </div>
         </div>
-    % endfor
+      </div>
+    </div>
+  %endfor
 </%def>
 
 <%def name="render_conversation_reply(script, msg, convId)">
@@ -268,7 +247,7 @@
     <div id="msg-toolbar" class="toolbar">
           %if script:
             <input id="thread-selector" type="checkbox" name="select" value="all"
-                   onchange="$('.message-row input[name=selected]').attr('checked', this.checked)"/>
+                   onchange="$('.conversation-row input[name=selected]').attr('checked', this.checked)"/>
             <input id="toolbarAction" name="action" value="" type="hidden"/>
           %endif
           %if filterType != "trash":
@@ -346,7 +325,7 @@
                         <div class="conversation-people-remove" class="busy-indicator"
                              onclick="$.post('/ajax/messages/members', 'action=remove&parent=${id}&recipients=${person}', null, 'script')" title="Remove ${people[person]["basic"]["name"]} from this conversation"><span>X</span></div>
                     %else:
-                        <div class="conversation-people-no-remove">&nbsp</div>
+                        <div class="conversation-people-no-remove">&nbsp;</div>
                     %endif
                 </li>
             %endfor
