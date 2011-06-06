@@ -331,11 +331,9 @@ class ProfileResource(base.BaseResource):
                              targetItem["meta"]['uuid'])
 
             value = ":".join([responseType, myKey, targetItemId, itemType, targetKey])
-            d14  = Db.insert(targetKey, "notifications", targetItemId, targetItem["meta"]['uuid'])
-            d15 = Db.batch_insert(targetKey, "notificationItems", {targetItemId:{targetItem["meta"]['uuid']:value}})
+            #notify users
 
-            calls = [d1, d2, d3, d4, d5, d6, d7, d8,
-                     d9, d10, d11, d12, d13, d14, d15]
+            calls = [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13]
         except ttypes.NotFoundException:
             itemId = utils.getUniqueKey()
             item = utils.createNewItem(request, itemType,
@@ -347,9 +345,8 @@ class ProfileResource(base.BaseResource):
             d1 = Db.insert(myKey, "pendingConnections", '0', targetKey)
             d2 = Db.insert(targetKey, "pendingConnections", '1', myKey)
             d3 = Db.batch_insert(itemId, "items", item)
-            d4  = Db.insert(targetKey, "notifications", itemId, item["meta"]['uuid'])
-            d5 = Db.batch_insert(targetKey, "notificationItems", {itemId:{item["meta"]['uuid']:value}})
-            calls = [d1, d2, d3, d4, d5]
+            #notify users
+            calls = [d1, d2, d3]
         except errors.PendingRequest:
             pass
 

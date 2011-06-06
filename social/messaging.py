@@ -54,6 +54,8 @@ class MessagingResource(base.BaseResource):
 
         convFolderMap = {}
         userFolderMap = {}
+        notifications = {}
+        rm_notifications = {'latestNotifications':[]}
         conv = yield Db.get_slice(convId, "mConversations", ['meta'])
         conv = utils.supercolumnsToDict(conv)
 
@@ -67,6 +69,10 @@ class MessagingResource(base.BaseResource):
             deliverToInbox = True
             # for a new message, mConvFolders will be empty
             # so recipient may not necessarily be present in cols
+            if recipient != owner:
+                notifications[recipient]= {'latestNotifications': {'messages':{timeUUID: convId }}}
+                rm_notifications['latestNotifications'].append(recipient)
+
             for folder in cols.get(recipient, []):
                 cf = self._folders[folder] if folder in self._folders else folder
                 yield Db.remove(recipient, cf, oldTimeUUID)
@@ -82,6 +88,7 @@ class MessagingResource(base.BaseResource):
                 if recipient != owner:
                     convFolderMap[recipient]['mUnreadConversations'] = {timeUUID:unread}
                     userFolderMap[recipient]['mUnreadConversations'] = ''
+
             else:
                 val = unread if recipient != owner else read
                 convFolderMap[recipient] = {'mDeletedConversations':{timeUUID:val}}
@@ -89,6 +96,10 @@ class MessagingResource(base.BaseResource):
 
         yield Db.batch_mutate(convFolderMap)
         yield Db.batch_insert(convId, "mConvFolders", userFolderMap)
+        if rm_notifications and oldTimeUUID != timeUUID:
+            yield Db.batch_remove(rm_notifications, names=[oldTimeUUID], supercolumn="messages")
+        if notifications:
+            yield Db.batch_mutate(notifications)
 
     def _createDateHeader(self, timezone='Asia/Kolkata'):
         #FIX: get the timezone from userInfo
@@ -567,6 +578,7 @@ class MessagingResource(base.BaseResource):
             timeUUID = conv['meta']['uuid']
             yield Db.remove(myId, "mUnreadConversations", timeUUID)
             yield Db.remove(convId, "mConvFolders", 'mUnreadConversations', myId)
+            yield Db.remove(myId, "latestNotifications", timeUUID, "messages")
             cols = yield Db.get_slice(convId, "mConvFolders", [myId])
             cols = utils.supercolumnsToDict(cols)
             for folder in cols[myId]:

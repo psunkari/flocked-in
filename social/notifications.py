@@ -15,28 +15,38 @@ from social.logging     import dump_args, profile
 @profile
 @defer.inlineCallbacks
 @dump_args
-def pushNotifications(itemId, convId, responseType,
-                      convType, convOwner, commentOwner, timeUUID):
+def pushNotifications(itemId, convId, responseType, convType, convOwner,
+                      commentOwner, timeUUID, followers=None, sc = "notifications"):
     # value = responseType:commentOwner:itemKey:convType:convOwner:
     value = ":".join([responseType, commentOwner, itemId, convType, convOwner])
-    followers = yield Db.get_slice(convId, "items", super_column="followers")
+    if not followers:
+        followers = yield Db.get_slice(convId, "items", super_column="followers")
+    deferreds = []
 
     for follower in followers:
         userKey = follower.column.name
         if commentOwner != userKey:
-            yield Db.insert(userKey, "notifications", convId, timeUUID)
-            yield Db.batch_insert(userKey, "notificationItems", {convId:{timeUUID:value}})
+            d1 =  Db.insert(userKey, "notifications", convId, timeUUID)
+            d2 =  Db.insert(userKey, "latestNotifications", convId, timeUUID, sc)
+            d3 =  Db.batch_insert(userKey, "notificationItems", {convId:{timeUUID:value}})
+            deferreds.extend([d1, d2, d3])
+    yield defer.DeferredList(deferreds)
 
 
 @profile
 @defer.inlineCallbacks
 @dump_args
-def deleteNotifications(convId, timeUUID):
-    followers = yield Db.get_slice(convId, "items", super_column="followers")
+def deleteNotifications(convId, timeUUID, followers=None, sf="notifications"):
+    deferreds = []
+    if not followers:
+        followers = yield Db.get_slice(convId, "items", super_column="followers")
     for follower in followers:
         userKey = follower.column.name
-        yield Db.remove(userKey, "notifications", timeUUID)
-        yield Db.remove(userKey, "notificationItems", timeUUID, convId)
+        d1 = Db.remove(userKey, "notifications", timeUUID)
+        d2 = Db.remove(userKey, "latestNotifications", timeUUID, sf)
+        d3 = Db.remove(userKey, "notificationItems", timeUUID, convId)
+        deferreds.extend([d1, d2, d3])
+    yield defer.DeferredList(deferreds)
 
 
 class NotificationsResource(base.BaseResource):
@@ -233,7 +243,7 @@ class NotificationsResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _renderNotifications(self, request):
-        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
         args["menuId"] = "notifications"
 
@@ -246,6 +256,8 @@ class NotificationsResource(base.BaseResource):
         start = utils.getRequestArg(request, "start") or ''
         fromFetchMore = ((not landing) and (not appchange) and start)
         data = yield self._getNotifications(request)
+        if not start:
+            yield Db.remove(myId, "latestNotifications", super_column="notifications")
         args.update(data)
 
         if script:

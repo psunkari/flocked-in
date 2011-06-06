@@ -32,7 +32,6 @@ class ItemResource(base.BaseResource):
         convId = utils.getRequestArg(request, "id")
         if not convId:
             raise errors.MissingParam()
-
         conv = yield Db.get_slice(convId, "items", ['meta', 'tags'])
         conv = utils.supercolumnsToDict(conv)
         if not conv:
@@ -52,7 +51,9 @@ class ItemResource(base.BaseResource):
 
         relation = Relation(myKey, [])
         yield defer.DeferredList([relation.initFriendsList(),
-                                  relation.initGroupsList()])
+                                  relation.initGroupsList(),
+                                  relation.initSubscriptionsList()])
+        # groups list is required when checking acls.
 
         if not utils.checkAcl(myKey, meta["acl"], owner, relation, myOrgId):
             raise errors.NotAuthorized()
@@ -117,8 +118,9 @@ class ItemResource(base.BaseResource):
             toFetchEntities.add(userKey)
         responseKeys.reverse()
 
-        likes = yield Db.get_slice(convId, "itemLikes", relation.friends.keys()) \
-                            if relation.friends.keys() else defer.succeed([])
+        friends_subscriptions = relation.friends.keys() + list(relation.subscriptions)
+        likes = yield Db.get_slice(convId, "itemLikes", friends_subscriptions) \
+                            if friends_subscriptions else defer.succeed([])
         toFetchEntities.update([x.column.name for x in likes])
         d1 = Db.multiget_slice(toFetchEntities, "entities", ["basic"])
         d2 = Db.multiget_slice(responseKeys, "items", ["meta"])
@@ -303,8 +305,8 @@ class ItemResource(base.BaseResource):
         yield feed.pushToOthersFeed(myId, timeUUID, itemId, convId, convACL,
                                     responseType, convType, convOwnerId, entities=extraEntities)
 
-        yield notifications.pushNotifications( itemId, convId, responseType, convType,
-                                    convOwnerId, myId, timeUUID)
+        yield notifications.pushNotifications(itemId, convId, responseType, convType,
+                                              convOwnerId, myId, timeUUID)
 
         item["meta"]["likesCount"] = str(likesCount + 1)
         args["items"] = {itemId: item}
