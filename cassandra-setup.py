@@ -196,6 +196,10 @@ def createColumnFamilies(client):
                          'A feed of all the items for user, group and organization')
     yield client.system_add_column_family(notifications)
 
+    latestNotifications = CfDef(KEYSPACE, 'latestNotifications', 'Super', 'UTF8Type',
+                                'TimeUUIDType', 'latest notifications for user')
+    yield client.system_add_column_family(latestNotifications)
+
     notificationItems = CfDef(KEYSPACE, "notificationItems", "Super", "UTF8Type",
                               "TimeUUIDType", "Notifications")
     yield client.system_add_column_family(notificationItems)
@@ -721,7 +725,7 @@ def truncateColumnFamilies(client):
                "tagFollowers", "orgTagsByName", "messages", "bannedUsers",
                "blockedUsers", "deletedConvs", "feed_question",
                "mConversations", "mAllConvs", "mUnread", "mArchived", "mDeleted",
-               "mConvMessages", "mConvFolders"]:
+               "mConvMessages", "mConvFolders", "latestNotifications"]:
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 

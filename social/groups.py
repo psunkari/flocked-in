@@ -137,6 +137,7 @@ class GroupsResource(base.BaseResource):
                 cols = yield Db.get_slice(groupId, "entities", ["admins"])
                 admins = utils.supercolumnsToDict(cols)
 
+                #XXX: notifications in new format
                 for admin in admins["admins"]:
                     commentOwner = myKey
                     responseType = "G"
