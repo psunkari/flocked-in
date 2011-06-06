@@ -12,6 +12,7 @@ from twisted.python             import log, components
 from social                     import Config, Db, utils, _
 from social.template            import render
 from social.isocial             import IAuthInfo
+from social.register            import RegisterResource
 
 #
 # IAuthInfo: Interface with which data is stored the session.
@@ -215,6 +216,9 @@ class AuthWrapper(object):
     def __init__(self, portal):
         self.portal = portal
         self.public = static.File("public")
+        self.about = static.File("about")
+        self.register = RegisterResource()
+        self.signin = SigninForm()
 
     def render(self, request):
         return self._authorized(request).render(request)
@@ -223,23 +227,20 @@ class AuthWrapper(object):
         if request.method == "GET":
             # Allow access to the signin form
             if name == "signin":
-                return SigninForm()
+                return self.signin
 
             if name == "register":
-                #inline import because of 'cyclic imports'.
-                #reorder the import to prevent cyclic imports
-                from social.register import RegisterResource
-                return RegisterResource()
+                return self.register
 
             # Allow access to public/static files.
-            # On production systems this should be handled by dedicated
-            # static file servers - nginX maybe.
             elif name == "public":
                 return self.public
 
+            elif name == "about":
+                return self.about
+
         if request.method == "POST":
             if name == "register":
-                from social.register import RegisterResource
                 return RegisterResource()
 
         request.postpath.insert(0, request.prepath.pop())

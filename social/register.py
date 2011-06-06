@@ -16,7 +16,7 @@ from social             import utils, Db, Config, whitelist, blacklist
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
 from social.logging     import dump_args, profile
-from social.isocial     import IAuthInfo
+
 
 @profile
 @defer.inlineCallbacks
