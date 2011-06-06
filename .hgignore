@@ -4,6 +4,9 @@ syntax: glob
 twistd.pid
 twisted/plugins/dropin.cache
 
+# Secret Folder :)
+secret/*
+
 # Compiled Python
 *.pyc
 
