@@ -101,22 +101,11 @@ class MessagingResource(base.BaseResource):
         if notifications:
             yield Db.batch_mutate(notifications)
 
-    def _createDateHeader(self, timezone='Asia/Kolkata'):
-        #FIX: get the timezone from userInfo
-        tz = pytz.timezone(timezone)
-        dt = tz.localize(datetime.datetime.now())
-        fmt_2822 = "%a, %d %b %Y %H:%M:%S %Z%z"
-        date = dt.strftime(fmt_2822)
-        epoch = time.mktime(dt.timetuple())
-        return date, epoch
-
     @defer.inlineCallbacks
-    def _newMessage(self, ownerId, timeUUID, body, dateHeader, epoch):
-
+    def _newMessage(self, ownerId, timeUUID, body, epoch):
         messageId = utils.getUniqueKey()
         meta =  { "owner": ownerId,
                  "timestamp": str(int(time.time())),
-                 'Date':dateHeader,
                  'date_epoch': str(epoch),
                  "body": body,
                  "uuid": timeUUID
@@ -125,14 +114,11 @@ class MessagingResource(base.BaseResource):
         defer.returnValue(messageId)
 
     @defer.inlineCallbacks
-    def _newConversation(self, ownerId, participants, timeUUID,
-                         subject, dateHeader, epoch):
-
+    def _newConversation(self, ownerId, participants, timeUUID, subject, epoch):
         participants = dict ([(userId, '') for userId in participants])
         conv_meta = {"owner":ownerId,
                      "timestamp": str(int(time.time())),
                      "uuid": timeUUID,
-                     "Date": dateHeader,
                      "date_epoch" : str(epoch),
                      "subject": subject}
         convId = utils.getUniqueKey()
@@ -148,7 +134,7 @@ class MessagingResource(base.BaseResource):
 
         myId = request.getSession(IAuthInfo).username
         recipients, body, subject, convId = self._parseComposerArgs(request)
-        dateHeader, epoch = self._createDateHeader()
+        epoch = int(time.time())
 
         if not convId:
             raise errors.MissingParams()
@@ -161,10 +147,9 @@ class MessagingResource(base.BaseResource):
         participants = cols['participants'].keys()
         timeUUID = uuid.uuid1().bytes
         snippet = self._fetchSnippet(body)
-        meta = {'uuid': timeUUID, 'Date': dateHeader, 'date_epoch': str(epoch),
-                "snippet":snippet}
+        meta = {'uuid': timeUUID, 'date_epoch': str(epoch), "snippet":snippet}
 
-        messageId = yield self._newMessage(myId, timeUUID, body, dateHeader, epoch)
+        messageId = yield self._newMessage(myId, timeUUID, body, epoch)
         yield self._deliverMessage(convId, participants, timeUUID, myId)
         yield Db.insert(convId, "mConvMessages", messageId, timeUUID)
         yield Db.batch_insert(convId, "mConversations", {'meta':meta})
@@ -200,11 +185,11 @@ class MessagingResource(base.BaseResource):
             request.finish()
 
     @defer.inlineCallbacks
-    def _createConveration(self, request):
+    def _createConversation(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
         recipients, body, subject, parent = self._parseComposerArgs(request)
-        dateHeader, epoch = self._createDateHeader()
+        epoch = int(time.time())
         filterType = utils.getRequestArg(request, "filterType") or None
 
         if not parent and not recipients:
@@ -221,11 +206,10 @@ class MessagingResource(base.BaseResource):
 
         timeUUID = uuid.uuid1().bytes
         snippet = self._fetchSnippet(body)
-        meta = {'uuid': timeUUID, 'Date': dateHeader, 'date_epoch': str(epoch),
-                "snippet":snippet}
+        meta = {'uuid': timeUUID, 'date_epoch': str(epoch), "snippet": snippet}
         convId = yield self._newConversation(myId, participants, timeUUID,
-                                             subject, dateHeader, epoch)
-        messageId = yield self._newMessage(myId, timeUUID, body, dateHeader, epoch)
+                                             subject, epoch)
+        messageId = yield self._newMessage(myId, timeUUID, body, epoch)
         yield self._deliverMessage(convId, participants, timeUUID, myId)
         yield Db.insert(convId, "mConvMessages", messageId, timeUUID)
         #XXX:Is this a duplicate batch insert ?
@@ -257,7 +241,7 @@ class MessagingResource(base.BaseResource):
         if parent:
             yield self._reply(request)
         else:
-            yield self._createConveration(request)
+            yield self._createConversation(request)
 
     @defer.inlineCallbacks
     def _listConversations(self, request):
