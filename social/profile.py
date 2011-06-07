@@ -1,5 +1,6 @@
 import PythonMagick
 import imghdr
+import uuid
 from random                 import sample
 
 from twisted.web            import resource, server, http
@@ -332,25 +333,85 @@ class ProfileResource(base.BaseResource):
 
             value = ":".join([responseType, myKey, targetItemId, itemType, targetKey])
             #notify users
+            d14  = Db.insert(targetKey, "notifications", targetItemId, targetItem["meta"]['uuid'])
+            d15 = Db.batch_insert(targetKey, "notificationItems", {targetItemId:{targetItem["meta"]['uuid']:value}})
 
-            calls = [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13]
+
+            calls = [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14, d15]
+            cols = yield Db.multiget_slice([myKey, targetKey] , "latestNotifications",
+                                            ["incomingFriendRequests",
+                                            "outGoingFriendRequests",
+                                            "archivedFriendRequests"])
+            cols = utils.multiSuperColumnsToDict(cols)
+            for sc in cols.get(myKey, []):
+                for tuuid, key in cols[myKey][sc].items():
+                    if key == targetKey:
+                        d = Db.remove(myKey, "latestNotifications", tuuid, sc)
+                        calls.append(d)
+            for sc in cols.get(targetKey, []):
+                for tuuid, key in cols[targetKey][sc].items():
+                    if key == myKey:
+                        d = Db.remove(targetKey, "latestNotifications", tuuid, sc)
+                        calls.append(d)
+
         except ttypes.NotFoundException:
-            itemId = utils.getUniqueKey()
-            item = utils.createNewItem(request, itemType,
-                                       ownerId= myKey,
-                                       subType="pendingConnection",
-                                       ownerOrgId = users[myKey]["basic"]["org"])
-            value = ":".join([responseType, myKey, itemId, itemType, targetKey])
+            timeUUID = uuid.uuid1().bytes
 
             d1 = Db.insert(myKey, "pendingConnections", '0', targetKey)
             d2 = Db.insert(targetKey, "pendingConnections", '1', myKey)
-            d3 = Db.batch_insert(itemId, "items", item)
+            d3 = Db.insert(targetKey, "latestNotifications", myKey, timeUUID, "incomingFriendRequests")
+            d4 = Db.insert(myKey, "latestNotifications", targetKey, timeUUID, "outGoingFriendRequests")
+
             #notify users
-            calls = [d1, d2, d3]
+            calls = [d1, d2, d3, d4]
         except errors.PendingRequest:
             pass
 
         yield defer.DeferredList(calls)
+
+    @defer.inlineCallbacks
+    def _cancelFriendRequest(self, myKey, targetKey):
+
+
+        deferreds = []
+
+        cols = yield Db.multiget_slice([myKey, targetKey], "latestNotifications",
+                                        ["incomingFriendRequests",
+                                        "outGoingFriendRequests",
+                                        "archivedFriendRequests"])
+        cols = utils.multiSuperColumnsToDict(cols)
+        for sc in cols.get(myKey, []):
+            for tuuid, key in cols[myKey][sc].items():
+                if key == targetKey:
+                    d = Db.remove(myKey, "latestNotifications", tuuid, sc)
+                    deferreds.append(d)
+        for sc in cols.get(targetKey, []):
+            for tuuid, key in cols[targetKey][sc].items():
+                if key == myKey:
+                    d = Db.remove(targetKey, "latestNotifications", tuuid, sc)
+                    deferreds.append(d)
+
+        d1 = Db.remove(myKey, "pendingConnections", targetKey)
+        d2 = Db.remove(targetKey, "pendingConnections", myKey)
+        yield defer.DeferredList(deferreds+[d1, d2])
+        #XXX: UI: remove the user from the list of pending-friend-requests
+
+
+    @defer.inlineCallbacks
+    def _archiveFriendRequest(self, myKey, targetKey):
+
+        try:
+            cols = yield Db.get_slice(myKey, "latestNotifications", ["incomingFriendRequests"])
+            cols = utils.supercolumnsToDict(cols)
+            for tuuid, key in cols['incomingFriendRequests'].items():
+                if key == targetKey:
+                    d1 = Db.remove(myKey, "latestNotifications", tuuid, "incomingFriendRequests")
+                    d2 = Db.insert(myKey, "latestNotifications", targetKey, tuuid, "archivedFriendRequests")
+                    yield defer.DeferredList([d1, d2])
+                    #XXX: UI: remove the user from pending requests list
+        except ttypes.NotFoundException:
+            pass
+
 
 
     @profile
@@ -367,7 +428,6 @@ class ProfileResource(base.BaseResource):
         targetFirstName = users[targetKey]["basic"].get("firstname", None)
         targetLastName = users[targetKey]["basic"].get("lastname", None)
         _getColName = lambda name,Id: ":".join([name.lower(), Id])
-
 
         mutations = {myKey:{}, targetKey:{}}
         mutations[myKey]["connections"] = {targetKey: None}
@@ -637,6 +697,16 @@ class ProfileResource(base.BaseResource):
             d = self._renderEditProfile(request)
         elif segmentCount == 1 and request.postpath[0] == 'changePasswd':
             d = self._changePassword(request)
+        elif segmentCount == 1 and request.postpath[0] in ['cancel', 'archive']:
+            targetKey = utils.getRequestArg(request, 'targetKey')
+            authinfo = request.getSession(IAuthInfo)
+            myKey = authinfo.username
+            if targetKey:
+                if request.postpath[0] == 'cancel':
+                    d = self._cancelFriendRequest(myKey, targetKey)
+                elif request.postpath[0] == 'archive':
+                    d = self._archiveFriendRequest(myKey, targetKey)
+
 
         return self._epilogue(request, d)
 

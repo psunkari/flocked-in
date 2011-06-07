@@ -33,8 +33,6 @@ def deleteFeed(userId, itemId, convId, itemType, acl, convOwner,
                                    convOwner, responseType, others, tagId)
 
 
-
-
 @profile
 @defer.inlineCallbacks
 @dump_args
@@ -562,6 +560,10 @@ class FeedResource(base.BaseResource):
             feedItems = yield getFeedItems(request, feedId=feedId, start=start)
         args.update(feedItems)
         args['itemType']=itemType
+        cols = yield Db.get_slice(myId, "latestNotifications")
+        cols = utils.supercolumnsToDict(cols)
+        counts = dict([(key, len(cols[key])) for key in cols])
+
 
         if script:
             onload = "(function(obj){$$.convs.load(obj);})(this);"

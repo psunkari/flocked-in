@@ -138,13 +138,16 @@ class GroupsResource(base.BaseResource):
                 admins = utils.supercolumnsToDict(cols)
 
                 #XXX: notifications in new format
-                for admin in admins["admins"]:
-                    commentOwner = myKey
-                    responseType = "G"
-                    value = ":".join([responseType, commentOwner, groupId, '', admin])
-                    timeUUID = uuid.uuid1().bytes
-                    yield Db.insert(admin, "notifications", groupId, timeUUID)
-                    yield Db.batch_insert(admin, "notificationItems", {groupId:{timeUUID:value}})
+                timeUUID = uuid.uuid1().bytes
+                yield Db.insert(groupId, "latestNotifications", myKey, timeUUID, 'incomingGroupRequests')
+                yield Db.insert(myKey, "latestNotifications", groupId, timeUUID, 'outgoingGroupRequests')
+
+                #for admin in admins["admins"]:
+                #    commentOwner = myKey
+                #    responseType = "G"
+                #    value = ":".join([responseType, commentOwner, groupId, '', admin])
+                #    yield Db.insert(admin, "notifications", groupId, timeUUID)
+                #    yield Db.batch_insert(admin, "notificationItems", {groupId:{timeUUID:value}})
 
                 pendingRequests[groupId]=myKey
             args["pendingConnections"] = pendingRequests
@@ -173,6 +176,13 @@ class GroupsResource(base.BaseResource):
                 cols = yield Db.get(groupId, "pendingConnections", userId)
                 yield Db.remove(groupId, "pendingConnections", userId)
                 yield Db.remove(userId, "pendingConnections", groupId)
+                cols  = yield Db.get_slice(groupId, "latestNotifications", ['incomingGroupRequests'])
+                cols = utils.supercolumnsToDict(cols)
+                for tuuid, key in cols['incomingGroupRequests'].items():
+                    if key == userId:
+                        yield Db.remove(groupId, "latestNotifications", tuuid, 'incomingGroupRequests')
+                        yield Db.remove(userId, "latestNotifications", tuuid, 'outgoingGroupRequests')
+                        break
                 yield self._addMember(request, groupId, userId, myOrgId)
             except ttypes.NotFoundException:
                 pass
@@ -194,6 +204,13 @@ class GroupsResource(base.BaseResource):
                 cols = yield Db.get(groupId, "pendingConnections", userId)
                 yield Db.remove(groupId, "pendingConnections", userId)
                 yield Db.remove(userId, "pendingConnections", groupId)
+                cols  = yield Db.get_slice(groupId, "latestNotifications", ['incomingGroupRequests'])
+                cols = utils.supercolumnsToDict(cols)
+                for tuuid, key in cols['incomingGroupRequests'].items():
+                    if key == userId:
+                        yield Db.remove(groupId, "latestNotifications", tuuid, 'incomingGroupRequests')
+                        yield Db.remove(userId, "latestNotifications", tuuid, 'outgoingGroupRequests')
+                        break
                 # notify user that the moderator rejected.
             except ttypes.NotFoundException:
                 pass
@@ -218,6 +235,13 @@ class GroupsResource(base.BaseResource):
             # if the request is pending, remove the request
             yield Db.remove(groupId, "pendingConnections", userId)
             yield Db.remove(userId, "pendingConnections", groupId)
+            cols  = yield Db.get_slice(groupId, "latestNotifications", ['incomingGroupRequests'])
+            cols = utils.supercolumnsToDict(cols)
+            for tuuid, key in cols['incomingGroupRequests'].items():
+                if key == userId:
+                    yield Db.remove(groupId, "latestNotifications", tuuid, 'incomingGroupRequests')
+                    yield Db.remove(userId, "latestNotifications", tuuid, 'outgoingGroupRequests')
+                    break
 
             # if the users is already a member, remove the user from the group
             yield Db.remove(groupId, "groupMembers", userId)
@@ -521,7 +545,7 @@ class GroupsResource(base.BaseResource):
         emailId = utils.getRequestArg(request, "uid")
         cols = yield Db.get_slice(emailId, "userAuth", ["user"])
         if not cols:
-            raise error.InvalidRequest()
+            raise errors.InvalidRequest()
         userId = cols[0].column.value
         group = yield Db.get_slice(groupId, "entities", ["basic", "admins"])
         group = utils.supercolumnsToDict(group)
