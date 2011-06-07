@@ -564,7 +564,6 @@ class FeedResource(base.BaseResource):
         cols = utils.supercolumnsToDict(cols)
         counts = dict([(key, len(cols[key])) for key in cols])
 
-
         if script:
             onload = "(function(obj){$$.convs.load(obj);})(this);"
             yield renderScriptBlock(request, "feed.mako", "feed", landing,

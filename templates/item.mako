@@ -106,7 +106,7 @@
             count = int(items[convId]["meta"].get("likesCount", "0"))
             if count:
               iLike = myLikes and convId in myLikes and len(myLikes[convId])
-              self.conv_likes(convId, count, iLike, likes.get(convId, {}) if likes else [])
+              self.conv_likes(convId, count, iLike, likes.get(convId, []) if likes else [])
           %>
         </div>
         <div id="conv-comments-wrapper-${convId}" class="comments-wrapper">
@@ -212,30 +212,28 @@
       try:
         users.remove(myKey)
       except: pass
-      other -= (1 + len(users))
+      other -= (1 + len(users[:2]))
       if other <= 0:
         template = ["You like this",
                     "You and %s like this",
-                    "You, %s and %s like this"][len(users)]
+                    "You, %s and %s like this"][len(users[:2])]
       else:
         template = ["You and %s like this",
             "You, %s and %s like this",
-            "You, %s, %s and %s like this"][len(users)]
+            "You, %s, %s and %s like this"][len(users[:2])]
     else:
-      other -= len(users)
+      other -= len(users[:2])
       if other == 0 and len(users) > 0:
         template = ["",
                     "%s likes this",
-                    "%s and %s like this"][len(users)]
-      if other == 1 and len(users) == 0:
-        template = "%s likes this"
-      elif other > 1:
-        template = ["%s like this",
+                    "%s and %s like this"][len(users[:2])]
+      if other >=1:
+        template = ["%s likes this",
             "%s and %s like this",
-            "%s, %s and %s like this"][len(users)]
+            "%s, %s and %s like this"][len(users[:2])]
 
     if template:
-      vals = [utils.userName(id, entities[id]) for id in users]
+      vals = [utils.userName(id, entities[id]) for id in users[:2]]
       if other == 1:
         if len(users) == 0 and not iLike:
           vals.append(linkifyLikes(_("1 person")))
@@ -434,8 +432,6 @@
     mood = conv["meta"]["subType"]
     normalize = utils.normalizeText
     owner = conv["meta"]["owner"]
-    print entities
-    print owner
   %>
   %if not isQuoted:
     ${utils.userName(owner, entities[owner], "conv-user-cause")}
