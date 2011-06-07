@@ -348,6 +348,7 @@ class GroupsResource(base.BaseResource):
         yield Db.batch_insert(groupId, "entities", {"basic": meta,
                                                     "admins": admins})
         yield Db.insert(orgKey, "entityGroupsMap", '', groupId)
+        yield self._addMember(request, groupId, myKey, orgKey)
         request.redirect("/feed?id=%s"%(groupId))
 
 
