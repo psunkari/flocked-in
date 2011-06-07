@@ -474,7 +474,7 @@
         %if imgsrc:
           <img src='${imgsrc}' class="link-image"></img>
         %endif
-      <a href=${url} class="link-url" ><div class="link-title" > ${_(title)} </div></a>
+      <a href=${url} class="link-url" target="_blank" ><div class="link-title" > ${_(title)} </div></a>
       <div id="summary" class="link-summary"> ${_(summary)}</div>
       </div>
 
