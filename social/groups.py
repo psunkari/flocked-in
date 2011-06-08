@@ -324,18 +324,15 @@ class GroupsResource(base.BaseResource):
         name = utils.getRequestArg(request, "name")
         description = utils.getRequestArg(request, "desc")
         access = utils.getRequestArg(request, "access") or "public"
-        allowExternal = utils.getRequestArg(request, "external") or "closed"
-
-        if allowExternal not in ("open", "closed"):
-            raise errors.InvalidRequest()
 
         if not name:
             raise errors.MissingParams()
 
         groupId = utils.getUniqueKey()
-        meta = {"name":name, "type":"group",
-                "access":access, "orgKey":args["orgKey"],
-                "allowExternalUsers": allowExternal}
+        meta = {"name":name,
+                "type":"group",
+                "access":access,
+                "orgKey":args["orgKey"]}
         admins = {myKey:''}
         if description:
             meta["desc"] = description
@@ -347,6 +344,7 @@ class GroupsResource(base.BaseResource):
 
         yield Db.batch_insert(groupId, "entities", {"basic": meta,
                                                     "admins": admins})
+        yield Db.insert(myKey, "entities", '', groupId, 'adminOfGroups')
         yield Db.insert(orgKey, "entityGroupsMap", '', groupId)
         yield self._addMember(request, groupId, myKey, orgKey)
         request.redirect("/feed?id=%s"%(groupId))
