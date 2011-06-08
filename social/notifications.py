@@ -1,5 +1,6 @@
 import uuid
 import time
+import json
 
 from telephus.cassandra import ttypes
 from twisted.internet   import defer
@@ -268,9 +269,37 @@ class NotificationsResource(base.BaseResource):
             else:
                 yield renderScriptBlock(request, "notifications.mako", "content",
                                     landing, "#notifications", "set", **args)
+    @defer.inlineCallbacks
+    def _get_new_notifications(self, request):
+
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        cols = yield Db.get_slice(myId, "latestNotifications")
+        cols = utils.supercolumnsToDict(cols)
+        counts = {myId: dict([(key, len(cols[key])) for key in cols])}
+        orgId = args['orgKey']
+        #get the list of groups
+        cols = yield Db.get_slice(myId, "entityGroupsMap")
+        groupIds = [col.column.name for col in cols]
+
+        cols = yield Db.multiget_slice(groupIds, "entities", ["admins"])
+        cols = utils.multiSuperColumnsToDict(cols)
+
+        #get the groups for which im admin.
+        groupIds = [groupId for groupId in cols if myId in cols[groupId]['admins']]
+        cols = yield Db.multiget_slice(groupIds, "latestNotifications")
+        cols = utils.multiSuperColumnsToDict(cols)
+
+        for groupId in cols:
+            counts[groupId] = dict([(key, len(cols[groupId][key])) for key in cols[groupId]])
+        request.write(json.dumps(counts))
+
 
     @profile
     @dump_args
     def render_GET(self, request):
-        d = self._renderNotifications(request)
+        segmentCount = len(request.postpath)
+        if segmentCount == 0:
+            d = self._renderNotifications(request)
+        elif segmentCount == 1 and request.postpath[0]=="new":
+            d = self._get_new_notifications(request)
         return self._epilogue(request, d)
