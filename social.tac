@@ -8,7 +8,6 @@ from social.server          import SiteFactory, RequestFactory, SessionFactory
 root = RootResource()
 
 application = service.Application('social')
-collection = service.IServiceCollection(application)
 
 factory = SiteFactory(root)
 factory.sessionFactory = SessionFactory

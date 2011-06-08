@@ -4,8 +4,7 @@ import ConfigParser
 import gettext
 from ordereddict        import OrderedDict
 
-from telephus.protocol  import ManagedCassandraClientFactory
-from telephus.client    import CassandraClient
+from telephus.pool      import CassandraClusterPool
 from twisted.internet   import reactor
 from twisted.plugin     import getPlugins
 
@@ -18,13 +17,11 @@ Config = ConfigParser.ConfigParser()
 Config.read([os.path.abspath(source) for source in config_sources])
 
 
-# Connect to Cassandra
-_dbhost = Config.get("Cassandra", "Host")
-_dbport = Config.get("Cassandra", "Port")
-_keyspace = Config.get("Cassandra", "Keyspace")
-_factory = ManagedCassandraClientFactory(_keyspace)
-reactor.connectTCP(_dbhost, int(_dbport), _factory)
-Db = CassandraClient(_factory)
+# Cassandra connection pool
+cassandraNodes = Config.get("Cassandra", "Nodes").split(',\s*')
+cassandraKeyspace = Config.get("Cassandra", "Keyspace")
+Db = CassandraClusterPool(cassandraNodes, cassandraKeyspace, pool_size=10)
+Db.startService()
 
 
 # Aliases for i18n
