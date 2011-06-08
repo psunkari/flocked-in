@@ -66,27 +66,34 @@ class SigninResource(resource.Resource):
 
     @defer.inlineCallbacks
     def _saveSessionAndRedirect(self, request, data):
-        authinfo = yield defer.maybeDeferred(request.getSession, IAuthInfo)
+        authinfo = yield defer.maybeDeferred(request.getSession, IAuthInfo, True)
         authinfo.username = data["user"]
         authinfo.organization = data.get("org", None)
         authinfo.isAdmin = True if data.has_key("isAdmin") else False
 
-        redirectURL = utils.getRequestArg(request, "_r") or "/"
+        redirectURL = utils.getRequestArg(request, "_r") or "/feed"
         util.redirectTo(redirectURL, request)
         request.finish()
-
 
     @defer.inlineCallbacks
     def _renderSigninForm(self, request, errcode=''):
         args = {}
-        redirect = utils.getRequestArg(request, '_r') or "/"
+        redirect = utils.getRequestArg(request, '_r') or "/feed"
         args["redirect"] = urllib.quote(redirect,  '*@+/')
         args["reason"] = errcode
         yield render(request, "signin.mako", **args)
         request.finish()
 
     def render_GET(self, request):
-        self._renderSigninForm(request)
+        d = defer.maybeDeferred(request.getSession, IAuthInfo, False)
+        def checkSession(authinfo):
+            if authinfo.username:
+                redirectURL = utils.getRequestArg(request, "_r") or "/feed"
+                util.redirectTo(redirectURL, request)
+                request.finish()
+            else:
+                self._renderSigninForm(request)
+        d.addCallback(checkSession)
         return server.NOT_DONE_YET
 
     def render_POST(self, request):
@@ -149,7 +156,9 @@ class RootResource(resource.Resource):
             self._signin = SigninResource()
 
     def _clearAuth(self, request):
-        pass
+        sessionId = request.getCookie(request.cookiename)
+        if sessionId:
+            request.site.clearSession(sessionId)
 
     @defer.inlineCallbacks
     def _ensureAuth(self, request, rsrc):
@@ -229,7 +238,7 @@ class RootResource(resource.Resource):
             if request.method == "GET" and path not in self._noCookiesPaths\
                                 and (not self._isAjax or "_fp" in request.args):
                 def addPageIndicatorCookie(rsrc, request, path):
-                    request.addCookie("_page", path, path="/")
+                    request.addCookie("page", path, path="/")
                     return rsrc
                 d.addCallback(addPageIndicatorCookie, request, path)
         else:

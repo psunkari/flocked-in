@@ -140,7 +140,7 @@ class RegisterResource(BaseResource):
             d =  self._sendInvitation(emailId, sender)
             deferreds.append(d)
 
-        prevPage = request.getCookie("_page")
+        prevPage = request.getCookie("page")
         if prevPage == "register":
             request.redirect('/people?type=all')
         elif not prevPage:
