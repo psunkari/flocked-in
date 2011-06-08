@@ -166,18 +166,18 @@ def getUniqueKey():
 
 def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
                   ownerOrgId=None, groupIds = None):
-    owner = ownerId or request.getSession(IAuthInfo).username
-    if not ownerOrgId:
-        ownerOrgId = request.getSession(IAuthInfo).organization
+    authinfo = request.getSession(IAuthInfo)
+    owner = ownerId or authinfo.username
+    org = ownerOrgId or authinfo.organization
 
     if not acl:
         acl = getRequestArg(request, "acl")
         try:
             acl = json.loads(acl)
         except:
-            if not ownerOrgId:
+            if not org:
                 raise errors.MissingParams()
-            acl = {"accept":{"orgs":[ownerOrgId]}}
+            acl = {"accept":{"orgs":[org]}}
 
     acl = pickle.dumps(acl)
     meta = {

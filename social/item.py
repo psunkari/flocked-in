@@ -653,7 +653,9 @@ class ItemResource(base.BaseResource):
     @dump_args
     def _tag(self, request):
         tagName = utils.getRequestArg(request, "tag")
-        myId = request.getSession(IAuthInfo).username
+        authInfo = request.getSession(IAuthInfo)
+        myId = authInfo.username
+        orgId = authInfo.organization
 
         if not tagName:
             raise errors.MissingParam()
@@ -670,7 +672,6 @@ class ItemResource(base.BaseResource):
         d2 = Db.insert(tagId, "tagItems", itemId, item["meta"]["uuid"])
         d3 = Db.get_slice(tagId, "tagFollowers")
 
-        orgId = request.getSession(IAuthInfo).organization
         tagItemsCount = int(tag.get("itemsCount", "0")) + 1
         if tagItemsCount % 10 == 7:
             tagItemsCount = yield Db.get_count(tagId, "tagItems")
@@ -705,9 +706,12 @@ class ItemResource(base.BaseResource):
     @dump_args
     def _untag(self, request):
         tagId = utils.getRequestArg(request, "tag")
-        myId = request.getSession(IAuthInfo).username
         if not tagId:
             raise errors.MissingParam()
+
+        authInfo = request.getSession(IAuthInfo)
+        myId = authInfo.username
+        orgId = authInfo.organization
 
         (itemId, item) = yield utils.getValidItemId(request, "id", ["tags"])
         if "parent" in item:
@@ -720,7 +724,6 @@ class ItemResource(base.BaseResource):
         d2 = Db.remove(tagId, "tagItems", item["meta"]["uuid"])
         d3 = Db.get_slice(tagId, "tagFollowers")
 
-        orgId = request.getSession(IAuthInfo).organization
         try:
             itemsCountCol = yield Db.get(orgId, "orgTags", "itemsCount", tagId)
             tagItemsCount = int(itemsCountCol.column.value) - 1

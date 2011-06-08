@@ -1,20 +1,19 @@
 
-from twisted.application import internet, service
-from twisted.web import server
-from twisted.cred.portal import Portal
+from twisted.application    import internet, service
 
-from social.root import RootResource
-from social.auth import AuthWrapper, AuthRealm
-from social.auth import UserPasswordChecker, UserSessionChecker, AuthTokenChecker
-from social import Config
+from social                 import Config
+from social.root            import RootResource
+from social.server          import SiteFactory, RequestFactory, SessionFactory
 
 root = RootResource()
-
-checkers = [UserSessionChecker(), UserPasswordChecker(), AuthTokenChecker()]
-wrapper = AuthWrapper(Portal(AuthRealm(root), checkers))
 
 application = service.Application('social')
 collection = service.IServiceCollection(application)
 
+factory = SiteFactory(root)
+factory.sessionFactory = SessionFactory
+factory.requestFactory = RequestFactory
+factory.displayTracebacks = False
+
 listen = int(Config.get('General', 'ListenPort'))
-internet.TCPServer(listen, server.Site(wrapper)).setServiceParent(collection)
+internet.TCPServer(listen, factory).setServiceParent(application)

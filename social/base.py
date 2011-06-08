@@ -7,6 +7,7 @@ from social.isocial         import IAuthInfo
 from social                 import Db, utils
 
 class BaseResource(resource.Resource):
+    requireAuth = True
     _ajax = False
 
     def __init__(self, ajax=False):
@@ -24,12 +25,11 @@ class BaseResource(resource.Resource):
         appchange = True if request.args.has_key('_fp') and self._ajax or\
                             not self._ajax and script else False
 
-        me = yield Db.get_slice(myKey, "entities", ["basic"])
-        me = utils.supercolumnsToDict(me)
+        cols = yield Db.multiget_slice([myKey, orgKey], "entities", ["basic"])
+        cols = utils.multiSuperColumnsToDict(cols)
 
-        org = yield Db.get_slice(orgKey, "entities", ["basic"])
-        org = utils.supercolumnsToDict(org)
-
+        me = cols.get(myKey, None)
+        org = cols.get(orgKey, None)
         args = {"myKey": myKey, "orgKey": orgKey, "me": me,
                 "isOrgAdmin": isOrgAdmin, "ajax": self._ajax,
                 "script": script, "org": org}

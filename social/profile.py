@@ -10,7 +10,7 @@ from telephus.cassandra     import ttypes
 
 from social.template        import render, renderDef, renderScriptBlock
 from social.relations       import Relation
-from social                 import Db, auth, utils, base, plugins, _, __
+from social                 import Db, utils, base, plugins, _, __
 from social                 import constants, feed, errors
 from social.logging         import dump_args, profile
 from social.isocial         import IAuthInfo
@@ -642,7 +642,7 @@ class ProfileResource(base.BaseResource):
             return self._epilogue(request, requestDeferred)
 
         requestDeferred = utils.getValidEntityId(request, "id", "user")
-        myKey = auth.getMyKey(request)
+        myKey = request.getSession(IAuthInfo).username
 
         def callback(targetKey):
             actionDeferred = None
