@@ -546,7 +546,7 @@ class FeedResource(base.BaseResource):
         if script:
             handlers = {}
             if "groupId" in args:
-                groupName = args["feedTitle"].split(":")[1].strip()
+                groupName = args["feedTitle"].split(":", 1)[1].strip()
                 groupId = args['feedId']
                 handlers["onload"] = "$$.acl.switchACL('sharebar-acl', 'group','%s', '%s')" %(groupId, groupName)
 

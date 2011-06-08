@@ -158,10 +158,10 @@
   </div>
   <div class="users-details">
     <%
-      groupName = groups[groupId]["basic"].get("name", "no name")
+      groupName = groups[groupId]["basic"].get("name", "-")
     %>
     <div class="user-details-name"><a href ="/feed?id=${groupId}">${groupName}</a></div>
-    <div class="user-details-title"></div>
+    <div class="user-details-title">${groups[groupId]["basic"]["access"].capitalize()}</div>
     <div class="user-details-actions">
       <ul id="group-actions-${groupId}" class="middle user-actions h-links">
         ${group_actions(groupId)}
