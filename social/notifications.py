@@ -58,6 +58,7 @@ class NotificationsResource(base.BaseResource):
     @dump_args
     def _getNotifications(self, request, count=15):
         def _getReasonStr(template, convId, itemType, itemOwnerId, usersList):
+
             vals = []
             noOfUsers = len(set(usersList))
             for userId in usersList:
@@ -67,7 +68,7 @@ class NotificationsResource(base.BaseResource):
                 if len(vals) == noOfUsers or len(vals) == 2:
                     break
             if noOfUsers > 3:
-                vals.append(noOfUsers-3)
+                vals.append(noOfUsers-2)
             vals.append(utils.userName(itemOwnerId, users[itemOwnerId]))
             vals.append(utils.itemLink(convId, itemType))
             return _(template) %(tuple(vals))
@@ -116,7 +117,9 @@ class NotificationsResource(base.BaseResource):
 
         rawNotifications = yield Db.get_slice(myId, "notificationItems",
                                               convs, reverse=True)
-        rawNotifications = utils.supercolumnsToDict(rawNotifications)
+        #reverse isn't working: the column order is not changing when revers=False
+        #So, adding userIds in reverse order. (insert at 0th position instead of append)
+        rawNotifications = utils.supercolumnsToDict(rawNotifications, ordered=True)
         for convId in rawNotifications:
             for timeUUID, value in rawNotifications[convId].items():
                 responseType, commentOwner, itemId,\
@@ -126,28 +129,36 @@ class NotificationsResource(base.BaseResource):
                 toFetchUsers.add(convOwner)
                 if responseType == "C":
                     comments.setdefault(key, [])
-                    comments[key].append(commentOwner)
+                    if commentOwner not in comments[key]:
+                        comments[key].insert(0,commentOwner)
                 elif responseType == "L" and itemId == convId:
                     convLikes.setdefault(key, [])
-                    convLikes[key].append(commentOwner)
+                    if commentOwner not in convLikes[key]:
+                        convLikes[key].insert(0,commentOwner)
                 elif responseType == "L" and itemId != convId:
                     if convType == "question":
                         answerLikes.setdefault(key, [])
-                        answerLikes[key].append(commentOwner)
+                        if commentOwner not in answerLikes[key]:
+                            answerLikes[key].insert(0,commentOwner)
                     else:
                         commentLikes.setdefault(key, [])
-                        commentLikes[key].append(commentOwner)
+                        if commentOwner not in commentLikes[key]:
+                            commentLikes[key].insert(0,commentOwner)
                 elif responseType == "I" and convType in plugins:
                     pluginNotifications.setdefault(convType, {})
                     pluginNotifications[convType].setdefault(convId, [])
-                    pluginNotifications[convType][convId].append(commentOwner)
+                    if commentOwner not in pluginNotifications[convType][convId]:
+                        pluginNotifications[convType][convId].insert(0,commentOwner)
                 elif responseType == "G":
                     groupId = convId
                     toFetchGroups.add(groupId)
-                    pendingRequests.setdefault(groupId, []).append(commentOwner)
+                    pendingRequests.setdefault(groupId, [])
+                    if commentOwner in pendingRequests[groupId]:
+                        pendingRequests[groupId].insert(0,commentOwner)
                 elif responseType == 'Q':
                     answers.setdefault(key, [])
-                    answers[key].append(commentOwner)
+                    if commentOwner not in answers[key]:
+                        answers[key].insert(0,commentOwner)
 
         users = yield Db.multiget_slice(toFetchUsers, "entities", ["basic"])
         groups = yield Db.multiget_slice(toFetchGroups, "entities", ["basic"])
@@ -185,31 +196,31 @@ class NotificationsResource(base.BaseResource):
 
         for key in comments:
             convId, convType, convOwner = key
-            template = commentTemplate[len(set(comments[key][:4]))]
+            template = commentTemplate[len(comments[key][:4])]
             reason = _getReasonStr(template, convId, convType, convOwner, comments[key])
             reasonStr[convId].append(reason)
 
         for key in convLikes:
             convId, convType, convOwner = key
-            template = likesTemplate[len(set(convLikes[key][:4]))]
+            template = likesTemplate[len(convLikes[key][:4])]
             reason = _getReasonStr(template, convId, convType, convOwner, convLikes[key])
             reasonStr[convId].append(reason)
 
         for key in commentLikes:
             convId, convType, convOwner = key
-            template = commentLikesTemplate[len(set(commentLikes[key][:4]))]
+            template = commentLikesTemplate[len(commentLikes[key][:4])]
             reason = _getReasonStr(template, convId, convType, convOwner, commentLikes[key])
             reasonStr[convId].append(reason)
 
         for key in answers:
             convId, convType, convOwner = key
-            template = answersTemplate[len(set(answers[key][:4]))]
+            template = answersTemplate[len(answers[key][:4])]
             reason = _getReasonStr(template, convId, convType, convOwner, answers[key])
             reasonStr[convId].append(reason)
 
         for key in answerLikes:
             convId, convType, convOwner = key
-            template = answerLikesTemplate[len(set(answerLikes[key][:4]))]
+            template = answerLikesTemplate[len(answerLikes[key][:4])]
             reason = _getReasonStr(template, convId, convType, convOwner, answerLikes[key])
             reasonStr[convId].append(reason)
 
@@ -278,19 +289,17 @@ class NotificationsResource(base.BaseResource):
         counts = {myId: dict([(key, len(cols[key])) for key in cols])}
         orgId = args['orgKey']
         #get the list of groups
-        cols = yield Db.get_slice(myId, "entityGroupsMap")
-        groupIds = [col.column.name for col in cols]
+        cols = yield Db.get_slice(myId, "entities", ['adminOfGroups'])
+        cols = utils.supercolumnsToDict(cols)
+        groupIds = cols.get('adminOfGroups', {}).keys()
 
-        cols = yield Db.multiget_slice(groupIds, "entities", ["admins"])
-        cols = utils.multiSuperColumnsToDict(cols)
-
-        #get the groups for which im admin.
-        groupIds = [groupId for groupId in cols if myId in cols[groupId]['admins']]
-        cols = yield Db.multiget_slice(groupIds, "latestNotifications")
-        cols = utils.multiSuperColumnsToDict(cols)
-
-        for groupId in cols:
-            counts[groupId] = dict([(key, len(cols[groupId][key])) for key in cols[groupId]])
+        if groupIds:
+            cols = yield Db.multiget_slice(groupIds, "latestNotifications")
+            cols = utils.multiSuperColumnsToDict(cols)
+            for groupId in cols:
+                counts[groupId] = {}
+                for key in cols[groupId]:
+                    counts[groupId][key] = len(cols[groupId][key])
         request.write(json.dumps(counts))
 
 
