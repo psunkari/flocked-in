@@ -59,7 +59,7 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(userAuth)
 
     # User sessions
-    sessions = CfDef(KEYSPACE, 'sessions', 'Super', 'BytesType', 'UTF8Type',
+    sessions = CfDef(KEYSPACE, 'sessions', 'Standard', 'BytesType', None,
                      'Session information for logged in users')
     yield client.system_add_column_family(sessions)
 

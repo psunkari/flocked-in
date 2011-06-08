@@ -9,7 +9,7 @@ from social                 import Db, utils, base, plugins
 
 
 class RequestFactory(server.Request):
-    cookiename = 'auth'
+    cookiename = 'session'
     session = None
 
     def getSession(self, sessionInterface=None, create=False):
@@ -60,15 +60,15 @@ class SiteFactory(server.Site):
 
     @defer.inlineCallbacks
     def getSession(self, uid):
-        result = yield Db.get(uid, "sessions", "data")
+        result = yield Db.get(uid, "sessions", "auth")
         serialized = result.column.value
         defer.returnValue(pickle.loads(serialized))
 
     @defer.inlineCallbacks
     def updateSession(self, uid, session):
         serialized = pickle.dumps(session)
-        yield Db.insert(uid, "sessions", serialized, "data", ttl=self.timeout)
+        yield Db.insert(uid, "sessions", serialized, "auth", ttl=self.timeout)
 
     @defer.inlineCallbacks
     def clearSession(self, uid):
-        yield Db.remove(uid, "sessions", "data")
+        yield Db.remove(uid, "sessions", "auth")
