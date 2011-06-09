@@ -153,7 +153,7 @@ class NotificationsResource(base.BaseResource):
                     groupId = convId
                     toFetchGroups.add(groupId)
                     pendingRequests.setdefault(groupId, [])
-                    if commentOwner in pendingRequests[groupId]:
+                    if commentOwner not in pendingRequests[groupId]:
                         pendingRequests[groupId].insert(0,commentOwner)
                 elif responseType == 'Q':
                     answers.setdefault(key, [])
