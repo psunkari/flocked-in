@@ -19,7 +19,7 @@ a:link, a:visited {
 }
 
 #wrapper {
-    width: 940px;
+    width: 900px;
     padding: 0 20px 20px;
     margin: 20px auto 5px;
     background-color: white;
@@ -29,7 +29,7 @@ a:link, a:visited {
     -webkit-box-shadow: 0 0 5px #CCC;
 }
 #footer {
-    width: 980px;
+    width: 940px;
     margin: 0 auto;
 }
 
@@ -70,8 +70,8 @@ a:link, a:visited {
     -moz-box-shadow: 0 0 10px #CCC;
     -webkit-box-shadow: 0 0 10px #CCC;
 }
-#banner-contents {
-    background: #C3D9C6 url(../images/about-banner-bg.png) repeat-x top;
+#banner-contents, #home-banner-contents {
+    background: #C3D9FA url(../images/about-banner-bg.png) repeat-x top;
     -moz-box-shadow: inset 0 0 5px #555;
     -webkit-box-shadow: inset 0 0 5px #555;
     box-shadow: inset 0 0 5px #555;
@@ -79,6 +79,12 @@ a:link, a:visited {
     padding: 40px 30px;
     line-height: 2em;
     text-align: center;
+}
+#home-banner-contents {
+    display: table-cell;
+    vertical-align: middle;
+    height: 370px;
+    width: 900px;
 }
 
 #caption {
@@ -94,7 +100,7 @@ a:link, a:visited {
 #signup-email {
     border-width: 1px;
     border-style: solid;
-    border-color: #204A87 #C3D9FF #C3D9FF #204A87;
+    border-color: #204A87 #C3D9FA #C3D9FA #204A87;
     font-size: 18px;
     padding: 5px;
     border-radius: 3px;
