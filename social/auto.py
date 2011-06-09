@@ -67,9 +67,13 @@ class AutoCompleteResource(BaseResource):
         # List of tags that match the given term
         tags = []
         matchedTags = yield d1
-        for match in matchedTags:
-            tags.append({"title": match.column.name,
-                         "id": match.column.value})
+        matchedTags = [match.column.value for match in matchedTags]
+        if matchedTags:
+            matchedTags = yield Db.get_slice(orgId, "orgTags", matchedTags)
+            matchedTags = utils.supercolumnsToDict(matchedTags)
+            for tagId in matchedTags:
+                tags.append({'title': matchedTags[tagId]['title'],
+                             'id': tagId})
         tags.sort(key=itemgetter("title"))
 
         # Fetch the required entities
@@ -107,7 +111,6 @@ class AutoCompleteResource(BaseResource):
         if len(term) < 2:
             request.write("[]")
             return
-
         authInfo = request.getSession(IAuthInfo)
         userId = authInfo.username
         orgId = authInfo.organization
@@ -123,9 +126,13 @@ class AutoCompleteResource(BaseResource):
                           start=term, finish=finish, count=10)
         tags = []
         matchedTags = yield d1
-        for match in matchedTags:
-            tags.append({"title": match.column.name,
-                         "id": match.column.value})
+        matchedTags = [match.column.value for match in matchedTags]
+        if matchedTags:
+            matchedTags = yield Db.get_slice(orgId, "orgTags", matchedTags)
+            matchedTags = utils.supercolumnsToDict(matchedTags)
+            for tagId in matchedTags:
+                tags.append({'title': matchedTags[tagId]['title'],
+                             'id': tagId})
         tags.sort(key=itemgetter("title"))
 
         output = []
@@ -220,7 +227,8 @@ class AutoCompleteResource(BaseResource):
                                       "Resource not found")
 
         path = request.postpath[0]
-        term = utils.getRequestArg(request, "term")
+        term = utils.getRequestArg(request, "term") or ''
+        term = term.lower()
 
         d = None
         if path == "searchbox":

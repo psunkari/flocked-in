@@ -26,6 +26,7 @@ def ensureTag(request, tagName, orgId=None):
     consistency = ttypes.ConsistencyLevel
 
     try:
+        tagName = tagName.lower()
         c = yield Db.get(myOrgId, "orgTagsByName",
                          tagName, consistency=consistency.QUORUM)
         tagId = c.column.value
@@ -35,6 +36,7 @@ def ensureTag(request, tagName, orgId=None):
     except ttypes.NotFoundException:
         tagId = utils.getUniqueKey()
         tag = {"title": tagName}
+        tagName = tagName.lower()
         yield Db.batch_insert(myOrgId, "orgTags",
                               {tagId: tag}, consistency=consistency.QUORUM)
         yield Db.insert(myOrgId, "orgTagsByName", tagId,
