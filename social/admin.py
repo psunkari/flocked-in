@@ -6,7 +6,7 @@ from twisted.internet   import defer
 from twisted.python     import log
 from twisted.cred.error import Unauthorized
 
-from social             import base, Db, utils
+from social             import base, Db, utils, people
 from social.register    import getOrgKey # move getOrgKey to utils
 from social.template    import render, renderScriptBlock
 from social.constants   import PEOPLE_PER_PAGE
@@ -280,24 +280,20 @@ class Admin(base.BaseResource):
         if script and appchange:
             yield renderScriptBlock(request, "admin.mako", "layout",
                                     landing, "#mainbar", "set", **args)
-        cols = yield Db.get_slice(orgId, "blockedUsers")
-        blockedUsers = utils.columnsToDict(cols).keys()
-
-        cols = yield Db.get_slice(orgId, "displayNameIndex", start=start,
-                                  count=PEOPLE_PER_PAGE)
-        employees = [col.column.name.split(":")[1] for col in cols]
-
-        userInfo = yield Db.multiget_slice(employees, "entities", ["basic"])
-        args["entities"] = utils.multiSuperColumnsToDict(userInfo)
-        args["people"] = employees
+        users, relations, userIds,blockedUsers,\
+            nextPageStart, prevPageStart = yield people.getPeople(myKey, orgId, orgId, start=start)
+        args["entities"] = users
+        args["relations"] = relations
+        args["people"] = userIds
+        args["nextPageStart"] = nextPageStart
+        args["prevPageStart"] = prevPageStart
         args["blockedUsers"] = blockedUsers
+
 
         if script:
             yield renderScriptBlock(request, "admin.mako", "list_users",
                                     landing, "#add-users", "set", **args)
 
-        if script and landing:
-            request.write("</body></html>")
 
 
     def render_POST(self, request):
