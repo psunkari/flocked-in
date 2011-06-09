@@ -85,7 +85,7 @@ class SigninResource(resource.Resource):
         request.finish()
 
     def render_GET(self, request):
-        d = defer.maybeDeferred(request.getSession, IAuthInfo, False)
+        d = defer.maybeDeferred(request.getSession, IAuthInfo)
         def checkSession(authinfo):
             if authinfo.username:
                 redirectURL = utils.getRequestArg(request, "_r") or "/feed"
@@ -122,6 +122,30 @@ class SigninResource(resource.Resource):
         return server.NOT_DONE_YET
 
 
+# 
+# HomeResource gives an interface for the new users to register for social
+#
+class HomeResource(resource.Resource):
+    isLeaf = True
+
+    def __init__(self):
+        self.indexPage = static.File("index.html")
+
+    def _renderHomePage(self, request):
+        request.finish()
+
+    def render_GET(self, request):
+        d = defer.maybeDeferred(request.getSession, IAuthInfo)
+        def checkSession(authinfo):
+            if authinfo.username:
+                util.redirectTo("/feed", request)
+                request.finish()
+            else:
+                self.indexPage.render(request)
+        d.addCallback(checkSession)
+        return server.NOT_DONE_YET
+
+
 #
 # RootResource is responsible for setting up the url path structure, ensuring
 # authorization, adding headers for cache busting and setting some default cookies
@@ -147,6 +171,7 @@ class RootResource(resource.Resource):
         self._feedback = FeedbackResource(self._isAjax)
         self._messages = MessagingResource(self._isAjax)
         if not self._isAjax:
+            self._home = HomeResource()
             self._ajax = RootResource(True)
             self._avatars = AvatarResource()
             self._auto = AutoCompleteResource()
@@ -177,12 +202,29 @@ class RootResource(resource.Resource):
 
     def getChildWithDefault(self, path, request):
         match = None
-        if path == "" or path == "feed":
+        if not self._isAjax:
+            if path == "":
+                match = self._home
+            elif path == "auto":
+                match = self._auto
+            elif path == "ajax":
+                match = self._ajax
+            elif path == "signin":
+                match = self._signin
+            elif path == "avatar":
+                match = self._avatars
+            elif path == "about":
+                match = self._about
+            elif path == "register":
+                match = self._register
+            elif path == "public":
+                match = self._public
+            elif path == "signout":
+                self._clearAuth(request)
+                match = util.Redirect('/signin')
+
+        if path == "feed":
             match = self._feed
-        elif path == "auto" and not self._isAjax:
-            match = self._auto
-        elif path == "ajax" and not self._isAjax:
-            match = self._ajax
         elif path == "profile":
             match = self._profile
         elif path == "item":
@@ -203,21 +245,8 @@ class RootResource(resource.Resource):
             match = self._admin
         elif path == "feedback":
             match = self._feedback
-        elif path == "signin" and not self._isAjax:
-            match = self._signin
-        elif path == "avatar" and not self._isAjax:
-            match = self._avatars
-        elif path == "about" and not self._isAjax:
-            match = self._about
-        elif path == "register" and not self._isAjax:
-            match = self._register
-        elif path == "public" and not self._isAjax:
-            match = self._public
         elif path in plugins and self._pluginResources.has_key(path):
             match = self._pluginResources[path]
-        elif path == "signout" and not self._isAjax:
-            self._clearAuth(request)
-            match = util.Redirect('/signin')
 
         # We have no idea how to handle the given path!
         if not match:
