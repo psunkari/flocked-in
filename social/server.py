@@ -6,6 +6,7 @@ from twisted.internet       import defer
 from twisted.python         import log, components
 
 from social                 import Db, utils, base, plugins
+from social.isocial         import IAuthInfo
 
 
 class RequestFactory(server.Request):
@@ -25,7 +26,8 @@ class RequestFactory(server.Request):
 
         # Save the updated session (only if we have a valid authinfo)
         def requestDone(ignored):
-            self.site.updateSession(self.session.uid, self.session)
+            if self.session and self.session.getComponent(IAuthInfo).username:
+                self.site.updateSession(self.session.uid, self.session)
         self.notifyFinish().addCallback(requestDone)
 
         # If we have a session cookie, try to fetch the session from Db
