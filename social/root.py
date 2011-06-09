@@ -3,7 +3,7 @@ import urllib
 from email.utils            import formatdate
 
 from zope.interface         import implements
-from twisted.web            import resource, server, static, util
+from twisted.web            import resource, server, static, util, http
 from twisted.internet       import defer
 from twisted.python         import log, components
 
@@ -72,7 +72,7 @@ class SigninResource(resource.Resource):
         authinfo.isAdmin = True if data.has_key("isAdmin") else False
 
         redirectURL = utils.getRequestArg(request, "_r") or "/feed"
-        util.redirectTo(redirectURL, request)
+        util.redirectTo(urllib.unquote(redirectURL), request)
         request.finish()
 
     @defer.inlineCallbacks
@@ -89,7 +89,7 @@ class SigninResource(resource.Resource):
         def checkSession(authinfo):
             if authinfo.username:
                 redirectURL = utils.getRequestArg(request, "_r") or "/feed"
-                util.redirectTo(redirectURL, request)
+                util.redirectTo(urllib.unquote(redirectURL), request)
                 request.finish()
             else:
                 self._renderSigninForm(request)
