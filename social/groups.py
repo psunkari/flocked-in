@@ -277,7 +277,14 @@ class GroupsResource(base.BaseResource):
 
         groupId = yield utils.getValidEntityId(request, "id", "group")
         userGroup = yield Db.get_slice(myId, "entityGroupsMap", [groupId])
+
         if not userGroup:
+            raise errors.InvalidRequest()
+
+        admins = yield Db.get_slice(groupId, "entities", ['admins'])
+        admins = utils.supercolumnsToDict(admins)
+        if len(admins.get('admins', [])) == 1 and myId in admins['admins']:
+            log.msg('Nominate another person as group administrator')
             raise errors.InvalidRequest()
 
         itemType = "activity"
