@@ -11,7 +11,7 @@ try:
     import cPickle as pickle
 except:
     import pickle
-
+from html5lib           import sanitizer
 from ordereddict        import OrderedDict
 from dateutil.tz        import gettz
 
@@ -66,7 +66,7 @@ def columnsToDict(columns, ordered = False):
 
 def getRequestArg(request, arg):
     if request.args.has_key(arg):
-        return request.args[arg][0]
+        return sanitizer.escape(request.args[arg][0]).strip()
     else:
         return None
 
