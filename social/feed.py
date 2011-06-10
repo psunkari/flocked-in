@@ -487,7 +487,7 @@ def _feedFilter(request, feedId, itemType, start='', count=10):
     @defer.inlineCallbacks
     def getFn(start='', count=12):
         cf = "feed_%s"%(itemType)
-        items = yield Db.get_slice(feedId, cf, start=start, count=count)
+        items = yield Db.get_slice(feedId, cf, start=start, count=count, reverse=True)
         defer.returnValue(utils.columnsToDict(items, ordered=True))
     return getFeedItems(request, getFn= getFn, start=start)
 
