@@ -83,7 +83,7 @@ class RegisterResource(BaseResource):
             cols = yield Db.get_slice(emailId, "invitations")
             invitation = utils.columnsToDict(cols)
             if token and invitation.get("token", None) == token:
-                args = request.args
+                args = {}
                 args['emailId']=emailId
                 args['view'] = 'userinfo'
                 yield render(request, "signup.mako", **args)
@@ -115,10 +115,10 @@ class RegisterResource(BaseResource):
         deferreds = []
         validEmailIds = []
 
-        emailIds = request.args.get('emailId', [])
+        skip = utils.getRequestArg(request, 'skip')
         sender = utils.getRequestArg(request, 'sender')
         submit = utils.getRequestArg(request, 'submit')
-        skip = utils.getRequestArg(request, 'skip')
+        emailIds = utils.getRequestArg(request, 'emailId', True) or []
 
         for emailId in emailIds:
             if len(emailId.split('@'))==2:

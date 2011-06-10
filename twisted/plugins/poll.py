@@ -235,7 +235,7 @@ class Poll(object):
 
         end = utils.getRequestArg(request, "end")
         start = utils.getRequestArg(request, "start")
-        options = request.args.get("options", None)
+        options = utils.getRequestArg(request, "options", True)
         question = utils.getRequestArg(request, "question")
         showResults = utils.getRequestArg(request, "show") or 'True'
         options = [option for option in options if option]

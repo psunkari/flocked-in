@@ -433,7 +433,7 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     def _actions(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        convIds = request.args.get('selected', [])
+        convIds = utils.getRequestArg(request, 'selected', True)
         filterType = utils.getRequestArg(request, "filterType") or "all"
         trash = utils.getRequestArg(request, "trash") or None
         archive = utils.getRequestArg(request, "archive") or None
