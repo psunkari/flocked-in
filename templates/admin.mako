@@ -9,30 +9,24 @@
 
 <%def name="nav_menu()">
   <%
-    def navMenuItem(link, text, icon):
-        return '<li><a href="%(link)s" class="ajax busy-indicator"><span class="sidemenu-icon admin-icon %(icon)s-icon"></span><span class="sidemenu-text">%(text)s</span></a></li>' % locals()
+    def navMenuItem(link, text, id):
+      cls = "sidemenu-selected" if id == menuId else ''
+      return '<li><a href="%(link)s" class="ajax busy-indicator %(id)s-sideitem %(cls)s"><span class="sidemenu-icon icon %(id)s-icon"></span><span class="sidemenu-text">%(text)s</span></a></li>' % locals()
   %>
   <div id="mymenu-container" class="sidemenu-container">
     <ul id="mymenu" class="v-links sidemenu">
        ${navMenuItem("/feed", _("Back to Home"), "back")}
     </ul>
     <ul id="mymenu" class="v-links sidemenu">
-      ${navMenuItem("/admin/add", _("Add Users"), "add-user")}
-      ${navMenuItem("/admin/people", _("Manage Users"), "block-user")}
-      ${navMenuItem("/admin/unblock", _("UnBlock Users "), "unblock-user")}
-      ${navMenuItem("", _("Manage Admins"), "manage-admins")}
-    </ul>
-    <ul id="mymenu" class="v-links sidemenu">
-      ${navMenuItem("", _("Manage Groups"), "manage-groups")}
-    </ul>
-    <ul id="mymenu" class="v-links sidemenu">
-      ${navMenuItem("/admin/org", _("Update OrgInfo"), "update-orgInfo")}
+      ${navMenuItem("/admin/people", _("Users"), "users")}
+      ${navMenuItem("admin/groups", _("Groups"), "groups")}
+      ${navMenuItem("/admin/org", _("Organization"), "org")}
     </ul>
   </div>
 </%def>
 
 <%def name="layout()">
-  <div class="contents has-left has-right">
+  <div class="contents has-left">
     <div id="left">
       <div id="nav-menu">
         ${self.nav_menu()}
@@ -48,46 +42,114 @@
         <div class="center-header">
           <div class="titlebar">
             %if title:
-              <div id="title"><span class="middle title">${_(title)}</span></div>
+              <span class="middle title">${_(title)}</span>
             %else:
-              <div id="title"><span class="middle title">${_("Admin Console")}</span></div>
+              <span class="middle title">${_("Admin Console")}</span>
+            %endif
+            <span class="button title-button">
+              <a class="ajax" href="/admin/add" _ref="/admin/add">${_('Add Users')}</a>
+            </span>
+          </div>
+          <div id="add-user-wrapper"></div>
+        </div>
+        <div class="center-contents">
+          <div id="users-view" class="viewbar">
+            %if not script:
+              ${viewOptions()}
             %endif
           </div>
-        </div>
-        <div id="add-users" class="center-contents">
-          %if not script:
-            ${self.addUsers()}
-          %endif
-
+          <div id="list-users" class="paged-container">
+            %if not script:
+              ${self.list_users()}
+            %endif
+          </div>
         </div>
       </div>
     </div>
   </div>
 </%def>
 
+<%def name="_displayUser(userId)">
+  <% button_class = 'default' %>
+  <div class="users-avatar">
+    <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
+    %if avatarURI:
+      <img src="${avatarURI}" height='48' width='48'></img>
+    %endif
+  </div>
+  <div class="users-details">
+    <div class="user-details-name">${utils.userName(userId, entities[userId])}</div>
+    <div class="user-details-title">${entities[userId]["basic"].get("jobTitle", '')}</div>
+    <div class="user-details-actions">
+      <ul id="user-actions-${userId}" class="middle user-actions h-links">
+        <button class="button default" onclick="$.post('/ajax/admin/unblock', 'id=${userId}', null, 'script')">
+          Unblock
+        </button>
+      </ul>
+    </div>
+  </div>
+</%def>
 
 <%def name="list_blocked()">
   % if not entities:
     <div id="next-load-wrapper">No blocked users</div>
   % else:
-    % for userId in entities:
-      <div class="users-user">
-        <div class="users-avatar">
-        <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
-        %if avatarURI:
-          <img src="${avatarURI}" height='48' width='48'></img>
+    <%
+      counter = 0
+      firstRow = True
+    %>
+    %for userId in entities:
+      %if counter % 2 == 0:
+        %if firstRow:
+          <div class="users-row users-row-first">
+          <% firstRow = False %>
+        %else:
+          <div class="users-row">
         %endif
+      %endif
+      <div class="users-user">${_displayUser(userId)}</div>
+      %if counter % 2 == 1:
         </div>
-        <div class="users-details">
-          <div class="user-details-name">${utils.userName(userId, entities[userId])}</div>
-          <div class="user-details-title">${entities[userId]["basic"].get("jobTitle", '')}</div>
-          <ul id="user-actions-${userId}" class="middle user-actions h-links">
-            <li class="button default" onclick="$.post('/ajax/admin/unblock', 'id=${userId}', null, 'script')"><span class="button-text">UnBlock</span></li>
-          </ul>
-        </div>
-      </div>
+      %endif
+      <% counter += 1 %>
     %endfor
+    %if counter % 2 == 1:
+      </div>
+    %endif
+
+    <!--% for userId in entities:-->
+    <!--  <div class="users-user">-->
+    <!--    <div class="users-avatar">-->
+    <!--    <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>-->
+    <!--    %if avatarURI:-->
+    <!--      <img src="${avatarURI}" height='48' width='48'></img>-->
+    <!--    %endif-->
+    <!--    </div>-->
+    <!--    <div class="users-details">-->
+    <!--      <div class="user-details-name">${utils.userName(userId, entities[userId])}</div>-->
+    <!--      <div class="user-details-title">${entities[userId]["basic"].get("jobTitle", '')}</div>-->
+    <!--      <ul id="user-actions-${userId}" class="middle user-actions h-links">-->
+    <!--          <button class="button default" onclick="$.post('/ajax/admin/unblock', 'id=${userId}', null, 'script')">-->
+    <!--            Unblock-->
+    <!--          </button>-->
+    <!--      </ul>-->
+    <!--    </div>-->
+    <!--  </div>-->
+    <!--%endfor-->
+
   %endif
+</%def>
+
+<%def name="viewOptions(viewType)">
+  <ul class="h-links view-options">
+    %for item, display in [('all', 'All users'), ('blocked', 'Blocked Users')]:
+      %if viewType == item:
+        <li class="selected">${_(display)}</li>
+      %else:
+        <li><a href="/admin/people?type=${item}" class="ajax">${_(display)}</a></li>
+      %endif
+    %endfor
+  </ul>
 </%def>
 
 <%def name="paging()">
@@ -115,62 +177,81 @@
 
 <%def name="addUsers()">
   <% myTimezone  = me.get("basic", {}).get("timezone", "") %>
+  <div class="tabs">
+    <ul class="tablinks h-links">
+      <li><a style="cursor:pointer" class="selected" onclick="$('#add-user-block').toggle();$('#add-users-block').toggle();$(this).toggleClass('selected');$(this).parent().siblings().children().toggleClass('selected')">New User</a></li>
+      <li><a style="cursor:pointer" class="" onclick="$('#add-users-block').toggle();$('#add-user-block').toggle();$(this).toggleClass('selected');$(this).parent().siblings().children().toggleClass('selected')">Multiple Users</a></li>
+  </div>
   <div class="edit-profile">
-    <h4> Add User:</h4>
     <form action="/admin/add" method="POST" enctype="multipart/form-data" autocomplete="off">
     <!-- fileupload doesn't work with ajax request.
         TODO: find workaround to submit file in ajax request-->
-
-      <ul>
-        <li><label for="name"> Display Name: </label></li>
-        <li><input type="text" name="name" /> </li>
-      </ul>
-      <ul>
-        <li><label for="email"> EmailId: </label></li>
-        <li><input type="text" name="email" /> </li>
-      </ul>
-      <ul>
-        <li><label for="jobTitle"> JobTitle: </label></li>
-        <li><input type="text" name="jobTitle" /> </li>
-      </ul>
-      <ul>
-        <li> <label for="timezone">Timezone </label> </li>
-        <li>
-          <select name="timezone">
-            % for timezone in common_timezones:
-              % if timezone == myTimezone:
-                <option value = "${timezone}" selected="">${timezone}</option>
-              % else:
-                <option value = "${timezone}" >${timezone}</option>
-              % endif
-            % endfor
-          </select>
-        </li>
-      </ul>
-      <ul>
-        <li><label for="passwd">  Password: </label></li>
-        <li><input type="password" name="passwd" /> </li>
-      </ul>
-      <ul>
-        <li></li>
-        <li> <input type="submit" value="Submit"/></li>
-      </ul>
-      <ul><li></li></ul>
-      <ul><h4>Or Upload a File</h4></ul>
-      <ul><li></li></ul>
-      <ul>
-        <li><label for="format"> File Type:</label></li>
-        <li><input type="radio" name="format" value="csv" checked=True>CSV</input></li>
-        <li><input type="radio" name="format" value="tsv">TSV</input></li>
-      </ul>
-      <ul>
-        <li><label for="data"> Upload File: </label></li>
-        <li><input type="file" name="data" accept="csv" /> </li>
-      </ul>
-      <ul>
-        <li></li>
-        <li> <input type="submit" value="Submit"/></li>
-      </ul>
+      <div id="add-user-block">
+        <ul>
+          <li>
+            <label for="name"> Display Name</label>
+            <input type="text" name="name" />
+          </li>
+          <li>
+            <label for="email"> Email Address</label>
+            <input type="text" name="email" />
+          </li>
+          <li>
+            <label for="jobTitle"> Job Title</label>
+            <input type="text" name="jobTitle" />
+          </li>
+          <li>
+            <label for="timezone">Timezone </label>
+            <select name="timezone" class="single-row">
+              % for timezone in common_timezones:
+                % if timezone == myTimezone:
+                  <option value = "${timezone}" selected="">${timezone}</option>
+                % else:
+                  <option value = "${timezone}" >${timezone}</option>
+                % endif
+              % endfor
+            </select>
+          </li>
+          <li>
+            <label for="passwd">Password</label>
+            <input type="password" name="passwd" />
+          </li>
+        </ul>
+        <div class="profile-save-wrapper">
+             <button type="submit" class="button default">Add</button>
+             <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">Cancel</button>
+        </div>
+      </div>
+      <div id="add-users-block" style="display:none">
+        <div id="next-load-wrapper">
+          You may also upload a Comma Separated or a Tab Separated file of users in the following format
+          <div>
+            <table>
+              <th>
+                <td>Name</td>
+                <td>Email Address</td>
+                <td>Job Title</td>
+                <td>Timezone</td>
+                <td>Password</td>
+            </table>
+          </div>
+        </div>
+        <ul>
+          <li>
+            <label for="format"> File Type</label>
+            <input type="radio" name="format" value="csv" checked=True/>CSV
+            <input type="radio" name="format" value="tsv"/>TSV
+          </li>
+          <li>
+            <label for="data"> Upload File</label>
+            <input type="file" name="data" accept="csv" />
+          </li>
+        </ul>
+        <div class="profile-save-wrapper">
+            <button type="submit" class="button default">Add</button>
+            <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">Cancel</button>
+        </div>
+      </div>
     </form>
   </div>
 </%def>
@@ -184,19 +265,19 @@
     <form action="/admin/org" method="POST" enctype="multipart/form-data">
     <!-- fileupload doesn't work with ajax request.
         TODO: find workaround to submit file in ajax request-->
-
       <ul>
-        <li><label for="name"> Name: </label></li>
-        <li><input type="text" name="name"  value="${name}"/> </li>
+        <li>
+          <label for="name"> Name</label>
+          <input type="text" name="name"  value="${name}"/>
+        </li>
+        <li>
+          <label for="dp"> Logo</label>
+          <input type="file" name="dp" />
+        </li>
       </ul>
-      <ul>
-        <li><label for="dp"> Logo: </label></li>
-        <li><input type="file" name="dp" /> </li>
-      </ul>
-      <ul>
-        <li></li>
-        <li> <input type="submit" value="Submit"/></li>
-      </ul>
+      <div class="profile-save-wrapper">
+          <button type="submit" class="button default">Save</button>
+      </div>
     </form>
   </div>
 </%def>

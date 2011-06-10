@@ -751,7 +751,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     text-align:right;
 }
 
-.edit-profile input {
+.edit-profile input[type=text], .edit-profile input[type=password]{
     width:20em;
     font-size:12px;
     background-color: white;
@@ -759,10 +759,20 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     padding: 2px;
 }
 
+.edit-profile textarea {
+    font-size:12px;
+    width:20em;
+}
+
 .edit-profile select {
     background-color: white;
     border: 1px solid #C3D9FF;
     padding: 2px;
+    font-size:12px;
+}
+
+.edit-profile select.single-row {
+    width: 20.5em;
 }
 
 .edit-profile fieldset {
@@ -1169,4 +1179,37 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     display: table-footer-group;
     padding: 5px;
     width: 150px;
+}
+
+/*Styling for Admin page*/
+
+#add-user-wrapper {
+    background-color:white;
+}
+
+#add-user-wrapper .tabs {
+    padding-top: 4px;
+    margin:0;
+}
+
+#add-user-wrapper .tablinks a {
+    cursor:pointer;
+}
+
+#add-user-wrapper .edit-profile {
+    border-bottom:1px solid #C3D9FF;
+    border-left:1px solid #C3D9FF;
+    border-right:1px solid #C3D9FF;
+}
+
+#add-user-wrapper #next-load-wrapper {
+    margin: 10px 5px !important;
+}
+
+#add-user-wrapper .profile-save-wrapper {
+    margin:10px !important;
+}
+
+#add-user-wrapper .edit-profile ul {
+    padding-top: 10px;
 }
