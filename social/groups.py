@@ -388,7 +388,7 @@ class GroupsResource(base.BaseResource):
         start = utils.getRequestArg(request, 'start') or ''
         start = utils.decodeKey(start)
 
-        viewTypes = ['myGroups', 'allGroups']
+        viewTypes = ['myGroups', 'allGroups', 'adminGroups']
         viewType = 'myGroups' if viewType not in viewTypes else viewType
         count = 110
         toFetchCount = count+1
@@ -407,10 +407,18 @@ class GroupsResource(base.BaseResource):
         entityId = myId if viewType == 'myGroups' else orgId
 
         #TODO: list the groups in sorted order.
-        cols = yield Db.get_slice(entityId, 'entityGroupsMap',
-                                  start=start, count=toFetchCount)
-        groupIds = utils.columnsToDict(cols, ordered=True).keys()
-        toFetchGroups.update(set(groupIds))
+        if viewType in ['myGroups', 'allGroups']:
+            cols = yield Db.get_slice(entityId, 'entityGroupsMap',
+                                      start=start, count=toFetchCount)
+            groupIds = utils.columnsToDict(cols, ordered=True).keys()
+            toFetchGroups.update(set(groupIds))
+        elif viewType == 'adminGroups':
+            cols = yield Db.get_slice(myId, "entities", ['adminOfGroups'])
+            groupIds = utils.supercolumnsToDict(cols, ordered=True)
+            if groupIds:
+                groupIds = groupIds['adminOfGroups'].keys()
+                toFetchGroups.update(set(groupIds))
+
 
         cols = yield Db.get_slice(myId, "entityGroupsMap",
                                   start=start, count=toFetchCount)
