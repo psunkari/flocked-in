@@ -866,6 +866,20 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     border: 1px solid transparent;
 }
 
+#invite-people > .input-wrap {
+    padding-left: 25px;
+    position: relative;
+}
+
+#invite-people > .input-wrap input {
+    height:auto;
+}
+
+.invite-people-entry {
+    position: absolute;
+    background-position: 0 -304px;
+    left: 4px;
+}
 
 /*
  * Notifications

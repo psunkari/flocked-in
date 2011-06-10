@@ -107,6 +107,40 @@ class PeopleResource(base.BaseResource):
         if not script:
             yield render(request, "people.mako", **args)
 
+    @defer.inlineCallbacks
+    def _renderInvitePeople(self, request):
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        landing = not self._ajax
+
+        orgId = args["orgKey"]
+        args["entities"] = {}
+        args["menuId"] = "people"
+
+        if script and landing:
+            yield render(request, "people.mako", **args)
+
+        if script and appchange:
+            yield renderScriptBlock(request, "people.mako", "layout",
+                                    landing, "#mainbar", "set", **args)
+
+        if script:
+            onload = """
+                    (function(obj){$$.publisher.load(obj);
+                        $('#invite-people').delegate('.input-wrap:last-child','focus',function(event){
+                            $(event.target.parentNode).clone().appendTo('#invite-people').find('input:text').blur();
+                        });
+                    })(this);
+                    """
+            yield renderScriptBlock(request, "people.mako", "invitePeople",
+                                    landing, "#invite-people-wrapper", "set", True,
+                                    handlers={"onload":onload}, **args)
+
+        else:
+            yield render(request, "people.mako", **args)
+
+    @defer.inlineCallbacks
+    def _invitePeople(self, request):
+        request.write("$('#invite-people-wrapper').empty()")
 
     @profile
     @dump_args
@@ -118,5 +152,16 @@ class PeopleResource(base.BaseResource):
 
         if segmentCount == 0:
             d = self._render(request, viewType, start)
+        elif segmentCount == 1 and request.postpath[0] == "invite":
+            d = self._renderInvitePeople(request)
+
+        return self._epilogue(request, d)
+
+    def render_POST(self, request):
+        segmentCount = len(request.postpath)
+        d = None
+
+        if segmentCount == 1 and request.postpath[0] == "invite":
+            d = self._invitePeople(request)
 
         return self._epilogue(request, d)
