@@ -28,7 +28,7 @@ def getOrgKey(domain):
     defer.returnValue(orgKey)
 
 
-class RegisterResource(BaseResource):
+class SignupResource(BaseResource):
     isLeaf = True
     requireAuth = False
 

@@ -7,7 +7,7 @@ from twisted.python     import log
 from twisted.cred.error import Unauthorized
 
 from social             import base, Db, utils, people
-from social.register    import getOrgKey # move getOrgKey to utils
+from social.signup      import getOrgKey # move getOrgKey to utils
 from social.template    import render, renderScriptBlock
 from social.constants   import PEOPLE_PER_PAGE
 from social.profile     import saveAvatarItem

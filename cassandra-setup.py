@@ -63,6 +63,12 @@ def createColumnFamilies(client):
                         "List of invitations sent out by existing users")
     yield client.system_add_column_family(invitations)
 
+    # Temporary column family for storing email addresses of people
+    # who expressed interest during the private beta.
+    notifyOnRelease = CfDef(KEYSPACE, "notifyOnRelease", "Standard",
+                            "UTF8Type", None, "Notify when public")
+    yield client.system_add_column_family(notifyOnRelease)
+
     # Connections between users
     connections = CfDef(KEYSPACE, 'connections', 'Super', 'UTF8Type',
                         'UTF8Type', 'Established user connections')

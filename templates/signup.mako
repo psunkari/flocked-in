@@ -21,7 +21,7 @@
 <body>
   <div id="inner">
     <div id="header"><img alt="Synovel" src="/public/images/synovel.png"/></div>
-    <div id="menu" class="register-menu">
+    <div id="menu" class="signup-menu">
         <span class="hlinks view-options">
           <%
             currentView = view if view else 'userinfo'
@@ -44,7 +44,7 @@
         ${self.userInfo()}
       %endif
     </div>
-    <div  id="footer" class="register-save-wrapper">
+    <div  id="footer" class="signup-save-wrapper">
       ${_('&copy;2011 Synovel Software')}
       &nbsp;|&nbsp;
       <a href="http://www.synovel.com/social">${_('Synovel SocialNet')}</a>
@@ -54,8 +54,8 @@
 </html>
 
 <%def name="userInfo()">
- <form action="/register/create" method="POST" onsubmit="return validate()" >
-    <div class="register">
+ <form action="/signup/create" method="POST" onsubmit="return validate()" >
+    <div class="signup">
       <ul>
         <li><input id="emailId" type="hidden" class="textfield" name="emailId" value="${emailId}"></input></li>
         <li>
@@ -87,7 +87,7 @@
           <input type="password" class="textfield" name="pwdrepeat" />
         </li>
       </ul>
-      <div class="register-save-wrapper">
+      <div class="signup-save-wrapper">
         <button type="submit" class="button" id="submit" value="Next"> ${_('Next')} </button>
       </div>
     </div>
@@ -95,8 +95,8 @@
 </%def>
 
 <%def name="invitePeople()">
-  <form action="/register/invite" method="POST">
-    <div class="register" >
+  <form action="/signup/invite" method="POST">
+    <div class="signup" >
       <ul>
         <li>
           <h4>Invite Your Colleagues</h4>
@@ -115,7 +115,7 @@
           <input type="text" name="email" /></li>
       </ul>
     </div>
-    <div class="register" >
+    <div class="signup" >
       <ul>
         <li><h4>Upload  Contacts</h4></li>
         <li></li>
@@ -125,7 +125,7 @@
         </li>
       </ul>
     </div>
-    <div class="register-save-wrapper" >
+    <div class="signup-save-wrapper" >
       <a href="/feed">Skip</a>
       <button type="submit" class="button" name="submit" value="Submit">Submit</button>
     </div>

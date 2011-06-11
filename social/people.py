@@ -33,7 +33,7 @@ def _sendInvitations(myOrgUsers, otherOrgUsers, me, myId, myOrg):
     myOrgUsers.extend(otherOrgUsers)
     for emailId in myOrgUsers:
         token = utils.getRandomKey('invite')
-        activationUrl = "%(rootUrl)s/register?emailId=%(emailId)s&%(token)s" % (locals())
+        activationUrl = "%(rootUrl)s/signup?emailId=%(emailId)s&%(token)s" % (locals())
         localpart, domainpart = emailId.split('@')
 
         deferreds.append(Db.insert(domainpart, "invitations", myId, token, emailId))
