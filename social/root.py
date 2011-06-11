@@ -128,7 +128,7 @@ class HomeResource(resource.Resource):
     isLeaf = True
 
     def __init__(self):
-        self.indexPage = static.File("index.html")
+        self.indexPage = static.File("private/index.html")
 
     def _renderHomePage(self, request):
         request.finish()
