@@ -254,8 +254,7 @@ class ProfileResource(base.BaseResource):
             raise errors.NotAllowed()
 
         # Circles are just tags that a user would set on his connections
-        circles = request.args["circle"]\
-                  if request.args.has_key("circle") else []
+        circles = utils.getRequestArg(request, 'circle', True) or []
         circles.append("__default__")
         circlesMap = dict([(circle, '') for circle in circles])
 

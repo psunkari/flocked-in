@@ -172,7 +172,7 @@
 
 <%def name="viewOptions(selected)">
   <ul class="h-links view-options">
-    %for item, display in [('myGroups', 'My Groups'), ('allGroups', 'All Groups')]:
+    %for item, display in [('myGroups', 'My Groups'), ('allGroups', 'All Groups'), ('adminGroups', 'Groups Managed By Me')]:
       %if selected == item:
         <li class="selected">${_(display)}</li>
       %else:

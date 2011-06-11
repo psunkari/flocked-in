@@ -417,7 +417,7 @@
         </li>
         <li>
           <label for="timezone">Timezone </label>
-          <select name="timezone">
+          <select name="timezone" class="single-row">
             % for timezone in common_timezones:
               % if timezone == myTimezone:
                 <option value = "${timezone}" selected="">${timezone}</option>

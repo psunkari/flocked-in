@@ -62,11 +62,10 @@ class RegisterResource(BaseResource):
         try:
             local, domain = emailId.split('@')
             token = yield Db.get(domain, "invitations", token, emailId)
-            args = request.args
+            args = {}
             args['emailId'] = emailId
             args['view'] = 'userinfo'
             yield render(request, "signup.mako", **args)
-            request.finish()
         except ttypes.NotFoundException, e:
             raise errors.InvalidActivationToken()
         except Exception, e:
@@ -79,7 +78,7 @@ class RegisterResource(BaseResource):
         if not authinfo.username:
             raise errors.NotAuthorized()
 
-        rawEmailIds = request.args.get('email')
+        rawEmailIds = utils.getRequestArg(request, 'email', True) or []
         d = people.invite(request, rawEmailIds)
         request.redirect('/feed')
 

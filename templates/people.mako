@@ -25,8 +25,13 @@
           <div class="titlebar">
             <span class="middle title">${_('People')}</span>
             <span class="button title-button">
-              <a class="ajax">${_('Invite more people')}</a>
+              <a class="ajax" href="/people/invite" _ref="/people/invite">${_('Invite more people')}</a>
             </span>
+          </div>
+          <div id="invite-people-wrapper">
+            %if not script:
+              ${invitePeople()}
+            %endif
           </div>
         </div>
         <div class="center-contents">
@@ -127,4 +132,36 @@
   %if counter % 2 == 1:
     </div>
   %endif
+</%def>
+
+<%def name="invitePeople()">
+  <form method="post" action="/people/invite" class="ajax">
+    <input type="hidden" name="from" value="people"/>
+    <div id="invite-people">
+      <div class="input-wrap">
+        <img class="icon invite-people-entry"/>
+        <input type="text" name="invites" placeholder="${_("Enter your colleague's email address")}"/>
+      </div>
+      <div class="input-wrap">
+        <img class="icon invite-people-entry"/>
+        <input type="text" name="invites" placeholder="${_("Enter your colleague's email address")}"/>
+      </div>
+      <div class="input-wrap">
+        <img class="icon invite-people-entry"/>
+        <input type="text" name="invites" placeholder="${_("Enter your colleague's email address")}"/>
+      </div>
+    </div>
+    <div class="conversation-composer-actions">
+      %if script:
+          <button type="submit" class="button default">
+              ${_('Invite')}
+          </button>
+          <button type="button" class="button" onclick="$('#invite-people-wrapper').empty()">
+              ${'Cancel'}
+          </button>
+      %else:
+          <a class="ajax" _ref="/messages">${'Cancel'}</a>
+      %endif
+    </div>
+  </form>
 </%def>

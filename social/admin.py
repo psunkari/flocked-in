@@ -84,7 +84,7 @@ class Admin(base.BaseResource):
                         continue
                     userKey = yield utils.addUser(email, displayName, passwd,
                                                   orgId, jobTitle, timezone)
-        request.redirect("/people?type=all")
+        request.redirect("/admin/people?type=all")
 
     @defer.inlineCallbacks
     def _blockUser(self, request):
@@ -184,7 +184,9 @@ class Admin(base.BaseResource):
 
         if not args["isOrgAdmin"]:
             raise Unauthorized()
-        args['title'] = "Update Company Info:"
+        args['title'] = "Update Company Info"
+        args["menuId"] = "org"
+
         if script and landing:
             yield render(request, "admin.mako", **args)
 
@@ -196,10 +198,11 @@ class Admin(base.BaseResource):
         orgInfo = utils.supercolumnsToDict(orgInfo)
 
         args["orgInfo"]= orgInfo
+        args["viewType"] = "org"
 
         if script:
             yield renderScriptBlock(request, "admin.mako", "orgInfo",
-                                    landing, "#add-users", "set", **args)
+                                    landing, "#list-users", "set", **args)
 
         if script and landing:
             request.write("</body></html>")
@@ -213,7 +216,10 @@ class Admin(base.BaseResource):
         if not args["isOrgAdmin"]:
             request.write("UnAuthorized")
             raise Unauthorized()
-        args["title"] = "Add Users:"
+        args["title"] = "Add Users"
+        args["viewType"] = "add"
+        args["menuId"] = "users"
+
         if script and landing:
             yield render(request, "admin.mako", **args)
 
@@ -223,7 +229,7 @@ class Admin(base.BaseResource):
 
         if script:
             yield renderScriptBlock(request, "admin.mako", "addUsers",
-                                    landing, "#add-users", "set", **args)
+                                    landing, "#add-user-wrapper", "set", **args)
 
         if script and landing:
             request.write("</body></html>")
@@ -238,7 +244,8 @@ class Admin(base.BaseResource):
             request.write("UnAuthorized")
             raise Unauthorized()
 
-        args["title"] = "UnBlock Users:"
+        args["menuId"] = "users"
+
         if script and landing:
             yield render(request, "admin.mako", **args)
 
@@ -254,16 +261,20 @@ class Admin(base.BaseResource):
         userInfo = utils.multiSuperColumnsToDict(cols)
 
         args["entities"] = userInfo
+        args["viewType"] = "blocked"
 
         if script:
+            yield renderScriptBlock(request, "admin.mako", "viewOptions",
+                                landing, "#users-view", "set", **args)
+
             yield renderScriptBlock(request, "admin.mako", "list_blocked",
-                                    landing, "#add-users", "set", **args)
+                                    landing, "#list-users", "set", **args)
 
         if script and landing:
             request.write("</body></html>")
 
     @defer.inlineCallbacks
-    def _listUsers(self, request):
+    def _listUnBlockedUsers(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         orgId = args["orgKey"]
         landing = not self._ajax
@@ -272,7 +283,8 @@ class Admin(base.BaseResource):
             raise Unauthorized()
 
         start = utils.getRequestArg(request, 'start') or ''
-        args["title"] = "Manage Users:"
+        args["title"] = "Manage Users"
+        args["menuId"] = "users"
 
         if script and landing:
             yield render(request, "admin.mako", **args)
@@ -288,13 +300,23 @@ class Admin(base.BaseResource):
         args["nextPageStart"] = nextPageStart
         args["prevPageStart"] = prevPageStart
         args["blockedUsers"] = blockedUsers
+        args["viewType"] = "all"
 
 
         if script:
+            yield renderScriptBlock(request, "admin.mako", "viewOptions",
+                                landing, "#users-view", "set", **args)
+
             yield renderScriptBlock(request, "admin.mako", "list_users",
-                                    landing, "#add-users", "set", **args)
+                                    landing, "#list-users", "set", **args)
 
-
+    @defer.inlineCallbacks
+    def _renderUsers(self, request):
+        type = utils.getRequestArg(request, 'type') or 'all'
+        if type == "all":
+            yield self._listUnBlockedUsers(request)
+        else:
+            yield self._listBlockedUsers(request)
 
     def render_POST(self, request):
         segmentCount = len(request.postpath)
@@ -315,12 +337,12 @@ class Admin(base.BaseResource):
     def render_GET(self, request):
         segmentCount = len(request.postpath)
         d = None
-        if segmentCount == 0 or (segmentCount== 1 and request.postpath[0] == "add"):
+        if segmentCount == 0:
+            d = self._renderUsers(request)
+        elif segmentCount== 1 and request.postpath[0] == "add":
             d = self._renderAddUsers(request)
-        elif segmentCount == 1 and request.postpath[0] == "unblock":
-            d = self._listBlockedUsers(request)
         elif segmentCount == 1 and request.postpath[0] == "people":
-            d = self._listUsers(request)
+            d = self._renderUsers(request)
         elif segmentCount == 1 and request.postpath[0] == "org":
             d = self._renderOrgInfo(request)
 

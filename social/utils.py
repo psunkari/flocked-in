@@ -12,7 +12,7 @@ try:
     import cPickle as pickle
 except:
     import pickle
-
+from html5lib           import sanitizer
 from ordereddict        import OrderedDict
 from dateutil.tz        import gettz
 
@@ -65,10 +65,16 @@ def columnsToDict(columns, ordered = False):
         retval[item.column.name] = item.column.value
     return retval
 
+def _sanitize(text):
+    escape_entities = {':':"&#58;"}
+    return sanitizer.escape(text, escape_entities).strip()
 
-def getRequestArg(request, arg):
+def getRequestArg(request, arg, multiValued=False):
+
     if request.args.has_key(arg):
-        return request.args[arg][0]
+        if not multiValued:
+            return _sanitize(request.args[arg][0])
+        return [_sanitize(value) for value in request.args[arg]]
     else:
         return None
 
