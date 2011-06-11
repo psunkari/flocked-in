@@ -12,13 +12,7 @@ from telephus.cassandra.ttypes import ColumnPath, ColumnParent, Column, SuperCol
 from twisted.internet import defer, reactor
 from twisted.python import log
 
-from social import Config, utils
-
-
-HOST     = Config.get('Cassandra', 'Host')
-PORT     = int(Config.get('Cassandra', 'Port'))
-KEYSPACE = Config.get('Cassandra', 'Keyspace')
-
+from social import Config, Db, utils
 
 @defer.inlineCallbacks
 def dropKeyspace(client):
@@ -743,21 +737,16 @@ if __name__ == '__main__':
 
     log.startLogging(sys.stdout)
 
-    f = ManagedCassandraClientFactory(KEYSPACE)
-    c = CassandraClient(f)
-
     deferreds = [];
     for (opt, val) in opts:
         if opt == "-c":
-            deferreds.append(createColumnFamilies(c))
+            deferreds.append(createColumnFamilies(Db))
         elif opt == "-d":
-            deferreds.append(addSampleData(c))
+            deferreds.append(addSampleData(Db))
         elif opt == "-t" and val == "yes-remove-all-the-data":
-            deferreds.append(truncateColumnFamilies(c))
+            deferreds.append(truncateColumnFamilies(Db))
 
     if len(deferreds) > 0:
         d = defer.DeferredList(deferreds)
         d.addBoth(lambda x: reactor.stop())
-
-        reactor.connectTCP(HOST, PORT, f)
         reactor.run()
