@@ -19,19 +19,7 @@
         <div id="home-events"></div>
         <div id="home-todo"></div>
         <div id="invite-people-block">
-          <div class="sidebar-chunk">
-            <div class="sidebar-title">${_("Invite people")}</div>
-            <form method="post" action="/register" class="ajax" autocomplete="off" >
-              <div class="input-wrap">
-                <input type="text" name="emailId"/>
-              </div>
-              <% mailId = me['basic'].get('emailId', None) if me else None %>
-              %if mailId:
-                <input type="hidden" name="sender" value="${mailId}" />
-              %endif
-              <input class="button" type="submit" id="submit" value="${_('Submit')}"/>
-            </form>
-          </div>
+          ${self.invitePeopleBlock()}
         </div>
         <div id ="group-links" >
         </div>
@@ -61,6 +49,20 @@
 
 <%def name="feed_title()">
   <span class="middle title">${feedTitle}</span>
+</%def>
+
+
+<%def name="invitePeopleBlock()">
+  <div class="sidebar-chunk">
+    <div class="sidebar-title">${_("Invite people")}</div>
+    <form method="post" action="/people/invite" class="ajax" autocomplete="off" >
+      <div class="input-wrap">
+        <input type="text" name="email"/>
+      </div>
+      <input type="hidden" name="from" value="sidebar"/>
+      <input class="button" type="submit" id="submit" value="${_('Submit')}"/>
+    </form>
+  </div>
 </%def>
 
 

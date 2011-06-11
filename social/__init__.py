@@ -40,13 +40,13 @@ whitelist = []
 blacklist = []
 try:
     wlist = open('etc/whitelist.txt', 'r').readlines()
-    whitelist = [domain.strip() for domain in wlist if domain]
+    whitelist = set([domain.strip() for domain in wlist if domain])
 except IOError:
     pass
 
 try:
     blist = open('etc/blacklist.txt', 'r').readlines()
-    blacklist = [domain.strip() for domain in blist if domain]
+    blacklist = set([domain.strip() for domain in blist if domain])
 except IOError:
     pass
 

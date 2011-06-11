@@ -24,7 +24,6 @@ from social.auto            import AutoCompleteResource
 from social.feedback        import FeedbackResource
 from social.messaging       import MessagingResource
 from social.admin           import Admin
-from social.register        import RegisterResource
 from social.server          import SessionFactory
 
 

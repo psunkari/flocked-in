@@ -65,7 +65,7 @@ def createColumnFamilies(client):
 
     # Invitations sent out by existing users
     # Key is the e-mail of the recipient - contains inviteKey, sender's key etc;
-    invitations = CfDef(KEYSPACE, "invitations", 'Standard', 'UTF8Type', None,
+    invitations = CfDef(KEYSPACE, "invitations", 'Super', 'UTF8Type', 'BytesType',
                         "List of invitations sent out by existing users")
     yield client.system_add_column_family(invitations)
 

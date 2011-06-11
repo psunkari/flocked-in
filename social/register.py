@@ -28,35 +28,9 @@ def getOrgKey(domain):
     defer.returnValue(orgKey)
 
 
-@profile
-@defer.inlineCallbacks
-@dump_args
-def send_email(emailId, token, username):
-    rootUrl = Config.get('General', 'URL')
-    subject  = ''
-    if username:
-        subject = "%s has invited you to join Jujubi" %(username)
-    else:
-        subject = "Welcome to Jujubi"
-
-    msg = MIMEText("%(subject)s."
-            "Click on the link to activate your account. "
-            "%(rootUrl)s/register?emailId=%(emailId)s&token=%(token)s"%(locals()))
-    #to_addr = 'praveen@synovel.com' if DEVMODE else emailId
-    to_addr = 'praveen@synovel.com'
-    from_addr = "social@synovel.com"
-    msg['From'] = from_addr
-    msg['To'] = to_addr
-    msg['Subject'] = subject
-    msg = msg.as_string()
-
-    host = Config.get('SMTP', 'Host')
-    yield sendmail(host, from_addr, to_addr, msg)
-
-
-
 class RegisterResource(BaseResource):
     isLeaf = True
+    requireAuth = False
 
     @profile
     @defer.inlineCallbacks
@@ -76,105 +50,62 @@ class RegisterResource(BaseResource):
     def _isValidToken(self, request):
         emailId = utils.getRequestArg(request, "emailId")
         token = utils.getRequestArg(request, "token")
+
         try:
             userKey = yield Db.get(emailId, "userAuth", "user")
             request.redirect("/signin")
+            request.finish()
+            return
         except:
-            cols = yield Db.get_slice(emailId, "invitations")
-            invitation = utils.columnsToDict(cols)
-            if token and invitation.get("token", None) == token:
-                args = request.args
-                args['emailId']=emailId
-                args['view'] = 'userinfo'
-                yield render(request, "signup.mako", **args)
-            else:
-                raise errors.InvalidToken()
+            pass
 
-
-    @profile
-    @defer.inlineCallbacks
-    @dump_args
-    def _sendInvitation(self, emailId, sender):
-        cols = {}
-        name = None
-        token = utils.getRandomKey('username')
-        cols['token'] = token
-        if sender:
-            senderId = yield Db.get(sender, "userAuth", 'user')
-            senderId = senderId.column.value
-            cols['sender']= senderId
-            userinfo = yield Db.get_slice(senderId, "entities", ["name"], super_column="basic")
-            userinfo = utils.columnsToDict(userinfo)
-            name = userinfo['name'] if userinfo.has_key('name') else None
-        yield Db.batch_insert(emailId, "invitations", cols)
-        send_email(emailId, token, name)
+        try:
+            local, domain = emailId.split('@')
+            token = yield Db.get(domain, "invitations", token, emailId)
+            args = request.args
+            args['emailId'] = emailId
+            args['view'] = 'userinfo'
+            yield render(request, "signup.mako", **args)
+            request.finish()
+        except ttypes.NotFoundException, e:
+            raise errors.InvalidActivationToken()
+        except Exception, e:
+            log.msg(e)
 
 
     @defer.inlineCallbacks
     def _invite(self, request):
-        deferreds = []
-        validEmailIds = []
+        authinfo = yield defer.maybeDeferred(request.getSession, IAuthInfo)
+        if not authinfo.username:
+            raise errors.NotAuthorized()
 
-        emailIds = request.args.get('emailId', [])
-        sender = utils.getRequestArg(request, 'sender')
-        submit = utils.getRequestArg(request, 'submit')
-        skip = utils.getRequestArg(request, 'skip')
+        rawEmailIds = request.args.get('email')
+        d = people.invite(request, rawEmailIds)
+        request.redirect('/feed')
 
-        for emailId in emailIds:
-            if len(emailId.split('@'))==2:
-                domain = emailId.split('@')[1]
-                if sender:
-                    valid = yield self._isValidMailId(domain, sender)
-                else:
-                    valid = True
-                if valid:
-                    if Config.has_option("General", "WhiteListMode") and \
-                        Config.get("General", "WhiteListMode") == "True":
-                        if  domain in whitelist and domain not in blacklist:
-                            validEmailIds.append(emailId)
-                    else:
-                        validEmailIds.append(emailId)
-                else:
-                    raise errors.InvalidEmailId()
-        for emailId in validEmailIds:
-            d =  self._sendInvitation(emailId, sender)
-            deferreds.append(d)
-
-        prevPage = request.getCookie("page")
-        if prevPage == "register":
-            request.redirect('/people?type=all')
-        elif not prevPage:
-            request.redirect('/signin')
-        else:
-            request.redirect('/'+prevPage)
-
-        # instead of redirecting, render a mesg saying that a mail is sent to the given emailIds.
 
     @profile
     @defer.inlineCallbacks
     @dump_args
     def _addUser(self, request):
+        @defer.inlineCallbacks
         def setCookie(userId, orgId=None):
-            session = request.getSession()
-            session.sessionTimeout = 14400  # Timeout of 4 hours
-            authinfo = session.getComponent(IAuthInfo)
+            authinfo = yield request.getSession(IAuthInfo)
             authinfo.username = userId
             authinfo.organization = orgId
             authinfo.isAdmin = False
-
-
 
         landing = not self._ajax
         emailId = utils.getRequestArg(request, 'emailId')
         domain = emailId.split("@")[1]
         passwd = utils.getRequestArg(request, 'password')
-        passwd1 = utils.getRequestArg(request, 'password1')
+        pwdrepeat = utils.getRequestArg(request, 'pwdrepeat')
         username = utils.getRequestArg(request, 'name')
         title = utils.getRequestArg(request, 'jobTitle')
         timezone = utils.getRequestArg(request, 'timezone')
         args= {'emailId': emailId, 'view':'invite'}
 
-        if passwd != passwd1:
+        if passwd != pwdrepeat:
             raise errors.PasswordsNoMatch()
 
         username = username if username else emailId
@@ -190,22 +121,20 @@ class RegisterResource(BaseResource):
 
             userKey = yield utils.addUser(emailId, username, passwd,
                                           orgKey, title, timezone)
-            yield Db.remove(emailId, "invitations")
+            yield Db.remove(domain, "invitations", super_column=emailId)
             setCookie(userKey, orgKey)
             yield render(request, "signup.mako", **args)
 
         else:
-            request.redirect('/signup')
+            request.redirect('/signin')
             raise errors.ExistingUser()
 
 
     @profile
     @dump_args
     def render_GET(self, request):
-
         segmentCount = len(request.postpath)
         d = None
-
         if segmentCount == 0:
             d = self._isValidToken(request)
 
@@ -216,12 +145,10 @@ class RegisterResource(BaseResource):
     @profile
     @dump_args
     def render_POST(self, request):
-
         segmentCount = len(request.postpath)
-        if segmentCount == 0 or \
-           segmentCount == 1 and request.postpath[0]== 'invite' :
+        if segmentCount == 1 and request.postpath[0] == 'invite' :
             d = self._invite(request)
-        elif segmentCount == 1 and request.postpath[0]== 'create':
+        elif segmentCount == 1 and request.postpath[0] == 'create':
             d = self._addUser(request)
         else:
             return resource.NoResource("Page not Found")
