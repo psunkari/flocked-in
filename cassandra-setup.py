@@ -14,6 +14,10 @@ from twisted.python import log
 
 from social import Config, Db, utils
 
+
+KEYSPACE = Config.get("Cassandra", "Keyspace")
+
+
 @defer.inlineCallbacks
 def dropKeyspace(client):
     yield client.system_drop_keyspace(KEYSPACE)
@@ -743,16 +747,15 @@ if __name__ == '__main__':
 
     log.startLogging(sys.stdout)
 
-    deferreds = [];
+    d = None
     for (opt, val) in opts:
         if opt == "-c":
-            deferreds.append(createColumnFamilies(Db))
+            d = createColumnFamilies(Db)
         elif opt == "-d":
-            deferreds.append(addSampleData(Db))
+            d = addSampleData(Db)
         elif opt == "-t" and val == "yes-remove-all-the-data":
-            deferreds.append(truncateColumnFamilies(Db))
+            d = truncateColumnFamilies(Db)
 
-    if len(deferreds) > 0:
-        d = defer.DeferredList(deferreds)
+    if d:
         d.addBoth(lambda x: reactor.stop())
         reactor.run()
