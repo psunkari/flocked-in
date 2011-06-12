@@ -109,13 +109,13 @@ class SigninResource(resource.Resource):
         def callback(result):
             cols = utils.columnsToDict(result)
             if cols.get("passwordHash", "XXX") != utils.md5(password):
-                self._renderSigninForm(request, self.AUTHENTICATION_FAILED)
+                return self._renderSigninForm(request, self.AUTHENTICATION_FAILED)
             if cols.has_key("isBlocked"):
-                self._renderSigninForm(request, self.USER_BLOCKED)
+                return self._renderSigninForm(request, self.USER_BLOCKED)
             self._saveSessionAndRedirect(request, cols)
         def errback(error):
-            self._renderSigninForm(request, self.UNKNOWN_ERROR)
-        d.addCallbacks(callback, errback)
+            return self._renderSigninForm(request, self.UNKNOWN_ERROR)
+        d.addCallback(callback)
         d.addErrback(errback)
 
         return server.NOT_DONE_YET
