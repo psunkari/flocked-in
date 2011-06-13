@@ -18,7 +18,7 @@ Config.read([os.path.abspath(source) for source in config_sources])
 
 
 # Cassandra connection pool
-cassandraNodes = Config.get("Cassandra", "Nodes").split(',\s*')
+cassandraNodes = Config.get("Cassandra", "Nodes").split(',')
 cassandraKeyspace = Config.get("Cassandra", "Keyspace")
 Db = CassandraClusterPool(cassandraNodes, cassandraKeyspace, pool_size=10)
 Db.startService()
