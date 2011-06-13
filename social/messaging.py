@@ -145,6 +145,9 @@ class MessagingResource(base.BaseResource):
             raise errors.InvalidRequest()
 
         participants = cols['participants'].keys()
+        if myId not in participants:
+            raise errors.AccessDenied()
+
         timeUUID = uuid.uuid1().bytes
         snippet = self._fetchSnippet(body)
         meta = {'uuid': timeUUID, 'date_epoch': str(epoch), "snippet":snippet}
@@ -366,12 +369,13 @@ class MessagingResource(base.BaseResource):
     def _addMembers(self, request):
         myId = request.getSession(IAuthInfo).username
         newMembers, body, subject, convId = self._parseComposerArgs(request)
+
         if not (convId and newMembers):
             raise errors.MissingParams()
+
         conv = yield Db.get_slice(convId, "mConversations")
         if not conv:
             raise errors.MissingParams()
-
         conv = utils.supercolumnsToDict(conv)
         participants =  set(conv['participants'].keys())
 
@@ -433,7 +437,7 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     def _actions(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        convIds = utils.getRequestArg(request, 'selected', multiValued=True)
+        convIds = utils.getRequestArg(request, 'selected', multiValued=True) or []
         filterType = utils.getRequestArg(request, "filterType") or "all"
         trash = utils.getRequestArg(request, "trash") or None
         archive = utils.getRequestArg(request, "archive") or None
@@ -456,6 +460,10 @@ class MessagingResource(base.BaseResource):
                 cols = yield Db.get_slice(convId, "mConversations")
                 conv = utils.supercolumnsToDict(cols)
                 timeUUID = conv['meta']['uuid']
+                participants = conv['participants'].keys()
+                if myId not in participants:
+                    raise errors.UnAuthorized()
+
                 yield Db.remove(myId, "mUnreadConversations", timeUUID)
                 yield Db.remove(convId, "mConvFolders", 'mUnreadConversations', myId)
                 cols = yield Db.get_slice(convId, "mConvFolders", [myId])
@@ -469,7 +477,7 @@ class MessagingResource(base.BaseResource):
             #Not all actions on message(s) happen over ajax, for them do a redirect
             request.redirect("/messages?type=%s" %filterType)
             request.finish()
-        else:
+        elif self._ajax and len(convIds) > 0:
             #For all actions other than read/unread, since the action won't be
             # available to the user in same view; i.e, archive won't be on
             # archive view, we can simply remove the conv.
@@ -502,8 +510,6 @@ class MessagingResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _moveConversation(self, request, convIds, toFolder):
-
-
         myId = request.getSession(IAuthInfo).username
 
         for convId in convIds:
@@ -512,6 +518,9 @@ class MessagingResource(base.BaseResource):
                 raise errors.InvalidRequest()
             conv = utils.supercolumnsToDict(conv)
             timeUUID = conv['meta']['uuid']
+            participants = conv['participants'].keys()
+            if myId not in participants:
+                raise errors.UnAuthorized()
 
             val = "%s:%s"%( 'u' if toFolder == 'unread' else 'r', convId)
 
