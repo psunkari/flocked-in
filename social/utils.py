@@ -67,19 +67,26 @@ def _sanitize(text):
     escape_entities = {':':"&#58;"}
     return sanitizer.escape(text, escape_entities).strip()
 
-def getRequestArg(request, arg, multiValued=False):
+def getRequestArg(request, arg, sanitize=True, multiValued=False):
 
     if request.args.has_key(arg):
         if not multiValued:
-            return _sanitize(request.args[arg][0])
-        return [_sanitize(value) for value in request.args[arg]]
+            if sanitize:
+                return _sanitize(request.args[arg][0])
+            else:
+                return request.args[arg][0]
+        if sanitize:
+            return [_sanitize(value) for value in request.args[arg]]
+        else:
+            return request.args[arg]
+
     else:
         return None
 
 
 @defer.inlineCallbacks
 def getValidEntityId(request, arg, type="user"):
-    entityId = getRequestArg(request, arg)
+    entityId = getRequestArg(request, arg, sanitize=False)
     if not entityId:
         raise errors.MissingParam()
     try:
@@ -94,7 +101,7 @@ def getValidEntityId(request, arg, type="user"):
 
 @defer.inlineCallbacks
 def getValidItemId(request, arg, columns=None, type=None):
-    itemId = getRequestArg(request, arg)
+    itemId = getRequestArg(request, arg, sanitize=False)
     if not itemId:
         raise errors.MissingParam()
 
@@ -133,7 +140,7 @@ def getAccessibleItemId(request, arg, columns=None, type=None):
 
 @defer.inlineCallbacks
 def getValidTagId(request, arg, orgId=None):
-    tagId = getRequestArg(request, arg)
+    tagId = getRequestArg(request, arg, sanitize=False)
     if not tagId:
         raise errors.MissingParam()
 
@@ -177,7 +184,7 @@ def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
     org = ownerOrgId or authinfo.organization
 
     if not acl:
-        acl = getRequestArg(request, "acl")
+        acl = getRequestArg(request, "acl", sanitize=False)
         try:
             acl = json.loads(acl)
         except:

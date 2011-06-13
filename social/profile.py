@@ -459,9 +459,9 @@ class ProfileResource(base.BaseResource):
     def _changePassword(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
-        curr_passwd = utils.getRequestArg(request, "curr_passwd")
-        passwd1 = utils.getRequestArg(request, "passwd1")
-        passwd2 = utils.getRequestArg(request, "passwd2")
+        curr_passwd = utils.getRequestArg(request, "curr_passwd", sanitize=False)
+        passwd1 = utils.getRequestArg(request, "passwd1", sanitize=False)
+        passwd2 = utils.getRequestArg(request, "passwd2", sanitize=False)
 
 
         yield self._renderEditProfile(request)
@@ -526,7 +526,7 @@ class ProfileResource(base.BaseResource):
             basic_acl = utils.getRequestArg(request, "basic_acl") or 'public'
             userInfo["basic"]["acl"] = basic_acl
 
-        dp = utils.getRequestArg(request, "dp")
+        dp = utils.getRequestArg(request, "dp", sanitize=False)
         if dp:
             avatar = yield saveAvatarItem(myKey, dp)
             if not userInfo.has_key("basic"):

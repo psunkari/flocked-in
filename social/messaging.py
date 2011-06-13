@@ -32,7 +32,7 @@ class MessagingResource(base.BaseResource):
         subject = utils.getRequestArg(request, "subject") or None
         if subject: subject.decode('utf-8').encode('utf-8', "replace")
 
-        recipients = utils.getRequestArg(request, "recipients")
+        recipients = utils.getRequestArg(request, "recipients", sanitize=False)
         if recipients:
             recipients = re.sub(',\s+', ',', recipients).split(",")
         return recipients, body, subject, parent
@@ -433,7 +433,7 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     def _actions(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        convIds = utils.getRequestArg(request, 'selected', True)
+        convIds = utils.getRequestArg(request, 'selected', multiValued=True)
         filterType = utils.getRequestArg(request, "filterType") or "all"
         trash = utils.getRequestArg(request, "trash") or None
         archive = utils.getRequestArg(request, "archive") or None

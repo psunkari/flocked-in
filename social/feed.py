@@ -581,8 +581,14 @@ class FeedResource(base.BaseResource):
 
     # The client has scripts and this is an ajax request
     @defer.inlineCallbacks
-    def _renderMore(self, request, start, entityId, itemType=None):
+    def _renderMore(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
+
+
+        entityId = utils.getRequestArg(request, "id")
+        start = utils.getRequestArg(request, "start") or ""
+        itemType = utils.getRequestArg(request, 'type')
+
         if itemType and itemType in plugins and plugins[itemType].hasIndex:
             feedItems = yield _feedFilter(request, entityId, itemType, start)
         else:
@@ -615,9 +621,6 @@ class FeedResource(base.BaseResource):
         if segmentCount == 0:
             d = self._render(request)
         elif segmentCount == 1 and request.postpath[0] == "more":
-            entityId = utils.getRequestArg(request, "id")
-            start = utils.getRequestArg(request, "start") or ""
-            itemType = utils.getRequestArg(request, 'type')
             d = self._renderMore(request, start, entityId, itemType)
         elif segmentCount == 2 and request.postpath[0] == "share":
             if self._ajax:

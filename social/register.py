@@ -167,8 +167,8 @@ class RegisterResource(BaseResource):
         landing = not self._ajax
         emailId = utils.getRequestArg(request, 'emailId')
         domain = emailId.split("@")[1]
-        passwd = utils.getRequestArg(request, 'password')
-        passwd1 = utils.getRequestArg(request, 'password1')
+        passwd = utils.getRequestArg(request, 'password', sanitize=False)
+        passwd1 = utils.getRequestArg(request, 'password1', sanitize=False)
         username = utils.getRequestArg(request, 'name')
         title = utils.getRequestArg(request, 'jobTitle')
         timezone = utils.getRequestArg(request, 'timezone')

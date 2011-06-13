@@ -47,10 +47,10 @@ class Admin(base.BaseResource):
             raise Unauthorized()
 
         format = utils.getRequestArg(request, 'format')
-        data = utils.getRequestArg(request, "data")
+        data = utils.getRequestArg(request, "data", sanitize=False)
         name = utils.getRequestArg(request, "name")
-        emailId = utils.getRequestArg(request, "email")
-        passwd = utils.getRequestArg(request, "passwd")
+        emailId = utils.getRequestArg(request, "email", sanitize=False)
+        passwd = utils.getRequestArg(request, "passwd", sanitize=False)
         jobTitle = utils.getRequestArg(request, "jobTitle")
         timezone = utils.getRequestArg(request, "timezone")
         log.msg(name, emailId, passwd, jobTitle, timezone)
@@ -160,7 +160,7 @@ class Admin(base.BaseResource):
         if not args["isOrgAdmin"]:
             raise Unauthorized()
         name = utils.getRequestArg(request, "name")
-        dp = utils.getRequestArg(request, "dp")
+        dp = utils.getRequestArg(request, "dp", sanitize=False)
 
         orgInfo = {}
         if dp:

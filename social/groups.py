@@ -331,6 +331,7 @@ class GroupsResource(base.BaseResource):
         name = utils.getRequestArg(request, "name")
         description = utils.getRequestArg(request, "desc")
         access = utils.getRequestArg(request, "access") or "public"
+        dp = utils.getRequestArg(request, "dp", sanitize=False)
 
         if not name:
             raise errors.MissingParams()
@@ -344,7 +345,6 @@ class GroupsResource(base.BaseResource):
         if description:
             meta["desc"] = description
 
-        dp = utils.getRequestArg(request, "dp")
         if dp:
             avatar = yield saveAvatarItem(groupId, dp)
             meta["avatar"] = avatar
@@ -475,8 +475,10 @@ class GroupsResource(base.BaseResource):
     def _listGroupMembers(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         landing = not self._ajax
+
         groupId = yield utils.getValidEntityId(request, "id", "group")
         start = utils.getRequestArg(request, 'start') or ''
+
         fromFetchMore = ((not landing) and (not appchange) and start)
 
         if script and landing:
