@@ -136,6 +136,7 @@
 
 <%def name="invitePeople()">
   <form method="post" action="/people/invite" class="ajax">
+    <input type="hidden" name="from" value="people"/>
     <div id="invite-people">
       <div class="input-wrap">
         <img class="icon invite-people-entry"/>

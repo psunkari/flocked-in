@@ -58,7 +58,7 @@
         </table>
       </div>
       </form>
-      <form action="/register" method="POST">
+      <form action="/signup/signup" method="POST">
       <div id="signup">
         <table id="signup-table" cellspacing="0" cellpadding="3" border="0" align="center">
           <tr>

@@ -21,11 +21,9 @@ def deleteUserFeed(userId, itemType, tuuid):
 @defer.inlineCallbacks
 def deleteFeed(userId, itemId, convId, itemType, acl, convOwner,
                 responseType, others=None, tagId='', deleteAll=False):
-
     """
     wrapper around deleteFromFeed&deleteFromOthersFeed
     """
-
     yield deleteFromFeed(userId, itemId, convId, itemType,
                          userId, responseType, tagId )
     if deleteAll:

@@ -751,7 +751,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     text-align:right;
 }
 
-.edit-profile input {
+.edit-profile input[type=text], .edit-profile input[type=password]{
     width:20em;
     font-size:12px;
     background-color: white;
@@ -759,10 +759,20 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     padding: 2px;
 }
 
+.edit-profile textarea {
+    font-size:12px;
+    width:20em;
+}
+
 .edit-profile select {
     background-color: white;
     border: 1px solid #C3D9FF;
     padding: 2px;
+    font-size:12px;
+}
+
+.edit-profile select.single-row {
+    width: 20.5em;
 }
 
 .edit-profile fieldset {
@@ -1084,7 +1094,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     overflow: hidden;
 }
 
-.register-menu ul{
+.signup-menu ul{
     float: right;
     width: 80%;
     margin: 0px;
@@ -1093,15 +1103,15 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     border-right: 1px solid white
 }
 
-.register-menu-selected {
+.signup-menu-selected {
     background-color: #C3D9FF;
 }
-.register menu li {
+.signup menu li {
     display: inline;
     height: 25px;
     width: 40px;
 }
-.register{
+.signup {
     width: 370px;
     height: 250px;
     float: left;
@@ -1113,24 +1123,24 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     background:#E8EEFA none repeat scroll 0 0;
 }
 
-.register menu {
+.signup menu {
     display: table-caption;
     height: 20px;
     margin: 20px;
 }
-.register ul {
+.signup ul {
     padding: 2px;
     list-style: none;
     display: table-row;
 }
-.register li {
+.signup li {
     height: 25px;
     width: 350px;
     padding: 2px;
     display: list-item;
     float: left;
 }
-.register label {
+.signup label {
     marign-left: 5px;
     padding-right: 5px;
     width: 80px;
@@ -1139,21 +1149,21 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     float: left;
     font-weight: bold;
 }
-.register input{
+.signup input{
     width: 200px;
     font-size:12px;
     background-color: white;
     border: 1px solid #C3D9FF;
     padding: 2px;
 }
-.register select{
+.signup select{
     width: 205px;
     font-size:12px;
     background-color: white;
     border: 1px solid #C3D9FF;
     padding: 2px;
 }
-.register h4, icons{
+.signup h4, icons{
     padding-left: 20px;
     font-size: 14px;
     margin-bottom: 5px;
@@ -1163,10 +1173,43 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     font-size: 14px;
 }
 
-.register-save-wrapper {
+.signup-save-wrapper {
     text-align: right;
     float: right;
     display: table-footer-group;
     padding: 5px;
     width: 150px;
+}
+
+/*Styling for Admin page*/
+
+#add-user-wrapper {
+    background-color:white;
+}
+
+#add-user-wrapper .tabs {
+    padding-top: 4px;
+    margin:0;
+}
+
+#add-user-wrapper .tablinks a {
+    cursor:pointer;
+}
+
+#add-user-wrapper .edit-profile {
+    border-bottom:1px solid #C3D9FF;
+    border-left:1px solid #C3D9FF;
+    border-right:1px solid #C3D9FF;
+}
+
+#add-user-wrapper #next-load-wrapper {
+    margin: 10px 5px !important;
+}
+
+#add-user-wrapper .profile-save-wrapper {
+    margin:10px !important;
+}
+
+#add-user-wrapper .edit-profile ul {
+    padding-top: 10px;
 }

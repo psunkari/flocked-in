@@ -12,12 +12,10 @@ from telephus.cassandra.ttypes import ColumnPath, ColumnParent, Column, SuperCol
 from twisted.internet import defer, reactor
 from twisted.python import log
 
-from social import Config, utils
+from social import Config, Db, utils
 
 
-HOST     = Config.get('Cassandra', 'Host')
-PORT     = int(Config.get('Cassandra', 'Port'))
-KEYSPACE = Config.get('Cassandra', 'Keyspace')
+KEYSPACE = Config.get("Cassandra", "Keyspace")
 
 
 @defer.inlineCallbacks
@@ -65,9 +63,15 @@ def createColumnFamilies(client):
 
     # Invitations sent out by existing users
     # Key is the e-mail of the recipient - contains inviteKey, sender's key etc;
-    invitations = CfDef(KEYSPACE, "invitations", 'Standard', 'UTF8Type', None,
+    invitations = CfDef(KEYSPACE, "invitations", 'Super', 'UTF8Type', 'BytesType',
                         "List of invitations sent out by existing users")
     yield client.system_add_column_family(invitations)
+
+    # Temporary column family for storing email addresses of people
+    # who expressed interest during the private beta.
+    notifyOnRelease = CfDef(KEYSPACE, "notifyOnRelease", "Standard",
+                            "UTF8Type", None, "Notify when public")
+    yield client.system_add_column_family(notifyOnRelease)
 
     # Connections between users
     connections = CfDef(KEYSPACE, 'connections', 'Super', 'UTF8Type',
@@ -743,21 +747,15 @@ if __name__ == '__main__':
 
     log.startLogging(sys.stdout)
 
-    f = ManagedCassandraClientFactory(KEYSPACE)
-    c = CassandraClient(f)
-
-    deferreds = [];
+    d = None
     for (opt, val) in opts:
         if opt == "-c":
-            deferreds.append(createColumnFamilies(c))
+            d = createColumnFamilies(Db)
         elif opt == "-d":
-            deferreds.append(addSampleData(c))
+            d = addSampleData(Db)
         elif opt == "-t" and val == "yes-remove-all-the-data":
-            deferreds.append(truncateColumnFamilies(c))
+            d = truncateColumnFamilies(Db)
 
-    if len(deferreds) > 0:
-        d = defer.DeferredList(deferreds)
+    if d:
         d.addBoth(lambda x: reactor.stop())
-
-        reactor.connectTCP(HOST, PORT, f)
         reactor.run()

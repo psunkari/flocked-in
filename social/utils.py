@@ -7,6 +7,7 @@ import base64
 import json
 import re
 import string
+from email.mime.text    import MIMEText
 try:
     import cPickle as pickle
 except:
@@ -17,8 +18,9 @@ from dateutil.tz        import gettz
 
 from twisted.internet   import defer
 from twisted.python     import log
+from twisted.mail       import smtp
 
-from social             import Db, _, __
+from social             import Db, _, __, Config
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.constants   import INFINITY
@@ -232,6 +234,7 @@ def getCompanyKey(userKey):
     cols = yield Db.get_slice(userKey, "entities", ["org"], super_column="basic")
     cols = columnsToDict(cols)
     defer.returnValue(cols['org'])
+
 
 @defer.inlineCallbacks
 def getCompanyGroups(orgId):
@@ -588,3 +591,17 @@ def updateNameIndex(userKey, targetKeys, newName, oldName):
             muts[targetKey]['nameIndex'][colName] = ''
     if muts:
         yield Db.batch_mutate(muts)
+
+
+@profile
+@defer.inlineCallbacks
+@dump_args
+def sendmail(toAddr, subject, body, fromAddr='noreply@flocked.in'):
+    msg = MIMEText(body)
+    msg['Subject'] = subject
+    msg['From'] = fromAddr
+    msg['To'] = toAddr
+    message = msg.as_string()
+
+    host = Config.get('SMTP', 'Host')
+    yield smtp.sendmail(host, fromAddr, 'prasad@synovel.com', message)

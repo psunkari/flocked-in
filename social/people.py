@@ -1,13 +1,85 @@
+import re
+
 from twisted.internet   import defer
 from twisted.web        import server
 from twisted.python     import log
 
-from social             import Db, utils, base, _
+from social             import Db, utils, base, _, whitelist, blacklist, Config
 from social.relations   import Relation
 from social.template    import render, renderScriptBlock
 from social.isocial     import IAuthInfo
 from social.constants   import PEOPLE_PER_PAGE
 from social.logging     import dump_args, profile
+
+@defer.inlineCallbacks
+def _sendInvitations(myOrgUsers, otherOrgUsers, me, myId, myOrg):
+    rootUrl = Config.get('General', 'URL')
+    brandName = Config.get('Branding', 'Name')
+    myName = me["basic"]["name"]
+    myOrgName = myOrg["basic"]["name"]
+    deferreds = []
+
+    myOrgSubject = "%s invited you to %s" % (myName, brandName)
+    myOrgBody = "Hi,\n\n"\
+                "%(myName)s has invited you to %(myOrgName)s network on %(brandName)s.\n"\
+                "To activate your account please visit: %(activationUrl)s.\n\n"\
+                "Flocked.in Team."
+    otherOrgSubject = "%s invited you to %s" % (myName, brandName)
+    otherOrgBody = "Hi,\n\n"\
+                   "%(myName)s has invited you to try %(brandName)s.\n"\
+                   "To activate your account please visit: %(activationUrl)s.\n\n"\
+                   "Flocked.in Team."
+
+    myOrgUsers.extend(otherOrgUsers)
+    for emailId in myOrgUsers:
+        token = utils.getRandomKey('invite')
+        activationUrl = "%(rootUrl)s/signup?emailId=%(emailId)s&%(token)s" % (locals())
+        localpart, domainpart = emailId.split('@')
+
+        deferreds.append(Db.insert(domainpart, "invitations", myId, token, emailId))
+        if emailId in otherOrgUsers:
+            deferreds.append(utils.sendmail(emailId, otherOrgSubject, otherOrgBody%locals()))
+        else:
+            deferreds.append(utils.sendmail(emailId, myOrgSubject, myOrgBody%locals()))
+
+    yield defer.DeferredList(deferreds)
+
+
+@defer.inlineCallbacks
+def invite(request, rawEmailIds):
+    authinfo = request.getSession(IAuthInfo)
+    emailIds = []
+
+    expr = re.compile(', *')
+    for commaSeparated in rawEmailIds:
+        emailIds.extend(expr.split(commaSeparated))
+
+    myId = authinfo.username
+    myOrgId = authinfo.organization
+    entities = yield Db.multiget_slice([myId, myOrgId], "entities",
+                                   ["basic", "domains"])
+    entities = utils.multiSuperColumnsToDict(entities)
+    myOrgDomains = set(entities[myOrgId].get('domains').keys())
+    myOrgIsWhite = len(myOrgDomains.intersection(whitelist))
+
+    myOrgUsers = []
+    otherOrgUsers = []
+    for emailId in emailIds:
+        try:
+            localpart, domainpart = emailId.split('@')
+            if domainpart in blacklist:
+                pass
+            elif domainpart in myOrgDomains:
+                myOrgUsers.append(emailId)
+            elif myOrgIsWhite:
+                otherOrgUsers.append(emailId)
+        except:
+            pass
+
+    if myOrgUsers or otherOrgUsers:
+        _sendInvitations(myOrgUsers, otherOrgUsers,
+                         entities[myId], myId, entities[myOrgId])
+
 
 @defer.inlineCallbacks
 def getPeople(myId, entityId, orgId, start='',
@@ -108,10 +180,28 @@ class PeopleResource(base.BaseResource):
             yield render(request, "people.mako", **args)
 
     @defer.inlineCallbacks
+    def _invite(self, request):
+        src = utils.getRequestArg(request, 'from') or None
+        rawEmailIds = request.args.get('email')
+        d = invite(request, rawEmailIds)
+
+        if not src:
+            src = "sidebar" if len(rawEmailIds) == 1 else "people"
+
+        if src == "sidebar" and self._ajax:
+            yield renderScriptBlock(request, "feed.mako", "invitePeopleBlock",
+                                    False, "#invite-people-block", "set")
+        elif src == "sidebar":
+            request.redirect('/feed')
+        elif src == "people" and self._ajax:
+            request.write("$('#invite-people-wrapper').empty()")
+        elif src == "people":
+            request.redirect('/people')
+
+    @defer.inlineCallbacks
     def _renderInvitePeople(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
-
         orgId = args["orgKey"]
         args["entities"] = {}
         args["menuId"] = "people"
@@ -138,10 +228,6 @@ class PeopleResource(base.BaseResource):
         else:
             yield render(request, "people.mako", **args)
 
-    @defer.inlineCallbacks
-    def _invitePeople(self, request):
-        request.write("$('#invite-people-wrapper').empty()")
-
     @profile
     @dump_args
     def render_GET(self, request):
@@ -160,8 +246,7 @@ class PeopleResource(base.BaseResource):
     def render_POST(self, request):
         segmentCount = len(request.postpath)
         d = None
-
         if segmentCount == 1 and request.postpath[0] == "invite":
-            d = self._invitePeople(request)
+            d = self._invite(request)
 
         return self._epilogue(request, d)

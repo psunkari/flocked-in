@@ -41,7 +41,7 @@ class RequestFactory(server.Request):
             self.session = self.site.makeSession()
             self.addCookie(self.cookiename, self.session.uid, path='/')
             return _component()
-        d.addCallbacks(callback, errback)
+        d.addCallbacks(callback)
         d.addErrback(errback)
         return d
 

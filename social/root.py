@@ -12,7 +12,7 @@ from social.template        import render
 from social.profile         import ProfileResource
 from social.isocial         import IAuthInfo
 from social.feed            import FeedResource
-from social.register        import RegisterResource
+from social.signup          import SignupResource
 from social.item            import ItemResource
 from social.people          import PeopleResource
 from social.avatar          import AvatarResource
@@ -24,7 +24,6 @@ from social.auto            import AutoCompleteResource
 from social.feedback        import FeedbackResource
 from social.messaging       import MessagingResource
 from social.admin           import Admin
-from social.register        import RegisterResource
 from social.server          import SessionFactory
 
 
@@ -110,26 +109,26 @@ class SigninResource(resource.Resource):
         def callback(result):
             cols = utils.columnsToDict(result)
             if cols.get("passwordHash", "XXX") != utils.md5(password):
-                self._renderSigninForm(request, self.AUTHENTICATION_FAILED)
+                return self._renderSigninForm(request, self.AUTHENTICATION_FAILED)
             if cols.has_key("isBlocked"):
-                self._renderSigninForm(request, self.USER_BLOCKED)
+                return self._renderSigninForm(request, self.USER_BLOCKED)
             self._saveSessionAndRedirect(request, cols)
         def errback(error):
-            self._renderSigninForm(request, self.UNKNOWN_ERROR)
-        d.addCallbacks(callback, errback)
+            return self._renderSigninForm(request, self.UNKNOWN_ERROR)
+        d.addCallback(callback)
         d.addErrback(errback)
 
         return server.NOT_DONE_YET
 
 
 # 
-# HomeResource gives an interface for the new users to register for social
+# HomeResource gives an interface for the new users to signup
 #
 class HomeResource(resource.Resource):
     isLeaf = True
 
     def __init__(self):
-        self.indexPage = static.File("index.html")
+        self.indexPage = static.File("private/index.html")
 
     def _renderHomePage(self, request):
         request.finish()
@@ -151,7 +150,7 @@ class HomeResource(resource.Resource):
 # authorization, adding headers for cache busting and setting some default cookies
 #
 class RootResource(resource.Resource):
-    _noCookiesPaths = set(["avatar", "auto", "signin", "register", "public", "about"])
+    _noCookiesPaths = set(["avatar", "auto", "signin", "signup", "public", "about"])
 
     def __init__(self, isAjax=False):
         self._isAjax = isAjax
@@ -177,7 +176,7 @@ class RootResource(resource.Resource):
             self._auto = AutoCompleteResource()
             self._public = static.File("public")
             self._about = static.File("about")
-            self._register = RegisterResource()
+            self._signup = SignupResource()
             self._signin = SigninResource()
 
     def _clearAuth(self, request):
@@ -215,8 +214,8 @@ class RootResource(resource.Resource):
                 match = self._avatars
             elif path == "about":
                 match = self._about
-            elif path == "register":
-                match = self._register
+            elif path == "signup":
+                match = self._signup
             elif path == "public":
                 match = self._public
             elif path == "signout":
