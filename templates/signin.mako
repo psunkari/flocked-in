@@ -6,12 +6,12 @@
 
 <head>
   <title>${_('Synovel SocialNet')}</title>
-  <link rel="stylesheet" type="text/css" media="screen" href="/public/style/signin.css"/>
+  <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/signin.css"/>
 </head>
 
 <body>
   <div id="header">
-    <img alt="Synovel" src="/public/images/synovel.png"/>
+    <img alt="Synovel" src="/rsrcs/img/synovel.png"/>
   </div>
   <div id="wrapper">
     <div id="inner">
@@ -52,7 +52,7 @@
           </tr>
           <tr>
             <td colspan="2" id="signin-help">
-              <a href="/public/support/signin">${_('Need help signing in?')}</a>
+              <a href="/about/support/signin">${_('Need help signing in?')}</a>
             </td>
           </tr>
         </table>
@@ -82,7 +82,7 @@
           </tr>
           <tr>
             <td colspan="2" id="signup-help">
-              <a href="/public/support/signup">${_('Know more')}</a>
+              <a href="/about/support/signup">${_('Know more')}</a>
             </td>
           </tr>
         </table>
@@ -94,7 +94,7 @@
   <div id="footer">
     ${_('&copy;2011 Synovel Software')}
     &nbsp;&#183;&nbsp;
-    <a href="/public/support/contact">${_('Contact')}</a>
+    <a href="/about/contact">${_('Contact')}</a>
   </div>
 </body>
 </html>

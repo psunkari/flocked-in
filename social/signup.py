@@ -90,7 +90,7 @@ class SignupResource(BaseResource):
     @defer.inlineCallbacks
     def _signup(self, request):
         if not self.thanksPage:
-            self.thanksPage = static.File("private/thanks.html")
+            self.thanksPage = static.File("public/thanks.html")
 
         emailId = utils.getRequestArg(request, "email")
         local, domain = emailId.split('@')

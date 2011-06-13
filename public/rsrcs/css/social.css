@@ -93,7 +93,7 @@ a:hover, a:active, a:focus {
     min-width: 24px;
 }
 .busy-indicator.busy {
-    background-image: url(/public/images/loading.gif);
+    background-image: url(/rsrcs/img/loading.gif);
     background-position: right center;
     background-repeat: no-repeat;
 }
@@ -101,7 +101,7 @@ a:hover, a:active, a:focus {
 .icon {
     height: 16px;
     width: 16px;
-    background-image: url(/public/images/sprite.png);
+    background-image: url(/rsrcs/img/sprite.png);
     background-repeat: no-repeat;
     display: inline-block;
     vertical-align: middle;
@@ -110,7 +110,7 @@ a:hover, a:active, a:focus {
 .small-icon {
     height: 10px;
     width: 13px;
-    background-image: url(/public/images/sprite.png);
+    background-image: url(/rsrcs/img/sprite.png);
     background-repeat: no-repeat;
     display: inline-block;
     vertical-align: middle;
@@ -119,7 +119,7 @@ a:hover, a:active, a:focus {
 .admin-icon {
     height: 16px;
     width: 16px;
-    background-image: url(/public/images/admin_sprite.png);
+    background-image: url(/rsrcs/img/admin_sprite.png);
     background-repeat: no-repeat;
     display: inline-block;
     vertical-align: middle;
@@ -158,7 +158,7 @@ a:hover, a:active, a:focus {
     height: 35px;
     width: 300px;
     margin-left: 10px;
-    background: transparent url(/public/images/default-sitelogo.jpg) left center no-repeat;
+    background: transparent url(/rsrcs/img/default-sitelogo.jpg) left center no-repeat;
     float: left;
 }
 #search-container {
@@ -568,7 +568,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .acl-busy-item {
     line-height: 1.5em;
     padding: 0.2em 0.4em;
-    background-image: url(/public/images/loading.gif);
+    background-image: url(/rsrcs/img/loading.gif);
     background-position: -5px center;
     background-repeat: no-repeat;
 }
@@ -1047,7 +1047,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     box-shadow: inset 2px 2px 5px #888;
 }
 .feedback-mood-icon {
-    background-image: url(/public/images/feedback.png);
+    background-image: url(/rsrcs/img/feedback.png);
     width: 48px;
     height: 48px;
     margin: 0 auto;

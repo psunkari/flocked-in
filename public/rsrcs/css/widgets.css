@@ -25,7 +25,7 @@
     border-width: 1px;
     border-style: solid;
     border-color: #CCC #888 #888 #CCC;
-    background: #dbdbdb url(/public/images/ui.png) no-repeat right -256px;
+    background: #dbdbdb url(/rsrcs/img/ui.png) no-repeat right -256px;
     cursor: pointer;
     -moz-border-bottom-colors: none;
     -moz-border-image: none;
@@ -70,7 +70,7 @@
 }
 
 .button.default {
-    background: #3D85C6 url(/public/images/ui.png) no-repeat -1px -321px;
+    background: #3D85C6 url(/rsrcs/img/ui.png) no-repeat -1px -321px;
     background: -moz-linear-gradient(center top , #3D85C6, #3366CC) repeat scroll 0 0 transparent;
     background: -webkit-gradient(linear,0% 40%,0% 70%,from(#3D85C6),to(#3366CC));
     border-color: #3366CC #3366CC #204573;
@@ -91,7 +91,7 @@
 
 .button.default:active, .button.default:focus, .button.default:hover {
     border-color: #204573;
-    background: #3D85C6 url(/public/images/ui.png) no-repeat right -1px -321px;
+    background: #3D85C6 url(/rsrcs/img/ui.png) no-repeat right -1px -321px;
     background: -moz-linear-gradient(center top , #3366CC, #3D85C6) repeat scroll 0 0 transparent;
     background: -webkit-gradient(linear,0% 40%,0% 70%,to(#3D85C6),from(#3366CC));
 }

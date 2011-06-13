@@ -7,9 +7,9 @@
 
 <head>
   <title>${_('Synovel SocialNet')}</title>
-  <link rel="stylesheet" type="text/css" media="screen" href="/public/style/signin.css"/>
-  <link rel="stylesheet" type="text/css" media="screen" href="/public/style/social.css"/>
-  <link rel="stylesheet" type="text/css" media="screen" href="/public/style/widgets.css"/>
+  <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/signin.css"/>
+  <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/social.css"/>
+  <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/widgets.css"/>
   <script type = "text/javascript">
   %if view == 'userinfo':
     function validate() {
@@ -20,7 +20,7 @@
 </head>
 <body>
   <div id="inner">
-    <div id="header"><img alt="Synovel" src="/public/images/synovel.png"/></div>
+    <div id="header"><img alt="Synovel" src="/rsrcs/img/synovel.png"/></div>
     <div id="menu" class="signup-menu">
         <span class="hlinks view-options">
           <%

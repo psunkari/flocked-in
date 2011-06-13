@@ -128,7 +128,7 @@ class HomeResource(resource.Resource):
     isLeaf = True
 
     def __init__(self):
-        self.indexPage = static.File("private/index.html")
+        self.indexPage = static.File("public/index.html")
 
     def _renderHomePage(self, request):
         request.finish()
@@ -150,7 +150,7 @@ class HomeResource(resource.Resource):
 # authorization, adding headers for cache busting and setting some default cookies
 #
 class RootResource(resource.Resource):
-    _noCookiesPaths = set(["avatar", "auto", "signin", "signup", "public", "about"])
+    _noCookiesPaths = set(["avatar", "auto", "signin", "signup", "rsrcs", "about"])
 
     def __init__(self, isAjax=False):
         self._isAjax = isAjax
@@ -174,8 +174,8 @@ class RootResource(resource.Resource):
             self._ajax = RootResource(True)
             self._avatars = AvatarResource()
             self._auto = AutoCompleteResource()
-            self._public = static.File("public")
-            self._about = static.File("about")
+            self._rsrcs = static.File("public/rsrcs")
+            self._about = static.File("public/about")
             self._signup = SignupResource()
             self._signin = SigninResource()
 
@@ -216,8 +216,8 @@ class RootResource(resource.Resource):
                 match = self._about
             elif path == "signup":
                 match = self._signup
-            elif path == "public":
-                match = self._public
+            elif path == "rsrcs":
+                match = self._rsrcs
             elif path == "signout":
                 self._clearAuth(request)
                 match = util.Redirect('/signin')

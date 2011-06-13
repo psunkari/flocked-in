@@ -39,10 +39,10 @@
 <html>
 <head>
   <title>${self.title()}</title>
-  <link rel="stylesheet" type="text/css" media="screen" href="/public/style/social.css"/>
-  <link rel="stylesheet" type="text/css" media="screen" href="/public/style/widgets.css"/>
-  <link rel="stylesheet" type="text/css" media="screen" href="/public/style/jquery.ui.css"/>
-  <link rel="stylesheet" type="text/css" media="screen" href="/public/style/messaging.css"/>
+  <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/social.css"/>
+  <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/widgets.css"/>
+  <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/jquery.ui.css"/>
+  <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/messaging.css"/>
 %if script:
   <noscript>
     <meta http-equiv="refresh" content="0; URL=${noscriptUrl}"/>
@@ -112,13 +112,13 @@
     ${self.layout()}
   </div>
 %if script:
-  <script type="text/javascript" src="/public/scripts/jquery.js"></script>
-  <script type="text/javascript" src="/public/scripts/jquery.ui.js"></script>
-  <script type="text/javascript" src="/public/scripts/jquery.ui.menu.js"></script>
-  <script type="text/javascript" src="/public/scripts/jquery.ui.autocomplete.js"></script>
-  <script type="text/javascript" src="/public/scripts/jquery.address.js"></script>
-  <script type="text/javascript" src="/public/scripts/jquery.autogrow-textarea.js"></script>
-  <script type="text/javascript" src="/public/scripts/social.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/jquery.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/jquery.ui.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/jquery.ui.menu.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/jquery.ui.autocomplete.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/jquery.address.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/jquery.autogrow-textarea.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/social.js"></script>
   <script type="text/javascript">
     $().ready(function() {$$.ui.init()});
   </script>

@@ -369,7 +369,7 @@ def userAvatar(id, userInfo, size=None):
         return "/avatar/%s_%s.%s" % (size, itemId, imgType)
     else:
         sex = "m" if sex != "f" else "f"
-        return "/public/images/avatar_%s_%s.png" % (sex, size)
+        return "/rsrcs/img/avatar_%s_%s.png" % (sex, size)
 
 
 def groupAvatar(id, groupInfo, size=None):
@@ -379,7 +379,7 @@ def groupAvatar(id, groupInfo, size=None):
         imgType, itemId = avatar.split(":")
         return "/avatar/%s_%s.%s" % (size, itemId, imgType)
     else:
-        return "/public/images/avatar_g_%s.png" % size
+        return "/rsrcs/img/avatar_g_%s.png" % size
 
 
 def companyLogo(orgInfo, size=None):
