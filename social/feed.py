@@ -619,7 +619,7 @@ class FeedResource(base.BaseResource):
         if segmentCount == 0:
             d = self._render(request)
         elif segmentCount == 1 and request.postpath[0] == "more":
-            d = self._renderMore(request, start, entityId, itemType)
+            d = self._renderMore(request)
         elif segmentCount == 2 and request.postpath[0] == "share":
             if self._ajax:
                 d = self._renderShareBlock(request, request.postpath[1])

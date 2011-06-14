@@ -1,18 +1,14 @@
-
-import time
-import uuid
-import urllib2
 from lxml               import etree
-import re
 
 from zope.interface     import implements
 from twisted.python     import log
 from twisted.internet   import defer
 from twisted.plugin     import IPlugin
+from twisted.web        import client
 
-from social.template    import renderScriptBlock, render, getBlock
+from social.template    import renderScriptBlock, getBlock
 from social.isocial     import IItemType
-from social             import Db, base, utils, errors
+from social             import Db, utils, errors
 from social.logging     import profile, dump_args
 
 
@@ -46,15 +42,15 @@ class Links(object):
     def create(self, request):
         target = utils.getRequestArg(request, "target")
         comment = utils.getRequestArg(request, "comment")
-        url = utils.getRequestArg(request, "url")
+        url = utils.getRequestArg(request, "url", sanitize=False)
 
         if not url:
             raise errors.MissingParams()
 
-        if not (url.startswith("http://") or url.startswith("https://")):
+        if len(url.split("://")) == 1:
             url = "http://" + url
 
-        summary, title, image =  self._summary(url)
+        summary, title, image = yield self._summary(url)
 
         convId = utils.getUniqueKey()
         item = utils.createNewItem(request, self.itemType)
@@ -81,7 +77,7 @@ class Links(object):
     def getResource(self, isAjax):
         return None
 
-
+    @defer.inlineCallbacks
     def _summary(self, url):
 
         parser = etree.HTMLParser()
@@ -92,9 +88,11 @@ class Links(object):
         ogImage = None
         image = None
         try:
-            foo = urllib2.urlopen(url)
+            #XXX: client.getPage starts and stops HTTPClientFactory everytime
+            #     find a way to avoid this
+            d = client.getPage(url)
+            data = yield d
             domain = url.split('/', 3)[2]
-            data = foo.read()
             parser.feed(data)
             tree = parser.close()
             titleElement = tree.xpath("head/title")
@@ -117,7 +115,7 @@ class Links(object):
                     summary = summary.encode('utf-8')
 
             if ((ogSummary or summary) and (ogTitle or title) and (ogImage)):
-                return (ogSummary or summary, ogTitle or title,  ogImage)
+                defer.returnValue((ogSummary or summary, ogTitle or title,  ogImage))
             if not ogSummary or summary:
                 for element in tree.xpath("body//p"):
                     if element.text:
@@ -126,14 +124,15 @@ class Links(object):
             if not ogImage:
                 for element in tree.xpath("body//img"):
                     if 'src' in element.attrib \
-                        and element.attrib['src'].startswith('http://') \
-                        and domain in element.attrib['src']:
-                            image = element.attrib['src']
-                            break
-            return (ogSummary or summary, ogTitle or title,  ogImage or image)
+                      and element.attrib['src'].startswith('http://') \
+                      and domain in element.attrib['src']:
+
+                        image = element.attrib['src']
+                        break
+            defer.returnValue((ogSummary or summary, ogTitle or title,  ogImage or image))
         except Exception as e:
             log.msg(e)
-            return(ogSummary or summary, ogTitle or title,  ogImage or image)
+            defer.returnValue((ogSummary or summary, ogTitle or title,  ogImage or image))
 
 
 links = Links()
