@@ -141,14 +141,12 @@ def getValidItemId(request, arg, type=None, columns=None):
 
 
 @defer.inlineCallbacks
-def getValidTagId(request, arg, orgId=None):
+def getValidTagId(request, arg):
     tagId = getRequestArg(request, arg, sanitize=False)
     if not tagId:
         raise errors.MissingParam()
 
-    if not orgId:
-        orgId = request.getSession(IAuthInfo).organization
-
+    orgId = request.getSession(IAuthInfo).organization
     tag = yield Db.get_slice(orgId, "orgTags", [tagId])
     if not tag:
         raise errors.InvalidTag()

@@ -705,10 +705,7 @@ class ItemResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _untag(self, request):
-        tagId = utils.getRequestArg(request, "tag")
-        if not tagId:
-            raise errors.MissingParam()
-
+        tagId = yield utils.getValidTagId(request, "tag")
         authInfo = request.getSession(IAuthInfo)
         myId = authInfo.username
         orgId = authInfo.organization
