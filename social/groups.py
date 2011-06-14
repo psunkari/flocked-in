@@ -268,12 +268,12 @@ class GroupsResource(base.BaseResource):
         landing = not self._ajax
         orgId = args["orgKey"]
 
+        groupId, group = yield utils.getValidEntityId(request, "id", "group",
+                                                      columns=["admins"])
         userGroup = yield Db.get_slice(myId, "entityGroupsMap", [groupId])
         if not userGroup:
             raise errors.InvalidRequest()
 
-        groupId, group = yield utils.getValidEntityId(request, "id", "group",
-                                                      columns=["admins"])
         if len(group.get('admins', [])) == 1 and myId in group['admins']:
             log.msg('Nominate another person as group administrator')
             raise errors.InvalidRequest()
