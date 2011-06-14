@@ -43,13 +43,6 @@ def createColumnFamilies(client):
                         'List of users in an organization')
     yield client.system_add_column_family(orgUsers)
 
-    # List of groups owned by the organization.  There will be other
-    # groups that are owned by various users in the organization.
-    orgGroups = CfDef(KEYSPACE, "orgGroups", "Standard", 'UTF8Type', None,
-                        'List of groups owned by the organization')
-    yield client.system_add_column_family(orgGroups)
-
-
     # Authentication information of the user.
     # Key is the e-mail address - contains userKey, orgKey, password etc;
     userAuth = CfDef(KEYSPACE, 'userAuth', 'Standard', 'UTF8Type', None,
@@ -315,7 +308,7 @@ def addSampleData(client):
                                     "type": "group" },
                                 "admins": {
                                     adminKey:''}})
-    yield client.insert(exampleKey, "orgGroups", '', managementGroupId)
+    yield client.insert(exampleKey, "entityGroupsMap", '', managementGroupId)
 
     programmersGroupId = utils.getUniqueKey()
     yield client.batch_insert(programmersGroupId, "entities", {
@@ -327,7 +320,7 @@ def addSampleData(client):
                                     "type": "group" },
                                 "admins": {
                                     adminKey:''}})
-    yield client.insert(exampleKey, "orgGroups", '', programmersGroupId)
+    yield client.insert(exampleKey, "entityGroupsMap", '', programmersGroupId)
 
     # Index used to sort users in company user's list
     yield client.insert(exampleKey, "displayNameIndex", "", "kevin:"+kevinKey)
@@ -716,7 +709,7 @@ def addSampleData(client):
 
 @defer.inlineCallbacks
 def truncateColumnFamilies(client):
-    for cf in ["entities", "orgUsers", "orgGroups", "userAuth",
+    for cf in ["entities", "orgUsers", "userAuth",
                "sessions", "invitations", "connections",
                "connectionsByTag", "pendingConnections", "subscriptions",
                "followers", "enterpriseLinks", "entityGroupsMap", "groupMembers",
