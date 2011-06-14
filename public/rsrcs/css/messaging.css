@@ -78,6 +78,7 @@
 .conversation-row-subject-wrapper {
     overflow: hidden;
     white-space: nowrap;
+    max-width:645px;
 }
 .conversation-row-snippet {
     color: #999999;
@@ -115,6 +116,7 @@
 
 .conversation-headline-subject {
    display:inline;
+   word-wrap: break-word;
 }
 
 .conversation-message-headers {
@@ -157,6 +159,7 @@
 
 .conversation-message-message {
    margin:0;
+   word-wrap:break-word;
 }
 
 .thread-selector-wrapper {
