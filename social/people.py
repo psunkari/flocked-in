@@ -33,7 +33,7 @@ def _sendInvitations(myOrgUsers, otherOrgUsers, me, myId, myOrg):
     myOrgUsers.extend(otherOrgUsers)
     for emailId in myOrgUsers:
         token = utils.getRandomKey('invite')
-        activationUrl = "%(rootUrl)s/signup?emailId=%(emailId)s&%(token)s" % (locals())
+        activationUrl = "%(rootUrl)s/signup?email=%(emailId)s&token=%(token)s" % (locals())
         localpart, domainpart = emailId.split('@')
 
         deferreds.append(Db.insert(domainpart, "invitations", myId, token, emailId))
@@ -57,7 +57,7 @@ def invite(request, rawEmailIds):
     myId = authinfo.username
     myOrgId = authinfo.organization
     entities = yield Db.multiget_slice([myId, myOrgId], "entities",
-                                   ["basic", "domains"])
+                                       ["basic", "domains"])
     entities = utils.multiSuperColumnsToDict(entities)
     myOrgDomains = set(entities[myOrgId].get('domains').keys())
     myOrgIsWhite = len(myOrgDomains.intersection(whitelist))

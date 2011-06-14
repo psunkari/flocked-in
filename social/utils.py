@@ -70,7 +70,6 @@ def _sanitize(text):
     return sanitizer.escape(text, escape_entities).strip()
 
 def getRequestArg(request, arg, sanitize=True, multiValued=False):
-
     if request.args.has_key(arg):
         if not multiValued:
             if sanitize:

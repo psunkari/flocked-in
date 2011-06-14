@@ -55,9 +55,10 @@
 
 <%def name="userInfo()">
  <form action="/signup/create" method="POST" onsubmit="return validate()" >
+    <input id="email" type="hidden" name="email" value="${emailId}"/>
+    <input id="token" type="hidden" name="token" value="${token}"/>
     <div class="signup">
       <ul>
-        <li><input id="emailId" type="hidden" class="textfield" name="emailId" value="${emailId}"></input></li>
         <li>
           <label for="name">${_('Name:')}</label>
           <input type="text" class="textfield" name="name" />

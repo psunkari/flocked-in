@@ -12,7 +12,7 @@ from email.mime.text    import MIMEText
 
 import social.constants as constants
 from social.base        import BaseResource
-from social             import utils, Db, Config
+from social             import utils, Db, Config, people
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
 from social.logging     import dump_args, profile
@@ -33,59 +33,71 @@ class SignupResource(BaseResource):
     requireAuth = False
     thanksPage = None
 
-    @profile
     @defer.inlineCallbacks
-    @dump_args
-    def _isValidMailId(self, inviteeDomain, sender):
-        col = yield Db.get(sender, "userAuth", 'org')
-        orgKey = col.column.value
-        cols = yield Db.get_slice(orgKey, "entities", super_column="domains")
-        cols = utils.columnsToDict(cols)
-        domains = cols.keys()
-
-        defer.returnValue(inviteeDomain and inviteeDomain in domains)
-
-    @profile
-    @defer.inlineCallbacks
-    @dump_args
-    def _isValidToken(self, request):
-        emailId = utils.getRequestArg(request, "emailId")
-        token = utils.getRequestArg(request, "token")
+    def _isValidToken(self, emailId, token):
+        if not emailId or not token:
+            defer.returnValue(False)
 
         try:
-            userKey = yield Db.get(emailId, "userAuth", "user")
-            request.redirect("/signin")
-            request.finish()
-            return
-        except:
-            pass
-
+            yield Db.get(emailId, "userAuth", "user")
+            defer.returnValue(False)
+        except: pass
         try:
             local, domain = emailId.split('@')
-            token = yield Db.get(domain, "invitations", token, emailId)
-            args = {}
-            args['emailId'] = emailId
-            args['view'] = 'userinfo'
-            yield render(request, "signup.mako", **args)
+            yield Db.get(domain, "invitations", token, emailId)
         except ttypes.NotFoundException, e:
-            raise errors.InvalidActivationToken()
-        except Exception, e:
-            log.msg(e)
+            defer.returnValue(False)
 
+        defer.returnValue(True)
 
+    # Link that is sent in mails.
     @defer.inlineCallbacks
-    def _invite(self, request):
+    def _signupCheckToken(self, request):
+        authinfo = yield defer.maybeDeferred(request.getSession, IAuthInfo)
+        if authinfo.username:
+            raise errors.AlreadySignedIn()
+
+        emailId = utils.getRequestArg(request, "email")
+        token = utils.getRequestArg(request, "token")
+
+        valid = yield self._isValidToken(emailId, token)
+        if not valid:
+            raise errors.InvalidRegistration()
+
+        args = {'emailId': emailId, 'token': token, 'view': 'userinfo'}
+        yield render(request, "signup.mako", **args)
+
+    # Results of first step in signup - basic user information
+    @defer.inlineCallbacks
+    def _signupGotUserData(self, request):
+        authinfo = yield defer.maybeDeferred(request.getSession, IAuthInfo)
+        if authinfo.username:
+            raise errors.AlreadySignedIn()
+
+        emailId = utils.getRequestArg(request, "email")
+        token = utils.getRequestArg(request, "token")
+
+        valid = yield self._isValidToken(emailId, token)
+        if not valid:
+            raise errors.InvalidRegistration()
+
+        yield self._addUser(request)
+
+
+    # Results of second step in signup - invite co-workers
+    @defer.inlineCallbacks
+    def _signupInviteCoworkers(self, request):
         authinfo = yield defer.maybeDeferred(request.getSession, IAuthInfo)
         if not authinfo.username:
             raise errors.NotAuthorized()
 
-        rawEmailIds = utils.getRequestArg(request, 'email', True) or []
+        rawEmailIds = utils.getRequestArg(request, 'email', multiValued=True) or []
         d = people.invite(request, rawEmailIds)
         request.redirect('/feed')
 
 
     # We are currently in a private demo mode.
-    # Signups => Notify when we are public :)
+    # Signups => Notify when we are public
     # We categorize them by domains, so that we can rollout by domain.
     @defer.inlineCallbacks
     def _signup(self, request):
@@ -102,46 +114,42 @@ class SignupResource(BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _addUser(self, request):
-        @defer.inlineCallbacks
-        def setCookie(userId, orgId=None):
-            authinfo = yield request.getSession(IAuthInfo)
-            authinfo.username = userId
-            authinfo.organization = orgId
-            authinfo.isAdmin = False
-
-        landing = not self._ajax
-        emailId = utils.getRequestArg(request, 'emailId')
-        domain = emailId.split("@")[1]
+        authinfo = yield defer.maybeDeferred(request.getSession, IAuthInfo)
+        emailId = utils.getRequestArg(request, 'email')
+        localpart, domain = emailId.split("@")
+        displayName = utils.getRequestArg(request, 'name')
+        jobTitle = utils.getRequestArg(request, 'jobTitle')
+        timezone = utils.getRequestArg(request, 'timezone')
         passwd = utils.getRequestArg(request, 'password', sanitize=False)
         pwdrepeat = utils.getRequestArg(request, 'pwdrepeat', sanitize=False)
-        username = utils.getRequestArg(request, 'name')
-        title = utils.getRequestArg(request, 'jobTitle')
-        timezone = utils.getRequestArg(request, 'timezone')
-        args= {'emailId': emailId, 'view':'invite'}
+        if not displayName or not jobTitle or not timezone or not passwd:
+            raise errors.MissingParams()
 
         if passwd != pwdrepeat:
             raise errors.PasswordsNoMatch()
 
-        username = username if username else emailId
+        args = {'emailId': emailId, 'view':'invite'}
+
         existingUser = yield Db.get_count(emailId, "userAuth")
         if not existingUser:
-            orgKey = yield getOrgKey(domain)
-            if not orgKey:
-                orgKey = utils.getUniqueKey()
+            orgId = yield getOrgKey(domain)
+            if not orgId:
+                orgId = utils.getUniqueKey()
                 domains = {domain:''}
                 basic = {"name":domain, "type":"org"}
-                yield Db.batch_insert(orgKey, "entities", {"basic": basic, "domains":domains})
-                yield Db.insert(domain, "domainOrgMap", '', orgKey)
+                yield Db.batch_insert(orgId, "entities", {"basic":basic,"domains":domains})
+                yield Db.insert(domain, "domainOrgMap", '', orgId)
 
-            userKey = yield utils.addUser(emailId, username, passwd,
-                                          orgKey, title, timezone)
+            userId = yield utils.addUser(emailId, displayName, passwd,
+                                         orgId, jobTitle, timezone)
+            authinfo.username = userId
+            authinfo.organization = orgId
+            authinfo.isAdmin = False
+
             yield Db.remove(domain, "invitations", super_column=emailId)
-            setCookie(userKey, orgKey)
             yield render(request, "signup.mako", **args)
-
         else:
-            request.redirect('/signin')
-            raise errors.ExistingUser()
+            raise errors.InvalidRegistration()
 
 
     @profile
@@ -150,7 +158,7 @@ class SignupResource(BaseResource):
         segmentCount = len(request.postpath)
         d = None
         if segmentCount == 0:
-            d = self._isValidToken(request)
+            d = self._signupCheckToken(request)
         return self._epilogue(request, d)
 
 
@@ -172,9 +180,9 @@ class SignupResource(BaseResource):
         elif segmentCount == 1:
             action = request.postpath[0]
             if action == 'invite' :
-                d = self._invite(request)
+                d = self._signupInviteCoworkers(request)
             elif action == 'create':
-                d = self._addUser(request)
+                d = self._signupGotUserData(request)
             return self._epilogue(request, d)
         else:
             return self._epilogue(request)
