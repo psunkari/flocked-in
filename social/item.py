@@ -367,7 +367,7 @@ class ItemResource(base.BaseResource):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
 
         # Get the item and the conversation
-        (itemId, item) = yield utils.getValidItemId(request, "id", ["tags"])
+        (itemId, item) = yield utils.getValidItemId(request, "id")
         # Make sure that I liked this item
         try:
             cols = yield Db.get(itemId, "itemLikes", myId)
@@ -581,7 +581,7 @@ class ItemResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _responses(self, request):
-        convId, conv = yield utils.getAccessibleItemId(request, "id")
+        convId, conv = yield utils.getValidItemId(request, "id")
         start = utils.getRequestArg(request, "start") or ''
         start = utils.decodeKey(start)
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
@@ -660,7 +660,7 @@ class ItemResource(base.BaseResource):
         if not tagName:
             raise errors.MissingParam()
 
-        (itemId, item) = yield utils.getValidItemId(request, "id", ["tags"])
+        (itemId, item) = yield utils.getValidItemId(request, "id", columns=["tags"])
         if "parent" in item["meta"]:
             raise errors.InvalidRequest()
 
@@ -713,7 +713,7 @@ class ItemResource(base.BaseResource):
         myId = authInfo.username
         orgId = authInfo.organization
 
-        (itemId, item) = yield utils.getValidItemId(request, "id", ["tags"])
+        (itemId, item) = yield utils.getValidItemId(request, "id", columns=["tags"])
         if "parent" in item:
             raise errors.InvalidRequest()
 
@@ -759,7 +759,7 @@ class ItemResource(base.BaseResource):
         myOrgId = args["orgKey"]
         conv = None
 
-        (itemId, item) = yield utils.getValidItemId(request, 'id', ["tags"])
+        (itemId, item) = yield utils.getValidItemId(request, 'id', columns=["tags"])
         convId = item["meta"].get("parent", itemId)
         itemOwner = item["meta"]["owner"]
 

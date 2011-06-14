@@ -310,10 +310,11 @@ def addSampleData(client):
                                 "basic": {
                                     "name": "Management",
                                     "desc": "Group of all executives involved in policy making",
-                                    "orgKey": exampleKey,
+                                    "org": exampleKey,
                                     "access": "private",
                                     "type": "group" },
-                                "admins":{adminKey:''}})
+                                "admins": {
+                                    adminKey:''}})
     yield client.insert(exampleKey, "orgGroups", '', managementGroupId)
 
     programmersGroupId = utils.getUniqueKey()
@@ -321,11 +322,11 @@ def addSampleData(client):
                                 "basic": {
                                     "name": "Programmers",
                                     "desc": "Group of all programmers",
-                                    "orgKey": exampleKey,
-                                    "admin": adminKey,
+                                    "org": exampleKey,
                                     "access": "private",
                                     "type": "group" },
-                                    "admin":{adminKey:''}})
+                                "admins": {
+                                    adminKey:''}})
     yield client.insert(exampleKey, "orgGroups", '', programmersGroupId)
 
     # Index used to sort users in company user's list
