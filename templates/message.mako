@@ -200,7 +200,7 @@
 
 <%def name="render_composer()">
   <div class="conversation-composer">
-    <form method="post" action="/messages/write" class="ajax" onsubmit="return false">
+    <!--<form method="post" action="/messages/write" class="ajax" submit="console.info('Done');this.preventDefault()">-->
       <div class="input-wrap conversation-composer-field">
         <div class="conversation-composer-recipients"></div>
         <div>
@@ -238,7 +238,7 @@
             <a class="ajax" _ref="/messages">${'Cancel'}</a>
         %endif
       </div>
-    </form>
+    <!--</form>-->
   </div>
 </%def>
 
