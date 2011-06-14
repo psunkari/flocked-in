@@ -172,7 +172,7 @@
 
 <%def name="viewOptions(selected)">
   <ul class="h-links view-options">
-    %for item, display in [('myGroups', 'My Groups'), ('allGroups', 'All Groups'), ('adminGroups', 'Groups Managed By Me')]:
+    %for item, display in [('myGroups', 'My Groups'), ('allGroups', 'All Groups'), ('adminGroups', 'Groups managed by Me')]:
       %if selected == item:
         <li class="selected">${_(display)}</li>
       %else:
@@ -203,22 +203,17 @@
     <div class="edit-profile">
       <ul>
         <li>
-            <label for="name"> Group Name</label>
+            <label for="name">Group Name</label>
             <input type="text" id="groupname" name="name" value= ""/>
         </li>
         <li>
-            <label for="desc"> Description</label>
+            <label for="desc">Description</label>
             <textarea class="input-wrap" id="desc" name="desc"></textarea>
         </li>
         <li>
-            <label for="access"> Group Visibility</label>
-            <input type="radio" id="access" name="access" value= "public" > Public</input>
-            <input type="radio" id="access" name="access" value= "private" > Private</input>
-        </li>
-        <li>
-            <label for="external">Allow External Users?</label>
-            <input type="radio" id="external" name="external" value= "open"> Yes</input>
-            <input type="radio" id="external" name="external" value= "closed"> No </input>
+            <label>Group Visibility</label>
+            <input type="radio" id="access" name="access" value="public">Public</input>
+            <input type="radio" id="access" name="access" value="private">Private</input>
         </li>
         <li>
             <label for="dp">Group Logo</label>
