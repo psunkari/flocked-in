@@ -603,4 +603,4 @@ def sendmail(toAddr, subject, body, fromAddr='noreply@flocked.in'):
     message = msg.as_string()
 
     host = Config.get('SMTP', 'Host')
-    yield smtp.sendmail(host, fromAddr, 'prasad@synovel.com', message)
+    yield smtp.sendmail(host, fromAddr, toAddr, message)
