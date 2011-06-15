@@ -89,7 +89,7 @@ def getRequestArg(request, arg, sanitize=True, multiValued=False):
 def getValidEntityId(request, arg, type="user", columns=None):
     entityId = getRequestArg(request, arg, sanitize=False)
     if not entityId:
-        raise errors.MissingParam()
+        raise errors.MissingParams()
 
     entity = yield Db.get_slice(entityId, "entities",
                                 ["basic"].extend(columns if columns else []))
@@ -115,7 +115,7 @@ def getValidEntityId(request, arg, type="user", columns=None):
 def getValidItemId(request, arg, type=None, columns=None):
     itemId = getRequestArg(request, arg, sanitize=False)
     if not itemId:
-        raise errors.MissingParam()
+        raise errors.MissingParams()
 
     item = yield Db.get_slice(itemId, "items",
                               ["meta"].extend(columns if columns else []))
@@ -144,7 +144,7 @@ def getValidItemId(request, arg, type=None, columns=None):
 def getValidTagId(request, arg):
     tagId = getRequestArg(request, arg, sanitize=False)
     if not tagId:
-        raise errors.MissingParam()
+        raise errors.MissingParams()
 
     orgId = request.getSession(IAuthInfo).organization
     tag = yield Db.get_slice(orgId, "orgTags", [tagId])

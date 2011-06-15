@@ -31,7 +31,7 @@ class ItemResource(base.BaseResource):
 
         convId = utils.getRequestArg(request, "id")
         if not convId:
-            raise errors.MissingParam()
+            raise errors.MissingParams()
         conv = yield Db.get_slice(convId, "items", ['meta', 'tags'])
         conv = utils.supercolumnsToDict(conv)
         if not conv:
@@ -478,7 +478,7 @@ class ItemResource(base.BaseResource):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         comment = utils.getRequestArg(request, "comment")
         if not comment:
-            raise errors.MissingParam()
+            raise errors.MissingParams()
 
         # 0. Fetch conversation and see if I have access to it.
         # TODO: Check ACL
@@ -658,7 +658,7 @@ class ItemResource(base.BaseResource):
         orgId = authInfo.organization
 
         if not tagName:
-            raise errors.MissingParam()
+            raise errors.MissingParams()
 
         (itemId, item) = yield utils.getValidItemId(request, "id", columns=["tags"])
         if "parent" in item["meta"]:

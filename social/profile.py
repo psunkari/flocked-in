@@ -640,7 +640,7 @@ class ProfileResource(base.BaseResource):
         requestDeferred = utils.getValidEntityId(request, "id", "user")
         myKey = request.getSession(IAuthInfo).username
 
-        def callback(targetKey, target):
+        def callback((targetKey, target)):
             actionDeferred = None
             if action == "friend":
                 actionDeferred = self._friend(request, myKey, targetKey)
