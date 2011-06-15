@@ -11,6 +11,7 @@ from social.isocial     import IItemType
 from social             import Db, utils, errors
 from social.logging     import profile, dump_args
 
+_encode = lambda x: type(x) == unicode and x.encode('utf8', 'replace') or x
 
 class Links(object):
     implements(IPlugin, IItemType)
@@ -51,6 +52,8 @@ class Links(object):
             url = "http://" + url
 
         summary, title, image = yield self._summary(url)
+        summary = _encode(summary)
+        title = _encode(title)
 
         convId = utils.getUniqueKey()
         item = utils.createNewItem(request, self.itemType)
