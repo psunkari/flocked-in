@@ -27,12 +27,12 @@ class GroupsResource(base.BaseResource):
     def _follow(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         landing = not self._ajax
-        groupId = yield utils.getValidEntityId(request, "id", "group")
+        groupId, group = yield utils.getValidEntityId(request, "id", "group")
 
         try:
             cols = yield Db.get(myKey, "entityGroupsMap", groupId)
             yield Db.insert(groupId, "followers", "", myKey)
-            args["groupId"]=groupId
+            args["groupId"] = groupId
             args["myGroups"] = [groupId]
             args["pendingConnections"] = {}
             args["groupFollowers"] = {groupId:[myKey]}
@@ -49,12 +49,12 @@ class GroupsResource(base.BaseResource):
     def _unfollow(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         landing = not self._ajax
-        groupId = yield utils.getValidEntityId(request, "id", "group")
+        groupId, group = yield utils.getValidEntityId(request, "id", "group")
         try:
             cols = yield Db.get(myKey, "entityGroupsMap", groupId)
             yield Db.remove(groupId, "followers", myKey)
 
-            args["groupId"]=groupId
+            args["groupId"] = groupId
             args["myGroups"] = [groupId]
             args["pendingConnections"] = {}
             args["groupFollowers"] = {groupId:[]}
@@ -109,17 +109,15 @@ class GroupsResource(base.BaseResource):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         landing = not self._ajax
         myOrgId = args["orgKey"]
-        groupId = yield utils.getValidEntityId(request, "id", "group")
-        cols = yield Db.get(groupId, "entities", "access", "basic")
-        access = cols.column.value
+        groupId, group = yield utils.getValidEntityId(request, "id", "group")
+        access = group["basic"]["access"]
         myGroups = []
         pendingRequests = {}
         groupFollowers = {groupId:[]}
 
-
         cols = yield Db.get_slice(groupId, "bannedUsers", [myKey])
         if cols:
-            log.msg("userid %s banned by admin" %(myKey))
+            log.msg("UserId %s banned by admin" %(myKey))
             raise errors.UserBanned()
 
         try:
@@ -165,10 +163,9 @@ class GroupsResource(base.BaseResource):
     def _acceptSubscription(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         myOrgId = args["orgKey"]
-        groupId = yield utils.getValidEntityId(request, "id", "group")
-        userId = yield utils.getValidEntityId(request, "uid", "user")
-        group = yield Db.get_slice(groupId, "entities", ["basic", "admins"])
-        group = utils.supercolumnsToDict(group)
+        groupId, group = yield utils.getValidEntityId(request, "id", "group",
+                                                      columns=["admins"])
+        userId, user = yield utils.getValidEntityId(request, "uid", "user")
 
         if myKey in group["admins"]:
             #or myKey in moderators #if i am moderator
@@ -193,10 +190,9 @@ class GroupsResource(base.BaseResource):
     @dump_args
     def _rejectSubscription(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
-        groupId = yield utils.getValidEntityId(request, "id", "group")
-        userId = yield utils.getValidEntityId(request, "uid", "user")
-        group = yield Db.get_slice(groupId, "entities", ["basic", "admins"])
-        group = utils.supercolumnsToDict(group)
+        groupId, group = yield utils.getValidEntityId(request, "id", "group",
+                                                      columns=["admins"])
+        userId, user = yield utils.getValidEntityId(request, "uid", "user")
 
         if myKey in group["admins"]:
             #or myKey in moderators #if i am moderator
@@ -221,13 +217,11 @@ class GroupsResource(base.BaseResource):
     @dump_args
     def _blockUser(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
-        groupId = yield utils.getValidEntityId(request, "id", "group")
-        userId = yield utils.getValidEntityId(request, "uid", "user")
-        group = yield Db.get_slice(groupId, "entities", ["basic", "admins"])
-        group = utils.supercolumnsToDict(group)
+        groupId, group = yield utils.getValidEntityId(request, "id", "group",
+                                                      columns=["admins"])
+        userId, user = yield utils.getValidEntityId(request, "uid", "user")
 
-        if myKey == userId and myKey in group["admins"] \
-            and len(group["admins"]) == 1:
+        if myKey == userId and myKey in group["admins"] and len(group["admins"]) == 1:
             log.msg("Admin can't be banned from group")
             raise errors.InvalidRequest()
 
@@ -256,10 +250,9 @@ class GroupsResource(base.BaseResource):
     @dump_args
     def _unBlockUser(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
-        groupId = yield utils.getValidEntityId(request, "id", "group")
-        userId = yield utils.getValidEntityId(request, "uid", "user")
-        group = yield Db.get_slice(groupId, "entities", ["basic", "admins"])
-        group = utils.supercolumnsToDict(group)
+        groupId, group = yield utils.getValidEntityId(request, "id", "group",
+                                                      columns=["admins"])
+        userId, user = yield utils.getValidEntityId(request, "uid", "user")
 
         if myKey in group["admins"]:
             # if the request is pending, remove the request
@@ -275,15 +268,13 @@ class GroupsResource(base.BaseResource):
         landing = not self._ajax
         orgId = args["orgKey"]
 
-        groupId = yield utils.getValidEntityId(request, "id", "group")
+        groupId, group = yield utils.getValidEntityId(request, "id", "group",
+                                                      columns=["admins"])
         userGroup = yield Db.get_slice(myId, "entityGroupsMap", [groupId])
-
         if not userGroup:
             raise errors.InvalidRequest()
 
-        admins = yield Db.get_slice(groupId, "entities", ['admins'])
-        admins = utils.supercolumnsToDict(admins)
-        if len(admins.get('admins', [])) == 1 and myId in admins['admins']:
+        if len(group.get('admins', [])) == 1 and myId in group['admins']:
             log.msg('Nominate another person as group administrator')
             raise errors.InvalidRequest()
 
@@ -340,7 +331,7 @@ class GroupsResource(base.BaseResource):
         meta = {"name":name,
                 "type":"group",
                 "access":access,
-                "orgKey":args["orgKey"]}
+                "org":args["orgKey"]}
         admins = {myKey:''}
         if description:
             meta["desc"] = description
@@ -403,7 +394,6 @@ class GroupsResource(base.BaseResource):
         toFetchGroups = set()
         nextPageStart = ''
         prevPageStart = ''
-        entityId = None
         entityId = myId if viewType == 'myGroups' else orgId
 
         #TODO: list the groups in sorted order.
@@ -476,7 +466,7 @@ class GroupsResource(base.BaseResource):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         landing = not self._ajax
 
-        groupId = yield utils.getValidEntityId(request, "id", "group")
+        groupId, group = yield utils.getValidEntityId(request, "id", "group")
         start = utils.getRequestArg(request, 'start') or ''
 
         fromFetchMore = ((not landing) and (not appchange) and start)
@@ -516,15 +506,12 @@ class GroupsResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _listPendingSubscriptions (self, request):
+    def _listPendingSubscriptions(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         landing = not self._ajax
 
-        groupId = yield utils.getValidEntityId(request, "id", "group")
-
-        group = yield Db.get_slice(groupId, "entities", ["basic", "admins"])
-        group = utils.supercolumnsToDict(group)
-
+        groupId, group = yield utils.getValidEntityId(request, "id", "group",
+                                                      columns=["admins"])
         if script and landing:
             yield render(request,"groups.mako", **args)
         if script and appchange:
@@ -557,14 +544,13 @@ class GroupsResource(base.BaseResource):
         myOrgId = args["orgKey"]
         landing = not self._ajax
 
-        groupId = yield utils.getValidEntityId(request, "id", "group")
+        groupId, group = yield utils.getValidEntityId(request, "id", "group",
+                                                      columns=["admins"])
         emailId = utils.getRequestArg(request, "uid")
         cols = yield Db.get_slice(emailId, "userAuth", ["user"])
         if not cols:
             raise errors.InvalidRequest()
         userId = cols[0].column.value
-        group = yield Db.get_slice(groupId, "entities", ["basic", "admins"])
-        group = utils.supercolumnsToDict(group)
         args["groupId"] = groupId
         args["heading"] = group["basic"]["name"]
 
@@ -586,9 +572,8 @@ class GroupsResource(base.BaseResource):
         myOrgId = args["orgKey"]
         landing = not self._ajax
 
-        groupId = yield utils.getValidEntityId(request, "id", "group")
-        group = yield Db.get_slice(groupId, "entities", ["basic", "admins"])
-        group = utils.supercolumnsToDict(group)
+        groupId, group = yield utils.getValidEntityId(request, "id", "group",
+                                                      columns=["admins"])
         args["groupId"]=groupId
         args["heading"] = group["basic"]["name"]
 

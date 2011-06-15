@@ -604,6 +604,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     display: block;
     color: #999;
     margin-bottom: 4px;
+    word-wrap:break-word;
 }
 
 .conv-root-render {
@@ -664,6 +665,10 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     border: none;
 }
 
+.comment-text {
+    word-wrap:break-word;
+}
+
 #next-load-wrapper {
     padding: 10px 20px;
     border: 1px solid #3D85C6;
@@ -707,6 +712,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     position: relative;
     color: #000;
     font-size: 15px;
+    word-wrap:break-word;
 }
 .item-icon {
     position: absolute;

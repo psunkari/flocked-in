@@ -45,7 +45,6 @@ def ensureTag(request, tagName, orgId=None):
     defer.returnValue((tagId, tag))
 
 
-
 class TagsResource(base.BaseResource):
     isLeaf = True
 

@@ -393,7 +393,6 @@ class MessagingResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _removeMembers(self, request):
-
         myId = request.getSession(IAuthInfo).username
         members, body, subject, convId = self._parseComposerArgs(request)
 
@@ -408,7 +407,7 @@ class MessagingResource(base.BaseResource):
         participants = conv['participants'].keys()
 
         if myId not in participants:
-            raise errors.UnAuthorized()
+            raise errors.Unauthorized()
 
         cols = yield Db.multiget_slice(members, "entities", ['basic'])
         members = set([userId for userId in cols if cols[userId]])
@@ -462,7 +461,7 @@ class MessagingResource(base.BaseResource):
                 timeUUID = conv['meta']['uuid']
                 participants = conv['participants'].keys()
                 if myId not in participants:
-                    raise errors.UnAuthorized()
+                    raise errors.Unauthorized()
 
                 yield Db.remove(myId, "mUnreadConversations", timeUUID)
                 yield Db.remove(convId, "mConvFolders", 'mUnreadConversations', myId)
@@ -520,7 +519,7 @@ class MessagingResource(base.BaseResource):
             timeUUID = conv['meta']['uuid']
             participants = conv['participants'].keys()
             if myId not in participants:
-                raise errors.UnAuthorized()
+                raise errors.Unauthorized()
 
             val = "%s:%s"%( 'u' if toFolder == 'unread' else 'r', convId)
 
@@ -566,7 +565,7 @@ class MessagingResource(base.BaseResource):
             participants = set(conv['participants'])
 
             if myId not in participants:
-                raise errors.UnAuthorized()
+                raise errors.Unauthorized()
 
             timeUUID = conv['meta']['uuid']
             yield Db.remove(myId, "mUnreadConversations", timeUUID)

@@ -20,7 +20,7 @@ from twisted.internet   import defer
 from twisted.python     import log
 from twisted.mail       import smtp
 
-from social             import Db, _, __, Config
+from social             import Db, _, __, Config, errors
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.constants   import INFINITY
@@ -86,25 +86,36 @@ def getRequestArg(request, arg, sanitize=True, multiValued=False):
 
 
 @defer.inlineCallbacks
-def getValidEntityId(request, arg, type="user"):
+def getValidEntityId(request, arg, type="user", columns=None):
     entityId = getRequestArg(request, arg, sanitize=False)
     if not entityId:
-        raise errors.MissingParam()
-    try:
-        col = yield Db.get(entityId, "entities", "type", "basic")
-        if col.column.value == type:
-            defer.returnValue(entityId)
+        raise errors.MissingParams()
+
+    entity = yield Db.get_slice(entityId, "entities",
+                                ["basic"].extend(columns if columns else []))
+    if not entity:
         raise errors.InvalidEntity()
-    except Exception, e:
-        log.err(e)
+
+    entity = supercolumnsToDict(entity)
+    basic = entity["basic"]
+    
+    if type != basic["type"]:
         raise errors.InvalidEntity()
+
+    authinfo = request.getSession(IAuthInfo)
+    myOrgId = authinfo.organization
+    org = basic["org"] if basic["type"] != "org" else entityId
+    if myOrgId != org:
+        raise errors.NoAccessToEntity()
+
+    defer.returnValue((entityId, entity))
 
 
 @defer.inlineCallbacks
-def getValidItemId(request, arg, columns=None, type=None):
+def getValidItemId(request, arg, type=None, columns=None):
     itemId = getRequestArg(request, arg, sanitize=False)
     if not itemId:
-        raise errors.MissingParam()
+        raise errors.MissingParams()
 
     item = yield Db.get_slice(itemId, "items",
                               ["meta"].extend(columns if columns else []))
@@ -112,57 +123,36 @@ def getValidItemId(request, arg, columns=None, type=None):
         raise errors.InvalidItem()
 
     item = supercolumnsToDict(item)
-    if not type:
-        defer.returnValue((itemId, item))
-    elif type and item["meta"].get("type", None) == type:
-        defer.returnValue((itemId, item))
-    else:
-        raise errors.InvalidItem()
-
-
-@defer.inlineCallbacks
-def getAccessibleItemId(request, arg, columns=None, type=None):
-    (itemId, item) = yield getValidItemId(request, arg, columns, type)
-
-    authInfo = request.getSession(IAuthInfo)
-    orgId = authInfo.organization
-    userId = authInfo.username
     meta = item["meta"]
 
-    relation = Relation(userId, [])
+    if type and meta["type"] != type:
+        raise errors.InvalidItem()
+
+    authinfo = request.getSession(IAuthInfo)
+    myOrgId = authinfo.organization
+    myId = authinfo.username
+    relation = Relation(myId, [])
     yield defer.DeferredList([relation.initFriendsList(),
                               relation.initGroupsList()])
-
-    if not checkAcl(userId, meta["acl"], meta["owner"], relation, orgId):
-        raise errors.NotAuthorized()
+    if not checkAcl(myId, meta["acl"], meta["owner"], relation, myOrgId):
+        raise errors.NoAccessToItem()
 
     defer.returnValue((itemId, item))
 
 
 @defer.inlineCallbacks
-def getValidTagId(request, arg, orgId=None):
+def getValidTagId(request, arg):
     tagId = getRequestArg(request, arg, sanitize=False)
     if not tagId:
-        raise errors.MissingParam()
+        raise errors.MissingParams()
 
-    if not orgId:
-        orgId = request.getSession(IAuthInfo).organization
-
+    orgId = request.getSession(IAuthInfo).organization
     tag = yield Db.get_slice(orgId, "orgTags", [tagId])
     if not tag:
         raise errors.InvalidTag()
 
     tag = supercolumnsToDict(tag)
     defer.returnValue((tagId, tag))
-
-
-# TODO
-def areFriendlyDomains(one, two):
-    return True
-
-
-def createACL(request):
-    return None
 
 
 def getRandomKey(prefix):
@@ -456,9 +446,7 @@ def toSnippet(comment):
     return " ".join(commentSnippet)
 
 
-
 def uuid1(node=None, clock_seq=None, timestamp=None):
-
     if not timestamp:
         nanoseconds = int(time.time() * 1e9)
         # 0x01b21dd213814000 is the number of 100-ns intervals between the
@@ -488,6 +476,7 @@ def existingUser(emailId):
     if count:
         defer.returnValue(True)
     defer.returnValue(False)
+
 
 @defer.inlineCallbacks
 def addUser(emailId, displayName, passwd, orgKey, jobTitle = None, timezone=None):
@@ -603,4 +592,4 @@ def sendmail(toAddr, subject, body, fromAddr='noreply@flocked.in'):
     message = msg.as_string()
 
     host = Config.get('SMTP', 'Host')
-    yield smtp.sendmail(host, fromAddr, 'prasad@synovel.com', message)
+    yield smtp.sendmail(host, fromAddr, toAddr, message)

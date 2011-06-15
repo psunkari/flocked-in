@@ -39,7 +39,7 @@ def deleteAvatarItem(entity, isLogo=False):
 def saveAvatarItem(entityId, data, isLogo=False):
     imageFormat = _getImageFileFormat(data)
     if imageFormat not in constants.SUPPORTED_IMAGE_TYPES:
-        raise errors.UnsupportedFileType()
+        raise errors.UnknownFileFormat()
 
     try:
         original = PythonMagick.Blob(data)
@@ -250,9 +250,6 @@ class ProfileResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _friend(self, request, myKey, targetKey):
-        if not utils.areFriendlyDomains(myKey, targetKey):
-            raise errors.NotAllowed()
-
         # Circles are just tags that a user would set on his connections
         circles = utils.getRequestArg(request, 'circle', True) or []
         circles.append("__default__")
@@ -633,7 +630,7 @@ class ProfileResource(base.BaseResource):
             headers = request.requestHeaders
             content_length = headers.getRawHeaders("content-length", [0])[0]
             if int(content_length) > constants.MAX_IMAGE_SIZE:
-                raise errors.LargeFile()
+                raise errors.InvalidFileSize()
             if action == "edit":
                 requestDeferred = self._edit(request)
             elif action == "changePasswd":
@@ -643,7 +640,7 @@ class ProfileResource(base.BaseResource):
         requestDeferred = utils.getValidEntityId(request, "id", "user")
         myKey = request.getSession(IAuthInfo).username
 
-        def callback(targetKey):
+        def callback((targetKey, target)):
             actionDeferred = None
             if action == "friend":
                 actionDeferred = self._friend(request, myKey, targetKey)
@@ -749,18 +746,23 @@ class ProfileResource(base.BaseResource):
     def _render(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
 
-        userKey = utils.getRequestArg(request, "id") or myKey
-        request.addCookie('cu', userKey, path="/ajax/profile")
+        # We are setting an empty value to 'cu' here just to make sure that
+        # any errors when looking validating the entity should not leave us
+        # in a bad state.
 
+        request.addCookie('cu', '', path="/ajax/profile")
+        if request.args.get("id", None):
+            userKey, ign = yield utils.getValidEntityId(request, "id", "user")
+        else:
+            userKey = myKey
+
+        # XXX: We should use getValidEntityId to fetch the entire user
+        # info instead of another call to the database.
+        request.addCookie('cu', userKey, path="/ajax/profile")
         cols = yield Db.get_slice(userKey, "entities")
         if cols:
             user = utils.supercolumnsToDict(cols)
-            if user["basic"]["type"] != "user":
-                raise errors.UnknownUser()
             args["user"] = user
-
-        else:
-            raise errors.UnknownUser()
 
         detail = utils.getRequestArg(request, "dt") or "activity"
         args["detail"] = detail
