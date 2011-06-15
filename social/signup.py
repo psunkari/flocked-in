@@ -89,7 +89,7 @@ class SignupResource(BaseResource):
     def _signupInviteCoworkers(self, request):
         authinfo = yield defer.maybeDeferred(request.getSession, IAuthInfo)
         if not authinfo.username:
-            raise errors.NotAuthorized()
+            raise errors.Unauthorized()
 
         rawEmailIds = utils.getRequestArg(request, 'email', multiValued=True) or []
         d = people.invite(request, rawEmailIds)

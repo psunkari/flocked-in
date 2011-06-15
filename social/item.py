@@ -29,13 +29,7 @@ class ItemResource(base.BaseResource):
         landing = not self._ajax
         myOrgId = args["orgKey"]
 
-        convId = utils.getRequestArg(request, "id")
-        if not convId:
-            raise errors.MissingParams()
-        conv = yield Db.get_slice(convId, "items", ['meta', 'tags'])
-        conv = utils.supercolumnsToDict(conv)
-        if not conv:
-            raise errors.InvalidRequest()
+        convId, conv = yield utils.getValidItemId(request, "id", columns=['tags'])
         itemType = conv["meta"].get("type", None)
 
         start = utils.getRequestArg(request, "start") or ''
@@ -48,15 +42,6 @@ class ItemResource(base.BaseResource):
 
         if script and landing:
             yield render(request, "item.mako", **args)
-
-        relation = Relation(myKey, [])
-        yield defer.DeferredList([relation.initFriendsList(),
-                                  relation.initGroupsList(),
-                                  relation.initSubscriptionsList()])
-        # groups list is required when checking acls.
-
-        if not utils.checkAcl(myKey, meta["acl"], owner, relation, myOrgId):
-            raise errors.NotAuthorized()
 
         if script and appchange:
             yield renderScriptBlock(request, "item.mako", "layout",
@@ -118,6 +103,9 @@ class ItemResource(base.BaseResource):
             toFetchEntities.add(userKey)
         responseKeys.reverse()
 
+        relation = Relation(myKey, [])
+        yield defer.DeferredList([relation.initFriendsList(),
+                                  relation.initSubscriptionsList()])
         friends_subscriptions = relation.friends.keys() + list(relation.subscriptions)
         likes = yield Db.get_slice(convId, "itemLikes", friends_subscriptions) \
                             if friends_subscriptions else defer.succeed([])

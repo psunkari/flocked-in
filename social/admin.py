@@ -4,7 +4,6 @@ from csv import reader
 from twisted.web        import server
 from twisted.internet   import defer
 from twisted.python     import log
-from twisted.cred.error import Unauthorized
 
 from social             import base, Db, utils, people
 from social.signup      import getOrgKey # move getOrgKey to utils
@@ -44,7 +43,7 @@ class Admin(base.BaseResource):
         orgId = args["orgKey"]
 
         if not args["isOrgAdmin"]:
-            raise Unauthorized()
+            raise errors.Unauthorized()
 
         format = utils.getRequestArg(request, 'format')
         data = utils.getRequestArg(request, "data", sanitize=False)
@@ -94,11 +93,11 @@ class Admin(base.BaseResource):
 
         admins = yield utils.getAdmins(orgId)
         if myKey not in admins:
-            raise Unauthorized()
+            raise errors.Unauthorized()
 
         if len(admins) == 1 and userId == myKey:
             # if the network has only one admin, admin can't block himself
-            raise errors.NotAllowed()
+            raise errors.InvalidRequest()
 
         cols = yield Db.get_slice(userId, "entities", ["basic"])
         userInfo = utils.supercolumnsToDict(cols)
@@ -107,7 +106,7 @@ class Admin(base.BaseResource):
 
         if userOrg != orgId:
             log.msg("can't block users of other networks")
-            raise errors.UnAuthoried()
+            raise errors.Unauthorized()
         yield Db.insert(emailId, "userAuth", 'True', "isBlocked")
         yield Db.insert(orgId, "blockedUsers", '', userId)
 
@@ -117,7 +116,7 @@ class Admin(base.BaseResource):
         orgId = args["orgKey"]
 
         if not args["isOrgAdmin"]:
-            raise Unauthorized()
+            raise errors.Unauthorized()
 
         userId = utils.getRequestArg(request, "id")
         cols = yield Db.get_slice(userId, "entities", ["basic"])
@@ -127,7 +126,7 @@ class Admin(base.BaseResource):
 
         if userOrg != orgId:
             log.msg("can't unblock users of other networks")
-            raise errors.UnAuthoried()
+            raise errors.Unauthorized()
         yield Db.remove(emailId, "userAuth", "isBlocked")
         yield Db.remove(orgId, "blockedUsers", userId)
 
@@ -137,19 +136,16 @@ class Admin(base.BaseResource):
         orgId = args["orgKey"]
 
         if not args["isOrgAdmin"]:
-            raise Unauthorized()
+            raise errors.Unauthorized()
 
         userId = utils.getRequestArg(request, "id")
-        cols = yield Db.get_slice(userId, "entities", ["basic"])
-        userInfo = utils.supercolumnsToDict(cols)
-        emailId = userInfo.get("basic", {}).get("emailId", None)
-        userOrg = userInfo.get("basic", {}).get("org", None)
+        userId, user = utils.getValidEntityId(request, "id", "user")
+        userOrg = user.get("basic", {}).get("org", None)
 
         if userOrg != orgId:
             log.msg("can't unblock users of other networks")
-            raise errors.UnAuthoried()
-        if not emailId:
-            raise errors.MissingData()
+            raise errors.Unauthorzied()
+
         yield utils.removeUser(userId, userInfo)
 
     @defer.inlineCallbacks
@@ -158,7 +154,7 @@ class Admin(base.BaseResource):
         orgId = args["orgKey"]
 
         if not args["isOrgAdmin"]:
-            raise Unauthorized()
+            raise errors.Unauthorized()
         name = utils.getRequestArg(request, "name")
         dp = utils.getRequestArg(request, "dp", sanitize=False)
 
@@ -183,7 +179,7 @@ class Admin(base.BaseResource):
         landing = not self._ajax
 
         if not args["isOrgAdmin"]:
-            raise Unauthorized()
+            raise errors.Unauthorized()
         args['title'] = "Update Company Info"
         args["menuId"] = "org"
 
@@ -214,8 +210,8 @@ class Admin(base.BaseResource):
         landing = not self._ajax
 
         if not args["isOrgAdmin"]:
-            request.write("UnAuthorized")
-            raise Unauthorized()
+            request.write("Unauthorized")
+            raise errors.Unauthorized()
         args["title"] = "Add Users"
         args["viewType"] = "add"
         args["menuId"] = "users"
@@ -241,8 +237,8 @@ class Admin(base.BaseResource):
         landing = not self._ajax
 
         if not args["isOrgAdmin"]:
-            request.write("UnAuthorized")
-            raise Unauthorized()
+            request.write("Unauthorized")
+            raise errors.Unauthorized()
 
         args["menuId"] = "users"
 
@@ -280,7 +276,7 @@ class Admin(base.BaseResource):
         landing = not self._ajax
 
         if not args["isOrgAdmin"]:
-            raise Unauthorized()
+            raise errors.Unauthorized()
 
         start = utils.getRequestArg(request, 'start') or ''
         args["title"] = "Manage Users"

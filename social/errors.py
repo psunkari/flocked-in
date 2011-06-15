@@ -1,15 +1,27 @@
 
+class BaseError(Exception):
+    _message = None
+    def __init__(self, message=''):
+        self._message = message
+    def __str__(self):
+        return self._message
+    def _get_message(self):
+        return self._message
+    message = property(_get_message)
+
+
 #
 # Used in messaging.
 #
-class AccessDenied(Exception):
+class AccessDenied(BaseError):
     pass
+
 
 #
 # User trying to signup
 # Request the user to signout before trying to signup.
 #
-class AlreadySignedIn(Exception):
+class AlreadySignedIn(BaseError):
     pass
 
 
@@ -17,7 +29,7 @@ class AlreadySignedIn(Exception):
 # Used when an invalid file is uploaded by admin
 # to add users.
 #
-class InvalidData(Exception):
+class InvalidData(BaseError):
     pass
 
 
@@ -25,7 +37,7 @@ class InvalidData(Exception):
 # EntityId passed in params does not exist or isn't of
 # the requested type.
 #
-class InvalidEntity(Exception):
+class InvalidEntity(BaseError):
     pass
 
 
@@ -33,7 +45,7 @@ class InvalidEntity(Exception):
 # ItemId passed in params does not exist or isn't of
 # the requested type.
 #
-class InvalidItem(Exception):
+class InvalidItem(BaseError):
     pass
 
 
@@ -41,7 +53,7 @@ class InvalidItem(Exception):
 # The user trying to register already exists
 # or an invalid signup token is being used to register.
 #
-class InvalidRegistration(Exception):
+class InvalidRegistration(BaseError):
     pass
 
 
@@ -50,121 +62,84 @@ class InvalidRegistration(Exception):
 # either due to insufficient privileges or because
 # the operation is not meant to be called that way
 #
-class InvalidRequest(Exception):
+class InvalidRequest(BaseError):
     pass
 
 
 #
 # TagId passed in params does not exist
 #
-class InvalidTag(Exception):
+class InvalidTag(BaseError):
     pass
 
 
 #
+# The uploaded file is larger than the maximum allowed size
 #
-#
-class LargeFile(Exception):
-    pass
-
-
-#
-#
-#
-class MissingData(Exception):
+class InvalidFileSize(BaseError):
     pass
 
 
 #
 # One or more parameters that are required are missing
 #
-class MissingParams(Exception):
+class MissingParams(BaseError):
+    pass
+
+
+#
+# User does not have access to the entity
+# Will be masked as InvalidEntity when reporting error to the user
+#
+class NoAccessToEntity(BaseError):
+    pass
+
+
+#
+# User does not have access to the item
+# Will be masked as InvalidItem when reporting error to the user
+#
+class NoAccessToItem(BaseError):
     pass
 
 
 #
 #
 #
-class NoAccessToEntity(Exception):
-    pass
-
-
-#
-#
-#
-class NoAccessToItem(Exception):
-    pass
-
-
-#
-#
-#
-class NotAllowed(Exception):
+class PasswordsNoMatch(BaseError):
     pass
 
 #
 #
 #
-class NotAuthorized(Exception):
+class PendingRequest(BaseError):
     pass
 
 #
 #
 #
-class PasswordsNoMatch(Exception):
+class TooManyParams(BaseError):
     pass
 
-#
-#
-#
-class PendingRequest(Exception):
-    pass
 
 #
+# Authentication is required to perform the action
 #
-#
-class TooManyParams(Exception):
+class Unauthorized(BaseError):
     pass
 
-#
-#
-#
-class UnAuthoried(Exception):
-    pass
 
 #
+# Uploaded file is not a support format
+# Eg: Images for avatars etc;
 #
-#
-class UnAuthorised(Exception):
+class UnknownFileFormat(BaseError):
     pass
 
-#
-#
-#
-class UnAuthorized(Exception):
-    pass
 
 #
+# The user was banned from the group and cannot join it.
 #
-#
-class UnknownFileFormat(Exception):
-    pass
-
-#
-#
-#
-class UnknownUser(Exception):
-    pass
-
-#
-#
-#
-class UnsupportedFileType(Exception):
-    pass
-
-#
-#
-#
-class UserBanned(Exception):
+class UserBanned(BaseError):
     pass
 

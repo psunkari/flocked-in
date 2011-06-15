@@ -20,7 +20,7 @@ from twisted.internet   import defer
 from twisted.python     import log
 from twisted.mail       import smtp
 
-from social             import Db, _, __, Config
+from social             import Db, _, __, Config, errors
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.constants   import INFINITY

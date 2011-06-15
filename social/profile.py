@@ -39,7 +39,7 @@ def deleteAvatarItem(entity, isLogo=False):
 def saveAvatarItem(entityId, data, isLogo=False):
     imageFormat = _getImageFileFormat(data)
     if imageFormat not in constants.SUPPORTED_IMAGE_TYPES:
-        raise errors.UnsupportedFileType()
+        raise errors.UnknownFileFormat()
 
     try:
         original = PythonMagick.Blob(data)
@@ -630,7 +630,7 @@ class ProfileResource(base.BaseResource):
             headers = request.requestHeaders
             content_length = headers.getRawHeaders("content-length", [0])[0]
             if int(content_length) > constants.MAX_IMAGE_SIZE:
-                raise errors.LargeFile()
+                raise errors.InvalidFileSize()
             if action == "edit":
                 requestDeferred = self._edit(request)
             elif action == "changePasswd":
@@ -762,12 +762,7 @@ class ProfileResource(base.BaseResource):
         cols = yield Db.get_slice(userKey, "entities")
         if cols:
             user = utils.supercolumnsToDict(cols)
-            if user["basic"]["type"] != "user":
-                raise errors.UnknownUser()
             args["user"] = user
-
-        else:
-            raise errors.UnknownUser()
 
         detail = utils.getRequestArg(request, "dt") or "activity"
         args["detail"] = detail
