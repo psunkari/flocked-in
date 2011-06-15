@@ -360,6 +360,7 @@ def addSampleData(client):
                                     'location': 'San Fransisco',
                                     'org': exampleKey,
                                     'type': "user",
+                                    'timezone': 'America/Los_Angeles',
                                     'emailId': "kevin@example.com",
                                 },
                                 'languages': {
@@ -399,6 +400,7 @@ def addSampleData(client):
                                     "lastname": "Ajax",
                                     'jobTitle': 'HR Manager',
                                     'location': 'San Fransisco',
+                                    'timezone': 'America/Los_Angeles',
                                     'org': exampleKey,
                                     'type': "user",
                                     "emailId": "ashok@example.com"
@@ -435,6 +437,7 @@ def addSampleData(client):
                                     'jobTitle': 'Administrator',
                                     'location': 'San Fransisco',
                                     'org': exampleKey,
+                                    'timezone': 'America/Los_Angeles',
                                     'type': "user",
                                     "emailId": "william@example.com"
                                 },
@@ -474,6 +477,7 @@ def addSampleData(client):
                                     'jobTitle': 'Programmer',
                                     'location': 'Hyderabad, India',
                                     'org': exampleKey,
+                                    'timezone': 'America/Los_Angeles',
                                     'type': "user",
                                     "emailId": "paul@example.com"
                                 },
@@ -513,6 +517,7 @@ def addSampleData(client):
                                     'jobTitle': 'Programmer',
                                     'location': 'Hyderabad, India',
                                     'org': exampleKey,
+                                    'timezone': 'America/Los_Angeles',
                                     'type': "user",
                                     "emailId": "john@example.com"
                                 },
