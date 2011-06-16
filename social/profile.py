@@ -550,7 +550,7 @@ class ProfileResource(base.BaseResource):
         c_email = utils.getRequestArg(request, "c_email")
         c_im = utils.getRequestArg(request, "c_im")
         c_phone = utils.getRequestArg(request, "c_phone")
-        c_mobile = utils.getRequestArg(request, "c_phone")
+        c_mobile = utils.getRequestArg(request, "c_mobile")
         contacts_acl = utils.getRequestArg(request, "contacts_acl") or 'public'
 
         if any([c_email, c_im, c_phone]):
@@ -563,6 +563,8 @@ class ProfileResource(base.BaseResource):
             userInfo["contact"]["im"] = c_im
         if c_phone:
             userInfo["contact"]["phone"] = c_phone
+        if c_mobile:
+            userInfo["contact"]["mobile"] = c_mobile
 
         interests = utils.getRequestArg(request, "interests")
         interests_acl = utils.getRequestArg(request, "interests_acl") or 'public'
@@ -574,6 +576,7 @@ class ProfileResource(base.BaseResource):
         p_email = utils.getRequestArg(request, "p_email")
         p_phone = utils.getRequestArg(request, "p_phone")
         p_mobile = utils.getRequestArg(request, "p_mobile")
+        currentCity = utils.getRequestArg(request, "currentCity")
         dob_day = utils.getRequestArg(request, "dob_day")
         dob_mon = utils.getRequestArg(request, "dob_mon")
         dob_year = utils.getRequestArg(request, "dob_year")
@@ -587,12 +590,18 @@ class ProfileResource(base.BaseResource):
             userInfo["personal"]["email"] = p_email
         if p_phone:
             userInfo["personal"]["phone"] = p_phone
+        if p_mobile:
+            userInfo["personal"]["mobile"] = p_mobile
         if hometown:
             userInfo["personal"]["hometown"] = hometown
         if currentCity:
             userInfo["personal"]["currentCity"] = currentCity
         if dob_day and dob_mon and dob_year:
-            userInfo["personal"]["birthday"] = "%s%s%s"%(dob_year, dob_mon, dob_day)
+            if dob_day.isdigit() and dob_mon.isdigit() and dob_year.isdigit():
+                if int(dob_day) in range(1, 31) and \
+                    int(dob_mon) in range(1, 12) and \
+                        int(dob_year) in range(1901, 2099):
+                    userInfo["personal"]["birthday"] = "%s%s%s"%(dob_year, dob_mon, dob_day)
 
         employer = utils.getRequestArg(request, "employer")
         emp_start = utils.getRequestArg(request, "emp_start") or ''
@@ -728,10 +737,26 @@ class ProfileResource(base.BaseResource):
                                     landing, "#profile-tabs", "set", **args)
             yield renderScriptBlock(request, "profile.mako", "editBasicInfo",
                                     landing, "#profile-content", "set", **args)
-        elif detail == "detail":
+        elif detail == "work":
             yield renderScriptBlock(request, "profile.mako", "editProfileTabs",
                                     landing, "#profile-tabs", "set", **args)
-            yield renderScriptBlock(request, "profile.mako", "editDetail",
+            yield renderScriptBlock(request, "profile.mako", "editWork",
+                                    landing, "#profile-content", "set", **args)
+        elif detail == "personal":
+            res = yield db.get_slice(myKey, "entities", ['personal'])
+            personalInfo = utils.supercolumnsToDict(res).get("personal", {})
+            args.update({"personalInfo":personalInfo})
+            yield renderScriptBlock(request, "profile.mako", "editProfileTabs",
+                                    landing, "#profile-tabs", "set", **args)
+            yield renderScriptBlock(request, "profile.mako", "editPersonal",
+                                    landing, "#profile-content", "set", **args)
+        elif detail == "contact":
+            res = yield db.get_slice(myKey, "entities", ['contact'])
+            contactInfo = utils.supercolumnsToDict(res).get("contact", {})
+            args.update({"contactInfo":contactInfo})
+            yield renderScriptBlock(request, "profile.mako", "editProfileTabs",
+                                    landing, "#profile-tabs", "set", **args)
+            yield renderScriptBlock(request, "profile.mako", "editContact",
                                     landing, "#profile-content", "set", **args)
         elif detail == "passwd":
             yield renderScriptBlock(request, "profile.mako", "editProfileTabs",

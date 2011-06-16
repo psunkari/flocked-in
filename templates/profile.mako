@@ -382,7 +382,7 @@
     <%
       path = "/profile/edit?id=%s&" % myKey
     %>
-    %for item, name in [('basic', 'Basic'), ('detail', 'Info'), ('passwd', 'Change Password')]:
+    %for item, name in [('basic', _('Basic')), ('contact', _('Contact')), ('work', _('Work Experience')), ('personal', _('Personal')), ('passwd', _('Change Password'))]:
       %if detail == item:
         <li><a href="${path}dt=${item}" id="profile-tab-${item}" class="ajax selected">${_(name)}</a></li>
       %else:
@@ -464,7 +464,7 @@
         <input type="password" name="curr_passwd" id="curr_passwd"/>
       </li>
       <li>
-        <label for="passwd1"> Password</label>
+        <label for="passwd1"> New Password</label>
         <input type="password" name="passwd1" id="passwd1"/>
       </li>
       <li>
@@ -480,137 +480,166 @@
 </form>
 </%def>
 
+<%def name="editWork()">
+<form action="/profile/edit" method="post"  enctype="multipart/form-data">
+    <div class="edit-profile">
+        <div id="work">
+          <div>
+            <legend>Current Work</legend>
+            <ul>
+              <li>
+                <label for="employer"> Employer</label>
+                <input type ="text" />
+              </li>
+              <li>
+                <label for="emp_title"> Title</label>
+                <input type ="text" name="jobTitle"/>
+              </li>
+              <li>
+                <label for="emp_start">Working Since</label>
+                ${self.selectYear("c_emp_start", "Start year")}
+              </li>
+            </ul>
+            <legend>Previous Work</legend>
+            <ul>
+              <li>
+                <label for="employer"> Employer</label>
+                <input type ="text" id= "employer" name = "employer"/>
+              </li>
+              <li>
+                <label for="emp_title"> Title</label>
+                <input type ="text" id= "emp_title" name = "emp_title"/>
+              </li>
+              <li>
+                <label for="emp_start"> Years</label>
+                ${self.selectYear("emp_start", "Start year")}
+                ${self.selectYear("emp_end", "End year")}
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div id="education">
+          <div>
+            <legend>Education</legend>
+            <ul>
+              <li>
+                <label for="college"> College</label>
+                <input type ="text" id= "college" name = "college"/>
+              </li>
+            </ul>
+            <ul>
+              <li>
+                <label for="degree"> Degree</label>
+                <input type ="text" id= "degree" name = "degree"/>
+              </li>
+            </ul>
+            <ul>
+              <li>
+                <label for="edu_end"> Year of Completion</label>
+                ${self.selectYear("edu_end","year")}
+              </li>
+            </ul>
+          </div>
+      </div>
+    </div>
+    <div class="profile-save-wrapper">
+        <input type="submit" class="button default" name="userInfo_submit" value="Save"/>
+    </div>
+    % if emailId and emailId[0]:
+    <input type="hidden" value = ${emailId[0]} name="emailId" />
+    %endif
+    % if myKey:
+    <input type="hidden" value = ${myKey} name="id" />
+    %endif
+</form>
+</%def>
 
-<%def name="editDetail()">
+<%def name="editPersonal()">
 <form action="/profile/edit" method="post"  enctype="multipart/form-data">
     <div class="edit-profile">
       <div id="personal">
-        <fieldset>
-        <legend>Personal:</legend>
-            <ul>
-              <li>
-                <label for ="bday"> Date Of Birth</label>
-                ${self.selectDay("dob_day")}
-                ${self.selectMonth("dob_mon")}
-                ${self.selectYear("dob_year")}
-              </li>
-              <li>
-                <label for="p_email"> Email</label>
-                <input type ="text" id= "p_email" name = "p_email"/>
-              </li>
-              <li>
-                <label for="p_phone"> Phone</label>
-                <input type ="text" id= "p_phone" name = "p_phone"/>
-              </li>
-              <li>
-                <label for="p_mobile"> Mobile</label>
-                <input type ="text" id= "p_mobile" name = "p_mobile"/>
-              </li>
-              <li>
-                <label for="hometown"> Hometown</label>
-                <input type ="text" id= "hometown" name = "hometown"/>
-              </li>
-              <li>
-                <label for="currentCity"> Current City</label>
-                <input type ="text" id= "currentCity" name = "currentCity"/>
-              </li>
-            </ul>
-        </fieldset>
+        <ul>
+          <li>
+            <label for ="bday"> Date Of Birth</label>
+            <%
+             birthday = personalInfo.get("birthday", "")
+             dob =
+             dom =
+             doy =
+            %>
+            ${self.selectDay("dob_day", "Day", dob)}
+            ${self.selectMonth("dob_mon", "Month", dom)}
+            ${self.selectYear("dob_year", "Year", doy)}
+          </li>
+          <li>
+            <label for="p_email"> Email</label>
+            <input type ="text" id= "p_email" name = "p_email" value="${personalInfo.get('mail', '')}"/>
+          </li>
+          <li>
+            <label for="p_phone"> Phone</label>
+            <input type ="text" id= "p_phone" name = "p_phone" value="${personalInfo.get('phone', '')}"/>
+          </li>
+          <li>
+            <label for="p_mobile"> Mobile</label>
+            <input type ="text" id= "p_mobile" name = "p_mobile" value="${personalInfo.get('mobile', '')}"/>
+          </li>
+          <li>
+            <label for="hometown"> Hometown</label>
+            <input type ="text" id= "hometown" name = "hometown" value="${personalInfo.get('hometown', '')}"/>
+          </li>
+          <li>
+            <label for="currentCity"> Current City</label>
+            <input type ="text" id= "currentCity" name = "currentCity" value="${personalInfo.get('currentCity', '')}"/>
+          </li>
+        </ul>
       </div>
-      <div id="contacts">
-        <fieldset>
-        <legend>Contacts:</legend>
-            <ul>
-                <li>
-                    <label for="email"> Email</label>
-                    <input type ="text" id= "c_email" name = "c_email"/>
-                </li>
-            </ul>
-            <ul>
-                <li>
-                    <label for="im"> IM</label>
-                    <input type ="text" id= "c_im" name = "c_im"/>
-                </li>
-                <li>
-                    <label for="phone">Work Phone</label>
-                    <input type ="text" id= "c_phone" name = "c_phone"/>
-                </li>
-                <li>
-                    <label for="c_mobile">Mobile</label>
-                    <input type ="text" id= "c_mobile" name = "c_mobile"/>
-                </li>
-            </ul>
-        </fieldset>
-      </div>
-      <div id="workNedu">
-        <fieldset>
-        <legend>Work and Education:</legend>
-            <div id="work">
-              <div>
-                <ul>
-                  <li>
-                    <label for="employer"> Employer</label>
-                    <input type ="text" id= "employer" name = "employer"/>
-                  </li>
-                </ul>
-                <ul>
-                  <li>
-                    <label for="emp_title"> Title</label>
-                    <input type ="text" id= "emp_title" name = "emp_title"/>
-                  </li>
-                </ul>
-                <ul>
-                  <li>
-                    <label for="emp_desc"> Description</label>
-                    <input type ="text" id= "emp_desc" name = "emp_desc"/>
-                  </li>
-                </ul>
-                <ul>
-                  <li>
-                    <label for="emp_start"> Years</label>
-                    ${self.selectYear("emp_start", "Start year")}
-                    ${self.selectYear("emp_end", "End year")}
-                  </li>
-                </ul>
-              </div>
-            </div>
-            <div id="education">
-              <div>
-                <ul>
-                  <li>
-                    <label for="college"> College</label>
-                    <input type ="text" id= "college" name = "college"/>
-                  </li>
-                </ul>
-                <ul>
-                  <li>
-                    <label for="degree"> Degree</label>
-                    <input type ="text" id= "degree" name = "degree"/>
-                  </li>
-                </ul>
-                <ul>
-                  <li>
-                    <label for="edu_end"> Year of Completion</label>
-                    ${self.selectYear("edu_end","year")}
-                  </li>
-                </ul>
-              </div>
-        </div>
-        </fieldset>
-      </div>
-      <ul>
         % if emailId and emailId[0]:
         <input type="hidden" value = ${emailId[0]} name="emailId" />
         %endif
         % if myKey:
         <input type="hidden" value = ${myKey} name="id" />
         %endif
-      </ul>
     </div>
     <div class="profile-save-wrapper">
         <input type="submit" class="button default" name="userInfo_submit" value="Save"/>
     </div>
   </form>
+</%def>
+
+<%def name="editContact()">
+<form action="/profile/edit" method="post"  enctype="multipart/form-data">
+    <div class="edit-profile">
+      <div id="contacts">
+        <ul>
+            <li>
+                <label for="email"> Email</label>
+                <input type ="text" id= "c_email" name = "c_email" value="${contactInfo.get('mail', '')}"/>
+            </li>
+            <li>
+                <label for="im"> IM</label>
+                <input type ="text" id= "c_im" name = "c_im" value="${contactInfo.get('im', '')}"/>
+            </li>
+            <li>
+                <label for="phone">Work Phone</label>
+                <input type ="text" id= "c_phone" name = "c_phone" value="${contactInfo.get('phone', '')}"/>
+            </li>
+            <li>
+                <label for="c_mobile">Work Mobile</label>
+                <input type ="text" id= "c_mobile" name = "c_mobile" value="${contactInfo.get('mobile', '')}"/>
+            </li>
+        </ul>
+      </div>
+      <div class="profile-save-wrapper">
+          <input type="submit" class="button default" name="userInfo_submit" value="Save"/>
+      </div>
+    </div>
+    % if emailId and emailId[0]:
+    <input type="hidden" value = ${emailId[0]} name="emailId" />
+    %endif
+    % if myKey:
+    <input type="hidden" value = ${myKey} name="id" />
+    %endif
+</form>
 </%def>
 
 <%def name="selectMonth(name)">
