@@ -1100,6 +1100,20 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     overflow: hidden;
 }
 
+#messages-wrapper {
+    padding: 5px 0px;
+    border: 1px solid #3D85C6;
+    background-color: #E8EEFA;
+    margin: 5px 0px;
+    text-align:center;
+    min-height:0;
+}
+
+.messages-error {
+    background-color: #FFEBE8 !important;
+    border: 1px solid #DD3C10 !important;
+}
+
 .signup-menu ul{
     float: right;
     width: 80%;
