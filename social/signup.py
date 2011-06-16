@@ -12,7 +12,7 @@ from email.mime.text    import MIMEText
 
 import social.constants as constants
 from social.base        import BaseResource
-from social             import utils, db, config, people
+from social             import utils, db, config, people, errors
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
 from social.logging     import dump_args, profile

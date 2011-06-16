@@ -83,11 +83,11 @@ a:link, a:visited {
 }
 
 #footer {
-  margin: 0 auto;
-  width: 750px;
-  color: #BBB;
-  text-align: right;
-  font-size: 80%;
+    clear: both;
+    color: #BBBBBB;
+    margin-left: 180px;
+    text-align: right;
+    width: 575px;
 }
 
 .signin-error {

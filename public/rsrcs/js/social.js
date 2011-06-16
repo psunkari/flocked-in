@@ -598,6 +598,31 @@ var ui = {
             $this.addClass('ui-ph');
             $this.addClass('ui-ph-active');
         });
+    },
+
+    showPopUp: function(event){
+        var evt = $.event.fix(event),
+        $target = $(evt.target),
+        $menu = $target.next()
+
+        if (!$menu.hasClass("ui-menu")) {
+            $menu.menu({
+                    select: function(event, ui) {
+                         $(this).hide();
+                     }
+                 })
+                 .css("z-index", 2000);
+        }
+    
+        $menu.show().position({
+                my: "left top",
+                at: "left bottom",
+                of: $target
+            }).focus();
+
+        $(document).one("click", function() {$menu.hide();});
+        evt.stopPropagation();
+        evt.preventDefault();
     }
 }
 
