@@ -4,8 +4,9 @@ syntax: glob
 twistd.pid
 twisted/plugins/dropin.cache
 
-# Secret Folder :)
-secret/*
+# devel and production configuration
+etc/devel.cfg
+etc/production.cfg
 
 # Compiled Python
 *.pyc

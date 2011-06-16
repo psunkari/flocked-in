@@ -14,9 +14,10 @@ from social.isocial     import IItemType
 #
 # Read configuration
 #
-config_sources = os.environ.get("CONFIG_SOURCES", "etc/production.cfg").split(",")
 config = ConfigParser.ConfigParser()
-config.read([os.path.abspath(source) for source in config_sources])
+with open('etc/defaults.cfg') as defaults:
+    config.readfp(defaults)
+config.read(['etc/devel.cfg','etc/production.cfg'])
 
 
 #
