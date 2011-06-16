@@ -11,7 +11,7 @@ from twisted.internet       import defer
 from twisted.python         import log
 from twisted.web            import resource, server, http
 
-from social                 import _, __, Db, utils
+from social                 import _, __, db, utils
 from social.base            import BaseResource
 from social.template        import getBlock
 from social.isocial         import IAuthInfo
@@ -48,9 +48,9 @@ class AutoCompleteResource(BaseResource):
         finish = _getFinishTerm(term)
 
         # Fetch list of tags and names that match the given term
-        d1 = Db.get_slice(orgId, "orgTagsByName",
+        d1 = db.get_slice(orgId, "orgTagsByName",
                           start=term, finish=finish, count=10)
-        d2 = Db.get_slice(orgId, "nameIndex",
+        d2 = db.get_slice(orgId, "nameIndex",
                           start=term, finish=finish, count=10)
 
         toFetchEntities = set()
@@ -69,7 +69,7 @@ class AutoCompleteResource(BaseResource):
         matchedTags = yield d1
         matchedTags = [match.column.value for match in matchedTags]
         if matchedTags:
-            matchedTags = yield Db.get_slice(orgId, "orgTags", matchedTags)
+            matchedTags = yield db.get_slice(orgId, "orgTags", matchedTags)
             matchedTags = utils.supercolumnsToDict(matchedTags)
             for tagId in matchedTags:
                 tags.append({'title': matchedTags[tagId]['title'],
@@ -79,7 +79,7 @@ class AutoCompleteResource(BaseResource):
         # Fetch the required entities
         entities = {}
         if toFetchEntities:
-            results = yield Db.multiget(toFetchEntities, "entities", "basic")
+            results = yield db.multiget(toFetchEntities, "entities", "basic")
             entities.update(utils.multiSuperColumnsToDict(results))
 
         output = []
@@ -122,13 +122,13 @@ class AutoCompleteResource(BaseResource):
 
         toFetchTags = set()
 
-        d1 = Db.get_slice(orgId, "orgTagsByName",
+        d1 = db.get_slice(orgId, "orgTagsByName",
                           start=term, finish=finish, count=10)
         tags = []
         matchedTags = yield d1
         matchedTags = [match.column.value for match in matchedTags]
         if matchedTags:
-            matchedTags = yield Db.get_slice(orgId, "orgTags", matchedTags)
+            matchedTags = yield db.get_slice(orgId, "orgTags", matchedTags)
             matchedTags = utils.supercolumnsToDict(matchedTags)
             for tagId in matchedTags:
                 tags.append({'title': matchedTags[tagId]['title'],
@@ -160,7 +160,7 @@ class AutoCompleteResource(BaseResource):
         finish = _getFinishTerm(term)
 
         # List of matching names in the company
-        d1 = Db.get_slice(orgId, "nameIndex",
+        d1 = db.get_slice(orgId, "nameIndex",
                           start=term, finish=finish, count=5)
 
         toFetchEntities = set()
@@ -177,7 +177,7 @@ class AutoCompleteResource(BaseResource):
         # Fetch the required entities
         entities = {}
         if toFetchEntities:
-            results = yield Db.multiget(toFetchEntities, "entities", "basic")
+            results = yield db.multiget(toFetchEntities, "entities", "basic")
             entities.update(utils.multiSuperColumnsToDict(results))
 
         output = []
@@ -203,12 +203,12 @@ class AutoCompleteResource(BaseResource):
     @defer.inlineCallbacks
     def _myGroups(self, request):
         myId = request.getSession(IAuthInfo).username
-        cols = yield Db.get_slice(myId, "entityGroupsMap")
+        cols = yield db.get_slice(myId, "entityGroupsMap")
         groupIds = [x.column.name for x in cols]
 
         groups = {}
         if groupIds:
-            results = yield Db.multiget_slice(groupIds, "entities",
+            results = yield db.multiget_slice(groupIds, "entities",
                         ["name", "allowExternalUsers"], super_column="basic")
             groups.update(utils.multiColumnsToDict(results))
 

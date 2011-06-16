@@ -9,14 +9,14 @@ from twisted.python             import log
 from twisted.web.http           import PotentialDataLoss
 from twisted.web.http_headers   import Headers
 
-from social                     import base, Db, utils, Config
+from social                     import base, db, utils, config
 from social                     import errors, plugins, _
 from social.feed                import FeedResource
 from social.template            import render, renderScriptBlock
 from social.logging             import dump_args, profile
 
 
-URL = Config.get('SOLR', 'HOST')
+URL = config.get('SOLR', 'HOST')
 DEBUG = False
 
 

@@ -3,7 +3,7 @@ from twisted.python     import log
 from twisted.internet   import defer
 from telephus.cassandra import ttypes
 
-from social             import Db, constants
+from social             import db, constants
 from social.logging     import profile, dump_args
 
 #
@@ -27,9 +27,9 @@ class Relation(object):
     @dump_args
     def initFollowersList(self):
         if self.others:
-            cols = yield Db.get_slice(self.me, "followers", self.others)
+            cols = yield db.get_slice(self.me, "followers", self.others)
         else:
-            cols = yield Db.get_slice(self.me, "followers")
+            cols = yield db.get_slice(self.me, "followers")
 
         self.followers = set([x.column.name for x in cols])
 
@@ -40,9 +40,9 @@ class Relation(object):
     @dump_args
     def initSubscriptionsList(self):
         if self.others:
-            cols = yield Db.get_slice(self.me, "subscriptions", self.others)
+            cols = yield db.get_slice(self.me, "subscriptions", self.others)
         else:
-            cols = yield Db.get_slice(self.me, "subscriptions")
+            cols = yield db.get_slice(self.me, "subscriptions")
 
         self.subscriptions = set([x.column.name for x in cols])
 
@@ -53,9 +53,9 @@ class Relation(object):
     @dump_args
     def initFriendsList(self):
         if self.others:
-            cols = yield Db.get_slice(self.me, 'connections', self.others)
+            cols = yield db.get_slice(self.me, 'connections', self.others)
         else:
-            cols = yield Db.get_slice(self.me, 'connections')
+            cols = yield db.get_slice(self.me, 'connections')
 
         self.friends = dict((x.super_column.name,\
                              [y.value for y in x.super_column.columns])\
@@ -68,12 +68,12 @@ class Relation(object):
     @dump_args
     def initPendingList(self):
         if self.others:
-            cols = yield Db.get_slice(self.me, 'pendingConnections', self.others)
+            cols = yield db.get_slice(self.me, 'pendingConnections', self.others)
         else:
-            cols = yield Db.get_slice(self.me, 'pendingConnections')
+            cols = yield db.get_slice(self.me, 'pendingConnections')
         self.pending = dict((x.column.name, x.column.value) for x in cols)
 
     @defer.inlineCallbacks
     def initGroupsList(self):
-        cols = yield Db.get_slice(self.me, "entityGroupsMap")
+        cols = yield db.get_slice(self.me, "entityGroupsMap")
         self.groups = [col.column.name for col in cols]

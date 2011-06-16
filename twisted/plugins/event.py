@@ -7,7 +7,7 @@ from twisted.internet   import defer
 from twisted.python     import log
 from twisted.web        import server
 
-from social             import Db, utils, base, errors, _
+from social             import db, utils, base, errors, _
 from social.template    import renderScriptBlock, render, getBlock
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
@@ -31,7 +31,7 @@ class EventResource(base.BaseResource):
         if not convId or not invitees:
             raise errors.MissingParams()
 
-        conv = yield Db.get_slice(convId, "items")
+        conv = yield db.get_slice(convId, "items")
         conv = utils.supercolumnsToDict(conv)
 
         if not conv:
@@ -47,10 +47,10 @@ class EventResource(base.BaseResource):
         timeUUID = timeUUID.bytes
         responseType = "I"
 
-        invitees = yield Db.multiget_slice(invitees, "userAuth")
+        invitees = yield db.multiget_slice(invitees, "userAuth")
         invitees = utils.multiColumnsToDict(invitees)
 
-        responses = yield Db.get_slice(convId, "eventResponses")
+        responses = yield db.get_slice(convId, "eventResponses")
         responses = utils.supercolumnsToDict(responses)
         attendees = responses.get("yes", {}).keys() + \
                      responses.get("maybe", {}).keys() + \
@@ -61,11 +61,11 @@ class EventResource(base.BaseResource):
             if not userKey:
                 raise errors.InvalidUserId()
             if userKey not in attendees:
-                yield Db.batch_insert(convId, "eventInvitations", {userKey:{timeUUID:''}})
-                yield Db.insert(userKey, "userEventInvitations", convId, timeUUID)
-                yield Db.insert(userKey, "notifications", convId, timeUUID)
+                yield db.batch_insert(convId, "eventInvitations", {userKey:{timeUUID:''}})
+                yield db.insert(userKey, "userEventInvitations", convId, timeUUID)
+                yield db.insert(userKey, "notifications", convId, timeUUID)
                 value = ":".join([responseType, myKey, convId, convType, convOwner])
-                yield Db.batch_insert(userKey, "notificationItems", {convId:{timeUUID:value}})
+                yield db.batch_insert(userKey, "notificationItems", {convId:{timeUUID:value}})
 
 
     @profile
@@ -80,7 +80,7 @@ class EventResource(base.BaseResource):
         if not response or response not in ('yes', 'maybe', 'no'):
             raise errors.InvalidRequest()
 
-        item = yield Db.get_slice(convId, "items")
+        item = yield db.get_slice(convId, "items")
         item = utils.supercolumnsToDict(item)
 
         if not item  :
@@ -94,7 +94,7 @@ class EventResource(base.BaseResource):
         timeUUID = timeUUID.bytes
         prevResponse, responseUUID = None, None
 
-        cols = yield Db.get_slice(myKey, "userEventResponse", [convId])
+        cols = yield db.get_slice(myKey, "userEventResponse", [convId])
         if cols:
             prevResponse, responseUUID = cols[0].column.value.split(":")
 
@@ -102,29 +102,29 @@ class EventResource(base.BaseResource):
             return
 
         if prevResponse:
-            yield Db.remove(convId, "eventResponses", myKey, prevResponse)
-            prevOptionCount = yield Db.get_count(convId, "eventResponses", prevResponse)
+            yield db.remove(convId, "eventResponses", myKey, prevResponse)
+            prevOptionCount = yield db.get_count(convId, "eventResponses", prevResponse)
             optionCounts[prevResponse] = str(prevOptionCount)
-            yield Db.remove(myKey, "userEvents", responseUUID)
+            yield db.remove(myKey, "userEvents", responseUUID)
 
         if not prevResponse:
-            invitations = yield  Db.get_slice(convId, "eventInvitations",
+            invitations = yield  db.get_slice(convId, "eventInvitations",
                                               super_column =myKey)
             for invitation in invitations:
                 tuuid = invitation.column.name
-                yield Db.remove(myKey, "userEventInvitations", tuuid)
-            yield Db.remove(convId, "eventInvitations", super_column=myKey)
+                yield db.remove(myKey, "userEventInvitations", tuuid)
+            yield db.remove(convId, "eventInvitations", super_column=myKey)
 
-        yield Db.insert(myKey, "userEventResponse", response+":"+timeUUID, convId)
-        yield Db.insert(convId, "eventResponses",  '', myKey, response)
+        yield db.insert(myKey, "userEventResponse", response+":"+timeUUID, convId)
+        yield db.insert(convId, "eventResponses",  '', myKey, response)
 
         if response in ("yes", "maybe"):
-            yield Db.insert(myKey, "userEvents", convId, timeUUID)
+            yield db.insert(myKey, "userEvents", convId, timeUUID)
 
-        responseCount = yield Db.get_count(convId, "eventResponses", response)
+        responseCount = yield db.get_count(convId, "eventResponses", response)
         optionCounts[response] = str(responseCount)
 
-        yield Db.batch_insert(convId, "items", {"options":optionCounts})
+        yield db.batch_insert(convId, "items", {"options":optionCounts})
 
 
     @profile
@@ -145,8 +145,8 @@ class EventResource(base.BaseResource):
             yield renderScriptBlock(request, "event.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-        myEvents = yield Db.get_slice(myKey, "userEvents", reverse=True)
-        myInvitations = yield Db.get_slice(myKey, "userEventInvitations", reverse=True)
+        myEvents = yield db.get_slice(myKey, "userEvents", reverse=True)
+        myInvitations = yield db.get_slice(myKey, "userEventInvitations", reverse=True)
 
         for item in myEvents:
             convs.append(item.column.value)
@@ -155,12 +155,12 @@ class EventResource(base.BaseResource):
             if item.column.value not in invitations:
                 invitations.append(item.column.value)
 
-        events = yield Db.multiget_slice(convs + invitations, "items", ["meta", "options"])
+        events = yield db.multiget_slice(convs + invitations, "items", ["meta", "options"])
         events = utils.multiSuperColumnsToDict(events)
         myResponses = {}
 
         if convs:
-            responses = yield Db.get_slice(myKey, "userEventResponse", convs )
+            responses = yield db.get_slice(myKey, "userEventResponse", convs )
             for item in responses:
                 convId = item.column.name
                 value = item.column.value.split(":")[0]
@@ -171,7 +171,7 @@ class EventResource(base.BaseResource):
                 myResponses[convId] = ''
 
         toFetchEntities.update([events[id]["meta"]["owner"] for id in events])
-        entities = yield Db.multiget_slice(toFetchEntities, "entities", ["basic"])
+        entities = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
         entities = utils.multiSuperColumnsToDict(entities)
 
         args["items"] = events
@@ -235,7 +235,7 @@ class Event(object):
     @defer.inlineCallbacks
     @dump_args
     def getReason(self, convId, requesters, users):
-        conv = yield Db.get_slice(convId, "items", ["meta"])
+        conv = yield db.get_slice(convId, "items", ["meta"])
         conv = utils.supercolumnsToDict(conv)
 
         title = conv["meta"].get("title", None)
@@ -286,13 +286,13 @@ class Event(object):
         convId = convId or args["convId"]
         myKey = args["myKey"]
 
-        conv = yield Db.get_slice(convId, "items", ["options"])
+        conv = yield db.get_slice(convId, "items", ["options"])
         if not conv:
             raise errors.InvalidRequest()
         conv = utils.supercolumnsToDict(conv)
         conv.update(args.get("items", {}).get(convId, {}))
 
-        myResponse = yield Db.get_slice(myKey, "userEventResponse", [convId])
+        myResponse = yield db.get_slice(myKey, "userEventResponse", [convId])
         myResponse = myResponse[0].column.value.split(":")[0] if myResponse else ''
 
         startTime = conv['meta'].get('start', None)
@@ -336,7 +336,7 @@ class Event(object):
         item["meta"].update(meta)
         item["options"] = options
 
-        yield Db.batch_insert(convId, "items", item)
+        yield db.batch_insert(convId, "items", item)
         if invitees:
             event = self.getResource(False)
             yield event._inviteUsers(request, convId)
@@ -346,7 +346,7 @@ class Event(object):
     @defer.inlineCallbacks
     def delete(self, itemId):
         log.msg("plugin:delete", itemId)
-        yield Db.get_slice(itemId, "entities")
+        yield db.get_slice(itemId, "entities")
 
 
 

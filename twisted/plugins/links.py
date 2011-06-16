@@ -8,7 +8,7 @@ from twisted.web        import client
 
 from social.template    import renderScriptBlock, getBlock
 from social.isocial     import IItemType
-from social             import Db, utils, errors
+from social             import db, utils, errors
 from social.logging     import profile, dump_args
 
 _encode = lambda x: type(x) == unicode and x.encode('utf8', 'replace') or x
@@ -70,12 +70,12 @@ class Links(object):
 
         item["meta"].update(meta)
 
-        yield Db.batch_insert(convId, "items", item)
+        yield db.batch_insert(convId, "items", item)
         defer.returnValue((convId, item))
 
     @defer.inlineCallbacks
     def delete(self, itemId):
-        yield Db.get_slice(itemId, "entities")
+        yield db.get_slice(itemId, "entities")
 
     def getResource(self, isAjax):
         return None

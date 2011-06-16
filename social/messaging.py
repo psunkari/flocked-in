@@ -9,7 +9,7 @@ from twisted.internet   import defer
 from twisted.python     import log
 from twisted.web        import server
 
-from social             import Db, utils, base, errors
+from social             import db, utils, base, errors
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
@@ -56,14 +56,14 @@ class MessagingResource(base.BaseResource):
         userFolderMap = {}
         notifications = {}
         rm_notifications = {'latestNotifications':[]}
-        conv = yield Db.get_slice(convId, "mConversations", ['meta'])
+        conv = yield db.get_slice(convId, "mConversations", ['meta'])
         conv = utils.supercolumnsToDict(conv)
 
         oldTimeUUID = conv['meta']['uuid']
         unread = "u:%s"%(convId)
         read = "r:%s"%(convId)
 
-        cols = yield Db.get_slice(convId, 'mConvFolders', recipients)
+        cols = yield db.get_slice(convId, 'mConvFolders', recipients)
         cols = utils.supercolumnsToDict(cols)
         for recipient in recipients:
             deliverToInbox = True
@@ -75,12 +75,12 @@ class MessagingResource(base.BaseResource):
 
             for folder in cols.get(recipient, []):
                 cf = self._folders[folder] if folder in self._folders else folder
-                yield Db.remove(recipient, cf, oldTimeUUID)
+                yield db.remove(recipient, cf, oldTimeUUID)
                 if cf == 'mDeletedConversations':
                     #don't add to recipient's inbox if the conv is deleted.
                     deliverToInbox = False
                 else:
-                    yield Db.remove(convId, 'mConvFolders', folder, recipient)
+                    yield db.remove(convId, 'mConvFolders', folder, recipient)
             if deliverToInbox:
                 val = unread if recipient != owner else read
                 convFolderMap[recipient] = {'mAllConversations':{timeUUID:val}}
@@ -94,12 +94,12 @@ class MessagingResource(base.BaseResource):
                 convFolderMap[recipient] = {'mDeletedConversations':{timeUUID:val}}
 
 
-        yield Db.batch_mutate(convFolderMap)
-        yield Db.batch_insert(convId, "mConvFolders", userFolderMap)
+        yield db.batch_mutate(convFolderMap)
+        yield db.batch_insert(convId, "mConvFolders", userFolderMap)
         if rm_notifications and oldTimeUUID != timeUUID:
-            yield Db.batch_remove(rm_notifications, names=[oldTimeUUID], supercolumn="messages")
+            yield db.batch_remove(rm_notifications, names=[oldTimeUUID], supercolumn="messages")
         if notifications:
-            yield Db.batch_mutate(notifications)
+            yield db.batch_mutate(notifications)
 
     @defer.inlineCallbacks
     def _newMessage(self, ownerId, timeUUID, body, epoch):
@@ -110,7 +110,7 @@ class MessagingResource(base.BaseResource):
                  "body": body,
                  "uuid": timeUUID
                 }
-        yield Db.batch_insert(messageId, "messages", {'meta':meta})
+        yield db.batch_insert(messageId, "messages", {'meta':meta})
         defer.returnValue(messageId)
 
     @defer.inlineCallbacks
@@ -122,7 +122,7 @@ class MessagingResource(base.BaseResource):
                      "date_epoch" : str(epoch),
                      "subject": subject}
         convId = utils.getUniqueKey()
-        yield Db.batch_insert(convId, "mConversations", {"meta": conv_meta,
+        yield db.batch_insert(convId, "mConversations", {"meta": conv_meta,
                                                 "participants": participants})
         defer.returnValue(convId)
 
@@ -139,7 +139,7 @@ class MessagingResource(base.BaseResource):
         if not convId:
             raise errors.MissingParams()
 
-        cols = yield Db.get_slice(convId, "mConversations", ['participants'])
+        cols = yield db.get_slice(convId, "mConversations", ['participants'])
         cols = utils.supercolumnsToDict(cols)
         if not cols:
             raise errors.InvalidRequest()
@@ -154,20 +154,20 @@ class MessagingResource(base.BaseResource):
 
         messageId = yield self._newMessage(myId, timeUUID, body, epoch)
         yield self._deliverMessage(convId, participants, timeUUID, myId)
-        yield Db.insert(convId, "mConvMessages", messageId, timeUUID)
-        yield Db.batch_insert(convId, "mConversations", {'meta':meta})
+        yield db.insert(convId, "mConvMessages", messageId, timeUUID)
+        yield db.batch_insert(convId, "mConversations", {'meta':meta})
 
         #XXX:We currently only fetch the message we inserted. Later we may fetch
         # all messages delivered since we last rendered the conversation
-        cols = yield Db.get_slice(convId, "mConversations")
+        cols = yield db.get_slice(convId, "mConversations")
         conv = utils.supercolumnsToDict(cols)
         participants = set(conv['participants'])
         mids = [messageId]
-        messages = yield Db.multiget_slice(mids, "messages", ["meta"])
+        messages = yield db.multiget_slice(mids, "messages", ["meta"])
         messages = utils.multiSuperColumnsToDict(messages)
         participants.update([messages[mid]['meta']['owner'] for mid in messages])
 
-        people = yield Db.multiget_slice(participants, "entities", ['basic'])
+        people = yield db.multiget_slice(participants, "entities", ['basic'])
         people = utils.multiSuperColumnsToDict(people)
 
         args.update({"people":people})
@@ -198,7 +198,7 @@ class MessagingResource(base.BaseResource):
         if not parent and not recipients:
             raise errors.MissingParams()
 
-        cols = yield Db.multiget_slice(recipients, "entities", ['basic'])
+        cols = yield db.multiget_slice(recipients, "entities", ['basic'])
         recipients = utils.multiSuperColumnsToDict(cols)
         recipients = set([userId for userId in recipients if recipients[userId]])
 
@@ -214,12 +214,12 @@ class MessagingResource(base.BaseResource):
                                              subject, epoch)
         messageId = yield self._newMessage(myId, timeUUID, body, epoch)
         yield self._deliverMessage(convId, participants, timeUUID, myId)
-        yield Db.insert(convId, "mConvMessages", messageId, timeUUID)
+        yield db.insert(convId, "mConvMessages", messageId, timeUUID)
         #XXX:Is this a duplicate batch insert ?
-        yield Db.batch_insert(convId, "mConversations", {'meta':meta})
+        yield db.batch_insert(convId, "mConversations", {'meta':meta})
 
         if script and filterType is not None and filterType == "all":
-            col = yield Db.get_slice(convId, 'mConversations')
+            col = yield db.get_slice(convId, 'mConversations')
             conversation = utils.supercolumnsToDict(col)
             args.update({"convId":convId})
 
@@ -228,7 +228,7 @@ class MessagingResource(base.BaseResource):
             args.update({"conv":conv})
 
             users = participants
-            users = yield Db.multiget_slice(users, 'entities', ['basic'])
+            users = yield db.multiget_slice(users, 'entities', ['basic'])
             users = utils.multiSuperColumnsToDict(users)
             args.update({"people":users})
 
@@ -271,7 +271,7 @@ class MessagingResource(base.BaseResource):
         nextPageStart = ''
         prevPageStart = ''
 
-        cols = yield Db.get_slice(myKey, folder, reverse=True, start=start, count=fetchCount)
+        cols = yield db.get_slice(myKey, folder, reverse=True, start=start, count=fetchCount)
         for col in cols:
             x, convId = col.column.value.split(':')
             convs.append(convId)
@@ -282,12 +282,12 @@ class MessagingResource(base.BaseResource):
             convs = convs[:count]
 
         ###XXX: try to avoid extra fetch
-        cols = yield Db.get_slice(myKey, folder, count=fetchCount, start=start)
+        cols = yield db.get_slice(myKey, folder, count=fetchCount, start=start)
         if cols and len(cols)>1 and start:
             prevPageStart = utils.encodeKey(cols[-1].column.name)
 
 
-        cols = yield Db.multiget_slice(convs, 'mConversations')
+        cols = yield db.multiget_slice(convs, 'mConversations')
         conversations = utils.multiSuperColumnsToDict(cols)
         m={}
         for convId in conversations:
@@ -297,11 +297,11 @@ class MessagingResource(base.BaseResource):
             users.update(participants)
             conversations[convId]['people'] = participants
             conversations[convId]['read'] = str(int(convId not in unread))
-            messageCount = yield Db.get_count(convId, "mConvMessages")
+            messageCount = yield db.get_count(convId, "mConvMessages")
             conversations[convId]['count'] = messageCount
             m[convId]=conversations[convId]
 
-        users = yield Db.multiget_slice(users, 'entities', ['basic'])
+        users = yield db.multiget_slice(users, 'entities', ['basic'])
         users = utils.multiSuperColumnsToDict(users)
 
 
@@ -339,10 +339,10 @@ class MessagingResource(base.BaseResource):
             yield self._removeMembers(request)
 
         if convId:
-            cols = yield Db.get_slice(convId, "mConversations")
+            cols = yield db.get_slice(convId, "mConversations")
             conv = utils.supercolumnsToDict(cols)
             participants = set(conv['participants'])
-            people = yield Db.multiget_slice(participants, "entities", ['basic'])
+            people = yield db.multiget_slice(participants, "entities", ['basic'])
             people = utils.multiSuperColumnsToDict(people)
 
             args.update({"people":people})
@@ -373,7 +373,7 @@ class MessagingResource(base.BaseResource):
         if not (convId and newMembers):
             raise errors.MissingParams()
 
-        conv = yield Db.get_slice(convId, "mConversations")
+        conv = yield db.get_slice(convId, "mConversations")
         if not conv:
             raise errors.MissingParams()
         conv = utils.supercolumnsToDict(conv)
@@ -382,13 +382,13 @@ class MessagingResource(base.BaseResource):
         if myId not in participants:
             raise errors.AccessDenied()
 
-        cols = yield Db.multiget_slice(newMembers, "entities", ['basic'])
+        cols = yield db.multiget_slice(newMembers, "entities", ['basic'])
         newMembers = set([userId for userId in cols if cols[userId]])
         newMembers = newMembers - participants
 
         if newMembers:
             newMembers = dict([(userId, '') for userId in newMembers])
-            yield Db.batch_insert(convId, "mConversations", {'participants':newMembers})
+            yield db.batch_insert(convId, "mConversations", {'participants':newMembers})
             yield self._deliverMessage(convId, newMembers, conv['meta']['uuid'], conv['meta']['owner'])
 
     @defer.inlineCallbacks
@@ -399,7 +399,7 @@ class MessagingResource(base.BaseResource):
         if not (convId and  members):
             raise errors.MissingParams()
 
-        conv = yield Db.get_slice(convId, "mConversations")
+        conv = yield db.get_slice(convId, "mConversations")
         if not conv:
             raise errors.MissingParams()
 
@@ -409,7 +409,7 @@ class MessagingResource(base.BaseResource):
         if myId not in participants:
             raise errors.Unauthorized()
 
-        cols = yield Db.multiget_slice(members, "entities", ['basic'])
+        cols = yield db.multiget_slice(members, "entities", ['basic'])
         members = set([userId for userId in cols if cols[userId]])
         members = members.intersection(participants)
 
@@ -418,17 +418,17 @@ class MessagingResource(base.BaseResource):
 
         deferreds = []
         if members:
-            d =  Db.batch_remove({"mConversations":[convId]},
+            d =  db.batch_remove({"mConversations":[convId]},
                                     names=members,
                                     supercolumn='participants')
             deferreds.append(d)
 
-            cols = yield Db.get_slice(convId, 'mConvFolders', members)
+            cols = yield db.get_slice(convId, 'mConvFolders', members)
             cols = utils.supercolumnsToDict(cols)
             for recipient in cols:
                 for folder in cols[recipient]:
                     cf = self._folders[folder] if folder in self._folders else folder
-                    d = Db.remove(recipient, cf, conv['meta']['uuid'])
+                    d = db.remove(recipient, cf, conv['meta']['uuid'])
                     deferreds.append(d)
             if deferreds:
                 yield deferreds
@@ -456,21 +456,21 @@ class MessagingResource(base.BaseResource):
                 #Remove it from unreadIndex and mark it as unread in all other
                 # folders
                 convId = convIds[0]
-                cols = yield Db.get_slice(convId, "mConversations")
+                cols = yield db.get_slice(convId, "mConversations")
                 conv = utils.supercolumnsToDict(cols)
                 timeUUID = conv['meta']['uuid']
                 participants = conv['participants'].keys()
                 if myId not in participants:
                     raise errors.Unauthorized()
 
-                yield Db.remove(myId, "mUnreadConversations", timeUUID)
-                yield Db.remove(convId, "mConvFolders", 'mUnreadConversations', myId)
-                cols = yield Db.get_slice(convId, "mConvFolders", [myId])
+                yield db.remove(myId, "mUnreadConversations", timeUUID)
+                yield db.remove(convId, "mConvFolders", 'mUnreadConversations', myId)
+                cols = yield db.get_slice(convId, "mConvFolders", [myId])
                 cols = utils.supercolumnsToDict(cols)
                 for folder in cols[myId]:
                     if folder in self._folders:
                         folder = self._folders[folder]
-                    yield Db.insert(myId, folder, "r:%s"%(convId), timeUUID)
+                    yield db.insert(myId, folder, "r:%s"%(convId), timeUUID)
 
         if not self._ajax:
             #Not all actions on message(s) happen over ajax, for them do a redirect
@@ -512,7 +512,7 @@ class MessagingResource(base.BaseResource):
         myId = request.getSession(IAuthInfo).username
 
         for convId in convIds:
-            conv = yield Db.get_slice(convId, "mConversations")
+            conv = yield db.get_slice(convId, "mConversations")
             if not conv:
                 raise errors.InvalidRequest()
             conv = utils.supercolumnsToDict(conv)
@@ -523,28 +523,28 @@ class MessagingResource(base.BaseResource):
 
             val = "%s:%s"%( 'u' if toFolder == 'unread' else 'r', convId)
 
-            cols = yield Db.get_slice(convId, 'mConvFolders', [myId])
+            cols = yield db.get_slice(convId, 'mConvFolders', [myId])
             cols = utils.supercolumnsToDict(cols)
             for folder in cols[myId]:
                 cf = self._folders[folder] if folder in self._folders else folder
                 if toFolder!='unread':
                     if folder!= 'mUnreadConversations':
-                        col = yield Db.get(myId, cf, timeUUID)
+                        col = yield db.get(myId, cf, timeUUID)
                         val = col.column.value
-                        yield Db.remove(myId, cf, timeUUID)
-                        yield Db.remove(convId, "mConvFolders", cf, myId)
+                        yield db.remove(myId, cf, timeUUID)
+                        yield db.remove(convId, "mConvFolders", cf, myId)
                 else:
-                        yield Db.insert(myId, cf, "u:%s"%(convId), timeUUID)
+                        yield db.insert(myId, cf, "u:%s"%(convId), timeUUID)
 
 
             if toFolder == 'unread':
                 val = "u:%s"%(convId)
-                yield Db.insert(convId, 'mConvFolders', '', 'mUnreadConversations', myId)
-                yield Db.insert(myId, 'mUnreadConversations', val, timeUUID)
+                yield db.insert(convId, 'mConvFolders', '', 'mUnreadConversations', myId)
+                yield db.insert(myId, 'mUnreadConversations', val, timeUUID)
             else:
                 folder = self._folders[toFolder]
-                yield Db.insert(myId, folder, val, timeUUID)
-                yield Db.insert(convId, 'mConvFolders', '', folder, myId)
+                yield db.insert(myId, folder, val, timeUUID)
+                yield db.insert(convId, 'mConvFolders', '', folder, myId)
 
     @defer.inlineCallbacks
     def _renderConversation(self, request):
@@ -560,7 +560,7 @@ class MessagingResource(base.BaseResource):
                               landing, "#mainbar", "set", **args)
 
         if convId:
-            cols = yield Db.get_slice(convId, "mConversations")
+            cols = yield db.get_slice(convId, "mConversations")
             conv = utils.supercolumnsToDict(cols)
             participants = set(conv['participants'])
 
@@ -568,26 +568,26 @@ class MessagingResource(base.BaseResource):
                 raise errors.Unauthorized()
 
             timeUUID = conv['meta']['uuid']
-            yield Db.remove(myId, "mUnreadConversations", timeUUID)
-            yield Db.remove(convId, "mConvFolders", 'mUnreadConversations', myId)
-            yield Db.remove(myId, "latestNotifications", timeUUID, "messages")
-            cols = yield Db.get_slice(convId, "mConvFolders", [myId])
+            yield db.remove(myId, "mUnreadConversations", timeUUID)
+            yield db.remove(convId, "mConvFolders", 'mUnreadConversations', myId)
+            yield db.remove(myId, "latestNotifications", timeUUID, "messages")
+            cols = yield db.get_slice(convId, "mConvFolders", [myId])
             cols = utils.supercolumnsToDict(cols)
             for folder in cols[myId]:
                 if folder in self._folders:
                     folder = self._folders[folder]
-                yield Db.insert(myId, folder, "r:%s"%(convId), timeUUID)
+                yield db.insert(myId, folder, "r:%s"%(convId), timeUUID)
 
             #FIX: make sure that there will be an entry of convId in mConvFolders
-            cols = yield Db.get_slice(convId, "mConvMessages")
+            cols = yield db.get_slice(convId, "mConvMessages")
             mids = []
             for col in cols:
                 mids.append(col.column.value)
-            messages = yield Db.multiget_slice(mids, "messages", ["meta"])
+            messages = yield db.multiget_slice(mids, "messages", ["meta"])
             messages = utils.multiSuperColumnsToDict(messages)
             participants.update([messages[mid]['meta']['owner'] for mid in messages])
 
-            people = yield Db.multiget_slice(participants, "entities", ['basic'])
+            people = yield db.multiget_slice(participants, "entities", ['basic'])
             people = utils.multiSuperColumnsToDict(people)
 
             args.update({"people":people})

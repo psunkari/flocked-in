@@ -14,10 +14,10 @@ from twisted.internet import defer, reactor
 from twisted.python import log
 
 sys.path.append(os.getcwd())
-from social import Config, Db, utils
+from social import config, db, utils
 
 
-KEYSPACE = Config.get("Cassandra", "Keyspace")
+KEYSPACE = config.get("Cassandra", "Keyspace")
 
 
 def usage():
@@ -26,7 +26,7 @@ def usage():
 
 @defer.inlineCallbacks
 def getOrgKey(domain):
-    cols = yield Db.get_slice(domain, "domainOrgMap")
+    cols = yield db.get_slice(domain, "domainOrgMap")
     cols = utils.columnsToDict(cols)
     orgKey = cols.keys()[0] if cols else None
     defer.returnValue(orgKey)
@@ -36,15 +36,15 @@ def getOrgKey(domain):
 def createUser(emailId, displayName, jobTitle, timezone, passwd):
     localpart, domain = emailId.split("@")
 
-    existingUser = yield Db.get_count(emailId, "userAuth")
+    existingUser = yield db.get_count(emailId, "userAuth")
     if not existingUser:
         orgId = yield getOrgKey(domain)
         if not orgId:
             orgId = utils.getUniqueKey()
             domains = {domain:''}
             basic = {"name":domain, "type":"org"}
-            yield Db.batch_insert(orgId, "entities", {"basic":basic,"domains":domains})
-            yield Db.insert(domain, "domainOrgMap", '', orgId)
+            yield db.batch_insert(orgId, "entities", {"basic":basic,"domains":domains})
+            yield db.insert(domain, "domainOrgMap", '', orgId)
 
         userId = yield utils.addUser(emailId, displayName, passwd,
                                      orgId, jobTitle, timezone)
@@ -79,6 +79,14 @@ if __name__ == '__main__':
         raise Exception("Passwords don't match")
 
     log.startLogging(sys.stdout)
+    db.startService()
+
     d = createUser(emailId, displayName, jobTitle, timezone, passwd)
-    d.addBoth(lambda x: reactor.stop())
+
+    def finish(x):
+        db.stopService()
+        reactor.stop();
+    d.addErrback(log.err)
+    d.addBoth(finish)
+
     reactor.run()

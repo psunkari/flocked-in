@@ -7,7 +7,7 @@ from twisted.internet   import defer
 from twisted.web        import server
 from twisted.python     import log
 
-from social             import Db, utils, _, __, base, plugins
+from social             import db, utils, _, __, base, plugins
 from social             import constants, errors
 from social.feed        import getFeedItems
 from social.template    import render, renderDef, renderScriptBlock
@@ -27,19 +27,19 @@ def ensureTag(request, tagName, orgId=None):
 
     try:
         tagName = tagName.lower()
-        c = yield Db.get(myOrgId, "orgTagsByName",
+        c = yield db.get(myOrgId, "orgTagsByName",
                          tagName, consistency=consistency.QUORUM)
         tagId = c.column.value
-        c = yield Db.get_slice(myOrgId, "orgTags", super_column=tagId,
+        c = yield db.get_slice(myOrgId, "orgTags", super_column=tagId,
                                consistency=consistency.QUORUM)
         tag = utils.columnsToDict(c)
     except ttypes.NotFoundException:
         tagId = utils.getUniqueKey()
         tag = {"title": tagName}
         tagName = tagName.lower()
-        yield Db.batch_insert(myOrgId, "orgTags",
+        yield db.batch_insert(myOrgId, "orgTags",
                               {tagId: tag}, consistency=consistency.QUORUM)
-        yield Db.insert(myOrgId, "orgTagsByName", tagId,
+        yield db.insert(myOrgId, "orgTagsByName", tagId,
                         tagName, consistency=consistency.QUORUM)
 
     defer.returnValue((tagId, tag))
@@ -51,7 +51,7 @@ class TagsResource(base.BaseResource):
     def _getTagItems(self, request, tagId, start='', count=10):
         @defer.inlineCallbacks
         def getter(start='', count=12):
-            items = yield Db.get_slice(tagId, "tagItems", count=count,
+            items = yield db.get_slice(tagId, "tagItems", count=count,
                                        start=start, reverse=True)
             defer.returnValue(utils.columnsToDict(items, ordered=True))
 
@@ -80,7 +80,7 @@ class TagsResource(base.BaseResource):
 
         newId = (prevDisplayedTag != tagId) or appchange
         if newId or not script:
-            tagInfo = yield Db.get_slice(myOrgId, "orgTags", super_column=tagId)
+            tagInfo = yield db.get_slice(myOrgId, "orgTags", super_column=tagId)
             if not tagInfo:
                 raise errors.InvalidTag()
             tagInfo = utils.columnsToDict(tagInfo)
@@ -88,7 +88,7 @@ class TagsResource(base.BaseResource):
             args["tagId"] = tagId
             args["tagFollowing"] = False
             try:
-                yield Db.get(tagId, "tagFollowers", myKey)
+                yield db.get(tagId, "tagFollowers", myKey)
                 args["tagFollowing"] = True
             except ttypes.NotFoundException:
                 pass
@@ -151,7 +151,7 @@ class TagsResource(base.BaseResource):
             yield renderScriptBlock(request, "tags.mako", "header",
                                     landing, "#tags-header", "set", **args )
 
-        tagsByName = yield Db.get_slice(myOrgId, "orgTagsByName", start=start, count=toFetchCount)
+        tagsByName = yield db.get_slice(myOrgId, "orgTagsByName", start=start, count=toFetchCount)
         tagIds = [x.column.value for x in tagsByName]
 
         if len(tagsByName) > count:
@@ -159,7 +159,7 @@ class TagsResource(base.BaseResource):
             tagIds = tagIds[:-1]
 
         if start:
-            prevCols = yield Db.get_slice(myOrgId, "orgTagsByName",
+            prevCols = yield db.get_slice(myOrgId, "orgTagsByName",
                                           start=start, reverse=True,
                                           count=toFetchCount)
             if len(prevCols) > 1:
@@ -167,7 +167,7 @@ class TagsResource(base.BaseResource):
 
         tags = {}
         if tagIds:
-            tags = yield Db.get_slice(myOrgId, "orgTags", tagIds)
+            tags = yield db.get_slice(myOrgId, "orgTags", tagIds)
             tags = utils.supercolumnsToDict(tags)
 
         # TODO: We need an index of all tags that the user is following
@@ -175,7 +175,7 @@ class TagsResource(base.BaseResource):
         #       and have people and tags in the same column family.
         tagsFollowing = []
         if tagIds:
-            cols = yield Db.multiget(tagIds, "tagFollowers", myId)
+            cols = yield db.multiget(tagIds, "tagFollowers", myId)
             tagsFollowing = [x for x in cols.keys() if cols[x]]
 
         args['tags'] = tags
@@ -232,9 +232,9 @@ class TagsResource(base.BaseResource):
             myId = request.getSession(IAuthInfo).username
 
             if action == "follow":
-                actionDeferred = Db.insert(tagId, "tagFollowers", '', myId)
+                actionDeferred = db.insert(tagId, "tagFollowers", '', myId)
             elif action == "unfollow":
-                actionDeferred = Db.remove(tagId, "tagFollowers", myId)
+                actionDeferred = db.remove(tagId, "tagFollowers", myId)
             else:
                 raise errors.InvalidRequest()
 

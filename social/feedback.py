@@ -2,7 +2,7 @@ from twisted.internet   import defer
 from twisted.python     import log
 from twisted.web        import server
 
-from social             import Db, utils, base, tags, _, Config
+from social             import db, utils, base, tags, _, config
 from social.template    import render, renderScriptBlock
 from social.isocial     import IAuthInfo
 
@@ -31,8 +31,8 @@ class FeedbackResource(base.BaseResource):
         tagName = 'feedback'
         moodTagName = 'feedback-'+mood
 
-        feedbackDomain = Config.get('Feedback', 'Domain') or 'synovel.com'
-        cols = yield Db.get_slice(feedbackDomain, 'domainOrgMap')
+        feedbackDomain = config.get('Feedback', 'Domain') or 'synovel.com'
+        cols = yield db.get_slice(feedbackDomain, 'domainOrgMap')
         if not cols:
             raise errors.InvalidRequest()
 
@@ -57,18 +57,18 @@ class FeedbackResource(base.BaseResource):
         itemId = utils.getUniqueKey()
 
         # XXX: Use cached values instead of calling get_count everytime
-        tagItemCount = yield Db.get_count(tagId, "tagItems")
-        moodTagItemCount = yield Db.get_count(moodTagId, "tagItems")
+        tagItemCount = yield db.get_count(tagId, "tagItems")
+        moodTagItemCount = yield db.get_count(moodTagId, "tagItems")
 
         tagItemCount += 1
         moodTagItemCount += 1
 
         # Finally save the feedback
-        yield Db.batch_insert(itemId, "items", item)
-        yield Db.insert(tagId, "tagItems", itemId, item["meta"]["uuid"])
-        yield Db.insert(moodTagId, "tagItems", itemId, item["meta"]["uuid"])
-        yield Db.insert(synovelOrgId, "orgTags", str(tagItemCount), "itemsCount", tagId)
-        yield Db.insert(synovelOrgId, "orgTags", str(moodTagItemCount), "itemsCount", moodTagId)
+        yield db.batch_insert(itemId, "items", item)
+        yield db.insert(tagId, "tagItems", itemId, item["meta"]["uuid"])
+        yield db.insert(moodTagId, "tagItems", itemId, item["meta"]["uuid"])
+        yield db.insert(synovelOrgId, "orgTags", str(tagItemCount), "itemsCount", tagId)
+        yield db.insert(synovelOrgId, "orgTags", str(moodTagItemCount), "itemsCount", moodTagId)
 
 
     def render_GET(self, request):

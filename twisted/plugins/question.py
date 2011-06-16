@@ -6,7 +6,7 @@ from twisted.python     import log
 from twisted.internet   import defer
 from twisted.plugin     import IPlugin
 
-from social             import Db, base, utils, errors
+from social             import db, base, utils, errors
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
 from social.template    import render, renderScriptBlock, getBlock
@@ -59,12 +59,12 @@ class Question(object):
 
         item["meta"].update(meta)
 
-        yield Db.batch_insert(convId, "items", item)
+        yield db.batch_insert(convId, "items", item)
         defer.returnValue((convId, item))
 
     @defer.inlineCallbacks
     def delete(self, itemId):
-        yield Db.get_slice(itemId, "entities")
+        yield db.get_slice(itemId, "entities")
 
 
     def getResource(self, isAjax):

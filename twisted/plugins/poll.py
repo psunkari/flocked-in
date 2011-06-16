@@ -7,7 +7,7 @@ from twisted.internet   import defer
 from twisted.python     import log
 from twisted.web        import server
 
-from social             import Db, utils, base, errors, _
+from social             import db, utils, base, errors, _
 from social.template    import renderScriptBlock, render, getBlock
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
@@ -30,24 +30,24 @@ class PollResource(base.BaseResource):
         optionCounts = {}
         myId = request.getSession(IAuthInfo).username
 
-        prevVote = yield Db.get_slice(myId, "userVotes", [convId])
+        prevVote = yield db.get_slice(myId, "userVotes", [convId])
         prevVote = prevVote[0].column.value if prevVote else False
         if prevVote == vote:
             yield self._results(request)
             return
 
         if prevVote:
-            yield Db.remove(convId, "votes", myId, prevVote)
-            prevOptionCount = yield Db.get_count(convId, "votes", prevVote)
+            yield db.remove(convId, "votes", myId, prevVote)
+            prevOptionCount = yield db.get_count(convId, "votes", prevVote)
             optionCounts[prevVote] = str(prevOptionCount)
 
-        yield Db.insert(myId, "userVotes", vote, convId)
-        yield Db.insert(convId, "votes",  '', myId, vote)
+        yield db.insert(myId, "userVotes", vote, convId)
+        yield db.insert(convId, "votes",  '', myId, vote)
 
-        voteCount = yield Db.get_count(convId, "votes", vote)
+        voteCount = yield db.get_count(convId, "votes", vote)
         optionCounts[vote] = str(voteCount)
 
-        yield Db.batch_insert(convId, "items", {"counts":optionCounts})
+        yield db.batch_insert(convId, "items", {"counts":optionCounts})
         yield self._results(request)
 
     @profile
@@ -96,7 +96,7 @@ class PollResource(base.BaseResource):
                                                   ["options"], "poll")
 
         myId = request.getSession(IAuthInfo).username
-        myVote = yield Db.get_slice(myId, "userVotes", [convId])
+        myVote = yield db.get_slice(myId, "userVotes", [convId])
         myVote = myVote[0].column.value if myVote else None
         if not myVote:
             raise errors.InvalidRequest();
@@ -105,7 +105,7 @@ class PollResource(base.BaseResource):
         if not option or option not in item.get("options", {}):
             raise errors.MissingParams();
 
-        votes = yield Db.get_slice(convId, "votes", [option])
+        votes = yield db.get_slice(convId, "votes", [option])
         votes = utils.supercolumnsToDict(votes)
         voters = set()
         if votes:
@@ -116,7 +116,7 @@ class PollResource(base.BaseResource):
         args['title'] = _('List of people who voted for "%s"')\
                                                     % item["options"][option]
         if voters:
-            people = yield Db.multiget_slice(voters, "entities", ["basic"])
+            people = yield db.multiget_slice(voters, "entities", ["basic"])
             people = utils.multiSuperColumnsToDict(people)
             args['entities'] = people
 
@@ -197,7 +197,7 @@ class Poll(object):
         convId = convId or args["convId"]
         myId = userId or args.get("myKey", None)
 
-        conv = yield Db.get_slice(convId, "items",
+        conv = yield db.get_slice(convId, "items",
                                   ['options', 'counts'].extend(columns))
         if not conv:
             raise errors.InvalidRequest()
@@ -208,7 +208,7 @@ class Poll(object):
         if not options:
             raise errors.InvalidRequest()
 
-        myVote = yield Db.get_slice(myId, "userVotes", [convId])
+        myVote = yield db.get_slice(myId, "userVotes", [convId])
         myVote = myVote[0].column.value if myVote else None
 
         startTime = conv['meta'].get('start', None)
@@ -258,13 +258,13 @@ class Poll(object):
         item["options"] = options
         item["meta"].update(meta)
 
-        yield Db.batch_insert(convId, "items", item)
+        yield db.batch_insert(convId, "items", item)
         defer.returnValue((convId, item))
 
 
     @defer.inlineCallbacks
     def delete(self, itemId):
-        yield Db.get_slice(itemId, "entities")
+        yield db.get_slice(itemId, "entities")
 
     _ajaxResource = None
     _resource = None

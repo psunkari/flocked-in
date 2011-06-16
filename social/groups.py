@@ -10,7 +10,7 @@ except:
     import pickle
 
 
-from social             import base, Db, utils, errors, feed, people
+from social             import base, db, utils, errors, feed, people
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
@@ -30,8 +30,8 @@ class GroupsResource(base.BaseResource):
         groupId, group = yield utils.getValidEntityId(request, "id", "group")
 
         try:
-            cols = yield Db.get(myKey, "entityGroupsMap", groupId)
-            yield Db.insert(groupId, "followers", "", myKey)
+            cols = yield db.get(myKey, "entityGroupsMap", groupId)
+            yield db.insert(groupId, "followers", "", myKey)
             args["groupId"] = groupId
             args["myGroups"] = [groupId]
             args["pendingConnections"] = {}
@@ -51,8 +51,8 @@ class GroupsResource(base.BaseResource):
         landing = not self._ajax
         groupId, group = yield utils.getValidEntityId(request, "id", "group")
         try:
-            cols = yield Db.get(myKey, "entityGroupsMap", groupId)
-            yield Db.remove(groupId, "followers", myKey)
+            cols = yield db.get(myKey, "entityGroupsMap", groupId)
+            yield db.remove(groupId, "followers", myKey)
 
             args["groupId"] = groupId
             args["myGroups"] = [groupId]
@@ -72,7 +72,7 @@ class GroupsResource(base.BaseResource):
         deferreds = []
         itemType = "activity"
         relation = Relation(userId, [])
-        cols = yield Db.get_slice(userId, "entities", ["basic"])
+        cols = yield db.get_slice(userId, "entities", ["basic"])
         userInfo = utils.supercolumnsToDict(cols)
 
         responseType = "I"
@@ -84,10 +84,10 @@ class GroupsResource(base.BaseResource):
                                    acl, "groupJoin", orgId)
         item["meta"]["target"] = groupId
 
-        d1 = Db.insert(userId, "entityGroupsMap", "", groupId)
-        d2 = Db.insert(groupId, "followers", "", userId)
-        d3 = Db.insert(groupId, "groupMembers", itemId, userId)
-        d4 = Db.batch_insert(itemId, 'items', item)
+        d1 = db.insert(userId, "entityGroupsMap", "", groupId)
+        d2 = db.insert(groupId, "followers", "", userId)
+        d3 = db.insert(groupId, "groupMembers", itemId, userId)
+        d4 = db.batch_insert(itemId, 'items', item)
 
         d5 = feed.pushToFeed(userId, item["meta"]["uuid"], itemId,
                              itemId, responseType, itemType, userId)
@@ -115,13 +115,13 @@ class GroupsResource(base.BaseResource):
         pendingRequests = {}
         groupFollowers = {groupId:[]}
 
-        cols = yield Db.get_slice(groupId, "bannedUsers", [myKey])
+        cols = yield db.get_slice(groupId, "bannedUsers", [myKey])
         if cols:
             log.msg("UserId %s banned by admin" %(myKey))
             raise errors.UserBanned()
 
         try:
-            cols = yield Db.get(myKey, "entityGroupsMap", groupId)
+            cols = yield db.get(myKey, "entityGroupsMap", groupId)
         except ttypes.NotFoundException:
             #add to pending connections
             if access == "public":
@@ -129,23 +129,23 @@ class GroupsResource(base.BaseResource):
                 myGroups.append(groupId)
                 groupFollowers[groupId].append(myKey)
             else:
-                yield Db.insert(myKey, "pendingConnections", '0', groupId)
-                yield Db.insert(groupId, "pendingConnections", '1', myKey)
+                yield db.insert(myKey, "pendingConnections", '0', groupId)
+                yield db.insert(groupId, "pendingConnections", '1', myKey)
                 #notify admin of the group
-                cols = yield Db.get_slice(groupId, "entities", ["admins"])
+                cols = yield db.get_slice(groupId, "entities", ["admins"])
                 admins = utils.supercolumnsToDict(cols)
 
                 #XXX: notifications in new format
                 timeUUID = uuid.uuid1().bytes
-                yield Db.insert(groupId, "latestNotifications", myKey, timeUUID, 'incomingGroupRequests')
-                yield Db.insert(myKey, "latestNotifications", groupId, timeUUID, 'outgoingGroupRequests')
+                yield db.insert(groupId, "latestNotifications", myKey, timeUUID, 'incomingGroupRequests')
+                yield db.insert(myKey, "latestNotifications", groupId, timeUUID, 'outgoingGroupRequests')
 
                 #for admin in admins["admins"]:
                 #    commentOwner = myKey
                 #    responseType = "G"
                 #    value = ":".join([responseType, commentOwner, groupId, '', admin])
-                #    yield Db.insert(admin, "notifications", groupId, timeUUID)
-                #    yield Db.batch_insert(admin, "notificationItems", {groupId:{timeUUID:value}})
+                #    yield db.insert(admin, "notifications", groupId, timeUUID)
+                #    yield db.batch_insert(admin, "notificationItems", {groupId:{timeUUID:value}})
 
                 pendingRequests[groupId]=myKey
             args["pendingConnections"] = pendingRequests
@@ -170,15 +170,15 @@ class GroupsResource(base.BaseResource):
         if myKey in group["admins"]:
             #or myKey in moderators #if i am moderator
             try:
-                cols = yield Db.get(groupId, "pendingConnections", userId)
-                yield Db.remove(groupId, "pendingConnections", userId)
-                yield Db.remove(userId, "pendingConnections", groupId)
-                cols  = yield Db.get_slice(groupId, "latestNotifications", ['incomingGroupRequests'])
+                cols = yield db.get(groupId, "pendingConnections", userId)
+                yield db.remove(groupId, "pendingConnections", userId)
+                yield db.remove(userId, "pendingConnections", groupId)
+                cols  = yield db.get_slice(groupId, "latestNotifications", ['incomingGroupRequests'])
                 cols = utils.supercolumnsToDict(cols)
                 for tuuid, key in cols['incomingGroupRequests'].items():
                     if key == userId:
-                        yield Db.remove(groupId, "latestNotifications", tuuid, 'incomingGroupRequests')
-                        yield Db.remove(userId, "latestNotifications", tuuid, 'outgoingGroupRequests')
+                        yield db.remove(groupId, "latestNotifications", tuuid, 'incomingGroupRequests')
+                        yield db.remove(userId, "latestNotifications", tuuid, 'outgoingGroupRequests')
                         break
                 yield self._addMember(request, groupId, userId, myOrgId)
             except ttypes.NotFoundException:
@@ -197,15 +197,15 @@ class GroupsResource(base.BaseResource):
         if myKey in group["admins"]:
             #or myKey in moderators #if i am moderator
             try:
-                cols = yield Db.get(groupId, "pendingConnections", userId)
-                yield Db.remove(groupId, "pendingConnections", userId)
-                yield Db.remove(userId, "pendingConnections", groupId)
-                cols  = yield Db.get_slice(groupId, "latestNotifications", ['incomingGroupRequests'])
+                cols = yield db.get(groupId, "pendingConnections", userId)
+                yield db.remove(groupId, "pendingConnections", userId)
+                yield db.remove(userId, "pendingConnections", groupId)
+                cols  = yield db.get_slice(groupId, "latestNotifications", ['incomingGroupRequests'])
                 cols = utils.supercolumnsToDict(cols)
                 for tuuid, key in cols['incomingGroupRequests'].items():
                     if key == userId:
-                        yield Db.remove(groupId, "latestNotifications", tuuid, 'incomingGroupRequests')
-                        yield Db.remove(userId, "latestNotifications", tuuid, 'outgoingGroupRequests')
+                        yield db.remove(groupId, "latestNotifications", tuuid, 'incomingGroupRequests')
+                        yield db.remove(userId, "latestNotifications", tuuid, 'outgoingGroupRequests')
                         break
                 # notify user that the moderator rejected.
             except ttypes.NotFoundException:
@@ -227,22 +227,22 @@ class GroupsResource(base.BaseResource):
 
         if myKey in group["admins"]:
             # if the request is pending, remove the request
-            yield Db.remove(groupId, "pendingConnections", userId)
-            yield Db.remove(userId, "pendingConnections", groupId)
-            cols  = yield Db.get_slice(groupId, "latestNotifications", ['incomingGroupRequests'])
+            yield db.remove(groupId, "pendingConnections", userId)
+            yield db.remove(userId, "pendingConnections", groupId)
+            cols  = yield db.get_slice(groupId, "latestNotifications", ['incomingGroupRequests'])
             cols = utils.supercolumnsToDict(cols)
             for tuuid, key in cols['incomingGroupRequests'].items():
                 if key == userId:
-                    yield Db.remove(groupId, "latestNotifications", tuuid, 'incomingGroupRequests')
-                    yield Db.remove(userId, "latestNotifications", tuuid, 'outgoingGroupRequests')
+                    yield db.remove(groupId, "latestNotifications", tuuid, 'incomingGroupRequests')
+                    yield db.remove(userId, "latestNotifications", tuuid, 'outgoingGroupRequests')
                     break
 
             # if the users is already a member, remove the user from the group
-            yield Db.remove(groupId, "groupMembers", userId)
-            yield Db.remove(groupId, "followers", userId)
-            yield Db.remove(userId, "entityGroupsMap", groupId)
+            yield db.remove(groupId, "groupMembers", userId)
+            yield db.remove(groupId, "followers", userId)
+            yield db.remove(userId, "entityGroupsMap", groupId)
 
-            yield Db.insert(groupId, "bannedUsers", '', userId)
+            yield db.insert(groupId, "bannedUsers", '', userId)
 
 
     @profile
@@ -256,7 +256,7 @@ class GroupsResource(base.BaseResource):
 
         if myKey in group["admins"]:
             # if the request is pending, remove the request
-            yield Db.remove(groupId, "bannedUsers", userId)
+            yield db.remove(groupId, "bannedUsers", userId)
             log.msg("unblocked user %s from group %s"%(userId, groupId))
 
 
@@ -270,7 +270,7 @@ class GroupsResource(base.BaseResource):
 
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                       columns=["admins"])
-        userGroup = yield Db.get_slice(myId, "entityGroupsMap", [groupId])
+        userGroup = yield db.get_slice(myId, "entityGroupsMap", [groupId])
         if not userGroup:
             raise errors.InvalidRequest()
 
@@ -292,11 +292,11 @@ class GroupsResource(base.BaseResource):
                                    acl, "groupLeave", orgId)
         item["meta"]["target"] = groupId
 
-        d1 = Db.remove(groupId, "followers", myId)
-        d2 = Db.remove(myId, "entityGroupsMap", groupId)
-        d3 = Db.batch_insert(itemId, 'items', item)
-        d4 = Db.remove(groupId, "groupMembers", myId)
-        #d4 = Db.insert(groupId, "groupMembers", itemId, myId)
+        d1 = db.remove(groupId, "followers", myId)
+        d2 = db.remove(myId, "entityGroupsMap", groupId)
+        d3 = db.batch_insert(itemId, 'items', item)
+        d4 = db.remove(groupId, "groupMembers", myId)
+        #d4 = db.insert(groupId, "groupMembers", itemId, myId)
 
         d5 = feed.pushToFeed(myId, item["meta"]["uuid"], itemId,
                              itemId, responseType, itemType, myId)
@@ -340,10 +340,10 @@ class GroupsResource(base.BaseResource):
             avatar = yield saveAvatarItem(groupId, dp)
             meta["avatar"] = avatar
 
-        yield Db.batch_insert(groupId, "entities", {"basic": meta,
+        yield db.batch_insert(groupId, "entities", {"basic": meta,
                                                     "admins": admins})
-        yield Db.insert(myKey, "entities", '', groupId, 'adminOfGroups')
-        yield Db.insert(orgKey, "entityGroupsMap", '', groupId)
+        yield db.insert(myKey, "entities", '', groupId, 'adminOfGroups')
+        yield db.insert(orgKey, "entityGroupsMap", '', groupId)
         yield self._addMember(request, groupId, myKey, orgKey)
         request.redirect("/feed?id=%s"%(groupId))
 
@@ -398,19 +398,19 @@ class GroupsResource(base.BaseResource):
 
         #TODO: list the groups in sorted order.
         if viewType in ['myGroups', 'allGroups']:
-            cols = yield Db.get_slice(entityId, 'entityGroupsMap',
+            cols = yield db.get_slice(entityId, 'entityGroupsMap',
                                       start=start, count=toFetchCount)
             groupIds = utils.columnsToDict(cols, ordered=True).keys()
             toFetchGroups.update(set(groupIds))
         elif viewType == 'adminGroups':
-            cols = yield Db.get_slice(myId, "entities", ['adminOfGroups'])
+            cols = yield db.get_slice(myId, "entities", ['adminOfGroups'])
             groupIds = utils.supercolumnsToDict(cols, ordered=True)
             if groupIds:
                 groupIds = groupIds['adminOfGroups'].keys()
                 toFetchGroups.update(set(groupIds))
 
 
-        cols = yield Db.get_slice(myId, "entityGroupsMap",
+        cols = yield db.get_slice(myId, "entityGroupsMap",
                                   start=start, count=toFetchCount)
         myGroupsIds = utils.columnsToDict(cols, ordered=True).keys()
 
@@ -419,17 +419,17 @@ class GroupsResource(base.BaseResource):
             groupIds = groupIds[0:count]
 
         if start:
-            cols = yield Db.get_slice(entityId, 'entityGroupsMap', start=start,
+            cols = yield db.get_slice(entityId, 'entityGroupsMap', start=start,
                                       count=toFetchCount,  reverse=True)
             if len(cols) > 1:
                 prevPageStart = utils.encodeKey(cols[-1].column.name)
 
         if toFetchGroups:
-            groups = yield Db.multiget_slice(toFetchGroups, "entities", ["basic"])
+            groups = yield db.multiget_slice(toFetchGroups, "entities", ["basic"])
             groups = utils.multiSuperColumnsToDict(groups)
-            groupFollowers = yield Db.multiget_slice(toFetchGroups, "followers", names=[myId])
+            groupFollowers = yield db.multiget_slice(toFetchGroups, "followers", names=[myId])
             groupFollowers = utils.multiColumnsToDict(groupFollowers)
-            cols = yield Db.get_slice(myId, 'pendingConnections', toFetchGroups)
+            cols = yield db.get_slice(myId, 'pendingConnections', toFetchGroups)
             pendingConnections = dict((x.column.name, x.column.value) for x in cols)
 
 
@@ -520,10 +520,10 @@ class GroupsResource(base.BaseResource):
 
         if myKey in group["admins"]:
             #or myKey in moderators #if i am moderator
-            cols = yield Db.get_slice(groupId, "pendingConnections")
+            cols = yield db.get_slice(groupId, "pendingConnections")
             cols = utils.columnsToDict(cols)
             userIds = cols.keys()
-            cols = yield Db.multiget_slice(userIds, "entities", ["basic"])
+            cols = yield db.multiget_slice(userIds, "entities", ["basic"])
             users = utils.multiSuperColumnsToDict(cols)
             args["entities"] = users
         else:
@@ -547,7 +547,7 @@ class GroupsResource(base.BaseResource):
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                       columns=["admins"])
         emailId = utils.getRequestArg(request, "uid")
-        cols = yield Db.get_slice(emailId, "userAuth", ["user"])
+        cols = yield db.get_slice(emailId, "userAuth", ["user"])
         if not cols:
             raise errors.InvalidRequest()
         userId = cols[0].column.value

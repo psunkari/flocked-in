@@ -12,7 +12,7 @@ from email.mime.text    import MIMEText
 
 import social.constants as constants
 from social.base        import BaseResource
-from social             import utils, Db, Config, people
+from social             import utils, db, config, people
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
 from social.logging     import dump_args, profile
@@ -22,7 +22,7 @@ from social.logging     import dump_args, profile
 @defer.inlineCallbacks
 @dump_args
 def getOrgKey(domain):
-    cols = yield Db.get_slice(domain, "domainOrgMap")
+    cols = yield db.get_slice(domain, "domainOrgMap")
     cols = utils.columnsToDict(cols)
     orgKey = cols.keys()[0] if cols else None
     defer.returnValue(orgKey)
@@ -39,12 +39,12 @@ class SignupResource(BaseResource):
             defer.returnValue(False)
 
         try:
-            yield Db.get(emailId, "userAuth", "user")
+            yield db.get(emailId, "userAuth", "user")
             defer.returnValue(False)
         except: pass
         try:
             local, domain = emailId.split('@')
-            yield Db.get(domain, "invitations", token, emailId)
+            yield db.get(domain, "invitations", token, emailId)
         except ttypes.NotFoundException, e:
             defer.returnValue(False)
 
@@ -106,7 +106,7 @@ class SignupResource(BaseResource):
 
         emailId = utils.getRequestArg(request, "email")
         local, domain = emailId.split('@')
-        yield Db.insert(domain, "notifyOnRelease", '', emailId)
+        yield db.insert(domain, "notifyOnRelease", '', emailId)
         self.thanksPage.render_GET(request)
 
 
@@ -130,15 +130,15 @@ class SignupResource(BaseResource):
 
         args = {'emailId': emailId, 'view':'invite'}
 
-        existingUser = yield Db.get_count(emailId, "userAuth")
+        existingUser = yield db.get_count(emailId, "userAuth")
         if not existingUser:
             orgId = yield getOrgKey(domain)
             if not orgId:
                 orgId = utils.getUniqueKey()
                 domains = {domain:''}
                 basic = {"name":domain, "type":"org"}
-                yield Db.batch_insert(orgId, "entities", {"basic":basic,"domains":domains})
-                yield Db.insert(domain, "domainOrgMap", '', orgId)
+                yield db.batch_insert(orgId, "entities", {"basic":basic,"domains":domains})
+                yield db.insert(domain, "domainOrgMap", '', orgId)
 
             userId = yield utils.addUser(emailId, displayName, passwd,
                                          orgId, jobTitle, timezone)
@@ -146,7 +146,7 @@ class SignupResource(BaseResource):
             authinfo.organization = orgId
             authinfo.isAdmin = False
 
-            yield Db.remove(domain, "invitations", super_column=emailId)
+            yield db.remove(domain, "invitations", super_column=emailId)
             yield render(request, "signup.mako", **args)
         else:
             raise errors.InvalidRegistration()

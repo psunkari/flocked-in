@@ -6,7 +6,7 @@ from twisted.internet       import defer
 from twisted.python         import log
 from twisted.web            import resource, server, http
 
-from social                 import _, __, Db, utils
+from social                 import _, __, db, utils
 from social.logging         import profile, dump_args
 
 class AvatarResource(resource.Resource):
@@ -23,7 +23,7 @@ class AvatarResource(resource.Resource):
         size = {"s": "small", "m": "medium", "l": "large"}[size]
         itemId = itemId.split(".")[0]
 
-        d = Db.get_slice(itemId, "items",
+        d = db.get_slice(itemId, "items",
                          [size, "format"], super_column="avatar")
         def callback(cols):
             avatarInfo = utils.columnsToDict(cols)

@@ -7,7 +7,7 @@ from twisted.web            import resource, server, static, util, http
 from twisted.internet       import defer
 from twisted.python         import log, components
 
-from social                 import Db, utils, base, plugins
+from social                 import db, utils, base, plugins
 from social.template        import render
 from social.profile         import ProfileResource
 from social.isocial         import IAuthInfo
@@ -105,7 +105,7 @@ class SigninResource(resource.Resource):
             self._renderSigninForm(request, self.MISSING_FIELDS)
             return server.NOT_DONE_YET
 
-        d = Db.get_slice(username, "userAuth")
+        d = db.get_slice(username, "userAuth")
         def callback(result):
             cols = utils.columnsToDict(result)
             if cols.get("passwordHash", "XXX") != utils.md5(password):

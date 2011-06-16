@@ -7,7 +7,7 @@ from twisted.internet   import defer
 from twisted.web        import server
 from twisted.python     import log
 
-from social             import base, Db, utils, feed, plugins, constants, _
+from social             import base, db, utils, feed, plugins, constants, _
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
 from social.logging     import dump_args, profile
@@ -21,15 +21,15 @@ def pushNotifications(itemId, convId, responseType, convType, convOwner,
     # value = responseType:commentOwner:itemKey:convType:convOwner:
     value = ":".join([responseType, commentOwner, itemId, convType, convOwner])
     if not followers:
-        followers = yield Db.get_slice(convId, "items", super_column="followers")
+        followers = yield db.get_slice(convId, "items", super_column="followers")
     deferreds = []
 
     for follower in followers:
         userKey = follower.column.name
         if commentOwner != userKey:
-            d1 =  Db.insert(userKey, "notifications", convId, timeUUID)
-            d2 =  Db.insert(userKey, "latestNotifications", convId, timeUUID, sc)
-            d3 =  Db.batch_insert(userKey, "notificationItems", {convId:{timeUUID:value}})
+            d1 =  db.insert(userKey, "notifications", convId, timeUUID)
+            d2 =  db.insert(userKey, "latestNotifications", convId, timeUUID, sc)
+            d3 =  db.batch_insert(userKey, "notificationItems", {convId:{timeUUID:value}})
             deferreds.extend([d1, d2, d3])
     yield defer.DeferredList(deferreds)
 
@@ -40,12 +40,12 @@ def pushNotifications(itemId, convId, responseType, convType, convOwner,
 def deleteNotifications(convId, timeUUID, followers=None, sf="notifications"):
     deferreds = []
     if not followers:
-        followers = yield Db.get_slice(convId, "items", super_column="followers")
+        followers = yield db.get_slice(convId, "items", super_column="followers")
     for follower in followers:
         userKey = follower.column.name
-        d1 = Db.remove(userKey, "notifications", timeUUID)
-        d2 = Db.remove(userKey, "latestNotifications", timeUUID, sf)
-        d3 = Db.remove(userKey, "notificationItems", timeUUID, convId)
+        d1 = db.remove(userKey, "notifications", timeUUID)
+        d2 = db.remove(userKey, "latestNotifications", timeUUID, sf)
+        d3 = db.remove(userKey, "notificationItems", timeUUID, convId)
         deferreds.extend([d1, d2, d3])
     yield defer.DeferredList(deferreds)
 
@@ -94,7 +94,7 @@ class NotificationsResource(base.BaseResource):
             fetchStart = utils.decodeKey(fetchStart)
 
         while len(convs) < count:
-            cols = yield Db.get_slice(myId, "notifications", count=fetchCount,
+            cols = yield db.get_slice(myId, "notifications", count=fetchCount,
                                       start=fetchStart, reverse=True)
             for col in cols:
                 value = col.column.value
@@ -115,7 +115,7 @@ class NotificationsResource(base.BaseResource):
         if not convs:
             defer.returnValue(args)
 
-        rawNotifications = yield Db.get_slice(myId, "notificationItems",
+        rawNotifications = yield db.get_slice(myId, "notificationItems",
                                               convs, reverse=True)
         #reverse isn't working: the column order is not changing when revers=False
         #So, adding userIds in reverse order. (insert at 0th position instead of append)
@@ -160,8 +160,8 @@ class NotificationsResource(base.BaseResource):
                     if commentOwner not in answers[key]:
                         answers[key].insert(0,commentOwner)
 
-        users = yield Db.multiget_slice(toFetchUsers, "entities", ["basic"])
-        groups = yield Db.multiget_slice(toFetchGroups, "entities", ["basic"])
+        users = yield db.multiget_slice(toFetchUsers, "entities", ["basic"])
+        groups = yield db.multiget_slice(toFetchGroups, "entities", ["basic"])
 
         users = utils.multiSuperColumnsToDict(users)
         groups = utils.multiSuperColumnsToDict(groups)
@@ -269,7 +269,7 @@ class NotificationsResource(base.BaseResource):
         fromFetchMore = ((not landing) and (not appchange) and start)
         data = yield self._getNotifications(request)
         if not start:
-            yield Db.remove(myId, "latestNotifications", super_column="notifications")
+            yield db.remove(myId, "latestNotifications", super_column="notifications")
         args.update(data)
 
         if script:
@@ -284,17 +284,17 @@ class NotificationsResource(base.BaseResource):
     def _get_new_notifications(self, request):
 
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        cols = yield Db.get_slice(myId, "latestNotifications")
+        cols = yield db.get_slice(myId, "latestNotifications")
         cols = utils.supercolumnsToDict(cols)
         counts = {myId: dict([(key, len(cols[key])) for key in cols])}
         orgId = args['orgKey']
         #get the list of groups
-        cols = yield Db.get_slice(myId, "entities", ['adminOfGroups'])
+        cols = yield db.get_slice(myId, "entities", ['adminOfGroups'])
         cols = utils.supercolumnsToDict(cols)
         groupIds = cols.get('adminOfGroups', {}).keys()
 
         if groupIds:
-            cols = yield Db.multiget_slice(groupIds, "latestNotifications")
+            cols = yield db.multiget_slice(groupIds, "latestNotifications")
             cols = utils.multiSuperColumnsToDict(cols)
             for groupId in cols:
                 counts[groupId] = {}

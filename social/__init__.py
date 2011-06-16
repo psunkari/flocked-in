@@ -11,31 +11,43 @@ from twisted.plugin     import getPlugins
 from social.isocial     import IItemType
 
 
+#
 # Read configuration
-config_sources = os.environ.get("CONFIG_SOURCES", "etc/social.cfg").split(",")
-Config = ConfigParser.ConfigParser()
-Config.read([os.path.abspath(source) for source in config_sources])
+#
+config_sources = os.environ.get("CONFIG_SOURCES", "etc/production.cfg").split(",")
+config = ConfigParser.ConfigParser()
+config.read([os.path.abspath(source) for source in config_sources])
 
 
+#
 # Cassandra connection pool
-cassandraNodes = Config.get("Cassandra", "Nodes").split(',')
-cassandraKeyspace = Config.get("Cassandra", "Keyspace")
-Db = CassandraClusterPool(cassandraNodes, cassandraKeyspace, pool_size=10)
-Db.startService()
+#
+cassandraNodes = config.get("Cassandra", "Nodes").split(',')
+cassandraKeyspace = config.get("Cassandra", "Keyspace")
+db = CassandraClusterPool(cassandraNodes, cassandraKeyspace, pool_size=10)
 
 
+#
+# Internationalization
 # Aliases for i18n
+#
 _ = gettext.gettext
 __ = gettext.ngettext
 
 
+#
 # Map of all item type plugins
+#
 plugins = {}
 for plg in getPlugins(IItemType):
     if not hasattr(plg, "disabled") or not plg.disabled:
         plugins[plg.itemType] = plg
 
 
+#
+# Whitelist: List of domains that can invite anyone to flocked.in
+# Blacklist: List of domains that cannot create networks on flocked.in
+#
 whitelist = []
 blacklist = []
 try:
@@ -50,4 +62,5 @@ try:
 except IOError:
     pass
 
-__all__ = [Config, Db, _, __, plugins, whitelist, blacklist]
+
+__all__ = [config, db, plugins, whitelist, blacklist, _, __]

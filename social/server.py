@@ -5,7 +5,7 @@ from twisted.web            import resource, server, static, util
 from twisted.internet       import defer
 from twisted.python         import log, components
 
-from social                 import Db, utils, base, plugins
+from social                 import db, utils, base, plugins
 from social.isocial         import IAuthInfo
 
 
@@ -30,7 +30,7 @@ class RequestFactory(server.Request):
                 self.site.updateSession(self.session.uid, self.session)
         self.notifyFinish().addCallback(requestDone)
 
-        # If we have a session cookie, try to fetch the session from Db
+        # If we have a session cookie, try to fetch the session from db
         # We use the existing session-id only if create is False
         sessionId = self.getCookie(self.cookiename) if not create else None
         d = self.site.getSession(sessionId) if sessionId else defer.fail([])
@@ -62,15 +62,15 @@ class SiteFactory(server.Site):
 
     @defer.inlineCallbacks
     def getSession(self, uid):
-        result = yield Db.get(uid, "sessions", "auth")
+        result = yield db.get(uid, "sessions", "auth")
         serialized = result.column.value
         defer.returnValue(pickle.loads(serialized))
 
     @defer.inlineCallbacks
     def updateSession(self, uid, session):
         serialized = pickle.dumps(session)
-        yield Db.insert(uid, "sessions", serialized, "auth", ttl=self.timeout)
+        yield db.insert(uid, "sessions", serialized, "auth", ttl=self.timeout)
 
     @defer.inlineCallbacks
     def clearSession(self, uid):
-        yield Db.remove(uid, "sessions", "auth")
+        yield db.remove(uid, "sessions", "auth")

@@ -5,7 +5,7 @@ from twisted.internet   import defer
 from twisted.web        import server
 from twisted.python     import log
 
-from social             import Db, utils, base, plugins, _, __
+from social             import db, utils, base, plugins, _, __
 from social.isocial     import IAuthInfo
 from social.relations   import Relation
 from social.template    import render, renderDef, renderScriptBlock
@@ -14,9 +14,9 @@ from social.logging     import profile, dump_args
 
 @defer.inlineCallbacks
 def deleteUserFeed(userId, itemType, tuuid):
-    yield Db.remove(userId, "userItems", tuuid)
+    yield db.remove(userId, "userItems", tuuid)
     if plugins.has_key(itemType) and plugins[itemType].hasIndex:
-        yield Db.remove(userId, "userItems_"+ itemType, tuuid)
+        yield db.remove(userId, "userItems_"+ itemType, tuuid)
 
 @defer.inlineCallbacks
 def deleteFeed(userId, itemId, convId, itemType, acl, convOwner,
@@ -38,7 +38,7 @@ def deleteFromFeed(userId, itemId, convId, itemType,
                    itemOwner, responseType, tagId=''):
     # fix: itemOwner is either the person who owns the item
     #       or person who liked the item. RENAME the variable.
-    cols = yield Db.get_slice(userId, "feedItems",
+    cols = yield db.get_slice(userId, "feedItems",
                               super_column=convId, reverse=True)
 
     noOfItems = len(cols)
@@ -67,16 +67,16 @@ def deleteFromFeed(userId, itemId, convId, itemType,
             key == itemId and tagId == tag:
             # anyone can untag
 
-            yield Db.remove(userId, "feedItems", tuuid, convId)
+            yield db.remove(userId, "feedItems", tuuid, convId)
             if latest == tuuid:
-                yield Db.remove(userId, "feed", tuuid)
+                yield db.remove(userId, "feed", tuuid)
                 if second:
-                    yield Db.insert(userId, "feed", convId, second)
+                    yield db.insert(userId, "feed", convId, second)
             if pseudoFeedTime:
-                yield Db.remove(userId, "feedItems", super_column=convId)
-                yield Db.remove(userId, "feed", pseudoFeedTime)
+                yield db.remove(userId, "feedItems", super_column=convId)
+                yield db.remove(userId, "feed", pseudoFeedTime)
             if plugins.has_key(itemType) and plugins[itemType].hasIndex:
-                yield Db.remove(userId, "feed_"+itemType, tuuid)
+                yield db.remove(userId, "feed_"+itemType, tuuid)
 
             break
 
@@ -118,9 +118,9 @@ def pushToFeed(userKey, timeuuid, itemKey, parentKey, responseType,
     convOwner = userKey if not convOwner else convOwner
     commentOwner = userKey if not commentOwner else commentOwner
 
-    yield Db.insert(userKey, "feed", parentKey, timeuuid)
+    yield db.insert(userKey, "feed", parentKey, timeuuid)
     if plugins.has_key(itemType) and plugins[itemType].hasIndex:
-        yield Db.insert(userKey, "feed_"+itemType, parentKey, timeuuid)
+        yield db.insert(userKey, "feed_"+itemType, parentKey, timeuuid)
 
     yield updateFeedResponses(userKey, parentKey, itemKey, timeuuid, itemType,
                                responseType, convOwner, commentOwner, tagId,
@@ -143,7 +143,7 @@ def updateFeedResponses(userKey, parentKey, itemKey, timeuuid, itemType,
     feedItemValue = ":".join([responseType, commentOwner, itemKey, entities, tagId])
     tmp, oldest, latest = {}, None, None
 
-    cols = yield Db.get_slice(userKey, "feedItems",
+    cols = yield db.get_slice(userKey, "feedItems",
                               super_column = parentKey, reverse=True)
     cols = utils.columnsToDict(cols, ordered=True)
 
@@ -158,7 +158,7 @@ def updateFeedResponses(userKey, parentKey, itemKey, timeuuid, itemType,
         if rtype != "!" and not latest:
             #to prevent duplicate, feed should have only one entry of convId
             latest = tuuid
-            yield Db.remove(userKey, "feed", tuuid)
+            yield db.remove(userKey, "feed", tuuid)
 
     totalItems = len(cols)
     noOfItems = len(tmp.get(responseType, []))
@@ -167,17 +167,17 @@ def updateFeedResponses(userKey, parentKey, itemKey, timeuuid, itemType,
         oldest = tmp[responseType][noOfItems-1]
 
     if noOfItems == MAXFEEDITEMSBYTYPE or totalItems == MAXFEEDITEMS:
-        yield Db.remove(userKey, "feedItems", oldest, parentKey)
-        yield Db.remove(userKey, "feed", oldest)
+        yield db.remove(userKey, "feedItems", oldest, parentKey)
+        yield db.remove(userKey, "feed", oldest)
         if plugins.has_key(itemType) and plugins[itemType].hasIndex:
-            yield Db.remove(userKey, "feed_"+itemType, oldest)
+            yield db.remove(userKey, "feed_"+itemType, oldest)
 
     if totalItems == 0 and responseType != 'I':
         value = ":".join(["!", convOwner, parentKey, ""])
         tuuid = uuid.uuid1().bytes
-        yield Db.batch_insert(userKey, "feedItems", {parentKey:{tuuid:value}})
+        yield db.batch_insert(userKey, "feedItems", {parentKey:{tuuid:value}})
 
-    yield Db.batch_insert(userKey, "feedItems",
+    yield db.batch_insert(userKey, "feedItems",
                           {parentKey:{timeuuid: feedItemValue}})
 
 
@@ -189,7 +189,7 @@ def updateFeedResponses(userKey, parentKey, itemKey, timeuuid, itemType,
 #    the currently logged in user.
 #  - Use feedItemsId to establish context of another user - may be used for
 #    administration purposes or when visiting other user's profile
-#  - If getFn is given, it is called to fetch the list of ids from the Db.
+#  - If getFn is given, it is called to fetch the list of ids from the db.
 #
 @profile
 @defer.inlineCallbacks
@@ -231,7 +231,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
         if not ids:
             defer.returnValue(retIds)
 
-        cols = yield Db.multiget_slice(ids, "items", ["meta", "tags"])
+        cols = yield db.multiget_slice(ids, "items", ["meta", "tags"])
         items.update(utils.multiSuperColumnsToDict(cols))
         checkAcl = utils.checkAcl
 
@@ -258,7 +258,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
     reasonTmpl = {}
     @defer.inlineCallbacks
     def fetchFeedItems(ids):
-        rawFeedItems = yield Db.get_slice(feedItemsId, "feedItems", ids) \
+        rawFeedItems = yield db.get_slice(feedItemsId, "feedItems", ids) \
                                             if ids else defer.succeed([])
         for conv in rawFeedItems:
             convId = conv.super_column.name
@@ -369,7 +369,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
 
             # Fetch user's feed when getFn isn't given.
             else:
-                results = yield Db.get_slice(feedId, "feed", count=fetchCount,
+                results = yield db.get_slice(feedId, "feed", count=fetchCount,
                                           start=fetchStart, reverse=True)
                 for col in results:
                     value = col.column.value
@@ -407,7 +407,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
     yield defer.DeferredList(feedItems_d)
 
     # Fetch the required entities, tags and items to finish the job!
-    items_d = Db.multiget_slice(toFetchItems, "items", ["meta"])
+    items_d = db.multiget_slice(toFetchItems, "items", ["meta"])
 
     for convId in convIds:
         conv = items[convId]
@@ -416,11 +416,11 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
             toFetchEntities.add(conv["meta"]["target"])
         toFetchTags.update(conv.get("tags",{}).keys())
 
-    entities_d = Db.multiget_slice(toFetchEntities, "entities", ["basic"])
-    tags_d = Db.get_slice(myOrgId, "orgTags", toFetchTags) \
+    entities_d = db.multiget_slice(toFetchEntities, "entities", ["basic"])
+    tags_d = db.get_slice(myOrgId, "orgTags", toFetchTags) \
                                 if toFetchTags else defer.succeed([])
 
-    myLikes_d = Db.multiget(toFetchItems.union(convIds), "itemLikes", myId)
+    myLikes_d = db.multiget(toFetchItems.union(convIds), "itemLikes", myId)
 
     # Extra data that is required to render special items
     # We already fetched the conversation items, plugins merely
@@ -485,7 +485,7 @@ def _feedFilter(request, feedId, itemType, start='', count=10):
     @defer.inlineCallbacks
     def getFn(start='', count=12):
         cf = "feed_%s"%(itemType)
-        items = yield Db.get_slice(feedId, cf, start=start, count=count, reverse=True)
+        items = yield db.get_slice(feedId, cf, start=start, count=count, reverse=True)
         defer.returnValue(utils.columnsToDict(items, ordered=True))
     return getFeedItems(request, getFn= getFn, start=start)
 
@@ -509,7 +509,7 @@ class FeedResource(base.BaseResource):
         args["menuId"] = "feed"
 
         if entityId:
-            entity = yield Db.get_slice(entityId, "entities", ["basic", "admins"])
+            entity = yield db.get_slice(entityId, "entities", ["basic", "admins"])
             entity = utils.supercolumnsToDict(entity)
             entityType = entity["basic"]['type']
 
@@ -558,7 +558,7 @@ class FeedResource(base.BaseResource):
             feedItems = yield getFeedItems(request, feedId=feedId, start=start)
         args.update(feedItems)
         args['itemType']=itemType
-        cols = yield Db.get_slice(myId, "latestNotifications")
+        cols = yield db.get_slice(myId, "latestNotifications")
         cols = utils.supercolumnsToDict(cols)
         counts = dict([(key, len(cols[key])) for key in cols])
 

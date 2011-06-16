@@ -10,14 +10,14 @@ from telephus.cassandra     import ttypes
 
 from social.template        import render, renderDef, renderScriptBlock
 from social.relations       import Relation
-from social                 import Db, utils, base, plugins, _, __
+from social                 import db, utils, base, plugins, _, __
 from social                 import constants, feed, errors
 from social.logging         import dump_args, profile
 from social.isocial         import IAuthInfo
 
 @defer.inlineCallbacks
 def deleteAvatarItem(entity, isLogo=False):
-    entity = yield Db.get_slice(entity, "entities", ["basic"])
+    entity = yield db.get_slice(entity, "entities", ["basic"])
     entity = utils.supercolumnsToDict(entity)
     itemId = None
     imgFmt = None
@@ -31,7 +31,7 @@ def deleteAvatarItem(entity, isLogo=False):
     if col:
         imgFmt, itemId = col.split(":")
     if itemId:
-        yield Db.remove(itemId, "items")
+        yield db.remove(itemId, "items")
 
 @profile
 @defer.inlineCallbacks
@@ -69,7 +69,7 @@ def saveAvatarItem(entityId, data, isLogo=False):
             "small": small.data, "medium": medium.data,
             "large": large.data, "original": original.data
         }}
-    yield Db.batch_insert(itemId, "items", item)
+    yield db.batch_insert(itemId, "items", item)
     #delete older image if any;
     yield deleteAvatarItem(entityId, isLogo)
 
@@ -118,7 +118,7 @@ class ProfileResource(base.BaseResource):
 
         toFetchEntities.add(userKey)
         while len(convs) < count:
-            cols = yield Db.get_slice(userKey, "userItems", start = toFetchStart,
+            cols = yield db.get_slice(userKey, "userItems", start = toFetchStart,
                                       reverse=True, count=toFetchCount)
             fetchedUserItem.extend(cols[0:count])
             if len(cols):
@@ -137,7 +137,7 @@ class ProfileResource(base.BaseResource):
             if len(cols) == toFetchCount:
                 convs = convs[0:count]
 
-            items = yield Db.multiget_slice(convs, "items", ["meta"])
+            items = yield db.multiget_slice(convs, "items", ["meta"])
             items = utils.multiSuperColumnsToDict(items)
             for convId in convs[:]:
                     acl = items[convId]["meta"]["acl"]
@@ -172,7 +172,7 @@ class ProfileResource(base.BaseResource):
                 reasonStr[value] = "%s"%(commentSnippet) + _(" on %s's %s")
                 userItems.append(value)
 
-        itemResponses = yield Db.multiget_slice(toFetchResponses, "itemResponses",
+        itemResponses = yield db.multiget_slice(toFetchResponses, "itemResponses",
                                                 count=2, reverse=True)
         for convId, comments in itemResponses.items():
             responses[convId] = []
@@ -183,7 +183,7 @@ class ProfileResource(base.BaseResource):
                     toFetchItems.add(itemKey)
                     toFetchEntities.add(userKey_)
 
-        items = yield Db.multiget_slice(toFetchItems, "items", ["meta", "tags"])
+        items = yield db.multiget_slice(toFetchItems, "items", ["meta", "tags"])
         items = utils.multiSuperColumnsToDict(items)
         args["items"] = items
         extraDataDeferreds = []
@@ -206,16 +206,16 @@ class ProfileResource(base.BaseResource):
             if success:
                 toFetchEntities.update(ret)
 
-        fetchedEntities = yield Db.multiget(toFetchEntities, "entities", "basic")
+        fetchedEntities = yield db.multiget(toFetchEntities, "entities", "basic")
         entities = utils.multiSuperColumnsToDict(fetchedEntities)
 
         tags = {}
         if toFetchTags:
             userOrgId = entities[userKey]["basic"]["org"]
-            fetchedTags = yield Db.get_slice(userOrgId, "orgTags", toFetchTags)
+            fetchedTags = yield db.get_slice(userOrgId, "orgTags", toFetchTags)
             tags = utils.supercolumnsToDict(fetchedTags)
 
-        fetchedLikes = yield Db.multiget(toFetchItems, "itemLikes", myKey)
+        fetchedLikes = yield db.multiget(toFetchItems, "itemLikes", myKey)
         myLikes = utils.multiColumnsToDict(fetchedLikes)
 
         del args['myKey']
@@ -230,8 +230,8 @@ class ProfileResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _follow(self, myKey, targetKey):
-        d1 = Db.insert(myKey, "subscriptions", "", targetKey)
-        d2 = Db.insert(targetKey, "followers", "", myKey)
+        d1 = db.insert(myKey, "subscriptions", "", targetKey)
+        d2 = db.insert(targetKey, "followers", "", myKey)
         yield d1
         yield d2
 
@@ -240,8 +240,8 @@ class ProfileResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _unfollow(self, myKey, targetKey):
-        d1 = Db.remove(myKey, "subscriptions", targetKey)
-        d2 = Db.remove(targetKey, "followers", myKey)
+        d1 = db.remove(myKey, "subscriptions", targetKey)
+        d2 = db.remove(targetKey, "followers", myKey)
         yield d1
         yield d2
 
@@ -261,19 +261,19 @@ class ProfileResource(base.BaseResource):
         calls = []
         responseType = "I"
         itemType = "activity"
-        cols = yield Db.multiget_slice([myKey, targetKey], "entities",
+        cols = yield db.multiget_slice([myKey, targetKey], "entities",
                                             ["basic"])
         users = utils.multiSuperColumnsToDict(cols)
         try:
-            cols = yield Db.get(myKey, "pendingConnections", targetKey)
+            cols = yield db.get(myKey, "pendingConnections", targetKey)
             pendingType = cols.column.value
             if pendingType == '0':
                 raise errors.PendingRequest()
 
-            d1 = Db.remove(myKey, "pendingConnections", targetKey)
-            d2 = Db.remove(targetKey, "pendingConnections", myKey)
-            d3 = Db.batch_insert(myKey, "connections", {targetKey: circlesMap})
-            d4 = Db.batch_insert(targetKey, "connections", {myKey: {'__default__':''}})
+            d1 = db.remove(myKey, "pendingConnections", targetKey)
+            d2 = db.remove(targetKey, "pendingConnections", myKey)
+            d3 = db.batch_insert(myKey, "connections", {targetKey: circlesMap})
+            d4 = db.batch_insert(targetKey, "connections", {myKey: {'__default__':''}})
 
             myName = users[myKey]["basic"].get("name", None)
             myFirstName = users[myKey]["basic"].get("firstname", None)
@@ -295,7 +295,7 @@ class ProfileResource(base.BaseResource):
                 if name:
                     colName = name.lower() + ":" + targetKey
                     mutMap.setdefault(myKey, {}).setdefault('nameIndex', {})[colName] = ''
-            d7 = Db.batch_mutate(mutMap)
+            d7 = db.batch_mutate(mutMap)
 
 
             #add to feed
@@ -310,8 +310,8 @@ class ProfileResource(base.BaseResource):
                                              ownerOrgId = users[targetKey]["basic"]["org"])
             targetItem["meta"]["target"] = myKey
             myItem["meta"]["target"] = targetKey
-            d8 = Db.batch_insert(myItemId, "items", myItem)
-            d9 = Db.batch_insert(targetItemId, "items", targetItem)
+            d8 = db.batch_insert(myItemId, "items", myItem)
+            d9 = db.batch_insert(targetItemId, "items", targetItem)
             d10 = feed.pushToFeed(myKey, myItem["meta"]["uuid"], myItemId,
                                   myItemId, responseType, itemType, myKey)
             d11 = feed.pushToFeed(targetKey, targetItem["meta"]["uuid"],
@@ -320,21 +320,21 @@ class ProfileResource(base.BaseResource):
 
             userItemValue = ":".join([responseType, myItemId,
                                       myItemId, "activity", myKey, ""])
-            d12 =  Db.insert(myKey, "userItems", userItemValue,
+            d12 =  db.insert(myKey, "userItems", userItemValue,
                              myItem["meta"]['uuid'])
             userItemValue = ":".join([responseType, targetItemId, targetItemId,
                                       itemType, targetKey, ""])
-            d13 =  Db.insert(targetKey, "userItems", userItemValue,
+            d13 =  db.insert(targetKey, "userItems", userItemValue,
                              targetItem["meta"]['uuid'])
 
             value = ":".join([responseType, myKey, targetItemId, itemType, targetKey])
             #notify users
-            d14  = Db.insert(targetKey, "notifications", targetItemId, targetItem["meta"]['uuid'])
-            d15 = Db.batch_insert(targetKey, "notificationItems", {targetItemId:{targetItem["meta"]['uuid']:value}})
+            d14  = db.insert(targetKey, "notifications", targetItemId, targetItem["meta"]['uuid'])
+            d15 = db.batch_insert(targetKey, "notificationItems", {targetItemId:{targetItem["meta"]['uuid']:value}})
 
 
             calls = [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14, d15]
-            cols = yield Db.multiget_slice([myKey, targetKey] , "latestNotifications",
+            cols = yield db.multiget_slice([myKey, targetKey] , "latestNotifications",
                                             ["incomingFriendRequests",
                                             "outGoingFriendRequests",
                                             "archivedFriendRequests"])
@@ -342,21 +342,21 @@ class ProfileResource(base.BaseResource):
             for sc in cols.get(myKey, []):
                 for tuuid, key in cols[myKey][sc].items():
                     if key == targetKey:
-                        d = Db.remove(myKey, "latestNotifications", tuuid, sc)
+                        d = db.remove(myKey, "latestNotifications", tuuid, sc)
                         calls.append(d)
             for sc in cols.get(targetKey, []):
                 for tuuid, key in cols[targetKey][sc].items():
                     if key == myKey:
-                        d = Db.remove(targetKey, "latestNotifications", tuuid, sc)
+                        d = db.remove(targetKey, "latestNotifications", tuuid, sc)
                         calls.append(d)
 
         except ttypes.NotFoundException:
             timeUUID = uuid.uuid1().bytes
 
-            d1 = Db.insert(myKey, "pendingConnections", '0', targetKey)
-            d2 = Db.insert(targetKey, "pendingConnections", '1', myKey)
-            d3 = Db.insert(targetKey, "latestNotifications", myKey, timeUUID, "incomingFriendRequests")
-            d4 = Db.insert(myKey, "latestNotifications", targetKey, timeUUID, "outGoingFriendRequests")
+            d1 = db.insert(myKey, "pendingConnections", '0', targetKey)
+            d2 = db.insert(targetKey, "pendingConnections", '1', myKey)
+            d3 = db.insert(targetKey, "latestNotifications", myKey, timeUUID, "incomingFriendRequests")
+            d4 = db.insert(myKey, "latestNotifications", targetKey, timeUUID, "outGoingFriendRequests")
 
             #notify users
             calls = [d1, d2, d3, d4]
@@ -371,7 +371,7 @@ class ProfileResource(base.BaseResource):
 
         deferreds = []
 
-        cols = yield Db.multiget_slice([myKey, targetKey], "latestNotifications",
+        cols = yield db.multiget_slice([myKey, targetKey], "latestNotifications",
                                         ["incomingFriendRequests",
                                         "outGoingFriendRequests",
                                         "archivedFriendRequests"])
@@ -379,16 +379,16 @@ class ProfileResource(base.BaseResource):
         for sc in cols.get(myKey, []):
             for tuuid, key in cols[myKey][sc].items():
                 if key == targetKey:
-                    d = Db.remove(myKey, "latestNotifications", tuuid, sc)
+                    d = db.remove(myKey, "latestNotifications", tuuid, sc)
                     deferreds.append(d)
         for sc in cols.get(targetKey, []):
             for tuuid, key in cols[targetKey][sc].items():
                 if key == myKey:
-                    d = Db.remove(targetKey, "latestNotifications", tuuid, sc)
+                    d = db.remove(targetKey, "latestNotifications", tuuid, sc)
                     deferreds.append(d)
 
-        d1 = Db.remove(myKey, "pendingConnections", targetKey)
-        d2 = Db.remove(targetKey, "pendingConnections", myKey)
+        d1 = db.remove(myKey, "pendingConnections", targetKey)
+        d2 = db.remove(targetKey, "pendingConnections", myKey)
         yield defer.DeferredList(deferreds+[d1, d2])
         #XXX: UI: remove the user from the list of pending-friend-requests
 
@@ -397,12 +397,12 @@ class ProfileResource(base.BaseResource):
     def _archiveFriendRequest(self, myKey, targetKey):
 
         try:
-            cols = yield Db.get_slice(myKey, "latestNotifications", ["incomingFriendRequests"])
+            cols = yield db.get_slice(myKey, "latestNotifications", ["incomingFriendRequests"])
             cols = utils.supercolumnsToDict(cols)
             for tuuid, key in cols['incomingFriendRequests'].items():
                 if key == targetKey:
-                    d1 = Db.remove(myKey, "latestNotifications", tuuid, "incomingFriendRequests")
-                    d2 = Db.insert(myKey, "latestNotifications", targetKey, tuuid, "archivedFriendRequests")
+                    d1 = db.remove(myKey, "latestNotifications", tuuid, "incomingFriendRequests")
+                    d2 = db.insert(myKey, "latestNotifications", targetKey, tuuid, "archivedFriendRequests")
                     yield defer.DeferredList([d1, d2])
                     #XXX: UI: remove the user from pending requests list
         except ttypes.NotFoundException:
@@ -414,7 +414,7 @@ class ProfileResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _unfriend(self, myKey, targetKey):
-        cols = yield Db.multiget_slice([myKey, targetKey], "entities",
+        cols = yield db.multiget_slice([myKey, targetKey], "entities",
                                         ["basic"])
         users = utils.multiSuperColumnsToDict(cols)
         targetDisplayName = users[targetKey]["basic"]["name"]
@@ -447,7 +447,7 @@ class ProfileResource(base.BaseResource):
                 colname = _getColName(name, targetKey)
                 mutations[myKey]["nameIndex"][colname] = None
 
-        yield Db.batch_mutate(mutations)
+        yield db.batch_mutate(mutations)
         # TODO: delete the notifications and items created while
         # sending&accepting friend request
 
@@ -468,9 +468,9 @@ class ProfileResource(base.BaseResource):
             args["errorMsg"] = "Enter current password"
         if passwd1 != passwd2:
             args["errorMsg"] = "New password didn't match"
-        cols = yield Db.get(myKey, "entities", "emailId", "basic")
+        cols = yield db.get(myKey, "entities", "emailId", "basic")
         emailId = cols.column.value
-        col = yield Db.get(emailId, "userAuth", "passwordHash")
+        col = yield db.get(emailId, "userAuth", "passwordHash")
         passwdHash = col.column.value
         if curr_passwd and passwdHash != utils.md5(curr_passwd):
             args["errorMsg"] ="Incorrect Password"
@@ -480,7 +480,7 @@ class ProfileResource(base.BaseResource):
                                     landing, "#profile-content", "set", **args)
         else:
             newPasswd = utils.md5(passwd1)
-            yield Db.insert(emailId, "userAuth", newPasswd, "passwordHash")
+            yield db.insert(emailId, "userAuth", newPasswd, "passwordHash")
             args["errorMsg"] = "password changed successfully"
             yield renderScriptBlock(request, "profile.mako", "changePasswd",
                                     landing, "#profile-content", "set", **args)
@@ -498,10 +498,10 @@ class ProfileResource(base.BaseResource):
             if val:
                 userInfo.setdefault("basic", {})[cn] = val
 
-        user = yield Db.get_slice(myKey, "entities", ["basic"])
+        user = yield db.get_slice(myKey, "entities", ["basic"])
         user = utils.supercolumnsToDict(user)
 
-        cols = yield Db.get_slice(myKey, 'connections', )
+        cols = yield db.get_slice(myKey, 'connections', )
         friends = [item.super_column.name for item in cols] + [args["orgKey"]]
 
         for field in ["name", "lastname", "firstname"]:
@@ -614,7 +614,7 @@ class ProfileResource(base.BaseResource):
             userInfo["education"][key] = degree
 
         if userInfo:
-            yield Db.batch_insert(myKey, "entities", userInfo)
+            yield db.batch_insert(myKey, "entities", userInfo)
         request.redirect("/profile/edit")
 
 
@@ -759,7 +759,7 @@ class ProfileResource(base.BaseResource):
         # XXX: We should use getValidEntityId to fetch the entire user
         # info instead of another call to the database.
         request.addCookie('cu', userKey, path="/ajax/profile")
-        cols = yield Db.get_slice(userKey, "entities")
+        cols = yield db.get_slice(userKey, "entities")
         if cols:
             user = utils.supercolumnsToDict(cols)
             args["user"] = user
@@ -829,17 +829,17 @@ class ProfileResource(base.BaseResource):
 
         if newId or not script:
             # List the user's subscriptions
-            cols = yield Db.get_slice(userKey, "subscriptions", count=11)
+            cols = yield db.get_slice(userKey, "subscriptions", count=11)
             subscriptions = set(utils.columnsToDict(cols).keys())
             args["subscriptions"] = subscriptions
 
             # List the user's followers
-            cols = yield Db.get_slice(userKey, "followers", count=11)
+            cols = yield db.get_slice(userKey, "followers", count=11)
             followers = set(utils.columnsToDict(cols).keys())
             args["followers"] = followers
 
             # List the user's friends (if allowed and look for common friends)
-            cols = yield Db.multiget_slice([myKey, userKey], "connections")
+            cols = yield db.multiget_slice([myKey, userKey], "connections")
             myFriends = set(utils.supercolumnsToDict(cols[myKey]).keys())
             userFriends = set(utils.supercolumnsToDict(cols[userKey]).keys())
             commonFriends = myFriends.intersection(userFriends)
@@ -849,7 +849,7 @@ class ProfileResource(base.BaseResource):
             # user groups and common items.
             entitiesToFetch = followers.union(subscriptions, commonFriends)\
                                        .difference(fetchedEntities)
-            cols = yield Db.multiget_slice(entitiesToFetch,
+            cols = yield db.multiget_slice(entitiesToFetch,
                                            "entities", super_column="basic")
             rawUserData = {}
             for key, data in cols.items():
@@ -858,7 +858,7 @@ class ProfileResource(base.BaseResource):
             args["rawUserData"] = rawUserData
 
             # List the user's groups (and look for groups common with me)
-            cols = yield Db.multiget_slice([myKey, userKey], "entityGroupsMap")
+            cols = yield db.multiget_slice([myKey, userKey], "entityGroupsMap")
             myGroups = set(utils.columnsToDict(cols[userKey]).keys())
             userGroups = set(utils.columnsToDict(cols[userKey]).keys())
             commonGroups = myGroups.intersection(userGroups)
@@ -868,7 +868,7 @@ class ProfileResource(base.BaseResource):
             args["commonGroups"] = commonGroups
 
             groupsToFetch = commonGroups.union(userGroups)
-            cols = yield Db.multiget_slice(groupsToFetch, "entities",
+            cols = yield db.multiget_slice(groupsToFetch, "entities",
                                            super_column="basic")
             rawGroupData = {}
             for key, data in cols.items():

@@ -5,7 +5,7 @@ from twisted.web        import server
 from twisted.internet   import defer
 from twisted.python     import log
 
-from social             import base, Db, utils, people
+from social             import base, db, utils, people
 from social.signup      import getOrgKey # move getOrgKey to utils
 from social.template    import render, renderScriptBlock
 from social.constants   import PEOPLE_PER_PAGE
@@ -99,7 +99,7 @@ class Admin(base.BaseResource):
             # if the network has only one admin, admin can't block himself
             raise errors.InvalidRequest()
 
-        cols = yield Db.get_slice(userId, "entities", ["basic"])
+        cols = yield db.get_slice(userId, "entities", ["basic"])
         userInfo = utils.supercolumnsToDict(cols)
         emailId = userInfo.get("basic", {}).get("emailId", None)
         userOrg = userInfo.get("basic", {}).get("org", None)
@@ -107,8 +107,8 @@ class Admin(base.BaseResource):
         if userOrg != orgId:
             log.msg("can't block users of other networks")
             raise errors.Unauthorized()
-        yield Db.insert(emailId, "userAuth", 'True', "isBlocked")
-        yield Db.insert(orgId, "blockedUsers", '', userId)
+        yield db.insert(emailId, "userAuth", 'True', "isBlocked")
+        yield db.insert(orgId, "blockedUsers", '', userId)
 
     @defer.inlineCallbacks
     def _unBlockUser(self, request):
@@ -119,7 +119,7 @@ class Admin(base.BaseResource):
             raise errors.Unauthorized()
 
         userId = utils.getRequestArg(request, "id")
-        cols = yield Db.get_slice(userId, "entities", ["basic"])
+        cols = yield db.get_slice(userId, "entities", ["basic"])
         userInfo = utils.supercolumnsToDict(cols)
         emailId = userInfo.get("basic", {}).get("emailId", None)
         userOrg = userInfo.get("basic", {}).get("org", None)
@@ -127,8 +127,8 @@ class Admin(base.BaseResource):
         if userOrg != orgId:
             log.msg("can't unblock users of other networks")
             raise errors.Unauthorized()
-        yield Db.remove(emailId, "userAuth", "isBlocked")
-        yield Db.remove(orgId, "blockedUsers", userId)
+        yield db.remove(emailId, "userAuth", "isBlocked")
+        yield db.remove(orgId, "blockedUsers", userId)
 
     @defer.inlineCallbacks
     def _deleteUser(self, request):
@@ -169,7 +169,7 @@ class Admin(base.BaseResource):
                 orgInfo["basic"] = {}
             orgInfo["basic"]["name"] = name
         if orgInfo:
-            yield Db.batch_insert(orgId, "entities", orgInfo)
+            yield db.batch_insert(orgId, "entities", orgInfo)
         request.redirect('/admin/org')
 
     @defer.inlineCallbacks
@@ -190,7 +190,7 @@ class Admin(base.BaseResource):
             yield renderScriptBlock(request, "admin.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-        orgInfo = yield Db.get_slice(orgId, "entities", ['basic'])
+        orgInfo = yield db.get_slice(orgId, "entities", ['basic'])
         orgInfo = utils.supercolumnsToDict(orgInfo)
 
         args["orgInfo"]= orgInfo
@@ -250,10 +250,10 @@ class Admin(base.BaseResource):
                                     landing, "#mainbar", "set", **args)
 
         args["heading"] = "Admin Console - Blocked Users"
-        cols = yield Db.get_slice(orgId, "blockedUsers")
+        cols = yield db.get_slice(orgId, "blockedUsers")
         blockedUsers = utils.columnsToDict(cols).keys()
 
-        cols = yield Db.multiget_slice(blockedUsers, "entities", ["basic"])
+        cols = yield db.multiget_slice(blockedUsers, "entities", ["basic"])
         userInfo = utils.multiSuperColumnsToDict(cols)
 
         args["entities"] = userInfo

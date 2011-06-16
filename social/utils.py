@@ -20,7 +20,7 @@ from twisted.internet   import defer
 from twisted.python     import log
 from twisted.mail       import smtp
 
-from social             import Db, _, __, Config, errors
+from social             import db, _, __, config, errors
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.constants   import INFINITY
@@ -91,7 +91,7 @@ def getValidEntityId(request, arg, type="user", columns=None):
     if not entityId:
         raise errors.MissingParams()
 
-    entity = yield Db.get_slice(entityId, "entities",
+    entity = yield db.get_slice(entityId, "entities",
                                 ["basic"].extend(columns if columns else []))
     if not entity:
         raise errors.InvalidEntity()
@@ -117,7 +117,7 @@ def getValidItemId(request, arg, type=None, columns=None):
     if not itemId:
         raise errors.MissingParams()
 
-    item = yield Db.get_slice(itemId, "items",
+    item = yield db.get_slice(itemId, "items",
                               ["meta"].extend(columns if columns else []))
     if not item:
         raise errors.InvalidItem()
@@ -147,7 +147,7 @@ def getValidTagId(request, arg):
         raise errors.MissingParams()
 
     orgId = request.getSession(IAuthInfo).organization
-    tag = yield Db.get_slice(orgId, "orgTags", [tagId])
+    tag = yield db.get_slice(orgId, "orgTags", [tagId])
     if not tag:
         raise errors.InvalidTag()
 
@@ -201,33 +201,33 @@ def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
 
 @defer.inlineCallbacks
 def getFollowers(userKey, count=10):
-    cols = yield Db.get_slice(userKey, "followers", count=count)
+    cols = yield db.get_slice(userKey, "followers", count=count)
     defer.returnValue(set(columnsToDict(cols).keys()))
 
 
 @defer.inlineCallbacks
 def getSubscriptions(userKey, count=10):
-    cols = yield Db.get_slice(userKey, "subscriptions", count=count)
+    cols = yield db.get_slice(userKey, "subscriptions", count=count)
     defer.returnValue(set(columnsToDict(cols).keys()))
 
 
 @defer.inlineCallbacks
 def getFriends(userKey, count=10):
-    cols = yield Db.get_slice(userKey, "connections", count=count)
+    cols = yield db.get_slice(userKey, "connections", count=count)
     friends = set(supercolumnsToDict(cols).keys())
     defer.returnValue(set(friends))
 
 
 @defer.inlineCallbacks
 def getCompanyKey(userKey):
-    cols = yield Db.get_slice(userKey, "entities", ["org"], super_column="basic")
+    cols = yield db.get_slice(userKey, "entities", ["org"], super_column="basic")
     cols = columnsToDict(cols)
     defer.returnValue(cols['org'])
 
 
 @defer.inlineCallbacks
 def getCompanyGroups(orgId):
-    cols = yield Db.get_slice(orgId, "orgGroups")
+    cols = yield db.get_slice(orgId, "orgGroups")
     cols = columnsToDict(cols)
     defer.returnValue(cols.keys())
 
@@ -250,7 +250,7 @@ def expandAcl(userKey, acl, convOwnerId=None):
         for groupId in groups[:]:
             if groupId in deny.get("groups", []):
                 groups.remove(groupId)
-        groupMembers = yield Db.multiget_slice(groups,"followers")
+        groupMembers = yield db.multiget_slice(groups,"followers")
         groupMembers = multiColumnsToDict(groupMembers)
         for groupId in groupMembers:
             keys.update([uid for uid in groupMembers[groupId].keys() \
@@ -472,7 +472,7 @@ def uuid1(node=None, clock_seq=None, timestamp=None):
 
 @defer.inlineCallbacks
 def existingUser(emailId):
-    count = yield Db.get_count(emailId, "userAuth")
+    count = yield db.get_count(emailId, "userAuth")
     if count:
         defer.returnValue(True)
     defer.returnValue(False)
@@ -491,10 +491,10 @@ def addUser(emailId, displayName, passwd, orgKey, jobTitle = None, timezone=None
     if timezone:
         userInfo["basic"]["timezone"] = timezone
 
-    yield Db.insert(orgKey, "orgUsers", '', userId)
-    yield Db.batch_insert(userId, "entities", userInfo)
-    yield Db.batch_insert(emailId, "userAuth", userAuthInfo)
-    yield Db.insert(orgKey, "displayNameIndex", "", displayName.lower()+ ":" + userId)
+    yield db.insert(orgKey, "orgUsers", '', userId)
+    yield db.batch_insert(userId, "entities", userInfo)
+    yield db.batch_insert(emailId, "userAuth", userAuthInfo)
+    yield db.insert(orgKey, "displayNameIndex", "", displayName.lower()+ ":" + userId)
 
     defer.returnValue(userId)
 
@@ -503,16 +503,16 @@ def addUser(emailId, displayName, passwd, orgKey, jobTitle = None, timezone=None
 def removeUser(userId, userInfo=None):
 
     if not userInfo:
-        cols = yield Db.get_slice(userId, "entities", ["basic"])
+        cols = yield db.get_slice(userId, "entities", ["basic"])
         userInfo = supercolumnsToDict(cols)
     emailId = userInfo["basic"].get("emailId", None)
     displayName = userInfo["basic"].get("name", None)
     orgKey = userInfo["basic"]["org"]
 
-    yield Db.remove(emailId, "userAuth")
-    yield Db.remove(orgKey, "displayNameIndex", ":".join([displayName.lower(), userId]))
-    yield Db.remove(orgKey, "orgUsers", userId)
-    yield Db.remove(orgKey, "blockedUsers", userId)
+    yield db.remove(emailId, "userAuth")
+    yield db.remove(orgKey, "displayNameIndex", ":".join([displayName.lower(), userId]))
+    yield db.remove(orgKey, "orgUsers", userId)
+    yield db.remove(orgKey, "blockedUsers", userId)
     #unfriend - remove all pending requests
     #clear displayName index
     #clear nameindex
@@ -523,7 +523,7 @@ def removeUser(userId, userInfo=None):
 
 @defer.inlineCallbacks
 def getAdmins(entityId):
-    cols = yield Db.get_slice(entityId, "entities", ["admins"])
+    cols = yield db.get_slice(entityId, "entities", ["admins"])
     admins = supercolumnsToDict(cols).get("admins", {}).keys()
     defer.returnValue(admins)
 
@@ -540,7 +540,7 @@ def isAdmin(userId, entityId):
 @dump_args
 def deleteNameIndex(userKey, name, targetKey):
     if name:
-        yield Db.remove(userKey, "nameIndex", ":".join([name.lower(), targetKey]))
+        yield db.remove(userKey, "nameIndex", ":".join([name.lower(), targetKey]))
 
 
 @profile
@@ -560,7 +560,7 @@ def updateDisplayNameIndex(userKey, targetKeys, newName, oldName):
             colName = newName.lower() + ':' + userKey
             muts[targetKey]['displayNameIndex'][colName] = ''
     if muts:
-        yield Db.batch_mutate(muts)
+        yield db.batch_mutate(muts)
 
 
 @profile
@@ -578,7 +578,7 @@ def updateNameIndex(userKey, targetKeys, newName, oldName):
             colName = newName.lower() + ":" + userKey
             muts[targetKey]['nameIndex'][colName] = ''
     if muts:
-        yield Db.batch_mutate(muts)
+        yield db.batch_mutate(muts)
 
 
 @profile
@@ -591,5 +591,5 @@ def sendmail(toAddr, subject, body, fromAddr='noreply@flocked.in'):
     msg['To'] = toAddr
     message = msg.as_string()
 
-    host = Config.get('SMTP', 'Host')
+    host = config.get('SMTP', 'Host')
     yield smtp.sendmail(host, fromAddr, toAddr, message)

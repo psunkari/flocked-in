@@ -4,7 +4,7 @@ from twisted.internet       import defer
 from twisted.python         import log
 
 from social.isocial         import IAuthInfo
-from social                 import Db, utils
+from social                 import db, utils
 
 class BaseResource(resource.Resource):
     requireAuth = True
@@ -25,7 +25,7 @@ class BaseResource(resource.Resource):
         appchange = True if request.args.has_key('_fp') and self._ajax or\
                             not self._ajax and script else False
 
-        cols = yield Db.multiget_slice([myKey, orgKey], "entities", ["basic"])
+        cols = yield db.multiget_slice([myKey, orgKey], "entities", ["basic"])
         cols = utils.multiSuperColumnsToDict(cols)
 
         me = cols.get(myKey, None)

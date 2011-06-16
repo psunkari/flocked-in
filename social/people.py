@@ -4,7 +4,7 @@ from twisted.internet   import defer
 from twisted.web        import server
 from twisted.python     import log
 
-from social             import Db, utils, base, _, whitelist, blacklist, Config
+from social             import db, utils, base, _, whitelist, blacklist, config
 from social.relations   import Relation
 from social.template    import render, renderScriptBlock
 from social.isocial     import IAuthInfo
@@ -13,8 +13,8 @@ from social.logging     import dump_args, profile
 
 @defer.inlineCallbacks
 def _sendInvitations(myOrgUsers, otherOrgUsers, me, myId, myOrg):
-    rootUrl = Config.get('General', 'URL')
-    brandName = Config.get('Branding', 'Name')
+    rootUrl = config.get('General', 'URL')
+    brandName = config.get('Branding', 'Name')
     myName = me["basic"]["name"]
     myOrgName = myOrg["basic"]["name"]
     deferreds = []
@@ -36,7 +36,7 @@ def _sendInvitations(myOrgUsers, otherOrgUsers, me, myId, myOrg):
         activationUrl = "%(rootUrl)s/signup?email=%(emailId)s&token=%(token)s" % (locals())
         localpart, domainpart = emailId.split('@')
 
-        deferreds.append(Db.insert(domainpart, "invitations", myId, token, emailId))
+        deferreds.append(db.insert(domainpart, "invitations", myId, token, emailId))
         if emailId in otherOrgUsers:
             deferreds.append(utils.sendmail(emailId, otherOrgSubject, otherOrgBody%locals()))
         else:
@@ -56,7 +56,7 @@ def invite(request, rawEmailIds):
 
     myId = authinfo.username
     myOrgId = authinfo.organization
-    entities = yield Db.multiget_slice([myId, myOrgId], "entities",
+    entities = yield db.multiget_slice([myId, myOrgId], "entities",
                                        ["basic", "domains"])
     entities = utils.multiSuperColumnsToDict(entities)
     myOrgDomains = set(entities[myOrgId].get('domains').keys())
@@ -84,7 +84,7 @@ def invite(request, rawEmailIds):
 @defer.inlineCallbacks
 def getPeople(myId, entityId, orgId, start='',
               count=PEOPLE_PER_PAGE, fn=None):
-    cols = yield Db.get_slice(orgId, "blockedUsers")
+    cols = yield db.get_slice(orgId, "blockedUsers")
     blockedUsers = utils.columnsToDict(cols).keys()
     toFetchCount = count + 1
     nextPageStart = None
@@ -92,9 +92,9 @@ def getPeople(myId, entityId, orgId, start='',
     userIds = []
 
     if not fn:
-        d1 = Db.get_slice(entityId, "displayNameIndex",
+        d1 = db.get_slice(entityId, "displayNameIndex",
                           start=start, count=toFetchCount)
-        d2 = Db.get_slice(entityId, "displayNameIndex",
+        d2 = db.get_slice(entityId, "displayNameIndex",
                     start=start, count=toFetchCount, reverse=True)\
                     if start else None
 
@@ -116,7 +116,7 @@ def getPeople(myId, entityId, orgId, start='',
                                 = yield fn(entityId, start, toFetchCount)
         toFetchUsers = userIds
 
-    usersDeferred = Db.multiget_slice(toFetchUsers, "entities", ["basic"])
+    usersDeferred = db.multiget_slice(toFetchUsers, "entities", ["basic"])
     relation = Relation(myId, userIds)
     results = yield defer.DeferredList([usersDeferred,
                                         relation.initFriendsList(),

@@ -6,7 +6,7 @@ from twisted.python     import log
 from twisted.internet   import defer
 from twisted.plugin     import IPlugin
 
-from social             import Db, base, utils, errors
+from social             import db, base, utils, errors
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
 from social.template    import render, renderScriptBlock, getBlock
@@ -21,10 +21,10 @@ class Activity(object):
 
     @defer.inlineCallbacks
     def getReason(self, convId, requesters, userId):
-        conv = yield Db.get_slice(convId, "items", ["meta"])
+        conv = yield db.get_slice(convId, "items", ["meta"])
         conv = utils.supercolumnsToDict(conv)
 
-        cols = yield Db.multiget_slice(requesters, "entities", ["basic"])
+        cols = yield db.multiget_slice(requesters, "entities", ["basic"])
         entities = utils.multiSuperColumnsToDict(cols)
         foo = requesters[0]
         if conv["meta"]["subType"] == "connection":
@@ -59,7 +59,7 @@ class Activity(object):
     @defer.inlineCallbacks
     def delete(self, itemId):
         log.msg("plugin:delete", itemId)
-        yield Db.get_slice(itemId, "entities")
+        yield db.get_slice(itemId, "entities")
 
 
     def getResource(self, isAjax):

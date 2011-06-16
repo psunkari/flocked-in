@@ -13,10 +13,10 @@ from twisted.internet import defer, reactor
 from twisted.python import log
 
 sys.path.append(os.getcwd())
-from social import Config, Db, utils
+from social import config, db, utils
 
 
-KEYSPACE = Config.get("Cassandra", "Keyspace")
+KEYSPACE = config.get("Cassandra", "Keyspace")
 
 
 @defer.inlineCallbacks
@@ -746,16 +746,22 @@ if __name__ == '__main__':
         sys.exit(2)
 
     log.startLogging(sys.stdout)
+    db.startService()
 
     d = None
     for (opt, val) in opts:
         if opt == "-c":
-            d = createColumnFamilies(Db)
+            d = createColumnFamilies(db)
         elif opt == "-d":
-            d = addSampleData(Db)
+            d = addSampleData(db)
         elif opt == "-t" and val == "yes-remove-all-the-data":
-            d = truncateColumnFamilies(Db)
+            d = truncateColumnFamilies(db)
 
     if d:
-        d.addBoth(lambda x: reactor.stop())
+        def finish(x):
+            db.stopService()
+            reactor.stop();
+        d.addErrback(log.err)
+        d.addBoth(finish)
+
         reactor.run()
