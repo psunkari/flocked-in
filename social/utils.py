@@ -98,7 +98,7 @@ def getValidEntityId(request, arg, type="user", columns=None):
 
     entity = supercolumnsToDict(entity)
     basic = entity["basic"]
-    
+
     if type != basic["type"]:
         raise errors.InvalidEntity()
 
@@ -495,6 +495,7 @@ def addUser(emailId, displayName, passwd, orgKey, jobTitle = None, timezone=None
     yield db.batch_insert(userId, "entities", userInfo)
     yield db.batch_insert(emailId, "userAuth", userAuthInfo)
     yield db.insert(orgKey, "displayNameIndex", "", displayName.lower()+ ":" + userId)
+    yield db.insert(orgKey, "nameIndex", "", displayName.lower()+ ":" + userId)
 
     defer.returnValue(userId)
 
