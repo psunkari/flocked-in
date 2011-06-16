@@ -12,6 +12,7 @@ from telephus.cassandra.ttypes import ColumnPath, ColumnParent, Column, SuperCol
 from twisted.internet import defer, reactor
 from twisted.python import log
 
+sys.path.append(os.getcwd())
 from social import Config, Db, utils
 
 
@@ -291,7 +292,7 @@ def addSampleData(client):
                                     'example.com': '',
                                     'example.org': ''
                                 },
-                                'admins': {adminKey: williamKey}})
+                                'admins': {adminKey: ''}})
 
     # Map domains to organization
     yield client.insert('example.com', 'domainOrgMap', '', exampleKey)
