@@ -561,15 +561,9 @@
         <ul>
           <li>
             <label for ="bday"> Date Of Birth</label>
-            <%
-             birthday = personalInfo.get("birthday", "")
-             dob =
-             dom =
-             doy =
-            %>
-            ${self.selectDay("dob_day", "Day", dob)}
-            ${self.selectMonth("dob_mon", "Month", dom)}
-            ${self.selectYear("dob_year", "Year", doy)}
+            ${self.selectDay("dob_day", "Day")}
+            ${self.selectMonth("dob_mon", "Month")}
+            ${self.selectYear("dob_year", "Year")}
           </li>
           <li>
             <label for="p_email"> Email</label>
@@ -642,10 +636,10 @@
 </form>
 </%def>
 
-<%def name="selectMonth(name)">
+<%def name="selectMonth(name, label)">
 
   <select name="${name}" >
-        <option value="">Month</option>
+        <option value="">${label}</option>
         <option value="01">January</option>
         <option value="02">February</option>
         <option value="04">April</option>
@@ -659,10 +653,9 @@
         <option value="12">December</option>
     </select>
 </%def>
-<%def name="selectDay(name)">
-
+<%def name="selectDay(name, label)">
   <select name="${name}">
-    <option value="">day</option>
+    <option value="">${label}</option>
     <option value="1">1</option>
     <option value="2">2</option>
     <option value="3">3</option>
@@ -696,9 +689,9 @@
     <option value="31">31</option>
   </select>
 </%def>
-<%def name="selectYear(name, t='year')">
+<%def name="selectYear(name, label)">
   <select name="${name}">
-    <option value="">${t}</option>
+    <option value="">${label}</option>
     <option value="2011">2011</option>
     <option value="2010">2010</option>
     <option value="2009">2009</option>
