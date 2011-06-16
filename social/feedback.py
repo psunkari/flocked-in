@@ -2,7 +2,7 @@ from twisted.internet   import defer
 from twisted.python     import log
 from twisted.web        import server
 
-from social             import Db, utils, base, tags, _, Config
+from social             import Db, utils, base, tags, _, Config, errors
 from social.template    import render, renderScriptBlock
 from social.isocial     import IAuthInfo
 
@@ -26,7 +26,7 @@ class FeedbackResource(base.BaseResource):
         mood = utils.getRequestArg(request, 'mood')
         if not mood or not comment:
             raise errors.MissingParams()
-        
+
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         tagName = 'feedback'
         moodTagName = 'feedback-'+mood
@@ -79,4 +79,3 @@ class FeedbackResource(base.BaseResource):
     def render_POST(self, request):
         d = self.postFeedback(request)
         return self._epilogue(request, d)
-
