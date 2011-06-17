@@ -364,7 +364,7 @@ class GroupsResource(base.BaseResource):
                                     landing, "#mainbar", "set", **args)
         if script:
              yield renderScriptBlock(request, "groups.mako", "createGroup",
-                                    landing, "#center-content", "set", **args)
+                                    landing, "#add-user-wrapper", "set", **args)
 
 
     @profile

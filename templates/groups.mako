@@ -26,6 +26,7 @@
           <div id="titlebar" class="titlebar">
             ${self.titlebar()}
           </div>
+          <div id="add-user-wrapper"></div>
         </div>
         <div class="center-contents" id="center-content">
           <div id="groups-view" class="viewbar">
@@ -214,9 +215,10 @@
             <label for="dp">Group Logo</label>
             <input type="file" id="dp" name="dp" accept="image/jpx, image/png, image/gif"/>
       </ul>
-    </div>
     <div class="styledform-buttons">
         <input type="submit" name="userInfo_submit" value="Save" class="button default"/>
+        <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">Cancel</button>
+    </div>
     </div>
     % if myKey:
     <input type="hidden" value = ${myKey} name="id" />
