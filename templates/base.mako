@@ -1,11 +1,12 @@
-<%! from social import utils, _, __ %>
+<%! from social import utils, config, _, __ %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <%def name="title()">
-  ${_('Synovel SocialNet')}
+  ${config.get('Branding', 'Name')} &mdash; ${_('Private, Secure and Free Social Network for Enterprises')}
 </%def>
+
 <%def name="layout()">
 </%def>
 
