@@ -6,9 +6,11 @@ body, html {
   padding: 0px !important;
   overflow: auto;
   height: 100%;
+  color: #333;
+  font-size: 12px;
 }
 
-td {
+td, label {
   font-family: "lucida grande",tahoma,verdana,arial,sans-serif;
   font-size: 90%;
 }
@@ -19,78 +21,109 @@ a:link, a:visited {
 }
 
 #wrapper {
-  width: 100%;
+  width: 600px;
   margin: 10px auto;
 }
-
-#inner {
-  width: 750px;
-  margin: 10px auto;
-}
-
 #header {
   padding: 15px;
-  width: 750px;
-  margin: 20px auto 0;
 }
-
-.title {
-  font-size: 110%;
-  padding-bottom: 15px;
-  font-weight: bold;
-}
-
-#signin-table, #signup-table {
-  width: 320px;
-}
-
-#signin, #signup {
-  padding: 20px;
-  min-height: 180px;
+#main-wrapper {
   border: 1px solid #3D85C6;
-  background: #E8EEFA;
-  border-radius: 3px;
-  box-shadow: 4px 3px 8px #CCC;
-}
-#signin {
-  float: left;
-}
-#signup {
-  float: right;
-}
-
-#signin-help, #signup-help, #signup-info {
-  padding-top: 10px;
-  font-size: 12px;
-  text-align: center;
-}
-
-#userlabel, #passlabel, #rememberfield, #emaillabel {
-  text-align: right;
-}
-#userfield, #passfield, #rememberlabel, #emailfield {
-  width: 225px;
-}
-#username, #password, #user1 {
-  width: 225px;
-}
-#signin-submitbox, #signup-submitbox {
-  text-align: right;
-}
-
-#clear {
+  border-radius: 4px;
   clear: both;
 }
-
-#footer {
-    clear: both;
-    color: #BBBBBB;
-    margin-left: 180px;
-    text-align: right;
-    width: 575px;
+#footer-wrapper {
+  color: #AAA;
+  text-align: right;
+  font-size: 11px;
+}
+#footer-wrapper:hover {
+  color: #333;
 }
 
-.signin-error {
-  color: #C60000;
-  text-align: center;
+#steps {
+  background: #C385C6 url(/rsrcs/img/about-banner-bg.png) repeat-x center center;
+  border-radius: 2px 2px 0 0;
+  border-bottom: 1px solid #3D85C6;
+}
+#views-list {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  display: inline-block;
+}
+#views-list > li {
+  float: left;
+  display: block;
+  padding: 15px 20px;
+  background: transparent url(/rsrcs/img/wiz-title-bg.png) left middle no-repeat;
+  color: #ACF;
+  font-size: 20px;
+}
+#views-list > li.last {
+  background: transparent;
+}
+#views-list > li.selected {
+  background: transparent url(/rsrcs/img/wiz-title-selected-bg.png) left middle no-repeat;
+  color: white;
+}
+
+#center {
+  padding: 20px;
+}
+
+
+/*
+ * Signup and signin forms
+ */
+
+.styledform {
+  width: 100%;
+  display: table;
+}
+
+.styledform ul {
+  list-style-type: none;
+  margin: 0px;
+  padding-left: 15px;
+}
+
+.styledform li {
+  padding: 5px 0px;
+  min-height: 26px;
+}
+
+.styledform label {
+  float: left;
+  font-size: 12px;
+  width: 15em;
+  display: inline-block;
+  line-height: 1.5em;
+  padding: 2px;
+  margin-right: 10px;
+  text-align: right;
+}
+
+.styledform input[type=text],
+.styledform input[type=password]{
+  width:20em;
+  font-size:12px;
+  background-color: white;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #CCC #999 #999 #CCC;
+  box-shadow: 1px 1px 0 #CCC;
+  padding: 2px;
+}
+
+.styledform-buttons {
+  border-top: 1px solid #C3D9FF;
+  padding-top: 4px;
+  margin: 20px 0;
+  text-align: right;
+}
+.styledform-buttons .button {
+  font-size: 14px;
+  font-weight: bold;
+  padding: 3px 8px;
 }
