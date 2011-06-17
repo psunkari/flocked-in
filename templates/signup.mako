@@ -6,7 +6,7 @@
 
 <head>
   <title>${config.get('Branding', 'Name')} &mdash; ${_('Private, Secure and Free Social Network for Enterprises')}</title>
-  <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/signin.css"/>
+  <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/about.css"/>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/widgets.css"/>
   <script type = "text/javascript">
   %if view == 'userinfo':
@@ -40,12 +40,12 @@
 </head>
 
 <body>
-  <div id="wrapper">
   <div id="header">
     <img src="/rsrcs/img/synovel.png" alt="Synovel">
   </div>
-  <div id="main-wrapper">
-    <div id="steps">
+
+  <div id="wrapper">
+    <div id="steps-banner" class="title-banner banner">
       <ul id="views-list">
         <%
           views = [('welcome', 'Welcome'), ('userinfo', 'About you'), ('invite', 'Invite co-workers')]
@@ -65,7 +65,7 @@
         %endfor
       </ul>
     </div>
-    <div id="center">
+    <div id="main">
       %if view == 'welcome':
         ${self.welcome()}
       %elif view == 'userinfo':
@@ -75,11 +75,12 @@
       %endif
     </div>
   </div>
-  <div id="footer-wrapper">
-    ${_('&copy;2011 Synovel Software')}
-    &nbsp;&#183;&nbsp;
-    <a href="/about/contact">${_('Contact us')}</a>
-  </div>
+  <div id="footer">
+    <div id="footer-contents" class="contents">
+      ${_('&copy;2011 Synovel Software')}
+      &nbsp;&#183;&nbsp;
+      <a href="/about/contact">${_('Contact us')}</a>
+    </div>
   </div>
 </body>
 
@@ -87,7 +88,7 @@
   <form action="/signup/create" method="POST" onsubmit="return validate()" >
     <input id="email" type="hidden" name="email" value="${emailId}"/>
     <input id="token" type="hidden" name="token" value="${token}"/>
-    <div class="styledform">
+    <div id="main-contents" class="styledform contents" style="width: 600px; margin: 20px auto;">
       <ul>
         <li>
           <label for="name">${_('Name')}</label>
@@ -128,7 +129,7 @@
 
 <%def name="invitePeople()">
   <form action="/signup/invite" method="POST">
-    <div class="styledform">
+    <div id="main-contents" class="styledform contents" style="width: 600px; margin: 20px auto;">
       <ul>
         %for index in range(5):
           <li>
