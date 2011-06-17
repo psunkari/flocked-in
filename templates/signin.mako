@@ -6,12 +6,11 @@
 
 <head>
   <title>${config.get('Branding', 'Name')} &mdash; ${_('Private, Secure and Free Social Network for Enterprises')}</title>
-  <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/signin.css"/>
+  <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/about.css"/>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/widgets.css"/>
 </head>
 
 <body>
-  <div id="wrapper">
   <div id="header">
     <img alt="Synovel" src="/rsrcs/img/synovel.png"/>
     <ul id="header-links">
@@ -19,18 +18,19 @@
       <li><a href="/">Signup</a></li>
     </ul>
   </div>
-  <div id="main-wrapper">
-    <div id="steps">
+
+  <div id="wrapper">
+    <div id="title-banner" class="title-banner banner">
       <ul id="views-list">
         <li class="selected last"><span>${_('Signin to your account')}</span></li>
       </ul>
     </div>
-    <div id="center">
+    <div id="main">
       %if reason:
         <span class="error">${reason}</span>
       %endif
       <form action="/signin" method="POST">
-      <div class="styledform">
+      <div id="main-contents" class="styledform contents" style="width: 600px; margin: 20px auto;">
         <ul>
           <li>
             <label for="username">${_('Username')}</label>
@@ -56,11 +56,12 @@
       </form>
     </div>
   </div>
-  <div id="footer-wrapper">
-    ${_('&copy;2011 Synovel Software')}
-    &nbsp;&#183;&nbsp;
-    <a href="/about/contact">${_('Contact us')}</a>
-  </div>
+  <div id="footer">
+    <div id="footer-contents" class="contents">
+      ${_('&copy;2011 Synovel Software')}
+      &nbsp;&#183;&nbsp;
+      <a href="/about/contact">${_('Contact us')}</a>
+    </div>
   </div>
 </body>
 </html>

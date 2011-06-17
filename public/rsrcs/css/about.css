@@ -5,11 +5,11 @@ html>body {
 body {
     margin: 0;
     padding: 0;
-    background-color: #EEE;
     font-family: "lucida grande",tahoma,verdana,arial,sans-serif;
     color: #333;
     font-size: 16px;
     line-height: 1.5em;
+    background-color: #EEE;
 }
 
 a:link, a:visited {
@@ -18,25 +18,27 @@ a:link, a:visited {
 }
 
 #wrapper {
-    width: 900px;
-    padding: 0 20px 20px;
-    margin: 20px auto 5px;
+    width: 920px;
+    clear: both;
+    margin: 0 auto 5px;
     background-color: white;
     border: 1px solid #CCC;
-    box-shadow: 0 0 5px #CCC;
-    -moz-box-shadow: 0 0 5px #CCC;
-    -webkit-box-shadow: 0 0 5px #CCC;
+    border-radius: 4px;
 }
 #footer {
-    width: 940px;
+    width: 920px;
     margin: 0 auto;
 }
-
 #header {
-    height: 50px;
-    padding: 2px 0 0 0;
+    width: 900px;
+    margin: 0 auto;
+    padding: 10px;
 }
 
+
+/*
+ * Header and the main navigation links
+ */
 #sitelogo {
     height: 35px;
     width: 300px;
@@ -45,10 +47,12 @@ a:link, a:visited {
     float: left;
 }
 #header-links {
+    display: inline-block;
     list-style-type: none;
+    float: right;
     margin: 0;
     padding: 0;
-    display: inline-block;
+    font-size: 14px;
 }
 #header-links > li {
     float: left;
@@ -63,29 +67,37 @@ a:link, a:visited {
 }
 
 
-#banner {
-    margin: 0 -30px;
-    box-shadow: 0 0 10px #CCC;
-    -moz-box-shadow: 0 0 10px #CCC;
-    -webkit-box-shadow: 0 0 10px #CCC;
-}
-#banner-contents, #home-banner-contents {
-    background: #C385C6 url(/rsrcs/img/about-banner-bg.png) repeat-x top;
-    -moz-box-shadow: inset 0 0 5px #555;
-    -webkit-box-shadow: inset 0 0 5px #555;
-    box-shadow: inset 0 0 5px #555;
+/*
+ * Banners and titles on the top
+ */
+.banner {
+    background: #3D85C6 url(/rsrcs/img/about-banner-bg.png) repeat-x;
     color: white;
-    padding: 40px 30px;
     line-height: 2em;
     text-align: center;
+    background-position: center center;
+    border-width: 0 1px;
+    border-style: solid;
+    border-color: #3D85C6;
+    border-radius: 3px 3px 0 0;
+    -moz-border-radius: 3px 3px 0 0;
+    -webkit-border-radius: 3px 3px 0 0;
 }
-#home-banner-contents {
+.title-banner {
+    padding: 15px;
+}
+.signup-banner {
+    padding: 25px 15px;
+}
+
+#home-banner-contents {  /* banner on the homepage */
     display: table-cell;
     vertical-align: middle;
     height: 370px;
     width: 900px;
+    padding: 40px 30px;
+    background-position: center bottom;
 }
-
 #caption {
     font-size: 25px;
     margin-bottom: 30px;
@@ -139,14 +151,118 @@ a:link, a:visited {
     filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#f47a20', endColorstr='#faa51a');
 }
 
+
+/*
+ * Main contents
+ */
+
+#main {
+    padding: 0px 20px;
+}
+#main-contents {
+    margin: 20px 0;
+}
+
+
+/*
+ * Common footer
+ */
 #footer-contents {
     color: #AAA;
     font-size: 11px;
+    text-align: right;
 }
 #footer-contents:hover, #footer-contents:focus {
     color: #333;
 }
 
-.contents-right {
-    float: right;
+
+/*
+ * Signin and signup wizards
+ */
+
+#steps {
+  background: #C385C6 url(/rsrcs/img/about-banner-bg.png) repeat-x center center;
+  border-radius: 2px 2px 0 0;
+  border-bottom: 1px solid #3D85C6;
 }
+#views-list {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  display: inline-block;
+}
+#views-list > li {
+  float: left;
+  display: block;
+  padding: 0px 20px;
+  background: transparent url(/rsrcs/img/wiz-title-bg.png) left middle no-repeat;
+  color: #ACF;
+  font-size: 20px;
+}
+#views-list > li.last {
+  background: transparent;
+}
+#views-list > li.selected {
+  background: transparent url(/rsrcs/img/wiz-title-selected-bg.png) left middle no-repeat;
+  color: white;
+}
+
+
+/*
+ * Styling for forms (copied from social.css)
+ */
+
+.styledform {
+  width: 100%;
+  display: table;
+}
+
+.styledform ul {
+  list-style-type: none;
+  margin: 0px;
+  padding-left: 15px;
+}
+
+.styledform li {
+  padding: 5px 0px;
+  min-height: 26px;
+}
+
+.styledform label {
+  float: left;
+  font-size: 12px;
+  width: 15em;
+  display: inline-block;
+  line-height: 1.5em;
+  padding: 2px;
+  margin-right: 10px;
+  text-align: right;
+}
+
+.styledform input[type=text],
+.styledform input[type=password],
+.styledform select,
+.styledform textarea {
+  width:20em;
+  font-size:12px;
+  background-color: white;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #CCC #999 #999 #CCC;
+  box-shadow: 1px 1px 0 #CCC;
+  padding: 2px;
+}
+
+.styledform-buttons {
+  border-top: 1px solid #C3D9FF;
+  padding-top: 4px;
+  margin: 20px 0;
+  text-align: right;
+}
+.styledform-buttons .button {
+  font-size: 14px;
+  font-weight: bold;
+  padding: 3px 8px;
+}
+
