@@ -105,7 +105,9 @@ a:link, a:visited {
 }
 
 .styledform input[type=text],
-.styledform input[type=password]{
+.styledform input[type=password],
+.styledform select,
+.styledform textarea {
   width:20em;
   font-size:12px;
   background-color: white;

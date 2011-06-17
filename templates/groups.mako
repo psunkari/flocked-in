@@ -200,7 +200,7 @@
 
 <%def name="createGroup()">
   <form action="/groups/create" method="post"  enctype="multipart/form-data">
-    <div class="edit-profile">
+    <div class="styledform">
       <ul>
         <li>
             <label for="name">Group Name</label>
@@ -220,7 +220,7 @@
             <input type="file" id="dp" name="dp" accept="image/jpx, image/png, image/gif"/>
       </ul>
     </div>
-    <div class="profile-save-wrapper">
+    <div class="styledform-buttons">
         <input type="submit" name="userInfo_submit" value="Save" class="button default"/>
     </div>
     % if myKey:
@@ -233,7 +233,7 @@
 
 <%def name="inviteMembers()">
   <form action="/groups/invite" class="ajax" method="post"  >
-    <div class="edit-profile">
+    <div class="styledform">
       <ul>
         <li><label for="name"> EmailId: </label></li>
         <li><input type="text" id="uid" name="uid" /></li>

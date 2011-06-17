@@ -402,7 +402,7 @@
   myTimezone = me.get("basic", {}).get("timezone", "")
   %>
   <form action="/profile/edit" method="post"  enctype="multipart/form-data">
-    <div class="edit-profile">
+    <div class="styledform">
       <ul>
         <li>
             <label for="name"> Display Name</label>
@@ -445,7 +445,7 @@
         %endif
       </ul>
     </div>
-    <div class="profile-save-wrapper">
+    <div class="styledform-buttons">
         <input type="submit" class="button default" name="userInfo_submit" value="Save"/>
     </div>
   </form>
@@ -458,7 +458,7 @@
   %endif
 </div>
 <form action="/profile/changePasswd" method="post"  enctype="multipart/form-data">
-  <div class="edit-profile">
+  <div class="styledform">
     <ul>
       <li>
         <label for="curr_passwd"> Current Password</label>
@@ -475,7 +475,7 @@
     </ul>
     <input type="hidden" id = 'dt' name="dt" value="passwd"/>
   </div>
-  <div class="profile-save-wrapper">
+  <div class="styledform-buttons">
     <input type="submit" class="button default" name="userInfo_submit" value="Save"/>
   </div>
 </form>
@@ -483,7 +483,7 @@
 
 <%def name="editWork()">
 <form action="/profile/edit" method="post"  enctype="multipart/form-data">
-    <div class="edit-profile">
+    <div class="styledform">
         <div id="work">
           <div>
             <legend>Current Work</legend>
@@ -543,7 +543,7 @@
           </div>
       </div>
     </div>
-    <div class="profile-save-wrapper">
+    <div class="styledform-buttons">
         <input type="submit" class="button default" name="userInfo_submit" value="Save"/>
     </div>
     % if emailId and emailId[0]:
@@ -557,7 +557,7 @@
 
 <%def name="editPersonal()">
 <form action="/profile/edit" method="post"  enctype="multipart/form-data">
-    <div class="edit-profile">
+    <div class="styledform">
       <div id="personal">
         <ul>
           <li>
@@ -607,7 +607,7 @@
         <input type="hidden" value = ${myKey} name="id" />
         %endif
     </div>
-    <div class="profile-save-wrapper">
+    <div class="styledform-buttons">
         <input type="submit" class="button default" name="userInfo_submit" value="Save"/>
     </div>
   </form>
@@ -615,7 +615,7 @@
 
 <%def name="editContact()">
 <form action="/profile/edit" method="post"  enctype="multipart/form-data">
-    <div class="edit-profile">
+    <div class="styledform">
       <div id="contacts">
         <ul>
             <li>
@@ -636,7 +636,7 @@
             </li>
         </ul>
       </div>
-      <div class="profile-save-wrapper">
+      <div class="styledform-buttons">
           <input type="submit" class="button default" name="userInfo_submit" value="Save"/>
       </div>
     </div>
