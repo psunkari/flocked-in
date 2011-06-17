@@ -1,11 +1,11 @@
-<%! from gettext import gettext as _ %>
+<%! from social import utils, config, _, __ %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 <html xmlns="http://www.w3.org/1999/xhtml">
 
 <head>
-  <title>${_('Synovel SocialNet')}</title>
+  <title>${config.get('Branding', 'Name')} &mdash; ${_('Private, Secure and Free Social Network for Enterprises')}</title>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/signin.css"/>
 </head>
 
