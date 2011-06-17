@@ -601,6 +601,8 @@ class ProfileResource(base.BaseResource):
                 if int(dob_day) in range(1, 31) and \
                     int(dob_mon) in range(1, 12) and \
                         int(dob_year) in range(1901, 2099):
+                    if int(dob_mon) < 10:
+                        dob_mon = "%02d" %int(dob_mon)
                     userInfo["personal"]["birthday"] = "%s%s%s"%(dob_year, dob_mon, dob_day)
 
         employer = utils.getRequestArg(request, "employer")
