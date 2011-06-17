@@ -1114,94 +1114,10 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     border: 1px solid #DD3C10 !important;
 }
 
-.signup-menu ul{
-    float: right;
-    width: 80%;
-    margin: 0px;
-    padding: 0px;
-    text-decoration: None;
-    border-right: 1px solid white
-}
 
-.signup-menu-selected {
-    background-color: #C3D9FF;
-}
-.signup menu li {
-    display: inline;
-    height: 25px;
-    width: 40px;
-}
-.signup {
-    width: 370px;
-    height: 250px;
-    float: left;
-    border: 1px solid #C3D9FF;
-    border-left: 0px;
-    padding-top: 5px;
-    margin-top: 5px;
-    display: table;
-    background:#E8EEFA none repeat scroll 0 0;
-}
-
-.signup menu {
-    display: table-caption;
-    height: 20px;
-    margin: 20px;
-}
-.signup ul {
-    padding: 2px;
-    list-style: none;
-    display: table-row;
-}
-.signup li {
-    height: 25px;
-    width: 350px;
-    padding: 2px;
-    display: list-item;
-    float: left;
-}
-.signup label {
-    marign-left: 5px;
-    padding-right: 5px;
-    width: 80px;
-    height: 25px;
-    text-align: right;
-    float: left;
-    font-weight: bold;
-}
-.signup input{
-    width: 200px;
-    font-size:12px;
-    background-color: white;
-    border: 1px solid #C3D9FF;
-    padding: 2px;
-}
-.signup select{
-    width: 205px;
-    font-size:12px;
-    background-color: white;
-    border: 1px solid #C3D9FF;
-    padding: 2px;
-}
-.signup h4, icons{
-    padding-left: 20px;
-    font-size: 14px;
-    margin-bottom: 5px;
-}
-.icons {
-    padding-left: 20px;
-    font-size: 14px;
-}
-
-.signup-save-wrapper {
-    text-align: right;
-    float: right;
-    display: table-footer-group;
-    padding: 5px;
-    width: 150px;
-}
-
-/*Styling for Admin page*/
+/*
+ * Styling for Admin page
+ */
 
 #add-user-wrapper {
     background-color:white;

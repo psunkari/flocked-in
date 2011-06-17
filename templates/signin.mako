@@ -7,94 +7,56 @@
 <head>
   <title>${config.get('Branding', 'Name')} &mdash; ${_('Private, Secure and Free Social Network for Enterprises')}</title>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/signin.css"/>
+  <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/widgets.css"/>
 </head>
 
 <body>
+  <div id="wrapper">
   <div id="header">
     <img alt="Synovel" src="/rsrcs/img/synovel.png"/>
   </div>
-  <div id="wrapper">
-    <div id="inner">
+  <div id="main-wrapper">
+    <div id="steps">
+      <ul id="views-list">
+        <li class="selected last"><span>${_('Signin to your account')}</span></li>
+      </ul>
+    </div>
+    <div id="center">
+      %if reason:
+        <span class="error">${reason}</span>
+      %endif
       <form action="/signin" method="POST">
-      <div id="signin">
-        <table id="signin-table" cellspacing="0" cellpadding="3" border="0" align="center">
-          <tr>
-            <td colspan="2" class="title">
-              ${_('Signin to your account')}
-            </td>
-          </tr>
-          %if reason:
-          <tr>
-            <td colspan="2" class="signin-error">
-              <span class="signin-error">${reason}</span>
-            </td>
-          </tr>
+      <div class="styledform">
+        <ul>
+          <li>
+            <label for="username">${_('Username')}</label>
+            <input id="username" type="text" class="textfield" name="u"></input>
+          </li>
+          <li>
+            <label for="password">${_('Password')}</label></td>
+            <input id="password" type="password" class="textfield" name="p"></input></td>
+          </li>
+          <li>
+            <input type="checkbox" id="remember" checked="true" name="remember"/>
+            <label for="remember">${_('Remember me')}</label>
+          </li>
+        </ul>
+        <div class="styledform-buttons">
+          %if redirect:
+            <input type="hidden" id="_r" value="${redirect}" name="_r"/>
           %endif
-          <tr>
-            <td id="userlabel"><label for="username">${_('Username')}:</label></td>
-            <td id="userfield"><input id="username" type="text" class="textfield" name="u"></input></td>
-          </tr>
-          <tr>
-            <td id="passlabel"><label for="password">${_('Password')}:</label></td>
-            <td id="passfield"><input id="password" type="password" class="textfield" name="p"></input></td>
-          </tr>
-          <tr>
-            <td id="rememberfield"><input type="checkbox" id="remember" checked="true" name="remember"/></td>
-            <td id="rememberlabel"><label for="remember">${_('Keep me logged in')}</label></td>
-          </tr>
-          <tr>
-            <td colspan="2" id="signin-submitbox">
-              %if redirect:
-              <input type="hidden" id="_r" value="${redirect}" name="_r"/>
-              %endif
-              <input type="submit" id="submit" value="${_('Sign in')}"/>
-            </td>
-          </tr>
-          <tr>
-            <td colspan="2" id="signin-help">
-              <a href="/about/support/signin">${_('Need help signing in?')}</a>
-            </td>
-          </tr>
-        </table>
+          <a href="/about/support/signin">${_('Need help signing in?')}</a>&nbsp;&nbsp;&nbsp;
+          <input type="submit" class="default button" id="submit" value="${_('Sign in')}"/>
+        </div>
       </div>
       </form>
-      <form action="/signup/signup" method="POST">
-      <div id="signup">
-        <table id="signup-table" cellspacing="0" cellpadding="3" border="0" align="center">
-          <tr>
-            <td colspan="2" class="title">
-              Create a new account
-            </td>
-          </tr>
-          <tr>
-            <td id="emaillabel"><label for="emailId">${_('Email')}</label></td>
-            <td id="emailfield"><input id="emailId" type="text" class="textfield" name="emailId"></input></td>
-
-          </tr>
-          <tr>
-            <td colspan="2" id="signup-submitbox"><input type="submit" id="submit" value="${_('Sign Up')}"/>
-          </tr>
-          <tr>
-            <td colspan="2" id="signup-info">
-              Synovel provides a secure, private social network for your company.
-              A valid company email address is required.
-            </td>
-          </tr>
-          <tr>
-            <td colspan="2" id="signup-help">
-              <a href="/about/support/signup">${_('Know more')}</a>
-            </td>
-          </tr>
-        </table>
-      </div>
-      </form>
-      <div id="clear"></div>
     </div>
   </div>
-  <div id="footer">
+  <div id="footer-wrapper">
     ${_('&copy;2011 Synovel Software')}
     &nbsp;&#183;&nbsp;
-    <a href="/about/contact">${_('Contact')}</a>
+    <a href="/about/contact">${_('Contact us')}</a>
+  </div>
   </div>
 </body>
 </html>
