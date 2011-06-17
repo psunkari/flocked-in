@@ -2,8 +2,7 @@ html>body {
     overflow-y: scroll;
 }
 
-body
-{
+body {
     margin: 0;
     padding: 0;
     background-color: #EEE;
@@ -104,12 +103,9 @@ a:link, a:visited {
     font-size: 18px;
     padding: 5px;
     border-radius: 3px;
-    height: 30px;
     -moz-box-shadow: 0 1px 3px #555;
     -webkit-box-shadow: 0 1px 3px #555;
     box-shadow: 0 1px 3px #555;
-    position: relative;
-    top: -1px;
 }
 #signup-submit {
     color: #fef4e9;
@@ -119,9 +115,9 @@ a:link, a:visited {
     background: -moz-linear-gradient(top,  #faa51a,  #f47a20);
     filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#faa51a', endColorstr='#f47a20');
     width: 125px;
-    height: 30px;
-    line-height: 1;
+    padding: 4px;
     font-size: 18px;
+    line-height: 24px;
     border-radius: 3px;
     -moz-border-radius: 3px;
     -webkit-border-radius: 3px;
