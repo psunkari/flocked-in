@@ -70,18 +70,32 @@
   %if groupId:
     <div class="sidebar-chunk">
     %if myKey in groupAdmins:
-      <div class="sidebar-title">${_("Manage group")}</div>
+      <div class="sidebar-title">${_("Manage")}</div>
     %else:
       <div class="sidebar-title">${_("Group")}</div>
     %endif
       <ul class="v-links">
         %if myKey in groupAdmins:
-          <li><a class="ajax" href="/groups/pending?id=${groupId}">${_('Pending requests')}</a></li>
-          <li><a class="ajax" href="/groups/invite?id=${groupId}">${_('Invite more people')}</a></li>
+          <li><a class="ajax" href="/groups/pending?id=${groupId}">${_('Pending Requests')}</a></li>
         %endif
-        <li><a class="ajax" href="/groups/members?id=${groupId}">${_('Members list')}</a></li>
+        <li><a class="ajax" href="/groups/members?id=${groupId}">${_('Members List')}</a></li>
       </ul>
     </div>
+    %if myKey in groupAdmins:
+    <div class="invite-input-block">
+        <div class="sidebar-chunk">
+            <div class="sidebar-title">${_("Invite")}</div>
+            <form method="post" action="/groups/invite" class="ajax" autocomplete="off">
+              <input type="hidden" name="invitee" id="group_invitee"/>
+              <input type="hidden" value = ${groupId} name="id" />
+              <div class="input-wrap">
+                <input type="text" id="group_add_invitee" placeHolder="Invite your colleague to this group"/>
+              </div>
+              <input type="hidden" name="from" value="sidebar"/>
+            </form>
+        </div>
+    </div>
+    %endif
   %endif
 </%def>
 

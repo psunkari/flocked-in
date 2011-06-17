@@ -470,6 +470,7 @@ class GroupsResource(base.BaseResource):
         start = utils.getRequestArg(request, 'start') or ''
 
         fromFetchMore = ((not landing) and (not appchange) and start)
+        args["menuId"] = "groups"
 
         if script and landing:
             yield render(request,"groups.mako", **args)
@@ -492,15 +493,20 @@ class GroupsResource(base.BaseResource):
         if script:
             yield renderScriptBlock(request, "groups.mako", "titlebar",
                                     landing, "#titlebar", "set", **args)
-            if fromFetchMore:
-                yield renderScriptBlock(request, "groups.mako",
-                                        "displayGroupMembers", landing,
-                                        "#next-load-wrapper", "replace", True,
-                                        handlers={}, **args)
-            else:
-                yield renderScriptBlock(request, "groups.mako",
-                                        "displayGroupMembers", landing,
-                                        "#groups-wrapper", "set", **args)
+            yield renderScriptBlock(request, "groups.mako", "listGroupMembers",
+                                    landing, "#groups-wrapper", "set", **args)
+            yield renderScriptBlock(request, "groups.mako", "paging",
+                                landing, "#groups-paging", "set", **args)
+
+            #if fromFetchMore:
+            #    yield renderScriptBlock(request, "groups.mako",
+            #                            "displayGroupMembers", landing,
+            #                            "#next-load-wrapper", "replace", True,
+            #                            handlers={}, **args)
+            #else:
+            #    yield renderScriptBlock(request, "groups.mako",
+            #                            "displayGroupMembers", landing,
+            #                            "#groups-wrapper", "set", **args)
 
 
     @profile
@@ -512,6 +518,8 @@ class GroupsResource(base.BaseResource):
 
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                       columns=["admins"])
+        args["menuId"] = "groups"
+
         if script and landing:
             yield render(request,"groups.mako", **args)
         if script and appchange:
@@ -531,6 +539,7 @@ class GroupsResource(base.BaseResource):
 
         args["heading"] = "Pending Requests"
         args["groupId"] = groupId
+
         if script:
             yield renderScriptBlock(request, "groups.mako", "titlebar",
                                     landing, "#titlebar", "set", **args)
@@ -546,11 +555,11 @@ class GroupsResource(base.BaseResource):
 
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                       columns=["admins"])
-        emailId = utils.getRequestArg(request, "uid")
-        cols = yield db.get_slice(emailId, "userAuth", ["user"])
-        if not cols:
-            raise errors.InvalidRequest()
-        userId = cols[0].column.value
+        userId = utils.getRequestArg(request, "invitee")
+        #cols = yield db.get_slice(emailId, "userAuth", ["user"])
+        #if not cols:
+        #    raise errors.InvalidRequest()
+        #userId = cols[0].column.value
         args["groupId"] = groupId
         args["heading"] = group["basic"]["name"]
 
@@ -563,7 +572,11 @@ class GroupsResource(base.BaseResource):
         if myKey in group['admins']:
             #TODO: dont add banned users
             yield self._addMember(request, groupId, userId, myOrgId)
-            yield self._listGroupMembers(request)
+            #yield self._listGroupMembers(request)
+            refreshFeedScript = """
+                $("#group_add_invitee").attr("value", "")
+                """
+            request.write(refreshFeedScript)
 
 
     @defer.inlineCallbacks
@@ -603,8 +616,8 @@ class GroupsResource(base.BaseResource):
             d = self._listPendingSubscriptions(request)
         elif segmentCount == 1 and request.postpath[0] == "unblock":
             d = self._unBlockUser(request)
-        elif segmentCount == 1 and request.postpath[0] == "invite":
-            d = self._renderInviteMembers(request)
+        #elif segmentCount == 1 and request.postpath[0] == "invite":
+        #    d = self._renderInviteMembers(request)
         return self._epilogue(request, d)
 
 
