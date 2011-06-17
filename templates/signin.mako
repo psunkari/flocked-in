@@ -14,6 +14,10 @@
   <div id="wrapper">
   <div id="header">
     <img alt="Synovel" src="/rsrcs/img/synovel.png"/>
+    <ul id="header-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/">Signup</a></li>
+    </ul>
   </div>
   <div id="main-wrapper">
     <div id="steps">

@@ -127,3 +127,17 @@ a:link, a:visited {
   font-weight: bold;
   padding: 3px 8px;
 }
+
+#header-links {
+  display: inline-block;
+  list-style-type: none;
+  float: right;
+  margin: 10px 0;
+  padding: 0;
+  font-size: 14px;
+}
+#header-links li {
+  float: left;
+  display: block;
+  margin: 0 5px;
+}
