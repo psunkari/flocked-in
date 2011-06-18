@@ -2,7 +2,7 @@ from twisted.internet   import defer
 from twisted.python     import log
 from twisted.web        import server
 
-from social             import db, utils, base, tags, _, config, errors
+from social             import db, utils, base, tags, _, config, errors, feed
 from social.template    import render, renderScriptBlock
 from social.isocial     import IAuthInfo
 
@@ -69,6 +69,15 @@ class FeedbackResource(base.BaseResource):
         yield db.insert(moodTagId, "tagItems", itemId, item["meta"]["uuid"])
         yield db.insert(synovelOrgId, "orgTags", str(tagItemCount), "itemsCount", tagId)
         yield db.insert(synovelOrgId, "orgTags", str(moodTagItemCount), "itemsCount", moodTagId)
+
+        cols = yield db.multiget_slice([tagId, moodTagId], "tagFollowers")
+        followers = utils.multiColumnsToDict(cols)
+        followers = set(followers[tagId].keys() + followers[moodTagId].keys())
+
+        value = {"feed":{item['meta']['uuid']: itemId}}
+        muts = dict([(x, value) for x in followers])
+        if muts:
+            yield db.batch_mutate(muts)
 
 
     def render_GET(self, request):
