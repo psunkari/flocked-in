@@ -567,8 +567,18 @@ class FeedResource(base.BaseResource):
             yield renderScriptBlock(request, "feed.mako", "feed", landing,
                                     "#user-feed", "set", True,
                                     handlers={"onload": onload}, **args)
+            onload = """
+                     $('#group_add_invitee').autocomplete({
+                           source: '/auto/users',
+                           minLength: 2,
+                           select: function( event, ui ) {
+                               $('#group_invitee').attr('value', ui.item.uid)
+                           }
+                      });
+                     """
             yield renderScriptBlock(request, "feed.mako", "groupLinks",
-                                    landing, "#group-links", "set",  **args)
+                                    landing, "#group-links", "set", True,
+                                    handlers={"onload":onload}, **args)
 
         if script and landing:
             request.write("</body></html>")

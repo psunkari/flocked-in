@@ -5,6 +5,7 @@ import getopt
 import uuid
 import time
 import pickle
+import os
 
 from telephus.protocol import ManagedCassandraClientFactory
 from telephus.client import CassandraClient
@@ -218,13 +219,13 @@ def createColumnFamilies(client):
 
     mConversations = CfDef(KEYSPACE, "mConversations", "Super", "UTF8Type",
                           "UTF8Type", "A collection of all conversations")
-    mAllConvs = CfDef(KEYSPACE, "mAllConversations", "Standard", "TimeUUIDType", None,
+    mAllConversations = CfDef(KEYSPACE, "mAllConversations", "Standard", "TimeUUIDType", None,
                      "list of all unread and read conversations of a user")
-    mUnread = CfDef(KEYSPACE, "mUnreadConversations","Standard", "TimeUUIDType", None,
+    mUnreadConversations = CfDef(KEYSPACE, "mUnreadConversations","Standard", "TimeUUIDType", None,
                     "list of all unread conversations of a user")
-    mArchived = CfDef(KEYSPACE, "mArchivedConversations", "Standard", "TimeUUIDType", None,
+    mArchivedConversations = CfDef(KEYSPACE, "mArchivedConversations", "Standard", "TimeUUIDType", None,
                          "list of archived conversations of a user")
-    mDeleted = CfDef(KEYSPACE, "mDeletedConversations", "Standard", "TimeUUIDType", None,
+    mDeletedConversations = CfDef(KEYSPACE, "mDeletedConversations", "Standard", "TimeUUIDType", None,
                         "list of converstions marked for deletion of a user")
     mConvMessages = CfDef(KEYSPACE, "mConvMessages", "Standard", "TimeUUIDType", None,
                         "list of all messages in a conversation")
@@ -232,10 +233,10 @@ def createColumnFamilies(client):
                         "list of folders in which a converstions belongs per user")
 
     yield client.system_add_column_family(mConversations)
-    yield client.system_add_column_family(mAllConvs)
-    yield client.system_add_column_family(mUnread)
-    yield client.system_add_column_family(mArchived)
-    yield client.system_add_column_family(mDeleted)
+    yield client.system_add_column_family(mAllConversations)
+    yield client.system_add_column_family(mUnreadConversations)
+    yield client.system_add_column_family(mArchivedConversations)
+    yield client.system_add_column_family(mDeletedConversations)
     yield client.system_add_column_family(mConvMessages)
     yield client.system_add_column_family(mConvFolders)
 
@@ -728,7 +729,8 @@ def truncateColumnFamilies(client):
                "nameIndex", "displayNameIndex", "orgTags", "tagItems",
                "tagFollowers", "orgTagsByName", "messages", "bannedUsers",
                "blockedUsers", "deletedConvs", "feed_question",
-               "mConversations", "mAllConvs", "mUnread", "mArchived", "mDeleted",
+               "mConversations", "mAllConversations", "mUnreadConversations",
+               "mArchivedConversations", "mDeletedConversations",
                "mConvMessages", "mConvFolders", "latestNotifications"]:
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)

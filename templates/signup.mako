@@ -1,14 +1,12 @@
-<%! from gettext import gettext as _ %>
+<%! from social import utils, config, _, __ %>
 <%! from pytz import common_timezones %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-
 <html xmlns="http://www.w3.org/1999/xhtml">
+
 <head>
-  <title>${_('Synovel SocialNet')}</title>
-  <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/signin.css"/>
-  <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/social.css"/>
+  <title>${config.get('Branding', 'Name')} &mdash; ${_('Private, Secure and Free Social Network for Enterprises')}</title>
+  <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/about.css"/>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/widgets.css"/>
   <script type = "text/javascript">
   %if view == 'userinfo':
@@ -40,65 +38,57 @@
   %endif
   </script>
 </head>
+
 <body>
-  <div id="topbar">
-    <div id="top" class="contents">
-      <div id="sitelogo">
-      </div>
+  <div id="header">
+    <img src="/rsrcs/img/synovel.png" alt="Synovel">
+  </div>
+
+  <div id="wrapper">
+    <div id="steps-banner" class="title-banner banner">
+      <ul id="views-list">
+        <%
+          views = [('welcome', 'Welcome'), ('userinfo', 'About you'), ('invite', 'Invite co-workers')]
+          foundSelected = False
+        %>
+        %for x in range(len(views)):
+          <%
+            (name, display) = views[x]
+            selectedCls = ''
+            if view == name:
+              selectedCls = ' selected'
+              foundSelected = True
+            doneCls = ' done' if foundSelected else ''
+            lastItemCls = ' last' if x == len(views)-1 else ''
+          %>
+          <li class="${selectedCls+lastItemCls+doneCls}"><span>${str(x+1)+'. '+_(display)}</span></li>
+        %endfor
+      </ul>
+    </div>
+    <div id="main">
+      %if view == 'welcome':
+        ${self.welcome()}
+      %elif view == 'userinfo':
+        ${self.userInfo()}
+      %elif view == 'invite':
+        ${self.invitePeople()}
+      %endif
     </div>
   </div>
-  <div id="menubar">
-    <div id="menu" class="contents">
+  <div id="footer">
+    <div id="footer-contents" class="contents">
+      ${_('&copy;2011 Synovel Software')}
+      &nbsp;&#183;&nbsp;
+      <a href="/about/contact">${_('Contact us')}</a>
     </div>
-  </div>
-  <div id="mainbar">
-    ${self.layout()}
   </div>
 </body>
-</html>
-
-<%def name="layout()">
-  <div class="contents has-left has-right">
-    <div id="left">
-      <div id="nav-menu">
-      </div>
-    </div>
-    <div id="center-right">
-      <div id="right">
-      </div>
-      <div id="center">
-        <div class="center-header">
-          <div class="titlebar">
-            %if view == 'userinfo':
-              <span class="middle title">${_('Create your Account')}</span>
-            %elif view == 'invite':
-              <span class="middle title">${_('Invite your friends')}</span>
-            %endif
-          </div>
-        </div>
-        <div class="center-contents">
-            %if view == 'invite':
-              ${self.invitePeople()}
-            %elif view == 'userinfo':
-              ${self.userInfo()}
-            %endif
-        </div>
-      </div>
-    </div>
-    <div  id="footer">
-      ${_('&copy;2011 Synovel Software')}
-      &nbsp;|&nbsp;
-      <a href="http://www.synovel.com/social">${_('Synovel SocialNet')}</a>
-    </div>
-
-  </div>
-</%def>
 
 <%def name="userInfo()">
- <form action="/signup/create" method="POST" onsubmit="return validate()" >
+  <form action="/signup/create" method="POST" onsubmit="return validate()" >
     <input id="email" type="hidden" name="email" value="${emailId}"/>
     <input id="token" type="hidden" name="token" value="${token}"/>
-    <div class="edit-profile">
+    <div id="main-contents" class="styledform contents" style="width: 600px; margin: 20px auto;">
       <ul>
         <li>
           <label for="name">${_('Name')}</label>
@@ -130,8 +120,8 @@
         </li>
         <li style="display:none" id="messages-wrapper" class="messages-error"></li>
       </ul>
-      <div class="profile-save-wrapper">
-        <button type="submit" class="button" id="submit" value="Next"> ${_('Create')} </button>
+      <div class="styledform-buttons">
+        <button type="submit" class="default button" id="submit" value="Next"> ${_('Create Account')} </button>
       </div>
     </div>
   </form>
@@ -139,33 +129,19 @@
 
 <%def name="invitePeople()">
   <form action="/signup/invite" method="POST">
-    <div class="edit-profile">
+    <div id="main-contents" class="styledform contents" style="width: 600px; margin: 20px auto;">
       <ul>
-        <li>
-          <label for="email">Email</label>
-          <input type="text" name="email" />
-        </li>
-        <li>
-          <label for="email">Email</label>
-          <input type="text" name="email" />
-        </li>
-        <li>
-          <label for="email">Email</label>
-          <input type="text" name="email" />
-        </li>
-        <li>
-          <label for="email">Email</label>
-          <input type="text" name="email" />
-        </li>
-        <li>
-          <label for="email">Email</label>
-          <input type="text" name="email" />
-        </li>
+        %for index in range(5):
+          <li>
+            <label for="email">Email</label>
+            <input type="text" name="email" />
+          </li>
+        %endfor
       </ul>
-    </div>
-    <div class="profile-save-wrapper" >
-      <a href="/feed">Skip</a>
-      <button type="submit" class="button" name="submit" value="Submit">Invite</button>
+      <div class="styledform-buttons" >
+        <a href="/feed">Skip</a>&nbsp;&nbsp;&nbsp;
+        <button type="submit" class="default button" name="submit" value="Submit">Invite People</button>
+      </div>
     </div>
   </form>
 </%def>

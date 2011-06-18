@@ -4,33 +4,28 @@
 <html lang="en" dir="ltr" xml:lang="en" xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <title>flocked.in &mdash; Private, Secure and Free Social Network for Enterprises</title>
-    <link href="/about/style/about.css" media="all" rel="stylesheet" type="text/css">
+    <link href="/rsrcs/css/about.css" media="all" rel="stylesheet" type="text/css">
   </head>
   <body>
+    <div id="header">
+      <img src="/rsrcs/img/synovel.png" alt="Synovel"/>
+      <ul id="header-links">
+        <li><a href="/about/product.html">About</a></li>
+        <li><a href="/signin">Sign In</a></li>
+      </ul>
+    </div>
+
     <div id="wrapper">
-      <div id="header">
-        <div id="sitelogo"></div>
-        <div id="header-contents" class="contents">
-          <div class="contents-right">
-            <ul id="header-links">
-              <li><a href="/about/product.html">About</a></li>
-              <li><a href="/signin">Sign In</a></li>
-            </ul>
+      <div id="home-banner-contents" class="banner contents">
+        <div id="caption">Private, Secure and Free way to stay connected with your co-workers!</div>
+        <div id="signup">
+          <div>
+            <p>flocked.in isn't public <b>yet</b>. Give us your e-mail address and we will notify you when it's public</p>
           </div>
-        </div>
-      </div>
-      <div id="banner">
-        <div id="home-banner-contents" class="contents">
-          <div id="caption">Private, Secure and Free way to stay connected with your co-workers!</div>
-          <div id="signup">
-            <div>
-              <p>flocked.in isn't public <b>yet</b>. Give us your e-mail address and we will notify you when it's public</p>
-            </div>
-            <form action="/signup/signup" id="signup-form" method="POST">
-              <input id="signup-email" type="email" name="email" placeholder="Enter your e-mail address"/>
-              <input id="signup-submit" type="submit" value="Notify Me!"/>
-            </form>
-          </div>
+          <form action="/signup/signup" id="signup-form" method="POST">
+            <input id="signup-email" type="email" name="email" placeholder="Enter your e-mail address"/>
+            <input id="signup-submit" type="submit" value="Notify Me!"/>
+          </form>
         </div>
       </div>
       <div id="main">
@@ -46,9 +41,7 @@
 
     <div id="footer">
       <div id="footer-contents" class="contents">
-        <div class="contents-right">
-          &copy;2011 Synovel &ndash; Contact sales&#64;synovel&#46;com
-        </div>
+        &copy;2011 Synovel &ndash; Contact sales&#64;synovel&#46;com
       </div>
     </div>
   </body>

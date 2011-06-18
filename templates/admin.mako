@@ -182,7 +182,7 @@
       <li><a style="cursor:pointer" class="selected" onclick="$('#add-user-block').toggle();$('#add-users-block').toggle();$(this).toggleClass('selected');$(this).parent().siblings().children().toggleClass('selected')">New User</a></li>
       <li><a style="cursor:pointer" class="" onclick="$('#add-users-block').toggle();$('#add-user-block').toggle();$(this).toggleClass('selected');$(this).parent().siblings().children().toggleClass('selected')">Multiple Users</a></li>
   </div>
-  <div class="edit-profile">
+  <div class="styledform">
     <form action="/admin/add" method="POST" enctype="multipart/form-data" autocomplete="off">
     <!-- fileupload doesn't work with ajax request.
         TODO: find workaround to submit file in ajax request-->
@@ -217,7 +217,7 @@
             <input type="password" name="passwd" />
           </li>
         </ul>
-        <div class="profile-save-wrapper">
+        <div class="styledform-buttons">
              <button type="submit" class="button default">Add</button>
              <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">Cancel</button>
         </div>
@@ -247,7 +247,7 @@
             <input type="file" name="data" accept="csv" />
           </li>
         </ul>
-        <div class="profile-save-wrapper">
+        <div class="styledform-buttons">
             <button type="submit" class="button default">Add</button>
             <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">Cancel</button>
         </div>
@@ -261,7 +261,7 @@
   <%
     name = org.get("basic", {}).get("name", '')
   %>
-  <div class="edit-profile">
+  <div class="styledform">
     <form action="/admin/org" method="POST" enctype="multipart/form-data">
     <!-- fileupload doesn't work with ajax request.
         TODO: find workaround to submit file in ajax request-->
@@ -275,7 +275,7 @@
           <input type="file" name="dp" />
         </li>
       </ul>
-      <div class="profile-save-wrapper">
+      <div class="styledform-buttons">
           <button type="submit" class="button default">Save</button>
       </div>
     </form>

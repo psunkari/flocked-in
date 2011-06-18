@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import os
 import sys
 import getopt
 import getpass
@@ -48,8 +49,6 @@ def createUser(emailId, displayName, jobTitle, timezone, passwd):
 
         userId = yield utils.addUser(emailId, displayName, passwd,
                                      orgId, jobTitle, timezone)
-        authinfo.username = userId
-        authinfo.organization = orgId
     else:
         raise Exception("User already exists for " + emailId)
 

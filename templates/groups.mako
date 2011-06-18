@@ -26,6 +26,7 @@
           <div id="titlebar" class="titlebar">
             ${self.titlebar()}
           </div>
+          <div id="add-user-wrapper"></div>
         </div>
         <div class="center-contents" id="center-content">
           <div id="groups-view" class="viewbar">
@@ -60,7 +61,7 @@
   %endif
 </%def>
 
-<%def name="displayGroupMembers()">
+<%def name="listGroupMembers()">
   <% counter = 0 %>
   %for userId in userIds:
     %if counter % 2 == 0:
@@ -74,11 +75,6 @@
   %endfor
   %if counter % 2 == 1:
     </div>
-  %endif
-  %if nextPageStart:
-    <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" _ref="/groups/members?id=${groupId}&start=${nextPageStart}">${_("Fetch More People")}</a></div>
-  %else:
-    <div id="next-load-wrapper"> </div>
   %endif
 </%def>
 
@@ -200,7 +196,7 @@
 
 <%def name="createGroup()">
   <form action="/groups/create" method="post"  enctype="multipart/form-data">
-    <div class="edit-profile">
+    <div class="styledform">
       <ul>
         <li>
             <label for="name">Group Name</label>
@@ -219,9 +215,10 @@
             <label for="dp">Group Logo</label>
             <input type="file" id="dp" name="dp" accept="image/jpx, image/png, image/gif"/>
       </ul>
-    </div>
-    <div class="profile-save-wrapper">
+    <div class="styledform-buttons">
         <input type="submit" name="userInfo_submit" value="Save" class="button default"/>
+        <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">Cancel</button>
+    </div>
     </div>
     % if myKey:
     <input type="hidden" value = ${myKey} name="id" />
@@ -229,20 +226,13 @@
   </form>
 </%def>
 
-
-
 <%def name="inviteMembers()">
   <form action="/groups/invite" class="ajax" method="post"  >
-    <div class="edit-profile">
+    <div class="styledform">
       <ul>
         <li><label for="name"> EmailId: </label></li>
-        <li><input type="text" id="uid" name="uid" /></li>
-      </ul>
-      <ul>
+        <li><input type="text" id="invitee" name="invitee" /></li>
         <li><input type="hidden" value = ${groupId} name="id" /></li>
-      </ul>
-      <ul>
-        <li></li>
         <li><input type="submit" name="userInfo_submit" value="Save"/> </li>
       </ul>
     </div>

@@ -4,6 +4,7 @@
 <%! from social import utils, _, __, plugins %>
 <%! from social import relations as r %>
 <%! from pytz import common_timezones %>
+<%! import re, datetime %>
 
 <%inherit file="base.mako"/>
 <%namespace name="item" file="item.mako"/>
@@ -382,7 +383,7 @@
     <%
       path = "/profile/edit?id=%s&" % myKey
     %>
-    %for item, name in [('basic', 'Basic'), ('detail', 'Info'), ('passwd', 'Change Password')]:
+    %for item, name in [('basic', _('Basic')), ('contact', _('Contact')), ('work', _('Work Experience')), ('personal', _('Personal')), ('passwd', _('Change Password'))]:
       %if detail == item:
         <li><a href="${path}dt=${item}" id="profile-tab-${item}" class="ajax selected">${_(name)}</a></li>
       %else:
@@ -401,7 +402,7 @@
   myTimezone = me.get("basic", {}).get("timezone", "")
   %>
   <form action="/profile/edit" method="post"  enctype="multipart/form-data">
-    <div class="edit-profile">
+    <div class="styledform">
       <ul>
         <li>
             <label for="name"> Display Name</label>
@@ -444,7 +445,7 @@
         %endif
       </ul>
     </div>
-    <div class="profile-save-wrapper">
+    <div class="styledform-buttons">
         <input type="submit" class="button default" name="userInfo_submit" value="Save"/>
     </div>
   </form>
@@ -457,14 +458,14 @@
   %endif
 </div>
 <form action="/profile/changePasswd" method="post"  enctype="multipart/form-data">
-  <div class="edit-profile">
+  <div class="styledform">
     <ul>
       <li>
         <label for="curr_passwd"> Current Password</label>
         <input type="password" name="curr_passwd" id="curr_passwd"/>
       </li>
       <li>
-        <label for="passwd1"> Password</label>
+        <label for="passwd1"> New Password</label>
         <input type="password" name="passwd1" id="passwd1"/>
       </li>
       <li>
@@ -474,305 +475,230 @@
     </ul>
     <input type="hidden" id = 'dt' name="dt" value="passwd"/>
   </div>
-  <div class="profile-save-wrapper">
+  <div class="styledform-buttons">
     <input type="submit" class="button default" name="userInfo_submit" value="Save"/>
   </div>
 </form>
 </%def>
 
-
-<%def name="editDetail()">
+<%def name="editWork()">
 <form action="/profile/edit" method="post"  enctype="multipart/form-data">
-    <div class="edit-profile">
-      <div id="personal">
-        <fieldset>
-        <legend>Personal:</legend>
+    <div class="styledform">
+        <div id="work">
+          <div>
+            <legend>Current Work</legend>
             <ul>
               <li>
-                <label for ="bday"> Date Of Birth</label>
-                ${self.selectDay("dob_day")}
-                ${self.selectMonth("dob_mon")}
-                ${self.selectYear("dob_year")}
+                <label for="employer"> Employer</label>
+                <input type ="text" />
               </li>
               <li>
-                <label for="p_email"> Email</label>
-                <input type ="text" id= "p_email" name = "p_email"/>
+                <label for="emp_title"> Title</label>
+                <input type ="text" name="jobTitle"/>
               </li>
               <li>
-                <label for="p_phone"> Phone</label>
-                <input type ="text" id= "p_phone" name = "p_phone"/>
-              </li>
-              <li>
-                <label for="p_mobile"> Mobile</label>
-                <input type ="text" id= "p_mobile" name = "p_mobile"/>
-              </li>
-              <li>
-                <label for="hometown"> Hometown</label>
-                <input type ="text" id= "hometown" name = "hometown"/>
-              </li>
-              <li>
-                <label for="currentCity"> Current City</label>
-                <input type ="text" id= "currentCity" name = "currentCity"/>
+                <label for="emp_start">Working Since</label>
+                ${self.selectYear("c_emp_start", "Start year")}
               </li>
             </ul>
-        </fieldset>
-      </div>
-      <div id="contacts">
-        <fieldset>
-        <legend>Contacts:</legend>
+            <legend>Previous Work</legend>
             <ul>
-                <li>
-                    <label for="email"> Email</label>
-                    <input type ="text" id= "c_email" name = "c_email"/>
-                </li>
+              <li>
+                <label for="employer"> Employer</label>
+                <input type ="text" id= "employer" name = "employer"/>
+              </li>
+              <li>
+                <label for="emp_title"> Title</label>
+                <input type ="text" id= "emp_title" name = "emp_title"/>
+              </li>
+              <li>
+                <label for="emp_start"> Years</label>
+                ${self.selectYear("emp_start", "Start year")}
+                ${self.selectYear("emp_end", "End year")}
+              </li>
             </ul>
-            <ul>
-                <li>
-                    <label for="im"> IM</label>
-                    <input type ="text" id= "c_im" name = "c_im"/>
-                </li>
-                <li>
-                    <label for="phone">Work Phone</label>
-                    <input type ="text" id= "c_phone" name = "c_phone"/>
-                </li>
-                <li>
-                    <label for="c_mobile">Mobile</label>
-                    <input type ="text" id= "c_mobile" name = "c_mobile"/>
-                </li>
-            </ul>
-        </fieldset>
-      </div>
-      <div id="workNedu">
-        <fieldset>
-        <legend>Work and Education:</legend>
-            <div id="work">
-              <div>
-                <ul>
-                  <li>
-                    <label for="employer"> Employer</label>
-                    <input type ="text" id= "employer" name = "employer"/>
-                  </li>
-                </ul>
-                <ul>
-                  <li>
-                    <label for="emp_title"> Title</label>
-                    <input type ="text" id= "emp_title" name = "emp_title"/>
-                  </li>
-                </ul>
-                <ul>
-                  <li>
-                    <label for="emp_desc"> Description</label>
-                    <input type ="text" id= "emp_desc" name = "emp_desc"/>
-                  </li>
-                </ul>
-                <ul>
-                  <li>
-                    <label for="emp_start"> Years</label>
-                    ${self.selectYear("emp_start", "Start year")}
-                    ${self.selectYear("emp_end", "End year")}
-                  </li>
-                </ul>
-              </div>
-            </div>
-            <div id="education">
-              <div>
-                <ul>
-                  <li>
-                    <label for="college"> College</label>
-                    <input type ="text" id= "college" name = "college"/>
-                  </li>
-                </ul>
-                <ul>
-                  <li>
-                    <label for="degree"> Degree</label>
-                    <input type ="text" id= "degree" name = "degree"/>
-                  </li>
-                </ul>
-                <ul>
-                  <li>
-                    <label for="edu_end"> Year of Completion</label>
-                    ${self.selectYear("edu_end","year")}
-                  </li>
-                </ul>
-              </div>
+          </div>
         </div>
-        </fieldset>
+        <div id="education">
+          <div>
+            <legend>Education</legend>
+            <ul>
+              <li>
+                <label for="college"> College</label>
+                <input type ="text" id= "college" name = "college"/>
+              </li>
+            </ul>
+            <ul>
+              <li>
+                <label for="degree"> Degree</label>
+                <input type ="text" id= "degree" name = "degree"/>
+              </li>
+            </ul>
+            <ul>
+              <li>
+                <label for="edu_end"> Year of Completion</label>
+                ${self.selectYear("edu_end","year")}
+              </li>
+            </ul>
+          </div>
       </div>
-      <ul>
+    </div>
+    <div class="styledform-buttons">
+        <input type="submit" class="button default" name="userInfo_submit" value="Save"/>
+    </div>
+    % if emailId and emailId[0]:
+    <input type="hidden" value = ${emailId[0]} name="emailId" />
+    %endif
+    % if myKey:
+    <input type="hidden" value = ${myKey} name="id" />
+    %endif
+</form>
+</%def>
+
+<%def name="editPersonal()">
+<form action="/profile/edit" method="post"  enctype="multipart/form-data">
+    <div class="styledform">
+      <div id="personal">
+        <ul>
+          <li>
+            <%
+                rawstr = r"""(?P<doy>\d{4})(?P<dom>\d{2})(?P<dod>\d{1,2})"""
+                matchstr = personalInfo.get('birthday', '')
+                compile_obj = re.compile(rawstr)
+                match_obj = compile_obj.search(matchstr)
+                if match_obj:
+                    doy = match_obj.group('doy')
+                    dom = match_obj.group('dom')
+                    dod = match_obj.group('dod')
+                else:
+                    doy = dom = dod = None
+            %>
+            <label for ="bday"> Date Of Birth</label>
+            ${self.selectDay("dob_day", "Day", dod)}
+            ${self.selectMonth("dob_mon", "Month", dom)}
+            ${self.selectYear("dob_year", "Year", doy)}
+          </li>
+          <li>
+            <label for="p_email"> Email</label>
+            <input type ="text" id= "p_email" name = "p_email" value="${personalInfo.get('mail', '')}"/>
+          </li>
+          <li>
+            <label for="p_phone"> Phone</label>
+            <input type ="text" id= "p_phone" name = "p_phone" value="${personalInfo.get('phone', '')}"/>
+          </li>
+          <li>
+            <label for="p_mobile"> Mobile</label>
+            <input type ="text" id= "p_mobile" name = "p_mobile" value="${personalInfo.get('mobile', '')}"/>
+          </li>
+          <li>
+            <label for="hometown"> Hometown</label>
+            <input type ="text" id= "hometown" name = "hometown" value="${personalInfo.get('hometown', '')}"/>
+          </li>
+          <li>
+            <label for="currentCity"> Current City</label>
+            <input type ="text" id= "currentCity" name = "currentCity" value="${personalInfo.get('currentCity', '')}"/>
+          </li>
+        </ul>
+      </div>
         % if emailId and emailId[0]:
         <input type="hidden" value = ${emailId[0]} name="emailId" />
         %endif
         % if myKey:
         <input type="hidden" value = ${myKey} name="id" />
         %endif
-      </ul>
     </div>
-    <div class="profile-save-wrapper">
+    <div class="styledform-buttons">
         <input type="submit" class="button default" name="userInfo_submit" value="Save"/>
     </div>
   </form>
 </%def>
 
-<%def name="selectMonth(name)">
+<%def name="editContact()">
+<form action="/profile/edit" method="post"  enctype="multipart/form-data">
+    <div class="styledform">
+      <div id="contacts">
+        <ul>
+            <li>
+                <label for="email"> Email</label>
+                <input type ="text" id= "c_email" name = "c_email" value="${contactInfo.get('mail', '')}"/>
+            </li>
+            <li>
+                <label for="im"> IM</label>
+                <input type ="text" id= "c_im" name = "c_im" value="${contactInfo.get('im', '')}"/>
+            </li>
+            <li>
+                <label for="phone">Work Phone</label>
+                <input type ="text" id= "c_phone" name = "c_phone" value="${contactInfo.get('phone', '')}"/>
+            </li>
+            <li>
+                <label for="c_mobile">Work Mobile</label>
+                <input type ="text" id= "c_mobile" name = "c_mobile" value="${contactInfo.get('mobile', '')}"/>
+            </li>
+        </ul>
+      </div>
+      <div class="styledform-buttons">
+          <input type="submit" class="button default" name="userInfo_submit" value="Save"/>
+      </div>
+    </div>
+    % if emailId and emailId[0]:
+    <input type="hidden" value = ${emailId[0]} name="emailId" />
+    %endif
+    % if myKey:
+    <input type="hidden" value = ${myKey} name="id" />
+    %endif
+</form>
+</%def>
 
+<%def name="selectMonth(name, label, dom=None)">
+  <%
+    months = [_("January"), _("February"), _("March"), _("April"),
+                _("May"), _("June"), _("July"), _("August"),
+                _("September"), _("October"), _("November"), _("December")]
+  %>
   <select name="${name}" >
-        <option value="">Month</option>
-        <option value="01">January</option>
-        <option value="02">February</option>
-        <option value="04">April</option>
-        <option value="05">May</option>
-        <option value="06">June</option>
-        <option value="07">July</option>
-        <option value="08">August</option>
-        <option value="09">September</option>
-        <option value="10">October</option>
-        <option value="11">November</option>
-        <option value="12">December</option>
+        <option value="">${label}</option>
+        %for m in range(1, 12):
+            <%
+                value = "%02d" %m
+            %>
+            %if dom and int(dom)== m:
+                <option selected value="${value}">${months[m-1]}</option>
+            %else:
+                <option value="${value}">${months[m-1]}</option>
+            %endif
+        %endfor
     </select>
 </%def>
-<%def name="selectDay(name)">
+
+<%def name="selectDay(name, label, dod=None)">
 
   <select name="${name}">
-    <option value="">day</option>
-    <option value="1">1</option>
-    <option value="2">2</option>
-    <option value="3">3</option>
-    <option value="4">4</option>
-    <option value="5">5</option>
-    <option value="6">6</option>
-    <option value="7">7</option>
-    <option value="8">8</option>
-    <option value="9">9</option>
-    <option value="10">10</option>
-    <option value="11">11</option>
-    <option value="12">12</option>
-    <option value="13">13</option>
-    <option value="14">14</option>
-    <option value="15">15</option>
-    <option value="16">16</option>
-    <option value="17">17</option>
-    <option value="18">18</option>
-    <option value="19">19</option>
-    <option value="20">20</option>
-    <option value="21">21</option>
-    <option value="22">22</option>
-    <option value="23">23</option>
-    <option value="24">24</option>
-    <option value="25">25</option>
-    <option value="26">26</option>
-    <option value="27">27</option>
-    <option value="28">28</option>
-    <option value="29">29</option>
-    <option value="30">30</option>
-    <option value="31">31</option>
+    <option value="">${label}</option>
+        %for d in range(1, 31):
+            <%
+                value = "%d" %d
+            %>
+            %if dod and int(dod)== d:
+                <option selected value="${value}">${d}</option>
+            %else:
+                <option value="${value}">${d}</option>
+            %endif
+        %endfor
   </select>
 </%def>
-<%def name="selectYear(name, t='year')">
+
+<%def name="selectYear(name, label, doy=None)">
   <select name="${name}">
-    <option value="">${t}</option>
-    <option value="2011">2011</option>
-    <option value="2010">2010</option>
-    <option value="2009">2009</option>
-    <option value="2008">2008</option>
-    <option value="2007">2007</option>
-    <option value="2006">2006</option>
-    <option value="2005">2005</option>
-    <option value="2004">2004</option>
-    <option value="2003">2003</option>
-    <option value="2002">2002</option>
-    <option value="2001">2001</option>
-    <option value="2000">2000</option>
-    <option value="1999">1999</option>
-    <option value="1998">1998</option>
-    <option value="1997">1997</option>
-    <option value="1996">1996</option>
-    <option value="1995">1995</option>
-    <option value="1994">1994</option>
-    <option value="1993">1993</option>
-    <option value="1992">1992</option>
-    <option value="1991">1991</option>
-    <option value="1990">1990</option>
-    <option value="1989">1989</option>
-    <option value="1988">1988</option>
-    <option value="1987">1987</option>
-    <option value="1986">1986</option>
-    <option value="1985">1985</option>
-    <option value="1984">1984</option>
-    <option value="1983">1983</option>
-    <option value="1982">1982</option>
-    <option value="1981">1981</option>
-    <option value="1980">1980</option>
-    <option value="1979">1979</option>
-    <option value="1978">1978</option>
-    <option value="1977">1977</option>
-    <option value="1976">1976</option>
-    <option value="1975">1975</option>
-    <option value="1974">1974</option>
-    <option value="1973">1973</option>
-    <option value="1972">1972</option>
-    <option value="1971">1971</option>
-    <option value="1970">1970</option>
-    <option value="1969">1969</option>
-    <option value="1968">1968</option>
-    <option value="1967">1967</option>
-    <option value="1966">1966</option>
-    <option value="1965">1965</option>
-    <option value="1964">1964</option>
-    <option value="1963">1963</option>
-    <option value="1962">1962</option>
-    <option value="1961">1961</option>
-    <option value="1960">1960</option>
-    <option value="1959">1959</option>
-    <option value="1958">1958</option>
-    <option value="1957">1957</option>
-    <option value="1956">1956</option>
-    <option value="1955">1955</option>
-    <option value="1954">1954</option>
-    <option value="1953">1953</option>
-    <option value="1952">1952</option>
-    <option value="1951">1951</option>
-    <option value="1950">1950</option>
-    <option value="1949">1949</option>
-    <option value="1948">1948</option>
-    <option value="1947">1947</option>
-    <option value="1946">1946</option>
-    <option value="1945">1945</option>
-    <option value="1944">1944</option>
-    <option value="1943">1943</option>
-    <option value="1942">1942</option>
-    <option value="1941">1941</option>
-    <option value="1940">1940</option>
-    <option value="1939">1939</option>
-    <option value="1938">1938</option>
-    <option value="1937">1937</option>
-    <option value="1936">1936</option>
-    <option value="1935">1935</option>
-    <option value="1934">1934</option>
-    <option value="1933">1933</option>
-    <option value="1932">1932</option>
-    <option value="1931">1931</option>
-    <option value="1930">1930</option>
-    <option value="1929">1929</option>
-    <option value="1928">1928</option>
-    <option value="1927">1927</option>
-    <option value="1926">1926</option>
-    <option value="1925">1925</option>
-    <option value="1924">1924</option>
-    <option value="1923">1923</option>
-    <option value="1922">1922</option>
-    <option value="1921">1921</option>
-    <option value="1920">1920</option>
-    <option value="1919">1919</option>
-    <option value="1918">1918</option>
-    <option value="1917">1917</option>
-    <option value="1916">1916</option>
-    <option value="1915">1915</option>
-    <option value="1914">1914</option>
-    <option value="1913">1913</option>
-    <option value="1912">1912</option>
-    <option value="1911">1911</option>
-    <option value="1910">1910</option>
-    <option value="1909">1909</option>
-    <option value="1908">1908</option>
+    <option value="">${label}</option>
+        %for d in reversed(range(1901, datetime.date.today().year)):
+            <%
+                value = "%d" %d
+            %>
+            %if doy and int(doy)== d:
+                <option selected value="${value}">${d}</option>
+            %else:
+                <option value="${value}">${d}</option>
+            %endif
+        %endfor
   </select>
 </%def>
