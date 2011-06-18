@@ -138,10 +138,10 @@
           </li>
         %endfor
       </ul>
-    </div>
-    <div class="styledform-buttons" >
-      <a href="/feed">Skip</a>&nbsp;&nbsp;&nbsp;
-      <button type="submit" class="default button" name="submit" value="Submit">Invite People</button>
+      <div class="styledform-buttons" >
+        <a href="/feed">Skip</a>&nbsp;&nbsp;&nbsp;
+        <button type="submit" class="default button" name="submit" value="Submit">Invite People</button>
+      </div>
     </div>
   </form>
 </%def>
