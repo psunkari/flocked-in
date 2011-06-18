@@ -8,6 +8,7 @@
   <title>${config.get('Branding', 'Name')} &mdash; ${_('Private, Secure and Free Social Network for Enterprises')}</title>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/about.css"/>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/widgets.css"/>
+  <link rel="shortcut icon" href="/rsrcs/img/favicon.ico" type="image/x-icon" />
 </head>
 
 <body>

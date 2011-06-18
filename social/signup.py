@@ -114,7 +114,8 @@ class SignupResource(BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _addUser(self, request):
-        authinfo = yield defer.maybeDeferred(request.getSession, IAuthInfo)
+        existingUser = db.get_count(emailId, "userAuth")
+
         emailId = utils.getRequestArg(request, 'email')
         localpart, domain = emailId.split("@")
         displayName = utils.getRequestArg(request, 'name')
@@ -130,8 +131,9 @@ class SignupResource(BaseResource):
 
         args = {'emailId': emailId, 'view':'invite'}
 
-        existingUser = yield db.get_count(emailId, "userAuth")
+        existingUser = yield existingUser
         if not existingUser:
+            authinfo = yield defer.maybeDeferred(request.getSession, IAuthInfo)
             orgId = yield getOrgKey(domain)
             if not orgId:
                 orgId = utils.getUniqueKey()
