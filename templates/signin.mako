@@ -12,7 +12,7 @@
 
 <body>
   <div id="header">
-    <img alt="Synovel" src="/rsrcs/img/synovel.png"/>
+    <img alt="Synovel" src="/rsrcs/img/flocked-in.png"/>
     <ul id="header-links">
       <li><a href="/">Home</a></li>
       <li><a href="/">Signup</a></li>

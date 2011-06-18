@@ -41,7 +41,7 @@
 
 <body>
   <div id="header">
-    <img src="/rsrcs/img/synovel.png" alt="Synovel">
+    <img src="/rsrcs/img/flocked-in.png" alt="Synovel">
   </div>
 
   <div id="wrapper">
@@ -121,7 +121,7 @@
         <li style="display:none" id="messages-wrapper" class="messages-error"></li>
       </ul>
       <div class="styledform-buttons">
-        <button type="submit" class="default button" id="submit" value="Next"> ${_('Create Account')} </button>
+        <button type="submit" class="default button" id="submit" value="Next">${_('Create Account')}</button>
       </div>
     </div>
   </form>
@@ -140,8 +140,20 @@
       </ul>
       <div class="styledform-buttons" >
         <a href="/feed">Skip</a>&nbsp;&nbsp;&nbsp;
-        <button type="submit" class="default button" name="submit" value="Submit">Invite People</button>
+        <button type="submit" class="default button" name="submit" value="Submit">${_('Invite People')}</button>
       </div>
     </div>
   </form>
 </%def>
+
+
+##
+## Errors during signup
+##
+
+<%def name="alreadySignedInError()">
+</%def>
+
+<%def name="invalidRegistrationToken()">
+</%def>
+
