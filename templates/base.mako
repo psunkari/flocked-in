@@ -44,6 +44,7 @@
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/widgets.css"/>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/jquery.ui.css"/>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/messaging.css"/>
+  <link rel="shortcut icon" href="/rsrcs/img/favicon.ico" type="image/x-icon" />
 %if script:
   <noscript>
     <meta http-equiv="refresh" content="0; URL=${noscriptUrl}"/>

@@ -1102,18 +1102,27 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     overflow: hidden;
 }
 
-#messages-wrapper {
+
+/*
+ * Alerts, error and warning display
+ */
+.alert {
     padding: 5px 0px;
-    border: 1px solid #3D85C6;
-    background-color: #E8EEFA;
     margin: 5px 0px;
-    text-align:center;
+    text-align: center;
     min-height:0;
 }
-
-.messages-error {
-    background-color: #FFEBE8 !important;
-    border: 1px solid #DD3C10 !important;
+.alert-error {
+    background-color: #ef2929;
+    border: 1px solid #a40000;
+}
+.alert-warning {
+    border: 1px solid #ce5c00;
+    background-color: #fcaf3e;
+}
+.alert-info {
+    border: 1px solid #c4a000;
+    background-color: #fce94f;
 }
 
 

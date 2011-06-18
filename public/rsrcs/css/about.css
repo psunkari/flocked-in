@@ -43,7 +43,7 @@ a:link, a:visited {
     height: 35px;
     width: 300px;
     margin-top: 8px;
-    background: transparent url(/rsrcs/img/synovel.png) left center no-repeat;
+    background: transparent url(/rsrcs/img/flocked-in.png) left center no-repeat;
     float: left;
 }
 #header-links {
@@ -62,7 +62,7 @@ a:link, a:visited {
     display: inline-block;
     font-size: 16px;
     line-height: 30px;
-    margin-top: 8px;
+    margin-top: 4px;
     padding: 0 10px;
 }
 
@@ -265,4 +265,28 @@ a:link, a:visited {
   font-weight: bold;
   padding: 3px 8px;
 }
+
+
+/*
+ * Alerts, warnings and errors
+ */
+.alert {
+    padding: 5px 0px;
+    margin: 5px 0px;
+    text-align: center;
+    min-height:0;
+}
+.alert-error {
+    background-color: #ef2929;
+    border: 1px solid #a40000;
+}
+.alert-warning {
+    border: 1px solid #ce5c00;
+    background-color: #fcaf3e;
+}
+.alert-info {
+    border: 1px solid #c4a000;
+    background-color: #fce94f;
+}
+
 
