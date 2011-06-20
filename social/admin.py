@@ -5,20 +5,19 @@ from twisted.web        import server
 from twisted.internet   import defer
 from twisted.python     import log
 
-from social             import base, db, utils, people
+from social             import base, db, utils, people, errors
+from social.isocial     import IAuthInfo
 from social.signup      import getOrgKey # move getOrgKey to utils
 from social.template    import render, renderScriptBlock
 from social.constants   import PEOPLE_PER_PAGE
 from social.profile     import saveAvatarItem
 
-class Admin(base.BaseResource):
 
+class Admin(base.BaseResource):
     isLeaf=True
 
     @defer.inlineCallbacks
     def _validData(self, data, format, orgId):
-
-
         if format in ("csv", "tsv"):
             dialect = csv.excel_tab  if format == "tsv" else csv.excel
             reader = csv.reader(data.split("\n"), dialect=dialect)
@@ -38,28 +37,26 @@ class Admin(base.BaseResource):
 
     @defer.inlineCallbacks
     def _addUsers(self, request):
-
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         orgId = args["orgKey"]
 
-        if not args["isOrgAdmin"]:
-            raise errors.Unauthorized()
-
-        format = utils.getRequestArg(request, 'format')
+        # File upload
+        dataFmt = utils.getRequestArg(request, 'format')
         data = utils.getRequestArg(request, "data", sanitize=False)
+
+        # Form submit - single user addtion
         name = utils.getRequestArg(request, "name")
         emailId = utils.getRequestArg(request, "email", sanitize=False)
         passwd = utils.getRequestArg(request, "passwd", sanitize=False)
         jobTitle = utils.getRequestArg(request, "jobTitle")
         timezone = utils.getRequestArg(request, "timezone")
-        log.msg(name, emailId, passwd, jobTitle, timezone)
 
+        fileUpload = True if (dataFmt or data) else False
+        if fileUpload and not (dataFmt and data):
+            raise errors.MissingParams("Both file and it's format are required")
 
-        if all([format, data, name, emailId, passwd, jobTitle]):
-            raise errors.TooManyParams()
-
-        if not (format and data) and not all([name, emailId, passwd, jobTitle, timezone]):
-            raise errors.MissingParams()
+        if not fileUpload and not all([name, emailId, passwd, jobTitle, timezone]):
+            raise errors.MissingParams("All fields are required to create the user")
 
         if all([name, emailId, passwd, jobTitle, timezone]):
             data = ",".join([emailId, name, jobTitle, passwd, timezone])
@@ -85,76 +82,52 @@ class Admin(base.BaseResource):
                                                   orgId, jobTitle, timezone)
         request.redirect("/admin/people?type=all")
 
+
     @defer.inlineCallbacks
     def _blockUser(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         orgId = args["orgKey"]
-        userId = utils.getRequestArg(request, "id")
+        userId, user = yield utils.getValidEntityId(request, "id")
 
-        admins = yield utils.getAdmins(orgId)
-        if myKey not in admins:
-            raise errors.Unauthorized()
+        # Admin cannot block himself.
+        if userId == myKey:
+            raise errors.InvalidRequest("An administrator cannot block himself")
 
-        if len(admins) == 1 and userId == myKey:
-            # if the network has only one admin, admin can't block himself
-            raise errors.InvalidRequest()
-
-        cols = yield db.get_slice(userId, "entities", ["basic"])
-        userInfo = utils.supercolumnsToDict(cols)
-        emailId = userInfo.get("basic", {}).get("emailId", None)
-        userOrg = userInfo.get("basic", {}).get("org", None)
-
-        if userOrg != orgId:
-            log.msg("can't block users of other networks")
-            raise errors.Unauthorized()
+        emailId = user.get("basic", {}).get("emailId", None)
         yield db.insert(emailId, "userAuth", 'True', "isBlocked")
         yield db.insert(orgId, "blockedUsers", '', userId)
+
 
     @defer.inlineCallbacks
     def _unBlockUser(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         orgId = args["orgKey"]
 
-        if not args["isOrgAdmin"]:
-            raise errors.Unauthorized()
+        userId, user = yield utils.getValidEntityId(request, "id")
+        emailId = user.get("basic", {}).get("emailId", None)
 
-        userId = utils.getRequestArg(request, "id")
-        cols = yield db.get_slice(userId, "entities", ["basic"])
-        userInfo = utils.supercolumnsToDict(cols)
-        emailId = userInfo.get("basic", {}).get("emailId", None)
-        userOrg = userInfo.get("basic", {}).get("org", None)
-
-        if userOrg != orgId:
-            log.msg("can't unblock users of other networks")
-            raise errors.Unauthorized()
         yield db.remove(emailId, "userAuth", "isBlocked")
         yield db.remove(orgId, "blockedUsers", userId)
+
 
     @defer.inlineCallbacks
     def _deleteUser(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         orgId = args["orgKey"]
+        userId, user = yield utils.getValidEntityId(request, "id")
 
-        if not args["isOrgAdmin"]:
-            raise errors.Unauthorized()
+        # Admin cannot block himself.
+        if userId == myKey:
+            raise errors.InvalidRequest("An administrator cannot delete himself")
 
-        userId = utils.getRequestArg(request, "id")
-        userId, user = utils.getValidEntityId(request, "id", "user")
-        userOrg = user.get("basic", {}).get("org", None)
+        yield utils.removeUser(userId, user)
 
-        if userOrg != orgId:
-            log.msg("can't unblock users of other networks")
-            raise errors.Unauthorzied()
-
-        yield utils.removeUser(userId, userInfo)
 
     @defer.inlineCallbacks
     def _updateOrgInfo(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         orgId = args["orgKey"]
 
-        if not args["isOrgAdmin"]:
-            raise errors.Unauthorized()
         name = utils.getRequestArg(request, "name")
         dp = utils.getRequestArg(request, "dp", sanitize=False)
 
@@ -170,7 +143,9 @@ class Admin(base.BaseResource):
             orgInfo["basic"]["name"] = name
         if orgInfo:
             yield db.batch_insert(orgId, "entities", orgInfo)
+
         request.redirect('/admin/org')
+
 
     @defer.inlineCallbacks
     def _renderOrgInfo(self, request):
@@ -178,8 +153,6 @@ class Admin(base.BaseResource):
         orgId = args["orgKey"]
         landing = not self._ajax
 
-        if not args["isOrgAdmin"]:
-            raise errors.Unauthorized()
         args['title'] = "Update Company Info"
         args["menuId"] = "org"
 
@@ -209,9 +182,6 @@ class Admin(base.BaseResource):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
 
-        if not args["isOrgAdmin"]:
-            request.write("Unauthorized")
-            raise errors.Unauthorized()
         args["title"] = "Add Users"
         args["viewType"] = "add"
         args["menuId"] = "users"
@@ -230,15 +200,12 @@ class Admin(base.BaseResource):
         if script and landing:
             request.write("</body></html>")
 
+
     @defer.inlineCallbacks
     def _listBlockedUsers(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         orgId = args["orgKey"]
         landing = not self._ajax
-
-        if not args["isOrgAdmin"]:
-            request.write("Unauthorized")
-            raise errors.Unauthorized()
 
         args["menuId"] = "users"
 
@@ -269,14 +236,12 @@ class Admin(base.BaseResource):
         if script and landing:
             request.write("</body></html>")
 
+
     @defer.inlineCallbacks
-    def _listUnBlockedUsers(self, request):
+    def _listAllUsers(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         orgId = args["orgKey"]
         landing = not self._ajax
-
-        if not args["isOrgAdmin"]:
-            raise errors.Unauthorized()
 
         start = utils.getRequestArg(request, 'start') or ''
         args["title"] = "Manage Users"
@@ -298,7 +263,6 @@ class Admin(base.BaseResource):
         args["blockedUsers"] = blockedUsers
         args["viewType"] = "all"
 
-
         if script:
             yield renderScriptBlock(request, "admin.mako", "viewOptions",
                                 landing, "#users-view", "set", **args)
@@ -306,40 +270,60 @@ class Admin(base.BaseResource):
             yield renderScriptBlock(request, "admin.mako", "list_users",
                                     landing, "#list-users", "set", **args)
 
+
     @defer.inlineCallbacks
     def _renderUsers(self, request):
         type = utils.getRequestArg(request, 'type') or 'all'
         if type == "all":
-            yield self._listUnBlockedUsers(request)
+            yield self._listAllUsers(request)
         else:
             yield self._listBlockedUsers(request)
 
+
+    @defer.inlineCallbacks
+    def _ensureAdmin(self, request):
+        authinfo = yield defer.maybeDeferred(request.getSession, IAuthInfo)
+        if not authinfo.isAdmin:
+            raise errors.PermissionDenied("Only company administrators are allowed here!")
+
+
     def render_POST(self, request):
         segmentCount = len(request.postpath)
-        d = None
-        if segmentCount == 1 and request.postpath[0] == "block":
-            d = self._blockUser(request)
-        elif segmentCount == 1 and  request.postpath[0] == "unblock":
-            d = self._unBlockUser(request)
-        elif segmentCount == 1 and request.postpath[0] == "add":
-            d = self._addUsers(request)
-        elif segmentCount == 1 and request.postpath[0] == "delete":
-            d = self._deleteUser(request)
-        elif segmentCount == 1 and request.postpath[0] == "org":
-            d = self._updateOrgInfo(request)
-
+        d = self._ensureAdmin(request)
+        def callback(ignored):
+            dfd = None
+            if segmentCount == 1 and request.postpath[0] == "block":
+                dfd = self._blockUser(request)
+            elif segmentCount == 1 and  request.postpath[0] == "unblock":
+                dfd = self._unBlockUser(request)
+            elif segmentCount == 1 and request.postpath[0] == "add":
+                dfd = self._addUsers(request)
+            elif segmentCount == 1 and request.postpath[0] == "delete":
+                dfd = self._deleteUser(request)
+            elif segmentCount == 1 and request.postpath[0] == "org":
+                dfd = self._updateOrgInfo(request)
+            else:
+                raise errors.NotFoundError(request)
+            return dfd
+        d.addCallback(callback)
         return self._epilogue(request, d)
+
 
     def render_GET(self, request):
         segmentCount = len(request.postpath)
-        d = None
-        if segmentCount == 0:
-            d = self._renderUsers(request)
-        elif segmentCount== 1 and request.postpath[0] == "add":
-            d = self._renderAddUsers(request)
-        elif segmentCount == 1 and request.postpath[0] == "people":
-            d = self._renderUsers(request)
-        elif segmentCount == 1 and request.postpath[0] == "org":
-            d = self._renderOrgInfo(request)
-
+        d = self._ensureAdmin(request)
+        def callback(ignored):
+            dfd = None
+            if segmentCount == 0:
+                dfd = self._renderUsers(request)
+            elif segmentCount== 1 and request.postpath[0] == "add":
+                dfd = self._renderAddUsers(request)
+            elif segmentCount == 1 and request.postpath[0] == "people":
+                dfd = self._renderUsers(request)
+            elif segmentCount == 1 and request.postpath[0] == "org":
+                dfd = self._renderOrgInfo(request)
+            else:
+                raise errors.NotFoundError(request)
+            return dfd
+        d.addCallback(callback)
         return self._epilogue(request, d)

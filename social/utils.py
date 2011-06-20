@@ -162,7 +162,8 @@ def getRandomKey(prefix):
     return sha.hexdigest()
 
 
-# XXX: We need something that can guarantee unique keys over trillion records.
+# XXX: We need something that can guarantee unique keys over trillion records
+#      and must be printable (in logs etc;)
 def getUniqueKey():
     u = uuid.uuid1()
     return base64.urlsafe_b64encode(u.bytes)[:-2]
@@ -502,7 +503,6 @@ def addUser(emailId, displayName, passwd, orgKey, jobTitle = None, timezone=None
 
 @defer.inlineCallbacks
 def removeUser(userId, userInfo=None):
-
     if not userInfo:
         cols = yield db.get_slice(userId, "entities", ["basic"])
         userInfo = supercolumnsToDict(cols)
@@ -521,12 +521,12 @@ def removeUser(userId, userInfo=None):
     #unsubscribe from all groups
 
 
-
 @defer.inlineCallbacks
 def getAdmins(entityId):
     cols = yield db.get_slice(entityId, "entities", ["admins"])
     admins = supercolumnsToDict(cols).get("admins", {}).keys()
     defer.returnValue(admins)
+
 
 @defer.inlineCallbacks
 def isAdmin(userId, entityId):

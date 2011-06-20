@@ -183,33 +183,31 @@
       <li><a style="cursor:pointer" class="" onclick="$('#add-users-block').toggle();$('#add-user-block').toggle();$(this).toggleClass('selected');$(this).parent().siblings().children().toggleClass('selected')">Multiple Users</a></li>
   </div>
   <div class="styledform">
-    <form action="/admin/add" method="POST" enctype="multipart/form-data" autocomplete="off">
-    <!-- fileupload doesn't work with ajax request.
-        TODO: find workaround to submit file in ajax request-->
-      <div id="add-user-block">
+    <div id="add-user-block">
+      <form action="/admin/add" method="POST" enctype="multipart/form-data" autocomplete="off">
         <ul>
           <li>
-            <label for="name"> Display Name</label>
+            <label for="name">Display Name</label>
             <input type="text" name="name" />
           </li>
           <li>
-            <label for="email"> Email Address</label>
+            <label for="email">Email Address</label>
             <input type="text" name="email" />
           </li>
           <li>
-            <label for="jobTitle"> Job Title</label>
+            <label for="jobTitle">Job Title</label>
             <input type="text" name="jobTitle" />
           </li>
           <li>
             <label for="timezone">Timezone </label>
             <select name="timezone" class="single-row">
-              % for timezone in common_timezones:
-                % if timezone == myTimezone:
+              %for timezone in common_timezones:
+                %if timezone == myTimezone:
                   <option value = "${timezone}" selected="">${timezone}</option>
-                % else:
+                %else:
                   <option value = "${timezone}" >${timezone}</option>
-                % endif
-              % endfor
+                %endif
+              %endfor
             </select>
           </li>
           <li>
@@ -218,11 +216,15 @@
           </li>
         </ul>
         <div class="styledform-buttons">
-             <button type="submit" class="button default">Add</button>
-             <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">Cancel</button>
+          <button type="submit" class="button default">Add</button>
+          <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">Cancel</button>
         </div>
-      </div>
-      <div id="add-users-block" style="display:none">
+      </form>
+    </div>
+    <div id="add-users-block" style="display:none">
+      <form action="/admin/add" method="POST" enctype="multipart/form-data" autocomplete="off">
+        <!-- fileupload doesn't work with ajax request.
+             TODO: find workaround to submit file in ajax request-->
         <div class="alert alert-info">
           Please upload a comma or tab separated file containing list of users in the following fields
           <div><b>
@@ -235,21 +237,21 @@
         </div>
         <ul>
           <li>
-            <label for="format"> File Type</label>
+            <label for="format">File Type</label>
             <input type="radio" name="format" value="csv" checked=True/>CSV
             <input type="radio" name="format" value="tsv"/>TSV
           </li>
           <li>
-            <label for="data"> Upload File</label>
+            <label for="data">Upload File</label>
             <input type="file" name="data" accept="csv" />
           </li>
         </ul>
         <div class="styledform-buttons">
-            <button type="submit" class="button default">Add</button>
-            <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">Cancel</button>
+          <button type="submit" class="button default">Add</button>
+          <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">Cancel</button>
         </div>
-      </div>
-    </form>
+      </form>
+    </div>
   </div>
 </%def>
 

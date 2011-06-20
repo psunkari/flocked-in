@@ -15,7 +15,7 @@ class BaseResource(resource.Resource):
 
     @defer.inlineCallbacks
     def _getBasicArgs(self, request):
-        auth = request.getSession(IAuthInfo)
+        auth = yield defer.maybeDeferred(request.getSession, IAuthInfo)
         myKey = auth.username
         orgKey = auth.organization
         isOrgAdmin = auth.isAdmin
