@@ -114,19 +114,20 @@ def getValidEntityId(request, arg, type="user", columns=None):
 @defer.inlineCallbacks
 def getValidItemId(request, arg, type=None, columns=None):
     itemId = getRequestArg(request, arg, sanitize=False)
+    itemType = type if type else "Item "
     if not itemId:
-        raise errors.MissingParams(type.capitalize()+' id missing')
+        raise errors.MissingParams(itemType.capitalize()+' id missing')
 
     item = yield db.get_slice(itemId, "items",
                               ["meta"].extend(columns if columns else []))
     if not item:
-        raise errors.InvalidItem('Invalid '+type, itemId)
+        raise errors.InvalidItem('Invalid '+itemType, itemId)
 
     item = supercolumnsToDict(item)
     meta = item["meta"]
 
     if type and meta["type"] != type:
-        raise errors.InvalidItem('Invalid '+type, itemId)
+        raise errors.InvalidItem('Invalid '+itemType, itemId)
 
     authinfo = request.getSession(IAuthInfo)
     myOrgId = authinfo.organization
@@ -135,7 +136,7 @@ def getValidItemId(request, arg, type=None, columns=None):
     yield defer.DeferredList([relation.initFriendsList(),
                               relation.initGroupsList()])
     if not checkAcl(myId, meta["acl"], meta["owner"], relation, myOrgId):
-        raise errors.ItemAccessDenied('Access to '+type+' denied', itemId)
+        raise errors.ItemAccessDenied('Access to '+itemType+' denied', itemId)
 
     defer.returnValue((itemId, item))
 
