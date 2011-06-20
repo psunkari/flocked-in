@@ -223,18 +223,15 @@
         </div>
       </div>
       <div id="add-users-block" style="display:none">
-        <div id="next-load-wrapper">
-          You may also upload a Comma Separated or a Tab Separated file of users in the following format
-          <div>
-            <table>
-              <th>
-                <td>Name</td>
-                <td>Email Address</td>
-                <td>Job Title</td>
-                <td>Timezone</td>
-                <td>Password</td>
-            </table>
-          </div>
+        <div class="alert alert-info">
+          Please upload a comma or tab separated file containing list of users in the following fields
+          <div><b>
+            <span>Name</span>&nbsp;&nbsp;
+            <span>Email Address</span>&nbsp;&nbsp;
+            <span>Job Title</span>&nbsp;&nbsp;
+            <span>Timezone</span>&nbsp;&nbsp;
+            <span>Password</span>
+          </b></div>
         </div>
         <ul>
           <li>
