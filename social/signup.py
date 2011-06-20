@@ -18,6 +18,14 @@ from social.template    import render, renderScriptBlock
 from social.logging     import dump_args, profile
 
 
+class InvalidRegistration(errors.BaseError):
+    pass
+
+
+class PasswordsNoMatch(errors.BaseError):
+    pass
+
+
 @profile
 @defer.inlineCallbacks
 @dump_args
@@ -55,14 +63,14 @@ class SignupResource(BaseResource):
     def _signupCheckToken(self, request):
         authinfo = yield defer.maybeDeferred(request.getSession, IAuthInfo)
         if authinfo.username:
-            raise errors.AlreadySignedIn()
+            raise errors.InvalidRequest("Another user is currently signed-in.  Please signout and then click the invitation link")
 
         emailId = utils.getRequestArg(request, "email")
         token = utils.getRequestArg(request, "token")
 
         valid = yield self._isValidToken(emailId, token)
         if not valid:
-            raise errors.InvalidRegistration()
+            raise InvalidRegistration("The invite is not valid anymore.  Already registered?")
 
         args = {'emailId': emailId, 'token': token, 'view': 'userinfo'}
         yield render(request, "signup.mako", **args)
@@ -72,14 +80,14 @@ class SignupResource(BaseResource):
     def _signupGotUserData(self, request):
         authinfo = yield defer.maybeDeferred(request.getSession, IAuthInfo)
         if authinfo.username:
-            raise errors.AlreadySignedIn()
+            raise errors.InvalidRequest("Another user is currently signed-in.  Please signout and then click the invitation link")
 
         emailId = utils.getRequestArg(request, "email")
         token = utils.getRequestArg(request, "token")
 
         valid = yield self._isValidToken(emailId, token)
         if not valid:
-            raise errors.InvalidRegistration()
+            raise InvalidRegistration("The invite is not valid anymore.  Already registered?")
 
         yield self._addUser(request)
 
@@ -89,7 +97,7 @@ class SignupResource(BaseResource):
     def _signupInviteCoworkers(self, request):
         authinfo = yield defer.maybeDeferred(request.getSession, IAuthInfo)
         if not authinfo.username:
-            raise errors.Unauthorized()
+            raise errors.Unauthorized("You need to login before sending invitations to other users")
 
         rawEmailIds = utils.getRequestArg(request, 'email', multiValued=True) or []
         d = people.invite(request, rawEmailIds)
@@ -124,10 +132,10 @@ class SignupResource(BaseResource):
         passwd = utils.getRequestArg(request, 'password', sanitize=False)
         pwdrepeat = utils.getRequestArg(request, 'pwdrepeat', sanitize=False)
         if not displayName or not jobTitle or not timezone or not passwd:
-            raise errors.MissingParams()
+            raise errors.MissingParams("All fields are required to create the user")
 
         if passwd != pwdrepeat:
-            raise errors.PasswordsNoMatch()
+            raise PasswordsNoMatch()
 
         args = {'emailId': emailId, 'view':'invite'}
 
@@ -151,7 +159,7 @@ class SignupResource(BaseResource):
             yield db.remove(domain, "invitations", super_column=emailId)
             yield render(request, "signup.mako", **args)
         else:
-            raise errors.InvalidRegistration()
+            raise InvalidRegistration("The invite is not valid anymore.  Already registered?")
 
 
     @profile

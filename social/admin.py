@@ -303,7 +303,7 @@ class Admin(base.BaseResource):
             elif segmentCount == 1 and request.postpath[0] == "org":
                 dfd = self._updateOrgInfo(request)
             else:
-                raise errors.NotFoundError(request)
+                raise errors.NotFoundError()
             return dfd
         d.addCallback(callback)
         return self._epilogue(request, d)
@@ -323,7 +323,7 @@ class Admin(base.BaseResource):
             elif segmentCount == 1 and request.postpath[0] == "org":
                 dfd = self._renderOrgInfo(request)
             else:
-                raise errors.NotFoundError(request)
+                raise errors.NotFoundError()
             return dfd
         d.addCallback(callback)
         return self._epilogue(request, d)

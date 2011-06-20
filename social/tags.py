@@ -82,7 +82,7 @@ class TagsResource(base.BaseResource):
         if newId or not script:
             tagInfo = yield db.get_slice(myOrgId, "orgTags", super_column=tagId)
             if not tagInfo:
-                raise errors.InvalidTag()
+                raise errors.InvalidTag("Tag does not exist", tagId)
             tagInfo = utils.columnsToDict(tagInfo)
             args["tags"] = {tagId: tagInfo}
             args["tagId"] = tagId
@@ -223,7 +223,7 @@ class TagsResource(base.BaseResource):
     def render_POST(self, request):
         segmentCount = len(request.postpath)
         if segmentCount != 1:
-            raise errors.InvalidRequest()
+            return self._epilogue(request, defer.fail(errors.NotFoundError()))
 
         requestDeferred = utils.getValidTagId(request, "id")
         def callback((tagId, tag)):
@@ -236,7 +236,7 @@ class TagsResource(base.BaseResource):
             elif action == "unfollow":
                 actionDeferred = db.remove(tagId, "tagFollowers", myId)
             else:
-                raise errors.InvalidRequest()
+                raise errors.NotFoundError()
 
             def renderActions(result):
                 return renderScriptBlock(request, "tags.mako", "tag_actions",

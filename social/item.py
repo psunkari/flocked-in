@@ -691,14 +691,14 @@ class ItemResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _untag(self, request):
-        tagId = yield utils.getValidTagId(request, "tag")
-        authInfo = request.getSession(IAuthInfo)
-        myId = authInfo.username
-        orgId = authInfo.organization
-
         (itemId, item) = yield utils.getValidItemId(request, "id", columns=["tags"])
         if "parent" in item:
             raise errors.InvalidRequest("Tags cannot be applied or removed from comments")
+
+        (tagId, tag) = yield utils.getValidTagId(request, "tag")
+        authInfo = request.getSession(IAuthInfo)
+        myId = authInfo.username
+        orgId = authInfo.organization
 
         if tagId not in item.get("tags", {}):
             raise errors.InvalidRequest("No such tag on the item")  # No such tag on item

@@ -40,11 +40,8 @@ class InvalidRequest(BaseError):
 # No such path
 #
 class NotFoundError(BaseError):
-    request = None
-
-    def __init__(self, request):
-        self.request = request
-        BaseError.__init__(self, "Not Found: %s"%request.path)
+    def __init__(self):
+        BaseError.__init__(self, "Not Found")
 
 
 #
@@ -63,6 +60,65 @@ class MissingParams(BaseError):
 #
 class ConfigurationError(BaseError):
     pass
+
+
+#
+# Access to item is denied
+#
+class ItemAccessDenied(BaseError):
+    itemId = None
+    userId = None
+
+    def __init__(self, message, itemId):
+        self.itemId = itemId
+        self.userId = userId
+        BaseError.__init__(self, message)
+
+
+#
+# Access to entity is denied
+#
+class EntityAccessDenied(BaseError):
+    entityId = None
+
+    def __init__(self, message, entityId):
+        self.entityId = itemId
+        self.userId = userId
+        BaseError.__init__(self, message)
+
+
+#
+# Invalid itemId was given
+#
+class InvalidItem(BaseError):
+    itemId = None
+
+    def __init__(self, message, itemId):
+        self.itemId = itemId
+        BaseError.__init__(self, message)
+
+
+#
+# Invalid entityId was given
+#
+class InvalidEntity(BaseError):
+    entityId = None
+
+    def __init__(self, message, entityId):
+        self.entityId = entityId
+        BaseError.__init__(self, message)
+
+
+#
+# Invalid tagId was given
+#
+class InvalidTag(BaseError):
+    tagId = None
+
+    def __init__(self, message, tagId):
+        self.tagId = tagId
+        BaseError.__init__(self, message)
+
 
 #
 # Exceptions will be changed to do the following:
@@ -83,7 +139,7 @@ class ConfigurationError(BaseError):
 # 7. The requested item does not exist or isn't of the right type
 #       InvalidItem(message, userId, givenItemId)
 # 8. The requested entity does not exist or isn't of the right type
-#       InvalidEntity(message, uesrId, givenEntityId)
+#       InvalidEntity(message, userId, givenEntityId)
 # 9. The requested tag does not exist
 #       InvalidTag(message, userId, givenTagId)
 # 10. Required parameters are missing
@@ -126,42 +182,10 @@ class InvalidData(BaseError):
 
 
 #
-# EntityId passed in params does not exist or isn't of
-# the requested type.
-#
-class InvalidEntity(BaseError):
-    pass
-
-
-#
-# ItemId passed in params does not exist or isn't of
-# the requested type.
-#
-class InvalidItem(BaseError):
-    pass
-
-
-#
 # The user trying to register already exists
 # or an invalid signup token is being used to register.
 #
 class InvalidRegistration(BaseError):
-    pass
-
-
-#
-# The requested operation cannot be performed
-# either due to insufficient privileges or because
-# the operation is not meant to be called that way
-#
-class InvalidRequest(BaseError):
-    pass
-
-
-#
-# TagId passed in params does not exist
-#
-class InvalidTag(BaseError):
     pass
 
 

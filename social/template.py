@@ -35,37 +35,25 @@ def render(request, path, *args, **data):
                               if request.path == request.uri \
                               else request.uri + "&_ns=1"
 
-    try:
-        template = yield threads.deferToThread(_getTemplate, path)
-        text = template.render(*args, **kwargs)
-        request.write(_spaceRE.sub(r'\1', text))
-    except Exception, err:
-        log.msg(traceback.print_exc())
-        request.processingFailed(err)
+    template = yield threads.deferToThread(_getTemplate, path)
+    text = template.render(*args, **kwargs)
+    request.write(_spaceRE.sub(r'\1', text))
 
 
 @defer.inlineCallbacks
 def renderDef(request, path, dfn, *args, **data):
-    try:
-        template = yield threads.deferToThread(_getTemplate, path, dfn)
-        text = template.render(*args, **data)
-        request.write(_spaceRE.sub(r'\1', text))
-    except Exception, err:
-        log.msg(traceback.print_exc())
-        request.processingFailed(err)
+    template = yield threads.deferToThread(_getTemplate, path, dfn)
+    text = template.render(*args, **data)
+    request.write(_spaceRE.sub(r'\1', text))
 
 
 @defer.inlineCallbacks
 def renderScriptBlock(request, path, dfn, wrapInTags=False, parent=None,
                       method=None, last=False, css=None, scripts=None,
                       handlers=None, attrs={}, args=[], **data):
-    try:
-        template = yield threads.deferToThread(_getTemplate, path, dfn)
-        text = template.render(*args, **data)
-        text = _spaceRE.sub(r'\1', text)
-    except Exception, err:
-        log.msg(traceback.print_exc())
-        request.processingFailed(err)
+    template = yield threads.deferToThread(_getTemplate, path, dfn)
+    text = template.render(*args, **data)
+    text = _spaceRE.sub(r'\1', text)
 
     map = {"content": text, "node": parent, "method": method, "last": last,
            "css": [], "js": [], "resources": {}, "handlers": handlers}
@@ -87,10 +75,6 @@ def renderScriptBlock(request, path, dfn, wrapInTags=False, parent=None,
 
 
 def getBlock(path, dfn, args=[], **data):
-    try:
-        template = _getTemplate(path, dfn)
-        text =  template.render(*args, **data)
-        return _spaceRE.sub(r'\1', text)
-    except Exception, err:
-        log.msg(traceback.print_exc())
-        raise Exception(err)
+    template = _getTemplate(path, dfn)
+    text =  template.render(*args, **data)
+    return _spaceRE.sub(r'\1', text)

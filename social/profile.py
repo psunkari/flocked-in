@@ -634,7 +634,7 @@ class ProfileResource(base.BaseResource):
     def render_POST(self, request):
         segmentCount = len(request.postpath)
         if segmentCount != 1:
-            return self._epilogue(request, defer.fail(errors.NotFoundError(request)))
+            return self._epilogue(request, defer.fail(errors.NotFoundError()))
 
         action = request.postpath[0]
         if action in ( "edit", "changePasswd") :
@@ -662,7 +662,7 @@ class ProfileResource(base.BaseResource):
             elif action == "unfollow":
                 actionDeferred = self._unfollow(myKey, targetKey)
             else:
-                raise errors.NotFoundError(request)
+                raise errors.NotFoundError()
 
             relation = Relation(myKey, [targetKey])
             data = {"relations": relation}
