@@ -8,8 +8,9 @@ from twisted.internet   import defer
 from twisted.web        import server
 from twisted.python     import log
 
-from social             import base, db, utils, feed, plugins, constants, tags, fts
-from social             import notifications, _
+from social             import base, db, utils, feed
+from social             import plugins, constants, tags, fts
+from social             import notifications, _, errors
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
@@ -19,7 +20,6 @@ from social.logging      import profile, dump_args
 
 class ItemResource(base.BaseResource):
     isLeaf = True
-
 
     @profile
     @defer.inlineCallbacks
@@ -243,7 +243,7 @@ class ItemResource(base.BaseResource):
         # Check if I already liked the item
         try:
             cols = yield db.get(itemId, "itemLikes", myId)
-            raise errors.InvalidRequest()
+            defer.returnValue(None)     # Ignore the request if we already liked it.
         except ttypes.NotFoundException:
             pass
 
@@ -261,8 +261,6 @@ class ItemResource(base.BaseResource):
         convOwnerId = conv["meta"]["owner"]
         convType = conv["meta"]["type"]
         convACL = conv["meta"]["acl"]
-
-        # TODO: Check if I have access to that item before liking it!
 
         # Update the likes count
         likesCount = int(item["meta"].get("likesCount", "0"))
@@ -361,7 +359,7 @@ class ItemResource(base.BaseResource):
             cols = yield db.get(itemId, "itemLikes", myId)
             likeTimeUUID = cols.column.value
         except ttypes.NotFoundException:
-            raise errors.InvalidRequest()
+            defer.returnValue(None)
 
         convId = item["meta"].get("parent", None)
         conv = None
@@ -466,7 +464,7 @@ class ItemResource(base.BaseResource):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         comment = utils.getRequestArg(request, "comment")
         if not comment:
-            raise errors.MissingParams()
+            raise errors.MissingParams("Please enter a comment")
 
         # 0. Fetch conversation and see if I have access to it.
         # TODO: Check ACL
@@ -548,7 +546,7 @@ class ItemResource(base.BaseResource):
         itemLikes = yield db.get_slice(itemId, "itemLikes")
         users = [col.column.name for col in itemLikes]
         if len(users) <= 0:
-            raise errors.InvalidRequest()
+            raise errors.InvalidRequest("Currently, no one likes the choosen item")
 
         entities = {}
         owner = item["meta"].get("owner")
@@ -646,15 +644,15 @@ class ItemResource(base.BaseResource):
         orgId = authInfo.organization
 
         if not tagName:
-            raise errors.MissingParams()
+            raise errors.MissingParams("Please enter a tag")
 
         (itemId, item) = yield utils.getValidItemId(request, "id", columns=["tags"])
         if "parent" in item["meta"]:
-            raise errors.InvalidRequest()
+            raise errors.InvalidRequest("Tag cannot be applied on a comment")
 
         (tagId, tag) = yield tags.ensureTag(request, tagName)
         if tagId in item.get("tags", {}):
-            raise errors.InvalidRequest() # Tag already exists on item.
+            raise errors.InvalidRequest("Tag already exists on the choosen item")
 
         d1 = db.insert(itemId, "items", myId, tagId, "tags")
         d2 = db.insert(tagId, "tagItems", itemId, item["meta"]["uuid"])
@@ -700,10 +698,10 @@ class ItemResource(base.BaseResource):
 
         (itemId, item) = yield utils.getValidItemId(request, "id", columns=["tags"])
         if "parent" in item:
-            raise errors.InvalidRequest()
+            raise errors.InvalidRequest("Tags cannot be applied or removed from comments")
 
         if tagId not in item.get("tags", {}):
-            raise errors.InvalidRequest()  # No such tag on item
+            raise errors.InvalidRequest("No such tag on the item")  # No such tag on item
 
         d1 = db.remove(itemId, "items", tagId, "tags")
         d2 = db.remove(tagId, "tagItems", item["meta"]["uuid"])
@@ -755,11 +753,12 @@ class ItemResource(base.BaseResource):
             conv = utils.supercolumnsToDict(conv)
 
         if itemOwner != myId and (itemId != convId and not conv):
-            raise errors.InvalidRequest()
+            raise errors.InvalidRequest("Conversation does not exist!")
 
+        # Do I own the item or if the item is a comment, do I own the conversation?
         if itemOwner != myId and \
             (itemId == convId or conv["meta"]["owner"] != myId):
-            raise errors.UnAuthorised()
+            raise errors.PermissionDenied("You should either own the comment or conversation to remove it")
 
         itemType = item["meta"].get("type", "status")
         convType = conv["meta"]["type"]
