@@ -155,7 +155,7 @@ class PeopleResource(base.BaseResource):
         elif viewType == "friends":
             d = getPeople(myId, myId, orgId, start=start)
         else:
-            raise errors.InvalidRequest()
+            raise errors.InvalidRequest("Unknown view type")
 
         users, relations, userIds,\
             blockedUsers, nextPageStart, prevPageStart = yield d

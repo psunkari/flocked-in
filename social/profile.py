@@ -39,13 +39,13 @@ def deleteAvatarItem(entity, isLogo=False):
 def saveAvatarItem(entityId, data, isLogo=False):
     imageFormat = _getImageFileFormat(data)
     if imageFormat not in constants.SUPPORTED_IMAGE_TYPES:
-        raise errors.UnknownFileFormat()
+        raise errors.InvalidFileFormat("The image format is not supported")
 
     try:
         original = PythonMagick.Blob(data)
         image = PythonMagick.Image(original)
     except Exception as e:
-        raise errors.UnknownFileFormat()
+        raise errors.InvalidFileFormat("Invalid image format")
 
     medium = PythonMagick.Blob()
     small = PythonMagick.Blob()
@@ -268,7 +268,7 @@ class ProfileResource(base.BaseResource):
             cols = yield db.get(myKey, "pendingConnections", targetKey)
             pendingType = cols.column.value
             if pendingType == '0':
-                raise errors.PendingRequest()
+                raise errors.InvalidRequest("A similar request is already pending")
 
             d1 = db.remove(myKey, "pendingConnections", targetKey)
             d2 = db.remove(targetKey, "pendingConnections", myKey)
@@ -634,15 +634,15 @@ class ProfileResource(base.BaseResource):
     def render_POST(self, request):
         segmentCount = len(request.postpath)
         if segmentCount != 1:
-                raise errors.InvalidRequest()
+            return self._epilogue(request, defer.fail(errors.NotFoundError(request)))
 
         action = request.postpath[0]
         if action in ( "edit", "changePasswd") :
             headers = request.requestHeaders
             content_length = headers.getRawHeaders("content-length", [0])[0]
             if int(content_length) > constants.MAX_IMAGE_SIZE:
-                raise errors.InvalidFileSize()
-            if action == "edit":
+                requestDeferred = defer.fail(errors.InvalidFileSize('Avatar image is too big'))
+            elif action == "edit":
                 requestDeferred = self._edit(request)
             elif action == "changePasswd":
                 requestDeferred = self._changePassword(request)
@@ -662,7 +662,7 @@ class ProfileResource(base.BaseResource):
             elif action == "unfollow":
                 actionDeferred = self._unfollow(myKey, targetKey)
             else:
-                raise errors.InvalidRequest()
+                raise errors.NotFoundError(request)
 
             relation = Relation(myKey, [targetKey])
             data = {"relations": relation}
