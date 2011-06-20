@@ -117,8 +117,7 @@ class GroupsResource(base.BaseResource):
 
         cols = yield db.get_slice(groupId, "bannedUsers", [myKey])
         if cols:
-            log.msg("UserId %s banned by admin" %(myKey))
-            raise errors.UserBanned()
+            raise errors.PermissionDenied("You are banned from joining the group by the administrator")
 
         try:
             cols = yield db.get(myKey, "entityGroupsMap", groupId)
@@ -221,9 +220,8 @@ class GroupsResource(base.BaseResource):
                                                       columns=["admins"])
         userId, user = yield utils.getValidEntityId(request, "uid", "user")
 
-        if myKey == userId and myKey in group["admins"] and len(group["admins"]) == 1:
-            log.msg("Admin can't be banned from group")
-            raise errors.InvalidRequest()
+        if myKey == userId and myKey in group["admins"]:
+            raise errors.InvalidRequest("An administrator cannot ban himself/herself from the group")
 
         if myKey in group["admins"]:
             # if the request is pending, remove the request
@@ -248,7 +246,7 @@ class GroupsResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _unBlockUser(self, request):
+    def _unblockUser(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                       columns=["admins"])
@@ -272,11 +270,10 @@ class GroupsResource(base.BaseResource):
                                                       columns=["admins"])
         userGroup = yield db.get_slice(myId, "entityGroupsMap", [groupId])
         if not userGroup:
-            raise errors.InvalidRequest()
+            raise errors.InvalidRequest("You are not currently a member of this group")
 
         if len(group.get('admins', [])) == 1 and myId in group['admins']:
-            log.msg('Nominate another person as group administrator')
-            raise errors.InvalidRequest()
+            raise errors.InvalidRequest("You are currently the only administrator of this group")
 
         itemType = "activity"
         responseType = "I"
@@ -325,7 +322,7 @@ class GroupsResource(base.BaseResource):
         dp = utils.getRequestArg(request, "dp", sanitize=False)
 
         if not name:
-            raise errors.MissingParams()
+            raise errors.MissingParams("Please give a name for this group")
 
         groupId = utils.getUniqueKey()
         meta = {"name":name,
@@ -608,16 +605,12 @@ class GroupsResource(base.BaseResource):
 
         if segmentCount == 0:
             d = self._listGroups(request)
-        elif segmentCount == 1 and request.postpath[0]=="members":
+        elif segmentCount == 1 and request.postpath[0] == "members":
             d = self._listGroupMembers(request)
         elif segmentCount == 1 and request.postpath[0] == "create":
             d = self._renderCreate(request)
         elif segmentCount == 1 and request.postpath[0] == "pending":
             d = self._listPendingSubscriptions(request)
-        elif segmentCount == 1 and request.postpath[0] == "unblock":
-            d = self._unBlockUser(request)
-        #elif segmentCount == 1 and request.postpath[0] == "invite":
-        #    d = self._renderInviteMembers(request)
         return self._epilogue(request, d)
 
 
@@ -634,7 +627,7 @@ class GroupsResource(base.BaseResource):
         elif segmentCount == 1 and request.postpath[0] == "block":
             d = self._blockUser(request)
         elif segmentCount == 1 and request.postpath[0] == "unblock":
-            d = self._unBlockUser(request)
+            d = self._unblockUser(request)
         elif segmentCount == 1 and request.postpath[0] == "invite":
             d = self._inviteMember(request)
         elif segmentCount == 1:

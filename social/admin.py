@@ -91,7 +91,7 @@ class Admin(base.BaseResource):
 
         # Admin cannot block himself.
         if userId == myKey:
-            raise errors.InvalidRequest("An administrator cannot block himself")
+            raise errors.InvalidRequest("An administrator cannot block himself/herself")
 
         emailId = user.get("basic", {}).get("emailId", None)
         yield db.insert(emailId, "userAuth", 'True', "isBlocked")
@@ -118,7 +118,7 @@ class Admin(base.BaseResource):
 
         # Admin cannot block himself.
         if userId == myKey:
-            raise errors.InvalidRequest("An administrator cannot delete himself")
+            raise errors.InvalidRequest("An administrator cannot delete himself/herself")
 
         yield utils.removeUser(userId, user)
 
