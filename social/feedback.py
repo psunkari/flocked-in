@@ -25,7 +25,7 @@ class FeedbackResource(base.BaseResource):
         comment = utils.getRequestArg(request, 'comment')
         mood = utils.getRequestArg(request, 'mood')
         if not mood or not comment:
-            raise errors.MissingParams()
+            raise errors.MissingParams("Please type your feedback")
 
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         tagName = 'feedback'
@@ -34,7 +34,7 @@ class FeedbackResource(base.BaseResource):
         feedbackDomain = config.get('Feedback', 'Domain') or 'synovel.com'
         cols = yield db.get_slice(feedbackDomain, 'domainOrgMap')
         if not cols:
-            raise errors.InvalidRequest()
+            raise errors.ConfigurationError("feedbackDomain is invalid!")
 
         # Only one org exists per domain
         synovelOrgId = cols[0].column.name

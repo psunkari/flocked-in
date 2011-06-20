@@ -53,7 +53,7 @@ class Admin(base.BaseResource):
 
         fileUpload = True if (dataFmt or data) else False
         if fileUpload and not (dataFmt and data):
-            raise errors.MissingParams("Both file and it's format are required")
+            raise errors.MissingParams("Please choose a file to upload")
 
         if not fileUpload and not all([name, emailId, passwd, jobTitle, timezone]):
             raise errors.MissingParams("All fields are required to create the user")

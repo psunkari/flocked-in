@@ -59,6 +59,12 @@ class MissingParams(BaseError):
 
 
 #
+# A required configuration parameter is missing or is invalid.
+#
+class ConfigurationError(BaseError):
+    pass
+
+#
 # Exceptions will be changed to do the following:
 #
 # 1. Current operation required authentication
@@ -82,6 +88,8 @@ class MissingParams(BaseError):
 #       InvalidTag(message, userId, givenTagId)
 # 10. Required parameters are missing
 #       MissingParams(message)
+# 11. Site configuration error (not displayed to user)
+#       ConfigurationError(message)
 #
 
 
