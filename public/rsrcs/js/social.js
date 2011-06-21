@@ -4,7 +4,7 @@
  * Accessible as "social", "$$" and "jQuery.social"
  */
 
-(function(window, $) {
+(function(window, $) { if (!window.social) {
 var social = {
 
 /*
@@ -332,7 +332,7 @@ social._initAjaxRequests();
 social._initTimestampUpdates();
 
 $.social = window.social = window.$$ = social;
-})(window, jQuery);
+}})(window, jQuery);
 
 
 
@@ -341,7 +341,7 @@ $.social = window.social = window.$$ = social;
  * Custom loading for the share block (publisher)
  * TODO: Handle extra options for showing buttons etc;
  */
-(function($$, $) {
+(function($$, $) { if (!$$.publisher) {
 var publisher = {
     load: function(obj) {
         // Tab selection
@@ -357,7 +357,7 @@ var publisher = {
 };
 
 $$.publisher = publisher;
-})(social, jQuery);
+}})(social, jQuery);
 
 
 
@@ -366,7 +366,7 @@ $$.publisher = publisher;
  * Callback to be called when one or more conversations are loaded
  * into the view. Initializes the item's display - the comment form etc;
  */
-(function($$, $) {
+(function($$, $) { if (!$$.convs) {
 var convs = {
     load: function(obj) {
         // Placeholders in comment input boxes
@@ -441,10 +441,10 @@ var convs = {
 };
 
 $$.convs = convs;
-})(social, jQuery);
+}})(social, jQuery);
 
 
-(function($$, $){
+(function($$, $){ if (!$$.feedback) {
 var feedback = {
     _mood: null,
     showFeedback: function() {
@@ -495,13 +495,13 @@ var feedback = {
     }
 };
 $$.feedback = feedback;
-})(social, jQuery);
+}})(social, jQuery);
 
 
 /*
  * Elements of the UI
  */
-(function($$, $){
+(function($$, $){ if (!$$.ui) {
 var ui = {
     init: function() {
         /* Add a scroll to bottom handler */
@@ -627,13 +627,13 @@ var ui = {
 }
 
 $$.ui = ui;
-})(social, jQuery);
+}})(social, jQuery);
 
 
 /*
  * JSON stringify
  */
-(function($$, $) {
+(function($$, $) { if (!$$.json) {
 var json = JSON || {};
 json.stringify = JSON.stringify || function (obj) {
     var t = typeof (obj);
@@ -656,13 +656,13 @@ json.stringify = JSON.stringify || function (obj) {
 };
 
 $$.json = json;
-})(social, jQuery);
+}})(social, jQuery);
 
 
 /*
  * Dialogs
  */
-(function($$, $) {
+(function($$, $) { if (!$$.dialog) {
 var dialog = {
     _counter: 0,
     _dialogs: {},
@@ -777,13 +777,13 @@ $.address.change(function(event) {
 });
 
 $$.dialog = dialog;
-})(social, jQuery);
+}})(social, jQuery);
 
 
 /*
  * Sidemenu related utilities
  */
-(function($$, $) {
+(function($$, $) { if (!$$.menu) {
 var menu = {
     selectItem: function(itemId) {
         var selected = $('.sidemenu-selected'),
@@ -797,14 +797,14 @@ var menu = {
     }
 };
 $$.menu = menu;
-})(social, jQuery);
+}})(social, jQuery);
 
 
 /*
  * Cache for lazy load.
  * List of groups, list of online users, list of notifications etc;
  */
-(function($$, $) {
+(function($$, $) { if (!$$.data) {
 var data = {
     _data: {},  // Local cache of data
 
@@ -828,7 +828,7 @@ var data = {
 };
 
 $$.data = data;
-})(social, jQuery);
+}})(social, jQuery);
 
 
 
@@ -836,7 +836,7 @@ $$.data = data;
 /*
  * Handle access control related menus and dialog.
  */
-(function($$, $) {
+(function($$, $) { if (!$$.acl) {
 var acl = {
     showACL: function(event, id) {
         var evt = $.event.fix(event),
@@ -931,14 +931,14 @@ var acl = {
     }
 };
 $$.acl = acl;
-})(social, jQuery);
+}})(social, jQuery);
 
 
 /*
  * Messaging related routines
  * Handle adding, removing users from composer etc
  */
-(function($$, $) {
+(function($$, $) { if (!$$.messaging) {
 var messaging = {
     removeUser: function(self, user_id){
         var recipients = $('.conversation-composer-recipients').data('recipients');
@@ -956,4 +956,4 @@ var messaging = {
 };
 
 $$.messaging = messaging;
-})(social, jQuery);
+}})(social, jQuery);
