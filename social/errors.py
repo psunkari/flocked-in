@@ -14,6 +14,12 @@ class BaseError(Exception):
 
 
 #
+# Requires user to be signed in
+#
+class Unauthorized(BaseError):
+    pass
+
+#
 # Current user has access/autorization but is not
 # permitted to perform the action (eg: in admin tasks)
 #

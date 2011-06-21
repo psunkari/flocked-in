@@ -225,8 +225,10 @@ a:hover, a:active, a:focus {
 }
 .has-left #left {width: 180px !important }
 
-#center-right {
+.has-left #center-right {
     margin-left: 180px;
+}
+#center-right {
     display: block;
 }
 
@@ -1159,4 +1161,14 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 
 #add-user-wrapper .styledform ul {
     padding-top: 10px;
+}
+
+
+/*
+ * Error page
+ */
+.error-page-contents {
+    font-size: 14px;
+    text-align: center;
+    padding: 30px 10px;
 }
