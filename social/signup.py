@@ -63,7 +63,7 @@ class SignupResource(BaseResource):
     def _signupCheckToken(self, request):
         authinfo = yield defer.maybeDeferred(request.getSession, IAuthInfo)
         if authinfo.username:
-            raise errors.InvalidRequest("Another user is currently signed-in.  Please signout and then click the invitation link")
+            raise errors.InvalidRequest(_("Another user is currently signed-in.  Please signout and then click the invitation link"))
 
         emailId = utils.getRequestArg(request, "email")
         token = utils.getRequestArg(request, "token")
@@ -80,7 +80,7 @@ class SignupResource(BaseResource):
     def _signupGotUserData(self, request):
         authinfo = yield defer.maybeDeferred(request.getSession, IAuthInfo)
         if authinfo.username:
-            raise errors.InvalidRequest("Another user is currently signed-in.  Please signout and then click the invitation link")
+            raise errors.InvalidRequest(_("Another user is currently signed-in.  Please signout and then click the invitation link"))
 
         emailId = utils.getRequestArg(request, "email")
         token = utils.getRequestArg(request, "token")
@@ -132,7 +132,7 @@ class SignupResource(BaseResource):
         passwd = utils.getRequestArg(request, 'password', sanitize=False)
         pwdrepeat = utils.getRequestArg(request, 'pwdrepeat', sanitize=False)
         if not displayName or not jobTitle or not timezone or not passwd:
-            raise errors.MissingParams("All fields are required to create the user")
+            raise errors.MissingParams([_("All fields are required to create the user")])
 
         if passwd != pwdrepeat:
             raise PasswordsNoMatch()

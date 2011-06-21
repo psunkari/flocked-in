@@ -19,14 +19,20 @@
     <div class="titlebar">
       <div id="title">
         <span class="middle title">${('Oops... there was a problem!')}</span>
-        %if script:
-          <span class="button title-button default"><a href="javascript:history.go(-1);">Go Back</a></span>
-        %else:
-        %endif
       </div>
     </div>
   </div>
   <div id="content" class="center-contents error-page-contents">
-    ${message}
+    <div>
+      ${message}
+    </div>
+    <div>
+      <ul class="h-links error-buttons">
+        <li><form action="/" method="GET"><button type="submit" class="button default">${_('Go Home')}</button></form></li>
+        %if not isDeepLink:
+        <li><form action="${referer}" method="GET"><button type="submit" class="button default" onclick="history.go(-1); return false;">${_('Go Back')}</button></form></li>
+        %endif
+      </ul>
+    </div>
   </div>
 </%def>

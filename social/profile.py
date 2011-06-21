@@ -268,7 +268,7 @@ class ProfileResource(base.BaseResource):
             cols = yield db.get(myKey, "pendingConnections", targetKey)
             pendingType = cols.column.value
             if pendingType == '0':
-                raise errors.InvalidRequest("A similar request is already pending")
+                raise errors.InvalidRequest(_("A similar request is already pending"))
 
             d1 = db.remove(myKey, "pendingConnections", targetKey)
             d2 = db.remove(targetKey, "pendingConnections", myKey)

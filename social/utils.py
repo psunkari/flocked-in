@@ -89,24 +89,24 @@ def getRequestArg(request, arg, sanitize=True, multiValued=False):
 def getValidEntityId(request, arg, type="user", columns=None):
     entityId = getRequestArg(request, arg, sanitize=False)
     if not entityId:
-        raise errors.MissingParams(type.capitalize()+' id missing')
+        raise errors.MissingParams([_('%s id') % _(type).capitalize()])
 
     entity = yield db.get_slice(entityId, "entities",
                                 ["basic"].extend(columns if columns else []))
     if not entity:
-        raise errors.InvalidEntity('Invalid '+type, entityId)
+        raise errors.InvalidEntity(type, entityId)
 
     entity = supercolumnsToDict(entity)
     basic = entity["basic"]
 
     if type != basic["type"]:
-        raise errors.InvalidEntity('Invalid '+type, entityId)
+        raise errors.InvalidEntity(type, entityId)
 
     authinfo = request.getSession(IAuthInfo)
     myOrgId = authinfo.organization
     org = basic["org"] if basic["type"] != "org" else entityId
     if myOrgId != org:
-        raise errors.EntityAccessDenied('Access to '+type+' denied', entityId)
+        raise errors.EntityAccessDenied(type, entityId)
 
     defer.returnValue((entityId, entity))
 
@@ -114,20 +114,20 @@ def getValidEntityId(request, arg, type="user", columns=None):
 @defer.inlineCallbacks
 def getValidItemId(request, arg, type=None, columns=None):
     itemId = getRequestArg(request, arg, sanitize=False)
-    itemType = type if type else "Item "
+    itemType = type if type else "item"
     if not itemId:
-        raise errors.MissingParams(itemType.capitalize()+' id missing')
+        raise errors.MissingParams([_('%s id') % _(itemType).capitalize()])
 
     item = yield db.get_slice(itemId, "items",
                               ["meta"].extend(columns if columns else []))
     if not item:
-        raise errors.InvalidItem('Invalid '+itemType, itemId)
+        raise errors.InvalidItem(itemType, itemId)
 
     item = supercolumnsToDict(item)
     meta = item["meta"]
 
     if type and meta["type"] != type:
-        raise errors.InvalidItem('Invalid '+itemType, itemId)
+        raise errors.InvalidItem(itemType, itemId)
 
     authinfo = request.getSession(IAuthInfo)
     myOrgId = authinfo.organization
@@ -136,7 +136,7 @@ def getValidItemId(request, arg, type=None, columns=None):
     yield defer.DeferredList([relation.initFriendsList(),
                               relation.initGroupsList()])
     if not checkAcl(myId, meta["acl"], meta["owner"], relation, myOrgId):
-        raise errors.ItemAccessDenied('Access to '+itemType+' denied', itemId)
+        raise errors.ItemAccessDenied(itemType, itemId)
 
     defer.returnValue((itemId, item))
 
@@ -145,12 +145,12 @@ def getValidItemId(request, arg, type=None, columns=None):
 def getValidTagId(request, arg):
     tagId = getRequestArg(request, arg, sanitize=False)
     if not tagId:
-        raise errors.MissingParams('Tag id missing')
+        raise errors.MissingParams([_('Tag id')])
 
     orgId = request.getSession(IAuthInfo).organization
     tag = yield db.get_slice(orgId, "orgTags", [tagId])
     if not tag:
-        raise errors.InvalidTag('Invalid tag', tagId)
+        raise errors.InvalidTag(tagId)
 
     tag = supercolumnsToDict(tag)
     defer.returnValue((tagId, tag))
@@ -182,10 +182,10 @@ def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
             acl = json.loads(acl)
             orgs = acl.get("accept", {}).get("orgs", [])
             if len(orgs) > 1 or orgs[0] != org:
-                raise errors.PermissionDenied('Cannot grant access to other orgs on this item')
+                raise errors.PermissionDenied(_('Cannot grant access to other orgs on this item'))
         except:
             if not org:
-                raise errors.MissingParams("You don't belong to any company.  Community member?")
+                raise Exception("User does not belong to any company!")
             acl = {"accept":{"orgs":[org]}}
 
     acl = pickle.dumps(acl)

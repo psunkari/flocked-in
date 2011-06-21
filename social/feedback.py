@@ -25,7 +25,7 @@ class FeedbackResource(base.BaseResource):
         comment = utils.getRequestArg(request, 'comment')
         mood = utils.getRequestArg(request, 'mood')
         if not mood or not comment:
-            raise errors.MissingParams("Please type your feedback")
+            raise errors.MissingParams([_("Feedback")])
 
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         tagName = 'feedback'

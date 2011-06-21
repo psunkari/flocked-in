@@ -5,7 +5,7 @@ from twisted.internet   import defer
 from twisted.web        import server
 from twisted.python     import log
 
-from social             import db, utils, base, plugins, _, __
+from social             import db, utils, base, plugins, _, __, errors
 from social.isocial     import IAuthInfo
 from social.relations   import Relation
 from social.template    import render, renderDef, renderScriptBlock
@@ -510,12 +510,15 @@ class FeedResource(base.BaseResource):
 
         if entityId:
             entity = yield db.get_slice(entityId, "entities", ["basic", "admins"])
+            if not entity:
+                raise errors.InvalidEntity("feed", entityId)
+
             entity = utils.supercolumnsToDict(entity)
             entityType = entity["basic"]['type']
 
             if entityType == "org":
                 if entityId != myOrgId:
-                    errors.InvalidRequest()
+                    raise errors.EntityAccessDenied("feed", entityId)
                 args["feedTitle"] = _("Company Feed: %s") % entity["basic"]["name"]
                 args["menuId"] = "org"
             elif entityType == "group":
@@ -524,7 +527,7 @@ class FeedResource(base.BaseResource):
                 args["groupId"] = entityId
                 args["menuId"] = "groups"
             elif entityId != myId:
-                errors.InvalidRequest()
+                raise errors.EntityAccessDenied("feed", entityId)
 
         feedId = entityId or myId
         args["feedId"] = feedId

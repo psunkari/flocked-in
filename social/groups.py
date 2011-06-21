@@ -117,7 +117,7 @@ class GroupsResource(base.BaseResource):
 
         cols = yield db.get_slice(groupId, "bannedUsers", [myKey])
         if cols:
-            raise errors.PermissionDenied("You are banned from joining the group by the administrator")
+            raise errors.PermissionDenied(_("You are banned from joining the group by the administrator"))
 
         try:
             cols = yield db.get(myKey, "entityGroupsMap", groupId)
@@ -221,7 +221,7 @@ class GroupsResource(base.BaseResource):
         userId, user = yield utils.getValidEntityId(request, "uid", "user")
 
         if myKey == userId and myKey in group["admins"]:
-            raise errors.InvalidRequest("An administrator cannot ban himself/herself from the group")
+            raise errors.InvalidRequest(_("An administrator cannot ban himself/herself from the group"))
 
         if myKey in group["admins"]:
             # if the request is pending, remove the request
@@ -270,10 +270,10 @@ class GroupsResource(base.BaseResource):
                                                       columns=["admins"])
         userGroup = yield db.get_slice(myId, "entityGroupsMap", [groupId])
         if not userGroup:
-            raise errors.InvalidRequest("You are not currently a member of this group")
+            raise errors.InvalidRequest(_("You are not currently a member of this group"))
 
         if len(group.get('admins', [])) == 1 and myId in group['admins']:
-            raise errors.InvalidRequest("You are currently the only administrator of this group")
+            raise errors.InvalidRequest(_("You are currently the only administrator of this group"))
 
         itemType = "activity"
         responseType = "I"
@@ -322,7 +322,7 @@ class GroupsResource(base.BaseResource):
         dp = utils.getRequestArg(request, "dp", sanitize=False)
 
         if not name:
-            raise errors.MissingParams("Please give a name for this group")
+            raise errors.MissingParams([_("Group name")])
 
         groupId = utils.getUniqueKey()
         meta = {"name":name,

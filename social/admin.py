@@ -53,10 +53,10 @@ class Admin(base.BaseResource):
 
         fileUpload = True if (dataFmt or data) else False
         if fileUpload and not (dataFmt and data):
-            raise errors.MissingParams("Please choose a file to upload")
+            raise errors.MissingParams([_("File")])
 
         if not fileUpload and not all([name, emailId, passwd, jobTitle, timezone]):
-            raise errors.MissingParams("All fields are required to create the user")
+            raise errors.MissingParams([_("All fields are required to create the user")])
 
         if all([name, emailId, passwd, jobTitle, timezone]):
             data = ",".join([emailId, name, jobTitle, passwd, timezone])
@@ -91,7 +91,7 @@ class Admin(base.BaseResource):
 
         # Admin cannot block himself.
         if userId == myKey:
-            raise errors.InvalidRequest("An administrator cannot block himself/herself")
+            raise errors.InvalidRequest(_("An administrator cannot block himself/herself"))
 
         emailId = user.get("basic", {}).get("emailId", None)
         yield db.insert(emailId, "userAuth", 'True', "isBlocked")
@@ -118,7 +118,7 @@ class Admin(base.BaseResource):
 
         # Admin cannot block himself.
         if userId == myKey:
-            raise errors.InvalidRequest("An administrator cannot delete himself/herself")
+            raise errors.InvalidRequest(_("An administrator cannot delete himself/herself"))
 
         yield utils.removeUser(userId, user)
 
@@ -284,7 +284,7 @@ class Admin(base.BaseResource):
     def _ensureAdmin(self, request):
         authinfo = yield defer.maybeDeferred(request.getSession, IAuthInfo)
         if not authinfo.isAdmin:
-            raise errors.PermissionDenied("Only company administrators are allowed here!")
+            raise errors.PermissionDenied(_("Only company administrators are allowed here!"))
 
 
     def render_POST(self, request):

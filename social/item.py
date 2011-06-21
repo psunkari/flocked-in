@@ -464,7 +464,7 @@ class ItemResource(base.BaseResource):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         comment = utils.getRequestArg(request, "comment")
         if not comment:
-            raise errors.MissingParams("Please enter a comment")
+            raise errors.MissingParams([_("Comment")])
 
         # 0. Fetch conversation and see if I have access to it.
         # TODO: Check ACL
@@ -546,7 +546,7 @@ class ItemResource(base.BaseResource):
         itemLikes = yield db.get_slice(itemId, "itemLikes")
         users = [col.column.name for col in itemLikes]
         if len(users) <= 0:
-            raise errors.InvalidRequest("Currently, no one likes the choosen item")
+            raise errors.InvalidRequest(_("Currently, no one likes the choosen item"))
 
         entities = {}
         owner = item["meta"].get("owner")
@@ -644,15 +644,15 @@ class ItemResource(base.BaseResource):
         orgId = authInfo.organization
 
         if not tagName:
-            raise errors.MissingParams("Please enter a tag")
+            raise errors.MissingParams([_("Tag")])
 
         (itemId, item) = yield utils.getValidItemId(request, "id", columns=["tags"])
         if "parent" in item["meta"]:
-            raise errors.InvalidRequest("Tag cannot be applied on a comment")
+            raise errors.InvalidRequest(_("Tag cannot be applied on a comment"))
 
         (tagId, tag) = yield tags.ensureTag(request, tagName)
         if tagId in item.get("tags", {}):
-            raise errors.InvalidRequest("Tag already exists on the choosen item")
+            raise errors.InvalidRequest(_("Tag already exists on the choosen item"))
 
         d1 = db.insert(itemId, "items", myId, tagId, "tags")
         d2 = db.insert(tagId, "tagItems", itemId, item["meta"]["uuid"])
@@ -693,7 +693,7 @@ class ItemResource(base.BaseResource):
     def _untag(self, request):
         (itemId, item) = yield utils.getValidItemId(request, "id", columns=["tags"])
         if "parent" in item:
-            raise errors.InvalidRequest("Tags cannot be applied or removed from comments")
+            raise errors.InvalidRequest(_("Tags cannot be applied or removed from comments"))
 
         (tagId, tag) = yield utils.getValidTagId(request, "tag")
         authInfo = request.getSession(IAuthInfo)
@@ -701,7 +701,7 @@ class ItemResource(base.BaseResource):
         orgId = authInfo.organization
 
         if tagId not in item.get("tags", {}):
-            raise errors.InvalidRequest("No such tag on the item")  # No such tag on item
+            raise errors.InvalidRequest(_("No such tag on the item"))  # No such tag on item
 
         d1 = db.remove(itemId, "items", tagId, "tags")
         d2 = db.remove(tagId, "tagItems", item["meta"]["uuid"])
@@ -753,12 +753,12 @@ class ItemResource(base.BaseResource):
             conv = utils.supercolumnsToDict(conv)
 
         if itemOwner != myId and (itemId != convId and not conv):
-            raise errors.InvalidRequest("Conversation does not exist!")
+            raise errors.InvalidRequest(_("Conversation does not exist!"))
 
         # Do I own the item or if the item is a comment, do I own the conversation?
         if itemOwner != myId and \
             (itemId == convId or conv["meta"]["owner"] != myId):
-            raise errors.PermissionDenied("You should either own the comment or conversation to remove it")
+            raise errors.PermissionDenied(_("You should either own the comment or conversation to remove it"))
 
         itemType = item["meta"].get("type", "status")
         convType = conv["meta"]["type"]

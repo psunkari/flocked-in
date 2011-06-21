@@ -1,16 +1,28 @@
 
+from twisted.python     import log
+from social             import _
+
 #
 # Base for all exceptions in social
 #
 class BaseError(Exception):
     _message = None
+
     def __init__(self, message=''):
         self._message = message
+
     def __str__(self):
         return self._message
+
     def _get_message(self):
         return self._message
     message = property(_get_message)
+
+    def errorData(self):
+        return ("<p>%s<p>"%self.message, 500, self.message)
+
+    def logError(self):
+        log.msg(self)
 
 
 #
@@ -19,16 +31,15 @@ class BaseError(Exception):
 class Unauthorized(BaseError):
     pass
 
+
 #
 # Current user has access/autorization but is not
 # permitted to perform the action (eg: in admin tasks)
 #
 class PermissionDenied(BaseError):
-    userId = None
     taskId = None
 
-    def __init__(self, message='', userId=None, taskId=None):
-        self.userId = userId
+    def __init__(self, message='', taskId=None):
         self.taskId = taskId
         BaseError.__init__(self, message)
 
@@ -47,7 +58,7 @@ class InvalidRequest(BaseError):
 #
 class NotFoundError(BaseError):
     def __init__(self):
-        BaseError.__init__(self, "Not Found")
+        BaseError.__init__(self, _("I really tried but couldn't find the resource here!"))
 
 
 #
@@ -56,15 +67,23 @@ class NotFoundError(BaseError):
 class MissingParams(BaseError):
     params = None
 
-    def __init__(self, message, params=None):
+    def __init__(self, params=None):
         self.params = params
+        message = _("One or more required parameters are missing")
         BaseError.__init__(self, message)
+
+    def errorData(self):
+        message = self.message
+        params = ", ".join(self.params)
+        return ("<p>%s</p><p><b>%s</b></p>"%(message, params), 500,
+                "%(message)s:%(params)s" % locals())
 
 
 #
 # A required configuration parameter is missing or is invalid.
+# Intentionally derived from Exception to hide error message from the user.
 #
-class ConfigurationError(BaseError):
+class ConfigurationError(Exception):
     pass
 
 
@@ -73,11 +92,10 @@ class ConfigurationError(BaseError):
 #
 class ItemAccessDenied(BaseError):
     itemId = None
-    userId = None
 
-    def __init__(self, message, itemId):
+    def __init__(self, itemType, itemId):
         self.itemId = itemId
-        self.userId = userId
+        message = _("The requested %s does not exist") % _(itemType)
         BaseError.__init__(self, message)
 
 
@@ -87,9 +105,9 @@ class ItemAccessDenied(BaseError):
 class EntityAccessDenied(BaseError):
     entityId = None
 
-    def __init__(self, message, entityId):
-        self.entityId = itemId
-        self.userId = userId
+    def __init__(self, entityType, entityId):
+        self.entityId = entityId
+        message = _("The requested %s does not exist") % _(entityType)
         BaseError.__init__(self, message)
 
 
@@ -99,8 +117,9 @@ class EntityAccessDenied(BaseError):
 class InvalidItem(BaseError):
     itemId = None
 
-    def __init__(self, message, itemId):
+    def __init__(self, itemType, itemId):
         self.itemId = itemId
+        message = _("The requested %s does not exist") % _(itemType)
         BaseError.__init__(self, message)
 
 
@@ -110,8 +129,9 @@ class InvalidItem(BaseError):
 class InvalidEntity(BaseError):
     entityId = None
 
-    def __init__(self, message, entityId):
+    def __init__(self, entityType, entityId):
         self.entityId = entityId
+        message = _("The requested %s does not exist") % _(entityType)
         BaseError.__init__(self, message)
 
 
@@ -121,8 +141,9 @@ class InvalidEntity(BaseError):
 class InvalidTag(BaseError):
     tagId = None
 
-    def __init__(self, message, tagId):
+    def __init__(self, tagId):
         self.tagId = tagId
+        message = _("The requested tag does not exist")
         BaseError.__init__(self, message)
 
 

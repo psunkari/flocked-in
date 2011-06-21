@@ -1172,3 +1172,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     text-align: center;
     padding: 30px 10px;
 }
+
+.error-buttons li {
+    margin: 20px 3px;
+}

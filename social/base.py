@@ -1,27 +1,14 @@
 
-import traceback
+import urlparse
 
 from twisted.web            import resource, server
 from twisted.internet       import defer
 from twisted.python         import log
 
 from social.isocial         import IAuthInfo
-from social                 import db, utils
+from social                 import db, utils, errors
 from social.template        import render, renderScriptBlock
 
-_errors = {
-    "Unauthorized": [ 
-        """The URL you are trying to visit requires that you signin.
-        Please <a href='/signin'>signin</a> if you already have a
-        flocked-in account or proceed to the <a href='/'>homepage to
-        know more about flocked-in and to signup</a>""",
-        401, "Please signin"],
-    "_default_": [
-        """<p>Something went wrong when processing your request.
-        The incident got noted and we are working on it.</p><p>Please try
-        again after sometime.</p>""", 500, """Oops... Unable to process 
-        your request. Please try after sometime"""]
-}
 
 class BaseResource(resource.Resource):
     requireAuth = True
@@ -58,11 +45,24 @@ class BaseResource(resource.Resource):
         appchange, script, args, myId = yield self._getBasicArgs(request)
         ajax = self._ajax
 
-        errorData = _errors.get(failure.type.__name__, None)
-        if not errorData:
-            errorData = _errors.get('_default_')
+        try:
+            failure.raiseException()
+        except errors.BaseError, e:
+            fullErrorStr, ajaxErrCode, ajaxErrStr = e.errorData()
+            e.logError()
+        except Exception, e:
+            fullErrorStr = """<p>Something went wrong when processing your
+                request.  The incident got noted and we are working on it.</p>
+                <p>Please try again after sometime.</p>"""
+            ajaxErrorCode = 500
+            ajaxErrorStr = """Oops... Unable to process your request.
+                Please try after sometime"""
+            log.msg("*************** Exception Start ***************")
+            log.msg(failure)
+            log.msg("***************  Exception End  ***************")
 
-        fullErrorStr, ajaxErrorCode, ajaxErrorStr = errorData
+        referer = request.getHeader('referer')
+        args["referer"] = referer
 
         if ajax and not appchange:
             request.setResponseCode(ajaxErrorCode)
@@ -72,13 +72,22 @@ class BaseResource(resource.Resource):
             yield renderScriptBlock(request, "errors.mako", "layout",
                                 not ajax, "#mainbar", "set", **args)
         else:
+            if referer:
+                fromNetLoc = urlparse.urlsplit(referer)[1]
+                myNetLoc = urlparse.urlsplit(request.uri)[1]
+                if fromNetLoc != myNetLoc:
+                    args["isDeepLink"] = True
+            else:
+                args["isDeepLink"] = True
+
             args["msg"] = fullErrorStr
             if script:
                 request.write("<script>$('body').empty();</script>")
             yield render(request, "errors.mako", **args)
       except Exception, e:
+        import traceback
         log.msg(traceback.print_exc())
-        log.err(e)
+
 
     def _epilogue(self, request, deferred=None):
         d = deferred if deferred else defer.fail(errors.NotFoundError())
