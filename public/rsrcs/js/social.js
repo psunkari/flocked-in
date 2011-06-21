@@ -42,8 +42,8 @@ fetchUri: function _fetchUri(str) {
     return deferred;
 },
 ajaxRedirectUri: function _ajaxRedirectUri(uri) {
-    $.address.value(uri);
     this.fetchUri(uri);
+    $.address.value(uri);
 },
 setBusy: function _setBusy(deferred, node) {
     busyIndicator = null;
@@ -71,8 +71,8 @@ _initAjaxRequests: function _initAjaxRequests() {
         if (url = node.attr('_ref')) {
             deferred = $.getScript('/ajax' + url);
         } else if (url = node.attr('href')) {
-            $.address.value(url);
             deferred = self.fetchUri(url);
+            $.address.value(url);
         }
 
         self.setBusy(deferred, node);
@@ -531,8 +531,8 @@ var ui = {
             select: function(event, obj){
                 url = obj.item.href;
                 if (url !== undefined) {
-                    $.address.value(url);
                     deferred = $$.fetchUri(url);
+                    $.address.value(url);
                     event.target.value = "";
                     return false;
                 }
