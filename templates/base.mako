@@ -118,6 +118,7 @@
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.menu.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.autocomplete.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/jquery.ui.datepicker.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.address.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.autogrow-textarea.js"></script>
   <script type="text/javascript" src="/rsrcs/js/social.js"></script>

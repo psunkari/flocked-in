@@ -613,7 +613,7 @@ var ui = {
                  })
                  .css("z-index", 2000);
         }
-    
+
         $menu.show().position({
                 my: "left top",
                 at: "left bottom",
@@ -957,3 +957,46 @@ var messaging = {
 
 $$.messaging = messaging;
 }})(social, jQuery);
+
+/*
+ * Event Plugin related routines
+ * Formatting date times, merging date times etc.
+ */
+(function($$, $) { if (!$$.events) {
+var events = {
+    formatTimein12: function(dateObj){
+        //Format time in AM/PM format derived from a date object
+        var currentHours = dateObj.getHours();
+        var currentMinutes = dateObj.getMinutes();
+
+        currentMinutes = ( currentMinutes < 10 ? "0" : "" ) + currentMinutes;
+        // Choose either "AM" or "PM" as appropriate
+        var timeOfDay = ( currentHours < 12 ) ? "AM" : "PM";
+
+        // Convert the hours component to 12-hour format if needed
+        currentHours = ( currentHours > 12 ) ? currentHours - 12 : currentHours;
+
+        // Convert an hours component of "0" to "12"
+        currentHours = ( currentHours == 0 ) ? 12 : currentHours;
+        return currentHours + ":" + currentMinutes + timeOfDay
+    },
+    RSVP: function(itemId){
+        //Add routine for submitting an RSVP
+    },
+    removeUser: function(self, user_id){
+        var recipients = $('#invitees').data('recipients');
+        var user_idx = jQuery.inArray(user_id, recipients);
+        recipients.splice(user_idx, 1);
+        $('#invitees').data('recipients', recipients);
+        $(self).parent().remove();
+    },
+    formatUser: function(user_string, user_id){
+        return "<div class='tag'>"+
+            "<span class='conversation-composer-recipient-label'>"+ user_string +"</span>"+
+            "<span class='conversation-composer-recipient-remove button-link' "+
+                "onclick='$$.events.removeUser(this, \""+user_id+"\")'>X</span></div>"
+    }
+};
+
+$$.events = events;
+}})(social, jQuery)
