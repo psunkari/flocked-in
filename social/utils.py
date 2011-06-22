@@ -129,13 +129,23 @@ def getValidItemId(request, arg, type=None, columns=None):
     if type and meta["type"] != type:
         raise errors.InvalidItem(itemType, itemId)
 
+    parentId = meta.get("parent", None)
+    if parentId:
+        parent = yield db.get_slice(parentId, "items", ["meta"])
+        parent = supercolumnsToDict(parent)
+        acl = parent["meta"]["acl"]
+        owner = parent["meta"]["owner"]
+    else:
+        acl = meta["acl"]
+        owner = meta["owner"]
+
     authinfo = request.getSession(IAuthInfo)
     myOrgId = authinfo.organization
     myId = authinfo.username
     relation = Relation(myId, [])
     yield defer.DeferredList([relation.initFriendsList(),
                               relation.initGroupsList()])
-    if not checkAcl(myId, meta["acl"], meta["owner"], relation, myOrgId):
+    if not checkAcl(myId, acl, owner, relation, myOrgId):
         raise errors.ItemAccessDenied(itemType, itemId)
 
     defer.returnValue((itemId, item))
