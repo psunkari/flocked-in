@@ -194,14 +194,6 @@
   class="button-link" onclick="$$.convs.comment('${convId}');" >${_(commentString)}</button>&#183;<button
   ## Add a tag
   class="button-link" title="${_('Add Tag')}" onclick="$$.convs.editTags('${convId}', true);">${_("Add Tag")}</button>
-  %if convType == "event":
-    &#183<button class="button-link" onclick="$$.ui.showPopUp(event)">RSVP to this event</button>
-    <ul class="acl-menu" style="display:none;">
-        <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'yes')"><div class="icon"></div>${_("Yes, I will attend")}</a></li>
-        <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'no')"><div class="icon"></div>${_("No")}</a></li>
-        <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'maybe')"><div class="icon"></div>${_("Maybe")}</a></li>
-    </ul>
-  %endif
 </%def>
 
 

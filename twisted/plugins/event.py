@@ -65,11 +65,33 @@ class EventResource(base.BaseResource):
                 value = ":".join([responseType, myKey, convId, convType, convOwner])
                 yield db.batch_insert(userKey, "notificationItems", {convId:{timeUUID:value}})
 
+    @defer.inlineCallbacks
+    def _invitees(self, request):
+        itemId, item = yield utils.getValidItemId(request, "id")
+
+        if itemId:
+            response = yield db.get_slice(itemId, "eventInvitations")
+            response = utils.supercolumnsToDict(response)
+            invitees = response.keys()
+
+            entities = {}
+            owner = item["meta"].get("owner")
+            cols = yield db.multiget_slice(invitees+[owner], "entities", ["basic"])
+            entities = utils.multiSuperColumnsToDict(cols)
+
+            args = {"users": invitees, "entities": entities}
+            args['title'] = _("People invited to this event ")
+
+            yield renderScriptBlock(request, "item.mako", "userListDialog", False,
+                                    "#invitee-dlg-%s"%(itemId), "set", **args)
 
     @profile
     @defer.inlineCallbacks
     @dump_args
     def _rsvp(self, request):
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        landing = not self._ajax
+
         convId = utils.getRequestArg(request, 'id')
         response = utils.getRequestArg(request, 'response')
         myKey = request.getSession(IAuthInfo).username
@@ -123,6 +145,20 @@ class EventResource(base.BaseResource):
         optionCounts[response] = str(responseCount)
 
         yield db.batch_insert(convId, "items", {"options":optionCounts})
+
+        if script:
+            #Update the inline status of your rsvp
+            if response == "yes":
+              rsp = _("You are attending")
+            elif response == "no":
+              rsp = _("You are not attending")
+            elif response == "maybe":
+              rsp = _("You may attend")
+
+            request.write("$('#event-rsvp-status-%s').attr('innerHTML', '%s')" %(convId, rsp))
+            #TODO:Update the sidebar listing of people attending this event
+
+
 
 
     @profile
@@ -188,36 +224,30 @@ class EventResource(base.BaseResource):
     @profile
     @dump_args
     def render_POST(self, request):
-        def success(response):
-            request.finish()
-        def failure(err):
-            log.msg(err)
-            request.finish()
 
         segmentCount = len(request.postpath)
+        d = None
+
         if segmentCount == 1 and request.postpath[0] == 'rsvp':
             d = self._rsvp(request)
-            d.addCallbacks(success, failure)
-            return server.NOT_DONE_YET
-        if segmentCount == 1 and request.postpath[0] == "invite":
+        if segmentCount == 1 and request.postpath[0] == "invitee":
             d = self._inviteUsers(request)
-            d.addCallbacks(success, failure)
-            return server.NOT_DONE_YET
 
+        return self._epilogue(request, d)
 
     @profile
     @dump_args
     def render_GET(self, request):
-        def success(response):
-            request.finish()
-        def failure(err):
-            log.msg(err)
-            request.finish()
-        d = self._events(request)
-        d.addCallbacks(success, failure)
-        return server.NOT_DONE_YET
 
+        segmentCount = len(request.postpath)
+        d = None
 
+        if segmentCount == 0:
+            d = self._events(request)
+        if segmentCount == 1 and request.postpath[0] == "invitee":
+            d = self._invitees(request)
+
+        return self._epilogue(request, d)
 
 #TODO: event Invitations.
 #TODO: listing invitations chronologically.
@@ -384,6 +414,7 @@ class Event(object):
 
 
     def rootHTML(self, convId, isQuoted, args):
+
         if "convId" in args:
             return getBlock("event.mako", "event_root", **args)
         else:
@@ -412,7 +443,11 @@ class Event(object):
         args.setdefault("items", {})[convId] = conv
         args.setdefault("myResponse", {})[convId] = myResponse
 
-        defer.returnValue(set())
+        response = yield db.get_slice(convId, "eventInvitations")
+        response = utils.supercolumnsToDict(response)
+        invitees = response.keys()
+        args.setdefault("invitees", {})[convId] = invitees
+        defer.returnValue(set(invitees))
 
 
     @profile
@@ -432,7 +467,7 @@ class Event(object):
         if not ((title or desc) and startTime and startDate):
             raise errors.InvalidRequest()
 
-        #TODO
+        #TODO input sanitization
         utc = pytz.utc
         startDate = datetime.datetime.utcfromtimestamp(float(startDate)/1000).replace(tzinfo=utc)
         endDate = datetime.datetime.utcfromtimestamp(float(endDate)/1000).replace(tzinfo=utc)
@@ -474,9 +509,6 @@ class Event(object):
     def delete(self, itemId):
         log.msg("plugin:delete", itemId)
         yield db.get_slice(itemId, "entities")
-
-
-
 
     _ajaxResource = None
     _resource = None

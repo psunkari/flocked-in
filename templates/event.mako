@@ -114,16 +114,23 @@
     start = items[convId]["meta"].get("startTime")
     end   = items[convId]["meta"].get("endTime", '')
     options = items[convId]["options"] or ["yes", "maybe", "no"]
-    #response = myResponse[convId] if convId in myResponse else False
     owner = items[convId]["meta"]["owner"]
     ownerName = entities[owner]["basic"]["name"]
     my_tz = timezone(entities[owner]["basic"]["timezone"])
+    if "invitees" in context.kwargs:
+      invited = invitees[convId]
+    else:
+      invited = []
+    response = myResponse[convId] if "myResponse" in context.kwargs else ""
+
     utc = pytz.utc
     startdatetime = datetime.datetime.utcfromtimestamp(float(start)).replace(tzinfo=utc)
     enddatetime = datetime.datetime.utcfromtimestamp(float(end)).replace(tzinfo=utc)
+
     utc_dt = utc.normalize(startdatetime)
     start_dt = my_tz.normalize(startdatetime.astimezone(my_tz))
     end_dt = my_tz.normalize(enddatetime.astimezone(my_tz))
+
     #If start and end on the same day then don't show end date
     today = datetime.datetime.now().replace(tzinfo=my_tz)
     startrdelta = relativedelta(startdatetime, today)
@@ -144,9 +151,16 @@
       event_end_fmt = "%a %b %d, %I:%M %p"
     event_end = end_dt.strftime(event_end_fmt)
   %>
-  <div class="conv-item">
-    <span>
-      <a class='ajax' href='/profile?id=${owner}'>${ownerName}</a> has invited you to <a href="/item?id=${convId}">${title} </a>
+  <div class="">
+    <span class="user-cause conv-reason">
+      <a class='ajax' href='/profile?id=${owner}'>${ownerName}</a> has invited you
+        % if len(invited) == 0:
+          to <a href="/item?id=${convId}">${title} </a>
+        % elif len(invited) == 1:
+          and ${entities[invited[0]]["basic"]["name"]} to <a href="/item?id=${convId}">${title} </a>
+        % else:
+          and <a class="ajax" onclick="$$.events.showEventInvitees('${convId}')">${len(invited)}</a> others to <a href="/item?id=${convId}">${title} </a>
+        % endif
     </span>
     <div class="item-title has-icon">
       <span class="event-date-icon button">
@@ -170,31 +184,33 @@
           % else:
             <span>till ${event_end}</span>
           % endif
+          <div class="event-actions">
+            % if response == "yes":
+              <span id="event-rsvp-status-${convId}">${_("You are attending")}</span>
+            % elif response == "no":
+              <span id="event-rsvp-status-${convId}">${_("You are not attending")}</span>
+            % elif response == "maybe":
+              <span id="event-rsvp-status-${convId}">${_("You may attend")}</span>
+            %endif
+            <button class="button-link" onclick="$$.ui.showPopUp(event)">RSVP to this event</button>
+            <ul class="acl-menu" style="display:none;">
+                <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'yes')"><div class="icon"></div>${_("Yes, I will attend")}</a></li>
+                <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'no')"><div class="icon"></div>${_("No")}</a></li>
+                <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'maybe')"><div class="icon"></div>${_("Maybe")}</a></li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>
   </div>
-<!--      <form action="/event/rsvp" method="POST" class="ajax">
-          % for option in options:
-            <% checked = "checked" if response and response == option else "" %>
-            % if checked:
-              <input type="radio" name="response" checked="${checked}" value="${option}">${option}</input>
-            % else:
-              <input type="radio" name="response" value= "${option}">${option}</input>
-            %endif
-          % endfor
-          <input type="hidden" name="id" value="${convId}" />
-          <input type="hidden" name="type" value="event" />
-          <input type="submit" id="submit" value="${_('RSVP')}" class="button"/>
-      </form>-->
+</%def>
 
-<!--    <div >
-      <form action="/event/invite"  method=POST class="ajax">
-        <label for="invitees"> Invite </label>
-        <input type="text" name="invitees" placeholder="${_('List of Invitees')}"/>
-        <input type="hidden" name="id" value= "${convId}" />
-        <input type="submit" id="submit" value="${_('Invite')}"/>
-      </form>
-    </div>
--->
+<%def name="update_rsvp(response, convId)">
+  % if response == "yes":
+    <span id="event-rsvp-status-${convId}">${_("You are attending")}</span>
+  % elif response == "no":
+    <span id="event-rsvp-status-${convId}">${_("You are not attending")}</span>
+  % elif response == "maybe":
+    <span id="event-rsvp-status-${convId}">${_("You may attend")}</span>
+  %endif
 </%def>
