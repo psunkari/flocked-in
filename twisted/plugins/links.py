@@ -56,7 +56,7 @@ class Links(object):
         title = _encode(title)
 
         convId = utils.getUniqueKey()
-        item = utils.createNewItem(request, self.itemType)
+        item, attachments = yield utils.createNewItem(request, self.itemType)
         meta = {"comment": comment}
         if target:
             meta["target"] = target

@@ -52,14 +52,17 @@ class Status(object):
             raise errors.MissingParams()
 
         convId = utils.getUniqueKey()
-        item = utils.createNewItem(request, self.itemType)
+        item, attachments = yield utils.createNewItem(request, self.itemType)
         meta = {"comment": comment}
         if target:
             meta["target"] = target
 
         item["meta"].update(meta)
-
         yield db.batch_insert(convId, "items", item)
+        for attachmentId in attachments:
+            timeuuid, fid, name, size, ftype  = attachments[attachmentId]
+            val = "%s:%s:%s:%s:%s" %(utils.encodeKey(timeuuid), fid, name, size, ftype)
+            yield db.insert(convId, "item_files", val, timeuuid, attachmentId)
         defer.returnValue((convId, item))
 
     @defer.inlineCallbacks

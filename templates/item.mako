@@ -136,6 +136,28 @@
   %if itemType in plugins:
     ${plugins[itemType].rootHTML(convId, isQuoted, context.kwargs)}
   %endif
+  <% attachments = items[convId].get("attachments", {}) %>
+  %for attachmentId in attachments:
+    <% 
+        tuuid, name, size, ftype = attachments[attachmentId].split(':') 
+        size = utils.approximate_size(int(size))
+    %>
+    <span id="${attachmentId}">
+      <a href='/file?id=${convId}&fid=${attachmentId}&ver=${tuuid}' >${name}</a>
+      %if size:
+        ${size}
+      %endif
+    </span>
+    ##<span> <a href="/file/versions?id=${convId}&fid=${attachmentId}">versions</a></span>
+    
+    ##<form id="${convId}-file-form" method="post" action = "/file/new_version" enctype="multipart/form-data" >
+    ##    <input type="file" name="file" />
+    ##    <input type="hidden" name="id" value="${convId}" />
+    ##    <input type="hidden" name="fid" value="${attachmentId}" />
+    ##    <input type="submit" name="upload" value="upload" />
+    ##</form>
+
+  %endfor
 </%def>
 
 
@@ -420,6 +442,43 @@
   </div>
 </%def>
 
+##<%def name="render_files(convId, isQuoted=False)">
+##  <%
+##    conv = items[convId]
+##    convType = conv["meta"]["type"]
+##    userId = conv["meta"]["owner"]
+##    normalize = utils.normalizeText
+##    attachments = conv.get("attachments", {})
+##
+##  %>
+##  %if not isQuoted:
+##    ${utils.userName(userId, entities[userId], "conv-user-cause")}
+##  %endif
+##  <div class="item-title">
+##    <div class="">
+##      %if isQuoted:
+##        ${utils.userName(userId, entities[userId])}
+##      %endif
+##      %if conv["meta"].has_key("comment"):
+##        ${conv["meta"]["comment"]|normalize}
+##      %endif
+##      % for attachmentId in attachments:
+##         <%
+##            timeuuid, fileId, name, size, filetype = attachments[attachmentId]
+##            size = utils.approximate_size(int(size))
+##         %>
+##         <div>
+##         <a href='/file?id=${convId}&fid=${attachmentId}&ver=${timeuuid}' >${name}</a>
+##         % if size:
+##            ##(${utils.approximate_size(size)})
+##            (${size})
+##         %endif 
+##         </div>
+##      % endfor
+##    </div>
+##  </div>
+##</%def>
+
 
 <%def name="feedback_icon(type)">
   <div class="feedback-mood-icon ${type}-icon"></div>
@@ -555,4 +614,12 @@
       </div>
     </div>
   </div>
+</%def>
+
+<%def name="set_attachment(itemId, attachmentId, timeuuid, name, size)">
+     <% size = utils.approximate_size(int(size)) %> 
+      <a href='/file?id=${itemId}&fid=${attachmentId}&ver=${timeuuid}' >${name}</a>
+      %if size:
+        ${size}
+      %endif
 </%def>

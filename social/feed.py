@@ -231,7 +231,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
         if not ids:
             defer.returnValue(retIds)
 
-        cols = yield db.multiget_slice(ids, "items", ["meta", "tags"])
+        cols = yield db.multiget_slice(ids, "items", ["meta", "tags", "attachments"])
         items.update(utils.multiSuperColumnsToDict(cols))
         checkAcl = utils.checkAcl
 
@@ -407,7 +407,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
     yield defer.DeferredList(feedItems_d)
 
     # Fetch the required entities, tags and items to finish the job!
-    items_d = db.multiget_slice(toFetchItems, "items", ["meta"])
+    items_d = db.multiget_slice(toFetchItems, "items", ["meta" ,"attachments"])
 
     for convId in convIds:
         conv = items[convId]
