@@ -46,7 +46,7 @@ class Links(object):
         url = utils.getRequestArg(request, "url", sanitize=False)
 
         if not url:
-            raise errors.MissingParams()
+            raise errors.MissingParams([_('URL to be shared')])
 
         if len(url.split("://")) == 1:
             url = "http://" + url

@@ -1,5 +1,6 @@
 import time
 import uuid
+from ordereddict        import OrderedDict
 
 from zope.interface     import implements
 from twisted.plugin     import IPlugin
@@ -21,11 +22,10 @@ class PollResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _vote(self, request):
-        convId, conv = yield utils.getAccessibleItemId(request,
-                                                'id', ['options'], 'poll')
+        convId, conv = yield utils.getValidItemId(request, 'id', 'poll', ['options'])
         vote = utils.getRequestArg(request, 'option')
         if not vote or vote not in conv.get("options", {}):
-            raise errors.InvalidRequest()
+            raise errors.InvalidRequest("The option does not exist")
 
         optionCounts = {}
         myId = request.getSession(IAuthInfo).username
@@ -54,9 +54,7 @@ class PollResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _results(self, request):
-        convId = utils.getRequestArg(request, "id");
-        if not convId:
-            raise errors.InvalidRequest()
+        convId, conv = yield utils.getValidItemId(request, "id", "poll");
 
         data = {}
         userId = request.getSession(IAuthInfo).username
@@ -74,9 +72,7 @@ class PollResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _change(self, request):
-        convId = utils.getRequestArg(request, "id");
-        if not convId:
-            raise errors.InvalidRequest()
+        convId, conv = yield utils.getValidItemId(request, "id", "poll");
 
         data = {}
         userId = request.getSession(IAuthInfo).username
@@ -92,18 +88,17 @@ class PollResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _listVoters(self, request):
-        convId, item = yield utils.getValidItemId(request, "id",
-                                                  ["options"], "poll")
+        convId, item = yield utils.getValidItemId(request, "id", "poll", ["options"])
 
         myId = request.getSession(IAuthInfo).username
         myVote = yield db.get_slice(myId, "userVotes", [convId])
         myVote = myVote[0].column.value if myVote else None
         if not myVote:
-            raise errors.InvalidRequest();
+            raise errors.InvalidRequest("You cannot see results unless you vote");
 
         option = utils.getRequestArg(request, "option")
         if not option or option not in item.get("options", {}):
-            raise errors.MissingParams();
+            raise errors.MissingParams([_('Option')]);
 
         votes = yield db.get_slice(convId, "votes", [option])
         votes = utils.supercolumnsToDict(votes)
@@ -199,14 +194,12 @@ class Poll(object):
 
         conv = yield db.get_slice(convId, "items",
                                   ['options', 'counts'].extend(columns))
-        if not conv:
-            raise errors.InvalidRequest()
         conv = utils.supercolumnsToDict(conv, True)
         conv.update(args.get("items", {}).get(convId, {}))
 
         options = conv["options"] if conv.has_key("options") else None
         if not options:
-            raise errors.InvalidRequest()
+            raise errors.InvalidRequest("The poll does not have any options")
 
         myVote = yield db.get_slice(myId, "userVotes", [convId])
         myVote = myVote[0].column.value if myVote else None
@@ -235,20 +228,20 @@ class Poll(object):
 
         end = utils.getRequestArg(request, "end")
         start = utils.getRequestArg(request, "start")
-        options = utils.getRequestArg(request, "options", True)
+        options = utils.getRequestArg(request, "options", multiValued=True)
         question = utils.getRequestArg(request, "question")
         showResults = utils.getRequestArg(request, "show") or 'True'
         options = [option for option in options if option]
 
-        if not (question and options):
-            raise errors.MissingParams()
-        if len(options) <2 :
-            raise errors.InSufficientParams()
+        if not question:
+            raise errors.MissingParams([_('Question')])
+        if len(options) < 2 :
+            raise errors.MissingParams([_('Add atleast two options to choose from')])
 
         convId = utils.getUniqueKey()
         item = utils.createNewItem(request, self.itemType)
 
-        options = dict([('%02d'%(x), options[x]) for x in range(len(options))])
+        options = OrderedDict([('%02d'%(x), options[x]) for x in range(len(options))])
         meta = {"question": question, "showResults": showResults}
         if start:
             meta["start"] = start

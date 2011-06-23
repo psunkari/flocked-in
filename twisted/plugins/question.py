@@ -6,7 +6,7 @@ from twisted.python     import log
 from twisted.internet   import defer
 from twisted.plugin     import IPlugin
 
-from social             import db, base, utils, errors
+from social             import db, base, utils, errors, _
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
 from social.template    import render, renderScriptBlock, getBlock
@@ -47,9 +47,8 @@ class Question(object):
     def create(self, request):
         target = utils.getRequestArg(request, "target")
         comment = utils.getRequestArg(request, "comment")
-
         if not comment:
-            raise errors.MissingParams()
+            raise errors.MissingParams([_('Question')])
 
         convId = utils.getUniqueKey()
         item = utils.createNewItem(request, self.itemType)

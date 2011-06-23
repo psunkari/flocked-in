@@ -37,7 +37,7 @@ class Activity(object):
         defer.returnValue(reasonStr)
 
     def shareBlockProvider(self):
-        raise errors.InvalidRequest()
+        raise Exception("No block provider for activity")
 
     def rootHTML(self, convId, isQuoted, args):
         if "convId" in args:
@@ -50,15 +50,11 @@ class Activity(object):
         return defer.succeed(set())
 
 
-    @profile
-    @defer.inlineCallbacks
-    @dump_args
     def create(self, request):
-        raise errors.InvalidRequest()
+        raise Exception("Activity item cannot be created from share block")
 
     @defer.inlineCallbacks
     def delete(self, itemId):
-        log.msg("plugin:delete", itemId)
         yield db.get_slice(itemId, "entities")
 
 

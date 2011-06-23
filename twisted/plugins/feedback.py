@@ -20,7 +20,7 @@ class Feedback(object):
     hasIndex = False
 
     def shareBlockProvider(self):
-        raise errors.InvalidRequest()
+        raise Exception("No block provider for feedback")
 
 
     def rootHTML(self, convId, isQuoted, args):
@@ -35,7 +35,7 @@ class Feedback(object):
 
 
     def create(self, request):
-        raise errors.InvalidRequest()
+        raise Exception("Feedback item cannot be created from share block")
 
 
     @defer.inlineCallbacks
