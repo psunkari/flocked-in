@@ -717,7 +717,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .item-title {
     position: relative;
     color: #000;
-    font-size: 15px;
+    font-size: 12px;
     word-wrap:break-word;
 }
 .item-icon {
@@ -726,7 +726,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 .has-icon > .item-title-text,
 .has-icon.item-contents {
-    padding-left: 20px;
+    padding-left: 40px;
     padding-bottom: 8px;
 }
 
@@ -1175,4 +1175,31 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 
 .error-buttons li {
     margin: 20px 3px;
+}
+
+/*Styling for events*/
+.event-date-icon {
+    border-color: #CCCCCC #BBBBBB #A0A0A0;
+    border-radius: 3px 3px 3px 3px;
+    border-style: solid;
+    border-width: 1px;
+    position: absolute;
+    text-align:center;
+    width:3em;
+    text-shadow: none !important;
+}
+
+.event-date-month {
+    background-color: #D04721;
+    color: peachPuff;
+    font-weight: bold;
+    letter-spacing:1px;
+    padding:1px 0px;
+}
+
+.event-date-day {
+    font-size:18px;
+}
+
+.event-date-year {
 }

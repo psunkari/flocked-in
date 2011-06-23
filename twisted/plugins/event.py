@@ -1,5 +1,8 @@
 import time
 import uuid
+import datetime
+import pytz
+import calendar
 
 from zope.interface     import implements
 from twisted.plugin     import IPlugin
@@ -47,19 +50,14 @@ class EventResource(base.BaseResource):
         timeUUID = timeUUID.bytes
         responseType = "I"
 
-        invitees = yield db.multiget_slice(invitees, "userAuth")
-        invitees = utils.multiColumnsToDict(invitees)
-
         responses = yield db.get_slice(convId, "eventResponses")
         responses = utils.supercolumnsToDict(responses)
         attendees = responses.get("yes", {}).keys() + \
                      responses.get("maybe", {}).keys() + \
                      responses.get("no", {}).keys()
 
-        for mailId in invitees:
-            userKey = invitees[mailId].get("user", None)
-            if not userKey:
-                raise errors.InvalidUserId()
+        #Check if invitees are valid keys
+        for userKey in invitees:
             if userKey not in attendees:
                 yield db.batch_insert(convId, "eventInvitations", {userKey:{timeUUID:''}})
                 yield db.insert(userKey, "userEventInvitations", convId, timeUUID)
@@ -133,7 +131,6 @@ class EventResource(base.BaseResource):
     def _events(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
-
         convs = []
         invitations = []
         toFetchEntities = set()
@@ -228,7 +225,7 @@ class Event(object):
     implements(IPlugin, IItemType)
     itemType = "event"
     position = 4
-    disabled = True
+    disabled = False
     hasIndex = False
 
     @profile
@@ -266,10 +263,124 @@ class Event(object):
         templateFile = "event.mako"
         renderDef = "share_event"
 
+        onload = """
+                (function(obj){$$.publisher.load(obj)})(this);
+                var currentTime = new Date();
+                var currentMinutes = currentTime.getMinutes();
+                var currentHours = currentTime.getHours();
+
+                if (currentMinutes < 30){
+                    //We set the start time at :30 mins
+                    startTime = currentTime.setMinutes(30);
+                    endTime = currentTime.setHours(currentTime.getHours()+1)
+                }else{
+                    //else we set the start at the next hour
+                    startTime = currentTime.setHours(currentTime.getHours()+1);
+                    startTime = currentTime.setMinutes(0);
+                    endTime = currentTime.setHours(currentTime.getHours()+1)
+                    endTime = currentTime.setMinutes(0);
+                }
+
+                startTimeString = $$.events.formatTimein12(new Date(startTime));
+                endTimeString = $$.events.formatTimein12(new Date(endTime));
+
+                // Set the Display Strings
+                $('#eventstarttime').attr('value', startTimeString);
+                $('#eventendtime').attr('value', endTimeString);
+                // Set the hidden attrs
+                $('#startTime').attr('value', startTime);
+                $('#endTime').attr('value', endTime);
+                // Set the Display Strings
+                $('#eventstartdate').datepicker();
+                $('#eventenddate').datepicker();
+                $('#eventstartdate').datepicker('setDate', new Date());
+                $('#eventenddate').datepicker('setDate', new Date());
+                // Set the hidden attrs.  When a user picks a date from the
+                // calendar, the corresponding epoch value is stored in
+                // the hidden field. To the server; only the date component is
+                // important, since the time component is fetched from the startTime
+                // and endTime respectively.
+                $('#startDate').attr('value', startTime);
+                $('#endDate').attr('value', endTime);
+                $("#eventstartdate").datepicker("option", "altField", '#startDate');
+                $("#eventenddate").datepicker("option", "altField", '#endDate');
+                $("#eventstartdate").datepicker("option", "altFormat", '@');
+                $("#eventenddate").datepicker("option", "altFormat", '@');
+
+                //Generate 30 minute timeslots in a day. When a user filters
+                // and picks a slot, the corresponding epoch value is stored in
+                // the hidden field. To the server; only the time component is
+                // important, since the date component is fetched from the startDate
+                // and endDate respectively.
+                var timeslots = [];
+                var dtnow = new Date();
+                var hourslots = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+                $.each(hourslots, function(index, slot) {
+                    if (slot < 12){
+                        var dtlabel = ( slot < 10 ? "0" : "" ) + slot;
+                        dtvalue = dtnow.setHours(slot)
+                        dtvalue = dtnow.setMinutes(0);
+                        dtvalue = dtnow.setSeconds(0);
+                        timeslots.push({label:dtlabel+":00"+"AM", value: dtvalue});
+                        dtvalue = dtnow.setMinutes(30);
+                        timeslots.push({label:dtlabel+":30"+"AM", value: dtvalue});
+                    }else{
+                        var dtlabel = slot-12;
+                        dtvalue = dtnow.setHours(slot)
+                        dtvalue = dtnow.setMinutes(0);
+                        dtvalue = dtnow.setSeconds(0);
+                        timeslots.push({label:dtlabel+":00"+"PM", value: dtvalue})
+                        dtvalue = dtnow.setMinutes(30);
+                        timeslots.push({label:dtlabel+":30"+"PM", value: dtvalue})
+                    }
+                });
+                console.info(timeslots);
+
+                $( "#eventstarttime" ).autocomplete({
+                    minLength: 0,
+                    source: timeslots,
+                    focus: function( event, ui ) {
+                        $("#eventstarttime").attr('value', ui.item.label);
+                        return false;
+                    },
+                    select: function( event, ui ) {
+                        $("#eventstarttime").attr('value', ui.item.label);
+                        $("#startTime").attr('value', ui.item.value);
+                        return false;
+                    },
+                    change: function(event, ui){
+                    }
+                })
+                $( "#eventendtime" ).autocomplete({
+                    minLength: 0,
+                    source: timeslots,
+                    focus: function( event, ui ) {
+                        $("#eventendtime").attr('value', ui.item.label);
+                        return false;
+                    },
+                    select: function( event, ui ) {
+                        $("#eventendtime").attr('value', ui.item.label);
+                        $("#endTime").attr('value', ui.item.value);
+                        return false;
+                    }
+                })
+                $('#eventInvitees').autocomplete({
+                      source: '/auto/users',
+                      minLength: 2,
+                      select: function( event, ui ) {
+                        $('#invitees').append($$.events.formatUser(ui.item.value, ui.item.uid))
+                        var rcpts = $('#inviteeList').val().trim();
+                        rcpts = (rcpts == "") ? ui.item.uid: rcpts+","+ui.item.uid
+                        $('#inviteeList').val(rcpts)
+                        this.value = ""
+                        return false;
+                      }
+                 });
+                """
         yield renderScriptBlock(request, templateFile, renderDef,
                                 not isAjax, "#sharebar", "set", True,
                                 attrs={"publisherName": "event"},
-                                handlers={"onload": "(function(obj){$$.publisher.load(obj)})(this);"})
+                                handlers={"onload": onload})
 
 
     def rootHTML(self, convId, isQuoted, args):
@@ -308,28 +419,44 @@ class Event(object):
     @defer.inlineCallbacks
     @dump_args
     def create(self, request):
+        startDate = utils.getRequestArg(request, 'startDate')
         startTime = utils.getRequestArg(request, 'startTime')
-        endTime = utils.getRequestArg(request, 'endTime')
+        endDate = utils.getRequestArg(request, 'endDate') or startDate
+        endTime = utils.getRequestArg(request, 'endTime') #or all day event
         title = utils.getRequestArg(request, 'title')
         desc = utils.getRequestArg(request, 'desc')
         location = utils.getRequestArg(request, 'location')
         invitees = utils.getRequestArg(request, "invitees")
         invitees = invitees.split(',') if invitees else None
 
-        if not ((title or desc) and startTime):
+        if not ((title or desc) and startTime and startDate):
             raise errors.InvalidRequest()
+
+        #TODO
+        utc = pytz.utc
+        startDate = datetime.datetime.utcfromtimestamp(float(startDate)/1000).replace(tzinfo=utc)
+        endDate = datetime.datetime.utcfromtimestamp(float(endDate)/1000).replace(tzinfo=utc)
+        startTime = datetime.datetime.utcfromtimestamp(float(startTime)/1000).replace(tzinfo=utc)
+        endTime = datetime.datetime.utcfromtimestamp(float(endTime)/1000).replace(tzinfo=utc)
+
+        startDateTime = datetime.datetime(startDate.year, startDate.month,
+                                          startDate.day, startTime.hour,
+                                          startTime.minute, startTime.second).replace(tzinfo=utc)
+        endDateTime = datetime.datetime(endDate.year, endDate.month,
+                                          endDate.day, endTime.hour,
+                                          endTime.minute, endTime.second).replace(tzinfo=utc)
 
         convId = utils.getUniqueKey()
         item = utils.createNewItem(request, self.itemType)
 
         options = dict([('yes', '0'), ('maybe', '0'), ('no', '0')])
-        meta = {"startTime": startTime}
+        meta = {"startTime": str(calendar.timegm(startDateTime.utctimetuple()))}
         if title:
             meta["title"] = title
         if desc:
             meta["desc"] = desc
         if endTime:
-            meta["endTime"] = endTime
+            meta["endTime"] = str(calendar.timegm(endDateTime.utctimetuple()))
         if location:
             meta["location"] = location
 
