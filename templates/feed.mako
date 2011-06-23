@@ -36,7 +36,7 @@
           %endif
         </div>
         <div id="user-feed" class="center-contents">
-          %if not script:
+          %if not script or tmp_files:
             ${self.feed()}
           %endif
           <div id="foot-loader"></div>
@@ -133,29 +133,43 @@
         %endfor
       </ul>
     </div>
-    <form id="share-form" class="ajax" autocomplete="off" method="post" action="/item/new">
-      <div id="sharebar"></div>
+    <form id="share-form" autocomplete="off" method="post" action="/item/new" class="ajax" >
+      <div id="sharebar">
+            <div class="input-wrap">
+            <input type="text" name="comment" placeholder="${_('What are you currently working on?')}"/>
+           </div>
+          <input type="hidden" name="type" value="status"/>
+      </div>
       <div>
         <ul id="sharebar-actions" class="h-links">
           <li>${acl_button("sharebar-acl", "{accept:{org:[%s]}}"%orgKey, "Company")}</li>
           <li>${widgets.button("sharebar-submit", "submit", "default", None, "Share")}</li>
         </ul>
         <span class="clear" style="display:block"></span>
+        <div id="files" name="files">
+            %if tmp_files:
+                ${self.append_fileIds(tmp_files)}
+            %endif
+        </div>
       </div>
+    </form>
+    <form id="file-form" method="post" action = "/file/upload" enctype="multipart/form-data" >
+        <input type="file" name="file" />
+        <input type="submit" name="upload" value="upload" />
     </form>
   %endif
 </%def>
 
 <%def name="share_status()">
   <div class="input-wrap">
-    <textarea name="comment" placeholder="${_('What are you currently working on?')}"/>
+    <textarea name="comment" placeholder="${_('What are you currently working on?')}" />
   </div>
   <input type="hidden" name="type" value="status"/>
 </%def>
 
 <%def name="share_question()">
   <div class="input-wrap">
-    <textarea name="comment" placeholder="${_('What is your question?')}"/>
+    <textarea name="comment" placeholder="${_('What is your question?')}" />
   </div>
   <input type="hidden" name="type" value="question"/>
 </%def>
@@ -165,10 +179,22 @@
     <textarea name="url" placeholder="${_('http://')}"/>
     </div>
   <div class="input-wrap">
-    <textarea name="comment" placeholder="${_('Say something about the link')}"/>
+    <textarea name="comment" placeholder="${_('Say something about the link')}" />
   </div>
   <input type="hidden" name="type" value="link"/>
 </%def>
+
+##<%def name="share_files()">
+##  <div class="input-wrap">
+##    <textarea name="comment" placeholder="${_('Say something about the link')}" />
+##  </div>
+##  <div class="input-wrap">
+##    <input name="file" type="file"/>
+##  </div>
+##  <input type="hidden" name="type" value="file"/>
+##</%def>
+
+
 
 <%def name="feed()">
   %for convId in conversations:
@@ -180,4 +206,11 @@
   %else:
     <div id="next-load-wrapper">No more posts to show</div>
   %endif
+</%def>
+
+
+<%def name="append_fileIds(fileIds)">
+    %for fileId in fileIds:
+        <input type="hidden", name="fId" value="${fileId}" />
+    %endfor
 </%def>

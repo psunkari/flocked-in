@@ -447,7 +447,7 @@ class Event(object):
                                           endTime.minute, endTime.second).replace(tzinfo=utc)
 
         convId = utils.getUniqueKey()
-        item = utils.createNewItem(request, self.itemType)
+        item, attachments = yield utils.createNewItem(request, self.itemType)
 
         options = dict([('yes', '0'), ('maybe', '0'), ('no', '0')])
         meta = {"startTime": str(calendar.timegm(startDateTime.utctimetuple()))}

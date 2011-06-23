@@ -51,7 +51,7 @@ class Question(object):
             raise errors.MissingParams([_('Question')])
 
         convId = utils.getUniqueKey()
-        item = utils.createNewItem(request, self.itemType)
+        item, attachments = yield utils.createNewItem(request, self.itemType)
         meta = {"comment": comment}
         if target:
             meta["target"] = target
