@@ -168,7 +168,6 @@ class RootResource(resource.Resource):
         self._search = FTSResource(self._isAjax)
         self._admin = Admin(self._isAjax)
         self._pluginResources = getPluggedResources(self._isAjax)
-        self._feedback = FeedbackResource(self._isAjax)
         self._messages = MessagingResource(self._isAjax)
         self._files = FilesResource(self._isAjax)
         if not self._isAjax:
@@ -180,6 +179,8 @@ class RootResource(resource.Resource):
             self._about = static.File("public/about")
             self._signup = SignupResource()
             self._signin = SigninResource()
+        else:
+            self._feedback = FeedbackResource(True)
 
     def _clearAuth(self, request):
         sessionId = request.getCookie(request.cookiename)
@@ -223,6 +224,8 @@ class RootResource(resource.Resource):
             elif path == "signout":
                 self._clearAuth(request)
                 match = util.Redirect('/signin')
+        elif path == "feedback":
+            match = self._feedback
 
         if path == "feed":
             match = self._feed
@@ -244,8 +247,6 @@ class RootResource(resource.Resource):
             match = self._messages
         elif path == "admin":
             match = self._admin
-        elif path == "feedback":
-            match = self._feedback
         elif path == "file":
             match = self._files
         elif path in plugins and self._pluginResources.has_key(path):

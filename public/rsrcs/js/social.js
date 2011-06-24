@@ -460,7 +460,7 @@ var feedback = {
                     text:'Submit',
                     click : function() {
                         comment = $("#feedback-desc").val();
-                        $.post("/feedback", {comment:comment, mood:feedback._mood});
+                        $.post("/ajax/feedback", {comment:comment, mood:feedback._mood});
                         $$.dialog.close(this, true)
                     }
                 },

@@ -49,8 +49,7 @@ class BaseResource(resource.Resource):
             failure.raiseException()
         except errors.BaseError, e:
             fullErrorStr, ajaxErrorCode, ajaxErrorStr = e.errorData()
-            e.logError()
-            log.msg(fullErrorStr)
+            log.msg('*** Error: ', ajaxErrorStr)
         except Exception, e:
             fullErrorStr = """<p>Something went wrong when processing your
                 request.  The incident got noted and we are working on it.</p>
