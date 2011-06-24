@@ -2,21 +2,21 @@ from lxml                       import etree
 from lxml.builder               import ElementMaker
 from zope.interface             import implements
 
-from twisted.web                import server, client
+from twisted.web                import client
 from twisted.web.iweb           import IBodyProducer
-from twisted.internet           import protocol,reactor, defer
+from twisted.internet           import protocol, reactor, defer
 from twisted.python             import log
 from twisted.web.http           import PotentialDataLoss
 from twisted.web.http_headers   import Headers
 
-from social                     import base, db, utils, config
+from social                     import base, utils, config, feed
 from social                     import errors, plugins, _
-from social.feed                import FeedResource
 from social.template            import render, renderScriptBlock
 from social.logging             import dump_args, profile
 
 
 URL = config.get('SOLR', 'HOST')
+#In devel environ set SOLR-URL in devel.cfg to http://localhost:8983/solr
 DEBUG = False
 
 
@@ -81,7 +81,8 @@ class Solr(object):
                 sfk, columnName = key
                 value = item[sfk].get(columnName, None)
                 if value:
-                    fields.append(self.elementMaker.field(str(value), {"name":columnName}))
+                    fields.append(self.elementMaker.field(str(value),
+                                  {"name":columnName}))
 
 
         root = self.elementMaker.add(self.elementMaker.doc(*fields))
@@ -98,14 +99,14 @@ class Solr(object):
             response.deliverBody(JsonBodyReceiver(finished))
             return finished
 
-        url = URL + "/select?q=%s"%(term)
+        url = URL + "/select?q=%s" % (term)
         d = self._request("GET", url)
         d.addCallback(callback)
         return d
 
 
 class FTSResource(base.BaseResource):
-    isLeaf=True
+    isLeaf = True
 
     @profile
     @defer.inlineCallbacks
@@ -113,7 +114,7 @@ class FTSResource(base.BaseResource):
     def search(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
-        args["heading"] = _("Search Results")
+        args["feedTitle"] = _("Search Results")
 
         term = utils.getRequestArg(request, "searchbox")
         if not term:
@@ -138,8 +139,7 @@ class FTSResource(base.BaseResource):
                 convs.append(item.get('id'))
 
         if convs:
-            feedResource = FeedResource()
-            feedItems = yield feedResource._getFeedItems(request, itemIds=convs)
+            feedItems = yield feed.getFeedItems(request, convIds=convs)
             args.update(feedItems)
         else:
             args["conversations"] = convs
