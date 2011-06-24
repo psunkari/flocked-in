@@ -122,9 +122,9 @@ class SignupResource(BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _addUser(self, request):
+        emailId = utils.getRequestArg(request, 'email')
         existingUser = db.get_count(emailId, "userAuth")
 
-        emailId = utils.getRequestArg(request, 'email')
         localpart, domain = emailId.split("@")
         displayName = utils.getRequestArg(request, 'name')
         jobTitle = utils.getRequestArg(request, 'jobTitle')
