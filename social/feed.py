@@ -347,9 +347,9 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
 
     # If we don't have a list of conversations,
     # fetch the list of either the given feedId or from the user's feed
+    nextPageStart = None
     if not convIds:
         feedId = feedId or myId
-        nextPageStart = None
         keysFromFeed = []
         convIds = []
 
@@ -396,7 +396,10 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
             nextPageStart = utils.encodeKey(keysFromFeed[-1])
             convIds = convIds[0:-1]
     else:
-        convIds = fetchAndFilterConvs(convIds)
+        convIds = yield fetchAndFilterConvs(convIds, count)
+        if len(convIds) > count:
+            nextPageStart = utils.encodeKey(convIds[count])
+            convIds = convIds[0:count]
 
     # We don't have any conversations to display!
     if not convIds:
