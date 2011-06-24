@@ -146,17 +146,17 @@
           <li>${widgets.button("sharebar-submit", "submit", "default", None, "Share")}</li>
         </ul>
         <span class="clear" style="display:block"></span>
-        <div id="files" name="files">
-            %if tmp_files:
-                ${self.append_fileIds(tmp_files)}
-            %endif
-        </div>
+##        <div id="files" name="files">
+##            %if tmp_files:
+##                ${self.append_fileIds(tmp_files)}
+##            %endif
+##        </div>
       </div>
     </form>
-    <form id="file-form" method="post" action = "/file/upload" enctype="multipart/form-data" >
-        <input type="file" name="file" />
-        <input type="submit" name="upload" value="upload" />
-    </form>
+##    <form id="file-form" method="post" action = "/file/upload" enctype="multipart/form-data" >
+##        <input type="file" name="file" />
+##        <input type="submit" name="upload" value="upload" />
+##    </form>
   %endif
 </%def>
 
@@ -183,18 +183,6 @@
   </div>
   <input type="hidden" name="type" value="link"/>
 </%def>
-
-##<%def name="share_files()">
-##  <div class="input-wrap">
-##    <textarea name="comment" placeholder="${_('Say something about the link')}" />
-##  </div>
-##  <div class="input-wrap">
-##    <input name="file" type="file"/>
-##  </div>
-##  <input type="hidden" name="type" value="file"/>
-##</%def>
-
-
 
 <%def name="feed()">
   %for convId in conversations:

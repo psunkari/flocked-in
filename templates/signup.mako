@@ -147,14 +147,3 @@
   </form>
 </%def>
 
-
-##
-## Errors during signup
-##
-
-<%def name="alreadySignedInError()">
-</%def>
-
-<%def name="invalidRegistrationToken()">
-</%def>
-

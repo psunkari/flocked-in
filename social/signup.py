@@ -12,7 +12,7 @@ from email.mime.text    import MIMEText
 
 import social.constants as constants
 from social.base        import BaseResource
-from social             import utils, db, config, people, errors
+from social             import utils, db, config, people, errors, _
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
 from social.logging     import dump_args, profile
@@ -122,9 +122,9 @@ class SignupResource(BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _addUser(self, request):
+        emailId = utils.getRequestArg(request, 'email')
         existingUser = db.get_count(emailId, "userAuth")
 
-        emailId = utils.getRequestArg(request, 'email')
         localpart, domain = emailId.split("@")
         displayName = utils.getRequestArg(request, 'name')
         jobTitle = utils.getRequestArg(request, 'jobTitle')
