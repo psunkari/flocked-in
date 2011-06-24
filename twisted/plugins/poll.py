@@ -239,7 +239,7 @@ class Poll(object):
             raise errors.MissingParams([_('Add atleast two options to choose from')])
 
         convId = utils.getUniqueKey()
-        item = utils.createNewItem(request, self.itemType)
+        item, attachments = yield utils.createNewItem(request, self.itemType)
 
         options = OrderedDict([('%02d'%(x), options[x]) for x in range(len(options))])
         meta = {"question": question, "showResults": showResults}

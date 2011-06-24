@@ -985,8 +985,10 @@ var events = {
         currentHours = ( currentHours == 0 ) ? 12 : currentHours;
         return currentHours + ":" + currentMinutes + timeOfDay
     },
-    RSVP: function(itemId){
+    RSVP: function(itemId, response){
         //Add routine for submitting an RSVP
+        var postdata = 'type=event&id='+itemId+'&response='+response;
+        $.post('/ajax/event/rsvp', postdata, null, 'script')
     },
     removeUser: function(self, user_id){
         var recipients = $('#invitees').data('recipients');
@@ -1000,6 +1002,13 @@ var events = {
             "<span class='conversation-composer-recipient-label'>"+ user_string +"</span>"+
             "<span class='conversation-composer-recipient-remove button-link' "+
                 "onclick='$$.events.removeUser(this, \""+user_id+"\")'>X</span></div>";
+    },
+    showEventInvitees: function(itemId) {
+        var dialogOptions = {
+            id: 'invitee-dlg-'+itemId
+        };
+        $$.dialog.create(dialogOptions);
+        $.getScript('/ajax/event/invitee?id='+itemId);
     }
 };
 

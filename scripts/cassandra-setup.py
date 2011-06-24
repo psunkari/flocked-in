@@ -126,6 +126,18 @@ def createColumnFamilies(client):
                   'All the items - mails, statuses, links, events etc;')
     yield client.system_add_column_family(items)
 
+    files = CfDef(KEYSPACE, 'files', 'Super', 'UTF8Type', 'UTF8Type',
+                  'files and its details')
+    yield client.system_add_column_family(files)
+    tmp_files = CfDef(KEYSPACE, 'tmp_files', 'Standard', 'UTF8Type', None,
+                  "tmp files and their details")
+    yield client.system_add_column_family(tmp_files)
+
+
+    item_files = CfDef(KEYSPACE, "item_files", 'Super', 'UTF8Type', 'TimeUUIDType',
+                      'files and its version')
+    yield client.system_add_column_family(item_files)
+
     itemLikes = CfDef(KEYSPACE, 'itemLikes', 'Standard', 'UTF8Type', None,
                       'List of likes per item')
     yield client.system_add_column_family(itemLikes)

@@ -25,6 +25,7 @@ from social.feedback        import FeedbackResource
 from social.messaging       import MessagingResource
 from social.admin           import Admin
 from social.server          import SessionFactory
+from social.files           import FilesResource
 
 
 def getPluggedResources(ajax=False):
@@ -121,7 +122,7 @@ class SigninResource(resource.Resource):
         return server.NOT_DONE_YET
 
 
-# 
+#
 # HomeResource gives an interface for the new users to signup
 #
 class HomeResource(resource.Resource):
@@ -169,6 +170,7 @@ class RootResource(resource.Resource):
         self._pluginResources = getPluggedResources(self._isAjax)
         self._feedback = FeedbackResource(self._isAjax)
         self._messages = MessagingResource(self._isAjax)
+        self._files = FilesResource(self._isAjax)
         if not self._isAjax:
             self._home = HomeResource()
             self._ajax = RootResource(True)
@@ -197,7 +199,7 @@ class RootResource(resource.Resource):
             if request.path != '/':
                 signinPath = "/signin?_r=%s" % urllib.quote(request.uri, '*@+/')
             defer.returnValue(util.Redirect(signinPath))
-        
+
 
     def getChildWithDefault(self, path, request):
         match = None
@@ -244,6 +246,8 @@ class RootResource(resource.Resource):
             match = self._admin
         elif path == "feedback":
             match = self._feedback
+        elif path == "file":
+            match = self._files
         elif path in plugins and self._pluginResources.has_key(path):
             match = self._pluginResources[path]
 

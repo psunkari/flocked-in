@@ -1,4 +1,5 @@
-
+import shutil
+import os
 import time
 import uuid
 import hashlib
@@ -15,6 +16,7 @@ except:
 from html5lib           import sanitizer
 from ordereddict        import OrderedDict
 from dateutil.tz        import gettz
+from telephus.cassandra import ttypes
 
 from twisted.internet   import defer
 from twisted.python     import log
@@ -118,8 +120,10 @@ def getValidItemId(request, arg, type=None, columns=None):
     if not itemId:
         raise errors.MissingParams([_('%s id') % _(itemType).capitalize()])
 
-    item = yield db.get_slice(itemId, "items",
-                              ["meta"].extend(columns if columns else []))
+    columns = [] if not columns else columns
+    columns.extend(["meta", "attachments"])
+
+    item = yield db.get_slice(itemId, "items", columns)
     if not item:
         raise errors.InvalidItem(itemType, itemId)
 
@@ -179,7 +183,7 @@ def getUniqueKey():
     u = uuid.uuid1()
     return base64.urlsafe_b64encode(u.bytes)[:-2]
 
-
+@defer.inlineCallbacks
 def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
                   ownerOrgId=None, groupIds = None):
     authinfo = request.getSession(IAuthInfo)
@@ -199,7 +203,7 @@ def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
             acl = {"accept":{"orgs":[org]}}
 
     acl = pickle.dumps(acl)
-    meta = {
+    item = {
         "meta": {
             "acl": acl,
             "type": itemType,
@@ -210,8 +214,55 @@ def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
         "followers": {owner: ''}
     }
     if subType:
-        meta["meta"]["subType"] = subType
-    return meta
+        item["meta"]["subType"] = subType
+    tmpFileIds = getRequestArg(request, 'fId', False, True)
+    attachments = {}
+    if tmpFileIds:
+        attachments = yield _upload_files(tmpFileIds)
+        if attachments:
+            item["attachments"] = {}
+            for attachmentId in attachments:
+                timeuuid, fid, name, size, ftype = attachments[attachmentId]
+                val = "%s:%s:%s:%s" %(encodeKey(timeuuid), name, size, ftype)
+                item["attachments"][attachmentId] = val
+    defer.returnValue ((item, attachments))
+
+
+@defer.inlineCallbacks
+def _upload_files(tmp_fileIds):
+    attachments = {}
+    if tmp_fileIds:
+        cols = yield db.multiget_slice(tmp_fileIds, "tmp_files", ["fileId"])
+        cols = multiColumnsToDict(cols)
+        for tmpFileId in cols:
+            attachmentId = getUniqueKey()
+            timeuuid = uuid.uuid1().bytes
+            location, name, size, ftype = cols[tmpFileId]['fileId'].split(':')
+
+            if not os.path.lexists(location):
+                log.msg('file doesnt exist')
+                raise errors.uploadFailed()
+
+            directory, fid = os.path.split(location)
+            newlocation = os.path.join('data', fid[0:2], fid[2:4], fid[4:6], fid)
+            try:
+                cols = yield db.get(fid, "files", super_column="meta")
+            except ttypes.NotFoundException:
+                try:
+                    directory, fname = os.path.split(newlocation)
+                    os.makedirs(directory)
+                except OSError:
+                    pass
+                try:
+                    shutil.copy(location, newlocation)
+                except OSError:
+                    log.msg("can't move the file from %s to %s"% (location ,newlocation))
+                    raise errors.uploadFailed()
+
+                meta = {"meta": {"uri": newlocation}}
+                yield db.batch_insert(fid, "files", meta)
+            attachments[attachmentId] = (timeuuid, fid, name, size, ftype)
+    defer.returnValue(attachments)
 
 
 @defer.inlineCallbacks
@@ -608,3 +659,26 @@ def sendmail(toAddr, subject, body, fromAddr='noreply@flocked.in'):
 
     host = config.get('SMTP', 'Host')
     yield smtp.sendmail(host, fromAddr, toAddr, message)
+
+
+SUFFIXES = {1000: ['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
+            1024: ['KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB']}
+
+def approximate_size(size, a_kilobyte_is_1024_bytes=False):
+    '''Convert a file size to human-readable form.
+    Keyword arguments:
+    size -- file size in bytes
+    a_kilobyte_is_1024_bytes -- if True (default), use multiples of 1024
+                                if False, use multiples of 1000
+    Returns: string
+    '''
+    if size < 0:
+        raise ValueError('number must be non-negative')
+
+    multiple = 1024 if a_kilobyte_is_1024_bytes else 1000
+    for suffix in SUFFIXES[multiple]:
+        size /= multiple
+        if size < multiple:
+            return '{0:.1f} {1}'.format(size, suffix)
+
+    raise ValueError('number too large')

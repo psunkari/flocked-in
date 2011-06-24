@@ -231,7 +231,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
         if not ids:
             defer.returnValue(retIds)
 
-        cols = yield db.multiget_slice(ids, "items", ["meta", "tags"])
+        cols = yield db.multiget_slice(ids, "items", ["meta", "tags", "attachments"])
         items.update(utils.multiSuperColumnsToDict(cols))
         checkAcl = utils.checkAcl
 
@@ -407,7 +407,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
     yield defer.DeferredList(feedItems_d)
 
     # Fetch the required entities, tags and items to finish the job!
-    items_d = db.multiget_slice(toFetchItems, "items", ["meta"])
+    items_d = db.multiget_slice(toFetchItems, "items", ["meta" ,"attachments"])
 
     for convId in convIds:
         conv = items[convId]
@@ -416,7 +416,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
             toFetchEntities.add(conv["meta"]["target"])
         toFetchTags.update(conv.get("tags",{}).keys())
 
-    entities_d = db.multiget_slice(toFetchEntities, "entities", ["basic"])
+
     tags_d = db.get_slice(myOrgId, "orgTags", toFetchTags) \
                                 if toFetchTags else defer.succeed([])
 
@@ -431,8 +431,8 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
         itemType = items[convId]["meta"]["type"]
         if itemType in plugins:
             try:
-                d = plugins[itemType].fetchData(data, convId)
-                extraData_d.append(d)
+                entityIds = yield plugins[itemType].fetchData(data, convId)
+                toFetchEntities.update(entityIds)
             except:
                 pass
 
@@ -440,6 +440,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
     fetchedItems = yield items_d
     items.update(utils.multiSuperColumnsToDict(fetchedItems))
 
+    entities_d = db.multiget_slice(toFetchEntities, "entities", ["basic"])
     fetchedEntities = yield entities_d
     entities.update(utils.multiSuperColumnsToDict(fetchedEntities))
 
@@ -473,7 +474,6 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
 
     results = yield defer.DeferredList(extraData_d)
     # TODO: Fetch any extra entities that the plugins might ask for!
-
     data.update({"entities": entities, "responses": responses, "likes": likes,
                  "myLikes": myLikes, "conversations": convIds, "tags": tags,
                  "nextPageStart": nextPageStart, "reasonStr": reasonStr})
