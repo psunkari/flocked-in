@@ -58,6 +58,14 @@
     </div>
   </div>
   <div id="footer">
+    <ul id="footer-sharing">
+      <li id="twitter-share">
+        <a rel="nofollow" href="http://twitter.com/share" class="twitter-share-button" data-url="http://flocked.in/" data-count="none">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
+      </li>
+      <li id="facebook-share">
+        <iframe src="http://www.facebook.com/plugins/like.php?href=http%3A%2F%2Fflocked.in&amp;send=false&amp;layout=button_count&amp;width=60&amp;show_faces=false&amp;action=like&amp;colorscheme=light&amp;font=tahoma&amp;height=20" scrolling="no" frameborder="0" style="border:none; overflow:hidden; width:60px; height:20px;" allowTransparency="true"></iframe>
+      </li>
+    </ul>
     <div id="footer-contents" class="contents">
       ${_('&copy;2011 Synovel Software')}
       &nbsp;&#183;&nbsp;

@@ -9,7 +9,7 @@ body {
     color: #333;
     font-size: 16px;
     line-height: 1.5em;
-    background-color: #EEE;
+    background-color: #F4F4F4;
 }
 
 a:link, a:visited {
@@ -22,7 +22,7 @@ a:link, a:visited {
     clear: both;
     margin: 0 auto 5px;
     background-color: white;
-    border: 1px solid #CCC;
+    border: 1px solid #DDDDDD;
     border-radius: 4px;
 }
 #footer {
@@ -290,3 +290,15 @@ a:link, a:visited {
 }
 
 
+/*
+ * Footer sharing
+ */
+#footer-sharing {
+    padding: 0;
+    margin: 0;
+    list-style-type: none;
+}
+#footer-sharing li {
+    float: left;
+    margin-right: 10px;
+}
