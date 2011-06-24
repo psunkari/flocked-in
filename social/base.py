@@ -7,7 +7,7 @@ from twisted.python         import log
 
 from social.isocial         import IAuthInfo
 from social                 import db, utils, errors
-from social.template        import render, renderScriptBlock
+from social.template        import render, renderScriptBlock, renderDef
 
 
 class BaseResource(resource.Resource):
@@ -41,10 +41,6 @@ class BaseResource(resource.Resource):
 
     @defer.inlineCallbacks
     def _handleErrors(self, failure, request):
-      try:
-        appchange, script, args, myId = yield self._getBasicArgs(request)
-        ajax = self._ajax
-
         try:
             failure.raiseException()
         except errors.BaseError, e:
@@ -57,36 +53,44 @@ class BaseResource(resource.Resource):
             ajaxErrorCode = 500
             ajaxErrorStr = """Oops... Unable to process your request.
                 Please try after sometime"""
-            log.msg("*************** Exception Start ***************")
-            log.msg(failure)
-            log.msg("***************  Exception End  ***************")
+            log.err(failure)
 
+        log.msg(fullErrorStr)
         referer = request.getHeader('referer')
-        args["referer"] = referer
 
-        if ajax and not appchange:
-            request.setResponseCode(ajaxErrorCode)
-            request.write(ajaxErrorStr)
-        elif ajax and appchange:
-            args["msg"] = fullErrorStr
-            yield renderScriptBlock(request, "errors.mako", "layout",
-                                not ajax, "#mainbar", "set", **args)
-        else:
-            if referer:
-                fromNetLoc = urlparse.urlsplit(referer)[1]
-                myNetLoc = urlparse.urlsplit(request.uri)[1]
-                if fromNetLoc != myNetLoc:
-                    args["isDeepLink"] = True
+        try:
+            log.msg(request)
+            appchange, script, args, myId = yield self._getBasicArgs(request)
+            ajax = self._ajax
+            log.msg(ajax)
+            log.msg(appchange)
+            log.msg(referer)
+            args["referer"] = referer
+         
+            if ajax and not appchange:
+                request.setResponseCode(ajaxErrorCode)
+                request.write(ajaxErrorStr)
+            elif ajax and appchange:
+                args["msg"] = fullErrorStr
+                yield renderScriptBlock(request, "errors.mako", "layout",
+                                    not ajax, "#mainbar", "set", **args)
             else:
-                args["isDeepLink"] = True
+                if referer:
+                    fromNetLoc = urlparse.urlsplit(referer)[1]
+                    myNetLoc = urlparse.urlsplit(request.uri)[1]
+                    if fromNetLoc != myNetLoc:
+                        args["isDeepLink"] = True
+                else:
+                    args["isDeepLink"] = True
+         
+                args["msg"] = fullErrorStr
+                if script:
+                    request.write("<script>$('body').empty();</script>")
+                yield render(request, "errors.mako", **args)
+        except Exception, e:
+            args = {"msg": fullErrorStr}
+            yield renderDef(request, "errors.mako", "fallback", **args)
 
-            args["msg"] = fullErrorStr
-            if script:
-                request.write("<script>$('body').empty();</script>")
-            yield render(request, "errors.mako", **args)
-      except Exception, e:
-        import traceback
-        log.msg(traceback.print_exc())
 
 
     def _epilogue(self, request, deferred=None):
