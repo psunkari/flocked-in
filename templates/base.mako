@@ -113,6 +113,7 @@
   <div id="mainbar">
     ${self.layout()}
   </div>
+  <div id="alertbar"></div>
 %if script:
   <script type="text/javascript" src="/rsrcs/js/jquery.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.js"></script>

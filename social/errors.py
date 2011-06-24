@@ -7,9 +7,11 @@ from social             import _
 #
 class BaseError(Exception):
     _message = None
+    _errcode = 500
 
-    def __init__(self, message=''):
+    def __init__(self, message='', errcode=500):
         self._message = message
+        self._errcode = errcode
 
     def __str__(self):
         return self._message
@@ -18,11 +20,15 @@ class BaseError(Exception):
         return self._message
     message = property(_get_message)
 
+    def _get_errcode(self):
+        return self._errcode
+    errcode = property(_get_errcode)
+
     def errorData(self):
-        return ("<p>%s<p>"%self.message, 500, self.message)
+        return ("<p>%s<p>"%self.message, self.errcode, self.message)
 
     def logError(self):
-        log.msg(self)
+        log.msg(self.message)
 
 
 #
@@ -41,7 +47,7 @@ class PermissionDenied(BaseError):
 
     def __init__(self, message='', taskId=None):
         self.taskId = taskId
-        BaseError.__init__(self, message)
+        BaseError.__init__(self, message, 403)
 
 
 #
@@ -58,7 +64,7 @@ class InvalidRequest(BaseError):
 #
 class NotFoundError(BaseError):
     def __init__(self):
-        BaseError.__init__(self, _("I really tried but couldn't find the resource here!"))
+        BaseError.__init__(self, _("I really tried but couldn't find the resource here!"), 404)
 
 
 #
@@ -70,12 +76,12 @@ class MissingParams(BaseError):
     def __init__(self, params=None):
         self.params = params
         message = _("One or more required parameters are missing")
-        BaseError.__init__(self, message)
+        BaseError.__init__(self, message, 418)  # XXX: No suitable error code
 
     def errorData(self):
         message = self.message
         params = ", ".join(self.params)
-        return ("<p>%s</p><p><b>%s</b></p>"%(message, params), 500,
+        return ("<p>%s</p><p><b>%s</b></p>"%(message, params), self.errcode,
                 "%(message)s:%(params)s" % locals())
 
 
@@ -96,7 +102,7 @@ class ItemAccessDenied(BaseError):
     def __init__(self, itemType, itemId):
         self.itemId = itemId
         message = _("The requested %s does not exist") % _(itemType)
-        BaseError.__init__(self, message)
+        BaseError.__init__(self, message, 404)
 
 
 #
@@ -108,7 +114,7 @@ class EntityAccessDenied(BaseError):
     def __init__(self, entityType, entityId):
         self.entityId = entityId
         message = _("The requested %s does not exist") % _(entityType)
-        BaseError.__init__(self, message)
+        BaseError.__init__(self, message, 404)
 
 
 #
@@ -120,7 +126,7 @@ class InvalidItem(BaseError):
     def __init__(self, itemType, itemId):
         self.itemId = itemId
         message = _("The requested %s does not exist") % _(itemType)
-        BaseError.__init__(self, message)
+        BaseError.__init__(self, message, 404)
 
 
 #
@@ -132,7 +138,7 @@ class InvalidEntity(BaseError):
     def __init__(self, entityType, entityId):
         self.entityId = entityId
         message = _("The requested %s does not exist") % _(entityType)
-        BaseError.__init__(self, message)
+        BaseError.__init__(self, message, 404)
 
 
 #
@@ -144,6 +150,6 @@ class InvalidTag(BaseError):
     def __init__(self, tagId):
         self.tagId = tagId
         message = _("The requested tag does not exist")
-        BaseError.__init__(self, message)
+        BaseError.__init__(self, message, 404)
 
 

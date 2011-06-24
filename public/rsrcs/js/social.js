@@ -116,14 +116,18 @@ _initAjaxRequests: function _initAjaxRequests() {
     });
 
     /* Global ajax error handler */
-    $(document).ajaxError(function(event, request, settings) {
+    $(document).ajaxError(function(event, request, settings, thrownError) {
         if (request.status == 401) {
             currentUri = self.parseUri(window.location);
             currentUri = escape(currentUri.relative)
             window.location = '/signin?_r='+currentUri;
+        } else if (request.status == 500 || request.status == 403 ||
+                   request.status == 404 || request.status == 418) {
+            $$.alerts.error(request.responseText);
         } else {
-            alert("Error fetching: " + settings.url);
+            console.log("An error occurred while fetching: "+settings.url);
         }
+        $('.busy-indicator.busy').removeClass('busy');
     });
 
     /* If the browser support HTML5 states, use them */
@@ -958,6 +962,7 @@ var messaging = {
 $$.messaging = messaging;
 }})(social, jQuery);
 
+
 /*
  * Event Plugin related routines
  * Formatting date times, merging date times etc.
@@ -994,9 +999,60 @@ var events = {
         return "<div class='tag'>"+
             "<span class='conversation-composer-recipient-label'>"+ user_string +"</span>"+
             "<span class='conversation-composer-recipient-remove button-link' "+
-                "onclick='$$.events.removeUser(this, \""+user_id+"\")'>X</span></div>"
+                "onclick='$$.events.removeUser(this, \""+user_id+"\")'>X</span></div>";
     }
 };
 
 $$.events = events;
-}})(social, jQuery)
+}})(social, jQuery);
+
+
+/*
+ * Error, warning and info alerts
+ */
+(function($$, $) { if (!$$.alerts) {
+var alerts = {
+    error: function(msg) {
+        alerts._message(msg, "error");
+    },
+    warning: function(msg) {
+        alerts._message(msg, "warning");
+    },
+    info: function(msg) {
+        alerts._message(msg, "info");
+    },
+
+    _timeout: 5000,
+    _messageNum: 0,
+    _message: function(msg, cls) {
+        var $alertbar = $('#alertbar'),
+            $newalert = $('<div class="alert alert-'+cls+'">'+msg+'</div>'),
+            msgId = "alert-id" + (alerts._messageNum + 1);
+
+        alerts._messageNum += 1;
+        $alertbar.children(':first').removeClass('first-child');
+        $newalert.attr('id', msgId).addClass('first-child')
+                 .prependTo($alertbar)
+                 .hide()
+                 .click(function() {
+                   alerts._clearMessage(msgId);
+                 }).slideDown('fast');
+
+        setTimeout(function(){alerts._clearMessage(msgId)}, alerts._timeout);
+    },
+
+    _clearMessage: function(msgId) {
+        $('#'+msgId).slideUp().remove()
+    },
+    _clearAll: function() {
+        $('#alertbar').empty();
+    }
+};
+
+// Close all alerts when we navigate to a different page.
+$.address.change(function(event) {
+    alerts._clearAll();
+});
+
+$$.alerts = alerts;
+}})(social, jQuery);
