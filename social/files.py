@@ -11,6 +11,7 @@ from zope.interface     import implements
 from twisted.plugin     import IPlugin
 from twisted.internet   import defer
 from twisted.python     import log
+from twisted.web        import static, server
 
 from social             import db, utils, errors, base, feed, _
 from social.relations   import Relation
@@ -125,13 +126,20 @@ class FilesResource(base.BaseResource):
         files = utils.supercolumnsToDict(files)
 
         url = files['meta']['uri']
-        with open(url, 'r') as fp:
-            data = fp.read()
+        defer.returnValue([url, filetype, size, name])
+
+    def _renderFile(self, request):
+        d = self._getFile(request)
+        def renderFile(fileInfo):
+            url, filetype, size, name = fileInfo
+            fileObj = static.File(url)
             request.setHeader('Content-Type', filetype)
             request.setHeader('Content-Length', size)
             request.setHeader('Cache-control', 'no-cache')
             request.setHeader('Content-Disposition', 'attachment;filename = %s' %(name))
-            request.write(data)
+            fileObj.render(request)
+
+        d.addCallback(renderFile)
 
 
     @defer.inlineCallbacks
@@ -213,7 +221,8 @@ class FilesResource(base.BaseResource):
         d = None
         segmentCount = len(request.postpath)
         if segmentCount == 0:
-            d = self._getFile(request)
+            self._renderFile(request)
+            return server.NOT_DONE_YET
         if segmentCount == 1:
             d = self._listFileVersions(request)
         return self._epilogue(request, d)
@@ -226,5 +235,3 @@ class FilesResource(base.BaseResource):
         if segmentCount == 1 and request.postpath[0]=="new_version":
             d = self._upload_new_version(request)
         return self._epilogue(request, d)
-
-
