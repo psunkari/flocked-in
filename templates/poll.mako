@@ -60,7 +60,7 @@
       </li>
     %endfor
   </ul>
-  <div class="poll-actions">
+  <div class="item-subactions">
     ${_("%d total votes")%total}
     &nbsp;&#183;&nbsp;
     <a class="ajax" _ref="/poll/change?id=${convId}">${_("Change vote")}</a>
