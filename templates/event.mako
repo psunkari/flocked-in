@@ -170,35 +170,33 @@
           <div class="event-date-year"></div>
         </div>
       </span>
-      <div class="item-title-text" style="margin-top:10px;">
-        <div style="display:inline-block;padding-left:8px">
-          <div>${desc}</div>
-          <div>Venue: ${location}</div>
-          % if startsToday:
-            <span>Event starts today from ${event_start}</span>
-          % else:
-            <span>Event starts on ${event_start}</span>
-          % endif
-          % if endsToday:
-            <span>to ${event_end}</span>
-          % else:
-            <span>till ${event_end}</span>
-          % endif
-          <div class="event-actions">
-            % if response == "yes":
-              <span id="event-rsvp-status-${convId}">${_("You are attending")}</span>
-            % elif response == "no":
-              <span id="event-rsvp-status-${convId}">${_("You are not attending")}</span>
-            % elif response == "maybe":
-              <span id="event-rsvp-status-${convId}">${_("You may attend")}</span>
-            %endif
-            <button class="button-link" onclick="$$.ui.showPopUp(event)">RSVP to this event</button>
-            <ul class="acl-menu" style="display:none;">
-                <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'yes')"><div class="icon"></div>${_("Yes, I will attend")}</a></li>
-                <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'no')"><div class="icon"></div>${_("No")}</a></li>
-                <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'maybe')"><div class="icon"></div>${_("Maybe")}</a></li>
-            </ul>
-          </div>
+      <div class="item-contents has-icon event-contents">
+        <div>${desc}</div>
+        <div>Venue: ${location}</div>
+        % if startsToday:
+          <span>Event starts today from ${event_start}</span>
+        % else:
+          <span>Event starts on ${event_start}</span>
+        % endif
+        % if endsToday:
+          <span>to ${event_end}</span>
+        % else:
+          <span>till ${event_end}</span>
+        % endif
+        <div class="item-subactions">
+          % if response == "yes":
+            <span id="event-rsvp-status-${convId}">${_("You are attending")}</span>
+          % elif response == "no":
+            <span id="event-rsvp-status-${convId}">${_("You are not attending")}</span>
+          % elif response == "maybe":
+            <span id="event-rsvp-status-${convId}">${_("You may attend")}</span>
+          %endif
+          <button class="button-link" onclick="$$.ui.showPopUp(event)">RSVP to this event</button>
+          <ul class="acl-menu" style="display:none;">
+              <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'yes')"><div class="icon"></div>${_("Yes, I will attend")}</a></li>
+              <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'no')"><div class="icon"></div>${_("No")}</a></li>
+              <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'maybe')"><div class="icon"></div>${_("Maybe")}</a></li>
+          </ul>
         </div>
       </div>
     </div>
