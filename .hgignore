@@ -18,3 +18,4 @@ etc/production.cfg
 *.bkp
 *~
 *.komodoproject
+glob:data/

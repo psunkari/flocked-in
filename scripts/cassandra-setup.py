@@ -743,7 +743,8 @@ def truncateColumnFamilies(client):
                "blockedUsers", "deletedConvs", "feed_question",
                "mConversations", "mAllConversations", "mUnreadConversations",
                "mArchivedConversations", "mDeletedConversations",
-               "mConvMessages", "mConvFolders", "latestNotifications"]:
+               "mConvMessages", "mConvFolders", "latestNotifications",
+               "files", "tmp_files", "item_files"]:
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 
