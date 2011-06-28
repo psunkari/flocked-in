@@ -554,6 +554,7 @@ class FeedResource(base.BaseResource):
                 groupId = args['feedId']
                 handlers["onload"] = "$$.acl.switchACL('sharebar-acl', 'group','%s', '%s')" %(groupId, groupName)
 
+            handlers["onload"] = handlers.get("onload", "") + "$$.ui.loadFileShareBlock()"
             yield renderScriptBlock(request, "feed.mako", "share_block",
                                     landing, "#share-block", "set", handlers=handlers, **args)
             yield self._renderShareBlock(request, "status")

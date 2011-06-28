@@ -247,8 +247,8 @@ class RootResource(resource.Resource):
             match = self._messages
         elif path == "admin":
             match = self._admin
-#        elif path == "file":
-#            match = self._files
+        elif path == "file":
+            match = self._files
         elif path in plugins and self._pluginResources.has_key(path):
             match = self._pluginResources[path]
 

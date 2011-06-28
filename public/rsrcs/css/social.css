@@ -547,6 +547,12 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     margin-left: 6px;
 }
 
+#sharebar-actions-wrapper {
+    float:right;
+    width:86%;
+    display:inline-block;
+}
+
 .acl-menu {
     width: 120px;
 }
@@ -582,6 +588,30 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     background-repeat: no-repeat;
 }
 
+#file-attach-input {
+    opacity: 0;
+    position: relative;
+    width: 36px;
+    z-index: 100;
+    left:-85px;
+    top:-1px;
+}
+
+#file-share {
+    left: -39px;
+    position: relative;
+    top: -5px;
+}
+
+#attached-files {
+    max-width:25em;
+}
+
+.file-attach-wrapper {
+    float:left;
+    width:14%;
+    overflow:hidden;
+}
 /*
  * Feed
  */

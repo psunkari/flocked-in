@@ -246,7 +246,7 @@ def _upload_files(tmp_fileIds):
             directory, fid = os.path.split(location)
             newlocation = os.path.join('data', fid[0:2], fid[2:4], fid[4:6], fid)
             try:
-                cols = yield db.get(fid, "files", super_column="meta")
+                file_meta = yield db.get(fid, "files", super_column="meta")
             except ttypes.NotFoundException:
                 try:
                     directory, fname = os.path.split(newlocation)

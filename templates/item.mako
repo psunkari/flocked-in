@@ -1,5 +1,6 @@
 <%! from social import utils, _, __, plugins, constants %>
 <%! from twisted.python import log %>
+<%! from twisted.web.static import formatFileSize %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -137,27 +138,29 @@
     ${plugins[itemType].rootHTML(convId, isQuoted, context.kwargs)}
   %endif
   <% attachments = items[convId].get("attachments", {}) %>
-  %for attachmentId in attachments:
-    <% 
-        tuuid, name, size, ftype = attachments[attachmentId].split(':') 
-        size = utils.approximate_size(int(size))
-    %>
-    <span id="${attachmentId}">
-      <a href='/file?id=${convId}&fid=${attachmentId}&ver=${tuuid}' >${name}</a>
-      %if size:
-        ${size}
-      %endif
-    </span>
-    ##<span> <a href="/file/versions?id=${convId}&fid=${attachmentId}">versions</a></span>
-    
-    ##<form id="${convId}-file-form" method="post" action = "/file/new_version" enctype="multipart/form-data" >
-    ##    <input type="file" name="file" />
-    ##    <input type="hidden" name="id" value="${convId}" />
-    ##    <input type="hidden" name="fid" value="${attachmentId}" />
-    ##    <input type="submit" name="upload" value="upload" />
-    ##</form>
-
-  %endfor
+  %if len(attachments.keys()) > 0:
+    <table>
+    %for attachmentId in attachments:
+      <%
+          tuuid, name, size, ftype = attachments[attachmentId].split(':')
+          size = formatFileSize(int(size))
+      %>
+      <tr>
+        <td><a href='/file?id=${convId}&fid=${attachmentId}&ver=${tuuid}' >${name}</a></td>
+        %if size:
+          <td>${size}</td>
+        %endif
+       <td><a onclick="$$.ui.showFileVersions('${convId}' , '${attachmentId}')">versions</a></td>
+      </tr>
+      ##<form id="${convId}-file-form" method="post" action = "/file/new_version" enctype="multipart/form-data" >
+      ##    <input type="file" name="file" />
+      ##    <input type="hidden" name="id" value="${convId}" />
+      ##    <input type="hidden" name="fid" value="${attachmentId}" />
+      ##    <input type="submit" name="upload" value="upload" />
+      ##</form>
+    %endfor
+    </table>
+  %endif
 </%def>
 
 
@@ -465,14 +468,14 @@
 ##      % for attachmentId in attachments:
 ##         <%
 ##            timeuuid, fileId, name, size, filetype = attachments[attachmentId]
-##            size = utils.approximate_size(int(size))
+##            size = formatFileSize(int(size))
 ##         %>
 ##         <div>
 ##         <a href='/file?id=${convId}&fid=${attachmentId}&ver=${timeuuid}' >${name}</a>
 ##         % if size:
-##            ##(${utils.approximate_size(size)})
+##            ##(${formatFileSize(size)})
 ##            (${size})
-##         %endif 
+##         %endif
 ##         </div>
 ##      % endfor
 ##    </div>
@@ -617,7 +620,7 @@
 </%def>
 
 <%def name="set_attachment(itemId, attachmentId, timeuuid, name, size)">
-     <% size = utils.approximate_size(int(size)) %> 
+     <% size = formatFileSize(int(size)) %>
       <a href='/file?id=${itemId}&fid=${attachmentId}&ver=${timeuuid}' >${name}</a>
       %if size:
         ${size}

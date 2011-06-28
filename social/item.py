@@ -218,7 +218,7 @@ class ItemResource(base.BaseResource):
             data = {"items":{convId:conv},
                     "entities":{myId: args['me']}, "script": True}
             args.update(data)
-            onload = "(function(obj){$$.convs.load(obj);})(this);"
+            onload = "(function(obj){$$.convs.load(obj);})(this);$('#attached-files').empty()"
             d1 = renderScriptBlock(request, "item.mako", "item_layout",
                             False, "#user-feed", "prepend", args=[convId],
                             handlers={"onload":onload}, **args)

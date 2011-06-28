@@ -644,6 +644,58 @@ var ui = {
         $(document).one("click", function() {$menu.hide();});
         evt.stopPropagation();
         evt.preventDefault();
+    },
+
+    removeFileFromShare: function(){
+        //Destroy both the checkbox and the hidden input
+        var item = $(this);
+        $('input:hidden[value="'+ item.attr('id') +'"]').remove();
+        $('input:checkbox[id="'+ item.attr('id') +'"]').parent("li").remove()
+    },
+
+    loadFileShareBlock: function(){
+        $("#upload :file").change(function() {
+          var form = $(this.form);
+          form.addClass("busy-indicator");
+          var uploadXhr = $.ajax(form.prop("action"), {
+            type: "POST",
+            files: form.find(":file")
+          }).complete(function(data) {
+            form.removeClass("busy-indicator");
+            form.find(":file").val("");
+          }).success(function(data) {
+            //Insert hidden inputs in attached-files
+            var hiddenInputs = [];
+            var fileItems = [];
+            for (var fileId in data.files ){
+                var fileInfo = data.files[fileId];
+                var input = "<input type='hidden' name='fId' value='"+ fileId +"'/>";
+                hiddenInputs.push(input);
+                $("#attached-files").add(input);
+                var list = "<li><input id='"+ fileId +
+                    "' type='checkbox' checked/><label for='"+ fileId +"'>"+ fileInfo[1]  +"</label></li>";
+                fileItems.push(list);
+
+            }
+            var textToInsert = hiddenInputs.join("");
+            $("#attached-files").append(textToInsert);
+            var textToInsert = fileItems.join("");
+            $("#attached-files").append(textToInsert);
+            for (var fileId in data.files ){
+                $('input:checkbox[id="'+ fileId +'"]').change($$.ui.removeFileFromShare)
+            }
+          });
+          var node = $('#attached-files');
+          $$.setBusy(uploadXhr, node);
+        });
+    },
+
+    showFileVersions: function(convId, fileId){
+        var dialogOptions = {
+            id: 'file-versions-dlg-'+fileId
+        };
+        $$.dialog.create(dialogOptions);
+        $$.get('/ajax/file/versions?id='+ convId+'&fid='+fileId);
     }
 }
 

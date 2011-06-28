@@ -83,7 +83,8 @@
     padding: 0 12px;
 }
 
-.button:active, .button:focus, .button:hover {
+.button:active, .button:focus, .button:hover, .file-overlay:hover~button,
+.file-overlay:focus~button {
     background: -moz-linear-gradient(center top , #EEEEEE, #F9F9F9) repeat scroll 0 0 transparent;
     background: -webkit-gradient(linear,0% 40%,0% 70%,from(#EEEEEE),to(#F9F9F9));
     outline:none;

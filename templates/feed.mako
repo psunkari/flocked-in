@@ -140,23 +140,26 @@
            </div>
           <input type="hidden" name="type" value="status"/>
       </div>
-      <div>
+      <div id="sharebar-actions-wrapper">
+        <ul id="attached-files" class="v-links busy-indicator" style="float:left">&nbsp</ul>
         <ul id="sharebar-actions" class="h-links">
           <li>${acl_button("sharebar-acl", "{accept:{org:[%s]}}"%orgKey, "Company")}</li>
           <li>${widgets.button("sharebar-submit", "submit", "default", None, "Share")}</li>
         </ul>
         <span class="clear" style="display:block"></span>
-##        <div id="files" name="files">
-##            %if tmp_files:
-##                ${self.append_fileIds(tmp_files)}
-##            %endif
-##        </div>
       </div>
     </form>
-##    <form id="file-form" method="post" action = "/file/upload" enctype="multipart/form-data" >
-##        <input type="file" name="file" />
-##        <input type="submit" name="upload" value="upload" />
-##    </form>
+    <div class="file-attach-wrapper">
+        <form id="upload" action="/file" method="post" enctype="multipart/form-data">
+          <span class="file-overlay">
+            <input id="file-attach-input" type="file" name="file" multiple size="1"/>
+          </span>
+          <button id="file-share" class="button" type="button" title="${_('Attach a file')}">
+            <img src="/rsrcs/img/attach.png" alt="${_('Attach a file')}"/>
+          </button>
+        </form>
+    </div>
+    <div class="clear"></div>
   %endif
 </%def>
 
@@ -194,11 +197,4 @@
   %else:
     <div id="next-load-wrapper">No more posts to show</div>
   %endif
-</%def>
-
-
-<%def name="append_fileIds(fileIds)">
-    %for fileId in fileIds:
-        <input type="hidden", name="fId" value="${fileId}" />
-    %endfor
 </%def>

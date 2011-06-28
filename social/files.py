@@ -9,7 +9,7 @@ from telephus.cassandra import ttypes
 
 from zope.interface     import implements
 from twisted.plugin     import IPlugin
-from twisted.internet   import defer
+from twisted.internet   import defer, threads
 from twisted.python     import log
 from twisted.web        import static, server
 
@@ -95,7 +95,7 @@ class FilesResource(base.BaseResource):
 
 
     @defer.inlineCallbacks
-    def _getFile(self, request):
+    def _getFileInfo(self, request):
 
         authinfo = request.getSession(IAuthInfo)
         myId = authinfo.username
@@ -129,14 +129,12 @@ class FilesResource(base.BaseResource):
         defer.returnValue([url, filetype, size, name])
 
     def _renderFile(self, request):
-        d = self._getFile(request)
+        d = self._getFileInfo(request)
         def renderFile(fileInfo):
             url, filetype, size, name = fileInfo
-            fileObj = static.File(url)
-            request.setHeader('Content-Type', filetype)
-            request.setHeader('Content-Length', size)
+            fileObj = static.File(url, filetype)
             request.setHeader('Cache-control', 'no-cache')
-            request.setHeader('Content-Disposition', 'attachment;filename = %s' %(name))
+            request.setHeader('Content-Disposition', 'attachment;filename = \"%s\"' %(name))
             fileObj.render(request)
 
         d.addCallback(renderFile)
@@ -157,13 +155,13 @@ class FilesResource(base.BaseResource):
 
         if 'file' in fs:
             fsi = fs['file'][0] if len(fs.getlist('file')) >1 else fs['file']
-            data, name, size, ftype = _getFileInfo(fsi)
+            data, name, size, ftype = yield threads.deferToThread(_getFileInfo, fsi)
             if data:
                 fileId = _getFileId(data)
                 location = _getFilePath(fileId)
                 timeuuid = uuid.uuid1().bytes
                 try:
-                    _writeToFile(location, data)
+                    yield threads.deferToThread(_writeToFile, location, data)
                     val = "%s:%s:%s:%s" %(utils.encodeKey(timeuuid), name, size, ftype)
                     val1= "%s:%s:%s:%s:%s" %(utils.encodeKey(timeuuid), fileId, name, size, ftype)
                     yield db.insert(itemId, "items", val, attachmentId, "attachments")
@@ -193,29 +191,31 @@ class FilesResource(base.BaseResource):
                               environ={'REQUEST_METHOD':'POST'})
         if 'file' in fs:
             tmp_files = []
+            tmp_files_info = {}
             files = fs['file'] if len(fs.getlist('file')) >1 else [fs['file']]
             for fsi in files:
-                data, name, size, filetype = _getFileInfo(fsi)
+                data, name, size, filetype = yield threads.deferToThread(_getFileInfo, fsi)
                 if data:
                     fileId = _getFileId(data)
                     tmpFileId = utils.getUniqueKey()
                     location = _get_tmpfile_location(fileId)
                     try:
-                        _writeToFile(location, data)
+                        yield threads.deferToThread(_writeToFile, location, data)
                         val = "%s:%s:%s:%s"%(location, name, size, filetype)
                         tmp_files.append((tmpFileId, val))
+                        tmp_files_info[tmpFileId] = [location, name, size, filetype]
                     except Exception as e:
                         raise errors.uploadFailed()
+
             for tmp_file, val in tmp_files:
                 yield db.insert(tmp_file, "tmp_files", val, "fileId")
 
-            #if tmp_files:
-            #    tmp_files = [tmp_fileId for tmp_fileId, fileId in tmp_files]
-            #    yield renderScriptBlock(request, "feed.mako", "append_fileIds",
-            #                            False, "#files", "set", True, args=[tmp_files])
-            tmp_files = [tmp_fileId for tmp_fileId, fileId in tmp_files]
-            args["tmp_files"]=tmp_files
-            yield render(request, "feed.mako", **args)
+            response = """
+                            <textarea data-type="application/json">
+                              {"ok": true, "files": %s}
+                            </textarea>
+                       """ % (json.dumps(tmp_files_info))
+            request.write(response)
 
     def render_GET(self, request):
         d = None
@@ -230,7 +230,7 @@ class FilesResource(base.BaseResource):
     def render_POST(self, request):
         d = None
         segmentCount = len(request.postpath)
-        if segmentCount == 1 and request.postpath[0]=="upload":
+        if segmentCount == 0:
             d = self.upload(request)
         if segmentCount == 1 and request.postpath[0]=="new_version":
             d = self._upload_new_version(request)

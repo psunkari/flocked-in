@@ -1370,7 +1370,6 @@ $.extend(Datepicker.prototype, {
 	/* Retrieve the date(s) directly. */
 	_getDate: function(inst) {
 	    var dtNow = new Date();
-	    console.info(dtNow);
 		var startDate = (!inst.currentYear || (inst.input && inst.input.val() == '') ? null :
 			this._daylightSavingAdjust(new Date(
 			inst.currentYear, inst.currentMonth, inst.currentDay, dtNow.getHours(),
