@@ -118,7 +118,7 @@ class ProfileResource(base.BaseResource):
 
         toFetchEntities.add(userKey)
         while len(convs) < count:
-            cols = yield db.get_slice(userKey, "userItems", start = toFetchStart,
+            cols = yield db.get_slice(userKey, "userItems", start=toFetchStart,
                                       reverse=True, count=toFetchCount)
             fetchedUserItem.extend(cols[0:count])
             if len(cols):
@@ -133,7 +133,8 @@ class ProfileResource(base.BaseResource):
             for col in cols:
                 value = tuple(col.column.value.split(":"))
                 rtype, itemId, convId, convType, convOwnerId, commentSnippet = value
-                convs.append(convId)
+                if convId not in convs:
+                    convs.append(convId)
             if len(cols) == toFetchCount:
                 convs = convs[0:count]
 
