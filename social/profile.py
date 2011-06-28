@@ -823,8 +823,7 @@ class ProfileResource(base.BaseResource):
 
         # Reload all user-depended blocks if the currently displayed user is
         # not the same as the user for which new data is being requested.
-        newId = (request.getCookie('cu') != userKey) or appchange
-        if script and newId:
+        if script:
             yield renderScriptBlock(request, "profile.mako", "summary",
                                     landing, "#profile-summary", "set", **args)
             yield renderScriptBlock(request, "profile.mako", "user_subactions",
@@ -853,56 +852,55 @@ class ProfileResource(base.BaseResource):
                                         "#profile-content", "set", True,
                                         handlers=handlers, **args)
 
-        if newId or not script:
-            # List the user's subscriptions
-            cols = yield db.get_slice(userKey, "subscriptions", count=11)
-            subscriptions = set(utils.columnsToDict(cols).keys())
-            args["subscriptions"] = subscriptions
+        # List the user's subscriptions
+        cols = yield db.get_slice(userKey, "subscriptions", count=11)
+        subscriptions = set(utils.columnsToDict(cols).keys())
+        args["subscriptions"] = subscriptions
 
-            # List the user's followers
-            cols = yield db.get_slice(userKey, "followers", count=11)
-            followers = set(utils.columnsToDict(cols).keys())
-            args["followers"] = followers
+        # List the user's followers
+        cols = yield db.get_slice(userKey, "followers", count=11)
+        followers = set(utils.columnsToDict(cols).keys())
+        args["followers"] = followers
 
-            # List the user's friends (if allowed and look for common friends)
-            cols = yield db.multiget_slice([myKey, userKey], "connections")
-            myFriends = set(utils.supercolumnsToDict(cols[myKey]).keys())
-            userFriends = set(utils.supercolumnsToDict(cols[userKey]).keys())
-            commonFriends = myFriends.intersection(userFriends)
-            args["commonFriends"] = commonFriends
+        # List the user's friends (if allowed and look for common friends)
+        cols = yield db.multiget_slice([myKey, userKey], "connections")
+        myFriends = set(utils.supercolumnsToDict(cols[myKey]).keys())
+        userFriends = set(utils.supercolumnsToDict(cols[userKey]).keys())
+        commonFriends = myFriends.intersection(userFriends)
+        args["commonFriends"] = commonFriends
 
-            # Fetch item data (name and avatar) for subscriptions, followers,
-            # user groups and common items.
-            entitiesToFetch = followers.union(subscriptions, commonFriends)\
-                                       .difference(fetchedEntities)
-            cols = yield db.multiget_slice(entitiesToFetch,
-                                           "entities", super_column="basic")
-            rawUserData = {}
-            for key, data in cols.items():
-                if len(data) > 0:
-                    rawUserData[key] = utils.columnsToDict(data)
-            args["rawUserData"] = rawUserData
+        # Fetch item data (name and avatar) for subscriptions, followers,
+        # user groups and common items.
+        entitiesToFetch = followers.union(subscriptions, commonFriends)\
+                                   .difference(fetchedEntities)
+        cols = yield db.multiget_slice(entitiesToFetch,
+                                       "entities", super_column="basic")
+        rawUserData = {}
+        for key, data in cols.items():
+            if len(data) > 0:
+                rawUserData[key] = utils.columnsToDict(data)
+        args["rawUserData"] = rawUserData
 
-            # List the user's groups (and look for groups common with me)
-            cols = yield db.multiget_slice([myKey, userKey], "entityGroupsMap")
-            myGroups = set(utils.columnsToDict(cols[userKey]).keys())
-            userGroups = set(utils.columnsToDict(cols[userKey]).keys())
-            commonGroups = myGroups.intersection(userGroups)
-            if len(userGroups) > 10:
-                userGroups = sample(userGroups, 10)
-            args["userGroups"] = userGroups
-            args["commonGroups"] = commonGroups
+        # List the user's groups (and look for groups common with me)
+        cols = yield db.multiget_slice([myKey, userKey], "entityGroupsMap")
+        myGroups = set(utils.columnsToDict(cols[userKey]).keys())
+        userGroups = set(utils.columnsToDict(cols[userKey]).keys())
+        commonGroups = myGroups.intersection(userGroups)
+        if len(userGroups) > 10:
+            userGroups = sample(userGroups, 10)
+        args["userGroups"] = userGroups
+        args["commonGroups"] = commonGroups
 
-            groupsToFetch = commonGroups.union(userGroups)
-            cols = yield db.multiget_slice(groupsToFetch, "entities",
-                                           super_column="basic")
-            rawGroupData = {}
-            for key, data in cols.items():
-                if len(data) > 0:
-                    rawGroupData[key] = utils.columnsToDict(data)
-            args["rawGroupData"] = rawGroupData
+        groupsToFetch = commonGroups.union(userGroups)
+        cols = yield db.multiget_slice(groupsToFetch, "entities",
+                                       super_column="basic")
+        rawGroupData = {}
+        for key, data in cols.items():
+            if len(data) > 0:
+                rawGroupData[key] = utils.columnsToDict(data)
+        args["rawGroupData"] = rawGroupData
 
-        if script and newId:
+        if script:
             yield renderScriptBlock(request, "profile.mako", "user_subscriptions",
                                     landing, "#user-subscriptions", "set", **args)
             yield renderScriptBlock(request, "profile.mako", "user_followers",

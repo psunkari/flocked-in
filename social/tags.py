@@ -61,39 +61,31 @@ class TagsResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _render(self, request, tagId):
+    def _render(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
         myOrgId = args["orgKey"]
+
+        (tagId, tagInfo) = yield utils.getValidTagId(request, 'id')
+        args["tags"] = tagInfo
+        args["tagId"] = tagId
+        args["tagFollowing"] = False
         args["menuId"] = "tags"
-        args["tagId"]=tagId
-        prevDisplayedTag = request.getCookie('cu')
-        request.addCookie('cu', tagId, path="/ajax/tags")
 
         if script and landing:
             yield render(request, "tags.mako", **args)
 
-        appchange = appchange or not prevDisplayedTag
         if script and appchange:
             yield renderScriptBlock(request, "tags.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-        newId = (prevDisplayedTag != tagId) or appchange
-        if newId or not script:
-            tagInfo = yield db.get_slice(myOrgId, "orgTags", super_column=tagId)
-            if not tagInfo:
-                raise errors.InvalidTag("Tag does not exist", tagId)
-            tagInfo = utils.columnsToDict(tagInfo)
-            args["tags"] = {tagId: tagInfo}
-            args["tagId"] = tagId
-            args["tagFollowing"] = False
-            try:
-                yield db.get(tagId, "tagFollowers", myKey)
-                args["tagFollowing"] = True
-            except ttypes.NotFoundException:
-                pass
+        try:
+            yield db.get(tagId, "tagFollowers", myKey)
+            args["tagFollowing"] = True
+        except ttypes.NotFoundException:
+            pass
 
-        if script and newId:
+        if script:
             yield renderScriptBlock(request, "tags.mako", "header",
                               landing, "#tags-header", "set", **args)
         start = utils.getRequestArg(request, "start") or ''
@@ -135,9 +127,6 @@ class TagsResource(base.BaseResource):
         count = constants.PEOPLE_PER_PAGE
         toFetchCount = count + 1
         start = utils.decodeKey(start)
-
-        appchange = appchange or request.getCookie('cu')
-        request.addCookie('cu', '', path="/ajax/tags", expires=formatdate(0))
 
         args["menuId"] = "tags"
         if script and landing:
@@ -205,15 +194,14 @@ class TagsResource(base.BaseResource):
         d = None
 
         if segmentCount == 0:
-            tagId = utils.getRequestArg(request, 'id');
-            if tagId:
-                d = self._render(request, tagId)
-            else:
+            d = self._render(request)
+        elif segmentCount == 1:
+            if request.postpath[0] == "list":
                 d = self._listTags(request)
-        elif segmentCount == 1 and request.postpath[0] == "more":
-            tagId = utils.getRequestArg(request, 'id')
-            start = utils.getRequestArg(request, 'start') or ""
-            d = self._renderMore(request, start, tagId)
+            elif request.postpath[0] == "more":
+                tagId = utils.getRequestArg(request, 'id')
+                start = utils.getRequestArg(request, 'start') or ""
+                d = self._renderMore(request, start, tagId)
 
         return self._epilogue(request, d)
 
