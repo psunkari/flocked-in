@@ -155,7 +155,7 @@ class EventResource(base.BaseResource):
             elif response == "maybe":
               rsp = _("You may attend")
 
-            request.write("$('#event-rsvp-status-%s').attr('innerHTML', '%s')" %(convId, rsp))
+            request.write("$('#event-rsvp-status-%s').text('%s')" %(convId, rsp))
             #TODO:Update the sidebar listing of people attending this event
 
 
@@ -364,7 +364,6 @@ class Event(object):
                         timeslots.push({label:dtlabel+":30"+"PM", value: dtvalue})
                     }
                 });
-                console.info(timeslots);
 
                 $( "#eventstarttime" ).autocomplete({
                     minLength: 0,
