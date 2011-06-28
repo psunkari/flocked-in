@@ -360,8 +360,6 @@ class ProfileResource(base.BaseResource):
 
             #notify users
             calls = [d1, d2, d3, d4]
-        except errors.PendingRequest:
-            pass
 
         yield defer.DeferredList(calls)
 
