@@ -185,9 +185,9 @@
   &#183;
   ## Like this conversation
   %if myLikes and myLikes.has_key(convId) and len(myLikes[convId]):
-    <button class="button-link ajax" _ref="/item/unlike?id=${convId}">${_("Unlike")}</button>&#183;<button
+    <button class="button-link ajaxpost" _ref="/item/unlike?id=${convId}">${_("Unlike")}</button>&#183;<button
   %else:
-    <button class="button-link ajax" _ref="/item/like?id=${convId}">${_("Like")}</button>&#183;<button
+    <button class="button-link ajaxpost" _ref="/item/like?id=${convId}">${_("Like")}</button>&#183;<button
   %endif
   ## Comment on this conversation
   <% commentString = "Answer" if convType == "question" else "Comment" %>
@@ -211,9 +211,9 @@
   %endif
   &#183;
   %if myLikes and myLikes.has_key(itemId) and len(myLikes[itemId]):
-    <button class="button-link ajax" _ref="/item/unlike?id=${itemId}">${_("Unlike")}</button>
+    <button class="button-link ajaxpost" _ref="/item/unlike?id=${itemId}">${_("Unlike")}</button>
   %else:
-    <button class="button-link ajax" _ref="/item/like?id=${itemId}">${_("Like")}</button>
+    <button class="button-link ajaxpost" _ref="/item/like?id=${itemId}">${_("Like")}</button>
   %endif
 </%def>
 
@@ -366,7 +366,7 @@
 <%def name="conv_tag(convId, tagId, tagName)">
   <span class="tag" id="tag-${tagId}">
     <a class="ajax" href="/tags?id=${tagId}">${tagName}</a>
-    <form class="ajax delete-tags" action="/item/untag">
+    <form class="ajax delete-tags" method="post" action="/item/untag">
       <input type="hidden" name="id" value="${convId}"/>
       <input type="hidden" name="tag" value="${tagId}"/>
       <button type="submit" class="button-link">x</button>
@@ -383,7 +383,7 @@
     %for tagId in itemTags.keys():
       <span class="tag" id="tag-${tagId}">
         <a class="ajax" href="/tags?id=${tagId}">${tags[tagId]["title"]}</a>
-        <form class="ajax delete-tags" action="/item/untag">
+        <form class="ajax delete-tags" method="post" action="/item/untag">
           <input type="hidden" name="id" value="${convId}"/>
           <input type="hidden" name="tag" value="${tagId}"/>
           <button type="submit" class="button-link">x</button>
