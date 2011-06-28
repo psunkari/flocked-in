@@ -26,8 +26,13 @@ class BaseResource(resource.Resource):
 
         script = False if request.args.has_key('_ns') or\
                           request.getCookie('_ns') else True
-        appchange = True if request.args.has_key('_fp') and self._ajax or\
-                            not self._ajax and script else False
+
+        requestPath = request.path
+        fromPage = utils.getRequestArg(request, '_pg')
+        if fromPage and self._ajax:
+            fromPage = '/ajax' + fromPage
+
+        appchange = (requestPath != fromPage)
 
         cols = yield db.multiget_slice([myKey, orgKey], "entities", ["basic"])
         cols = utils.multiSuperColumnsToDict(cols)

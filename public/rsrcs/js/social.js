@@ -38,23 +38,9 @@ parseUri: function parseUri(str) {
     return uri
 },
 
-_fetchUriOldPath: null,
 _historyHasStates: false,
-fetchUri: function _fetchUri(str) {
-    uri = social.parseUri(str);
-    deferred = null;
-    if (social._fetchUriOldPath) {
-        tail = '';
-        if (social._fetchUriOldPath != uri.path)
-            tail = uri.query? "&_fp=1": "?_fp=1";
-
-        deferred = social.get('/ajax' + str + tail);
-    }
-    social._fetchUriOldPath = uri.path;
-    return deferred;
-},
 ajaxRedirectUri: function _ajaxRedirectUri(uri) {
-    this.fetchUri(uri);
+    this.get('/ajax' + uri);
     $.address.value(uri);
 },
 setBusy: function _setBusy(deferred, node) {
@@ -88,7 +74,7 @@ _initAjaxRequests: function _initAjaxRequests() {
         if (url = node.attr('_ref')) {
             deferred = social.get('/ajax' + url);
         } else if (url = node.attr('href')) {
-            deferred = self.fetchUri(url);
+            deferred = social.get('/ajax' + url);
             $.address.value(url);
         }
 
@@ -159,7 +145,7 @@ _initAjaxRequests: function _initAjaxRequests() {
 
     /* An address or the hash changed externally, update the page */
     $.address.externalChange(function(event) {
-        self.fetchUri(event.value)
+        self.get('/ajax' + event.value)
     });
 },
 
@@ -552,7 +538,7 @@ var ui = {
             select: function(event, obj){
                 url = obj.item.href;
                 if (url !== undefined) {
-                    deferred = $$.fetchUri(url);
+                    deferred = $$.get('/ajax' + url);
                     $.address.value(url);
                     event.target.value = "";
                     return false;
