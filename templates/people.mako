@@ -98,9 +98,9 @@
       <ul id="user-actions-${userId}" class="middle user-actions h-links">
         %if showBlocked:
           %if userId not in blockedUsers:
-            <button class="button default" onclick="$.post('/ajax/admin/block', 'id=${userId}', null, 'script')"><span class="button-text">Block</span></li>
+            <button class="button default" onclick="$$.post('/ajax/admin/block', 'id=${userId}')"><span class="button-text">Block</span></li>
           %endif
-          <button class="button default" onclick="$.post('/ajax/admin/delete', 'id=${userId}', null, 'script')"><span class="button-text">Remove</span></li>
+          <button class="button default" onclick="$$.post('/ajax/admin/delete', 'id=${userId}')"><span class="button-text">Remove</span></li>
         %else:
           ${profile.user_actions(userId, True)}
         %endif

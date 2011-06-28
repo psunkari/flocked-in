@@ -119,21 +119,21 @@
         %>
         <div class="messaging-icon messaging-${readStatus}-icon"
              title="Mark this conversation as ${readAction}"
-             onclick="$.post('/ajax/messages/thread', 'action=${readAction}&selected=${convId}&filterType=${filterType}', null, 'script')">&nbsp;</div>
+             onclick="$$.post('/ajax/messages/thread', 'action=${readAction}&selected=${convId}&filterType=${filterType}')">&nbsp;</div>
         %elif filterType == "unread":
         <div class="messaging-icon messaging-unread-icon"
              title="Mark this conversation as read"
-             onclick="$.post('/ajax/messages/thread', 'action=read&selected=${convId}&filterType=${filterType}', null, 'script')">&nbsp;</div>
+             onclick="$$.post('/ajax/messages/thread', 'action=read&selected=${convId}&filterType=${filterType}')">&nbsp;</div>
         %endif
         %if filterType != "archive":
         <div class="messaging-icon messaging-archive-icon"
              title="Archive this conversation"
-             onclick="$.post('/ajax/messages/thread', 'action=archive&selected=${convId}&filterType=${filterType}', null, 'script')">&nbsp;</div>
+             onclick="$$.post('/ajax/messages/thread', 'action=archive&selected=${convId}&filterType=${filterType}')">&nbsp;</div>
         %endif
         %if filterType != "trash":
         <div class="messaging-icon messaging-delete-icon"
              title="Delete this conversation"
-             onclick="$.post('/ajax/messages/thread', 'action=trash&selected=${convId}&filterType=${filterType}', null, 'script')">&nbsp;</div>
+             onclick="$$.post('/ajax/messages/thread', 'action=trash&selected=${convId}&filterType=${filterType}')">&nbsp;</div>
         %endif
       </span>
     </div>
@@ -225,7 +225,7 @@
                         filterType = ''
                     }
                     var urlpostdata = 'recipients='+recipients+'&subject='+subject+'&body='+body+'&filterType='+filterType;
-                    $.post('/ajax/messages/write', urlpostdata, null, 'script')
+                    $$.post('/ajax/messages/write', urlpostdata)
                     $('#composer').empty()
             """%>
             <button type="button" class="button default" onclick="${onclickscript}">
@@ -323,7 +323,7 @@
                     %>
                     %if showDelete:
                         <div class="conversation-people-remove" class="busy-indicator"
-                             onclick="$.post('/ajax/messages/members', 'action=remove&parent=${id}&recipients=${person}', null, 'script')" title="Remove ${people[person]["basic"]["name"]} from this conversation"><span>X</span></div>
+                             onclick="$$.post('/ajax/messages/members', 'action=remove&parent=${id}&recipients=${person}')" title="Remove ${people[person]["basic"]["name"]} from this conversation"><span>X</span></div>
                     %else:
                         <div class="conversation-people-no-remove">&nbsp;</div>
                     %endif

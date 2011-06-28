@@ -669,7 +669,7 @@ class ProfileResource(base.BaseResource):
                                            relation.initPendingList(),
                                            relation.initSubscriptionsList()])
 
-            isProfile = (request.getCookie("page") == "profile")
+            isProfile = (utils.getRequestArg(request, "_pg") == "/profile")
             def renderActions(ign):
                 d = renderScriptBlock(request, "profile.mako", "user_actions",
                                 False, "#user-actions-%s"%targetKey, "set",

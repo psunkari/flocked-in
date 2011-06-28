@@ -315,7 +315,7 @@ class ItemResource(base.BaseResource):
             else:
                 likes = []
 
-            isFeed = False if request.getCookie("page") == "item" else True
+            isFeed = (utils.getRequestArg(request, "_pg") != "/item")
             hasComments = False
             hasLikes = True if likes else False
             toFetchEntities = set(likes)
@@ -427,7 +427,7 @@ class ItemResource(base.BaseResource):
 
             feedItems = yield db.get_slice(myId, "feedItems", [convId])
             feedItems = utils.supercolumnsToDict(feedItems)
-            isFeed = False if request.getCookie("page") == "item" else True
+            isFeed = (utils.getRequestArg(request, "_pg") != "/item")
             hasComments = False
             if not isFeed:
                 hasComments = True
@@ -525,7 +525,7 @@ class ItemResource(base.BaseResource):
 
         numShowing = utils.getRequestArg(request, "nc") or "0"
         numShowing = int(numShowing) + 1
-        isFeed = False if request.getCookie("page") == "item" else True
+        isFeed = (utils.getRequestArg(request, "_pg") != "/item")
         yield renderScriptBlock(request, 'item.mako', 'conv_comments_head',
                         False, '#comments-header-%s' % (convId), 'set',
                         args=[convId, responseCount, numShowing, isFeed], **args)
@@ -571,7 +571,7 @@ class ItemResource(base.BaseResource):
         start = utils.getRequestArg(request, "start") or ''
         start = utils.decodeKey(start)
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        isFeed = False if request.getCookie("page") == "item" else True
+        isFeed = (utils.getRequestArg(request, "_pg") != "/item")
         responseCount = int(conv["meta"].get("responseCount", "0"))
 
         if isFeed and responseCount > constants.MAX_COMMENTS_IN_FEED:

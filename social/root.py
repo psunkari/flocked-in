@@ -267,13 +267,6 @@ class RootResource(resource.Resource):
                 d = self._ensureAuth(request, match)
             else:
                 d = defer.succeed(match)
-
-            if request.method == "GET" and path not in self._noCookiesPaths\
-                                and (not self._isAjax or "_fp" in request.args):
-                def addPageIndicatorCookie(rsrc, request, path):
-                    request.addCookie("page", path, path="/")
-                    return rsrc
-                d.addCallback(addPageIndicatorCookie, request, path)
         else:
             d = defer.succeed(match)
 

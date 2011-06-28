@@ -94,9 +94,9 @@
         <div class="user-details-name">${utils.userName(userId, entities[userId])}</div>
         <div class="user-details-actions">
           <ul id="user-actions-${userId}" class="middle user-actions h-links">
-            <button class="button default" onclick="$.post('/ajax/groups/approve', 'id=${groupId}&uid=${userId}', null, 'script')"><span class="button-text">Accept</span></button>
-            <button class="button default" onclick="$.post('/ajax/groups/reject', 'id=${groupId}&uid=${userId}', null, 'script')"><span class="button-text">Reject</span></button>
-            <button class="button default" onclick="$.post('/ajax/groups/block', 'id=${groupId}&uid=${userId}', null, 'script')"><span class="button-text">Block</span></button>
+            <button class="button default" onclick="$$.post('/ajax/groups/approve', 'id=${groupId}&uid=${userId}')"><span class="button-text">Accept</span></button>
+            <button class="button default" onclick="$$.post('/ajax/groups/reject', 'id=${groupId}&uid=${userId}')"><span class="button-text">Reject</span></button>
+            <button class="button default" onclick="$$.post('/ajax/groups/block', 'id=${groupId}&uid=${userId}')"><span class="button-text">Block</span></button>
           </ul>
         </div>
       </div>
@@ -108,13 +108,13 @@
   %if groupId in pendingConnections:
     <button class="button disabled"><span class="button-text">${_('Request Pending')}</span></button>
   %elif groupId not in myGroups:
-    <button class="button default" onclick="$.post('/ajax/groups/subscribe', 'id=${groupId}', null, 'script')"><span class="button-text">${('Join')}</span></button>
+    <button class="button default" onclick="$$.post('/ajax/groups/subscribe', 'id=${groupId}')"><span class="button-text">${('Join')}</span></button>
   %else:
-    <button class="button" onclick="$.post('/ajax/groups/unsubscribe', 'id=${groupId}', null, 'script')"><span class="button-text">${('Leave')}</span></button>
+    <button class="button" onclick="$$.post('/ajax/groups/unsubscribe', 'id=${groupId}')"><span class="button-text">${('Leave')}</span></button>
     %if myKey in groupFollowers[groupId]:
-      <button class="button" onclick="$.post('/ajax/groups/unfollow', 'id=${groupId}', null, 'script')"><span class="button-text">${('Stop Following')}</span></button>
+      <button class="button" onclick="$$.post('/ajax/groups/unfollow', 'id=${groupId}')"><span class="button-text">${('Stop Following')}</span></button>
     %else:
-      <button class="button default" onclick="$.post('/ajax/groups/follow', 'id=${groupId}', null, 'script')"><span class="button-text">${('Follow')}</span></button>
+      <button class="button default" onclick="$$.post('/ajax/groups/follow', 'id=${groupId}')"><span class="button-text">${('Follow')}</span></button>
     %endif
   %endif
 </%def>

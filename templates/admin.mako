@@ -82,7 +82,7 @@
     <div class="user-details-title">${entities[userId]["basic"].get("jobTitle", '')}</div>
     <div class="user-details-actions">
       <ul id="user-actions-${userId}" class="middle user-actions h-links">
-        <button class="button default" onclick="$.post('/ajax/admin/unblock', 'id=${userId}', null, 'script')">
+        <button class="button default" onclick="$$.post('/ajax/admin/unblock', 'id=${userId}')">
           Unblock
         </button>
       </ul>
@@ -116,27 +116,6 @@
     %if counter % 2 == 1:
       </div>
     %endif
-
-    <!--% for userId in entities:-->
-    <!--  <div class="users-user">-->
-    <!--    <div class="users-avatar">-->
-    <!--    <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>-->
-    <!--    %if avatarURI:-->
-    <!--      <img src="${avatarURI}" height='48' width='48'></img>-->
-    <!--    %endif-->
-    <!--    </div>-->
-    <!--    <div class="users-details">-->
-    <!--      <div class="user-details-name">${utils.userName(userId, entities[userId])}</div>-->
-    <!--      <div class="user-details-title">${entities[userId]["basic"].get("jobTitle", '')}</div>-->
-    <!--      <ul id="user-actions-${userId}" class="middle user-actions h-links">-->
-    <!--          <button class="button default" onclick="$.post('/ajax/admin/unblock', 'id=${userId}', null, 'script')">-->
-    <!--            Unblock-->
-    <!--          </button>-->
-    <!--      </ul>-->
-    <!--    </div>-->
-    <!--  </div>-->
-    <!--%endfor-->
-
   %endif
 </%def>
 

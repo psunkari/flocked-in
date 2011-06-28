@@ -76,9 +76,9 @@
 
 <%def name="tag_actions(tagId, tagFollowing)">
   %if not tagFollowing:
-    <button class="button default" onclick="$.post('/ajax/tags/follow', 'id=${tagId}', null, 'script')"><span class="button-text">Follow</span></button>
+    <button class="button default" onclick="$$.post('/ajax/tags/follow', 'id=${tagId}')"><span class="button-text">Follow</span></button>
   %else:
-    <button class="button" onclick="$.post('/ajax/tags/unfollow', 'id=${tagId}', null, 'script')"><span class="button-text">Unfollow</span></button>
+    <button class="button" onclick="$$.post('/ajax/tags/unfollow', 'id=${tagId}')"><span class="button-text">Unfollow</span></button>
   %endif
 </%def>
 
