@@ -302,10 +302,10 @@ class ProfileResource(base.BaseResource):
             #add to feed
             myItemId = utils.getUniqueKey()
             targetItemId = utils.getUniqueKey()
-            myItem = utils.createNewItem(request, itemType, ownerId = myKey,
+            myItem, attachments = yield utils.createNewItem(request, itemType, ownerId = myKey,
                                          subType="connection",
                                          ownerOrgId= users[myKey]["basic"]["org"])
-            targetItem = utils.createNewItem(request, itemType,
+            targetItem, attachments = yield utils.createNewItem(request, itemType,
                                              ownerId= targetKey,
                                              subType="connection",
                                              ownerOrgId = users[targetKey]["basic"]["org"])
