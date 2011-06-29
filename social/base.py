@@ -91,8 +91,6 @@ class BaseResource(resource.Resource):
             args = {"msg": fullErrorStr}
             yield renderDef(request, "errors.mako", "fallback", **args)
 
-
-
     def _epilogue(self, request, deferred=None):
         d = deferred if deferred else defer.fail(errors.NotFoundError())
 

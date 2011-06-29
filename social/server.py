@@ -32,7 +32,11 @@ class RequestFactory(server.Request):
 
         # If we have a session cookie, try to fetch the session from db
         # We use the existing session-id only if create is False
-        sessionId = self.getCookie(self.cookiename) if not create else None
+        sessionId = self.getCookie(self.cookiename)
+        if sessionId and create:
+            self.site.clearSession(sessionId)
+
+        sessionId = sessionId if not create else None
         d = self.site.getSession(sessionId) if sessionId else defer.fail([])
         def callback(session):
             self.session = session
