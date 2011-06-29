@@ -166,6 +166,8 @@ class Poll(object):
     itemType = "poll"
     position = 5
     hasIndex = False
+    indexFields = [("meta", "question"), ("meta", "options_str"),
+                   ("meta", "start"), ("meta", "end")]
 
     @defer.inlineCallbacks
     def renderShareBlock(self, request, isAjax):
@@ -241,6 +243,8 @@ class Poll(object):
         convId = utils.getUniqueKey()
         item, attachments = yield utils.createNewItem(request, self.itemType)
 
+        options_str = " ".join(options)
+
         options = OrderedDict([('%02d'%(x), options[x]) for x in range(len(options))])
         meta = {"question": question, "showResults": showResults}
         if start:
@@ -252,6 +256,9 @@ class Poll(object):
         item["meta"].update(meta)
 
         yield db.batch_insert(convId, "items", item)
+        item["meta"]["options_str"] = options_str
+        from social import fts
+        fts.solr.updateIndex(convId, item)
         defer.returnValue((convId, item))
 
 

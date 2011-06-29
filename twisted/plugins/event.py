@@ -257,6 +257,9 @@ class Event(object):
     position = 4
     disabled = False
     hasIndex = False
+    #fields indexed by solr
+    indexFields = [('meta', 'parent'),('meta', 'desc'),
+                   ('meta', 'location'), ('meta', 'title')]
 
     @profile
     @defer.inlineCallbacks
@@ -502,6 +505,8 @@ class Event(object):
             event = self.getResource(False)
             yield event._inviteUsers(request, convId)
 
+        from social import fts
+        d = fts.solr.updateIndex(convId, item)
         defer.returnValue((convId, item))
 
     @defer.inlineCallbacks

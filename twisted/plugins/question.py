@@ -18,6 +18,7 @@ class Question(object):
     itemType = "question"
     position = 2
     hasIndex = True
+    indexFields = [('meta', 'comment'), ('meta', 'parent')]
 
     @defer.inlineCallbacks
     def renderShareBlock(self, request, isAjax):
@@ -59,6 +60,8 @@ class Question(object):
         item["meta"].update(meta)
 
         yield db.batch_insert(convId, "items", item)
+        from social import fts
+        fts.solr.updateIndex(convId, item)
         defer.returnValue((convId, item))
 
     @defer.inlineCallbacks

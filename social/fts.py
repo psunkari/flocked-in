@@ -81,7 +81,12 @@ class Solr(object):
                 sfk, columnName = key
                 value = item[sfk].get(columnName, None)
                 if value:
-                    fields.append(self.elementMaker.field(str(value),
+                    if type(value) in [str, unicode]:
+                        value = value.decode('utf8', 'replace')
+                        fields.append(self.elementMaker.field((value),
+                                  {"name":columnName}))
+                    else:
+                        fields.append(self.elementMaker.field(str(value),
                                   {"name":columnName}))
 
 

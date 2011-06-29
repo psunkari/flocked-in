@@ -535,7 +535,7 @@ class ItemResource(base.BaseResource):
                                 '#comments-%s' % convId, 'append', True,
                                 handlers={"onload": "(function(){$('.comment-input', '#comment-form-%s').val(''); $('[name=\"nc\"]', '#comment-form-%s').val('%s');})();" % (convId, convId, numShowing)},
                                 args=[convId, itemId], **args)
-        d = fts.solr.updateIndex(itemId, {'meta':meta})
+        fts.solr.updateIndex(itemId, {'meta':meta})
 
 
     @profile

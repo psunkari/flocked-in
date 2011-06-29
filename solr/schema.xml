@@ -205,14 +205,20 @@
 
     </types>
     <fields>
-
+    
        <field name="id" type="string" indexed="true" stored="true" required="true" />
        <field name="comment" type = "text" indexed="true" stored="true" />
        <field name="parent" type="text" stored="true" />
        <field name="ownerId" type = "uuid" stored="true" />
        <field name="target" type="uuid" stored="true" />
-       <field name="itemType" type="text" stored="true" />
-       <field name="acl" type="text" stored="true" />
+       <field name="itemType" type = "text" indexed="true" stored="true" />
+       <field name="summary" type = "text" indexed="true" stored="true" />
+       <field name="title" type = "text" indexed="true" stored="true" />
+       <field name="location" type = "text" indexed="true" stored="true" />
+       <field name="options_str" type = "text" indexed="true" stored="true" />
+       <field name="question" type = "text" indexed="true" stored="true" />
+       <field name="desc" type = "text" indexed="true" stored="true" />
+       <field name="acl" type="text" stored="true"   />
        <field name="ownerName" type="text" indexed="true" stored="true" />
        <field name="targetName" type="text" indexed="true" stored="true" /> 
        <field name="text" type="text" indexed="true" stored="false" multiValued="true"/>
@@ -220,9 +226,7 @@
     <uniqueKey>id</uniqueKey>
     <defaultSearchField>text</defaultSearchField>
     <solrQueryParser defaultOperator="OR"/>
-    <copyField source="ownerName" dest="text" />
-    <copyField source="targetName" dest="text" />
-    <copyField source="comment" dest="text" />
+    <copyField source="*" dest="text"/>
 
 </schema>
 

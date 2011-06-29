@@ -8,7 +8,7 @@ from twisted.web        import client
 
 from social.template    import renderScriptBlock, getBlock
 from social.isocial     import IItemType
-from social             import db, utils, errors
+from social             import db, utils, errors, _
 from social.logging     import profile, dump_args
 
 _encode = lambda x: type(x) == unicode and x.encode('utf8', 'replace') or x
@@ -18,6 +18,10 @@ class Links(object):
     itemType = "link"
     position = 3
     hasIndex = True
+    indexFields = [('meta', 'summary'), ('meta', 'comment'),
+                   ('meta', 'title'), ('meta', 'parent')]
+
+
     @defer.inlineCallbacks
     def renderShareBlock(self, request, isAjax):
         templateFile = "feed.mako"
@@ -71,6 +75,8 @@ class Links(object):
         item["meta"].update(meta)
 
         yield db.batch_insert(convId, "items", item)
+        from social import fts
+        fts.solr.updateIndex(convId, item)
         defer.returnValue((convId, item))
 
     @defer.inlineCallbacks
