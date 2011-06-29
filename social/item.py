@@ -864,18 +864,6 @@ class ItemResource(base.BaseResource):
                 d = self._responses(request)
             if path == "likes":
                 d = self._likes(request)
-            elif path == 'like' :
-                d = self._like(request)
-            elif path == 'unlike':
-                d = self._unlike(request)
-            elif path == 'untag':
-                d = self._untag(request)
-            elif path == "tag":
-                d = self._tag(request)
-            elif path == 'delete':
-                d = self._remove(request, True)
-            elif path == 'remove':
-                d = self._remove(request)
 
         return self._epilogue(request, d)
 
@@ -895,6 +883,10 @@ class ItemResource(base.BaseResource):
                 d = self._tag(request)
             elif path == 'untag':
                 d = self._untag(request)
+            elif path == 'like' :
+                d = self._like(request)
+            elif path == 'unlike':
+                d = self._unlike(request)
             elif path == 'delete':
                 d = self._remove(request, True)
             elif path == 'remove':

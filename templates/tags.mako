@@ -85,12 +85,12 @@
 <%def name="paging()">
   <ul class="h-links">
     %if prevPageStart:
-      <li class="button"><a class="ajax" href="/tags?start=${prevPageStart}">${_("&#9666; Previous")}</a></li>
+      <li class="button"><a class="ajax" href="/tags/list?start=${prevPageStart}">${_("&#9666; Previous")}</a></li>
     %else:
       <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
     %endif
     %if nextPageStart:
-      <li class="button"><a class="ajax" href="/tags?start=${nextPageStart}">${_("Next &#9656;")}</a></li>
+      <li class="button"><a class="ajax" href="/tags/list?start=${nextPageStart}">${_("Next &#9656;")}</a></li>
     %else:
       <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
     %endif
