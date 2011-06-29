@@ -10,7 +10,7 @@ except:
     import pickle
 
 
-from social             import base, db, utils, errors, feed, people
+from social             import base, db, utils, errors, feed, people, _
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
@@ -80,7 +80,7 @@ class GroupsResource(base.BaseResource):
         _acl = pickle.dumps(acl)
 
         itemId = utils.getUniqueKey()
-        item = utils.createNewItem(request, "activity", userId,
+        item, attachments = yield utils.createNewItem(request, "activity", userId,
                                    acl, "groupJoin", orgId)
         item["meta"]["target"] = groupId
 
@@ -285,7 +285,7 @@ class GroupsResource(base.BaseResource):
         itemId = utils.getUniqueKey()
         acl = {"accept":{"groups":[groupId], "followers":[], "friends":[]}}
         _acl = pickle.dumps(acl)
-        item = utils.createNewItem(request, itemType, myId,
+        item, attachments = yield utils.createNewItem(request, itemType, myId,
                                    acl, "groupLeave", orgId)
         item["meta"]["target"] = groupId
 
