@@ -159,7 +159,7 @@ class GroupsResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _acceptSubscription(self, request):
+    def _approve(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         myOrgId = args["orgKey"]
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
@@ -187,7 +187,7 @@ class GroupsResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _rejectSubscription(self, request):
+    def _reject(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                       columns=["admins"])
@@ -214,7 +214,7 @@ class GroupsResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _blockUser(self, request):
+    def _block(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                       columns=["admins"])
@@ -246,7 +246,7 @@ class GroupsResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _unblockUser(self, request):
+    def _unblock(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                       columns=["admins"])
@@ -545,7 +545,7 @@ class GroupsResource(base.BaseResource):
 
 
     @defer.inlineCallbacks
-    def _inviteMember(self, request):
+    def _invite(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         myOrgId = args["orgKey"]
         landing = not self._ajax
@@ -605,12 +605,14 @@ class GroupsResource(base.BaseResource):
 
         if segmentCount == 0:
             d = self._listGroups(request)
-        elif segmentCount == 1 and request.postpath[0] == "members":
-            d = self._listGroupMembers(request)
-        elif segmentCount == 1 and request.postpath[0] == "create":
-            d = self._renderCreate(request)
-        elif segmentCount == 1 and request.postpath[0] == "pending":
-            d = self._listPendingSubscriptions(request)
+        elif segmentCount == 1:
+            if request.postpath[0] == "members":
+                d = self._listGroupMembers(request)
+            elif request.postpath[0] == "create":
+                d = self._renderCreate(request)
+            elif request.postpath[0] == "pending":
+                d = self._listPendingSubscriptions(request)
+
         return self._epilogue(request, d)
 
 
@@ -620,17 +622,12 @@ class GroupsResource(base.BaseResource):
         segmentCount = len(request.postpath)
         d = None
 
-        if segmentCount == 1 and request.postpath[0] == "approve":
-            d = self._acceptSubscription(request)
-        elif segmentCount == 1 and request.postpath[0] == "reject":
-            d = self._rejectSubscription(request)
-        elif segmentCount == 1 and request.postpath[0] == "block":
-            d = self._blockUser(request)
-        elif segmentCount == 1 and request.postpath[0] == "unblock":
-            d = self._unblockUser(request)
-        elif segmentCount == 1 and request.postpath[0] == "invite":
-            d = self._inviteMember(request)
-        elif segmentCount == 1:
-            d = getattr(self, "_" + request.postpath[0])(request)
+        if segmentCount == 1:
+            action = request.postpath[0]
+            availableActions = ["approve", "reject", "block", "unblock",
+                                "invite", "follow", "unfollow", "subscribe",
+                                "unsubscribe", "create"]
+            if action in availableActions:
+                d = getattr(self, "_" + request.postpath[0])(request)
 
         return self._epilogue(request, d)

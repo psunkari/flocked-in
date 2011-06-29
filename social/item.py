@@ -175,7 +175,7 @@ class ItemResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def createItem(self, request):
+    def _new(self, request):
         convType = utils.getRequestArg(request, "type")
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
 
@@ -848,9 +848,6 @@ class ItemResource(base.BaseResource):
         #TODO: update UI
 
 
-    def _tags(self, request):
-        pass
-
     @profile
     @dump_args
     def render_GET(self, request):
@@ -859,13 +856,14 @@ class ItemResource(base.BaseResource):
         if segmentCount == 0:
             d =  self.renderItem(request)
         elif segmentCount == 1:
-            path = request.postpath[0]
-            if path == "responses":
+            action = request.postpath[0]
+            if action == "responses":
                 d = self._responses(request)
-            if path == "likes":
+            if action == "likes":
                 d = self._likes(request)
 
         return self._epilogue(request, d)
+
 
     @profile
     @dump_args
@@ -874,22 +872,12 @@ class ItemResource(base.BaseResource):
         d = None
 
         if segmentCount == 1:
-            path = request.postpath[0]
-            if path == 'new':
-                d =  self.createItem(request)
-            elif path == 'comment':
-                d = self._comment(request)
-            elif path == 'tag':
-                d = self._tag(request)
-            elif path == 'untag':
-                d = self._untag(request)
-            elif path == 'like' :
-                d = self._like(request)
-            elif path == 'unlike':
-                d = self._unlike(request)
-            elif path == 'delete':
+            action = request.postpath[0]
+            availableActions = ["new", "comment", "tag", "untag", "like",
+                                "unlike", "remove"]
+            if action in availableActions:
+                d = getattr(self, "_" + request.postpath[0])(request)
+            elif action == 'delete':
                 d = self._remove(request, True)
-            elif path == 'remove':
-                d = self._remove(request)
 
         return self._epilogue(request, d)

@@ -366,14 +366,11 @@ class ProfileResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _cancelFriendRequest(self, myKey, targetKey):
-
-
         deferreds = []
-
         cols = yield db.multiget_slice([myKey, targetKey], "latestNotifications",
                                         ["incomingFriendRequests",
-                                        "outGoingFriendRequests",
-                                        "archivedFriendRequests"])
+                                         "outGoingFriendRequests",
+                                         "archivedFriendRequests"])
         cols = utils.multiSuperColumnsToDict(cols)
         for sc in cols.get(myKey, []):
             for tuuid, key in cols[myKey][sc].items():
@@ -394,7 +391,6 @@ class ProfileResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _archiveFriendRequest(self, myKey, targetKey):
-
         try:
             cols = yield db.get_slice(myKey, "latestNotifications", ["incomingFriendRequests"])
             cols = utils.supercolumnsToDict(cols)
@@ -406,7 +402,6 @@ class ProfileResource(base.BaseResource):
                     #XXX: UI: remove the user from pending requests list
         except ttypes.NotFoundException:
             pass
-
 
 
     @profile
@@ -629,95 +624,6 @@ class ProfileResource(base.BaseResource):
 
 
     @profile
-    @dump_args
-    def render_POST(self, request):
-        segmentCount = len(request.postpath)
-        if segmentCount != 1:
-            return self._epilogue(request, defer.fail(errors.NotFoundError()))
-
-        action = request.postpath[0]
-        if action in ( "edit", "changePasswd") :
-            headers = request.requestHeaders
-            content_length = headers.getRawHeaders("content-length", [0])[0]
-            if int(content_length) > constants.MAX_IMAGE_SIZE:
-                requestDeferred = defer.fail(errors.InvalidFileSize('Avatar image is too big'))
-            elif action == "edit":
-                requestDeferred = self._edit(request)
-            elif action == "changePasswd":
-                requestDeferred = self._changePassword(request)
-            return self._epilogue(request, requestDeferred)
-
-        requestDeferred = utils.getValidEntityId(request, "id", "user")
-        myKey = request.getSession(IAuthInfo).username
-
-        def callback((targetKey, target)):
-            actionDeferred = None
-            if action == "friend":
-                actionDeferred = self._friend(request, myKey, targetKey)
-            elif action == "unfriend":
-                actionDeferred = self._unfriend(myKey, targetKey)
-            elif action == "follow":
-                actionDeferred = self._follow(myKey, targetKey)
-            elif action == "unfollow":
-                actionDeferred = self._unfollow(myKey, targetKey)
-            else:
-                raise errors.NotFoundError()
-
-            relation = Relation(myKey, [targetKey])
-            data = {"relations": relation}
-            def fetchRelations(ign):
-                return defer.DeferredList([relation.initFriendsList(),
-                                           relation.initPendingList(),
-                                           relation.initSubscriptionsList()])
-
-            isProfile = (utils.getRequestArg(request, "_pg") == "/profile")
-            def renderActions(ign):
-                d = renderScriptBlock(request, "profile.mako", "user_actions",
-                                False, "#user-actions-%s"%targetKey, "set",
-                                args=[targetKey, not isProfile], **data)
-                if isProfile:
-                    def renderSubactions(ign):
-                        return renderScriptBlock(request, "profile.mako",
-                                    "user_subactions", False,
-                                    "#user-subactions-%s"%targetKey, "set",
-                                    args=[targetKey, False], **data)
-                    d.addCallback(renderSubactions)
-                return d
-
-            actionDeferred.addCallback(fetchRelations)
-            actionDeferred.addCallback(renderActions)
-            return actionDeferred
-
-        requestDeferred.addCallback(callback)
-        return self._epilogue(request, requestDeferred)
-
-
-    @profile
-    @dump_args
-    def render_GET(self, request):
-        segmentCount = len(request.postpath)
-        d = None
-        if segmentCount == 0:
-            d = self._render(request)
-        elif segmentCount == 1 and request.postpath[0] == 'edit':
-            d = self._renderEditProfile(request)
-        elif segmentCount == 1 and request.postpath[0] == 'changePasswd':
-            d = self._changePassword(request)
-        elif segmentCount == 1 and request.postpath[0] in ['cancel', 'archive']:
-            targetKey = utils.getRequestArg(request, 'targetKey')
-            authinfo = request.getSession(IAuthInfo)
-            myKey = authinfo.username
-            if targetKey:
-                if request.postpath[0] == 'cancel':
-                    d = self._cancelFriendRequest(myKey, targetKey)
-                elif request.postpath[0] == 'archive':
-                    d = self._archiveFriendRequest(myKey, targetKey)
-
-
-        return self._epilogue(request, d)
-
-
-    @profile
     @defer.inlineCallbacks
     @dump_args
     def _renderEditProfile(self, request):
@@ -917,3 +823,89 @@ class ProfileResource(base.BaseResource):
             yield render(request, "profile.mako", **args)
 
         request.finish()
+
+
+    @profile
+    @dump_args
+    def render_POST(self, request):
+        segmentCount = len(request.postpath)
+        if segmentCount != 1:
+            return self._epilogue(request, defer.fail(errors.NotFoundError()))
+
+        action = request.postpath[0]
+        if action in ("edit", "changePasswd") :
+            headers = request.requestHeaders
+            content_length = headers.getRawHeaders("content-length", [0])[0]
+            if int(content_length) > constants.MAX_IMAGE_SIZE:
+                requestDeferred = defer.fail(errors.InvalidFileSize('Avatar image is too big'))
+            elif action == "edit":
+                requestDeferred = self._edit(request)
+            elif action == "changePasswd":
+                requestDeferred = self._changePassword(request)
+            return self._epilogue(request, requestDeferred)
+
+        requestDeferred = utils.getValidEntityId(request, "id", "user")
+        myKey = request.getSession(IAuthInfo).username
+
+        def callback((targetKey, target)):
+            actionDeferred = None
+            if action == "friend":
+                actionDeferred = self._friend(request, myKey, targetKey)
+            elif action == "unfriend":
+                actionDeferred = self._unfriend(myKey, targetKey)
+            elif action == "follow":
+                actionDeferred = self._follow(myKey, targetKey)
+            elif action == "unfollow":
+                actionDeferred = self._unfollow(myKey, targetKey)
+            else:
+                raise errors.NotFoundError()
+
+            relation = Relation(myKey, [targetKey])
+            data = {"relations": relation}
+            def fetchRelations(ign):
+                return defer.DeferredList([relation.initFriendsList(),
+                                           relation.initPendingList(),
+                                           relation.initSubscriptionsList()])
+
+            isProfile = (utils.getRequestArg(request, "_pg") == "/profile")
+            def renderActions(ign):
+                d = renderScriptBlock(request, "profile.mako", "user_actions",
+                                False, "#user-actions-%s"%targetKey, "set",
+                                args=[targetKey, not isProfile], **data)
+                if isProfile:
+                    def renderSubactions(ign):
+                        return renderScriptBlock(request, "profile.mako",
+                                    "user_subactions", False,
+                                    "#user-subactions-%s"%targetKey, "set",
+                                    args=[targetKey, False], **data)
+                    d.addCallback(renderSubactions)
+                return d
+
+            actionDeferred.addCallback(fetchRelations)
+            actionDeferred.addCallback(renderActions)
+            return actionDeferred
+
+        requestDeferred.addCallback(callback)
+        return self._epilogue(request, requestDeferred)
+
+
+    @profile
+    @dump_args
+    def render_GET(self, request):
+        segmentCount = len(request.postpath)
+        d = None
+        if segmentCount == 0:
+            d = self._render(request)
+        elif segmentCount == 1 and request.postpath[0] == 'edit':
+            d = self._renderEditProfile(request)
+        elif segmentCount == 1 and request.postpath[0] in ('cancel', 'archive'):
+            targetKey = utils.getRequestArg(request, 'targetKey')
+            authinfo = request.getSession(IAuthInfo)
+            myKey = authinfo.username
+            if targetKey:
+                if request.postpath[0] == 'cancel':
+                    d = self._cancelFriendRequest(myKey, targetKey)
+                elif request.postpath[0] == 'archive':
+                    d = self._archiveFriendRequest(myKey, targetKey)
+
+        return self._epilogue(request, d)

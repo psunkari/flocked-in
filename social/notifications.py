@@ -281,8 +281,7 @@ class NotificationsResource(base.BaseResource):
                 yield renderScriptBlock(request, "notifications.mako", "content",
                                     landing, "#notifications", "set", **args)
     @defer.inlineCallbacks
-    def _get_new_notifications(self, request):
-
+    def _getNewNotifications(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         cols = yield db.get_slice(myId, "latestNotifications")
         cols = utils.supercolumnsToDict(cols)
@@ -309,6 +308,6 @@ class NotificationsResource(base.BaseResource):
         segmentCount = len(request.postpath)
         if segmentCount == 0:
             d = self._renderNotifications(request)
-        elif segmentCount == 1 and request.postpath[0]=="new":
-            d = self._get_new_notifications(request)
+        elif segmentCount == 1 and request.postpath[0] == "new":
+            d = self._getNewNotifications(request)
         return self._epilogue(request, d)
