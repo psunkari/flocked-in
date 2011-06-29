@@ -85,7 +85,7 @@
     </div>
     <div style="display:inline-block;float:right">
       <!--<div class="input-wrap">-->
-        <input type="checkbox" name="allDay" id="allDay" onchange="$('#startTimeWrapper, #endTimeWrapper').toggle()"/><label for="allDay">All Day</label>
+        <input type="checkbox" name="allDay" id="allDay"/><label for="allDay">All Day</label>
       <!--</div>-->
     </div>
   </div>
@@ -136,19 +136,33 @@
     startrdelta = relativedelta(startdatetime, today)
     startsToday = False
     endsToday = False
+    allDay = True if items[convId]["meta"].get("allDay", "0") == "1" else False
+
     if startrdelta.days == 0:
-      event_start_fmt = "%I:%M %p"
+      if not allDay:
+        event_start_fmt = "%I:%M %p"
+      else:
+        event_start_fmt = ""
       startsToday = True
     else:
-      event_start_fmt = "%a %b %d, %I:%M %p"
+      if not allDay:
+        event_start_fmt = "%a %b %d, %I:%M %p"
+      else:
+        event_start_fmt = "%a %b %d"
     event_start = start_dt.strftime(event_start_fmt)
 
     endrdelta = relativedelta(start_dt, end_dt)
     if endrdelta.days == 0:
-      event_end_fmt = "%I:%M %p"
+      if not allDay:
+        event_end_fmt = "%I:%M %p"
+      else:
+        event_end_fmt = ""
       endsToday = True
     else:
-      event_end_fmt = "%a %b %d, %I:%M %p"
+      if not allDay:
+        event_end_fmt = "%a %b %d, %I:%M %p"
+      else:
+        event_end_fmt = "%a %b %d"
     event_end = end_dt.strftime(event_end_fmt)
   %>
   <div class="">
@@ -171,18 +185,33 @@
         </div>
       </span>
       <div class="item-contents has-icon event-contents">
-        <div>${desc}</div>
-        <div>Venue: ${location}</div>
-        % if startsToday:
-          <span>Event starts today from ${event_start}</span>
-        % else:
-          <span>Event starts on ${event_start}</span>
-        % endif
-        % if endsToday:
-          <span>to ${event_end}</span>
-        % else:
-          <span>till ${event_end}</span>
-        % endif
+        %if not allDay:
+          % if startsToday:
+            <span>Event starts today from ${event_start}</span>
+          % else:
+            <span>Event starts on ${event_start}</span>
+          % endif
+          % if endsToday:
+            <span>to ${event_end}</span>
+          % else:
+            <span>untill ${event_end}</span>
+          % endif
+        %else:
+          % if startsToday:
+            <span>Event starts today ${event_start}</span>
+          % else:
+            <span>Event starts on ${event_start}</span>
+          % endif
+          % if endsToday:
+            <span>for the entire day</span>
+          % else:
+            <span>untill ${event_end}</span>
+          % endif
+        %endif
+        <div class="event-description">${desc}</div>
+        %if location.strip() != "":
+          <div><b>Venue</b> ${location}</div>
+        %endif
         <div class="item-subactions">
           % if response == "yes":
             <span id="event-rsvp-status-${convId}">${_("You are attending")}</span>
@@ -190,6 +219,8 @@
             <span id="event-rsvp-status-${convId}">${_("You are not attending")}</span>
           % elif response == "maybe":
             <span id="event-rsvp-status-${convId}">${_("You may attend")}</span>
+          %else:
+            <span id="event-rsvp-status-${convId}">&nbsp</span>
           %endif
           <button class="button-link" onclick="$$.ui.showPopUp(event)">RSVP to this event</button>
           <ul class="acl-menu" style="display:none;">

@@ -1104,6 +1104,130 @@ var events = {
         };
         $$.dialog.create(dialogOptions);
         $.get('/ajax/event/invitee?id='+itemId);
+    },
+    prepareDateTimePickers: function(){
+        var currentTime = new Date();
+        var currentMinutes = currentTime.getMinutes();
+        var currentHours = currentTime.getHours();
+
+        if (currentMinutes < 30){
+            //We set the start time at :30 mins
+            startTime = currentTime.setMinutes(30);
+            endTime = currentTime.setHours(currentTime.getHours()+1)
+        }else{
+            //else we set the start at the next hour
+            startTime = currentTime.setHours(currentTime.getHours()+1);
+            startTime = currentTime.setMinutes(0);
+            endTime = currentTime.setHours(currentTime.getHours()+1)
+            endTime = currentTime.setMinutes(0);
+        }
+
+        startTimeString = this.formatTimein12(new Date(startTime));
+        endTimeString = this.formatTimein12(new Date(endTime));
+
+        // Set the Display Strings
+        $('#eventstarttime').attr('value', startTimeString);
+        $('#eventendtime').attr('value', endTimeString);
+        // Set the hidden attrs
+        $('#startTime').attr('value', startTime);
+        $('#endTime').attr('value', endTime);
+        // Set the Display Strings
+        $('#eventstartdate').datepicker({ minDate: currentTime,
+            changeMonth: true, altField: '#startDate', altFormat: '@',
+            onSelect: function(selectedDate){
+                console.info(selectedDate)
+                var instance = $(this).data("datepicker")
+                var date = $.datepicker.parseDate(
+                                    instance.settings.dateFormat ||
+                                        $.datepicker._defaults.dateFormat,
+                                    selectedDate, instance.settings );
+                console.info(date)
+                $('#eventenddate').datepicker("option", "minDate", date)
+            }
+        });
+        $('#eventenddate').datepicker({ minDate: currentTime,
+            changeMonth: true, altField: '#endDate', altFormat: '@'});
+        $('#eventstartdate').datepicker('setDate', new Date());
+        $('#eventenddate').datepicker('setDate', new Date());
+        // Set the hidden attrs.  When a user picks a date from the
+        // calendar, the corresponding epoch value is stored in
+        // the hidden field. To the server; only the date component is
+        // important, since the time component is fetched from the startTime
+        // and endTime respectively.
+        $('#startDate').attr('value', startTime);
+        $('#endDate').attr('value', endTime);
+
+        //Generate 30 minute timeslots in a day. When a user filters
+        // and picks a slot, the corresponding epoch value is stored in
+        // the hidden field. To the server; only the time component is
+        // important, since the date component is fetched from the startDate
+        // and endDate respectively.
+        var timeslots = [];
+        var dtnow = new Date();
+        var hourslots = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+        $.each(hourslots, function(index, slot) {
+            if (slot < 12){
+                var dtlabel = ( slot < 10 ? "0" : "" ) + slot;
+                dtvalue = dtnow.setHours(slot)
+                dtvalue = dtnow.setMinutes(0);
+                dtvalue = dtnow.setSeconds(0);
+                timeslots.push({label:dtlabel+":00"+"AM", value: dtvalue});
+                dtvalue = dtnow.setMinutes(30);
+                timeslots.push({label:dtlabel+":30"+"AM", value: dtvalue});
+            }else{
+                var dtlabel = slot-12;
+                dtvalue = dtnow.setHours(slot)
+                dtvalue = dtnow.setMinutes(0);
+                dtvalue = dtnow.setSeconds(0);
+                timeslots.push({label:dtlabel+":00"+"PM", value: dtvalue})
+                dtvalue = dtnow.setMinutes(30);
+                timeslots.push({label:dtlabel+":30"+"PM", value: dtvalue})
+            }
+        });
+
+        $( "#eventstarttime" ).autocomplete({
+            minLength: 0,
+            source: timeslots,
+            focus: function( event, ui ) {
+                $("#eventstarttime").attr('value', ui.item.label);
+                return false;
+            },
+            select: function( event, ui ) {
+                $("#eventstarttime").attr('value', ui.item.label);
+                $("#startTime").attr('value', ui.item.value);
+                return false;
+            },
+            change: function(event, ui){
+            }
+        })
+        $( "#eventendtime" ).autocomplete({
+            minLength: 0,
+            source: timeslots,
+            focus: function( event, ui ) {
+                $("#eventendtime").attr('value', ui.item.label);
+                return false;
+            },
+            select: function( event, ui ) {
+                $("#eventendtime").attr('value', ui.item.label);
+                $("#endTime").attr('value', ui.item.value);
+                return false;
+            }
+        })
+        $('#eventInvitees').autocomplete({
+              source: '/auto/users',
+              minLength: 2,
+              select: function( event, ui ) {
+                $('#invitees').append($$.events.formatUser(ui.item.value, ui.item.uid))
+                var rcpts = $('#inviteeList').val().trim();
+                rcpts = (rcpts == "") ? ui.item.uid: rcpts+","+ui.item.uid
+                $('#inviteeList').val(rcpts)
+                this.value = ""
+                return false;
+              }
+         });
+        $("#allDay").change(function(){
+            $('#startTimeWrapper, #endTimeWrapper').toggle()
+        })
     }
 };
 

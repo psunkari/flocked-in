@@ -101,7 +101,7 @@
 
 
 <%def name="acl_button(id, defaultVal, defaultLabel)">
-  <input type="hidden" id="${id}" name="acl" value="${defaultVal}"/>
+  <input type="hidden" id="${id}" name="acl" value='${defaultVal}'/>
   %if script:
     <div id="${id}-wrapper">
       <button class="acl-button button" id="${id}-label" onclick="$$.acl.showACL(event, '${id}');">${defaultLabel}</button>
@@ -143,7 +143,7 @@
       <div id="sharebar-actions-wrapper">
         <ul id="attached-files" class="v-links busy-indicator" style="float:left">&nbsp</ul>
         <ul id="sharebar-actions" class="h-links">
-          <li>${acl_button("sharebar-acl", "{accept:{org:[%s]}}"%orgKey, "Company")}</li>
+          <li>${acl_button("sharebar-acl", '{"accept":{"org":["%s"]}}'%orgKey, "Company")}</li>
           <li>${widgets.button("sharebar-submit", "submit", "default", None, "Share")}</li>
         </ul>
         <span class="clear" style="display:block"></span>

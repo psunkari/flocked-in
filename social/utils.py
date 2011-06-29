@@ -195,7 +195,9 @@ def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
         try:
             acl = json.loads(acl)
             orgs = acl.get("accept", {}).get("orgs", [])
-            if len(orgs) > 1 or orgs[0] != org:
+            if len(orgs) > 1 :
+                raise errors.PermissionDenied(_('Cannot grant access to other orgs on this item'))
+            elif len(orgs) == 1 and orgs[0] != org:
                 raise errors.PermissionDenied(_('Cannot grant access to other orgs on this item'))
         except:
             if not org:
@@ -344,7 +346,6 @@ def checkAcl(userId, acl, owner, relation, userOrgId=None):
     acl = pickle.loads(acl)
     deny = acl.get("deny", {})
     accept = acl.get("accept", {})
-
     # if userID is owner of the conversation, show the item irrespective of acl
     if userId == owner:
         return True
