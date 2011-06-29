@@ -575,7 +575,7 @@ class ItemResource(base.BaseResource):
         responseCount = int(conv["meta"].get("responseCount", "0"))
 
         if isFeed and responseCount > constants.MAX_COMMENTS_IN_FEED:
-            request.write("$$.ajaxRedirectUri('/item?id=%s');"%convId)
+            request.write("$$.fetchUri('/item?id=%s');"%convId)
             return
 
         # A copy of this code for fetching comments is present in renderItem

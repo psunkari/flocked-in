@@ -6,21 +6,35 @@
 
 (function(window, $) { if (!window.social) {
 var social = {
+_historyHasStates: false,
 
 /*
- * social.get() and social.post() - Base of all the ajax requests
+ * Preprocess all ajax requests:
+ * 1. Add a request argument to indicate current page
+ * 2. Add a token for csrf busting (read from cookie)
  */
-get: function _get(str) {
-  var uri = social.parseUri(str),
-      separator = uri.query? "&": "?",
-      currentUri = social.parseUri($.address.value());
-  return $.getScript(str + separator + "_pg=" + currentUri.path);
-},
-post: function _post(str, data) {
-  var serialized = (typeof data == "string")? data: $.param(data),
-      separator = serialized.length? "&": ""
-      currentUri = social.parseUri($.address.value());
-  return $.post(str, serialized + separator + "_pg=" + currentUri.path, null, 'script');
+_sendingAjaxRequest: function(evt, xhr, options) {
+    var uri = social.parseUri(options.url),
+        method = options.type,
+        data = options.data || '',
+        cookies = document.cookie.split(';'),
+        currentUri = social.parseUri($.address.value()),
+        separator = null, csrfToken = null, payload = null;
+
+    for (var i=0; i<cookies.length; i++) {
+        var cookie = $.trim(cookies[i]);
+        if (cookie.indexOf('token') == 0)
+            csrfToken = decodeURIComponent(cookie.substring(5));
+    }
+
+    payload = "_pg=" + currentUri.path + "&_tk=" + csrfToken;
+    if (method == "GET") {
+        separator = uri.query? "&": "?";
+        options.url = options.url + separator + payload;
+    } else if (method == "POST") {
+        separator = data.length? "&": "?";
+        options.data = data + separator + payload;
+    }
 },
 
 /*
@@ -38,9 +52,12 @@ parseUri: function parseUri(str) {
     return uri
 },
 
+/*
+ * fetchUri:
+ * To be used when a request would also add an entry in browser history
+ */
 _fetchUriOldPath: null,
-_historyHasStates: false,
-fetchUri: function _fetchUri(str) {
+fetchUri: function _fetchUri(str, ignoreHistory) {
     uri = social.parseUri(str);
     deferred = null;
     if (social._fetchUriOldPath) {
@@ -48,15 +65,21 @@ fetchUri: function _fetchUri(str) {
         if (social._fetchUriOldPath != uri.path)
             tail = uri.query? "&_fp=1": "?_fp=1";
 
-        deferred = social.get('/ajax' + str + tail);
+        deferred = $.get('/ajax' + str + tail);
     }
     social._fetchUriOldPath = uri.path;
+
+    if (ignoreHistory === undefined || !ignoreHistory)
+        $.address.value(str);
+
     return deferred;
 },
-ajaxRedirectUri: function _ajaxRedirectUri(uri) {
-    this.fetchUri(uri);
-    $.address.value(uri);
-},
+
+/*
+ * setBusy:
+ * Indicates busy status on the closest matching '.busy-indicator' node
+ * based on an ajax request
+ */
 setBusy: function _setBusy(deferred, node) {
     busyIndicator = null;
     if (!deferred)
@@ -85,12 +108,10 @@ _initAjaxRequests: function _initAjaxRequests() {
         node = $(this);
         deferred = null;
 
-        if (url = node.attr('_ref')) {
-            deferred = social.get('/ajax' + url);
-        } else if (url = node.attr('href')) {
+        if (url = node.attr('_ref'))
+            deferred = $.get('/ajax' + url);
+        else if (url = node.attr('href'))
             deferred = self.fetchUri(url);
-            $.address.value(url);
-        }
 
         self.setBusy(deferred, node);
         return false;
@@ -102,7 +123,7 @@ _initAjaxRequests: function _initAjaxRequests() {
         url = node.attr('_ref');
         parsed = social.parseUri(url);
 
-        deferred = social.post('/ajax' + parsed.path, parsed.query);
+        deferred = $.post('/ajax' + parsed.path, parsed.query);
 
         self.setBusy(deferred, node);
         return false;
@@ -114,7 +135,7 @@ _initAjaxRequests: function _initAjaxRequests() {
             return false;
 
         var $this = $(this);
-        var deferred = social.post('/ajax' + $this.attr('action'),
+        var deferred = $.post('/ajax' + $this.attr('action'),
                                    $this.serialize());
 
         self.setBusy(deferred, $this)
@@ -159,8 +180,14 @@ _initAjaxRequests: function _initAjaxRequests() {
 
     /* An address or the hash changed externally, update the page */
     $.address.externalChange(function(event) {
-        self.fetchUri(event.value)
+        self.fetchUri(event.value, true)
     });
+
+    /* By default we always request script */
+    $.ajaxSetup({dataType: 'script'});
+
+    /* Preprocessing for all ajax requests.  Add "_pg" and "_tk" */
+    $('html').ajaxSend(self._sendingAjaxRequest);
 },
 
 /*
@@ -430,7 +457,7 @@ var convs = {
             id: 'likes-dlg-'+itemId,
         };
         $$.dialog.create(dialogOptions);
-        $$.get('/ajax/item/likes?id='+itemId);
+        $.get('/ajax/item/likes?id='+itemId);
     },
 
     showHideComponent: function(convId, component, show) {
@@ -477,7 +504,7 @@ var feedback = {
                     text:'Submit',
                     click : function() {
                         comment = $("#feedback-desc").val();
-                        $$.post("/ajax/feedback", {comment:comment, mood:feedback._mood});
+                        $.post("/ajax/feedback", {comment:comment, mood:feedback._mood});
                         $$.dialog.close(this, true)
                     }
                 },
@@ -490,7 +517,7 @@ var feedback = {
             ]
         };
         $$.dialog.create(dialogOptions);
-        $$.get('/ajax/feedback', function() {feedback.mood('happy');});
+        $.get('/ajax/feedback', function() {feedback.mood('happy');});
     },
 
     _descriptionLabels: {
@@ -552,8 +579,7 @@ var ui = {
             select: function(event, obj){
                 url = obj.item.href;
                 if (url !== undefined) {
-                    deferred = $$.fetchUri(url);
-                    $.address.value(url);
+                    $$.fetchUri(url);
                     event.target.value = "";
                     return false;
                 }
@@ -1057,7 +1083,7 @@ var events = {
     RSVP: function(itemId, response){
         //Add routine for submitting an RSVP
         var postdata = 'type=event&id='+itemId+'&response='+response;
-        $$.post('/ajax/event/rsvp', postdata)
+        $.post('/ajax/event/rsvp', postdata)
     },
     removeUser: function(self, user_id){
         var recipients = $('#invitees').data('recipients');
@@ -1077,7 +1103,7 @@ var events = {
             id: 'invitee-dlg-'+itemId
         };
         $$.dialog.create(dialogOptions);
-        $$.get('/ajax/event/invitee?id='+itemId);
+        $.get('/ajax/event/invitee?id='+itemId);
     }
 };
 

@@ -82,7 +82,7 @@
     <div class="user-details-title">${entities[userId]["basic"].get("jobTitle", '')}</div>
     <div class="user-details-actions">
       <ul id="user-actions-${userId}" class="middle user-actions h-links">
-        <button class="button default" onclick="$$.post('/ajax/admin/unblock', 'id=${userId}')">
+        <button class="button default" onclick="$.post('/ajax/admin/unblock', 'id=${userId}')">
           Unblock
         </button>
       </ul>
