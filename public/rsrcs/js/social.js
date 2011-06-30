@@ -717,7 +717,7 @@ var ui = {
             id: 'file-versions-dlg-'+fileId
         };
         $$.dialog.create(dialogOptions);
-        $$.get('/ajax/file/versions?id='+ convId+'&fid='+fileId);
+        $.get('/ajax/file/versions?id='+convId+'&fid='+fileId);
     }
 }
 
