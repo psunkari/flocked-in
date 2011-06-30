@@ -1,5 +1,6 @@
 
 import urllib
+import uuid
 from email.utils            import formatdate
 
 from zope.interface         import implements
@@ -48,6 +49,7 @@ class AuthInfo(components.Adapter):
         self.username = None
         self.organization = None
         self.isAdmin = False
+        self.token = None
 
 components.registerAdapter(AuthInfo, SessionFactory, IAuthInfo)
 
@@ -148,10 +150,10 @@ class HomeResource(resource.Resource):
 
 #
 # RootResource is responsible for setting up the url path structure, ensuring
-# authorization, adding headers for cache busting and setting some default cookies
+# authorization, adding headers for cache busting and busting csrf.
 #
 class RootResource(resource.Resource):
-    _noCookiesPaths = set(["avatar", "auto", "signin", "signup", "rsrcs", "about"])
+    _noCSRFReset = set(["avatar", "auto", "rsrcs", "about", "signup", "signin"])
 
     def __init__(self, isAjax=False):
         self._isAjax = isAjax
@@ -191,6 +193,11 @@ class RootResource(resource.Resource):
     def _ensureAuth(self, request, rsrc):
         authinfo = yield defer.maybeDeferred(request.getSession, IAuthInfo)
         if authinfo.username != None:
+            if request.method == "POST" or self._isAjax:
+                token = utils.getRequestArg(request, "_tk")
+                if authinfo.token and token != authinfo.token:
+                    defer.returnValue(resource.ErrorPage(400,
+                            http.RESPONSES[400], "Invalid authorization token"))
             defer.returnValue(rsrc)
         elif self._isAjax:
             defer.returnValue(resource.ErrorPage(401, http.RESPONSES[401],
@@ -256,9 +263,9 @@ class RootResource(resource.Resource):
         if not match:
             return resource.NoResource("Page not found")
 
-        # By default prevent caching.
-        # Any resource may change these headers later during the processing
         if not self._isAjax:
+            # By default prevent caching.
+            # Any resource may change these headers later during the processing
             request.setHeader('Expires', formatdate(0))
             request.setHeader('Cache-control', 'private,no-cache,no-store,must-revalidate')
 
@@ -269,5 +276,26 @@ class RootResource(resource.Resource):
                 d = defer.succeed(match)
         else:
             d = defer.succeed(match)
+
+        # 
+        # We update the CSRF token when it is a GET request
+        # and when one of the below is true
+        #  - Ajax resource in which the full page is requested (appchange)
+        #  - Non AJAX resource which is not in self._noCSRFReset
+        #
+        if ((self._isAjax and request.args.has_key('_fp')) or (not self._isAjax
+                    and match != self._ajax and path not in self._noCSRFReset))\
+                    and request.method == "GET":
+            def addTokenCallback(rsrc):
+                ad = defer.maybeDeferred(request.getSession, IAuthInfo)
+                def gotAuthInfo(authinfo):
+                    if authinfo.username:
+                        token = str(uuid.uuid4())[:8]
+                        request.addCookie('token', token, path='/')
+                        authinfo.token = token
+                    return rsrc
+                ad.addCallback(gotAuthInfo)
+                return ad
+            d.addCallback(addTokenCallback)
 
         return util.DeferredResource(d)

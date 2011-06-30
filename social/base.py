@@ -59,12 +59,8 @@ class BaseResource(resource.Resource):
         referer = request.getHeader('referer')
 
         try:
-            log.msg(request)
             appchange, script, args, myId = yield self._getBasicArgs(request)
             ajax = self._ajax
-            log.msg(ajax)
-            log.msg(appchange)
-            log.msg(referer)
             args["referer"] = referer
          
             if ajax and not appchange:

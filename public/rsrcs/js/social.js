@@ -24,7 +24,7 @@ _sendingAjaxRequest: function(evt, xhr, options) {
     for (var i=0; i<cookies.length; i++) {
         var cookie = $.trim(cookies[i]);
         if (cookie.indexOf('token') == 0)
-            csrfToken = decodeURIComponent(cookie.substring(5));
+            csrfToken = decodeURIComponent(cookie.substring(6));
     }
 
     payload = "_pg=" + currentUri.path + "&_tk=" + csrfToken;
