@@ -122,6 +122,7 @@
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.datepicker.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.address-1.4.min.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.autogrow-textarea.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/jquery.iframe-transport.js"></script>
   <script type="text/javascript" src="/rsrcs/js/social.js"></script>
   <script type="text/javascript">
     $().ready(function() {$$.ui.init()});

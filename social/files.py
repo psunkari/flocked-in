@@ -175,17 +175,6 @@ class FilesResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def upload(self, request):
-        (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        itemType = utils.getRequestArg(request, 'type')
-        feedId = myId
-        args["feedTitle"] = _("News Feed")
-        args["menuId"] = "feed"
-        args["feedId"] = feedId
-        args['itemType']=itemType
-        start = utils.getRequestArg(request, "start") or ''
-        feedItems = yield feed.getFeedItems(request, feedId=feedId, start=start)
-        args.update(feedItems)
-
         fs = cgi.FieldStorage(request.content,
                               request.getAllHeaders(),
                               environ={'REQUEST_METHOD':'POST'})

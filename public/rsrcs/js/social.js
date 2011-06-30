@@ -28,13 +28,8 @@ _sendingAjaxRequest: function(evt, xhr, options) {
     }
 
     payload = "_pg=" + currentUri.path + "&_tk=" + csrfToken;
-    if (method == "GET") {
-        separator = uri.query? "&": "?";
-        options.url = options.url + separator + payload;
-    } else if (method == "POST") {
-        separator = data.length? "&": "?";
-        options.data = data + separator + payload;
-    }
+    separator = uri.query? "&": "?";
+    options.url = options.url + separator + payload;
 },
 
 /*
@@ -163,7 +158,7 @@ _initAjaxRequests: function _initAjaxRequests() {
                    request.status == 404 || request.status == 418) {
             $$.alerts.error(request.responseText);
         } else {
-            console.log("An error occurred while fetching: "+settings.url);
+            console.log("An error occurred while fetching: "+settings.url+" ("+request.status+")");
         }
         $('.busy-indicator.busy').removeClass('busy');
     });
@@ -685,6 +680,7 @@ var ui = {
           form.addClass("busy-indicator");
           var uploadXhr = $.ajax(form.prop("action"), {
             type: "POST",
+            dataType: "json",
             files: form.find(":file")
           }).complete(function(data) {
             form.removeClass("busy-indicator");
