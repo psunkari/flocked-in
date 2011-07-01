@@ -84,12 +84,12 @@
     %if myKey in groupAdmins:
     <div class="invite-input-block">
         <div class="sidebar-chunk">
-            <div class="sidebar-title">${_("Invite")}</div>
+            <div class="sidebar-title">${_("Invite your colleague to this group")}</div>
             <form method="post" action="/groups/invite" class="ajax" autocomplete="off">
               <input type="hidden" name="invitee" id="group_invitee"/>
               <input type="hidden" value = ${groupId} name="id" />
               <div class="input-wrap">
-                <input type="text" id="group_add_invitee" placeHolder="Invite your colleague to this group"/>
+                <input type="text" id="group_add_invitee" placeHolder="Your colleague's name"/>
               </div>
               <input type="hidden" name="from" value="sidebar"/>
             </form>
