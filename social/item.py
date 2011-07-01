@@ -220,7 +220,7 @@ class ItemResource(base.BaseResource):
             args.update(data)
             onload = "(function(obj){$$.convs.load(obj);})(this);$('#attached-files').empty()"
             d1 = renderScriptBlock(request, "item.mako", "item_layout",
-                            False, "#user-feed", "prepend", args=[convId],
+                            False, "#user-feed", "prepend", args=[convId, 'conv-item-created'],
                             handlers={"onload":onload}, **args)
 
             defaultType = plugins.keys()[0]

@@ -613,10 +613,11 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     width:14%;
     overflow:hidden;
 }
+
+
 /*
  * Feed
  */
-
 .conv-item {
     padding: 10px 0 16px;
     border-top: 1px dotted #CCC;
@@ -624,28 +625,19 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .conv-item:first-child {
     padding-top: 0px;
     border-top: none;
-    -moz-animation-duration: 1s;
-    -webkit-animation-duration: 1s;
-    -moz-animation-name: slidein;
-    -webkit-animation-name: slidein;
 }
 
+.conv-item-created {
+    -moz-animation: slidein 1.5s;
+    -webkit-animation: slidein 1.5s;
+}
 @-moz-keyframes slidein {
-  from {
-    opacity:0;
-  }
-  to {
-    opacity: 1;
-  }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
-
 @-webkit-keyframes slidein {
-  from {
-    opacity:0;
-  }
-  to {
-    opacity: 1;
-  }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .conv-item-bottom {

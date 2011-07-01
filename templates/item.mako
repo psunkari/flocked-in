@@ -66,8 +66,8 @@
 </%def>
 
 
-<%def name="item_layout(convId)">
-  <div id="conv-${convId}" class="conv-item">
+<%def name="item_layout(convId, classes='')">
+  <div id="conv-${convId}" class="conv-item ${classes}">
     <div class="conv-avatar" id="conv-avatar-${convId}">
       <%
         convMeta = items[convId]['meta']
