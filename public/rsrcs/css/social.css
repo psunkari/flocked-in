@@ -838,6 +838,10 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     width: 20.5em;
 }
 
+.styledform .inline-select {
+    width:auto !important;
+}
+
 .styledform fieldset {
     border: none
 }
@@ -944,6 +948,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 #invite-people > .input-wrap {
     padding-left: 25px;
     position: relative;
+    margin-bottom: 5px;
 }
 
 .invite-people-entry {

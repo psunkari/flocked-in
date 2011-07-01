@@ -10,15 +10,15 @@
   </div>
   <div id="share-poll-options">
     <div class="input-wrap">
-      <img class="icon poll-option"/>
+      <span class="icon poll-option">&nbsp</span>
       <input type="text" name="options" placeholder="${_('Add an option')}"/>
     </div>
     <div class="input-wrap">
-      <img class="icon poll-option"/>
+      <span class="icon poll-option">&nbsp</span>
       <input type="text" name="options" placeholder="${_('Add an option')}"/>
     </div>
     <div class="input-wrap">
-      <img class="icon poll-option"/>
+      <span class="icon poll-option">&nbsp</span>
       <input type="text" name="options" placeholder="${_('Add an option')}"/>
     </div>
   </div>

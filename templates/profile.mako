@@ -400,7 +400,7 @@
   jobTitle = me.get("basic", {}).get("jobTitle", '')
   myTimezone = me.get("basic", {}).get("timezone", "")
   %>
-  <form action="/profile/edit" method="post"  enctype="multipart/form-data">
+  <form id="profile_form" action="/ajax/profile/edit" method="post"  enctype="multipart/form-data">
     <div class="styledform">
       <ul>
         <li>
@@ -456,7 +456,7 @@
     ${errorMsg}
   %endif
 </div>
-<form action="/profile/changePasswd" method="post"  enctype="multipart/form-data">
+<form class="ajax" id="profile_form" action="/profile/changePasswd" method="post"  enctype="multipart/form-data">
   <div class="styledform">
     <ul>
       <li>
@@ -481,7 +481,7 @@
 </%def>
 
 <%def name="editWork()">
-<form action="/profile/edit" method="post"  enctype="multipart/form-data">
+<form class="ajax" id="profile_form" action="/profile/edit" method="post"  enctype="multipart/form-data">
     <div class="styledform">
         <div id="work">
           <div>
@@ -555,7 +555,7 @@
 </%def>
 
 <%def name="editPersonal()">
-<form action="/profile/edit" method="post"  enctype="multipart/form-data">
+<form class="ajax" id="profile_form" action="/profile/edit" method="post"  enctype="multipart/form-data">
     <div class="styledform">
       <div id="personal">
         <ul>
@@ -613,7 +613,7 @@
 </%def>
 
 <%def name="editContact()">
-<form action="/profile/edit" method="post"  enctype="multipart/form-data">
+<form class="ajax" id="profile_form" action="/profile/edit" method="post"  enctype="multipart/form-data">
     <div class="styledform">
       <div id="contacts">
         <ul>
@@ -654,7 +654,7 @@
                 _("May"), _("June"), _("July"), _("August"),
                 _("September"), _("October"), _("November"), _("December")]
   %>
-  <select name="${name}" >
+  <select name="${name}" class="inline-select">
         <option value="">${label}</option>
         %for m in range(1, 12):
             <%
@@ -671,7 +671,7 @@
 
 <%def name="selectDay(name, label, dod=None)">
 
-  <select name="${name}">
+  <select name="${name}" class="inline-select">
     <option value="">${label}</option>
         %for d in range(1, 31):
             <%
@@ -687,7 +687,7 @@
 </%def>
 
 <%def name="selectYear(name, label, doy=None)">
-  <select name="${name}">
+  <select name="${name}" class="inline-select">
     <option value="">${label}</option>
         %for d in reversed(range(1901, datetime.date.today().year)):
             <%

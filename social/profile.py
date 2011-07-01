@@ -620,7 +620,13 @@ class ProfileResource(base.BaseResource):
 
         if userInfo:
             yield db.batch_insert(myKey, "entities", userInfo)
-        request.redirect("/profile/edit")
+
+        if not self._ajax:
+            request.redirect("/profile/edit")
+        else:
+            pass
+            #TODO: If basic profile was edited, then logo, name and title could
+            # also change, make sure these are reflected too.
 
 
     @profile
@@ -642,8 +648,10 @@ class ProfileResource(base.BaseResource):
         if detail == "basic":
             yield renderScriptBlock(request, "profile.mako", "editProfileTabs",
                                     landing, "#profile-tabs", "set", **args)
+            onload = """$$.ui.bindFormSubmit('#profile_form')"""
             yield renderScriptBlock(request, "profile.mako", "editBasicInfo",
-                                    landing, "#profile-content", "set", **args)
+                                    landing, "#profile-content", "set", True,
+                                    handlers={"onload":onload},**args)
         elif detail == "work":
             yield renderScriptBlock(request, "profile.mako", "editProfileTabs",
                                     landing, "#profile-tabs", "set", **args)

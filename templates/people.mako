@@ -139,15 +139,15 @@
     <input type="hidden" name="from" value="people"/>
     <div id="invite-people">
       <div class="input-wrap">
-        <img class="icon invite-people-entry"/>
+        <span class="icon invite-people-entry">&nbsp</span>
         <input type="text" name="invites" placeholder="${_("Enter your colleague's email address")}"/>
       </div>
       <div class="input-wrap">
-        <img class="icon invite-people-entry"/>
+        <span class="icon invite-people-entry">&nbsp</span>
         <input type="text" name="invites" placeholder="${_("Enter your colleague's email address")}"/>
       </div>
       <div class="input-wrap">
-        <img class="icon invite-people-entry"/>
+        <span class="icon invite-people-entry">&nbsp</span>
         <input type="text" name="invites" placeholder="${_("Enter your colleague's email address")}"/>
       </div>
     </div>
