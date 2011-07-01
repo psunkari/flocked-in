@@ -184,10 +184,12 @@ class RootResource(resource.Resource):
         else:
             self._feedback = FeedbackResource(True)
 
+    @defer.inlineCallbacks
     def _clearAuth(self, request):
         sessionId = request.getCookie(request.cookiename)
+        log.msg("****** Session Id: ", sessionId)
         if sessionId:
-            request.site.clearSession(sessionId)
+            yield request.site.clearSession(sessionId)
 
     @defer.inlineCallbacks
     def _ensureAuth(self, request, rsrc):
@@ -228,9 +230,6 @@ class RootResource(resource.Resource):
                 match = self._signup
             elif path == "rsrcs":
                 match = self._rsrcs
-            elif path == "signout":
-                self._clearAuth(request)
-                match = util.Redirect('/signin')
         elif path == "feedback":
             match = self._feedback
 
@@ -259,43 +258,49 @@ class RootResource(resource.Resource):
         elif path in plugins and self._pluginResources.has_key(path):
             match = self._pluginResources[path]
 
-        # We have no idea how to handle the given path!
-        if not match:
-            return resource.NoResource("Page not found")
-
-        if not self._isAjax:
-            # By default prevent caching.
-            # Any resource may change these headers later during the processing
-            request.setHeader('Expires', formatdate(0))
-            request.setHeader('Cache-control', 'private,no-cache,no-store,must-revalidate')
-
-        if self._isAjax or (not self._isAjax and match != self._ajax):
-            if hasattr(match, 'requireAuth') and match.requireAuth:
-                d = self._ensureAuth(request, match)
+        d = None
+        if path == "signout":
+            d = self._clearAuth(request)
+            d.addCallback(lambda x: util.Redirect('/signin'))
+        else:
+            # We have no idea how to handle the given path!
+            if not match:
+                return resource.NoResource("Page not found")
+         
+            if not self._isAjax:
+                # By default prevent caching.
+                # Any resource may change these headers later during the processing
+                request.setHeader('Expires', formatdate(0))
+                request.setHeader('Cache-control', 'private,no-cache,no-store,must-revalidate')
+         
+            if self._isAjax or (not self._isAjax and match != self._ajax):
+                if hasattr(match, 'requireAuth') and match.requireAuth:
+                    d = self._ensureAuth(request, match)
+                else:
+                    d = defer.succeed(match)
             else:
                 d = defer.succeed(match)
-        else:
-            d = defer.succeed(match)
-
-        # 
-        # We update the CSRF token when it is a GET request
-        # and when one of the below is true
-        #  - Ajax resource in which the full page is requested (appchange)
-        #  - Non AJAX resource which is not in self._noCSRFReset
-        #
-        if ((self._isAjax and request.args.has_key('_fp')) or (not self._isAjax
-                    and match != self._ajax and path not in self._noCSRFReset))\
-                    and request.method == "GET":
-            def addTokenCallback(rsrc):
-                ad = defer.maybeDeferred(request.getSession, IAuthInfo)
-                def gotAuthInfo(authinfo):
-                    if authinfo.username:
-                        token = str(uuid.uuid4())[:8]
-                        request.addCookie('token', token, path='/')
-                        authinfo.token = token
-                    return rsrc
-                ad.addCallback(gotAuthInfo)
-                return ad
-            d.addCallback(addTokenCallback)
+         
+            # 
+            # We update the CSRF token when it is a GET request
+            # and when one of the below is true
+            #  - Ajax resource in which the full page is requested (appchange)
+            #  - Non AJAX resource which is not in self._noCSRFReset
+            #
+            if ((self._isAjax and request.args.has_key('_fp')) or\
+                        (not self._isAjax and match != self._ajax and\
+                        path not in self._noCSRFReset))\
+                        and request.method == "GET":
+                def addTokenCallback(rsrc):
+                    ad = defer.maybeDeferred(request.getSession, IAuthInfo)
+                    def gotAuthInfo(authinfo):
+                        if authinfo.username:
+                            token = str(uuid.uuid4())[:8]
+                            request.addCookie('token', token, path='/')
+                            authinfo.token = token
+                        return rsrc
+                    ad.addCallback(gotAuthInfo)
+                    return ad
+                d.addCallback(addTokenCallback)
 
         return util.DeferredResource(d)
