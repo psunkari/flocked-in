@@ -166,6 +166,7 @@
 /*
  * Menu
  */
+.ui-datepicker,
 .ui-menu {
   position: absolute;
   box-shadow: 0 4px 6px #AAA;
