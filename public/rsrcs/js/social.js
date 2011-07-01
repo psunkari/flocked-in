@@ -718,6 +718,23 @@ var ui = {
         };
         $$.dialog.create(dialogOptions);
         $.get('/ajax/file/versions?id='+convId+'&fid='+fileId);
+    },
+    bindFormSubmit: function(selector, onCompleteFunc) {
+        //Force form submits via ajax posts when form contains a input file.
+        $(selector).submit(function() {
+            $.ajax(this.action, {
+                type: "POST",
+                dataType: "html",
+                data: $(selector+' :input').not(':file').serializeArray(),
+                files: $(":file", this),
+                processData: false
+            }).complete(function(data) {
+                if (jQuery.isFunction(onCompleteFunc)){
+                    onCompleteFunc()
+                }
+            });
+            return false
+        });
     }
 }
 

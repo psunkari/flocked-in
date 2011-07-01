@@ -342,8 +342,6 @@ class GroupsResource(base.BaseResource):
         yield db.insert(myKey, "entities", '', groupId, 'adminOfGroups')
         yield db.insert(orgKey, "entityGroupsMap", '', groupId)
         yield self._addMember(request, groupId, myKey, orgKey)
-        request.redirect("/feed?id=%s"%(groupId))
-
 
     @profile
     @defer.inlineCallbacks
@@ -362,7 +360,7 @@ class GroupsResource(base.BaseResource):
         if script:
              yield renderScriptBlock(request, "groups.mako", "createGroup",
                                     landing, "#add-user-wrapper", "set", **args)
-
+             request.write("$$.ui.bindFormSubmit('#group_form', function(){$('#add-user-wrapper').empty();$$.fetchUri('/groups');})");
 
     @profile
     @defer.inlineCallbacks

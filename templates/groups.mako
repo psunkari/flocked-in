@@ -195,7 +195,7 @@
 
 
 <%def name="createGroup()">
-  <form action="/groups/create" method="post"  enctype="multipart/form-data">
+  <form id="group_form" action="/ajax/groups/create" method="post" enctype="multipart/form-data">
     <div class="styledform">
       <ul>
         <li>
