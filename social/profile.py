@@ -89,6 +89,30 @@ class ProfileResource(base.BaseResource):
     isLeaf = True
     resources = {}
 
+
+    # Add a notification (TODO: and send mail notifications to users
+    # who prefer getting notifications on e-mail)
+    @defer.inlineCallbacks
+    def _notify(self, myId, targetId):
+        timeUUID = uuid.uuid1().bytes
+        yield db.insert(targetId, "latest", myId, timeUUID, "friends")
+
+
+    # Remove notifications about a particular user.
+    # XXX: Assuming that there wouldn't be too many items here.
+    @defer.inlineCallbacks
+    def _removeFromPending(self, myId, targetId):
+        yield db.remove(myId, "pendingConnections", targetId)
+        yield db.remove(targetId, "pendingConnections", myId)
+
+        cols = yield db.get_slice(groupId, "latest", ['friends'])
+        cols = utils.supercolumnsToDict(cols)
+        for tuuid, key in cols['friends'].items():
+            if key == targetId:
+                yield db.remove(myId, "latest", tuuid, 'friends')
+                return
+
+
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -262,9 +286,10 @@ class ProfileResource(base.BaseResource):
         calls = []
         responseType = "I"
         itemType = "activity"
-        cols = yield db.multiget_slice([myKey, targetKey], "entities",
-                                            ["basic"])
+        cols = yield db.multiget_slice([myKey, targetKey], "entities", ["basic"])
         users = utils.multiSuperColumnsToDict(cols)
+
+        # We have a pending incoming connection.  Accept It.
         try:
             cols = yield db.get(myKey, "pendingConnections", targetKey)
             pendingType = cols.column.value
@@ -276,6 +301,9 @@ class ProfileResource(base.BaseResource):
             d3 = db.batch_insert(myKey, "connections", {targetKey: circlesMap})
             d4 = db.batch_insert(targetKey, "connections", {myKey: {'__default__':''}})
 
+            #
+            # Update name indices
+            #
             myName = users[myKey]["basic"].get("name", None)
             myFirstName = users[myKey]["basic"].get("firstname", None)
             myLastName = users[myKey]["basic"].get("lastname", None)
@@ -298,17 +326,21 @@ class ProfileResource(base.BaseResource):
                     mutMap.setdefault(myKey, {}).setdefault('nameIndex', {})[colName] = ''
             d7 = db.batch_mutate(mutMap)
 
-
-            #add to feed
+            #
+            # Add to feeds
+            #
             myItemId = utils.getUniqueKey()
             targetItemId = utils.getUniqueKey()
-            myItem, attachments = yield utils.createNewItem(request, itemType, ownerId = myKey,
-                                         subType="connection",
-                                         ownerOrgId= users[myKey]["basic"]["org"])
-            targetItem, attachments = yield utils.createNewItem(request, itemType,
-                                             ownerId= targetKey,
-                                             subType="connection",
-                                             ownerOrgId = users[targetKey]["basic"]["org"])
+            orgId = users[myKey]["basic"]["org"]
+            myItem, attachments = yield utils.createNewItem(request, itemType,
+                                                            ownerId=myKey,
+                                                            subType="connection",
+                                                            ownerOrgId=orgId)
+            targetItem, attachments = yield utils.createNewItem(request,
+                                                            itemType,
+                                                            ownerId=targetKey,
+                                                            subType="connection",
+                                                            ownerOrgId=orgId)
             targetItem["meta"]["target"] = myKey
             myItem["meta"]["target"] = targetKey
             d8 = db.batch_insert(myItemId, "items", myItem)
@@ -329,79 +361,39 @@ class ProfileResource(base.BaseResource):
                              targetItem["meta"]['uuid'])
 
             value = ":".join([responseType, myKey, targetItemId, itemType, targetKey])
-            #notify users
-            d14  = db.insert(targetKey, "notifications", targetItemId, targetItem["meta"]['uuid'])
-            d15 = db.batch_insert(targetKey, "notificationItems", {targetItemId:{targetItem["meta"]['uuid']:value}})
 
+            # TODO: Notify target user about the accepted request.
 
-            calls = [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14, d15]
-            cols = yield db.multiget_slice([myKey, targetKey] , "latestNotifications",
-                                            ["incomingFriendRequests",
-                                            "outGoingFriendRequests",
-                                            "archivedFriendRequests"])
-            cols = utils.multiSuperColumnsToDict(cols)
-            for sc in cols.get(myKey, []):
-                for tuuid, key in cols[myKey][sc].items():
-                    if key == targetKey:
-                        d = db.remove(myKey, "latestNotifications", tuuid, sc)
-                        calls.append(d)
-            for sc in cols.get(targetKey, []):
-                for tuuid, key in cols[targetKey][sc].items():
-                    if key == myKey:
-                        d = db.remove(targetKey, "latestNotifications", tuuid, sc)
-                        calls.append(d)
+            calls = [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13]
+            calls.append(self._removeFromPending(myKey, targetKey))
 
+        # No incoming connection request.  Send a request to the target users.
         except ttypes.NotFoundException:
-            timeUUID = uuid.uuid1().bytes
-
             d1 = db.insert(myKey, "pendingConnections", '0', targetKey)
             d2 = db.insert(targetKey, "pendingConnections", '1', myKey)
-            d3 = db.insert(targetKey, "latestNotifications", myKey, timeUUID, "incomingFriendRequests")
-            d4 = db.insert(myKey, "latestNotifications", targetKey, timeUUID, "outGoingFriendRequests")
-
-            #notify users
-            calls = [d1, d2, d3, d4]
+            d3 = self._notify(myKey, targetKey)
+            calls = [d1, d2, d3]
 
         yield defer.DeferredList(calls)
 
+
     @defer.inlineCallbacks
     def _cancelFriendRequest(self, myKey, targetKey):
-        deferreds = []
-        cols = yield db.multiget_slice([myKey, targetKey], "latestNotifications",
-                                        ["incomingFriendRequests",
-                                         "outGoingFriendRequests",
-                                         "archivedFriendRequests"])
-        cols = utils.multiSuperColumnsToDict(cols)
-        for sc in cols.get(myKey, []):
-            for tuuid, key in cols[myKey][sc].items():
-                if key == targetKey:
-                    d = db.remove(myKey, "latestNotifications", tuuid, sc)
-                    deferreds.append(d)
-        for sc in cols.get(targetKey, []):
-            for tuuid, key in cols[targetKey][sc].items():
-                if key == myKey:
-                    d = db.remove(targetKey, "latestNotifications", tuuid, sc)
-                    deferreds.append(d)
-
-        d1 = db.remove(myKey, "pendingConnections", targetKey)
-        d2 = db.remove(targetKey, "pendingConnections", myKey)
-        yield defer.DeferredList(deferreds+[d1, d2])
-        #XXX: UI: remove the user from the list of pending-friend-requests
+        yield self._removeFromPending(myKey, targetKey)
+        # TODO: UI update
 
 
     @defer.inlineCallbacks
     def _archiveFriendRequest(self, myKey, targetKey):
         try:
-            cols = yield db.get_slice(myKey, "latestNotifications", ["incomingFriendRequests"])
+            cols = yield db.get_slice(myKey, "latest", ["friends"])
             cols = utils.supercolumnsToDict(cols)
-            for tuuid, key in cols['incomingFriendRequests'].items():
+            for tuuid, key in cols['friends'].items():
                 if key == targetKey:
-                    d1 = db.remove(myKey, "latestNotifications", tuuid, "incomingFriendRequests")
-                    d2 = db.insert(myKey, "latestNotifications", targetKey, tuuid, "archivedFriendRequests")
-                    yield defer.DeferredList([d1, d2])
-                    #XXX: UI: remove the user from pending requests list
+                    yield db.remove(myKey, "latest", tuuid, "friends")
         except ttypes.NotFoundException:
             pass
+        # TODO: UI update
 
 
     @profile

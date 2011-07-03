@@ -103,13 +103,9 @@ def createColumnFamilies(client):
                             'entity->groups map')
     yield client.system_add_column_family(entityGroupsMap)
 
-    bannedUsers = CfDef(KEYSPACE, "bannedUsers", "Standard", "UTF8Type", None,
-                     "List of users banned from a group")
-    yield client.system_add_column_family(bannedUsers)
-
     blockedUsers = CfDef(KEYSPACE, "blockedUsers", "Standard", "UTF8Type", None,
-                         "List of users blocked by admins."
-                         "blocked users will not be able to login")
+                         "List of users blocked by admins from logging in or from joining the group"
+                         "Blocked users will not be able to login/join the group.")
     yield client.system_add_column_family(blockedUsers)
 
 
@@ -739,11 +735,11 @@ def truncateColumnFamilies(client):
                'eventResponses', "userEventInvitations", "userEventResponse",
                'eventInvitations',"notifications", "notificationItems",
                "nameIndex", "displayNameIndex", "orgTags", "tagItems",
-               "tagFollowers", "orgTagsByName", "messages", "bannedUsers",
+               "tagFollowers", "orgTagsByName", "messages",
                "blockedUsers", "deletedConvs", "feed_question",
                "mConversations", "mAllConversations", "mUnreadConversations",
                "mArchivedConversations", "mDeletedConversations",
-               "mConvMessages", "mConvFolders", "latestNotifications",
+               "mConvMessages", "mConvFolders", "latest",
                "files", "tmp_files", "item_files"]:
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)

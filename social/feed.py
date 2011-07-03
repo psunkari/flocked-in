@@ -133,7 +133,6 @@ def pushToFeed(userKey, timeuuid, itemKey, parentKey, responseType,
 def updateFeedResponses(userKey, parentKey, itemKey, timeuuid, itemType,
                         responseType, convOwner, commentOwner, tagId='',
                         entities=None):
-
     if not entities:
         entities = [commentOwner]
     else:
@@ -383,8 +382,8 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
 
             fetchStart = keysFromFeed[-1]
             feedItems_d.append(fetchFeedItems(fetchedConvIds))
-            filteredConvIds = yield fetchAndFilterConvs(fetchedConvIds, count)
-            convIds.extend(filteredConvIds)
+            feedItems_d.append(fetchAndFilterConvs(fetchedConvIds, count))
+            feedItems_d[-1].addCallback(lambda x: convIds.extend(x))
 
             if len(results) < fetchCount:
                 break
@@ -565,9 +564,6 @@ class FeedResource(base.BaseResource):
             feedItems = yield getFeedItems(request, feedId=feedId, start=start)
         args.update(feedItems)
         args['itemType']=itemType
-        cols = yield db.get_slice(myId, "latestNotifications")
-        cols = utils.supercolumnsToDict(cols)
-        counts = dict([(key, len(cols[key])) for key in cols])
 
         if script:
             onload = "(function(obj){$$.convs.load(obj);})(this);"

@@ -21,6 +21,30 @@ from social.profile     import saveAvatarItem
 class GroupsResource(base.BaseResource):
     isLeaf = True
 
+
+    # Add a notification (TODO: and send mail notifications to admins
+    # who prefer getting notifications on e-mail)
+    @defer.inlineCallbacks
+    def _notify(self, groupId, userId):
+        timeUUID = uuid.uuid1().bytes
+        yield db.insert(groupId, "latest", userId, timeUUID, "groups")
+
+
+    # Remove notifications about a particular user.
+    # XXX: Assuming that there wouldn't be too many items here.
+    @defer.inlineCallbacks
+    def _removeFromPending(self, groupId, userId):
+        yield db.remove(groupId, "pendingConnections", userId)
+        yield db.remove(userId, "pendingConnections", groupId)
+
+        cols = yield db.get_slice(groupId, "latest", ['groups'])
+        cols = utils.supercolumnsToDict(cols)
+        for tuuid, key in cols['groups'].items():
+            if key == userId:
+                yield db.remove(groupId, "latest", tuuid, 'groups')
+                return
+
+
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -115,38 +139,25 @@ class GroupsResource(base.BaseResource):
         pendingRequests = {}
         groupFollowers = {groupId:[]}
 
-        cols = yield db.get_slice(groupId, "bannedUsers", [myKey])
+        cols = yield db.get_slice(groupId, "blockedUsers", [myKey])
         if cols:
             raise errors.PermissionDenied(_("You are banned from joining the group by the administrator"))
 
         try:
             cols = yield db.get(myKey, "entityGroupsMap", groupId)
         except ttypes.NotFoundException:
-            #add to pending connections
             if access == "public":
                 yield self._addMember(request, groupId, myKey, myOrgId)
                 myGroups.append(groupId)
                 groupFollowers[groupId].append(myKey)
             else:
+                # Add to pending connections
                 yield db.insert(myKey, "pendingConnections", '0', groupId)
                 yield db.insert(groupId, "pendingConnections", '1', myKey)
-                #notify admin of the group
-                cols = yield db.get_slice(groupId, "entities", ["admins"])
-                admins = utils.supercolumnsToDict(cols)
 
-                #XXX: notifications in new format
-                timeUUID = uuid.uuid1().bytes
-                yield db.insert(groupId, "latestNotifications", myKey, timeUUID, 'incomingGroupRequests')
-                yield db.insert(myKey, "latestNotifications", groupId, timeUUID, 'outgoingGroupRequests')
+                yield self._notify(groupId, myKey)
+                pendingRequests[groupId] = myKey
 
-                #for admin in admins["admins"]:
-                #    commentOwner = myKey
-                #    responseType = "G"
-                #    value = ":".join([responseType, commentOwner, groupId, '', admin])
-                #    yield db.insert(admin, "notifications", groupId, timeUUID)
-                #    yield db.batch_insert(admin, "notificationItems", {groupId:{timeUUID:value}})
-
-                pendingRequests[groupId]=myKey
             args["pendingConnections"] = pendingRequests
             args["groupFollowers"] = groupFollowers
             args["groupId"] = groupId
@@ -167,18 +178,9 @@ class GroupsResource(base.BaseResource):
         userId, user = yield utils.getValidEntityId(request, "uid", "user")
 
         if myKey in group["admins"]:
-            #or myKey in moderators #if i am moderator
             try:
                 cols = yield db.get(groupId, "pendingConnections", userId)
-                yield db.remove(groupId, "pendingConnections", userId)
-                yield db.remove(userId, "pendingConnections", groupId)
-                cols  = yield db.get_slice(groupId, "latestNotifications", ['incomingGroupRequests'])
-                cols = utils.supercolumnsToDict(cols)
-                for tuuid, key in cols['incomingGroupRequests'].items():
-                    if key == userId:
-                        yield db.remove(groupId, "latestNotifications", tuuid, 'incomingGroupRequests')
-                        yield db.remove(userId, "latestNotifications", tuuid, 'outgoingGroupRequests')
-                        break
+                yield self._removeFromPending(groupId, userId)
                 yield self._addMember(request, groupId, userId, myOrgId)
             except ttypes.NotFoundException:
                 pass
@@ -194,19 +196,9 @@ class GroupsResource(base.BaseResource):
         userId, user = yield utils.getValidEntityId(request, "uid", "user")
 
         if myKey in group["admins"]:
-            #or myKey in moderators #if i am moderator
             try:
                 cols = yield db.get(groupId, "pendingConnections", userId)
-                yield db.remove(groupId, "pendingConnections", userId)
-                yield db.remove(userId, "pendingConnections", groupId)
-                cols  = yield db.get_slice(groupId, "latestNotifications", ['incomingGroupRequests'])
-                cols = utils.supercolumnsToDict(cols)
-                for tuuid, key in cols['incomingGroupRequests'].items():
-                    if key == userId:
-                        yield db.remove(groupId, "latestNotifications", tuuid, 'incomingGroupRequests')
-                        yield db.remove(userId, "latestNotifications", tuuid, 'outgoingGroupRequests')
-                        break
-                # notify user that the moderator rejected.
+                yield self._removeFromPending(groupId, userId)
             except ttypes.NotFoundException:
                 pass
 
@@ -224,23 +216,15 @@ class GroupsResource(base.BaseResource):
             raise errors.InvalidRequest(_("An administrator cannot ban himself/herself from the group"))
 
         if myKey in group["admins"]:
-            # if the request is pending, remove the request
-            yield db.remove(groupId, "pendingConnections", userId)
-            yield db.remove(userId, "pendingConnections", groupId)
-            cols  = yield db.get_slice(groupId, "latestNotifications", ['incomingGroupRequests'])
-            cols = utils.supercolumnsToDict(cols)
-            for tuuid, key in cols['incomingGroupRequests'].items():
-                if key == userId:
-                    yield db.remove(groupId, "latestNotifications", tuuid, 'incomingGroupRequests')
-                    yield db.remove(userId, "latestNotifications", tuuid, 'outgoingGroupRequests')
-                    break
+            yield self._removeFromPending(groupId, userId)
 
-            # if the users is already a member, remove the user from the group
+            # If the users is already a member, remove the user from the group
             yield db.remove(groupId, "groupMembers", userId)
             yield db.remove(groupId, "followers", userId)
             yield db.remove(userId, "entityGroupsMap", groupId)
 
-            yield db.insert(groupId, "bannedUsers", '', userId)
+            # Add user to blocked users
+            yield db.insert(groupId, "blockedUsers", '', userId)
 
 
     @profile
@@ -253,9 +237,7 @@ class GroupsResource(base.BaseResource):
         userId, user = yield utils.getValidEntityId(request, "uid", "user")
 
         if myKey in group["admins"]:
-            # if the request is pending, remove the request
-            yield db.remove(groupId, "bannedUsers", userId)
-            log.msg("unblocked user %s from group %s"%(userId, groupId))
+            yield db.remove(groupId, "blockedUsers", userId)
 
 
     @profile
@@ -343,6 +325,7 @@ class GroupsResource(base.BaseResource):
         yield db.insert(orgKey, "entityGroupsMap", '', groupId)
         yield self._addMember(request, groupId, myKey, orgKey)
 
+
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -361,6 +344,7 @@ class GroupsResource(base.BaseResource):
              yield renderScriptBlock(request, "groups.mako", "createGroup",
                                     landing, "#add-user-wrapper", "set", **args)
              request.write("$$.ui.bindFormSubmit('#group_form', function(){$('#add-user-wrapper').empty();$$.fetchUri('/groups');})");
+
 
     @profile
     @defer.inlineCallbacks
@@ -565,7 +549,7 @@ class GroupsResource(base.BaseResource):
                                     landing, "#mainbar", "set", **args)
 
         if myKey in group['admins']:
-            #TODO: dont add banned users
+            # TODO: dont add blocked users
             yield self._addMember(request, groupId, userId, myOrgId)
             #yield self._listGroupMembers(request)
             refreshFeedScript = """

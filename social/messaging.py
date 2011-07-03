@@ -3,8 +3,6 @@ import pickle
 import re
 import pytz, time, datetime
 
-
-
 from twisted.internet   import defer
 from twisted.python     import log
 from twisted.web        import server
@@ -13,6 +11,7 @@ from social             import db, utils, base, errors
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
+
 
 class MessagingResource(base.BaseResource):
     isLeaf = True
@@ -51,11 +50,10 @@ class MessagingResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _deliverMessage(self, convId, recipients, timeUUID, owner):
-
         convFolderMap = {}
         userFolderMap = {}
-        notifications = {}
-        rm_notifications = {'latestNotifications':[]}
+        toNotify = {}
+        toRemove = {'latest':[]}
         conv = yield db.get_slice(convId, "mConversations", ['meta'])
         conv = utils.supercolumnsToDict(conv)
 
@@ -70,8 +68,8 @@ class MessagingResource(base.BaseResource):
             # for a new message, mConvFolders will be empty
             # so recipient may not necessarily be present in cols
             if recipient != owner:
-                notifications[recipient]= {'latestNotifications': {'messages':{timeUUID: convId }}}
-                rm_notifications['latestNotifications'].append(recipient)
+                toNotify[recipient]= {'latest': {'messages':{timeUUID: convId}}}
+                toRemove['latest'].append(recipient)
 
             for folder in cols.get(recipient, []):
                 cf = self._folders[folder] if folder in self._folders else folder
@@ -96,10 +94,12 @@ class MessagingResource(base.BaseResource):
 
         yield db.batch_mutate(convFolderMap)
         yield db.batch_insert(convId, "mConvFolders", userFolderMap)
-        if rm_notifications and oldTimeUUID != timeUUID:
-            yield db.batch_remove(rm_notifications, names=[oldTimeUUID], supercolumn="messages")
-        if notifications:
-            yield db.batch_mutate(notifications)
+
+        if toRemove and oldTimeUUID != timeUUID:
+            yield db.batch_remove(toRemove, names=[oldTimeUUID], supercolumn="messages")
+        if toNotify:
+            yield db.batch_mutate(toNotify)
+
 
     @defer.inlineCallbacks
     def _newMessage(self, ownerId, timeUUID, body, epoch):
@@ -570,7 +570,7 @@ class MessagingResource(base.BaseResource):
             timeUUID = conv['meta']['uuid']
             yield db.remove(myId, "mUnreadConversations", timeUUID)
             yield db.remove(convId, "mConvFolders", 'mUnreadConversations', myId)
-            yield db.remove(myId, "latestNotifications", timeUUID, "messages")
+            yield db.remove(myId, "latest", timeUUID, "messages")
             cols = yield db.get_slice(convId, "mConvFolders", [myId])
             cols = utils.supercolumnsToDict(cols)
             for folder in cols[myId]:

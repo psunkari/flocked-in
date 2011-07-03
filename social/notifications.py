@@ -28,7 +28,7 @@ def pushNotifications(itemId, convId, responseType, convType, convOwner,
         userKey = follower.column.name
         if commentOwner != userKey:
             d1 =  db.insert(userKey, "notifications", convId, timeUUID)
-            d2 =  db.insert(userKey, "latestNotifications", convId, timeUUID, sc)
+            d2 =  db.insert(userKey, "latest", convId, timeUUID, sc)
             d3 =  db.batch_insert(userKey, "notificationItems", {convId:{timeUUID:value}})
             deferreds.extend([d1, d2, d3])
     yield defer.DeferredList(deferreds)
@@ -44,7 +44,7 @@ def deleteNotifications(convId, timeUUID, followers=None, sf="notifications"):
     for follower in followers:
         userKey = follower.column.name
         d1 = db.remove(userKey, "notifications", timeUUID)
-        d2 = db.remove(userKey, "latestNotifications", timeUUID, sf)
+        d2 = db.remove(userKey, "latest", timeUUID, sf)
         d3 = db.remove(userKey, "notificationItems", timeUUID, convId)
         deferreds.extend([d1, d2, d3])
     yield defer.DeferredList(deferreds)
@@ -269,9 +269,9 @@ class NotificationsResource(base.BaseResource):
         fromFetchMore = ((not landing) and (not appchange) and start)
         data = yield self._getNotifications(request)
         if not start:
-            yield db.remove(myId, "latestNotifications", super_column="notifications")
-        args.update(data)
+            yield db.remove(myId, "latest", super_column="notifications")
 
+        args.update(data)
         if script:
             if fromFetchMore:
                 yield renderScriptBlock(request, "notifications.mako", "content",
@@ -280,26 +280,34 @@ class NotificationsResource(base.BaseResource):
             else:
                 yield renderScriptBlock(request, "notifications.mako", "content",
                                     landing, "#notifications", "set", **args)
-    @defer.inlineCallbacks
-    def _getNewNotifications(self, request):
-        (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        cols = yield db.get_slice(myId, "latestNotifications")
-        cols = utils.supercolumnsToDict(cols)
-        counts = {myId: dict([(key, len(cols[key])) for key in cols])}
-        orgId = args['orgKey']
-        #get the list of groups
-        cols = yield db.get_slice(myId, "entities", ['adminOfGroups'])
-        cols = utils.supercolumnsToDict(cols)
-        groupIds = cols.get('adminOfGroups', {}).keys()
 
-        if groupIds:
-            cols = yield db.multiget_slice(groupIds, "latestNotifications")
+
+    # Return a count of unseen notifications a user has.
+    # XXX: Assuming a user would never have too many unseen notifications.
+    @defer.inlineCallbacks
+    def _getNewNotifications(self, request, asJSON=True):
+        authinfo = yield defer.maybeDeferred(request.getSession, IAuthInfo)
+        myId = authinfo.username
+        myOrgId = authinfo.organization
+
+        latest = yield db.get_slice(myId, "latest")
+        latest = utils.supercolumnsToDict(latest)
+        counts = dict([(key, len(latest[key])) for key in latest])
+
+        groups = yield db.get_slice(myId, "entities", ['adminOfGroups'])
+        groups = utils.supercolumnsToDict(groups).get('adminOfGroups', {}).keys()
+        if groups:
+            counts.setdefault("groups", 0)
+            cols = yield db.multiget_slice(groups, "latest")
             cols = utils.multiSuperColumnsToDict(cols)
             for groupId in cols:
-                counts[groupId] = {}
                 for key in cols[groupId]:
-                    counts[groupId][key] = len(cols[groupId][key])
-        request.write(json.dumps(counts))
+                    counts['groups'] += len(cols[groupId][key])
+
+        if asJSON:
+            defer.returnValue(json.dumps(counts))
+        else:
+            defer.returnValue(counts)
 
 
     @profile
@@ -310,4 +318,6 @@ class NotificationsResource(base.BaseResource):
             d = self._renderNotifications(request)
         elif segmentCount == 1 and request.postpath[0] == "new":
             d = self._getNewNotifications(request)
+            d.addCallback(lambda x: request.write(x))
         return self._epilogue(request, d)
+
