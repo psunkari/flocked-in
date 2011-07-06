@@ -282,34 +282,6 @@ class NotificationsResource(base.BaseResource):
                                     landing, "#notifications", "set", **args)
 
 
-    # Return a count of unseen notifications a user has.
-    # XXX: Assuming a user would never have too many unseen notifications.
-    @defer.inlineCallbacks
-    def _getNewNotifications(self, request, asJSON=True):
-        authinfo = yield defer.maybeDeferred(request.getSession, IAuthInfo)
-        myId = authinfo.username
-        myOrgId = authinfo.organization
-
-        latest = yield db.get_slice(myId, "latest")
-        latest = utils.supercolumnsToDict(latest)
-        counts = dict([(key, len(latest[key])) for key in latest])
-
-        groups = yield db.get_slice(myId, "entities", ['adminOfGroups'])
-        groups = utils.supercolumnsToDict(groups).get('adminOfGroups', {}).keys()
-        if groups:
-            counts.setdefault("groups", 0)
-            cols = yield db.multiget_slice(groups, "latest")
-            cols = utils.multiSuperColumnsToDict(cols)
-            for groupId in cols:
-                for key in cols[groupId]:
-                    counts['groups'] += len(cols[groupId][key])
-
-        if asJSON:
-            defer.returnValue(json.dumps(counts))
-        else:
-            defer.returnValue(counts)
-
-
     @profile
     @dump_args
     def render_GET(self, request):
@@ -318,7 +290,7 @@ class NotificationsResource(base.BaseResource):
         if segmentCount == 0:
             d = self._renderNotifications(request)
         elif segmentCount == 1 and request.postpath[0] == "new" and self._ajax:
-            d = self._getNewNotifications(request)
+            d = utils.getLatestCounts(request)
             d.addCallback(lambda x: request.write('$$.menu.counts(%s);' % x))
         return self._epilogue(request, d)
 

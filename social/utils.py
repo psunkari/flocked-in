@@ -383,6 +383,34 @@ def decodeKey(key):
     return base64.urlsafe_b64decode(key[2:] + ((length % 4) * '='))
 
 
+# Return a count of unseen notifications a user has.
+# XXX: Assuming a user would never have too many unseen notifications.
+@defer.inlineCallbacks
+def getLatestCounts(request, asJSON=True):
+    authinfo = yield defer.maybeDeferred(request.getSession, IAuthInfo)
+    myId = authinfo.username
+    myOrgId = authinfo.organization
+
+    latest = yield db.get_slice(myId, "latest")
+    latest = supercolumnsToDict(latest)
+    counts = dict([(key, len(latest[key])) for key in latest])
+
+    groups = yield db.get_slice(myId, "entities", ['adminOfGroups'])
+    groups = supercolumnsToDict(groups).get('adminOfGroups', {}).keys()
+    if groups:
+        counts.setdefault("groups", 0)
+        cols = yield db.multiget_slice(groups, "latest")
+        cols = multiSuperColumnsToDict(cols)
+        for groupId in cols:
+            for key in cols[groupId]:
+                counts['groups'] += len(cols[groupId][key])
+
+    if asJSON:
+        defer.returnValue(json.dumps(counts))
+    else:
+        defer.returnValue(counts)
+
+
 #
 # Date and time formating utilities (format based on localizations)
 #
@@ -466,7 +494,6 @@ def normalizeText(text):
 
 
 def simpleTimestamp(timestamp, timezone='Asia/Kolkata'):
-
     tzinfo = gettz(timezone)
     if not tzinfo:
         tzinfo = gettz('Asia/Kolkata')

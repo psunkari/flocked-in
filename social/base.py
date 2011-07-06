@@ -37,6 +37,11 @@ class BaseResource(resource.Resource):
         args = {"myKey": myKey, "orgKey": orgKey, "me": me,
                 "isOrgAdmin": isOrgAdmin, "ajax": self._ajax,
                 "script": script, "org": org}
+
+        if appchange:
+            latest = yield utils.getLatestCounts(request, False)
+            args["latest"] = latest
+
         defer.returnValue((appchange, script, args, myKey))
 
     @defer.inlineCallbacks
