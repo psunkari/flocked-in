@@ -1,17 +1,24 @@
+import embedly
 from lxml               import etree
 
 from zope.interface     import implements
 from twisted.python     import log
-from twisted.internet   import defer
+from twisted.internet   import defer, threads
 from twisted.plugin     import IPlugin
 from twisted.web        import client
 
 from social.template    import renderScriptBlock, getBlock
 from social.isocial     import IItemType
-from social             import db, utils, errors, _
+from social             import db, utils, errors, _, config
 from social.logging     import profile, dump_args
 
 _encode = lambda x: type(x) == unicode and x.encode('utf8', 'replace') or x
+embedlyKey = config.get('Embedly', 'Key')
+embedlyClient = None
+if embedlyKey:
+    embedlyClient = embedly.client.Embedly(key=embedlyKey)
+    embedlyClient.get_services()
+
 
 class Links(object):
     implements(IPlugin, IItemType)
@@ -99,6 +106,14 @@ class Links(object):
         try:
             #XXX: client.getPage starts and stops HTTPClientFactory everytime
             #     find a way to avoid this
+            if embedlyClient :
+                obj = yield threads.deferToThread(embedlyClient.oembed, url)
+                image = obj.get('thumbnail_url')
+                if embedlyClient._regex.match(url) and obj.get('error') != True:
+                    title = obj.get("title")
+                    summary = obj.get("description")
+                    defer.returnValue((summary, title, image))
+
             d = client.getPage(url)
             data = yield d
             domain = url.split('/', 3)[2]
@@ -123,14 +138,14 @@ class Links(object):
                     summary = element.attrib.get('content', '')
                     summary = summary.encode('utf-8')
 
-            if ((ogSummary or summary) and (ogTitle or title) and (ogImage)):
-                defer.returnValue((ogSummary or summary, ogTitle or title,  ogImage))
-            if not ogSummary or summary:
+            if ((ogSummary or summary) and (ogTitle or title) and (ogImage or image)):
+                defer.returnValue((ogSummary or summary, ogTitle or title,  ogImage or image))
+            if not (ogSummary or summary):
                 for element in tree.xpath("body//p"):
                     if element.text:
                         summary = element.text
                         break
-            if not ogImage:
+            if not (ogImage or image):
                 for element in tree.xpath("body//img"):
                     if 'src' in element.attrib \
                       and element.attrib['src'].startswith('http://') \
