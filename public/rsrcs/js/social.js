@@ -214,6 +214,15 @@ _initTimestampUpdates: function _initTimestampUpdates() {
     }, 30000);
 },
 
+
+_initUpdatesCheck: function _initUpdatesCheck() {
+    $.get('/ajax/notifications/new');
+    window.setInterval(function() {
+        $.get('/ajax/notifications/new');
+    }, 30000)
+},
+
+
 /* ChunkLoader: Load the page in Chunks.
  * Takes the already loaded resource ids as argument.
  */
@@ -373,6 +382,7 @@ if (!Function.prototype.bind) {
 social._initChunkLoader();
 social._initAjaxRequests();
 social._initTimestampUpdates();
+social._initUpdatesCheck();
 
 $.social = window.social = window.$$ = social;
 }})(window, jQuery);
@@ -899,13 +909,27 @@ $$.dialog = dialog;
 var menu = {
     selectItem: function(itemId) {
         var selected = $('.sidemenu-selected'),
-            newItemClass = itemId+'-sideitem';
+            itemSelector = '#'+itemId+'-sideitem';
 
-        if (selected.hasClass(newItemClass))
+        if (selected.is(itemSelector))
             return;
 
         selected.removeClass('sidemenu-selected');
-        $('.'+newItemClass).addClass('sidemenu-selected');
+        $(itemSelector).addClass('sidemenu-selected');
+    },
+
+    counts: function(obj) {
+        $.each(obj, function(key, value) {
+            var $item = $('#'+key+'-sideitem'),
+                $counter = $item.children('.new-count');
+
+            if ($counter.length == 0) {
+                $counter = $('<div class="new-count"></div>');
+                $counter.appendTo($item);
+            }
+
+            $counter.text(value);
+        });
     }
 };
 $$.menu = menu;

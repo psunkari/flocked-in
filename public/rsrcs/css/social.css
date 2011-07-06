@@ -300,6 +300,22 @@ a:hover, a:active, a:focus {
     padding-left: 21px;
 }
 
+.new-count {
+    position: absolute;
+    background-color: #b40000;
+    color: white;
+    border-radius: 2px 2px 2px 2px;
+    box-shadow: 0pt 0pt 2px #888;
+    font-weight: bold;
+    right: 10px;
+    font-size: 9px;
+    line-height: 14px;
+    padding: 0 4px;
+    top: 4px;
+    font-family: monospace;
+    font-weight: bold;
+}
+
 .feed-icon {
     background-position: 0 -48px;
 }

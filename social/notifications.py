@@ -314,10 +314,11 @@ class NotificationsResource(base.BaseResource):
     @dump_args
     def render_GET(self, request):
         segmentCount = len(request.postpath)
+        d = None
         if segmentCount == 0:
             d = self._renderNotifications(request)
-        elif segmentCount == 1 and request.postpath[0] == "new":
+        elif segmentCount == 1 and request.postpath[0] == "new" and self._ajax:
             d = self._getNewNotifications(request)
-            d.addCallback(lambda x: request.write(x))
+            d.addCallback(lambda x: request.write('$$.menu.counts(%s);' % x))
         return self._epilogue(request, d)
 
