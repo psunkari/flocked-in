@@ -224,9 +224,9 @@
           %endif
           <button class="button-link" onclick="$$.ui.showPopUp(event)">RSVP to this event</button>
           <ul class="acl-menu" style="display:none;">
-              <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'yes')"><div class="icon"></div>${_("Yes, I will attend")}</a></li>
-              <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'no')"><div class="icon"></div>${_("No")}</a></li>
-              <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'maybe')"><div class="icon"></div>${_("Maybe")}</a></li>
+              <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'yes')">${_("Yes, I will attend")}</a></li>
+              <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'no')">${_("No")}</a></li>
+              <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'maybe')">${_("Maybe")}</a></li>
           </ul>
         </div>
       </div>
