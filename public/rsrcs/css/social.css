@@ -751,11 +751,13 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     color: #999;
     padding: 5px 0 0;
     font-size: 10px;
+    clear: both;
 }
 
 .comment-meta {
     color: #999;
     font-size: 9px;
+    clear: both;
 }
 .conv-footer abbr, .comment-meta abbr {
     border: none;
@@ -1108,35 +1110,22 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .editing-tags .edit-tags-form {
     display: inline-block;
 }
-.link-item {
-    padding-top: 2px;
-    padding-bottom: 1px;
-}
 
 .link-summary {
     font-size: 11px;
     font-family: inherit;
-    color: grey;
-    padding-left: 2px;
 
 }
 .link-title {
-    padding-left: 2px;
-    padding-bottom: 2px;
+    margin-top: 5px;
     font-size: 11px;
     font-weight: bold;
 }
-
-.link-url {
-    font-size: smaller;
-}
-
 .link-image {
     float:left;
-    padding-right: 3px;
-    padding-bottom: 3px;
-    max-height: 75px;
-    max-width: 75px;
+    margin-right: 10px;
+    max-height: 100px;
+    max-width: 100px;
 }
 
 
