@@ -203,9 +203,9 @@ def createColumnFamilies(client):
                          'A feed of all the items for user, group and organization')
     yield client.system_add_column_family(notifications)
 
-    latestNotifications = CfDef(KEYSPACE, 'latestNotifications', 'Super', 'UTF8Type',
+    latest = CfDef(KEYSPACE, 'latest', 'Super', 'UTF8Type',
                                 'TimeUUIDType', 'latest notifications for user')
-    yield client.system_add_column_family(latestNotifications)
+    yield client.system_add_column_family(latest)
 
     notificationItems = CfDef(KEYSPACE, "notificationItems", "Super", "UTF8Type",
                               "TimeUUIDType", "Notifications")
