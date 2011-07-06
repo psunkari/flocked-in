@@ -155,9 +155,13 @@
   <div class="users-details">
     <%
       groupName = groups[groupId]["basic"].get("name", "-")
+      groupDesc = groups[groupId]["basic"].get("desc", None)
     %>
     <div class="user-details-name"><a href ="/feed?id=${groupId}">${groupName}</a></div>
-    <div class="user-details-title">${groups[groupId]["basic"]["access"].capitalize()}</div>
+    <div class="group-details-title">${groups[groupId]["basic"]["access"].capitalize()}</div>
+    %if groupDesc:
+        <div class="group-details-desc">&nbsp - ${groupDesc}</div>
+    %endif
     <div class="user-details-actions">
       <ul id="group-actions-${groupId}" class="middle user-actions h-links">
         ${group_actions(groupId)}

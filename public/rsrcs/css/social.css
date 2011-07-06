@@ -964,6 +964,26 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     margin-top: 6px;
 }
 
+
+.group-details-title {
+    color: #888;
+    display:table-cell;
+}
+
+.group-details-desc {
+    color: #888888;
+    display: table-cell;
+    font-style: italic;
+    overflow: hidden;
+    white-space: nowrap;
+    max-width: 20em;
+    text-overflow: ellipsis;
+}
+
+.group-details-desc:after {
+    content: "...";
+}
+
 .viewbar {
     margin: 0;
     padding: 0 0 10px;
@@ -1330,4 +1350,3 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     margin: 4px 0;
     color:#808080;
 }
-
