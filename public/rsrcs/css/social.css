@@ -158,8 +158,16 @@ a:hover, a:active, a:focus {
     height: 35px;
     width: 300px;
     margin-left: 10px;
-    background: transparent url(/rsrcs/img/default-sitelogo.jpg) left center no-repeat;
     float: left;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+#sitename {
+    padding-top: 6px;
+    line-height: 35px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #3D85C6;
 }
 #search-container {
     padding: 1px;
@@ -196,6 +204,9 @@ a:hover, a:active, a:focus {
     max-width: 500px;
     overflow: hidden;
     float: left;
+    padding: 0 10px;
+    text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
 }
 #menubar-links-wrapper {
     float: right;
