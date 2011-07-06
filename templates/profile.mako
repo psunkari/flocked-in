@@ -155,12 +155,10 @@
 </%def>
 
 <%def name="summary()">
-  <div id="useravatar">
-    <% avatarURI = utils.userAvatar(userKey, user, "large") %>
-    %if avatarURI:
-      <img src="${avatarURI}" width=128 height=128/>
-    %endif
-  </div>
+  <% avatarURI = utils.userAvatar(userKey, user, "large") %>
+  %if avatarURI:
+     <div id="useravatar" class="avatar" style="background-image:url('${avatarURI}')"></div>
+  %endif
   <div id="userprofile">
     <div class="titlebar">
       <div>

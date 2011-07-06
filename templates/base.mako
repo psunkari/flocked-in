@@ -66,12 +66,10 @@
 %endif
   <div id="topbar">
     <div id="top" class="contents">
-      <div id="avatar">
-        <% avatarURI = utils.userAvatar(myKey, me) %>
-        %if avatarURI:
-          <img src="${avatarURI}" width="48" height="48"/>
-        %endif
-      </div>
+      <% avatarURI = utils.userAvatar(myKey, me) %>
+      %if avatarURI:
+        <div class="avatar" id="avatar" style="background-image:url('${avatarURI}')"></div>
+      %endif
       <div id="sitelogo">
         %if org and org.has_key('basic'):
           <% logoURI = utils.companyLogo(org) %>

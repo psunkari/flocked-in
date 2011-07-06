@@ -146,13 +146,19 @@ a:hover, a:active, a:focus {
     height: 35px;
     padding: 2px 0 0 0;
 }
+.avatar {
+    background-position: center center !important;
+    background-repeat: no-repeat !important;
+    background-size: contain !important;
+    border: none !important;
+}
 #avatar {
     height: 48px;
     width: 48px;
     border: 1px solid white;
-    background: white;
+    background: transparent;
     float: left;
-    margin: 3px 0;
+    margin: 4px 0;
 }
 #sitelogo {
     height: 35px;
@@ -449,13 +455,12 @@ a:hover, a:active, a:focus {
 
 
 
-
 #useravatar {
     height: 128px;
     width: 128px;
-    padding: 3px;
+    padding: 4px;
     border: 1px solid #C3D9FF;
-    background-color: white;
+    background-color: transparent;
     float: right;
 }
 #profile-summary {
