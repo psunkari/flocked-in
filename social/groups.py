@@ -42,7 +42,6 @@ class GroupsResource(base.BaseResource):
         for tuuid, key in cols['groups'].items():
             if key == userId:
                 yield db.remove(groupId, "latest", tuuid, 'groups')
-                return
 
 
     @profile

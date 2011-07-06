@@ -95,7 +95,7 @@ class ProfileResource(base.BaseResource):
     @defer.inlineCallbacks
     def _notify(self, myId, targetId):
         timeUUID = uuid.uuid1().bytes
-        yield db.insert(targetId, "latest", myId, timeUUID, "friends")
+        yield db.insert(targetId, "latest", myId, timeUUID, "people")
 
 
     # Remove notifications about a particular user.
@@ -105,12 +105,11 @@ class ProfileResource(base.BaseResource):
         yield db.remove(myId, "pendingConnections", targetId)
         yield db.remove(targetId, "pendingConnections", myId)
 
-        cols = yield db.get_slice(groupId, "latest", ['friends'])
+        cols = yield db.get_slice(myId, "latest", ['people'])
         cols = utils.supercolumnsToDict(cols)
-        for tuuid, key in cols['friends'].items():
+        for tuuid, key in cols['people'].items():
             if key == targetId:
-                yield db.remove(myId, "latest", tuuid, 'friends')
-                return
+                yield db.remove(myId, "latest", tuuid, 'people')
 
 
     @profile
@@ -386,11 +385,11 @@ class ProfileResource(base.BaseResource):
     @defer.inlineCallbacks
     def _archiveFriendRequest(self, myKey, targetKey):
         try:
-            cols = yield db.get_slice(myKey, "latest", ["friends"])
+            cols = yield db.get_slice(myKey, "latest", ["people"])
             cols = utils.supercolumnsToDict(cols)
-            for tuuid, key in cols['friends'].items():
+            for tuuid, key in cols['people'].items():
                 if key == targetKey:
-                    yield db.remove(myKey, "latest", tuuid, "friends")
+                    yield db.remove(myKey, "latest", tuuid, "people")
         except ttypes.NotFoundException:
             pass
         # TODO: UI update

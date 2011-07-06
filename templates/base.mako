@@ -14,14 +14,13 @@
   <%
     def navMenuItem(link, text, id):
       cls = "sidemenu-selected" if id == menuId else ''
-      return '<li><a href="%(link)s" class="ajax busy-indicator %(id)s-sideitem %(cls)s"><span class="sidemenu-icon icon %(id)s-icon"></span><span class="sidemenu-text">%(text)s</span></a></li>' % locals()
+      return '<li><a href="%(link)s" id="%(id)s-sideitem" class="ajax busy-indicator %(cls)s"><span class="sidemenu-icon icon %(id)s-icon"></span><span class="sidemenu-text">%(text)s</span></a></li>' % locals()
   %>
   <div id="mymenu-container" class="sidemenu-container">
     <ul id="mymenu" class="v-links sidemenu">
       ${navMenuItem("/feed", _("News Feed"), "feed")}
       ${navMenuItem("/notifications", _("Notifications"), "notifications")}
       ${navMenuItem("/messages", _("Messages"), "messages")}
-##      ${navMenuItem("/events", _("Events"), "events")}
       ${navMenuItem("/people", _("People"), "people")}
       ${navMenuItem("/feed?id=%s" % orgKey, _("Company Feed"), "org")}
       ${navMenuItem("/groups", _("Groups"), "groups")}
@@ -71,13 +70,14 @@
           <img src="${avatarURI}" width="48" height="48"/>
         %endif
       </div>
-      <!-- TODO: Avatar and Site Logo -->
       <div id="sitelogo">
         %if org and org.has_key('basic'):
           <% logoURI = utils.companyLogo(org) %>
-          % if logoURI:
+          %if logoURI:
             <img src="${logoURI}" alt="${org['basic']['name']}"/>
-          % endif
+          %else:
+            <span id="sitename">${org['basic']['name']}</span>
+          %endif
         %endif
       </div>
       <div id="search-container">
@@ -97,7 +97,7 @@
           title = me['basic']['jobTitle']
           name = _('%(name)s, %(title)s') % locals()
       %>
-      <div id="name"><a href="#">${name}</a></div>
+      <div id="name">${name}</div>
       <div id="menubar-links-wrapper">
         <ul class="h-links">
           <li><a href="/feed" class="ajax">${_("Home")}</a></li>
@@ -113,7 +113,6 @@
   <div id="mainbar">
     ${self.layout()}
   </div>
-  <div id="alertbar"></div>
 %if script:
   <script type="text/javascript" src="/rsrcs/js/jquery-1.6.1.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.js"></script>

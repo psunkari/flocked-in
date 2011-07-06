@@ -79,13 +79,16 @@
       %endif
     </div>
     <div class="conv-data">
+      <%
+        hasReason = reasonStr and reasonStr.has_key(convId)
+        hasComments = responses and len(responses.get(convId, {}))
+        hasLikes = likes and len(likes.get(convId, {}))
+        hasTags = items and items[convId].get("tags", {})
+        convType = convMeta["type"]
+        convOwner = convMeta["owner"]
+      %>
+      ${self._item_other_actions(convId, convOwner==myKey, convType)}
       <div id="conv-root-${convId}">
-        <%
-          hasReason = reasonStr and reasonStr.has_key(convId)
-          hasComments = responses and len(responses.get(convId, {}))
-          hasLikes = likes and len(likes.get(convId, {}))
-          hasTags = items and items[convId].get("tags", {})
-        %>
         %if hasReason:
           <span class="conv-reason">${reasonStr[convId]}</span>
           <div class="conv-summary conv-quote">
@@ -356,6 +359,7 @@
       %endif
     </div>
     <div class="comment-container">
+      <button class="button-link conv-other-actions" onclick="$.post('/ajax/item/delete', {id:'${commentId}'});">x</button>
       <span class="comment-user">${utils.userName(userId, entities[userId])}</span>
       <span class="comment-text">${comment|normalize}</span>
     </div>
@@ -625,4 +629,20 @@
       %if size:
         ${size}
       %endif
+</%def>
+
+<%def name="_item_other_actions(convId, iamOwner, convType)">
+  %if convType not in ["activity"]:
+    <span class="conv-other-actions">
+      <button class="button-link" onclick="$$.ui.showPopUp(event)">X</button>
+      <ul class="acl-menu" style="display:none;">
+          %if iamOwner:
+            <li><a class="menu-item noicon" onclick="$.post('/ajax/item/delete', {id:'${convId}'});">${_("Delete")}</a></li>
+          %else:
+            <li><a class="menu-item noicon" onclick="$.post('/ajax/item/remove', {id:'${convId}'});">${_("Remove")}</a></li>
+            <li><a class="menu-item noicon" onclick="">${_("Report")}</a></li>
+          %endif
+      </ul>
+    </span>
+  %endif
 </%def>
