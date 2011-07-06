@@ -382,8 +382,8 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
 
             fetchStart = keysFromFeed[-1]
             feedItems_d.append(fetchFeedItems(fetchedConvIds))
-            feedItems_d.append(fetchAndFilterConvs(fetchedConvIds, count))
-            feedItems_d[-1].addCallback(lambda x: convIds.extend(x))
+            filteredConvIds = yield fetchAndFilterConvs(fetchedConvIds, count)
+            convIds.extend(filteredConvIds)
 
             if len(results) < fetchCount:
                 break
