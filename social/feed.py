@@ -190,6 +190,31 @@ def updateFeedResponses(userKey, parentKey, itemKey, timeuuid, itemType,
 #    administration purposes or when visiting other user's profile
 #  - If getFn is given, it is called to fetch the list of ids from the db.
 #
+# Filter conversations based on ACL, delete status etc;
+@defer.inlineCallbacks
+def fetchAndFilterConvs(ids, count, relation, items, myId, myOrgId):
+    retIds = []
+    if not ids:
+        defer.returnValue(retIds)
+
+    cols = yield db.multiget_slice(ids, "items", ["meta", "tags", "attachments"])
+    items.update(utils.multiSuperColumnsToDict(cols))
+    checkAcl = utils.checkAcl
+
+    # Filter the items (checkAcl only for conversations)
+    for convId in ids:
+        if convId not in items:
+            continue
+        meta = items[convId]["meta"]
+        if "deleted" in meta:
+            continue
+        if checkAcl(myId, meta["acl"], meta["owner"], relation, myOrgId):
+            retIds.append(convId)
+            if len(retIds) == count:
+                break
+
+    defer.returnValue(retIds)
+
 @profile
 @defer.inlineCallbacks
 @dump_args
@@ -220,36 +245,10 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
 
     relation = Relation(myId, [])
     relationsFetched = False
-    relations_d = defer.DeferredList([relation.initFriendsList(),
+    yield defer.DeferredList([relation.initFriendsList(),
                                       relation.initGroupsList()])
 
-    # Filter conversations based on ACL, delete status etc;
-    @defer.inlineCallbacks
-    def fetchAndFilterConvs(ids, count):
-        retIds = []
-        if not ids:
-            defer.returnValue(retIds)
 
-        cols = yield db.multiget_slice(ids, "items", ["meta", "tags", "attachments"])
-        items.update(utils.multiSuperColumnsToDict(cols))
-        checkAcl = utils.checkAcl
-
-        # Wait till user relations are fetched
-        yield relations_d
-
-        # Filter the items (checkAcl only for conversations)
-        for convId in ids:
-            if convId not in items:
-                continue
-            meta = items[convId]["meta"]
-            if "deleted" in meta:
-                continue
-            if checkAcl(myId, meta["acl"], meta["owner"], relation, myOrgId):
-                retIds.append(convId)
-                if len(retIds) == count:
-                    break
-
-        defer.returnValue(retIds)
 
     # Fetch and process feed items
     reasonUserIds = {}
@@ -369,7 +368,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
             # Fetch user's feed when getFn isn't given.
             else:
                 results = yield db.get_slice(feedId, "feed", count=fetchCount,
-                                          start=fetchStart, reverse=True)
+                                              start=fetchStart, reverse=True)
                 for col in results:
                     value = col.column.value
                     if value not in allFetchedConvIds:
@@ -382,7 +381,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
 
             fetchStart = keysFromFeed[-1]
             feedItems_d.append(fetchFeedItems(fetchedConvIds))
-            filteredConvIds = yield fetchAndFilterConvs(fetchedConvIds, count)
+            filteredConvIds = yield fetchAndFilterConvs(fetchedConvIds, count, relation, items, myId, myOrgId)
             convIds.extend(filteredConvIds)
 
             if len(results) < fetchCount:
@@ -395,7 +394,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
             nextPageStart = utils.encodeKey(keysFromFeed[-1])
             convIds = convIds[0:-1]
     else:
-        convIds = yield fetchAndFilterConvs(convIds, count)
+        convIds = yield fetchAndFilterConvs(convIds, count, relation, items, myId, myOrgId)
         if len(convIds) > count:
             nextPageStart = utils.encodeKey(convIds[count])
             convIds = convIds[0:count]

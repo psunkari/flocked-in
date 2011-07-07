@@ -132,6 +132,7 @@ class ProfileResource(base.BaseResource):
         userItemsRaw = []
         userItems = []
         reasonStr = {}
+        items = {}
         nextPageStart = None
         args = {"myKey": myKey}
 
@@ -140,45 +141,37 @@ class ProfileResource(base.BaseResource):
                                   relation.initGroupsList()])
 
         toFetchEntities.add(userKey)
-        while len(convs) < count:
+
+        while len(convs) < toFetchCount:
             cols = yield db.get_slice(userKey, "userItems", start=toFetchStart,
                                       reverse=True, count=toFetchCount)
-            fetchedUserItem.extend(cols[0:count])
-            if len(cols):
-                toFetchStart = cols[-1].column.name
-            else:
-                toFetchStart = ''
-            if len(cols) == toFetchCount:
-                nextPageStart = toFetchStart
-            else:
-                nextPageStart = None
-
+            tmpIds = []
             for col in cols:
-                value = tuple(col.column.value.split(":"))
-                rtype, itemId, convId, convType, convOwnerId, commentSnippet = value
+                convId = col.column.value.split(":")[2]
+                if convId not in tmpIds and convId not in convs:
+                    tmpIds.append(convId)
+            filteredConvs = yield feed.fetchAndFilterConvs(tmpIds, toFetchCount, relation, items, myKey, myOrgId)
+            for col in cols[0:count]:
+                convId = col.column.value.split(":")[2]
+                if len(convs) == count or len(fetchedUserItem) == count*2:
+                    nextPageStart = col.column.name
+                    break
+                if convId not in filteredConvs and convId not in convs:
+                    continue
+                fetchedUserItem.append(col)
                 if convId not in convs:
                     convs.append(convId)
-            if len(cols) == toFetchCount:
-                convs = convs[0:count]
-
-            items = yield db.multiget_slice(convs, "items", ["meta"])
-            items = utils.multiSuperColumnsToDict(items)
-            for convId in convs[:]:
-                    acl = items[convId]["meta"]["acl"]
-                    owner = items[convId]["meta"]["owner"]
-
-                    if not utils.checkAcl(myKey, acl, owner, relation, myOrgId):
-                        convs.remove(convId)
-            if len(cols) < toFetchCount:
+            if len(cols) < toFetchCount or nextPageStart:
                 break
+            if cols:
+                toFetchStart = cols[-1].column.name
         if nextPageStart:
             nextPageStart = utils.encodeKey(nextPageStart)
+
 
         for col in fetchedUserItem:
             value = tuple(col.column.value.split(":"))
             rtype, itemId, convId, convType, convOwnerId, commentSnippet = value
-            if convId not in convs:
-                continue
             commentSnippet = """<span class="snippet"> "%s" </span>""" %(_(commentSnippet))
             toFetchEntities.add(convOwnerId)
             toFetchItems.add(convId)
