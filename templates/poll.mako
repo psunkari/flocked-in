@@ -43,7 +43,7 @@
     %for option in options:
       <%
         count = int(counts.get(option, '0'))
-        percent = (count * 100)/total
+        percent = (count * 100)/total if total > 0 else 0
         checked = 'checked="true"' if (voted and voted == option) else ''
         optionId = 'option-%s-%s' % (option, convId)
       %>
@@ -91,7 +91,7 @@
         %for option in options:
           <%
             count = int(counts.get(option, '0'))
-            percent = (count * 100)/total
+            percent = (count * 100)/total if total > 0 else 0
             checked = 'checked="true"' if (voted and voted == option) else ''
             optionId = 'option-%s-%s' % (option, convId)
           %>
