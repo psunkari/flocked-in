@@ -44,17 +44,24 @@
       <%
         count = int(counts.get(option, '0'))
         percent = (count * 100)/total
+        checked = 'checked="true"' if (voted and voted == option) else ''
+        optionId = 'option-%s-%s' % (option, convId)
       %>
       <li>
-        <div>${options[option]}</div>
-        <div>
+        %if checked:
+          <span class=" icon tick-icon">&nbsp</span>
+        %else:
+          <span class=" icon empty-icon">&nbsp</span>
+        %endif
+        <div class="poll-wrapper">
           <div class="poll-bar-wrapper">
+            <span class="poll-option-text" title="${options[option]}">${options[option]}</span>
             <div class="poll-bar option-${int(option)%10}" style="width:${percent}%;">&nbsp;</div>
           </div>
           %if percent > 0:
-            <div class="poll-percent"><button class="button-link" onclick="$$.dialog.create({id:'poll-users-${option}-${convId}'});$.getScript('/ajax/poll/voters?id=${convId}&option=${option}');">${"%d%%"%percent}</button></div>
+            <div class="poll-percent"><span onclick="$$.dialog.create({id:'poll-users-${option}-${convId}'});$.getScript('/ajax/poll/voters?id=${convId}&option=${option}');">${"%d%%"%percent}</span></div>
           %else:
-            <div class="poll-percent"><button class="button-link">${"%d%%"%percent}</button></div>
+            <div class="poll-percent"><span>${"%d%%"%percent}</span></div>
           %endif
         </div>
       </li>
@@ -72,27 +79,47 @@
     conv = items[convId]
     question = conv["meta"]["question"]
     options = conv["options"]
+    counts = conv.get("counts", {})
   %>
   <form action="/poll/vote" method="POST" class="ajax">
-    <div class="tabular-form poll-options">
-      %for option in options:
+      <ul class="poll-results">
         <%
-          checked = 'checked="true"' if (voted and voted == option) else ''
-          optionId = 'option-%s-%s' % (option, convId)
+          total = 0
+          for votes in counts.values():
+            total += int(votes)
         %>
-        <ul>
-          <li><input type="radio" name="option" value="${option}" id="${optionId}" ${checked}/></li>
-          <li><label for="${optionId}">${options[option]}</label></li>
-        </ul>
-      %endfor
+        %for option in options:
+          <%
+            count = int(counts.get(option, '0'))
+            percent = (count * 100)/total
+            checked = 'checked="true"' if (voted and voted == option) else ''
+            optionId = 'option-%s-%s' % (option, convId)
+          %>
+          <li>
+            <input type="radio" name="option" value="${option}" id="${optionId}" ${checked} class="poll-options-option"/>
+            <div class="poll-wrapper" onclick="$('#${optionId}').attr('checked', true)">
+              <div class="poll-bar-wrapper">
+                <span class="poll-option-text" title="${options[option]}">${options[option]}</span>
+                <div class="poll-bar option-${int(option)%10}" style="width:${percent}%;">&nbsp;</div>
+              </div>
+              %if percent > 0:
+                <div class="poll-percent"><span onclick="$$.dialog.create({id:'poll-users-${option}-${convId}'});$.getScript('/ajax/poll/voters?id=${convId}&option=${option}');">${"%d%%"%percent}</span></div>
+              %else:
+                <div class="poll-percent"><span>${"%d%%"%percent}</span></div>
+              %endif
+            </div>
+          </li>
+        %endfor
+      </ul>
+      <div class="item-subactions">
+        <input type="hidden" name="id" value="${convId}"/>
+        %if voted:
+          <input style="font-size:11px" type="submit" class="button" id="submit" value="${_('Update')}"/>&nbsp;
+          <a class="ajax" _ref="/poll/results?id=${convId}">${_('Go back to results')}</a>
+        %else:
+          <input type="submit" id="submit" value="${_('Vote')}"/>
+        %endif
       </div>
-      <input type="hidden" name="id" value="${convId}"/>
-      %if voted:
-        <input type="submit" id="submit" value="${_('Update')}"/>&nbsp;
-        <a class="ajax" _ref="/poll/results?id=${convId}">${_('Go back to results')}</a>
-      %else:
-        <input type="submit" id="submit" value="${_('Vote')}"/>
-      %endif
     </form>
   </form>
 </%def>

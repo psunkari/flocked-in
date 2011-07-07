@@ -566,7 +566,12 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .link-icon {
     background-position: 0 -368px;
 }
-
+.tick-icon {
+    background-position: 0 -320px;
+}
+.empty-icon {
+    background-position: 0 20px;
+}
 #sharebar .input-wrap {
     padding: 4px;
     margin-bottom: 5px;
@@ -1061,14 +1066,68 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
  * Styling for polls
  */
 
-.poll-bar-wrapper {
-    padding: 1px;
-    width: 300px;
-    border: 1px solid #3D85C6;
-    float: left;
+.poll-wrapper {
+    /*box-shadow: 1px 1px 1px #B8B8B8;*/
+    border-radius: 25px;
+    font-size:15px;
+    height:25px;
+    width:370px;
+    background-image: -webkit-gradient(
+        linear,
+        left bottom,
+        left top,
+        color-stop(0.45, rgb(231,231,231)),
+        color-stop(0.73, rgb(244,244,244))
+    );
+    background-image: -moz-linear-gradient(
+        center bottom,
+        rgb(231,231,231) 45%,
+        rgb(244,244,244) 73%
+    );
+    background-color:rgb(244, 244, 244);
+    display:inline-block;
 }
+
+.poll-bar-wrapper {
+    padding: 2px;
+    width: 330px;
+    display:inline-block;
+    background-image: -webkit-gradient(
+        linear,
+        left bottom,
+        left top,
+        color-stop(0.26, rgb(219,219,219)),
+        color-stop(0.63, rgb(244,244,244))
+    );
+
+    background-image: -moz-linear-gradient(
+        center bottom,
+        rgb(219,219,219) 26%,
+        rgb(244,244,244) 63%
+    );
+    border-right:1px solid #E0E0E0;
+    border-radius:25px;
+    background-color: #F4F4F4;
+}
+
 .poll-bar {
-    background-color: #C3D9FF;
+    background-image: -webkit-gradient(
+        linear,
+        left bottom,
+        left top,
+        color-stop(0.26, rgb(187,219,92)),
+        color-stop(0.63, rgb(210,242,114))
+    );
+    background-image: -moz-linear-gradient(
+        center bottom,
+        rgb(187,219,92) 26%,
+        rgb(210,242,114) 63%
+    );
+    border-radius:25px;
+    margin: -2px;
+    display:inline-block;
+    height:25px;
+    background-color:#BBDB5C;
 }
 
 .poll-results {
@@ -1081,12 +1140,41 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     padding: 5px 0;
 }
 .poll-percent {
-    float: left;
-    padding: 2px 6px;
+    display:inline-block;
+    width:20px;
+    text-align:right;
+    font-size:10px;
+    position:relative;
+    padding-bottom:0px;
+    top:2px;
+    text-shadow: 0 1px 1px #555555;
+    cursor:pointer;
 }
+
 .poll-options {
-    margin: 5px 0;
+    /*margin: 5px 0;*/
 }
+
+.poll-options-option {
+    display: inline-block;
+    float: left;
+    position: relative;
+    top: 2px;
+}
+
+.poll-option-text {
+    font-size:11px;
+    position:absolute;
+    font-weight:bold;
+    max-width:325px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow: ellipsis;
+    margin-left:4px;
+    margin-top:4px;
+    text-shadow:0 1px 2px #FFFFFF;
+}
+
 #share-poll-options > .input-wrap {
     padding-left: 25px;
     position: relative;
