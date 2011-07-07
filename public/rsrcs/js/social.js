@@ -489,6 +489,19 @@ var convs = {
             label.height(input.outerHeight());
             label.width(input.outerWidth());
         }
+    },
+
+    playEmbed: function(convId) {
+        var $embedFrame = $('#embed-frame-'+convId),
+            width = $embedFrame.css('width'),
+            height = $embedFrame.css('height'),
+            frame = '<iframe src="/embed/link?id='+convId+
+                    '" height="'+height+'" width="'+width+
+                    '" frameborder="0"></iframe>';
+        
+        $embedFrame.append($(frame))
+                   .css('display', 'block')
+                   .prev().css('display', 'none');
     }
 };
 
