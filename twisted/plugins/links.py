@@ -1,4 +1,5 @@
 import embedly
+import urllib
 from lxml               import etree
 
 from zope.interface     import implements
@@ -62,7 +63,7 @@ class Links(object):
         if len(url.split("://")) == 1:
             url = "http://" + url
 
-        summary, title, image = yield self._summary(url)
+        summary, title, image, embed = yield self._summary(url)
         summary = _encode(summary)
         title = _encode(title)
 
@@ -77,8 +78,18 @@ class Links(object):
             meta["title"] = title
         if image:
             meta['imgSrc'] = image
-        meta["url"] = url
+        if embed:
+            embedType = embed.get("type")
+            embedSrc = embed.get("html")
+            embedWidth = embed.get("width")
+            embedHeight = embed.get("height")
+            if embedHeight and embedWidth and embedSrc:
+                meta["embedType"] = embedType
+                meta["embedSrc"] = embedSrc
+                meta["embedHeight"] = str(embedHeight)
+                meta["embedWidth"] = str(embedWidth)
 
+        meta["url"] = url
         item["meta"].update(meta)
 
         yield db.batch_insert(convId, "items", item)
@@ -95,25 +106,30 @@ class Links(object):
 
     @defer.inlineCallbacks
     def _summary(self, url):
-
         parser = etree.HTMLParser()
         summary = None
         title = None
+        image = None
         ogTitle = None
         ogSummary = None
         ogImage = None
-        image = None
         try:
-            #XXX: client.getPage starts and stops HTTPClientFactory everytime
-            #     find a way to avoid this
-            if embedlyClient :
-                obj = yield threads.deferToThread(embedlyClient.oembed, url)
-                image = obj.get('thumbnail_url')
-                if embedlyClient._regex.match(url) and obj.get('error') != True:
+            # First check if embedly supports it.
+            if embedlyClient and embedlyClient._regex.match(url):
+                kwargs = {'maxwidth': 400, 'autoplay': 1}
+                obj = yield threads.deferToThread(embedlyClient.oembed, url, **kwargs)
+                if obj.get('error') != True:
+                    image = obj.get('thumbnail_url')
                     title = obj.get("title")
                     summary = obj.get("description")
-                    defer.returnValue((summary, title, image))
+                    embedType = obj.get("type")
+                    if embedType in ["photo", "video", "audio"]:
+                        defer.returnValue((summary, title, image, obj))
+                    else:
+                        defer.returnValue((summary, title, image, None))
 
+            #XXX: client.getPage starts and stops HTTPClientFactory everytime
+            #     find a way to avoid this
             d = client.getPage(url)
             data = yield d
             domain = url.split('/', 3)[2]
@@ -124,7 +140,7 @@ class Links(object):
                 title = titleElement[0].text
             meta = tree.xpath("//meta")
             for element in meta:
-                if element.attrib.get('property','') == 'og:title':
+                if element.attrib.get('property', '') == 'og:title':
                     ogTitle = element.attrib.get('content', '')
                     ogTitle = ogTitle.encode('utf-8')
                 if element.attrib.get('property', '') == 'og:description':
@@ -153,10 +169,10 @@ class Links(object):
 
                         image = element.attrib['src']
                         break
-            defer.returnValue((ogSummary or summary, ogTitle or title,  ogImage or image))
+            defer.returnValue((ogSummary or summary, ogTitle or title, ogImage or image, None))
         except Exception as e:
             log.msg(e)
-            defer.returnValue((ogSummary or summary, ogTitle or title,  ogImage or image))
+            defer.returnValue((ogSummary or summary, ogTitle or title, ogImage or image, None))
 
 
 links = Links()

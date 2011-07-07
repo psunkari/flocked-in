@@ -27,6 +27,7 @@ from social.messaging       import MessagingResource
 from social.admin           import Admin
 from social.server          import SessionFactory
 from social.files           import FilesResource
+from social.embed           import EmbedResource
 
 
 def getPluggedResources(ajax=False):
@@ -181,13 +182,13 @@ class RootResource(resource.Resource):
             self._about = static.File("public/about")
             self._signup = SignupResource()
             self._signin = SigninResource()
+            self._embed = EmbedResource()
         else:
             self._feedback = FeedbackResource(True)
 
     @defer.inlineCallbacks
     def _clearAuth(self, request):
         sessionId = request.getCookie(request.cookiename)
-        log.msg("****** Session Id: ", sessionId)
         if sessionId:
             yield request.site.clearSession(sessionId)
 
@@ -220,6 +221,8 @@ class RootResource(resource.Resource):
                 match = self._auto
             elif path == "ajax":
                 match = self._ajax
+            elif path == "embed":
+                match = self._embed
             elif path == "signin":
                 match = self._signin
             elif path == "avatar":
