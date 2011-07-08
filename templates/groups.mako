@@ -41,7 +41,7 @@
           </div>
           <div id="groups-paging" class="pagingbar">
             %if not script:
-              ${paging()}
+              ${self.paging()}
             %endif
           </div>
         </div>

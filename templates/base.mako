@@ -81,8 +81,8 @@
         %endif
       </div>
       <div id="search-container">
-        <form id="search" action="/search" method="post">
-          <input type="text" id="searchbox" name="searchbox"
+        <form id="search" action="/search" method="GET" class="ajaxget">
+          <input type="text" id="searchbox" name="q"
                  placeholder="${_('Search people, messages and statuses...')}"/>
           <input type="submit" id="searchbutton" value="${_('Go!')}"/>
         </form>

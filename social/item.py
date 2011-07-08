@@ -844,6 +844,8 @@ class ItemResource(base.BaseResource):
                                      convACL, convOwnerId, responseType,
                                      deleteAll=deleteAll)
             yield notifications.deleteNotifications(convId, conv["meta"]["uuid"])
+        if deleteAll:
+            fts.solr.deleteIndex(itemId)
 
         #TODO: update UI
 

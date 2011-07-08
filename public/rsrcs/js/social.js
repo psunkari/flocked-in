@@ -147,6 +147,31 @@ _initAjaxRequests: function _initAjaxRequests() {
 
         return false;
     });
+    
+    /* Search form is actually submitted over GET */
+    $('#search').live("submit", function() {
+        if (this.hasAttribute("disabled"))
+            return false;
+
+        var $this = $(this),
+            uri = '/search?'+$this.serialize(),
+            deferred = $.fetchUri(uri);
+
+        self.setBusy(deferred, $this)
+
+        // Prevent accidental resubmission by disabling the
+        // form till we get a response from the server.
+        $this.attr("disabled", true);
+        $inputs = $this.find(":input").attr("disabled", true);
+        var enabler = function() {
+            $inputs.removeAttr("disabled");
+            $this.removeAttr("disabled");
+        };
+        deferred.then(enabler, enabler);
+
+        return false;
+    });
+
 
     /* Global ajax error handler */
     $(document).ajaxError(function(event, request, settings, thrownError) {

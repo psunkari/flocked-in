@@ -11,6 +11,7 @@ from twisted.web.http_headers   import Headers
 
 from social                     import base, utils, config, feed
 from social                     import errors, plugins, _
+from social.constants           import SEARCH_RESULTS_PER_PAGE
 from social.template            import render, renderScriptBlock
 from social.logging             import dump_args, profile
 
@@ -92,19 +93,21 @@ class Solr(object):
 
         root = self.elementMaker.add(self.elementMaker.doc(*fields))
         url = URL +  "/update?commit=true"
-
         return self._request("POST", url, {}, XMLBodyProducer(root))
 
-    def deleteIndex(self, itemId, item):
-        pass
 
-    def search(self, term):
+    def deleteIndex(self, itemId):
+        root = self.elementMaker.delete(self.elementMaker.id(str(itemId)))
+        url = URL +  "/update?commit=true"
+        return self._request("POST", url, {}, XMLBodyProducer(root))
+
+    def search(self, term, start=0):
         def callback(response):
             finished = defer.Deferred()
             response.deliverBody(JsonBodyReceiver(finished))
             return finished
-
-        url = URL + "/select?q=%s" % (term)
+        rows = SEARCH_RESULTS_PER_PAGE
+        url = URL + "/select?q=%s&start=%s&rows=%s" % (term, start, rows)
         d = self._request("GET", url)
         d.addCallback(callback)
         return d
@@ -119,22 +122,34 @@ class FTSResource(base.BaseResource):
     def search(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
-        args["feedTitle"] = _("Search Results")
 
-        term = utils.getRequestArg(request, "searchbox")
+        term = utils.getRequestArg(request, "q")
+        start = utils.getRequestArg(request, "start") or 0
+        args["term"] = term
+        prevPageStart = ''
+        nextPageStart = ''
+
         if not term:
             errors.MissingParams()
 
-        if script and landing:
-            yield render(request, "feed.mako", **args)
+        try:
+            start = int(start)
+            if start < 0:
+                raise ValueError
+        except ValueError:
+            errors.InvalidParamValue()
+
+        if script  and landing:
+            yield render(request, "search.mako", **args)
 
         if script and appchange:
-            yield renderScriptBlock(request, "feed.mako", "layout",
+            yield renderScriptBlock(request, "search.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-        res = yield solr.search(term)
+        res = yield solr.search(term, start)
         data = res.data
         convs = []
+        numMatched = data.get('response', {}).get('numFound', 0)
         for item in data.get('response', {}).get('docs', []):
             parent = item.get('parent', None)
             if parent:
@@ -142,36 +157,42 @@ class FTSResource(base.BaseResource):
                     convs.append(parent)
             else:
                 convs.append(item.get('id'))
-
         if convs:
-            feedItems = yield feed.getFeedItems(request, convIds=convs)
+            feedItems = yield feed.getFeedItems(request, convIds=convs, count=len(convs))
             args.update(feedItems)
         else:
             args["conversations"] = convs
 
+        if start + SEARCH_RESULTS_PER_PAGE < numMatched:
+            nextPageStart = start + SEARCH_RESULTS_PER_PAGE
+        if start - SEARCH_RESULTS_PER_PAGE >= 0:
+            prevPageStart = start - SEARCH_RESULTS_PER_PAGE
+
+        args["nextPageStart"] = nextPageStart
+        args["prevPageStart"] = prevPageStart
+
         if script:
-            yield renderScriptBlock(request, "feed.mako", "feed", landing,
+            yield renderScriptBlock(request, "search.mako", "results", landing,
                                     "#user-feed", "set", **args)
+            yield renderScriptBlock(request, "search.mako", "paging", landing,
+                                    "#search-paging", "set", **args)
 
         if script and landing:
             request.write("</body></html>")
 
         if not script:
-            yield render(request, "feed.mako", **args)
+            yield render(request, "search.mako", **args)
 
     @profile
     @dump_args
-    def render_POST(self, request):
+    def render_GET(self, request):
         segmentCount = len(request.postpath)
         d = None
         if segmentCount == 0:
             d = self.search(request)
         return self._epilogue(request, d)
 
-    @profile
-    @dump_args
-    def render_GET(self, request):
-        request.redirect("/feed")
-        return ""
+    def render_POST(self, request):
+        return resource.NoResource("Page not found")
 
 solr = Solr()

@@ -20,3 +20,5 @@ NOTIFICATIONS_PER_ITEM = 4
 
 #Number of people in one page
 PEOPLE_PER_PAGE = 20
+
+SEARCH_RESULTS_PER_PAGE = 10
