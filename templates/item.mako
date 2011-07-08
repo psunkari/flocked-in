@@ -317,7 +317,9 @@
     responsesToShow = responses.get(convId, {}) if responses else []
   %>
   <div id="comments-header-${convId}">
-    ${self.conv_comments_head(convId, responseCount, len(responsesToShow), isFeed)}
+    %if responsesToShow:
+      ${self.conv_comments_head(convId, responseCount, len(responsesToShow), isFeed)}
+    %endif
   </div>
   <div id="comments-${convId}">
     %for responseId in responsesToShow:

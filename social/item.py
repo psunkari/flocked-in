@@ -633,9 +633,10 @@ class ItemResource(base.BaseResource):
             args["oldest"] = utils.encodeKey(nextPageStart)
 
         if isFeed:
+            handler = {"onload":"(function(){$$.convs.showHideComponent('%s', 'comments', true)})();"%(convId)}
             yield renderScriptBlock(request, "item.mako", 'conv_comments',
                         not self._ajax, '#conv-comments-wrapper-%s' % convId,
-                        'set', True, handlers={"onload":"$('#conv-meta-wrapper-%s').removeClass('no-comments')"%convId}, **args)
+                        'set', True, handlers=handler, **args)
         else:
             landing = not self._ajax
             showing = utils.getRequestArg(request, "nc") or "0"
