@@ -6,7 +6,7 @@ from twisted.python     import log
 
 from social             import db, utils, base, _, whitelist, blacklist, config
 from social.relations   import Relation
-from social.template    import render, renderScriptBlock
+from social.template    import render, renderScriptBlock, getBlock
 from social.isocial     import IAuthInfo
 from social.constants   import PEOPLE_PER_PAGE
 from social.logging     import dump_args, profile
@@ -15,32 +15,35 @@ from social.logging     import dump_args, profile
 def _sendInvitations(myOrgUsers, otherOrgUsers, me, myId, myOrg):
     rootUrl = config.get('General', 'URL')
     brandName = config.get('Branding', 'Name')
-    myName = me["basic"]["name"]
+    invitee = me["basic"]["name"]
     myOrgName = myOrg["basic"]["name"]
     deferreds = []
 
-    myOrgSubject = "%s invited you to %s" % (myName, brandName)
-    myOrgBody = "Hi,\n\n"\
-                "%(myName)s has invited you to %(myOrgName)s network on %(brandName)s.\n"\
+    subject = "%s invited you to %s" % (invitee, brandName)
+    myOrgText = "Hi,\n\n"\
+                "%(invitee)s has invited you to %(myOrgName)s network on %(brandName)s.\n"\
                 "To activate your account please visit: %(activationUrl)s.\n\n"\
                 "Flocked.in Team."
-    otherOrgSubject = "%s invited you to %s" % (myName, brandName)
-    otherOrgBody = "Hi,\n\n"\
-                   "%(myName)s has invited you to try %(brandName)s.\n"\
+    otherOrgText = "Hi,\n\n"\
+                   "%(invitee)s has invited you to try %(brandName)s.\n"\
                    "To activate your account please visit: %(activationUrl)s.\n\n"\
                    "Flocked.in Team."
-
+    images = [["%s.png"%brandName, "%sLogo" %brandName]]
     myOrgUsers.extend(otherOrgUsers)
+
     for emailId in myOrgUsers:
         token = utils.getRandomKey('invite')
         activationUrl = "%(rootUrl)s/signup?email=%(emailId)s&token=%(token)s" % (locals())
         localpart, domainpart = emailId.split('@')
+        htmlPart = getBlock("email/invite.html", None, args=[], **locals())
 
         deferreds.append(db.insert(domainpart, "invitations", myId, token, emailId))
         if emailId in otherOrgUsers:
-            deferreds.append(utils.sendmail(emailId, otherOrgSubject, otherOrgBody%locals()))
+            textPart = otherOrgText%locals()
+            deferreds.append(utils.sendmail(emailId, subject, textPart, htmlPart, images))
         else:
-            deferreds.append(utils.sendmail(emailId, myOrgSubject, myOrgBody%locals()))
+            textpart = myOrgText%locals()
+            deferreds.append(utils.sendmail(emailId, subject, textPart, htmlPart, images))
 
     yield defer.DeferredList(deferreds)
 
