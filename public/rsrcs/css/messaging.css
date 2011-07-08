@@ -2,10 +2,18 @@
 .messaging-icon {
     height: 16px;
     width: 16px;
-    background-image: url(/rsrcs/img/messaging_sprite.png);
+    background-image: url(/rsrcs/img/message-list.png);
     background-repeat: no-repeat;
     display: inline-block;
     vertical-align: middle;
+    cursor:pointer;
+    box-shadow:1px 1px 1px -1px #CCCCCC;
+    border-radius:2px;
+    margin-right:2px;
+}
+
+.messaging-icon:active {
+    box-shadow: inset 1px 1px 1px -1px #CCCCCC;
 }
 
 #msg-toolbar {
@@ -58,6 +66,7 @@
 .conversation-row-actions {
     width: 75px;
     text-align: right;
+    padding-right:3px;
 }
 .conversation-row-info {
     padding-left: 8px;
@@ -94,6 +103,7 @@
     background-color: #E8EEFA;
     color: #3366CC;
 }
+
 
 
 /*
@@ -173,19 +183,21 @@
 }
 
 .messaging-archive-icon {
-    background-position:0px -110px;
+    background-image: url("/rsrcs/img/folder-pane.png");
+    background-position:0px -192px;
 }
 
 .messaging-unread-icon {
-    background-position:0px -175px;
+    background-position:0px -16px;
 }
 
 .messaging-read-icon {
-    background-position:0px -160px;
+    background-position:0px 0px;
 }
 
 .messaging-delete-icon {
-    background-position:0px -78px;
+    background-image: url("/rsrcs/img/cross.png");
+    background-position:center;
 }
 
 .nopad {
@@ -195,6 +207,7 @@
 .conversation-composer-field {
     padding:5px;
     min-height:20px;
+    margin-bottom:5px;
 }
 
 .conversation-composer-field-body {
