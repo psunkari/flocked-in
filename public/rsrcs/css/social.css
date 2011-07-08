@@ -741,6 +741,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     height: 32px;
     width: 32px;
     float: left;
+    position: absolute;
 }
 
 .comment-container,
