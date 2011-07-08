@@ -521,10 +521,21 @@
     convType = conv["meta"]["type"]
     userId = conv["meta"]["owner"]
     normalize = utils.normalizeText
-    url = conv["meta"].get("url", "")
-    title = conv["meta"].get("title", '')
-    imgsrc = conv['meta'].get('imgSrc', '')
-    summary = conv["meta"].get("summary", '')
+
+    meta = conv["meta"]
+    url = meta.get("url", "")
+    title = meta.get("title", '')
+    imgsrc = meta.get("imgSrc", '')
+    summary = meta.get("summary", '')
+
+    hasEmbed = False
+    embedType = meta.get("embedType", '')
+    embedSrc = meta.get("embedSrc", '')
+    embedWidth = meta.get("embedWidth", 0)
+    embedHeight = meta.get("embedHeight", 0)
+    if embedType and embedSrc and embedWidth and embedHeight:
+        hasEmbed = True
+
     title = title if title else url
   %>
   %if not isQuoted:
@@ -537,13 +548,24 @@
         ${conv["meta"]["comment"]|normalize}
       %endif
       <div class="link-item">
-        %if imgsrc:
-          <img src='${imgsrc}' class="link-image"></img>
+        %if imgsrc and hasEmbed:
+          <div onclick="$$.convs.playEmbed('${convId}');" class="embed-wrapper">
+            <div class="embed-overlay embed-${embedType}"></div>
+            <img src='${imgsrc}' class="link-image has-embed embed-${embedType}"/>
+          </div>
+        %elif imgsrc:
+          <img src='${imgsrc}' class="link-image"/>
         %endif
-      <a href=${url} class="link-url" target="_blank" ><div class="link-title" > ${_(title)} </div></a>
-      <div id="summary" class="link-summary"> ${_(summary)}</div>
+        <a href=${url} target="_blank"><div class="link-title">${_(title)}</div></a>
+        <div id="summary" class="link-summary">${_(summary)}</div>
+        %if title != url:
+          <div id="url" class="link-url">${url}</div>
+        %endif
       </div>
-
+      %if hasEmbed:
+        <div class="embed-frame-wrapper" id="embed-frame-${convId}"
+             style="width:${embedWidth}px;height:${embedHeight}px;display:none;"/>
+      %endif
     </div>
   </div>
 </%def>

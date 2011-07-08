@@ -1240,6 +1240,22 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     max-height: 100px;
     max-width: 100px;
 }
+.link-url {
+    color: gray;
+    font-size: 10px;
+}
+.embed-wrapper {
+    position: relative;
+    float: left;
+    cursor: pointer;
+}
+.embed-overlay {
+    width: 24px;
+    height: 24px;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+}
 
 
 /*
