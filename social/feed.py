@@ -248,8 +248,6 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
     yield defer.DeferredList([relation.initFriendsList(),
                                       relation.initGroupsList()])
 
-
-
     # Fetch and process feed items
     reasonUserIds = {}
     reasonTagId = {}
@@ -482,13 +480,12 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
 
 
 def _feedFilter(request, feedId, itemType, start='', count=10):
-
     @defer.inlineCallbacks
     def getFn(start='', count=12):
         cf = "feed_%s"%(itemType)
         items = yield db.get_slice(feedId, cf, start=start, count=count, reverse=True)
         defer.returnValue(utils.columnsToDict(items, ordered=True))
-    return getFeedItems(request, getFn= getFn, start=start)
+    return getFeedItems(request, getFn=getFn, start=start)
 
 
 class FeedResource(base.BaseResource):
@@ -593,7 +590,6 @@ class FeedResource(base.BaseResource):
     @defer.inlineCallbacks
     def _renderMore(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
-
 
         entityId = utils.getRequestArg(request, "id")
         start = utils.getRequestArg(request, "start") or ""

@@ -30,22 +30,18 @@
 </%def>
 
 <%def name="content()">
-    % if conversations:
-      %for convId in conversations:
-        <div class="conv-item" >
-          %for reason in reasonStr[convId]:
-            <div>
-              ${reason}
-            </div>
-          %endfor
-        </div>
-      %endfor
-      %if nextPageStart:
-        <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" _ref="/notifications?start=${nextPageStart}">${_("Fetch older Notifications")}</a></div>
-      %else:
-        <div id="next-load-wrapper">No more Notifications to show</div>
-      %endif
-    % else:
-        <div id="next-load-wrapper">No more Notifications to show</div>
+  %if notifications:
+    %for notifyId in notifications:
+      <div class="conv-item" >
+        ${notifyStr[notifyId]}
+      </div>
+    %endfor
+    %if nextPageStart:
+      <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" _ref="/notifications?start=${nextPageStart}">${_("Fetch older Notifications")}</a></div>
+    %else:
+      <div id="next-load-wrapper">No more Notifications to show</div>
     %endif
+  %else:
+      <div id="next-load-wrapper">No more Notifications to show</div>
+  %endif
 </%def>

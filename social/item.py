@@ -17,6 +17,25 @@ from social.template    import render, renderScriptBlock
 from social.logging      import profile, dump_args
 
 
+@defer.inlineCallbacks
+def pushNotifications(notifyType, convId, convType, convOwner,
+                          actor, timeUUID, followers=None):
+    notifyId = ":".join([convId, convType, convOwner, notifyType])
+    if not followers:
+        followers = yield db.get_slice(convId, "items", super_column="followers")
+    deferreds = []
+
+    for follower in followers:
+        userKey = follower.column.name
+        if actor != userKey:
+            d0 = db.get_slice(userKey, "notificationItems", super_column=notifyId, count=1, reverse=True)
+            d0.addCallback(lambda x: db.remove(userKey, "notifications", x[0].column.name) if (x and x[0].column.name != timeUUID) else defer.succeed([]))
+            d1 = db.insert(userKey, "notifications", notifyId, timeUUID)
+            d2 = db.insert(userKey, "latest", notifyId, timeUUID, "notifications")
+            d3 = db.batch_insert(userKey, "notificationItems", {notifyId:{timeUUID:actor}})
+            deferreds.extend([d0, d1, d2, d3])
+    yield defer.DeferredList(deferreds)
+
 
 class ItemResource(base.BaseResource):
     isLeaf = True
@@ -271,6 +290,7 @@ class ItemResource(base.BaseResource):
 
         timeUUID = uuid.uuid1().bytes
         responseType = "L"
+
         # 1. add user to Likes list
         yield db.insert(itemId, "itemLikes", timeUUID, myId)
 
@@ -278,7 +298,6 @@ class ItemResource(base.BaseResource):
         yield db.insert(convId, "items", "", myId, "followers")
 
         # 3. update user's feed, feedItems, feed_*
-
         userItemValue = ":".join([responseType, itemId, convId, convType,
                                   convOwnerId, commentSnippet])
         yield db.insert(myId, "userItems", userItemValue, timeUUID)
@@ -292,8 +311,8 @@ class ItemResource(base.BaseResource):
         yield feed.pushToOthersFeed(myId, timeUUID, itemId, convId, convACL,
                                     responseType, convType, convOwnerId, entities=extraEntities)
 
-        yield notifications.pushNotifications(itemId, convId, responseType, convType,
-                                              convOwnerId, myId, timeUUID)
+        notifyType = "L" if itemId == convId else "LC"
+        yield pushNotifications(notifyType, convId, convType, convOwnerId, myId, timeUUID)
 
         item["meta"]["likesCount"] = str(likesCount + 1)
         args["items"] = {itemId: item}
@@ -401,8 +420,6 @@ class ItemResource(base.BaseResource):
         yield db.remove(myId, "userItems", likeTimeUUID)
         if plugins.has_key(convType) and plugins[convType].hasIndex:
             yield db.remove(myId, "userItems_"+ convType, likeTimeUUID)
-
-        yield notifications.deleteNotifications(convId, likeTimeUUID)
 
         item["meta"]["likesCount"] = likesCount -1
         args["items"] = {itemId: item}
@@ -514,8 +531,9 @@ class ItemResource(base.BaseResource):
         yield feed.pushToOthersFeed(myId, timeUUID, itemId, convId, convACL,
                                     responseType, convType, convOwnerId)
 
-        yield notifications.pushNotifications( itemId, convId, responseType,
-                                              convType, convOwnerId, myId, timeUUID)
+        notifyType = "C"
+        yield pushNotifications(notifyType, convId, convType, convOwnerId, myId, timeUUID)
+
         # Finally, update the UI
         entities = yield db.get(myId, "entities", super_column="basic")
         entities = {myId: utils.supercolumnsToDict([entities])}
@@ -801,7 +819,6 @@ class ItemResource(base.BaseResource):
             yield feed.deleteUserFeed(userId, itemType, tuuid)
             yield feed.deleteFeed(userId, itemId, convId, convType, convACL,
                                      convOwnerId, responseType, deleteAll=deleteAll)
-            yield notifications.deleteNotifications(convId, tuuid)
 
         # if conv is being deleted, delete feed corresponding to commentLikes also.
         if itemId == convId:
@@ -815,7 +832,6 @@ class ItemResource(base.BaseResource):
                     yield feed.deleteFeed(userId, responseId, convId,
                                              convType, convACL, convOwnerId,
                                              responseType, deleteAll=deleteAll)
-                    yield notifications.deleteNotifications(convId, tuuid)
 
         #remove from itemResponses
         responseType = "C"
@@ -830,7 +846,6 @@ class ItemResource(base.BaseResource):
                 if deleteAll:
                     yield db.insert(convId, "deletedConvs", '', responseId)
                     yield db.remove(convId, "itemResponses", tuuid)
-                yield notifications.deleteNotifications(convId, tuuid)
 
         #update itemResponse Count
         if itemId != convId and deleteAll:
@@ -843,7 +858,6 @@ class ItemResource(base.BaseResource):
             yield feed.deleteFeed(convOwnerId, convId, convId, convType,
                                      convACL, convOwnerId, responseType,
                                      deleteAll=deleteAll)
-            yield notifications.deleteNotifications(convId, conv["meta"]["uuid"])
         if deleteAll:
             fts.solr.deleteIndex(itemId)
 

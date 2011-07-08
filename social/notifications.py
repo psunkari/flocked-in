@@ -13,241 +13,179 @@ from social.template    import render, renderScriptBlock
 from social.logging     import dump_args, profile
 
 
-@profile
-@defer.inlineCallbacks
-@dump_args
-def pushNotifications(itemId, convId, responseType, convType, convOwner,
-                      commentOwner, timeUUID, followers=None, sc = "notifications"):
-    # value = responseType:commentOwner:itemKey:convType:convOwner:
-    value = ":".join([responseType, commentOwner, itemId, convType, convOwner])
-    if not followers:
-        followers = yield db.get_slice(convId, "items", super_column="followers")
-    deferreds = []
-
-    for follower in followers:
-        userKey = follower.column.name
-        if commentOwner != userKey:
-            d1 =  db.insert(userKey, "notifications", convId, timeUUID)
-            d2 =  db.insert(userKey, "latest", convId, timeUUID, sc)
-            d3 =  db.batch_insert(userKey, "notificationItems", {convId:{timeUUID:value}})
-            deferreds.extend([d1, d2, d3])
-    yield defer.DeferredList(deferreds)
-
-
-@profile
-@defer.inlineCallbacks
-@dump_args
-def deleteNotifications(convId, timeUUID, followers=None, sf="notifications"):
-    deferreds = []
-    if not followers:
-        followers = yield db.get_slice(convId, "items", super_column="followers")
-    for follower in followers:
-        userKey = follower.column.name
-        d1 = db.remove(userKey, "notifications", timeUUID)
-        d2 = db.remove(userKey, "latest", timeUUID, sf)
-        d3 = db.remove(userKey, "notificationItems", timeUUID, convId)
-        deferreds.extend([d1, d2, d3])
-    yield defer.DeferredList(deferreds)
-
-
 class NotificationsResource(base.BaseResource):
     isLeaf = True
 
-    @profile
-    @defer.inlineCallbacks
-    @dump_args
-    def _getNotifications(self, request, count=15):
-        def _getReasonStr(template, convId, itemType, itemOwnerId, usersList):
+    # String templates used in notifications.
+    # Generally there are expected to be in past-tense since
+    # notifications are record of something that already happened.
+    _commentTemplate = {1: "%s commented on %s's %s",
+                        2: "%s and %s commented on %s's %s",
+                        3: "%s, %s and 1 other commented on %s's %s",
+                        4: "%s, %s and %s others commented on %s's %s"}
+    _answerTemplate = {1: "%s answered %s's %s",
+                       2: "%s and %s answered %s's %s",
+                       3: "%s, %s and 1 other answered %s's %s",
+                       4: "%s, %s and %s others answered %s's %s"}
+    _likesTemplate = {1: "%s liked %s's %s",
+                      2: "%s and %s liked %s's %s",
+                      3: "%s, %s and 1 other liked %s's %s",
+                      4: "%s, %s and %s others liked %s's %s"}
+    _answerLikesTemplate = {1: "%s liked your answer on %s's %s",
+                            2: "%s and %s liked your answer on  %s's %s",
+                            3: "%s, %s and 1 other liked your answer on  %s's %s",
+                            4: "%s, %s and %s others liked your answer on %s's %s"}
+    _commentLikesTemplate = {1: "%s liked your comment on %s's %s",
+                             2: "%s and %s liked your comment on  %s's %s",
+                             3: "%s, %s and 1 other liked your comment on  %s's %s",
+                             4: "%s, %s and %s others liked your comment on %s's %s"}
 
+    # Fetch notifications from the database
+    # NotificationIds are stored in a column family called "notifications"
+    #
+    # notifications (Standard CF):
+    #   Key: UserId
+    #   Column Name: TimeUUID
+    #   Column Value: NotifyId
+    #       (ConvId:ConvType:ConvOwner:X, UserId:Y)
+    #           X => Type of action (Like/Comment/Like a comment)
+    #           Y => Type of action (Friend/Group/Following)
+    #
+    # notificationItems (Super CF):
+    #   Key: UserId
+    #   Supercolumn Name: notifyId
+    #   Column Name: TimeUUID
+    #   Column Value: specific to type of notification
+    #       (Actor:ItemId, UserId, GroupId, UserId)
+    #
+    @defer.inlineCallbacks
+    def _getNotifications(self, request, count=15):
+        authinfo = request.getSession(IAuthInfo)
+        myId = authinfo.username
+        myOrgId = authinfo.organization
+
+        nextPageStart = None
+        keysFromStore = []      # List of keys fetched
+        notifyIds = []          # convIds for which we have notifications
+        details_d = []          # Deferreds waiting of notification items
+
+        toFetchTags = set()
+        toFetchEntities = set()
+        tags = {}
+        entities = {}
+        timestamps = {}
+
+        notifyStrs = {}
+        notifyClasses = {}
+        
+        fetchStart = utils.getRequestArg(request, 'start') or ''
+        if fetchStart:
+            fetchStart = utils.decodeKey(fetchStart)
+        fetchCount = count + 2
+        while len(notifyIds) < count:
+            fetchedNotifyIds = []
+            results = yield db.get_slice(myId, "notifications", count=fetchCount,
+                                         start=fetchStart, reverse=True)
+            for col in results:
+                value = col.column.value
+                if value not in notifyIds:
+                    fetchedNotifyIds.append(value)
+                    keysFromStore.append(col.column.name)
+                    timestamps[value] = col.column.name
+
+            if not keysFromStore:
+                break
+
+            fetchStart = keysFromStore[-1]
+            notifyIds.extend(fetchedNotifyIds)
+
+            if len(results) < fetchCount:
+                break
+
+            if len(keysFromStore) > count:
+                nextPageStart = utils.encodeKey(keysFromStore[count])
+                notifyIds = notifyIds[0:count]
+            elif len(results) == fetchCount:
+                nextPageStart = utils.encodeKey(keysFromStore[-1])
+                notifyIds = notifyIds[0:-1]
+
+        # We don't have notifications on any conversations
+        if not notifyIds:
+            defer.returnValue({})
+
+        # Fetch more data about the notifications
+        notifyItems = yield db.get_slice(myId, "notificationItems",
+                                         notifyIds, reverse=True)
+        notifyValues = {}
+        for notify in notifyItems:
+            notifyId = notify.super_column.name
+            notifyIdParts = notifyId.split(':')
+            updates = notify.super_column.columns
+            notifyValues[notifyId] = []
+
+            if notifyId.startswith(myId):   # Connection/Group/Following
+                if notifyId.endswith([':G', ':F', ':C']):
+                    for update in updates:
+                        toFetchEntities.append(update.value)
+                        notifyValues[notifyId].append(update.value)
+            
+            elif len(notifyIdParts) == 4:   # Conversation updates
+                convId, convType, convOwner, notifyType = notifyIdParts
+                toFetchEntities.add(convOwner)
+                for update in updates:
+                    toFetchEntities.add(update.value.split(':')[0])
+                    notifyValues[notifyId].append(update.value)
+
+        # Fetch the required entities
+        fetchedEntities = yield db.multiget_slice(toFetchEntities,
+                                                  "entities", ["basic"])
+        entities.update(utils.multiSuperColumnsToDict(fetchedEntities))
+
+        def buildRelationStr(notifyId):
+            return ''
+
+        def buildConvStr(notifyId):
+            convId, convType, convOwner, x = notifyId.split(':')
+            noOfUsers = len(set(notifyValues[notifyId]))
             vals = []
-            noOfUsers = len(set(usersList))
-            for userId in usersList:
-                userName = utils.userName(userId, users[userId])
+            for userId in notifyValues[notifyId]:
+                userName = utils.userName(userId, entities[userId])
                 if userName not in vals:
                     vals.append(userName)
                 if len(vals) == noOfUsers or len(vals) == 2:
                     break
             if noOfUsers > 3:
                 vals.append(noOfUsers-2)
-            vals.append(utils.userName(itemOwnerId, users[itemOwnerId]))
-            vals.append(utils.itemLink(convId, itemType))
-            return _(template) %(tuple(vals))
 
-        args = {}
-        convs = []
-        comments = {}
-        answers = {}
-        reasonStr = {}
-        convLikes = {}
-        commentLikes = {}
-        answerLikes = {}
-        pluginNotifications = {}
-        toFetchUsers = set()
-        toFetchGroups = set()
-        pendingRequests = {}
-        fetchCount = count + 1
-        nextPageStart = None
+            if x == "L":
+                tmpl = self._likesTemplate[noOfUsers]
+            elif x == "C" and convType == "question":
+                tmpl = self._answerTemplate[noOfUsers]
+            elif x == "C":
+                tmpl = self._commentTemplate[noOfUsers]
+            elif x == "LC" and convType == "question":
+                tmpl = self._answerLikesTemplate[noOfUsers]
+            elif x == "LC":
+                tmpl = self._commentLikesTemplate[noOfUsers]
 
-        myId = request.getSession(IAuthInfo).username
-        fetchStart = utils.getRequestArg(request, "start") or ''
-        if fetchStart:
-            fetchStart = utils.decodeKey(fetchStart)
+            vals.append(utils.userName(convOwner, entities[convOwner]))
+            vals.append(utils.itemLink(convId, convType))
+            return tmpl % tuple(vals)
 
-        while len(convs) < count:
-            cols = yield db.get_slice(myId, "notifications", count=fetchCount,
-                                      start=fetchStart, reverse=True)
-            for col in cols:
-                value = col.column.value
-                if value not in convs:
-                    convs.append(value)
+        # Build strings
+        notifyStrs = {}
+        for notifyId in notifyIds:
+            if notifyId.startswith(myId) and\
+               notifyId.endswith([':G', ':F', ':C']):
+                notifyStrs[notifyId] = buildRelationStr(notifyId)
+            else:
+                notifyStrs[notifyId] = buildConvStr(notifyId)
 
-            fetchStart = cols[-1].column.name
-            if len(convs)> count:
-                nextPageStart = utils.encodeKey(fetchStart)
-
-            if len(cols) < fetchCount:
-                break
-
-        if len(convs) > count:
-            convs = convs[0:count]
-
-        args["conversations"] = convs
-        if not convs:
-            defer.returnValue(args)
-
-        rawNotifications = yield db.get_slice(myId, "notificationItems",
-                                              convs, reverse=True)
-        #reverse isn't working: the column order is not changing when revers=False
-        #So, adding userIds in reverse order. (insert at 0th position instead of append)
-        rawNotifications = utils.supercolumnsToDict(rawNotifications, ordered=True)
-        for convId in rawNotifications:
-            for timeUUID, value in rawNotifications[convId].items():
-                responseType, commentOwner, itemId,\
-                                convType, convOwner = value.split(":")
-                key = (convId, convType, convOwner)
-                toFetchUsers.add(commentOwner)
-                toFetchUsers.add(convOwner)
-                if responseType == "C":
-                    comments.setdefault(key, [])
-                    if commentOwner not in comments[key]:
-                        comments[key].insert(0,commentOwner)
-                elif responseType == "L" and itemId == convId:
-                    convLikes.setdefault(key, [])
-                    if commentOwner not in convLikes[key]:
-                        convLikes[key].insert(0,commentOwner)
-                elif responseType == "L" and itemId != convId:
-                    if convType == "question":
-                        answerLikes.setdefault(key, [])
-                        if commentOwner not in answerLikes[key]:
-                            answerLikes[key].insert(0,commentOwner)
-                    else:
-                        commentLikes.setdefault(key, [])
-                        if commentOwner not in commentLikes[key]:
-                            commentLikes[key].insert(0,commentOwner)
-                elif responseType == "I" and convType in plugins:
-                    pluginNotifications.setdefault(convType, {})
-                    pluginNotifications[convType].setdefault(convId, [])
-                    if commentOwner not in pluginNotifications[convType][convId]:
-                        pluginNotifications[convType][convId].insert(0,commentOwner)
-                elif responseType == "G":
-                    groupId = convId
-                    toFetchGroups.add(groupId)
-                    pendingRequests.setdefault(groupId, [])
-                    if commentOwner not in pendingRequests[groupId]:
-                        pendingRequests[groupId].insert(0,commentOwner)
-                elif responseType == 'Q':
-                    answers.setdefault(key, [])
-                    if commentOwner not in answers[key]:
-                        answers[key].insert(0,commentOwner)
-
-        users = yield db.multiget_slice(toFetchUsers, "entities", ["basic"])
-        groups = yield db.multiget_slice(toFetchGroups, "entities", ["basic"])
-
-        users = utils.multiSuperColumnsToDict(users)
-        groups = utils.multiSuperColumnsToDict(groups)
-
-        commentTemplate = {1: "%s commented on %s's %s",
-                           2: "%s and %s commented on %s's %s",
-                           3: "%s, %s and 1 other commented on %s's %s",
-                           4: "%s, %s and %s others commented on %s's %s"}
-        likesTemplate = {1: "%s likes %s's %s",
-                         2: "%s and %s likes %s's %s",
-                         3: "%s, %s and 1 other likes %s's %s",
-                         4: "%s, %s and %s others likes %s's %s"}
-        commentLikesTemplate = {1: "%s likes a comment on %s's %s",
-                                 2: "%s and %s likes a comment on  %s's %s",
-                                 3: "%s, %s and 1 other likes a comment on  %s's %s",
-                                 4: "%s, %s and %s others likes a comment on %s's %s"}
-        groupRequestsTemplate = {1: "%s subscribed to %s group. %s to approve the request ",
-                                 2: "%s and %s subscribed to %s group. %s to approve the request",
-                                 3: "%s and %s and 1 other subscribed to %s group. %s to approve the request.",
-                                 4: "%s and %s and %s others subscribed to %s group. %s to approve the request."}
-        answersTemplate = {1: "%s answered %s's %s",
-                           2: "%s and %s answered %s's %s",
-                           3: "%s, %s and 1 other answered %s's %s",
-                           4: "%s, %s and %s others answered %s's %s"}
-        answerLikesTemplate = {1: "%s likes an answer on %s's %s",
-                                 2: "%s and %s likes an answer on  %s's %s",
-                                 3: "%s, %s and 1 other likes an answer on  %s's %s",
-                                 4: "%s, %s and %s others likes an answer on %s's %s"}
-
-        for convId in convs:
-            reasonStr[convId] = []
-
-        for key in comments:
-            convId, convType, convOwner = key
-            template = commentTemplate[len(comments[key][:4])]
-            reason = _getReasonStr(template, convId, convType, convOwner, comments[key])
-            reasonStr[convId].append(reason)
-
-        for key in convLikes:
-            convId, convType, convOwner = key
-            template = likesTemplate[len(convLikes[key][:4])]
-            reason = _getReasonStr(template, convId, convType, convOwner, convLikes[key])
-            reasonStr[convId].append(reason)
-
-        for key in commentLikes:
-            convId, convType, convOwner = key
-            template = commentLikesTemplate[len(commentLikes[key][:4])]
-            reason = _getReasonStr(template, convId, convType, convOwner, commentLikes[key])
-            reasonStr[convId].append(reason)
-
-        for key in answers:
-            convId, convType, convOwner = key
-            template = answersTemplate[len(answers[key][:4])]
-            reason = _getReasonStr(template, convId, convType, convOwner, answers[key])
-            reasonStr[convId].append(reason)
-
-        for key in answerLikes:
-            convId, convType, convOwner = key
-            template = answerLikesTemplate[len(answerLikes[key][:4])]
-            reason = _getReasonStr(template, convId, convType, convOwner, answerLikes[key])
-            reasonStr[convId].append(reason)
-
-        for convType in pluginNotifications:
-            for convId in pluginNotifications[convType]:
-                reason = yield plugins[convType].getReason(convId,
-                                                     pluginNotifications[convType][convId],
-                                                     users)
-                reasonStr[convId].append(reason)
-
-        for groupId in pendingRequests:
-            groupName = groups[groupId]["basic"]["name"]
-            groupUrl = "<a href='/feed?id=%s'> %s</a>"%(groupId, groupName)
-            url = "<a href='/groups/admin?id=%s'>click here</a> "%(groupId)
-            reason = groupRequestsTemplate[len(pendingRequests[groupId])]
-            vals = [utils.userName(userId, users[userId]) for userId in pendingRequests[groupId][:2]]
-            if len(pendingRequests[groupId])>3:
-                vals.append(len(pendingRequests[groupId])-2)
-            vals.append(groupUrl)
-            vals.append(url)
-            reasonStr[groupId].append(reason%(tuple(vals)))
-
-        args["reasonStr"] = reasonStr
-        args["groups"] = groups
-        args["users"] = users
-        args["nextPageStart"] = nextPageStart
-
+        args = {"notifications": notifyIds,
+                "notifyStr": notifyStrs,
+                "notifyClasses": notifyClasses,
+                "entities": entities,
+                "nextPageStart": nextPageStart}
         defer.returnValue(args)
 
 
