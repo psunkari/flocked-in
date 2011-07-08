@@ -21,9 +21,16 @@ class EmbedResource(BaseResource):
     @defer.inlineCallbacks
     def _link(self, request):
         itemId, item = yield utils.getValidItemId(request, 'id', 'link')
-        src = item.get('meta', {}).get('embedSrc', '')
-        if src:
-            request.write(self._template % src)
+        meta = item.get('meta', {})
+        embedType = meta.get('embedType', '')
+        embedSrc = meta.get('embedSrc', '')
+        if embedSrc:
+            if embedType == "photo":
+                src = '<img src="%s"></img>' % embedSrc
+            elif embedType in ["video", "audio"]:
+                src = item.get('meta', {}).get('embedSrc', '')
+            if src:
+                request.write(self._template % src)
         request.finish()
 
     def render_GET(self, request):

@@ -549,10 +549,12 @@
       %endif
       <div class="link-item">
         %if imgsrc and hasEmbed:
-          <div onclick="$$.convs.playEmbed('${convId}');" class="embed-wrapper">
+          <div onclick="$$.convs.embed('${convId}');" class="embed-wrapper">
             <div class="embed-overlay embed-${embedType}"></div>
             <img src='${imgsrc}' class="link-image has-embed embed-${embedType}"/>
           </div>
+          <div class="embed-frame-wrapper" id="embed-frame-${convId}"
+               style="width:${embedWidth}px;height:${embedHeight}px;display:none;"/>
         %elif imgsrc:
           <img src='${imgsrc}' class="link-image"/>
         %endif
@@ -562,10 +564,6 @@
           <div id="url" class="link-url">${url}</div>
         %endif
       </div>
-      %if hasEmbed:
-        <div class="embed-frame-wrapper" id="embed-frame-${convId}"
-             style="width:${embedWidth}px;height:${embedHeight}px;display:none;"/>
-      %endif
     </div>
   </div>
 </%def>

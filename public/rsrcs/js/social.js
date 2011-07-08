@@ -516,7 +516,7 @@ var convs = {
         }
     },
 
-    playEmbed: function(convId) {
+    embed: function(convId) {
         var $embedFrame = $('#embed-frame-'+convId),
             width = $embedFrame.css('width'),
             height = $embedFrame.css('height'),
@@ -526,7 +526,8 @@ var convs = {
         
         $embedFrame.append($(frame))
                    .css('display', 'block')
-                   .prev().css('display', 'none');
+                   .prev().css('display', 'none')
+                   .nextAll('.link-summary').css('display', 'none');
     }
 };
 
