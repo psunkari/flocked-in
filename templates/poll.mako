@@ -1,7 +1,6 @@
 <%! from social import utils, _, __, constants %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
 <%namespace name="widgets" file="widgets.mako"/>
 
 <%def name="share_poll()">
@@ -133,6 +132,7 @@
     counts = conv.get("counts", {})
     voted = myVotes[convId] if (myVotes and myVotes.get(convId, False))\
                             else False
+    normalize = utils.normalizeText
   %>
   %if not isQuoted:
     <span class="conv-reason">
@@ -141,7 +141,7 @@
   %endif
   <div class="item-title has-icon">
     <span class="icon item-icon poll-icon"></span>
-    <span class="item-title-text">${question}</span>
+    <div class="item-title-text">${question|normalize}</div>
   </div>
   <div id="poll-contents-${convId}" class="item-contents has-icon">
   <%
