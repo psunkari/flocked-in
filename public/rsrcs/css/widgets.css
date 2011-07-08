@@ -1,3 +1,12 @@
+button::-moz-focus-inner {
+    border:0;
+    padding:0;
+}
+
+input::-moz-focus-inner {
+    border:0;
+    padding:0;
+}
 
 .ui-ph-label {
     color: graytext;
@@ -7,7 +16,7 @@
 
 .button-link {
     border: 0px;
-    padding: 0px;
+    padding: 2px;
     margin: 0px;
     color: #3366CC;
     font-size: inherit;
@@ -47,6 +56,10 @@
     white-space: nowrap;
     text-shadow: 1px 1px white;
     box-shadow: 1px 1px 2px #CCC;
+    padding-bottom:2px;
+    padding-top:2px;
+    line-height:16px;
+    font-size:14px;
 }
 
 .button.disabled {
