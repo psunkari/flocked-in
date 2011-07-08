@@ -8,7 +8,10 @@ import base64
 import json
 import re
 import string
-from email.mime.text    import MIMEText
+from email.mime.text     import MIMEText
+from email.MIMEMultipart import MIMEMultipart
+from email.MIMEImage     import MIMEImage
+
 try:
     import cPickle as pickle
 except:
@@ -18,7 +21,7 @@ from ordereddict        import OrderedDict
 from dateutil.tz        import gettz
 from telephus.cassandra import ttypes
 
-from twisted.internet   import defer
+from twisted.internet   import defer, threads
 from twisted.python     import log
 from twisted.mail       import smtp
 
@@ -678,15 +681,62 @@ def updateNameIndex(userKey, targetKeys, newName, oldName):
 @profile
 @defer.inlineCallbacks
 @dump_args
-def sendmail(toAddr, subject, body, fromAddr='noreply@flocked.in'):
-    msg = MIMEText(body)
-    msg['Subject'] = subject
-    msg['From'] = fromAddr
-    msg['To'] = toAddr
-    message = msg.as_string()
+def sendmail(toAddr, subject, textPart, htmlPart, imgInfo, fromAddr=None):
+    msgRoot = MIMEMultipart('related')
+    msgRoot['Subject'] = subject
+    if not fromAddr:
+        fromAddr = 'noreply@flocked.in'
+    msgRoot['From'] = "FlockedIn Team <%s>" %fromAddr
+    msgRoot['To'] = toAddr
+    msgRoot.preamble = 'This is a multi-part message in MIME format.'
 
+    msgAlternative = MIMEMultipart('alternative')
+    msgRoot.attach(msgAlternative)
+
+    msgText = MIMEText(textPart)
+    msgAlternative.attach(msgText)
+
+    msgText = MIMEText(htmlPart, 'html')
+    msgAlternative.attach(msgText)
+
+    def _readFromFile(filepath):
+        try:
+            with open(filepath, 'rb') as f:
+                contents = f.read()
+        except IOError as e:
+            traceback.print_exc()
+            log.msg(e)
+            raise e
+        else:
+            return contents
+
+    for (imgFile, imgName) in imgInfo:
+        imgPath = os.path.join('templates/email', imgFile)
+        imgData = yield threads.deferToThread(_readFromFile, imgPath)
+        msgImage = MIMEImage(imgData)
+        msgImage.add_header('Content-ID', '<%s>' %imgName)
+        msgRoot.attach(msgImage)
+
+    message = msgRoot.as_string()
     host = config.get('SMTP', 'Host')
     yield smtp.sendmail(host, fromAddr, toAddr, message)
+    #try:
+    #    from cStringIO import StringIO
+    #except ImportError:
+    #    from StringIO import StringIO
+
+    #from twisted.mail.smtp import ESMTPSenderFactory
+    #from twisted.internet import reactor
+    #
+    #result = defer.Deferred()
+    #factory = ESMTPSenderFactory('abhishek',
+    #                             'life@123',
+    #                             fromAddr,
+    #                             toAddr,
+    #                             StringIO(message), result)
+    #reactor.connectTCP(host, 25, factory)
+    #
+    #yield result
 
 
 SUFFIXES = {1000: ['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
