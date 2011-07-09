@@ -9,15 +9,15 @@
   </div>
   <div id="share-poll-options">
     <div class="input-wrap">
-      <span class="icon poll-option">&nbsp</span>
+      <span class="icon poll-option">&nbsp;</span>
       <input type="text" name="options" placeholder="${_('Add an option')}"/>
     </div>
     <div class="input-wrap">
-      <span class="icon poll-option">&nbsp</span>
+      <span class="icon poll-option">&nbsp;</span>
       <input type="text" name="options" placeholder="${_('Add an option')}"/>
     </div>
     <div class="input-wrap">
-      <span class="icon poll-option">&nbsp</span>
+      <span class="icon poll-option">&nbsp;</span>
       <input type="text" name="options" placeholder="${_('Add an option')}"/>
     </div>
   </div>
@@ -48,9 +48,9 @@
       %>
       <li>
         %if checked:
-          <span class=" icon tick-icon">&nbsp</span>
+          <span class=" icon tick-icon">&nbsp;</span>
         %else:
-          <span class=" icon empty-icon">&nbsp</span>
+          <span class=" icon empty-icon">&nbsp;</span>
         %endif
         <div class="poll-wrapper">
           <div class="poll-bar-wrapper">

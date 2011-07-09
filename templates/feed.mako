@@ -141,7 +141,7 @@
           <input type="hidden" name="type" value="status"/>
       </div>
       <div id="sharebar-actions-wrapper">
-        <ul id="attached-files" class="v-links busy-indicator" style="float:left">&nbsp</ul>
+        <ul id="attached-files" class="v-links busy-indicator" style="float:left">&nbsp;</ul>
         <ul id="sharebar-actions" class="h-links">
           <li>${acl_button("sharebar-acl", '{"accept":{"orgs":["%s"]}}'%orgKey, "Company")}</li>
           <li>${widgets.button("sharebar-submit", "submit", "default", None, "Share")}</li>

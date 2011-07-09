@@ -221,7 +221,7 @@
           % elif response == "maybe":
             <span id="event-rsvp-status-${convId}">${_("You may attend")}</span>
           %else:
-            <span id="event-rsvp-status-${convId}">&nbsp</span>
+            <span id="event-rsvp-status-${convId}">&nbsp;</span>
           %endif
           <button class="button-link" onclick="$$.ui.showPopUp(event)">RSVP to this event</button>
           <ul class="acl-menu" style="display:none;">

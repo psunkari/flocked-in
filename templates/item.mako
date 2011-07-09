@@ -179,7 +179,7 @@
   ${utils.simpleTimestamp(timestamp, myTimezone)}\
   ## If none of my friends liked it, show the count of likes (onclick show the likes)
   %if (not hasLikes and likesCount) or (not hasComments and commentsCount):
-    &#8226;
+    &#183;
   %endif
   %if not hasLikes and likesCount > 0:
     <button class="button-link" title="${likesCount} Likes" onclick="$$.convs.showItemLikes('${convId}')"><div class="small-icon small-like"></div>${likesCount}</button>
@@ -188,16 +188,16 @@
   %if not hasComments and commentsCount > 0:
     <button class="button-link ajax" title="${commentsCount} Comments" href="/item?id=${convId}" _ref="/item/responses?id=${convId}"><div class="small-icon small-comment"></div>${commentsCount}</button>
   %endif
-  &#8226;
+  &#183;
   ## Like this conversation
   %if myLikes and myLikes.has_key(convId) and len(myLikes[convId]):
-    <button class="button-link ajaxpost" _ref="/item/unlike?id=${convId}">${_("Unlike")}</button>&#8226;<button
+    <button class="button-link ajaxpost" _ref="/item/unlike?id=${convId}">${_("Unlike")}</button>&#183;<button
   %else:
-    <button class="button-link ajaxpost" _ref="/item/like?id=${convId}">${_("Like")}</button>&#8226;<button
+    <button class="button-link ajaxpost" _ref="/item/like?id=${convId}">${_("Like")}</button>&#183;<button
   %endif
   ## Comment on this conversation
   <% commentString = "Answer" if convType == "question" else "Comment" %>
-  class="button-link" onclick="$$.convs.comment('${convId}');" >${_(commentString)}</button>&#8226;<button
+  class="button-link" onclick="$$.convs.comment('${convId}');" >${_(commentString)}</button>&#183;<button
   ## Add a tag
   class="button-link" title="${_('Add Tag')}" onclick="$$.convs.editTags('${convId}', true);">${_("Add Tag")}</button>
 </%def>
@@ -212,10 +212,10 @@
   %>
   ${utils.simpleTimestamp(timestamp, myTimezone)}
   %if likesCount > 0:
-    &#8226;
+    &#183;
     <button class="button-link" title="${likesCount} Likes" onclick="$$.convs.showItemLikes('${itemId}')"><div class="small-icon small-like"></div>${likesCount}</button>
   %endif
-  &#8226;
+  &#183;
   %if myLikes and myLikes.has_key(itemId) and len(myLikes[itemId]):
     <button class="button-link ajaxpost" _ref="/item/unlike?id=${itemId}">${_("Unlike")}</button>
   %else:
@@ -361,7 +361,7 @@
       %endif
     </div>
     <div class="comment-container">
-      <span class="conv-other-actions" onclick="$.post('/ajax/item/delete', {id:'${commentId}'});">&nbsp</span>
+      <span class="conv-other-actions" onclick="$.post('/ajax/item/delete', {id:'${commentId}'});">&nbsp;</span>
       <span class="comment-user">${utils.userName(userId, entities[userId])}</span>
       <span class="comment-text">${comment|normalize}</span>
     </div>
