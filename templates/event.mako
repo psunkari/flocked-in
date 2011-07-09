@@ -164,6 +164,7 @@
       else:
         event_end_fmt = "%a %b %d"
     event_end = end_dt.strftime(event_end_fmt)
+    normalize = utils.normalizeText
   %>
   <div class="">
     <span class="user-cause conv-reason">
@@ -177,7 +178,7 @@
         % endif
     </span>
     <div class="item-title has-icon">
-      <span class="event-date-icon button">
+      <span class="event-date-icon">
         <div>
           <div class="event-date-month">${start_dt.strftime("%b")}</div>
           <div class="event-date-day">${start_dt.strftime("%d")}</div>
@@ -208,7 +209,7 @@
             <span>untill ${event_end}</span>
           % endif
         %endif
-        <div class="event-description">${desc}</div>
+        <div class="event-description">${desc|normalize}</div>
         %if location.strip() != "":
           <div><b>Venue</b> ${location}</div>
         %endif

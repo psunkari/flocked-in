@@ -57,7 +57,7 @@
     <div class="sidebar-title">${_("Invite people")}</div>
     <form method="post" action="/people/invite" class="ajax" autocomplete="off" >
       <div class="input-wrap">
-        <input type="text" name="email"/>
+        <input type="text" name="email" id="invite-others" placeholder="Email Address"/>
       </div>
       <input type="hidden" name="from" value="sidebar"/>
       <input class="button" type="submit" id="submit" value="${_('Submit')}"/>
