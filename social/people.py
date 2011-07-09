@@ -218,6 +218,7 @@ class PeopleResource(base.BaseResource):
 
         if script:
             onload = """
+                    $$.ui.placeholders('#invite-people input:text');
                     (function(obj){$$.publisher.load(obj);
                         $('#invite-people').delegate('.input-wrap:last-child','focus',function(event){
                             $(event.target.parentNode).clone().appendTo('#invite-people').find('input:text').blur();

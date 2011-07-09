@@ -193,6 +193,7 @@ a:hover, a:active, a:focus {
 }
 #searchbox {
     width: 350px;
+    font-size:12px;
 }
 
 
