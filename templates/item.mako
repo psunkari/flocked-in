@@ -285,7 +285,7 @@
 
 
 <%def name="conv_comments_head(convId, total, showing, isFeed)">
-  <% commentString = "Answers" if items[convId]['meta']['type'] == "question" else "Comment" %>
+  <% commentString = "answers" if items[convId]['meta']['type'] == "question" else "comments" %>
   %if total > showing:
     <div class="conv-comments-more" class="busy-indicator">
       %if isFeed:
