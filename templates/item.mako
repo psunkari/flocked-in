@@ -497,17 +497,22 @@
 <%def name="render_feedback(convId, isQuoted=False)">
   <%
     conv = items[convId]
-    mood = conv["meta"]["subType"]
     normalize = utils.normalizeText
-    owner = conv["meta"]["owner"]
+    meta = conv["meta"]
+    mood = meta["subType"]
+    user = entities[meta['userId']]
+    userOrg = entities[meta['userOrgId']]
   %>
   %if not isQuoted:
-    ${utils.userName(owner, entities[owner], "conv-user-cause")}
+    <span class="conv-user-cause" style="color:#3366CC">
+      ${", ".join([user["basic"]["name"], user["basic"].get('jobTitle', None)])}
+    </span>
+    (${userOrg["basic"]["name"]})
   %endif
   <div class="item-title">
     <div>
       %if isQuoted:
-        ${utils.userName(owner, entities[owner])}
+        ${utils.userName(userId, entities[userId])}
       %endif
       %if conv["meta"].has_key("comment"):
         ${conv["meta"]["comment"]|normalize}

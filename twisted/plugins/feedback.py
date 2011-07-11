@@ -31,7 +31,9 @@ class Feedback(object):
 
 
     def fetchData(self, args, convId=None):
-        return defer.succeed(set())
+        convId = convId or args["convId"]
+        conv = args["items"][convId]
+        return defer.succeed(set([conv["meta"]["userId"], conv["meta"]["userOrgId"]]))
 
 
     def create(self, request):
