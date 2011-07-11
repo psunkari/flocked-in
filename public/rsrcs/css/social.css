@@ -1079,47 +1079,17 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
  */
 
 .poll-wrapper {
-    /*box-shadow: 1px 1px 1px #B8B8B8;*/
-    border-radius: 25px;
-    font-size:15px;
-    height:25px;
-    width:370px;
-    background-image: -webkit-gradient(
-        linear,
-        left bottom,
-        left top,
-        color-stop(0.45, rgb(231,231,231)),
-        color-stop(0.73, rgb(244,244,244))
-    );
-    background-image: -moz-linear-gradient(
-        center bottom,
-        rgb(231,231,231) 45%,
-        rgb(244,244,244) 73%
-    );
-    background-color:rgb(244, 244, 244);
-    display:inline-block;
+    height: 20px;
+    width: 370px;
+    display: inline-block;
 }
 
 .poll-bar-wrapper {
-    padding: 2px;
     width: 330px;
-    display:inline-block;
-    background-image: -webkit-gradient(
-        linear,
-        left bottom,
-        left top,
-        color-stop(0.26, rgb(219,219,219)),
-        color-stop(0.63, rgb(244,244,244))
-    );
-
-    background-image: -moz-linear-gradient(
-        center bottom,
-        rgb(219,219,219) 26%,
-        rgb(244,244,244) 63%
-    );
-    border-right:1px solid #E0E0E0;
-    border-radius:25px;
-    background-color: #F4F4F4;
+    display: inline-block;
+    border: 1px solid #97BFE1;
+    border-radius: 0 4px 4px 0;
+    padding: 1px;
 }
 
 .poll-bar {
@@ -1127,19 +1097,18 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
         linear,
         left bottom,
         left top,
-        color-stop(0.26, rgb(187,219,92)),
-        color-stop(0.63, rgb(210,242,114))
+        color-stop(0.26, #97BFE1),
+        color-stop(0.63, #C3D9FF)
     );
     background-image: -moz-linear-gradient(
         center bottom,
-        rgb(187,219,92) 26%,
-        rgb(210,242,114) 63%
+        #97BFE1 26%,
+        #C3D9FF 63%
     );
-    border-radius:25px;
-    margin: -2px;
-    display:inline-block;
-    height:25px;
-    background-color:#BBDB5C;
+    border-radius: 0 4px 4px 0;
+    display: inline-block;
+    height: 18px;
+    background-color: #97BFE1;
 }
 
 .poll-results {
@@ -1152,19 +1121,18 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     padding: 5px 0;
 }
 .poll-percent {
-    display:inline-block;
-    width:20px;
-    text-align:right;
-    font-size:10px;
-    position:relative;
-    padding-bottom:0px;
-    top:2px;
-    text-shadow: 0 1px 1px #555555;
-    cursor:pointer;
+    display: inline-block;
+    text-align: right;
+    font-size: 10px;
+    padding-bottom: 0px;
 }
-
-.poll-options {
-    /*margin: 5px 0;*/
+.poll-percent > span {
+    height: 20px;
+    width: 25px;
+    line-height: 20px;
+    display: block;
+    cursor: pointer;
+    text-shadow: 0 1px 1px #888;
 }
 
 .poll-options-option {
@@ -1175,16 +1143,16 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 
 .poll-option-text {
-    font-size:11px;
-    position:absolute;
-    font-weight:bold;
-    max-width:325px;
-    white-space:nowrap;
-    overflow:hidden;
+    font-size: 11px;
+    position: absolute;
+    font-weight: bold;
+    max-width: 325px;
+    white-space: nowrap;
+    overflow: hidden;
     text-overflow: ellipsis;
-    margin-left:4px;
-    margin-top:4px;
-    text-shadow:0 1px 2px #FFFFFF;
+    margin-left: 8px;
+    line-height: 18px;
+    text-shadow: 0 1px 1px #FFFFFF;
 }
 
 #share-poll-options > .input-wrap {
