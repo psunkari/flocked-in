@@ -860,6 +860,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .has-icon.item-contents {
     padding-left: 20px;
     padding-bottom: 8px;
+    display: inline-block;
 }
 .item-subactions {
     clear: both;
