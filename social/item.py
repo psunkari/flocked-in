@@ -750,6 +750,7 @@ class ItemResource(base.BaseResource):
             yield feed.deleteFromOthersFeed(myId, itemId, convId, convType,
                                             convACL, convOwnerId, responseType,
                                             others=followers, tagId=tagId)
+        request.write("$('#conv-tags-%s').children('[tag-id=\"%s\"]').remove();" % (convId, tagId));
 
     @defer.inlineCallbacks
     def _remove(self, request, deleteAll=False):

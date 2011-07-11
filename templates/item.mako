@@ -373,7 +373,7 @@
 
 
 <%def name="conv_tag(convId, tagId, tagName)">
-  <span class="tag" id="tag-${tagId}">
+  <span class="tag" tag-id="${tagId}">
     <a class="ajax" href="/tags?id=${tagId}">${tagName}</a>
     <form class="ajax delete-tags" method="post" action="/item/untag">
       <input type="hidden" name="id" value="${convId}"/>
@@ -390,7 +390,7 @@
     <button class="button-link edit-tags-button" title="${_('Edit tags')}" onclick="$$.convs.editTags('${convId}');"><div class="icon edit-tags-icon"></div>Edit Tags</button>
     <span id="conv-tags-${convId}">
     %for tagId in itemTags.keys():
-      <span class="tag" id="tag-${tagId}">
+      <span class="tag" tag-id="${tagId}">
         <a class="ajax" href="/tags?id=${tagId}">${tags[tagId]["title"]}</a>
         <form class="ajax delete-tags" method="post" action="/item/untag">
           <input type="hidden" name="id" value="${convId}"/>
