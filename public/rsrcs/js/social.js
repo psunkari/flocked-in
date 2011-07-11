@@ -1114,11 +1114,25 @@ $$.acl = acl;
  */
 (function($$, $) { if (!$$.messaging) {
 var messaging = {
+    autoFillUsers: function(){
+        $('.conversation-composer-field-recipient').autocomplete({
+            source: '/auto/users',
+            minLength: 2,
+            select: function( event, ui ) {
+                $('.conversation-composer-recipients').append(
+                    $$.messaging.formatUser(ui.item.value, ui.item.uid));
+                var rcpts = $('#recipientList').val().trim();
+                rcpts = (rcpts == "") ? ui.item.uid: rcpts+","+ui.item.uid
+                $('#recipientList').val(rcpts)
+                this.value = "";
+                return false;
+        }
+        });
+    },
     removeUser: function(self, user_id){
-        var recipients = $('.conversation-composer-recipients').data('recipients');
-        var user_idx = jQuery.inArray(user_id, recipients);
-        recipients.splice(user_idx, 1);
-        $('.conversation-composer-recipients').data('recipients', recipients);
+        var recipients = $('#recipientList').val().split(",");
+        var rcpts = jQuery.grep(recipients, function (a) { return a != user_id; });
+        $('#recipientList').val(rcpts.join(","))
         $(self).parent().remove();
     },
     formatUser: function(user_string, user_id){
@@ -1161,10 +1175,9 @@ var events = {
         $.post('/ajax/event/rsvp', postdata)
     },
     removeUser: function(self, user_id){
-        var recipients = $('#invitees').data('recipients');
-        var user_idx = jQuery.inArray(user_id, recipients);
-        recipients.splice(user_idx, 1);
-        $('#invitees').data('recipients', recipients);
+        var invitees = $('#inviteeList').val().split(",");
+        var rcpts = jQuery.grep(invitees, function (a) { return a != user_id; });
+        $('#inviteeList').val(rcpts.join(","))
         $(self).parent().remove();
     },
     formatUser: function(user_string, user_id){

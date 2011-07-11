@@ -200,9 +200,10 @@
 
 <%def name="render_composer()">
   <div class="conversation-composer">
-    <!--<form method="post" action="/messages/write" class="ajax" submit="console.info('Done');this.preventDefault()">-->
+    <form method="post" action="/messages/write" class="ajax" id="message_form">
       <div class="input-wrap conversation-composer-field">
         <div class="conversation-composer-recipients"></div>
+        <input name="recipients" id="recipientList" type="hidden"/>
         <div>
             <input class="conversation-composer-field-recipient" type="text" placeholder="${_('Enter name or email address') |h}"/>
         </div>
@@ -215,20 +216,7 @@
       </div>
       <div class="conversation-composer-actions">
         %if script:
-            <%
-                onclickscript = """
-                    var recipients = $('.conversation-composer-recipients').data('recipients');
-                    var subject = $('.conversation-composer-field-subject').attr('value');
-                    var body = $('.conversation-composer-field-body').attr('value');
-                    var filterType = $('[name=filterType]').attr('value');
-                    if (filterType == undefined){
-                        filterType = ''
-                    }
-                    var urlpostdata = 'recipients='+recipients+'&subject='+subject+'&body='+body+'&filterType='+filterType;
-                    $.post('/ajax/messages/write', urlpostdata)
-                    $('#composer').empty()
-            """%>
-            <button type="button" class="button default" onclick="${onclickscript}">
+            <button type="submit" class="button default">
                 ${_('Send')}
             </button>
             <button type="button" class="button" onclick="$('#composer').empty()">
@@ -238,7 +226,7 @@
             <a class="ajax" _ref="/messages">${'Cancel'}</a>
         %endif
       </div>
-    <!--</form>-->
+    </form>
   </div>
 </%def>
 
