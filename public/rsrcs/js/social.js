@@ -1019,7 +1019,7 @@ var acl = {
 
         if (!$menu.hasClass("ui-menu")) {
             $menu.menu({
-                    select: function(event, ui) {
+                     select: function(event, ui) {
                          $(this).hide();
                          acl.updateACL(id, ui);
                      }
@@ -1073,7 +1073,7 @@ var acl = {
         }
 
         $("#"+id).attr("value", $$.json.stringify(aclObj));
-        $("#"+id+"-label").text(ui.item.text());
+        $("#"+id+"-label").text(str);
     },
 
     /* Update list of groups displayed in the menu */
