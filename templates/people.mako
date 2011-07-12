@@ -140,15 +140,15 @@
     <div id="invite-people">
       <div class="input-wrap">
         <span class="icon invite-people-entry">&nbsp;</span>
-        <input type="text" name="invites" placeholder="${_("Enter your colleague's email address")}"/>
+        <input type="text" name="email" placeholder="${_("Enter your colleague's email address")}"/>
       </div>
       <div class="input-wrap">
         <span class="icon invite-people-entry">&nbsp;</span>
-        <input type="text" name="invites" placeholder="${_("Enter your colleague's email address")}"/>
+        <input type="text" name="email" placeholder="${_("Enter your colleague's email address")}"/>
       </div>
       <div class="input-wrap">
         <span class="icon invite-people-entry">&nbsp;</span>
-        <input type="text" name="invites" placeholder="${_("Enter your colleague's email address")}"/>
+        <input type="text" name="email" placeholder="${_("Enter your colleague's email address")}"/>
       </div>
     </div>
     <div class="conversation-composer-actions">
