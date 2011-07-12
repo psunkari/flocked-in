@@ -431,7 +431,6 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
         if itemType in plugins:
             try:
                 entityIds = yield plugins[itemType].fetchData(data, convId)
-                log.msg(">>>>>>", entityIds)
                 toFetchEntities.update(entityIds)
             except Exception, e:
                 log.err(e)
@@ -442,7 +441,6 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
 
     entities_d = db.multiget_slice(toFetchEntities, "entities", ["basic"])
     fetchedEntities = yield entities_d
-    log.msg(">>>>>> Fetched entities:", fetchedEntities)
     entities.update(utils.multiSuperColumnsToDict(fetchedEntities))
 
     fetchedTags = yield tags_d

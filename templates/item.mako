@@ -512,7 +512,10 @@
   <div class="item-title">
     <div>
       %if isQuoted:
-        ${utils.userName(userId, entities[userId])}
+        <span class="conv-user-cause" style="color:#3366CC">
+          ${", ".join([user["basic"]["name"], user["basic"].get('jobTitle', None)])}
+        </span>
+        (${userOrg["basic"]["name"]})<br/>
       %endif
       %if conv["meta"].has_key("comment"):
         ${conv["meta"]["comment"]|normalize}
