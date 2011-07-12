@@ -568,32 +568,31 @@ class MessagingResource(base.BaseResource):
             #For all actions other than read/unread, since the action won't be
             # available to the user in same view; i.e, archive won't be on
             # archive view, we can simply remove the conv.
-            # We are assuming action is always on a single thread
-            if action == "inbox":
-                request.write("$('#thread-%s').remove()" %convIds[0])
-            elif action == "archive":
-                request.write("$('#thread-%s').remove()" %convIds[0])
-            elif action == "trash":
-                request.write("$('#thread-%s').remove()" %convIds[0])
+            if action in ["inbox", "archive", "trash"]:
+                if filterType != "unread":
+                    request.write("$('%s').remove()" %','.join(['#thread-%s' %convId for convId in convIds]))
             elif action == "unread":
-                request.write("""
+                query_template = """
                               $('#thread-%s').removeClass('row-read').addClass('row-unread');
                               $('#thread-%s .messaging-read-icon').removeClass('messaging-read-icon').addClass('messaging-unread-icon');
                               $('#thread-%s .messaging-unread-icon').attr("title", "Mark this conversation as read")
                               $('#thread-%s .messaging-unread-icon')[0].onclick = function(event) { $.post('/ajax/messages/thread', 'action=read&selected=%s&filterType=%s', null, 'script') }
-                              """ % (convIds[0], convIds[0], convIds[0], convIds[0], convIds[0], filterType))
-                #request.finish()
+                              """
+                query = "".join([query_template % (convId, convId, convId, convId, convId, filterType) for convId in convIds])
+                request.write(query)
             elif action == "read":
                 # If we are in unread view, remove the conv else swap the styles
                 if filterType != "unread":
-                    request.write("""
+                    query_template = """
                                   $('#thread-%s').removeClass('row-unread').addClass('row-read');
                                   $('#thread-%s .messaging-unread-icon').removeClass('messaging-unread-icon').addClass('messaging-read-icon');
                                   $('#thread-%s .messaging-read-icon').attr("title", "Mark this conversation as unread")
                                   $('#thread-%s .messaging-read-icon')[0].onclick = function(event) { $.post('/ajax/messages/thread', 'action=unread&selected=%s&filterType=%s', null, 'script') }
-                                  """ % (convIds[0], convIds[0], convIds[0], convIds[0], convIds[0], filterType))
+                                  """
+                    query = "".join([query_template % (convId, convId, convId, convId, convId, filterType) for convId in convIds])
+                    request.write(query)
                 else:
-                    request.write("$('#thread-%s').remove()" %convIds[0])
+                    request.write("$('%s').remove()" %','.join(['#thread-%s' %convId for convId in convIds]))
 
     @defer.inlineCallbacks
     def _moveConversation(self, request, convIds, toFolder):

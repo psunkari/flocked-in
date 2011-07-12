@@ -263,6 +263,9 @@
                    onchange="$('.conversation-row input[name=selected]').attr('checked', this.checked)"/>
             <input id="toolbarAction" name="action" value="" type="hidden"/>
           %endif
+          %if filterType == "unread":
+            <input type="submit" name="read" value="Mark as Read" class="button" onclick="$('#toolbarAction').attr('value', 'read')"/>
+          %endif
           %if filterType != "trash":
             <input type="submit" name="trash" value="Trash" class="button" onclick="$('#toolbarAction').attr('value', 'trash')"/>
           %endif
@@ -279,7 +282,7 @@
   %elif view == "message":
     <div id="msg-toolbar" class="toolbar">
       <a class="${'ajax' if script else ''} back-link" href="/messages">Go Back</a>
-        <form method="post" action="/messages/thread">
+        <form method="post" action="/messages/thread" class="ajax">
             <input type="hidden" name="selected" value="${id}"/>
             <input id="toolbarAction" name="action" value="" type="hidden"/>
             <input type="submit" name="trash" value="Trash" class="button" onclick="$('#toolbarAction').attr('value', 'trash')"/>
@@ -296,7 +299,7 @@
     ${viewOptions()}
   </div>
   <div id="threads-wrapper" class="paged-container">
-    <form action="/messages/thread" method="post">
+    <form action="/messages/thread" method="post" class="ajax">
         ${toolbar_layout(view, nextPageStart, prevPageStart)}
         <div class="conversation-layout-container">
             %for mid in mids:
