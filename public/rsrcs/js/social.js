@@ -961,12 +961,15 @@ var menu = {
             var $item = $('#'+key+'-sideitem'),
                 $counter = $item.children('.new-count');
 
-            if ($counter.length == 0) {
+            if ($counter.length == 0 && value > 0) {
                 $counter = $('<div class="new-count"></div>');
                 $counter.appendTo($item);
             }
 
-            $counter.text(value);
+            if (value > 0)
+                $counter.text(value);
+            else
+                $counter.remove();
         });
     }
 };
