@@ -57,7 +57,7 @@
     <div class="sidebar-title">${_("Invite people")}</div>
     <form method="post" action="/people/invite" class="ajax" autocomplete="off" >
       <div class="input-wrap">
-        <input type="text" name="email"/>
+        <input type="text" name="email" id="invite-others" placeholder="Email Address"/>
       </div>
       <input type="hidden" name="from" value="sidebar"/>
       <input class="button" type="submit" id="submit" value="${_('Submit')}"/>
@@ -106,12 +106,8 @@
     <div id="${id}-wrapper">
       <button class="acl-button button" id="${id}-label" onclick="$$.acl.showACL(event, '${id}');">${defaultLabel}</button>
       <ul id="${id}-menu" class="acl-menu" style="display:none;">
-##      <li><a class="acl-item" _acl="public"><div class="icon"></div>${_("Public")}</a></li>
-        <li><a class="acl-item" _acl="orgs:${orgKey}"><div class="icon"></div>${_("Company")}</a></li>
+        <li><a class="acl-item" _acl="org:${orgKey}"><div class="icon"></div>${_("Company")}</a></li>
         <li><a class="acl-item" _acl="friends"><div class="icon"></div>${_("Friends")}</a></li>
-##      <li class="ui-menu-separator" id="${id}-groups-sep"></li>
-##      <li class="ui-menu-separator"></li>
-##      <li><a class="acl-item" _acl="custom"><div class="icon"></div>${_("Custom")}</a></li>
       </ul>
     </div>
   %endif
@@ -141,7 +137,7 @@
           <input type="hidden" name="type" value="status"/>
       </div>
       <div id="sharebar-actions-wrapper">
-        <ul id="attached-files" class="v-links busy-indicator" style="float:left">&nbsp</ul>
+        <ul id="attached-files" class="v-links busy-indicator" style="float:left">&nbsp;</ul>
         <ul id="sharebar-actions" class="h-links">
           <li>${acl_button("sharebar-acl", '{"accept":{"orgs":["%s"]}}'%orgKey, "Company")}</li>
           <li>${widgets.button("sharebar-submit", "submit", "default", None, "Share")}</li>

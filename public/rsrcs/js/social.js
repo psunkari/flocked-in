@@ -516,7 +516,7 @@ var convs = {
         }
     },
 
-    playEmbed: function(convId) {
+    embed: function(convId) {
         var $embedFrame = $('#embed-frame-'+convId),
             width = $embedFrame.css('width'),
             height = $embedFrame.css('height'),
@@ -526,7 +526,8 @@ var convs = {
         
         $embedFrame.append($(frame))
                    .css('display', 'block')
-                   .prev().css('display', 'none');
+                   .prev().css('display', 'none')
+                   .nextAll('.link-summary').css('display', 'none');
     }
 };
 
@@ -960,12 +961,15 @@ var menu = {
             var $item = $('#'+key+'-sideitem'),
                 $counter = $item.children('.new-count');
 
-            if ($counter.length == 0) {
+            if ($counter.length == 0 && value > 0) {
                 $counter = $('<div class="new-count"></div>');
                 $counter.appendTo($item);
             }
 
-            $counter.text(value);
+            if (value > 0)
+                $counter.text(value);
+            else
+                $counter.remove();
         });
     }
 };
@@ -1018,7 +1022,7 @@ var acl = {
 
         if (!$menu.hasClass("ui-menu")) {
             $menu.menu({
-                    select: function(event, ui) {
+                     select: function(event, ui) {
                          $(this).hide();
                          acl.updateACL(id, ui);
                      }
@@ -1072,7 +1076,7 @@ var acl = {
         }
 
         $("#"+id).attr("value", $$.json.stringify(aclObj));
-        $("#"+id+"-label").text(ui.item.text());
+        $("#"+id+"-label").text(str);
     },
 
     /* Update list of groups displayed in the menu */
@@ -1113,11 +1117,25 @@ $$.acl = acl;
  */
 (function($$, $) { if (!$$.messaging) {
 var messaging = {
+    autoFillUsers: function(){
+        $('.conversation-composer-field-recipient').autocomplete({
+            source: '/auto/users',
+            minLength: 2,
+            select: function( event, ui ) {
+                $('.conversation-composer-recipients').append(
+                    $$.messaging.formatUser(ui.item.value, ui.item.uid));
+                var rcpts = $('#recipientList').val().trim();
+                rcpts = (rcpts == "") ? ui.item.uid: rcpts+","+ui.item.uid
+                $('#recipientList').val(rcpts)
+                this.value = "";
+                return false;
+        }
+        });
+    },
     removeUser: function(self, user_id){
-        var recipients = $('.conversation-composer-recipients').data('recipients');
-        var user_idx = jQuery.inArray(user_id, recipients);
-        recipients.splice(user_idx, 1);
-        $('.conversation-composer-recipients').data('recipients', recipients);
+        var recipients = $('#recipientList').val().split(",");
+        var rcpts = jQuery.grep(recipients, function (a) { return a != user_id; });
+        $('#recipientList').val(rcpts.join(","))
         $(self).parent().remove();
     },
     formatUser: function(user_string, user_id){
@@ -1160,10 +1178,9 @@ var events = {
         $.post('/ajax/event/rsvp', postdata)
     },
     removeUser: function(self, user_id){
-        var recipients = $('#invitees').data('recipients');
-        var user_idx = jQuery.inArray(user_id, recipients);
-        recipients.splice(user_idx, 1);
-        $('#invitees').data('recipients', recipients);
+        var invitees = $('#inviteeList').val().split(",");
+        var rcpts = jQuery.grep(invitees, function (a) { return a != user_id; });
+        $('#inviteeList').val(rcpts.join(","))
         $(self).parent().remove();
     },
     formatUser: function(user_string, user_id){

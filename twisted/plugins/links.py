@@ -80,7 +80,7 @@ class Links(object):
             meta['imgSrc'] = image
         if embed:
             embedType = embed.get("type")
-            embedSrc = embed.get("html")
+            embedSrc = embed.get("url") if embedType == "photo" else embed.get("html")
             embedWidth = embed.get("width")
             embedHeight = embed.get("height")
             if embedHeight and embedWidth and embedSrc:

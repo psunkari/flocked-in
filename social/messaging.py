@@ -218,25 +218,8 @@ class MessagingResource(base.BaseResource):
         #XXX:Is this a duplicate batch insert ?
         yield db.batch_insert(convId, "mConversations", {'meta':meta})
 
-        if script and filterType is not None and filterType == "all":
-            col = yield db.get_slice(convId, 'mConversations')
-            conversation = utils.supercolumnsToDict(col)
-            args.update({"convId":convId})
-
-            conv = {"people":participants, "read":1, "count":1,
-                    "meta":conversation['meta']}
-            args.update({"conv":conv})
-
-            users = participants
-            users = yield db.multiget_slice(users, 'entities', ['basic'])
-            users = utils.multiSuperColumnsToDict(users)
-            args.update({"people":users})
-
-            args.update({"filterType":"all"})
-            yield renderScriptBlock(request, "message.mako",
-                                    "render_conversation_row", landing,
-                                    ".conversation-layout-container",
-                                    "prepend", **args)
+        if script:
+            request.write("$('#composer').empty();$$.fetchUri('/messages');")
 
     @defer.inlineCallbacks
     def _composeMessage(self, request):
@@ -635,22 +618,7 @@ class MessagingResource(base.BaseResource):
 
         if script:
             onload = """
-                    $('.conversation-composer-field-recipient').autocomplete({
-                        source: '/auto/users',
-                        minLength: 2,
-                        select: function( event, ui ) {
-                            $('.conversation-composer-recipients').append($$.messaging.formatUser(ui.item.value, ui.item.uid))
-                            var rcpts = $('.conversation-composer-recipients').data('recipients')
-                            if (jQuery.isArray(rcpts)){
-                                rcpts.push(ui.item.uid)
-                            }else{
-                                rcpts = [ui.item.uid]
-                            }
-                            $('.conversation-composer-recipients').data('recipients', rcpts)
-                            this.value = ""
-                            return false;
-                    }
-                    });
+                    $$.messaging.autoFillUsers();
                     $('.conversation-composer-field-body').autogrow();
                      """
             yield renderScriptBlock(request, "message.mako", "render_composer",

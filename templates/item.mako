@@ -285,7 +285,7 @@
 
 
 <%def name="conv_comments_head(convId, total, showing, isFeed)">
-  <% commentString = "Answers" if items[convId]['meta']['type'] == "question" else "Comment" %>
+  <% commentString = "answers" if items[convId]['meta']['type'] == "question" else "comments" %>
   %if total > showing:
     <div class="conv-comments-more" class="busy-indicator">
       %if isFeed:
@@ -317,7 +317,9 @@
     responsesToShow = responses.get(convId, {}) if responses else []
   %>
   <div id="comments-header-${convId}">
-    ${self.conv_comments_head(convId, responseCount, len(responsesToShow), isFeed)}
+    %if responsesToShow:
+      ${self.conv_comments_head(convId, responseCount, len(responsesToShow), isFeed)}
+    %endif
   </div>
   <div id="comments-${convId}">
     %for responseId in responsesToShow:
@@ -359,7 +361,7 @@
       %endif
     </div>
     <div class="comment-container">
-      <button class="button-link conv-other-actions" onclick="$.post('/ajax/item/delete', {id:'${commentId}'});">x</button>
+      <span class="conv-other-actions" onclick="$.post('/ajax/item/delete', {id:'${commentId}'});">&nbsp;</span>
       <span class="comment-user">${utils.userName(userId, entities[userId])}</span>
       <span class="comment-text">${comment|normalize}</span>
     </div>
@@ -371,7 +373,7 @@
 
 
 <%def name="conv_tag(convId, tagId, tagName)">
-  <span class="tag" id="tag-${tagId}">
+  <span class="tag" tag-id="${tagId}">
     <a class="ajax" href="/tags?id=${tagId}">${tagName}</a>
     <form class="ajax delete-tags" method="post" action="/item/untag">
       <input type="hidden" name="id" value="${convId}"/>
@@ -388,7 +390,7 @@
     <button class="button-link edit-tags-button" title="${_('Edit tags')}" onclick="$$.convs.editTags('${convId}');"><div class="icon edit-tags-icon"></div>Edit Tags</button>
     <span id="conv-tags-${convId}">
     %for tagId in itemTags.keys():
-      <span class="tag" id="tag-${tagId}">
+      <span class="tag" tag-id="${tagId}">
         <a class="ajax" href="/tags?id=${tagId}">${tags[tagId]["title"]}</a>
         <form class="ajax delete-tags" method="post" action="/item/untag">
           <input type="hidden" name="id" value="${convId}"/>
@@ -495,17 +497,25 @@
 <%def name="render_feedback(convId, isQuoted=False)">
   <%
     conv = items[convId]
-    mood = conv["meta"]["subType"]
     normalize = utils.normalizeText
-    owner = conv["meta"]["owner"]
+    meta = conv["meta"]
+    mood = meta["subType"]
+    user = entities[meta['userId']]
+    userOrg = entities[meta['userOrgId']]
   %>
   %if not isQuoted:
-    ${utils.userName(owner, entities[owner], "conv-user-cause")}
+    <span class="conv-user-cause" style="color:#3366CC">
+      ${", ".join([user["basic"]["name"], user["basic"].get('jobTitle', None)])}
+    </span>
+    (${userOrg["basic"]["name"]})
   %endif
   <div class="item-title">
     <div>
       %if isQuoted:
-        ${utils.userName(owner, entities[owner])}
+        <span class="conv-user-cause" style="color:#3366CC">
+          ${", ".join([user["basic"]["name"], user["basic"].get('jobTitle', None)])}
+        </span>
+        (${userOrg["basic"]["name"]})<br/>
       %endif
       %if conv["meta"].has_key("comment"):
         ${conv["meta"]["comment"]|normalize}
@@ -549,10 +559,12 @@
       %endif
       <div class="link-item">
         %if imgsrc and hasEmbed:
-          <div onclick="$$.convs.playEmbed('${convId}');" class="embed-wrapper">
+          <div onclick="$$.convs.embed('${convId}');" class="embed-wrapper">
             <div class="embed-overlay embed-${embedType}"></div>
             <img src='${imgsrc}' class="link-image has-embed embed-${embedType}"/>
           </div>
+          <div class="embed-frame-wrapper" id="embed-frame-${convId}"
+               style="width:${embedWidth}px;height:${embedHeight}px;display:none;"/>
         %elif imgsrc:
           <img src='${imgsrc}' class="link-image"/>
         %endif
@@ -562,10 +574,6 @@
           <div id="url" class="link-url">${url}</div>
         %endif
       </div>
-      %if hasEmbed:
-        <div class="embed-frame-wrapper" id="embed-frame-${convId}"
-             style="width:${embedWidth}px;height:${embedHeight}px;display:none;"/>
-      %endif
     </div>
   </div>
 </%def>
@@ -655,16 +663,14 @@
 
 <%def name="_item_other_actions(convId, iamOwner, convType)">
   %if convType not in ["activity"]:
-    <span class="conv-other-actions">
-      <button class="button-link" onclick="$$.ui.showPopUp(event)">X</button>
-      <ul class="acl-menu" style="display:none;">
-          %if iamOwner:
-            <li><a class="menu-item noicon" onclick="$.post('/ajax/item/delete', {id:'${convId}'});">${_("Delete")}</a></li>
-          %else:
-            <li><a class="menu-item noicon" onclick="$.post('/ajax/item/remove', {id:'${convId}'});">${_("Remove")}</a></li>
-            <li><a class="menu-item noicon" onclick="">${_("Report")}</a></li>
-          %endif
-      </ul>
-    </span>
+    <span class="conv-other-actions" onclick="$$.ui.showPopUp(event)"></span>
+    <ul class="acl-menu" style="display:none;">
+        %if iamOwner:
+          <li><a class="menu-item noicon" onclick="$.post('/ajax/item/delete', {id:'${convId}'});">${_("Delete")}</a></li>
+        %else:
+          <li><a class="menu-item noicon" onclick="$.post('/ajax/item/remove', {id:'${convId}'});">${_("Remove")}</a></li>
+          <li><a class="menu-item noicon" onclick="">${_("Report")}</a></li>
+        %endif
+    </ul>
   %endif
 </%def>

@@ -98,9 +98,9 @@
       <ul id="user-actions-${userId}" class="middle user-actions h-links">
         %if showBlocked:
           %if userId not in blockedUsers:
-            <button class="button default" onclick="$.post('/ajax/admin/block', 'id=${userId}')"><span class="button-text">Block</span></li>
+            <button class="button default" onclick="$.post('/ajax/admin/block', 'id=${userId}')">Block</button>
           %endif
-          <button class="button default" onclick="$.post('/ajax/admin/delete', 'id=${userId}')"><span class="button-text">Remove</span></li>
+          <button class="button default" onclick="$.post('/ajax/admin/delete', 'id=${userId}')">Remove</button>
         %else:
           ${profile.user_actions(userId, True)}
         %endif
@@ -139,15 +139,15 @@
     <input type="hidden" name="from" value="people"/>
     <div id="invite-people">
       <div class="input-wrap">
-        <span class="icon invite-people-entry">&nbsp</span>
+        <span class="icon invite-people-entry">&nbsp;</span>
         <input type="text" name="invites" placeholder="${_("Enter your colleague's email address")}"/>
       </div>
       <div class="input-wrap">
-        <span class="icon invite-people-entry">&nbsp</span>
+        <span class="icon invite-people-entry">&nbsp;</span>
         <input type="text" name="invites" placeholder="${_("Enter your colleague's email address")}"/>
       </div>
       <div class="input-wrap">
-        <span class="icon invite-people-entry">&nbsp</span>
+        <span class="icon invite-people-entry">&nbsp;</span>
         <input type="text" name="invites" placeholder="${_("Enter your colleague's email address")}"/>
       </div>
     </div>
