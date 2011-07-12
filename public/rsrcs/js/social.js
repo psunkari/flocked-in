@@ -100,8 +100,9 @@ _initAjaxRequests: function _initAjaxRequests() {
 
     /* Async Get */
     $("a.ajax,button.ajax").live("click", function() {
-        node = $(this);
-        deferred = null;
+        var node = $(this),
+            deferred = null,
+            url = null;
 
         if (url = node.attr('_ref'))
             deferred = $.get('/ajax' + url);
@@ -114,8 +115,8 @@ _initAjaxRequests: function _initAjaxRequests() {
 
     /* Async Post */
     $("a.ajaxpost,button.ajaxpost").live("click", function() {
-        node = $(this);
-        url = node.attr('_ref');
+        var node = $(this),
+            url = node.attr('_ref');
         parsed = social.parseUri(url);
 
         deferred = $.post('/ajax' + parsed.path, parsed.query);
@@ -129,8 +130,8 @@ _initAjaxRequests: function _initAjaxRequests() {
         if (this.hasAttribute("disabled"))
             return false;
 
-        var $this = $(this);
-        var deferred = $.post('/ajax' + $this.attr('action'),
+        var $this = $(this),
+            deferred = $.post('/ajax' + $this.attr('action'),
                                    $this.serialize());
 
         self.setBusy(deferred, $this)
@@ -620,7 +621,7 @@ var ui = {
             source: '/auto/searchbox',
             minLength: 3,
             select: function(event, obj){
-                url = obj.item.href;
+                var url = obj.item.href;
                 if (url !== undefined) {
                     $$.fetchUri(url);
                     event.target.value = "";
