@@ -61,6 +61,10 @@ def createColumnFamilies(client):
     invitations = CfDef(KEYSPACE, "invitations", 'Super', 'UTF8Type', 'BytesType',
                         "List of invitations sent out by existing users")
     yield client.system_add_column_family(invitations)
+    #
+    invitationsSent = CfDef(KEYSPACE, "invitationsSent", "Standard", "BytesType", None,
+                            "map of users to invitations")
+    yield client.system_add_column_family(invitationsSent)
 
     # Temporary column family for storing email addresses of people
     # who expressed interest during the private beta.

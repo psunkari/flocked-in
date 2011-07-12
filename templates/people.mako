@@ -58,7 +58,7 @@
 
 <%def name="viewOptions(selected)">
   <ul class="h-links view-options">
-    %for item, display in [('friends', 'My friends'), ('all', 'All users')]:
+    %for item, display in [('friends', 'My friends'), ('all', 'All users'), ('invitations', 'Invitations')]:
       %if selected == item:
         <li class="selected">${_(display)}</li>
       %else:
@@ -165,3 +165,49 @@
     </div>
   </form>
 </%def>
+
+
+
+
+
+<%def name="listInvitations()">
+  <%
+    counter = 0
+    firstRow = True
+  %>
+  %for emailId in emailIds:
+    %if counter % 2 == 0:
+      %if firstRow:
+        <div class="users-row users-row-first">
+        <% firstRow = False %>
+      %else:
+        <div class="users-row">
+      %endif
+    %endif
+    <div class="users-user">${_displayInvitation(emailId)}</div>
+    %if counter % 2 == 1:
+      </div>
+    %endif
+    <% counter += 1 %>
+  %endfor
+  %if counter % 2 == 1:
+    </div>
+  %endif
+</%def>
+
+
+<%def name="_displayInvitation(emailId)">
+  <% button_class = 'default' %>
+  <div class="users-avatar">
+      <img width="48" height="48" src="/rsrcs/img/avatar_m_m.png">
+  </div>
+  <div class="users-details">
+    <div class="user-details-name">${emailId}</div>
+    <div class="user-details-actions">
+      <ul id="user-actions-${emailId}" class="middle user-actions h-links">
+        ##<button class="button disabled" onclick="$.post('/ajax/people/invite/resend', 'id=${emailId}')"><span class="button-text">Invite Again</span></button>
+      </ul>
+    </div>
+  </div>
+</%def>
+

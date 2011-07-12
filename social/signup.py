@@ -156,6 +156,12 @@ class SignupResource(BaseResource):
             authinfo.organization = orgId
             authinfo.isAdmin = False
 
+            cols = yield db.get_slice(domain, "invitations", [emailId])
+            cols = utils.supercolumnsToDict(cols)
+            userIds = cols.get(emailId, {}).values()
+            if userIds:
+                db.batch_remove({'invitationsSent':userIds}, names=[emailId])
+
             yield db.remove(domain, "invitations", super_column=emailId)
             yield render(request, "signup.mako", **args)
         else:

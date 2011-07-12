@@ -37,6 +37,7 @@ def _sendInvitations(myOrgUsers, otherOrgUsers, me, myId, myOrg):
         localpart, domainpart = emailId.split('@')
 
         deferreds.append(db.insert(domainpart, "invitations", myId, token, emailId))
+        deferreds.append(db.insert(myId, "invitationsSent", '', emailId))
         if emailId in otherOrgUsers:
             deferreds.append(utils.sendmail(emailId, otherOrgSubject, otherOrgBody%locals()))
         else:
@@ -127,6 +128,25 @@ def getPeople(myId, entityId, orgId, start='',
     defer.returnValue((users, relation, userIds,\
                        blockedUsers, nextPageStart, prevPageStart))
 
+@defer.inlineCallbacks
+def _get_invitations_sent(userId, start='', count=PEOPLE_PER_PAGE):
+    toFetchCount = count + 1
+    prevPageStart = None
+    nextPageStart = None
+    d1 = db.get_slice(userId, "invitationsSent", start=start, count=toFetchCount)
+    d2 = db.get_slice(userId, "invitationsSent", start=start, count=toFetchCount,
+                        reverse=True) if start else None
+    cols = yield d1
+    emailIds = [col.column.name for col in cols]
+    if len(cols) == toFetchCount:
+        nextPageStart = emailIds[-1]
+    if start and d2:
+        prevCols = yield d2
+        if len(prevCols) > 1:
+            prevPageStart = prevPageStart[-1].column.name
+
+    defer.returnValue((emailIds, prevPageStart, nextPageStart))
+
 
 class PeopleResource(base.BaseResource):
     isLeaf = True
@@ -154,16 +174,22 @@ class PeopleResource(base.BaseResource):
             d = getPeople(myId, orgId, orgId, start=start)
         elif viewType == "friends":
             d = getPeople(myId, myId, orgId, start=start)
+        elif viewType == "invitations":
+            d = _get_invitations_sent(myId, start=start)
         else:
             raise errors.InvalidRequest(_("Unknown view type"))
 
-        users, relations, userIds,\
-            blockedUsers, nextPageStart, prevPageStart = yield d
+        if viewType in ['all', 'friends']:
+            users, relations, userIds,\
+                blockedUsers, nextPageStart, prevPageStart = yield d
 
-        # First result tuple contains the list of user objects.
-        args["entities"] = users
-        args["relations"] = relations
-        args["people"] = userIds
+            # First result tuple contains the list of user objects.
+            args["entities"] = users
+            args["relations"] = relations
+            args["people"] = userIds
+        elif viewType == 'invitations':
+            emailIds, prevPageStart, nextPageStart = yield d
+            args['emailIds'] = emailIds
         args["nextPageStart"] = nextPageStart
         args["prevPageStart"] = prevPageStart
         args["viewType"] = viewType
@@ -171,8 +197,12 @@ class PeopleResource(base.BaseResource):
         if script:
             yield renderScriptBlock(request, "people.mako", "viewOptions",
                                 landing, "#people-view", "set", args=[viewType])
-            yield renderScriptBlock(request, "people.mako", "listPeople",
-                                    landing, "#users-wrapper", "set", **args)
+            if viewType in ('all', 'friends'):
+                yield renderScriptBlock(request, "people.mako", "listPeople",
+                                        landing, "#users-wrapper", "set", **args)
+            elif viewType == 'invitations':
+                yield renderScriptBlock(request, "people.mako", "listInvitations",
+                                        landing, "#users-wrapper", "set", **args)
             yield renderScriptBlock(request, "people.mako", "paging",
                                 landing, "#people-paging", "set", **args)
 
