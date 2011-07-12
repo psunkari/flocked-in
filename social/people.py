@@ -84,34 +84,38 @@ def invite(request, rawEmailIds):
 
 @defer.inlineCallbacks
 def getPeople(myId, entityId, orgId, start='',
-              count=PEOPLE_PER_PAGE, fn=None):
-    cols = yield db.get_slice(orgId, "blockedUsers")
-    blockedUsers = utils.columnsToDict(cols).keys()
+              count=PEOPLE_PER_PAGE, fn=None, fetchBlocked=True):
+    blockedUsers = []
     toFetchCount = count + 1
     nextPageStart = None
     prevPageStart = None
     userIds = []
 
+    if fetchBlocked:
+        cols = yield db.get_slice(orgId, "blockedUsers")
+        blockedUsers = utils.columnsToDict(cols).keys()
+
     if not fn:
         d1 = db.get_slice(entityId, "displayNameIndex",
                           start=start, count=toFetchCount)
         d2 = db.get_slice(entityId, "displayNameIndex",
-                    start=start, count=toFetchCount, reverse=True)\
-                    if start else None
+                          start=start, count=toFetchCount,
+                          reverse=True) if start else None
 
         # Get the list of users (sorted by displayName)
         cols = yield d1
         userIds = [col.column.name.split(":")[1] for col in cols]
         if len(userIds) > count:
-            nextPageStart = cols[-1].column.name
+            nextPageStart = utils.encodeKey(cols[-1].column.name)
             userIds = userIds[0:count]
+
         toFetchUsers = userIds
 
         # Start of previous page
         if start and d2:
             prevCols = yield d2
-            if prevCols and len(prevCols) > 1:
-                prevPageStart = prevCols[-1].column.name
+            if len(prevCols) > 1:
+                prevPageStart = utils.encodeKey(prevCols[-1].column.name)
     else:
         userIds, nextPageStart, prevPageStart\
                                 = yield fn(entityId, start, toFetchCount)
@@ -128,6 +132,7 @@ def getPeople(myId, entityId, orgId, start='',
     defer.returnValue((users, relation, userIds,\
                        blockedUsers, nextPageStart, prevPageStart))
 
+
 @defer.inlineCallbacks
 def _getInvitationsSent(userId, start='', count=PEOPLE_PER_PAGE):
     toFetchCount = count + 1
@@ -140,13 +145,13 @@ def _getInvitationsSent(userId, start='', count=PEOPLE_PER_PAGE):
     cols = yield d1
     emailIds = [col.column.name for col in cols]
     if len(cols) == toFetchCount:
-        nextPageStart = emailIds[-1]
+        nextPageStart = utils.encodeKey(emailIds[-1])
         emailIds = emailIds[0:count]
 
     if start and d2:
         prevCols = yield d2
         if len(prevCols) > 1:
-            prevPageStart = prevCols[-1].column.name
+            prevPageStart = utils.encodeKey(prevCols[-1].column.name)
 
     defer.returnValue((emailIds, prevPageStart, nextPageStart))
 
@@ -174,9 +179,9 @@ class PeopleResource(base.BaseResource):
 
         d = None
         if viewType == "all":
-            d = getPeople(myId, orgId, orgId, start=start)
+            d = getPeople(myId, orgId, orgId, start=start, fetchBlocked=False)
         elif viewType == "friends":
-            d = getPeople(myId, myId, orgId, start=start)
+            d = getPeople(myId, myId, orgId, start=start, fetchBlocked=False)
         elif viewType == "invitations":
             d = _getInvitationsSent(myId, start=start)
         else:
@@ -193,6 +198,7 @@ class PeopleResource(base.BaseResource):
         elif viewType == 'invitations':
             emailIds, prevPageStart, nextPageStart = yield d
             args['emailIds'] = emailIds
+
         args["nextPageStart"] = nextPageStart
         args["prevPageStart"] = prevPageStart
         args["viewType"] = viewType
@@ -268,6 +274,7 @@ class PeopleResource(base.BaseResource):
         segmentCount = len(request.postpath)
         viewType = utils.getRequestArg(request, "type") or "friends"
         start = utils.getRequestArg(request, "start") or ''
+        start = utils.decodeKey(start)
         d = None
 
         if segmentCount == 0:

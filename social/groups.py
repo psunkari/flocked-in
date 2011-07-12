@@ -467,7 +467,7 @@ class GroupsResource(base.BaseResource):
 
         users, relation, userIds, blockedUsers, nextPageStart,\
             prevPageStart = yield people.getPeople(myKey, groupId,
-                                               args['orgKey'], start = start)
+                                                   args['orgKey'], start=start)
         args["relations"] = relation
         args["entities"] = users
         args["userIds"] = userIds
@@ -484,17 +484,6 @@ class GroupsResource(base.BaseResource):
                                     landing, "#groups-wrapper", "set", **args)
             yield renderScriptBlock(request, "groups.mako", "paging",
                                 landing, "#groups-paging", "set", **args)
-
-            #if fromFetchMore:
-            #    yield renderScriptBlock(request, "groups.mako",
-            #                            "displayGroupMembers", landing,
-            #                            "#next-load-wrapper", "replace", True,
-            #                            handlers={}, **args)
-            #else:
-            #    yield renderScriptBlock(request, "groups.mako",
-            #                            "displayGroupMembers", landing,
-            #                            "#groups-wrapper", "set", **args)
-
 
     @profile
     @defer.inlineCallbacks
