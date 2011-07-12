@@ -113,6 +113,7 @@ class Links(object):
         ogTitle = None
         ogSummary = None
         ogImage = None
+        embed = None
         try:
             # First check if embedly supports it.
             if embedlyClient and embedlyClient._regex.match(url):
@@ -155,7 +156,7 @@ class Links(object):
                     summary = summary.encode('utf-8')
 
             if ((ogSummary or summary) and (ogTitle or title) and (ogImage or image)):
-                defer.returnValue((ogSummary or summary, ogTitle or title,  ogImage or image))
+                defer.returnValue((ogSummary or summary, ogTitle or title,  ogImage or image, embed ))
             if not (ogSummary or summary):
                 for element in tree.xpath("body//p"):
                     if element.text:
@@ -169,10 +170,10 @@ class Links(object):
 
                         image = element.attrib['src']
                         break
-            defer.returnValue((ogSummary or summary, ogTitle or title, ogImage or image, None))
+            defer.returnValue((ogSummary or summary, ogTitle or title, ogImage or image, embed))
         except Exception as e:
             log.msg(e)
-            defer.returnValue((ogSummary or summary, ogTitle or title, ogImage or image, None))
+            defer.returnValue((ogSummary or summary, ogTitle or title, ogImage or image, embed))
 
 
 links = Links()
