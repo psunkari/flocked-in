@@ -129,21 +129,24 @@ def getPeople(myId, entityId, orgId, start='',
                        blockedUsers, nextPageStart, prevPageStart))
 
 @defer.inlineCallbacks
-def _get_invitations_sent(userId, start='', count=PEOPLE_PER_PAGE):
+def _getInvitationsSent(userId, start='', count=PEOPLE_PER_PAGE):
     toFetchCount = count + 1
     prevPageStart = None
     nextPageStart = None
-    d1 = db.get_slice(userId, "invitationsSent", start=start, count=toFetchCount)
-    d2 = db.get_slice(userId, "invitationsSent", start=start, count=toFetchCount,
-                        reverse=True) if start else None
+    d1 = db.get_slice(userId, "invitationsSent",
+                      start=start, count=toFetchCount)
+    d2 = db.get_slice(userId, "invitationsSent", start=start,
+                      count=toFetchCount, reverse=True) if start else None
     cols = yield d1
     emailIds = [col.column.name for col in cols]
     if len(cols) == toFetchCount:
         nextPageStart = emailIds[-1]
+        emailIds = emailIds[0:count]
+
     if start and d2:
         prevCols = yield d2
         if len(prevCols) > 1:
-            prevPageStart = prevPageStart[-1].column.name
+            prevPageStart = prevCols[-1].column.name
 
     defer.returnValue((emailIds, prevPageStart, nextPageStart))
 
@@ -175,7 +178,7 @@ class PeopleResource(base.BaseResource):
         elif viewType == "friends":
             d = getPeople(myId, myId, orgId, start=start)
         elif viewType == "invitations":
-            d = _get_invitations_sent(myId, start=start)
+            d = _getInvitationsSent(myId, start=start)
         else:
             raise errors.InvalidRequest(_("Unknown view type"))
 
