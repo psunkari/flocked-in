@@ -100,8 +100,16 @@ class ItemResource(base.BaseResource):
         args["ownerId"] = convOwner
 
         if script:
-            d = renderScriptBlock(request, "item.mako", "conv_owner", landing,
-                                  "#conv-avatar-%s" % convId, "set", **args)
+            if itemType != "feedback":
+                d = renderScriptBlock(request, "item.mako", "conv_owner",
+                                      landing, "#conv-avatar-%s" % convId,
+                                      "set", **args)
+            else:
+                feedbackType = conv['meta']['subType']
+                d = renderScriptBlock(request, "item.mako", "feedback_icon",
+                                      landing, "#conv-avatar-%s" % convId,
+                                      "set", args=[feedbackType])
+                                        
             renderers.append(d)
 
         # A copy of this code for fetching comments is present in _responses
