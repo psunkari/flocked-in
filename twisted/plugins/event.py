@@ -419,6 +419,11 @@ class Event(object):
             event = self.getResource(False)
             yield event._inviteUsers(request, convId)
 
+        for attachmentId in attachments:
+            timeuuid, fid, name, size, ftype  = attachments[attachmentId]
+            val = "%s:%s:%s:%s:%s" %(utils.encodeKey(timeuuid), fid, name, size, ftype)
+            yield db.insert(convId, "item_files", val, timeuuid, attachmentId)
+
         from social import fts
         d = fts.solr.updateIndex(convId, item)
         defer.returnValue((convId, item))

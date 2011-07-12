@@ -60,6 +60,12 @@ class Question(object):
         item["meta"].update(meta)
 
         yield db.batch_insert(convId, "items", item)
+
+        for attachmentId in attachments:
+            timeuuid, fid, name, size, ftype  = attachments[attachmentId]
+            val = "%s:%s:%s:%s:%s" %(utils.encodeKey(timeuuid), fid, name, size, ftype)
+            yield db.insert(convId, "item_files", val, timeuuid, attachmentId)
+
         from social import fts
         fts.solr.updateIndex(convId, item)
         defer.returnValue((convId, item))
