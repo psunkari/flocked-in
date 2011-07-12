@@ -11,6 +11,7 @@ except:
 
 
 from social             import base, db, utils, errors, feed, people, _
+from social.constants   import PEOPLE_PER_PAGE
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
@@ -359,7 +360,7 @@ class GroupsResource(base.BaseResource):
 
         viewTypes = ['myGroups', 'allGroups', 'adminGroups']
         viewType = 'myGroups' if viewType not in viewTypes else viewType
-        count = 110
+        count = PEOPLE_PER_PAGE
         toFetchCount = count+1
 
         args["menuId"] = "groups"
@@ -381,15 +382,16 @@ class GroupsResource(base.BaseResource):
             groupIds = utils.columnsToDict(cols, ordered=True).keys()
             toFetchGroups.update(set(groupIds))
         elif viewType == 'adminGroups':
-            cols = yield db.get_slice(myId, "entities", ['adminOfGroups'])
-            groupIds = utils.supercolumnsToDict(cols, ordered=True)
-            if groupIds:
-                groupIds = groupIds['adminOfGroups'].keys()
+            try:
+                cols = yield db.get_slice(myId, "entities",
+                                          super_column='adminOfGroups',
+                                          start=start, count=toFetchCount)
+                groupIds = utils.columnsToDict(cols, ordered=True).keys()
                 toFetchGroups.update(set(groupIds))
+            except ttypes.NotFoundException:
+                pass
 
-
-        cols = yield db.get_slice(myId, "entityGroupsMap",
-                                  start=start, count=toFetchCount)
+        cols = yield db.get_slice(myId, "entityGroupsMap", list(toFetchGroups))
         myGroupsIds = utils.columnsToDict(cols, ordered=True).keys()
 
         if len(groupIds) > count:
@@ -397,8 +399,15 @@ class GroupsResource(base.BaseResource):
             groupIds = groupIds[0:count]
 
         if start:
-            cols = yield db.get_slice(entityId, 'entityGroupsMap', start=start,
-                                      count=toFetchCount,  reverse=True)
+            if viewType in ['myGroups', 'allGroups']:
+                cols = yield db.get_slice(entityId, 'entityGroupsMap',
+                                          start=start, count=toFetchCount,
+                                          reverse=True)
+            elif viewType == "adminGroups":
+                cols = yield db.get_slice(myId, "entities",
+                                          super_column='adminOfGroups',
+                                          start=start, count=toFetchCount,
+                                          reverse=True)
             if len(cols) > 1:
                 prevPageStart = utils.encodeKey(cols[-1].column.name)
 
