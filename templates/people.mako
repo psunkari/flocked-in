@@ -58,7 +58,7 @@
 
 <%def name="viewOptions(selected)">
   <ul class="h-links view-options">
-    %for item, display in [('friends', 'My friends'), ('all', 'All users'), ('invitations', 'Invitations')]:
+    %for item, display in [('friends', 'My friends'), ('all', 'All users'), ('invitations', 'Invitations'), ('pendingRequests', 'Friend Requests')]:
       %if selected == item:
         <li class="selected">${_(display)}</li>
       %else:
@@ -210,4 +210,3 @@
     </div>
   </div>
 </%def>
-
