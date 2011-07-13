@@ -744,7 +744,7 @@ def truncateColumnFamilies(client):
                "mConversations", "mAllConversations", "mUnreadConversations",
                "mArchivedConversations", "mDeletedConversations",
                "mConvMessages", "mConvFolders", "latest",
-               "files", "tmp_files", "item_files"]:
+               "files", "tmp_files", "item_files", "invitationsSent"]:
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 
