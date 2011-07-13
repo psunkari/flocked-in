@@ -13,7 +13,6 @@ from twisted.web            import resource, server, http
 
 from social                 import _, __, db, utils
 from social.base            import BaseResource
-from social.template        import getBlock
 from social.isocial         import IAuthInfo
 
 
