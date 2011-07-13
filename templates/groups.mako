@@ -78,31 +78,7 @@
   %endif
 </%def>
 
-<%def name="pendingRequests()">
-  <%
-    counter = 0
-  %>
-  %for userId in entities:
-    <div class="users-user">
-      <div class="users-avatar">
-      <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
-      %if avatarURI:
-        <img src="${avatarURI}" height='48' width='48'></img>
-      %endif
-      </div>
-      <div class="users-details">
-        <div class="user-details-name">${utils.userName(userId, entities[userId])}</div>
-        <div class="user-details-actions">
-          <ul id="user-actions-${userId}" class="middle user-actions h-links">
-            <button class="button default" onclick="$.post('/ajax/groups/approve', 'id=${groupId}&uid=${userId}')"><span class="button-text">Accept</span></button>
-            <button class="button default" onclick="$.post('/ajax/groups/reject', 'id=${groupId}&uid=${userId}')"><span class="button-text">Reject</span></button>
-            <button class="button default" onclick="$.post('/ajax/groups/block', 'id=${groupId}&uid=${userId}')"><span class="button-text">Block</span></button>
-          </ul>
-        </div>
-      </div>
-    </div>
-  %endfor
-</%def>
+
 
 <%def name="group_actions(groupId)">
   %if groupId in pendingConnections:
@@ -199,7 +175,6 @@
   </ul>
 </%def>
 
-
 <%def name="createGroup()">
   <form id="group_form" action="/ajax/groups/create" method="post" enctype="multipart/form-data">
     <div class="styledform">
@@ -243,4 +218,65 @@
       </ul>
     </div>
   </form>
+</%def>
+
+
+<%def name="pendingRequests()">
+  <%
+    counter = 0
+    firstRow = True
+  %>
+  %for userId in userIds:
+    %if counter % 2 == 0:
+      %if firstRow:
+        <div class="users-row users-row-first">
+        <% firstRow = False %>
+      %else:
+        <div class="users-row">
+      %endif
+    %endif
+    <div class="users-user">${_pendingRequestUser(userId)}</div>
+    %if counter % 2 == 1:
+      </div>
+    %endif
+    <% counter += 1 %>
+  %endfor
+  %if counter % 2 == 1:
+    </div>
+  %endif
+</%def>
+
+<%def name="_pendingRequestUser(userId)">
+  <div class="users-avatar">
+    <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
+    %if avatarURI:
+        <img src="${avatarURI}" height='48' width='48'></img>
+    %endif
+  </div>
+  <div class="users-details">
+    <div class="user-details-name">${utils.userName(userId, entities[userId])}</div>
+    <div class="user-details-title">${entities[userId]["basic"].get("jobTitle", '')}</div>
+    <div class="user-details-actions">
+      <ul id="user-actions-${userId}" class="middle user-actions h-links">
+        <button class="button default" onclick="$.post('/ajax/groups/approve', 'id=${groupId}&uid=${userId}')"><span class="button-text">Accept</span></button>
+        <button class="button default" onclick="$.post('/ajax/groups/reject', 'id=${groupId}&uid=${userId}')"><span class="button-text">Reject</span></button>
+        <button class="button default" onclick="$.post('/ajax/groups/block', 'id=${groupId}&uid=${userId}')"><span class="button-text">Block</span></button>
+      </ul>
+    </div>
+  </div>
+</%def>
+
+<%def name="pendingRequestsPaging()">
+  <ul class="h-links">
+    %if prevPageStart:
+      <li class="button"><a class="ajax" href="/groups/pending?start=${prevPageStart}&id=${groupId}">${_("&#9666; Previous")}</a></li>
+    %else:
+      <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
+    %endif
+    %if nextPageStart:
+      <li class="button"><a class="ajax" href="/groups/pending?start=${nextPageStart}&id=${groupId}">${_("Next &#9656;")}</a></li>
+    %else:
+      <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
+    %endif
+  </ul>
 </%def>

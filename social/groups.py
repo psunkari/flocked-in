@@ -497,6 +497,11 @@ class GroupsResource(base.BaseResource):
     def _listPendingSubscriptions(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         landing = not self._ajax
+        start = utils.getRequestArg(request, 'start') or ''
+        count = PEOPLE_PER_PAGE
+        toFetchCount = count+1
+        nextPageStart = None
+        prevPageStart = None
 
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                       columns=["admins"])
@@ -510,23 +515,41 @@ class GroupsResource(base.BaseResource):
 
         if myKey in group["admins"]:
             #or myKey in moderators #if i am moderator
-            cols = yield db.get_slice(groupId, "pendingConnections")
-            cols = utils.columnsToDict(cols)
+            cols = yield db.get_slice(groupId, "pendingConnections",
+                                      start=start, count=toFetchCount)
+            cols = utils.columnsToDict(cols, ordered=True)
             userIds = cols.keys()
+            if len(userIds) == toFetchCount:
+                nextPageStart = userIds[-1]
+                userIds = userIds[0:count]
             cols = yield db.multiget_slice(userIds, "entities", ["basic"])
             users = utils.multiSuperColumnsToDict(cols)
+            if start:
+                cols = yield db.get_slice(groupId, "pendingConnections",
+                                          start=start, count=toFetchCount,
+                                          reverse=True)
+                if len(cols) >1:
+                    prevPageStart = cols[-1].column.name
+
             args["entities"] = users
+            args["userIds"] = userIds
         else:
-            args["entities"] = []
+            args["entities"] = {}
+            args["userIds"] = []
 
         args["heading"] = "Pending Requests"
         args["groupId"] = groupId
+        args["nextPageStart"] = nextPageStart
+        args["prevPageStart"] = prevPageStart
 
         if script:
             yield renderScriptBlock(request, "groups.mako", "titlebar",
                                     landing, "#titlebar", "set", **args)
             yield renderScriptBlock(request, "groups.mako", "pendingRequests",
                                     landing, "#groups-wrapper", "set", **args)
+            yield renderScriptBlock(request, 'groups.mako', "pendingRequestsPaging",
+                                    landing, "#groups-paging", "set", **args)
+
 
 
     @defer.inlineCallbacks
