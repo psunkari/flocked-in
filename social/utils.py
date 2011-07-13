@@ -476,9 +476,11 @@ def companyLogo(orgInfo, size=None):
         return None
 
 
-_urlRegEx = r'\b(([\w-]+://?|www[.])[^\s()<>]+(?:\([\w\d]+\)|([^%s\s]|/)))'
+_urlRegEx = r'\b(([\w-]+(?::|&#58;)//?|www[.])[^\s()<>]+(?:\([\w\d]+\)|([^%s\s]|/)))'
 _urlRegEx = _urlRegEx % re.sub(r'([-\\\]])', r'\\\1', string.punctuation)
 _urlRegEx = re.compile(_urlRegEx)
+_newLineRegEx = r'\r\n|\n'
+_newLineRegEx = re.compile(_newLineRegEx)
 def normalizeText(text):
     global _urlRegEx
     def addAnchor(m):
@@ -490,7 +492,7 @@ def normalizeText(text):
             return m.group(0)
 
     urlReplaced = _urlRegEx.sub(addAnchor, text)
-    return urlReplaced.strip().lstrip().replace("\r\n", "<br/>")
+    return _newLineRegEx.sub('<br/>', urlReplaced).strip().lstrip().replace("\r\n", "<br/>")
 
 
 def simpleTimestamp(timestamp, timezone='Asia/Kolkata'):
@@ -531,9 +533,20 @@ def simpleTimestamp(timestamp, timezone='Asia/Kolkata'):
 def toSnippet(comment):
     commentSnippet = []
     length = 0
-    for word in comment.replace(":", "").split():
-        if length +len(word)> 20:
-            commentSnippet.append(" ...")
+    words = comment.split()
+
+    # If it's a single word (eg:link) only make sure that
+    # the word isn't too long.
+    if len(words) == 1:
+        if len(words[0]) > 35:
+            return words[0][0:30] + "&hellip;"
+        else:
+            return words[0]
+
+    # More than one words. Break only at spaces.
+    for word in words:
+        if length+len(word) > 35:
+            commentSnippet.append("&hellip;")
             break
         commentSnippet.append(word)
         length += len(word)
