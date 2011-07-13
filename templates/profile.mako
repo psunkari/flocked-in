@@ -233,7 +233,7 @@
       %else:
         <button class="button disabled"><span class="button-text">Friend request sent</span></button>
       %endif
-      %if userKey not in relations.subscriptions and relations.pending.get(userKey) != "1":
+      %if userKey not in relations.subscriptions and userKey not in relations.friends:
         <button class="button" onclick="$.post('/ajax/profile/follow', 'id=${userKey}')"><span class="button-text">Follow User</span></button>
       %elif showRemove:
         <button class="button" onclick="$.post('/ajax/profile/unfollow', 'id=${userKey}')"><span class="button-text">Unfollow User</span></button>

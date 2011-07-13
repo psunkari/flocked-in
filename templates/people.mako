@@ -57,8 +57,13 @@
 </%def>
 
 <%def name="viewOptions(selected)">
+ <% 
+    tabs = [('friends', 'My friends'), ('all', 'All users'), ('pendingRequests', 'Friend Requests')]
+    if showInvitationsTab:
+        tabs.append(('invitations', 'Invitations'))
+ %>
   <ul class="h-links view-options">
-    %for item, display in [('friends', 'My friends'), ('all', 'All users'), ('invitations', 'Invitations')]:
+    %for item, display in tabs:
       %if selected == item:
         <li class="selected">${_(display)}</li>
       %else:
@@ -109,7 +114,16 @@
   </div>
 </%def>
 
-<%def name="listPeople(showBlocked=False)">
+<%def name="listPeople()">
+  %if viewType and viewType == 'invitations':
+    ${listInvitations()}
+  %else:
+    ${listUsers()}
+  %endif
+</%def>
+
+
+<%def name="listUsers(showBlocked=False)">
   <%
     counter = 0
     firstRow = True
@@ -166,10 +180,6 @@
   </form>
 </%def>
 
-
-
-
-
 <%def name="listInvitations()">
   <%
     counter = 0
@@ -195,7 +205,6 @@
   %endif
 </%def>
 
-
 <%def name="_displayInvitation(emailId)">
   <% button_class = 'default' %>
   <div class="users-avatar">
@@ -210,4 +219,3 @@
     </div>
   </div>
 </%def>
-

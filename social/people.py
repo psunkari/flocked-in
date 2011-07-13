@@ -11,6 +11,9 @@ from social.isocial     import IAuthInfo
 from social.constants   import PEOPLE_PER_PAGE
 from social.logging     import dump_args, profile
 
+INCOMING_REQUEST = '1'
+OUTGOING_REQUEST = '0'
+
 @defer.inlineCallbacks
 def _sendInvitations(myOrgUsers, otherOrgUsers, me, myId, myOrg):
     rootUrl = config.get('General', 'URL')
@@ -155,6 +158,76 @@ def _getInvitationsSent(userId, start='', count=PEOPLE_PER_PAGE):
 
     defer.returnValue((emailIds, prevPageStart, nextPageStart))
 
+@defer.inlineCallbacks
+def _get_pending_conncetions(userId, start='', count=PEOPLE_PER_PAGE, entityType='user'):
+    toFetchCount = count + 1
+    toFetchStart = start
+    prevPageStart = None
+    nextPageStart = None
+    blockedUsers = []
+    entityIds = []
+    entities = {}
+    tmp_count = 0
+
+    while len(entities) < toFetchCount:
+        cols = yield db.get_slice(userId, "pendingConnections",
+                                  start=toFetchStart,
+                                  count=toFetchCount)
+        if cols:
+            toFetchStart = cols[-1].column.name
+
+        ids = [col.column.name for col in cols if col.column.value == INCOMING_REQUEST]
+        if ids:
+            tmp_entities = yield db.multiget_slice(ids, "entities", ["basic"])
+            tmp_entities = utils.multiSuperColumnsToDict(tmp_entities)
+            for entityId in ids:
+                if tmp_entities[entityId]['basic']['type'] == entityType and \
+                   entityId not in entityIds:
+                    entities[entityId] = tmp_entities[entityId]
+                    entityIds.append(entityId)
+                    tmp_count +=1
+                if tmp_count == toFetchCount:
+                    break
+
+        if len(cols) < toFetchCount:
+            break
+
+    if len(entities) == toFetchCount:
+        nextPageStart = entityIds[-1]
+        entityIds = entityIds[0:count]
+    relation = Relation(userId, entityIds)
+    relation_d =  defer.DeferredList([relation.initPendingList(),
+                                      relation.initSubscriptionsList()])
+
+    if start:
+        tmp_count = 0
+        toFetchStart = start
+        tmp_ids = []
+        while tmp_count < toFetchCount:
+            cols = yield db.get_slice(userId, "pendingConnections",
+                                     start=toFetchStart, count=toFetchCount,
+                                     reverse=True)
+            if cols:
+                toFetchStart = cols[-1].column.name
+            ids = [col.column.name for col in cols if col.column.value == INCOMING_REQUEST]
+            if ids:
+                tmp_entities = yield db.multiget_slice(ids, "entities", ["basic"])
+                tmp_entities = utils.multiSuperColumnsToDict(tmp_entities)
+                for entityId in ids:
+                    if tmp_entities[entityId]['basic']['type'] == entityType and \
+                       entityId not in tmp_ids:
+                        tmp_count +=1
+                        tmp_ids.append(entityId)
+                    if tmp_count == toFetchCount:
+                        prevPageStart = entityId
+                        break
+            if len(cols) < toFetchCount:
+                break
+    yield relation_d
+
+    defer.returnValue((entities, relation, entityIds,\
+                       blockedUsers, nextPageStart, prevPageStart))
+
 
 class PeopleResource(base.BaseResource):
     isLeaf = True
@@ -182,12 +255,16 @@ class PeopleResource(base.BaseResource):
             d = getPeople(myId, orgId, orgId, start=start, fetchBlocked=False)
         elif viewType == "friends":
             d = getPeople(myId, myId, orgId, start=start, fetchBlocked=False)
+        elif viewType == 'pendingRequests':
+            d = _get_pending_conncetions(myId, start=start)
         elif viewType == "invitations":
             d = _getInvitationsSent(myId, start=start)
         else:
             raise errors.InvalidRequest(_("Unknown view type"))
 
-        if viewType in ['all', 'friends']:
+        sentInvitationsCount = yield db.get_count(myId, "invitationsSent")
+
+        if viewType in ['all', 'friends', 'pendingRequests']:
             users, relations, userIds,\
                 blockedUsers, nextPageStart, prevPageStart = yield d
 
@@ -199,19 +276,20 @@ class PeopleResource(base.BaseResource):
             emailIds, prevPageStart, nextPageStart = yield d
             args['emailIds'] = emailIds
 
+        # display the invitations tab only when there are invitations sent or
+        # when user explicitly checks for viewType "invitations"
+        showInvitationsTab = sentInvitationsCount > 0 or viewType == 'invitations'
         args["nextPageStart"] = nextPageStart
         args["prevPageStart"] = prevPageStart
         args["viewType"] = viewType
+        args['showInvitationsTab'] = showInvitationsTab
 
         if script:
             yield renderScriptBlock(request, "people.mako", "viewOptions",
-                                landing, "#people-view", "set", args=[viewType])
-            if viewType in ('all', 'friends'):
-                yield renderScriptBlock(request, "people.mako", "listPeople",
-                                        landing, "#users-wrapper", "set", **args)
-            elif viewType == 'invitations':
-                yield renderScriptBlock(request, "people.mako", "listInvitations",
-                                        landing, "#users-wrapper", "set", **args)
+                                    landing, "#people-view", "set", args=[viewType],
+                                    showInvitationsTab=showInvitationsTab)
+            yield renderScriptBlock(request, "people.mako", "listPeople",
+                                    landing, "#users-wrapper", "set", **args)
             yield renderScriptBlock(request, "people.mako", "paging",
                                 landing, "#people-paging", "set", **args)
 

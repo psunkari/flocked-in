@@ -107,7 +107,7 @@ class ProfileResource(base.BaseResource):
 
         cols = yield db.get_slice(myId, "latest", ['people'])
         cols = utils.supercolumnsToDict(cols)
-        for tuuid, key in cols['people'].items():
+        for tuuid, key in cols.get('people', {}).items():
             if key == targetId:
                 yield db.remove(myId, "latest", tuuid, 'people')
 
@@ -288,10 +288,8 @@ class ProfileResource(base.BaseResource):
             if pendingType == '0':
                 raise errors.InvalidRequest(_("A similar request is already pending"))
 
-            d1 = db.remove(myKey, "pendingConnections", targetKey)
-            d2 = db.remove(targetKey, "pendingConnections", myKey)
-            d3 = db.batch_insert(myKey, "connections", {targetKey: circlesMap})
-            d4 = db.batch_insert(targetKey, "connections", {myKey: {'__default__':''}})
+            d1 = db.batch_insert(myKey, "connections", {targetKey: circlesMap})
+            d2 = db.batch_insert(targetKey, "connections", {myKey: {'__default__':''}})
 
             #
             # Update name indices
@@ -303,8 +301,8 @@ class ProfileResource(base.BaseResource):
             targetFirstName = users[targetKey]["basic"].get("firstname", None)
             targetLastName = users[targetKey]["basic"].get("lastname", None)
 
-            d5 = utils.updateDisplayNameIndex(targetKey, [myKey], targetName, None)
-            d6 = utils.updateDisplayNameIndex(myKey, [targetKey], myName, None)
+            d3 = utils.updateDisplayNameIndex(targetKey, [myKey], targetName, None)
+            d4 = utils.updateDisplayNameIndex(myKey, [targetKey], myName, None)
 
             mutMap = {}
             for field in ['name', 'firstname', 'lastname']:
@@ -316,7 +314,7 @@ class ProfileResource(base.BaseResource):
                 if name:
                     colName = name.lower() + ":" + targetKey
                     mutMap.setdefault(myKey, {}).setdefault('nameIndex', {})[colName] = ''
-            d7 = db.batch_mutate(mutMap)
+            d5 = db.batch_mutate(mutMap)
 
             #
             # Add to feeds
@@ -335,28 +333,28 @@ class ProfileResource(base.BaseResource):
                                                             ownerOrgId=orgId)
             targetItem["meta"]["target"] = myKey
             myItem["meta"]["target"] = targetKey
-            d8 = db.batch_insert(myItemId, "items", myItem)
-            d9 = db.batch_insert(targetItemId, "items", targetItem)
-            d10 = feed.pushToFeed(myKey, myItem["meta"]["uuid"], myItemId,
+            d6 = db.batch_insert(myItemId, "items", myItem)
+            d7 = db.batch_insert(targetItemId, "items", targetItem)
+            d8 = feed.pushToFeed(myKey, myItem["meta"]["uuid"], myItemId,
                                   myItemId, responseType, itemType, myKey)
-            d11 = feed.pushToFeed(targetKey, targetItem["meta"]["uuid"],
+            d9 = feed.pushToFeed(targetKey, targetItem["meta"]["uuid"],
                                   targetItemId, targetItemId, responseType,
                                   itemType, targetKey)
 
             userItemValue = ":".join([responseType, myItemId,
                                       myItemId, "activity", myKey, ""])
-            d12 =  db.insert(myKey, "userItems", userItemValue,
+            d10 =  db.insert(myKey, "userItems", userItemValue,
                              myItem["meta"]['uuid'])
             userItemValue = ":".join([responseType, targetItemId, targetItemId,
                                       itemType, targetKey, ""])
-            d13 =  db.insert(targetKey, "userItems", userItemValue,
+            d11 =  db.insert(targetKey, "userItems", userItemValue,
                              targetItem["meta"]['uuid'])
 
             value = ":".join([responseType, myKey, targetItemId, itemType, targetKey])
 
             # TODO: Notify target user about the accepted request.
 
-            calls = [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13]
+            calls = [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11]
             calls.append(self._removeFromPending(myKey, targetKey))
 
         # No incoming connection request.  Send a request to the target users.
@@ -405,10 +403,8 @@ class ProfileResource(base.BaseResource):
 
         mutations = {myKey:{}, targetKey:{}}
         mutations[myKey]["connections"] = {targetKey: None}
-        mutations[myKey]["pendingConnections"] = {targetKey:None}
         mutations[myKey]["displayNameIndex"] = {_getColName(targetDisplayName, targetKey):None}
         mutations[targetKey]["connections"] = {myKey:None}
-        mutations[targetKey]["pendingConnections"] = {myKey:None}
         mutations[targetKey]["displayNameIndex"] = {_getColName(myDisplayName, myKey):None}
 
         if any([myDisplayName, myFirstName, myLastName]):
@@ -428,6 +424,7 @@ class ProfileResource(base.BaseResource):
         yield db.batch_mutate(mutations)
         # TODO: delete the notifications and items created while
         # sending&accepting friend request
+        yield self._removeFromPending(myKey, targetKey)
 
 
     @defer.inlineCallbacks

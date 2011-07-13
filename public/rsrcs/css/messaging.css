@@ -231,29 +231,17 @@
 }
 
 .conversation-composer-field-recipient {
-    margin-top:2px;
     width:auto !important;
+    height:auto !important;
+    margin-top:2px;
 }
 
 .conversation-composer-field-subject {
+    height: auto !important;
 }
 
 .conversation-composer-actions {
     text-align:right;padding:4px 0;
-    float:right;
-    width:86%;
-}
-
-.conversation-reply-wrapper {
-    margin-left:60px;
-}
-
-#composer #file-share {
-    top:0px;
-}
-
-.conversation-reply-wrapper #file-share {
-    top:0px;
 }
 
 .conversation-message-container {
@@ -274,8 +262,6 @@
 
 .conversation-reply-actions {
     text-align:right;padding:4px 0;
-    float:right;
-    width:74%;
 }
 
 .conversation-people-add-wrapper {
@@ -289,8 +275,8 @@
 .conversation-people-profile {
     display:table-cell;
     vertical-align:middle;
-    padding-left:5px;
-    width:150px;
+    padding-left:15px;
+    width:160px;
 }
 
 .conversation-people-remove {
