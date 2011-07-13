@@ -391,7 +391,10 @@ class GroupsResource(base.BaseResource):
             except ttypes.NotFoundException:
                 pass
 
-        cols = yield db.get_slice(myId, "entityGroupsMap", list(toFetchGroups))
+        if toFetchGroups:
+            cols = yield db.get_slice(myId, "entityGroupsMap", list(toFetchGroups))
+        else:
+            cols = []
         myGroupsIds = utils.columnsToDict(cols, ordered=True).keys()
 
         if len(groupIds) > count:
@@ -400,9 +403,12 @@ class GroupsResource(base.BaseResource):
 
         if start:
             if viewType in ['myGroups', 'allGroups']:
+              try:
                 cols = yield db.get_slice(entityId, 'entityGroupsMap',
                                           start=start, count=toFetchCount,
                                           reverse=True)
+              except Exception, e:
+                log.err(e)
             elif viewType == "adminGroups":
                 cols = yield db.get_slice(myId, "entities",
                                           super_column='adminOfGroups',
