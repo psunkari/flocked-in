@@ -8,7 +8,9 @@ import base64
 import json
 import re
 import string
-from email.mime.text    import MIMEText
+from email.mime.text     import MIMEText
+from email.MIMEMultipart import MIMEMultipart
+
 try:
     import cPickle as pickle
 except:
@@ -18,7 +20,7 @@ from ordereddict        import OrderedDict
 from dateutil.tz        import gettz
 from telephus.cassandra import ttypes
 
-from twisted.internet   import defer
+from twisted.internet   import defer, threads
 from twisted.python     import log
 from twisted.mail       import smtp
 
@@ -691,13 +693,25 @@ def updateNameIndex(userKey, targetKeys, newName, oldName):
 @profile
 @defer.inlineCallbacks
 @dump_args
-def sendmail(toAddr, subject, body, fromAddr='noreply@flocked.in'):
-    msg = MIMEText(body)
-    msg['Subject'] = subject
-    msg['From'] = fromAddr
-    msg['To'] = toAddr
-    message = msg.as_string()
+def sendmail(toAddr, subject, textPart, htmlPart=None,
+             fromAddr='noreply@flocked.in'):
+    if htmlPart:
+        msg = MIMEMultipart('alternative')
+        msg.preamble = 'This is a multi-part message in MIME format.'
+        
+        msgText = MIMEText(textPart)
+        msg.attach(msgText)
 
+        msgText = MIMEText(htmlPart, 'html')
+        msg.attach(msgText)
+    else:
+        msg = MIMEText(textPart)
+
+    msg['Subject'] = subject
+    msg['From'] = "FlockedIn Team <%s>" % fromAddr
+    msg['To'] = toAddr
+
+    message = msg.as_string()
     host = config.get('SMTP', 'Host')
     yield smtp.sendmail(host, fromAddr, toAddr, message)
 

@@ -6,7 +6,7 @@ from twisted.python     import log
 
 from social             import db, utils, base, _, whitelist, blacklist, config
 from social.relations   import Relation
-from social.template    import render, renderScriptBlock
+from social.template    import render, renderScriptBlock, getBlock
 from social.isocial     import IAuthInfo
 from social.constants   import PEOPLE_PER_PAGE
 from social.logging     import dump_args, profile
@@ -18,33 +18,50 @@ OUTGOING_REQUEST = '0'
 def _sendInvitations(myOrgUsers, otherOrgUsers, me, myId, myOrg):
     rootUrl = config.get('General', 'URL')
     brandName = config.get('Branding', 'Name')
-    myName = me["basic"]["name"]
-    myOrgName = myOrg["basic"]["name"]
-    deferreds = []
+    senderName = me["basic"]["name"]
+    senderOrgName = myOrg["basic"]["name"]
+    senderAvatarUrl = rootUrl + utils.userAvatar(myId, me, "medium")
 
-    myOrgSubject = "%s invited you to %s" % (myName, brandName)
+    myOrgSubject = "%s invited you to %s" % (senderName, brandName)
     myOrgBody = "Hi,\n\n"\
-                "%(myName)s has invited you to %(myOrgName)s network on %(brandName)s.\n"\
-                "To activate your account please visit: %(activationUrl)s.\n\n"\
-                "Flocked.in Team."
-    otherOrgSubject = "%s invited you to %s" % (myName, brandName)
+                "%(senderName)s has invited you to %(senderOrgName)s network on %(brandName)s.\n"\
+                "To activate your account please visit: %(activationUrl)s.\n\n"
+    otherOrgSubject = "%s invited you to %s" % (senderName, brandName)
     otherOrgBody = "Hi,\n\n"\
-                   "%(myName)s has invited you to try %(brandName)s.\n"\
-                   "To activate your account please visit: %(activationUrl)s.\n\n"\
-                   "Flocked.in Team."
+                   "%(senderName)s has invited you to try %(brandName)s.\n"\
+                   "To activate your account please visit: %(activationUrl)s.\n\n"
 
+    signature =  "Flocked.in Team.\n\n\n\n"\
+                 "--\n"\
+                 "To block invitations from %(senderName)s visit %(blockSenderUrl)s\n"\
+                 "To block all invitations from %(brandName)s visit %(blockAllUrl)s"
+    
+    blockSenderTmpl = "%(rootUrl)s/block/sender?email=%(emailId)s&token=%(token)s"
+    blockAllTmpl = "%(rootUrl)s/block/all?email=%(emailId)s&token=%(token)s"
+    activationTmpl = "%(rootUrl)s/signup?email=%(emailId)s&token=%(token)s"
+    
     myOrgUsers.extend(otherOrgUsers)
+    deferreds = []
     for emailId in myOrgUsers:
         token = utils.getRandomKey('invite')
-        activationUrl = "%(rootUrl)s/signup?email=%(emailId)s&token=%(token)s" % (locals())
-        localpart, domainpart = emailId.split('@')
+        activationUrl = activationTmpl % locals()
+        blockAllUrl = blockAllTmpl % locals()
+        blockSenderUrl = blockSenderTmpl % locals()
+        sameOrg = False if emailId in otherOrgUsers else True
+        if not sameOrg:
+            subject = otherOrgSubject
+            textBody = (otherOrgBody + signature) % locals()
+        else:
+            subject = myOrgSubject
+            textBody = (myOrgBody + signature) % locals()
 
+        localpart, domainpart = emailId.split('@')
         deferreds.append(db.insert(domainpart, "invitations", myId, token, emailId))
         deferreds.append(db.insert(myId, "invitationsSent", '', emailId))
-        if emailId in otherOrgUsers:
-            deferreds.append(utils.sendmail(emailId, otherOrgSubject, otherOrgBody%locals()))
-        else:
-            deferreds.append(utils.sendmail(emailId, myOrgSubject, myOrgBody%locals()))
+
+        # XXX: Get block blocks the application for disk reads.
+        htmlBody = getBlock("emails.mako", "invite", **locals())
+        deferreds.append(utils.sendmail(emailId, subject, textBody, htmlBody))
 
     yield defer.DeferredList(deferreds)
 
