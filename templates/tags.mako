@@ -1,4 +1,5 @@
 <%! from social import utils, _, __, plugins %>
+<%! from twisted.python import log %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -64,9 +65,14 @@
 </%def>
 
 <%def name="items()">
-  %for convId in conversations:
-    ${item.item_layout(convId)}
-  %endfor
+  <%
+    for convId in conversations:
+      try:
+        item.item_layout(convId)
+      except Exception, e:
+        log.msg("Exception when displaying %s in tags" % convId)
+        log.err(e)
+  %>
   %if nextPageStart:
     <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" href="/tags?id=${tagId}&start=${nextPageStart}" _ref="/tags/more?id=${tagId}&start=${nextPageStart}">${_("Fetch older posts")}</a></div>
   %else:

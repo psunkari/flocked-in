@@ -4,6 +4,7 @@
 <%! from social import utils, _, __, plugins %>
 <%! from social import relations as r %>
 <%! from pytz import common_timezones %>
+<%! from twisted.python import log %>
 <%! import re, datetime %>
 
 <%inherit file="base.mako"/>
@@ -347,17 +348,20 @@
   <%
     block = []
     for key in userItems:
-      rtype, itemId, convId, convType, convOwnerId, commentSnippet = key
-      if not reasonStr.has_key(key):
-        if len(block) > 0:
-          self.activity_block(block)
-          block = []
-        item.item_layout(convId)
-      elif convType in plugins:
-        block.append(key)
+      try:
+        rtype, itemId, convId, convType, convOwnerId, commentSnippet = key
+        if not reasonStr.has_key(key):
+          if len(block) > 0:
+            self.activity_block(block)
+            block = []
+          item.item_layout(convId)
+        elif convType in plugins:
+          block.append(key)
+      except Exception, e:
+        log.msg("Error when displaying UserItem:", key)
+        log.err(e)
     if block:
       self.activity_block(block)
-
   %>
   %if nextPageStart:
     <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" _ref="/profile?id=${userKey}&start=${nextPageStart}">${_("Fetch older posts")}</a></div>

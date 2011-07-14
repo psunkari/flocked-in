@@ -1,4 +1,5 @@
 <%! from social import utils, _, __, plugins %>
+<%! from twisted.python import log %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -184,9 +185,13 @@
 </%def>
 
 <%def name="feed()">
-  %for convId in conversations:
-    ${item.item_layout(convId)}
-  %endfor
+  <%
+    for convId in conversations:
+      try:
+        item.item_layout(convId)
+      except Exception, e:
+        log.err(e)
+  %>
   %if nextPageStart:
     <% typ_filter = '&type=%s' %(itemType) if itemType else '' %>
     <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" href="/feed?start=${nextPageStart}&id=${feedId}" _ref="/feed/more?start=${nextPageStart}&id=${feedId}${typ_filter}">${_("Fetch older posts")}</a></div>
