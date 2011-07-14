@@ -47,24 +47,30 @@
 
   <div id="wrapper">
     <div id="steps-banner" class="title-banner banner">
-      <ul id="views-list">
-        <%
-          views = [('welcome', 'Welcome'), ('userinfo', 'About you'), ('invite', 'Invite co-workers')]
-          foundSelected = False
-        %>
-        %for x in range(len(views)):
+      %if view in ['welcome', 'userinfo', 'invite']:
+        <ul id="views-list">
           <%
-            (name, display) = views[x]
-            selectedCls = ''
-            if view == name:
-              selectedCls = ' selected'
-              foundSelected = True
-            doneCls = ' done' if foundSelected else ''
-            lastItemCls = ' last' if x == len(views)-1 else ''
+            views = [('welcome', 'Welcome'), ('userinfo', 'About you'), ('invite', 'Invite co-workers')]
+            foundSelected = False
           %>
-          <li class="${selectedCls+lastItemCls+doneCls}"><span>${str(x+1)+'. '+_(display)}</span></li>
-        %endfor
-      </ul>
+          %for x in range(len(views)):
+            <%
+              (name, display) = views[x]
+              selectedCls = ''
+              if view == name:
+                selectedCls = ' selected'
+                foundSelected = True
+              doneCls = ' done' if foundSelected else ''
+              lastItemCls = ' last' if x == len(views)-1 else ''
+            %>
+            <li class="${selectedCls+lastItemCls+doneCls}"><span>${str(x+1)+'. '+_(display)}</span></li>
+          %endfor
+        </ul>
+      %else:
+        <ul id="views-list">
+          <li class="last">${_('Unsubscribed')}</li>
+        </ul>
+      %endif
     </div>
     <div id="main">
       %if view == 'welcome':
@@ -73,9 +79,12 @@
         ${self.userInfo()}
       %elif view == 'invite':
         ${self.invitePeople()}
+      %elif view == 'block':
+        ${self.unsubscribed()}
       %endif
     </div>
   </div>
+
   <div id="footer">
     <div id="footer-contents" class="contents">
       ${_('&copy;2011 Synovel Software')}
@@ -145,5 +154,19 @@
       </div>
     </div>
   </form>
+</%def>
+
+<%def name="unsubscribed()">
+  <div id="main-contents" class="contents" style="width: 600px; margin: 30px auto;">
+    %if blockType == "all":
+      <div><b>${_("No further invitations will be sent to %s from us.") % emailId}</b></div>
+    %else:
+      <div><b>${_("No further invitations will be sent to %s from this sender.") % emailId}</b></div>
+    %endif
+    <div style="margin:20px 0;">
+      ${_("We are sorry to have bothered you")}<br/>
+      ${_("In case you change your mind, you can still register by visiting <a href='http://flocked.in'>http://flocked.in</a>")}
+    </div>
+  </div>
 </%def>
 

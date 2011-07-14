@@ -44,19 +44,20 @@ class SignupResource(BaseResource):
     @defer.inlineCallbacks
     def _isValidToken(self, emailId, token):
         if not emailId or not token:
-            defer.returnValue(False)
+            defer.returnValue(None)
 
         try:
             yield db.get(emailId, "userAuth", "user")
-            defer.returnValue(False)
+            defer.returnValue(None)
         except: pass
         try:
             local, domain = emailId.split('@')
-            yield db.get(domain, "invitations", token, emailId)
+            sender = yield db.get(domain, "invitations", token, emailId)
+            sender = sender.column.value
         except ttypes.NotFoundException, e:
-            defer.returnValue(False)
+            defer.returnValue(None)
 
-        defer.returnValue(True)
+        defer.returnValue(sender)
 
     # Link that is sent in mails.
     @defer.inlineCallbacks
@@ -100,7 +101,7 @@ class SignupResource(BaseResource):
             raise errors.Unauthorized("You need to login before sending invitations to other users")
 
         rawEmailIds = utils.getRequestArg(request, 'email', multiValued=True) or []
-        d = people.invite(request, rawEmailIds)
+        stats = yield people.invite(request, rawEmailIds)
         request.redirect('/feed')
 
 
@@ -165,7 +166,26 @@ class SignupResource(BaseResource):
             yield db.remove(domain, "invitations", super_column=emailId)
             yield render(request, "signup.mako", **args)
         else:
-            raise InvalidRegistration("The invite is not valid anymore.  Already registered?")
+            raise InvalidRegistration("A user with this e-mail already exists! Already registered?")
+
+
+    @defer.inlineCallbacks
+    def _block(self, request, blockType):
+        token = utils.getRequestArg(request, "token")
+        emailId = utils.getRequestArg(request, "email")
+        sender = yield self._isValidToken(emailId, token)
+
+        if blockType == "all":
+            yield db.insert(emailId, "doNotSpam", "", "*")
+        elif blockType == "sender":
+            yield db.insert(emailId, "doNotSpam", "", sender)
+
+        # The invitation is not removed.
+        # This is to ensure that the sender can still whom he invited and that
+        # the invited person did not join flocked.in
+
+        args = {'view': 'block', 'blockType': blockType, 'emailId': emailId}
+        yield render(request, "signup.mako", **args)
 
 
     @profile
@@ -175,6 +195,12 @@ class SignupResource(BaseResource):
         d = None
         if segmentCount == 0:
             d = self._signupCheckToken(request)
+        elif segmentCount == 1:
+            action = request.postpath[0]
+            if action == 'blockSender':
+                d = self._block(request, "sender")
+            elif action == 'blockAll':
+                d = self._block(request, "all")
         return self._epilogue(request, d)
 
 

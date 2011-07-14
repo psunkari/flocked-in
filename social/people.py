@@ -21,6 +21,9 @@ def _sendInvitations(myOrgUsers, otherOrgUsers, me, myId, myOrg):
     senderName = me["basic"]["name"]
     senderOrgName = myOrg["basic"]["name"]
     senderAvatarUrl = rootUrl + utils.userAvatar(myId, me, "medium")
+    sentUsers = []
+    blockedUsers = []
+    existingUsers = []
 
     myOrgSubject = "%s invited you to %s" % (senderName, brandName)
     myOrgBody = "Hi,\n\n"\
@@ -36,14 +39,40 @@ def _sendInvitations(myOrgUsers, otherOrgUsers, me, myId, myOrg):
                  "To block invitations from %(senderName)s visit %(blockSenderUrl)s\n"\
                  "To block all invitations from %(brandName)s visit %(blockAllUrl)s"
     
-    blockSenderTmpl = "%(rootUrl)s/block/sender?email=%(emailId)s&token=%(token)s"
-    blockAllTmpl = "%(rootUrl)s/block/all?email=%(emailId)s&token=%(token)s"
+    blockSenderTmpl = "%(rootUrl)s/signup/blockSender?email=%(emailId)s&token=%(token)s"
+    blockAllTmpl = "%(rootUrl)s/signup/blockAll?email=%(emailId)s&token=%(token)s"
     activationTmpl = "%(rootUrl)s/signup?email=%(emailId)s&token=%(token)s"
-    
+
+    # Combine all users.
     myOrgUsers.extend(otherOrgUsers)
+
+    # Ensure that the users do not already exist and that the users are
+    # not in the doNotSpam list (for this sender or globally)
+    d1 = db.multiget(myOrgUsers, "userAuth", "user")
+    d2 = db.multiget_slice(myOrgUsers, "doNotSpam", [myId, '*'])
+    existing = yield d1
+    existing = utils.multiColumnsToDict(existing)
+    doNotSpam = yield d2
+    doNotSpam = utils.multiColumnsToDict(doNotSpam)
+
     deferreds = []
     for emailId in myOrgUsers:
+        if emailId in existing and existing[emailId]:
+            existingUsers.append(emailId)
+            continue
+
         token = utils.getRandomKey('invite')
+
+        # Add invitation to the database
+        localpart, domainpart = emailId.split('@')
+        deferreds.append(db.insert(domainpart, "invitations", myId, token, emailId))
+        deferreds.append(db.insert(myId, "invitationsSent", '', emailId))
+
+        # Mail the invitation if everything is ok.
+        if emailId in doNotSpam and doNotSpam["emailId"]:
+            blockedUsers.append(emailId)
+            continue
+
         activationUrl = activationTmpl % locals()
         blockAllUrl = blockAllTmpl % locals()
         blockSenderUrl = blockSenderTmpl % locals()
@@ -55,15 +84,13 @@ def _sendInvitations(myOrgUsers, otherOrgUsers, me, myId, myOrg):
             subject = myOrgSubject
             textBody = (myOrgBody + signature) % locals()
 
-        localpart, domainpart = emailId.split('@')
-        deferreds.append(db.insert(domainpart, "invitations", myId, token, emailId))
-        deferreds.append(db.insert(myId, "invitationsSent", '', emailId))
-
-        # XXX: Get block blocks the application for disk reads.
+        # XXX: getBlock blocks the application for disk reads when reading template
         htmlBody = getBlock("emails.mako", "invite", **locals())
         deferreds.append(utils.sendmail(emailId, subject, textBody, htmlBody))
+        sentUsers.append(emailId)
 
     yield defer.DeferredList(deferreds)
+    defer.returnValue((sentUsers, blockedUsers, existingUsers))
 
 
 @defer.inlineCallbacks
@@ -97,9 +124,11 @@ def invite(request, rawEmailIds):
         except:
             pass
 
+    stats = None
     if myOrgUsers or otherOrgUsers:
-        _sendInvitations(myOrgUsers, otherOrgUsers,
-                         entities[myId], myId, entities[myOrgId])
+        stats = yield _sendInvitations(myOrgUsers, otherOrgUsers,
+                                       entities[myId], myId, entities[myOrgId])
+    defer.returnValue(stats)
 
 
 @defer.inlineCallbacks
@@ -317,7 +346,7 @@ class PeopleResource(base.BaseResource):
     def _invite(self, request):
         src = utils.getRequestArg(request, 'from') or None
         rawEmailIds = request.args.get('email')
-        d = invite(request, rawEmailIds)
+        stats = yield invite(request, rawEmailIds)
 
         if not src:
             src = "sidebar" if len(rawEmailIds) == 1 else "people"
