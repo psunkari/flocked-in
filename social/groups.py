@@ -346,6 +346,93 @@ class GroupsResource(base.BaseResource):
              request.write("$$.ui.bindFormSubmit('#group_form', function(){$('#add-user-wrapper').empty();$$.fetchUri('/groups');})");
 
 
+    @defer.inlineCallbacks
+    def _getPendingGroupRequests(self, request):
+        appchange, script, args, myId = yield self._getBasicArgs(request)
+        cols = yield db.get_slice(myId, "entities", super_column='adminOfGroups')
+        managedGroupIds = [col.column.name for col in cols]
+
+        if not managedGroupIds:
+            defer.returnValue(([], {}, None, None))
+
+        start = utils.getRequestArg(request, 'start') or ''
+        start = utils.decodeKey(start)
+        startKey = ''
+        startGroupId = managedGroupIds[0]
+        if len(start.split(':')) == 2:
+            startKey, startGroupId = start.split(":")
+
+        toFetchStart = startKey
+        toFetchGroup = startGroupId
+        count = PEOPLE_PER_PAGE
+        toFetchCount = count + 1
+        nextPageStart = None
+        prevPageStart = None
+        toFetchEntities = set()
+
+        userIds = []
+        index = 0
+        try:
+            index = managedGroupIds.index(toFetchGroup)
+        except ValueError:
+            pass
+
+        while len(userIds) < toFetchCount:
+            cols = yield db.get_slice(toFetchGroup, "pendingConnections",
+                                      start=toFetchStart, count=toFetchCount)
+            userIds.extend([(col.column.name, toFetchGroup) for col in cols])
+            if len(userIds) >= toFetchCount:
+                break
+            if len(cols) < toFetchCount:
+                if index + 1 < len(managedGroupIds):
+                    index = index+1
+                    toFetchGroup = managedGroupIds[index]
+                    toFetchStart = ''
+                else:
+                    break;
+
+        if len(userIds) >= toFetchCount:
+            nextPageStart = utils.encodeKey("%s:%s" %(userIds[count]))
+            userIds = userIds[0:count]
+
+        toFetchEntities.update([userId for userId, groupId in userIds])
+        toFetchEntities.update([groupId for userId, groupId in userIds])
+        entities_d = db.multiget_slice(toFetchEntities, "entities", ["basic"])
+
+        try:
+            toFetchGroup = startGroupId
+            index = managedGroupIds.index(startGroupId)
+            toFetchStart = startKey
+        except ValueError:
+            index = None
+
+        if index is not None and start:
+            tmpIds = []
+            while len(tmpIds) < toFetchCount:
+                cols = yield db.get_slice(toFetchGroup, "pendingConnections",
+                                          start=toFetchStart, reverse=True,
+                                          count=toFetchCount)
+                tmpIds.extend([(col.column.name, toFetchGroup) for col in cols])
+
+                if len(tmpIds) >= toFetchCount:
+                    tmpIds = tmpIds[0:toFetchCount]
+                    break
+                if len(cols) < toFetchCount:
+                    if index -1 >= 0:
+                        index = index -1
+                        toFetchGroup = managedGroupIds[index]
+                        toFetchStart = ''
+                    else:
+                        break;
+            if len(tmpIds) > 1:
+                prevPageStart = utils.encodeKey("%s:%s"%(tmpIds[-1]))
+
+        entities = yield entities_d
+        entities = utils.multiSuperColumnsToDict(entities)
+
+        defer.returnValue((userIds, entities, prevPageStart, nextPageStart))
+
+
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -358,73 +445,19 @@ class GroupsResource(base.BaseResource):
         start = utils.getRequestArg(request, 'start') or ''
         start = utils.decodeKey(start)
 
-        viewTypes = ['myGroups', 'allGroups', 'adminGroups']
+        viewTypes = ['myGroups', 'allGroups', 'adminGroups', 'pendingRequests']
         viewType = 'myGroups' if viewType not in viewTypes else viewType
-        count = PEOPLE_PER_PAGE
-        toFetchCount = count+1
 
         args["menuId"] = "groups"
         args['viewType']  = viewType
-        groups = {}
-        groupIds = []
-        myGroupsIds = []
-        groupFollowers = {}
-        pendingConnections = {}
-        toFetchGroups = set()
-        nextPageStart = ''
-        prevPageStart = ''
-        entityId = myId if viewType == 'myGroups' else orgId
 
-        #TODO: list the groups in sorted order.
-        if viewType in ['myGroups', 'allGroups']:
-            cols = yield db.get_slice(entityId, 'entityGroupsMap',
-                                      start=start, count=toFetchCount)
-            groupIds = utils.columnsToDict(cols, ordered=True).keys()
-            toFetchGroups.update(set(groupIds))
-        elif viewType == 'adminGroups':
-            try:
-                cols = yield db.get_slice(myId, "entities",
-                                          super_column='adminOfGroups',
-                                          start=start, count=toFetchCount)
-                groupIds = utils.columnsToDict(cols, ordered=True).keys()
-                toFetchGroups.update(set(groupIds))
-            except ttypes.NotFoundException:
-                pass
+        cols = yield db.get_slice(myId, "entities", super_column='adminOfGroups')
+        managedGroupIds = [col.column.name for col in cols]
+        cols = yield db.multiget_slice(managedGroupIds, "pendingConnections", count=1)
+        cols = utils.multiColumnsToDict(cols)
 
-        if toFetchGroups:
-            cols = yield db.get_slice(myId, "entityGroupsMap", list(toFetchGroups))
-        else:
-            cols = []
-        myGroupsIds = utils.columnsToDict(cols, ordered=True).keys()
-
-        if len(groupIds) > count:
-            nextPageStart = utils.encodeKey(groupIds[-1])
-            groupIds = groupIds[0:count]
-
-        if start:
-            if viewType in ['myGroups', 'allGroups']:
-              try:
-                cols = yield db.get_slice(entityId, 'entityGroupsMap',
-                                          start=start, count=toFetchCount,
-                                          reverse=True)
-              except Exception, e:
-                log.err(e)
-            elif viewType == "adminGroups":
-                cols = yield db.get_slice(myId, "entities",
-                                          super_column='adminOfGroups',
-                                          start=start, count=toFetchCount,
-                                          reverse=True)
-            if len(cols) > 1:
-                prevPageStart = utils.encodeKey(cols[-1].column.name)
-
-        if toFetchGroups:
-            groups = yield db.multiget_slice(toFetchGroups, "entities", ["basic"])
-            groups = utils.multiSuperColumnsToDict(groups)
-            groupFollowers = yield db.multiget_slice(toFetchGroups, "followers", names=[myId])
-            groupFollowers = utils.multiColumnsToDict(groupFollowers)
-            cols = yield db.get_slice(myId, 'pendingConnections', toFetchGroups)
-            pendingConnections = dict((x.column.name, x.column.value) for x in cols)
-
+        showPendingRequestsTab = sum([len(cols[groupId]) for groupId in cols]) > 0
+        args["showPendingRequestsTab"] = showPendingRequestsTab
 
         if script and landing:
             yield render(request,"groups.mako", **args)
@@ -432,21 +465,94 @@ class GroupsResource(base.BaseResource):
             yield renderScriptBlock(request, "groups.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-        args["groups"] = groups
-        args["groupIds"] = groupIds
-        args["myGroups"] = myGroupsIds
-        args["groupFollowers"] = groupFollowers
-        args["pendingConnections"] = pendingConnections
-        args['nextPageStart'] = nextPageStart
-        args['prevPageStart'] = prevPageStart
+        if viewType != 'pendingRequests':
+            count = PEOPLE_PER_PAGE
+            toFetchCount = count+1
+            groups = {}
+            groupIds = []
+            myGroupsIds = []
+            groupFollowers = {}
+            pendingConnections = {}
+            toFetchGroups = set()
+            nextPageStart = ''
+            prevPageStart = ''
+            entityId = myId if viewType == 'myGroups' else orgId
+
+            #TODO: list the groups in sorted order.
+            if viewType in ['myGroups', 'allGroups']:
+                cols = yield db.get_slice(entityId, 'entityGroupsMap',
+                                          start=start, count=toFetchCount)
+                groupIds = utils.columnsToDict(cols, ordered=True).keys()
+                toFetchGroups.update(set(groupIds))
+            elif viewType == 'adminGroups':
+                try:
+                    cols = yield db.get_slice(myId, "entities",
+                                              super_column='adminOfGroups',
+                                              start=start, count=toFetchCount)
+                    groupIds = utils.columnsToDict(cols, ordered=True).keys()
+                    toFetchGroups.update(set(groupIds))
+                except ttypes.NotFoundException:
+                    pass
+
+            if toFetchGroups:
+                cols = yield db.get_slice(myId, "entityGroupsMap", list(toFetchGroups))
+            else:
+                cols = []
+            myGroupsIds = utils.columnsToDict(cols, ordered=True).keys()
+
+            if len(groupIds) > count:
+                nextPageStart = utils.encodeKey(groupIds[-1])
+                groupIds = groupIds[0:count]
+
+            if start:
+                if viewType in ['myGroups', 'allGroups']:
+                  try:
+                    cols = yield db.get_slice(entityId, 'entityGroupsMap',
+                                              start=start, count=toFetchCount,
+                                              reverse=True)
+                  except Exception, e:
+                    log.err(e)
+                elif viewType == "adminGroups":
+                    cols = yield db.get_slice(myId, "entities",
+                                              super_column='adminOfGroups',
+                                              start=start, count=toFetchCount,
+                                              reverse=True)
+                if len(cols) > 1:
+                    prevPageStart = utils.encodeKey(cols[-1].column.name)
+
+            if toFetchGroups:
+                groups = yield db.multiget_slice(toFetchGroups, "entities", ["basic"])
+                groups = utils.multiSuperColumnsToDict(groups)
+                groupFollowers = yield db.multiget_slice(toFetchGroups, "followers", names=[myId])
+                groupFollowers = utils.multiColumnsToDict(groupFollowers)
+                cols = yield db.get_slice(myId, 'pendingConnections', toFetchGroups)
+                pendingConnections = dict((x.column.name, x.column.value) for x in cols)
+            args["groups"] = groups
+            args["groupIds"] = groupIds
+            args["myGroups"] = myGroupsIds
+            args["groupFollowers"] = groupFollowers
+            args["pendingConnections"] = pendingConnections
+            args['nextPageStart'] = nextPageStart
+            args['prevPageStart'] = prevPageStart
+        else:
+            userIds, entities, prevPageStart, nextPageStart = yield self._getPendingGroupRequests(request)
+            args["userIds"] = userIds
+            args["entities"] = entities
+            args["prevPageStart"] = prevPageStart
+            args["nextPageStart"] = nextPageStart
 
         if script:
             yield renderScriptBlock(request, "groups.mako", "viewOptions",
-                                landing, "#groups-view", "set", args=[viewType])
-            yield renderScriptBlock(request, "groups.mako", "listGroups",
-                                    landing, "#groups-wrapper", "set", **args)
+                                    landing, "#groups-view", "set", args=[viewType],
+                                    showPendingRequestsTab=showPendingRequestsTab)
+            if viewType == "pendingRequests":
+                yield renderScriptBlock(request, "groups.mako", "allPendingRequests",
+                                        landing, "#groups-wrapper", "set", **args)
+            else:
+                yield renderScriptBlock(request, "groups.mako", "listGroups",
+                                        landing, "#groups-wrapper", "set", **args)
             yield renderScriptBlock(request, "groups.mako", "paging",
-                                landing, "#groups-paging", "set", **args)
+                                    landing, "#groups-paging", "set", **args)
 
         if not script:
             yield render(request, "groups.mako", **args)
