@@ -149,8 +149,15 @@
 </%def>
 
 <%def name="viewOptions(selected)">
+  <%
+    options = [('myGroups', 'My Groups'), ('allGroups', 'All Groups'), ('adminGroups', 'Groups managed by Me')]
+    if showPendingRequestsTab:
+        options.append(("pendingRequests", "Pending Requests"))
+    print options
+    print showPendingRequestsTab
+    %>
   <ul class="h-links view-options">
-    %for item, display in [('myGroups', 'My Groups'), ('allGroups', 'All Groups'), ('adminGroups', 'Groups managed by Me')]:
+    %for item, display in options:
       %if selected == item:
         <li class="selected">${_(display)}</li>
       %else:
@@ -246,7 +253,33 @@
   %endif
 </%def>
 
-<%def name="_pendingRequestUser(userId)">
+<%def name="allPendingRequests()">
+  <%
+    counter = 0
+    firstRow = True
+  %>
+  %for userId, groupId in userIds:
+    %if counter % 2 == 0:
+      %if firstRow:
+        <div class="users-row users-row-first">
+        <% firstRow = False %>
+      %else:
+        <div class="users-row">
+      %endif
+    %endif
+    <div class="users-user">${_pendingRequestUser(userId, groupId)}</div>
+    %if counter % 2 == 1:
+      </div>
+    %endif
+    <% counter += 1 %>
+  %endfor
+  %if counter % 2 == 1:
+    </div>
+  %endif
+</%def>
+
+
+<%def name="_pendingRequestUser(userId, groupId=None)">
   <div class="users-avatar">
     <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
     %if avatarURI:
@@ -255,12 +288,14 @@
   </div>
   <div class="users-details">
     <div class="user-details-name">${utils.userName(userId, entities[userId])}</div>
-    <div class="user-details-title">${entities[userId]["basic"].get("jobTitle", '')}</div>
+    % if groupId:
+      <div class="user-details-name">${_("Group:")} ${utils.groupName(groupId, entities[groupId])}</div>
+    %endif
     <div class="user-details-actions">
       <ul id="user-actions-${userId}" class="middle user-actions h-links">
-        <button class="button default" onclick="$.post('/ajax/groups/approve', 'id=${groupId}&uid=${userId}')"><span class="button-text">Accept</span></button>
-        <button class="button default" onclick="$.post('/ajax/groups/reject', 'id=${groupId}&uid=${userId}')"><span class="button-text">Reject</span></button>
-        <button class="button default" onclick="$.post('/ajax/groups/block', 'id=${groupId}&uid=${userId}')"><span class="button-text">Block</span></button>
+        <button class="button default" onclick="$.post('/ajax/groups/approve', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Accept")}</span></button>
+        <button class="button default" onclick="$.post('/ajax/groups/reject', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Reject")}</span></button>
+        <button class="button default" onclick="$.post('/ajax/groups/block', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Block")}</span></button>
       </ul>
     </div>
   </div>
