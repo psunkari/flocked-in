@@ -17,7 +17,11 @@
   <div class="contents has-left has-right">
     <div id="left">
       <div id="nav-menu">
-        ${self.nav_menu()}
+        %if editProfile:
+            ${self.edit_profile_nav_menu()}
+        %else:
+            ${self.nav_menu()}
+        %endif
       </div>
     </div>
     <div id="center-right">
@@ -75,6 +79,29 @@
 ##
 ## Functions for rendering content
 ##
+<%def name="edit_profile_nav_menu()">
+  <%
+    def navMenuItem(link, text, id):
+      cls = "sidemenu-selected" if id == detail else ''
+      return '<li><a href="%(link)s" id="%(id)s-sideitem" class="ajax busy-indicator %(cls)s"><span class="sidemenu-icon %(id)s-icon"></span><span class="sidemenu-text">%(text)s</a></li>' % locals()
+  %>
+  <div id="mymenu-container" class="sidemenu-container">
+    <ul id="mymenu" class="v-links sidemenu">
+       ${navMenuItem("/profile", _("Back to Profile"), "back")}
+    </ul>
+    <ul id="mymenu" class="v-links sidemenu">
+      ${navMenuItem("/profile/edit?dt=basic", _("Basic"), "basic")}
+      ${navMenuItem("/profile/edit?dt=contact", _("Contact Info"), "contact")}
+      ${navMenuItem("/profile/edit?dt=personal", _("Personal Info"), "personal")}
+      ${navMenuItem("/profile/edit?dt=work", _("Work Experience"), "work")}
+    </ul>
+    <ul id="mymenu" class="v-links sidemenu">
+      ${navMenuItem("/profile/edit?dt=passwd", _("Change Password"), "passwd")}
+      ${navMenuItem("/profile/edit?dt=emailPref", _("Preferences"), "emailPref")}
+    </ul>
+ </div>
+</%def>
+
 
 <%def name="user_me()">
   %if myKey != userKey:
@@ -379,19 +406,15 @@
   %endif
 </%def>
 
-<%def name="editProfileTabs()">
-  <ul class="tablinks h-links">
-    <%
-      path = "/profile/edit?id=%s&" % myKey
-    %>
-    %for item, name in [('basic', _('Basic')), ('contact', _('Contact')), ('work', _('Work Experience')), ('personal', _('Personal')), ('passwd', _('Change Password'))]:
-      %if detail == item:
-        <li><a href="${path}dt=${item}" id="profile-tab-${item}" class="ajax selected">${_(name)}</a></li>
-      %else:
-        <li><a href="${path}dt=${item}" id="profile-tab-${item}" class="ajax">${_(name)}</a></li>
-      %endif
-    %endfor
-  </ul>
+<%def name="editProfileTitle()">
+  <%
+    detail_name_map = {'basic':_('Basic'), 'contact': _('Contact'),
+                       'work':_('Work Experince'), 'personal':_('Personal'),
+                       'passwd':_('Change Password'), 
+                       'emailPref': _('Preferences')}
+    name = detail_name_map.get(detail, '')
+  %>
+  <span class="middle title"> ${_(name)} </span>
 </%def>
 
 <%def name="editBasicInfo()">
@@ -703,3 +726,117 @@
         %endfor
   </select>
 </%def>
+
+<%def name="emailPreferences()">
+<%
+  if 'email_preferences' in me['basic']:
+
+    email_preferences = int(me['basic']['email_preferences'])
+  else:
+    email_preferences = 4095 #2**12-1 
+  new_friend_request = email_preferences &1
+  accepted_my_friend_request = email_preferences &2
+  new_follower = email_preferences &4
+  new_member_to_network = email_preferences &8
+
+  new_group_invite = email_preferences &16
+  pending_group_request = email_preferences &32
+  accepted_my_group_membership = email_preferences &64
+  new_post_to_group = email_preferences &128
+
+  new_message = email_preferences &256
+  #new_message_reply = email_preferences &512
+
+  others_act_on_my_post = email_preferences &1024
+  others_act_on_item_following = email_preferences &2048
+
+  def foo(name, value):
+    if value:
+        return """<input type="checkbox" name="%s" value="1" checked="checked"/>""" %(name)
+    else:
+        return """<input type="checkbox" name="%s" value="0" /> """ %(name)
+%>
+<form class="ajax" id="profile_form" action="/profile/emailPref" method="post"  enctype="multipart/form-data">
+  <div class="styledform">
+    <legend> Email me when </legend>
+    <ul>
+      <li>
+        <div id="new-requests">
+          <ul>
+            <li>
+              ${foo("new_friend_request", new_friend_request)}
+              ${_("Someone added me as a friend")}
+            </li>      
+            <li>
+              ${foo("accepted_my_friend_request", accepted_my_friend_request)}
+              ${_("Others accept my friend request")}
+            </li>
+             <li>
+              ${foo("new_follower", new_follower)}
+              ${_("Someone starts following me")}
+            </li>
+            <li>
+              ${foo("new_member_to_network", new_member_to_network)}
+              ${_("New member joins the network")}
+            </li>
+          </ul>
+        </div>
+      </li>
+      <li>
+        <div id="edit-setting-groups">
+          <legend>Groups</legend>
+          <ul>
+            <li>
+              ${foo("new_group_invite", new_group_invite)}
+              ${_("Someone invites me to join a group")}
+            </li>
+            <li>
+              ${foo("pending_group_request", pending_group_request)}
+              ${_("Someone requests to join private group for which i am administrator")}
+            </li>
+            <li>
+              ${foo("accepted_my_group_membership", accepted_my_group_membership)}
+              ${_("My group membership is accepted")}
+            </li>
+            <li>
+              ${foo("new_post_to_group", new_post_to_group)}
+              ${_("Someone posts to a group im member of")}
+            </li>
+          </ul>
+        </div>
+      </li>
+      <li>
+        <div id="edit-setting-messages">
+          <legend>Messages</legend>
+          <ul>
+            <li>
+              ${foo("new_message", new_message)}
+              ${_("I receive new message")}
+            </li>
+          </ul>
+        </div>
+      </li>
+      <li>
+        <div id="edit-setting-posts">
+          <legend>Posts</legend>
+          <ul>
+            <li>
+              ${foo("others_act_on_my_post", others_act_on_my_post)}
+              ${_("Others liked/commented on my post")}
+            </li>
+            <li>
+              ${foo("others_act_on_item_following", others_act_on_item_following)}
+              ${_("Others liked/liked my comment/commented on posts i liked/commented ")}
+            </li>
+          </ul>
+        </div>
+      </li>
+    </ul>
+    <input type="hidden" id = 'dt' name="dt" value="email_preferences"/>
+  </div>
+  <div class="styledform-buttons">
+    <input type="submit" class="button default" name="userInfo_submit" value="Save"/>
+  </div>
+</form>
+</%def>
+

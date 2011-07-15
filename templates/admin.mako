@@ -147,7 +147,7 @@
 </%def>
 
 <%def name="list_users()" >
-  ${people.listPeople(True)}
+  ${people.listPeople()}
   <div id="people-paging" class="pagingbar">
     ${paging()}
   </div>

@@ -15,6 +15,7 @@ from social                 import constants, feed, errors
 from social.logging         import dump_args, profile
 from social.isocial         import IAuthInfo
 
+
 @defer.inlineCallbacks
 def deleteAvatarItem(entity, isLogo=False):
     entity = yield db.get_slice(entity, "entities", ["basic"])
@@ -609,6 +610,62 @@ class ProfileResource(base.BaseResource):
             #TODO: If basic profile was edited, then logo, name and title could
             # also change, make sure these are reflected too.
 
+    @defer.inlineCallbacks
+    def _set_email_preferences(self, request):
+
+        """
+            someone sends friend request
+            someone accepts friend request
+            group request is accepted.
+            someone invites me to a group
+            some one is following me
+            someone likes/likes-comment/comments on my post
+            someone commented/liked my comment on others post
+            someone mentions me in a post/comment
+        """
+
+        authinfo = request.getSession(IAuthInfo)
+        myId = authinfo.username
+        intify = lambda x: int(x or 0)
+        log.msg(request.args)
+
+        new_friend_request = intify(utils.getRequestArg(request, 'new_friend_request'))
+        accepted_my_friend_request = intify(utils.getRequestArg(request, 'accepted_my_friend_request'))
+        new_follower = intify(utils.getRequestArg(request, 'new_follower'))
+        new_member_to_network = intify(utils.getRequestArg(request, 'new_member_to_network'))
+
+        new_group_invite = intify(utils.getRequestArg(request, 'new_group_invite'))
+        pending_group_request = intify(utils.getRequestArg(request, "pending_group_request")) # admin only
+        accepted_my_group_membership = intify(utils.getRequestArg(request, 'accepted_my_group_membership'))
+        new_post_to_group = intify(utils.getRequestArg(request, 'new_post_to_group'))
+
+        new_message = intify(utils.getRequestArg(request, 'new_message'))
+        #new_message_reply = intify(utils.getRequestArg(request, 'new_message_reply'))
+
+        others_act_on_my_post = intify(utils.getRequestArg(request, 'others_act_on_my_post'))
+        others_act_on_item_following = intify(utils.getRequestArg(request, 'others_act_on_item_following'))
+
+        #mention_in_post = intify(utils.getRequestArg(request, 'mention_in_post'))
+
+        count = 0
+        count |= new_friend_request
+        count |= accepted_my_friend_request<<1
+        count |= new_follower<<2
+        count |= new_member_to_network<<3
+
+        count |= new_group_invite<<4
+        count |= pending_group_request<<5
+        count |= accepted_my_group_membership<<6
+        count |= new_post_to_group<<7
+
+        count |= new_message<<8
+        #count |= new_message_reply<<9
+
+        count |= others_act_on_my_post <<10
+        count |= others_act_on_item_following<<11
+
+        yield db.insert(myId, 'entities', str(count), 'email_preferences', 'basic')
+
 
     @profile
     @defer.inlineCallbacks
@@ -617,6 +674,10 @@ class ProfileResource(base.BaseResource):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
 
+        detail = utils.getRequestArg(request, "dt") or "basic"
+        args["detail"] = detail
+        args["editProfile"] = True
+
         if script and landing:
             yield render(request, "profile.mako", **args)
 
@@ -624,41 +685,50 @@ class ProfileResource(base.BaseResource):
             yield renderScriptBlock(request, "profile.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-        detail = utils.getRequestArg(request, "dt") or "basic"
-        args["detail"] = detail
+        handlers={"onload": "$$.menu.selectItem('%s');"%detail }
         if detail == "basic":
-            yield renderScriptBlock(request, "profile.mako", "editProfileTabs",
-                                    landing, "#profile-tabs", "set", **args)
-            onload = """$$.ui.bindFormSubmit('#profile_form')"""
+            yield renderScriptBlock(request, "profile.mako", "editProfileTitle",
+                                    landing, "#profile-summary", "set", **args)
+            handlers["onload"] += """$$.ui.bindFormSubmit('#profile_form');"""
             yield renderScriptBlock(request, "profile.mako", "editBasicInfo",
                                     landing, "#profile-content", "set", True,
-                                    handlers={"onload":onload},**args)
+                                    handlers = handlers, **args)
         elif detail == "work":
-            yield renderScriptBlock(request, "profile.mako", "editProfileTabs",
-                                    landing, "#profile-tabs", "set", **args)
+            yield renderScriptBlock(request, "profile.mako", "editProfileTitle",
+                                    landing, "#profile-summary", "set", **args)
             yield renderScriptBlock(request, "profile.mako", "editWork",
-                                    landing, "#profile-content", "set", **args)
+                                    landing, "#profile-content", "set", True,
+                                    handlers=handlers, **args)
         elif detail == "personal":
             res = yield db.get_slice(myKey, "entities", ['personal'])
             personalInfo = utils.supercolumnsToDict(res).get("personal", {})
             args.update({"personalInfo":personalInfo})
-            yield renderScriptBlock(request, "profile.mako", "editProfileTabs",
-                                    landing, "#profile-tabs", "set", **args)
+            yield renderScriptBlock(request, "profile.mako", "editProfileTitle",
+                                    landing, "#profile-summary", "set", **args)
             yield renderScriptBlock(request, "profile.mako", "editPersonal",
-                                    landing, "#profile-content", "set", **args)
+                                    landing, "#profile-content", "set", True,
+                                    handlers=handlers, **args)
         elif detail == "contact":
             res = yield db.get_slice(myKey, "entities", ['contact'])
             contactInfo = utils.supercolumnsToDict(res).get("contact", {})
             args.update({"contactInfo":contactInfo})
-            yield renderScriptBlock(request, "profile.mako", "editProfileTabs",
-                                    landing, "#profile-tabs", "set", **args)
+            yield renderScriptBlock(request, "profile.mako", "editProfileTitle",
+                                    landing, "#profile-summary", "set", **args)
             yield renderScriptBlock(request, "profile.mako", "editContact",
-                                    landing, "#profile-content", "set", **args)
+                                    landing, "#profile-content", "set",True,
+                                    handlers=handlers, **args)
         elif detail == "passwd":
-            yield renderScriptBlock(request, "profile.mako", "editProfileTabs",
-                                    landing, "#profile-tabs", "set", **args)
+            yield renderScriptBlock(request, "profile.mako", "editProfileTitle",
+                                    landing, "#profile-summary", "set", **args)
             yield renderScriptBlock(request, "profile.mako", "changePasswd",
-                                    landing, "#profile-content", "set", **args)
+                                    landing, "#profile-content", "set",True,
+                                    handlers=handlers, **args)
+        elif detail == 'emailPref':
+            yield renderScriptBlock(request, "profile.mako", "editProfileTitle",
+                                    landing, "#profile-summary", "set", **args)
+            yield renderScriptBlock(request, "profile.mako", "emailPreferences",
+                                    landing, "#profile-content", "set",True,
+                                    handlers=handlers, **args)
 
 
     @profile
@@ -822,7 +892,7 @@ class ProfileResource(base.BaseResource):
             return self._epilogue(request, defer.fail(errors.NotFoundError()))
 
         action = request.postpath[0]
-        if action in ("edit", "changePasswd") :
+        if action in ("edit", "changePasswd", "emailPref") :
             headers = request.requestHeaders
             content_length = headers.getRawHeaders("content-length", [0])[0]
             if int(content_length) > constants.MAX_IMAGE_SIZE:
@@ -831,6 +901,8 @@ class ProfileResource(base.BaseResource):
                 requestDeferred = self._edit(request)
             elif action == "changePasswd":
                 requestDeferred = self._changePassword(request)
+            elif action == "emailPref":
+                requestDeferred = self._set_email_preferences(request)
             return self._epilogue(request, requestDeferred)
 
         requestDeferred = utils.getValidEntityId(request, "id", "user")
