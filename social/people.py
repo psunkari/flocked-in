@@ -69,7 +69,7 @@ def _sendInvitations(myOrgUsers, otherOrgUsers, me, myId, myOrg):
         deferreds.append(db.insert(myId, "invitationsSent", '', emailId))
 
         # Mail the invitation if everything is ok.
-        if emailId in doNotSpam and doNotSpam["emailId"]:
+        if emailId in doNotSpam and doNotSpam[emailId]:
             blockedUsers.append(emailId)
             continue
 
