@@ -48,6 +48,9 @@ class Question(object):
     def create(self, request):
         target = utils.getRequestArg(request, "target")
         comment = utils.getRequestArg(request, "comment")
+        authinfo = request.getSession(IAuthInfo)
+        myOrgId = authinfo.organization
+
         if not comment:
             raise errors.MissingParams([_('Question')])
 
@@ -67,7 +70,7 @@ class Question(object):
             yield db.insert(convId, "item_files", val, timeuuid, attachmentId)
 
         from social import fts
-        fts.solr.updateIndex(convId, item)
+        fts.solr.updateIndex(convId, item, myOrgId)
         defer.returnValue((convId, item))
 
     @defer.inlineCallbacks

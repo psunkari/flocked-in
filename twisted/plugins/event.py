@@ -352,7 +352,11 @@ class Event(object):
     @defer.inlineCallbacks
     @dump_args
     def create(self, request):
-        myKey = request.getSession(IAuthInfo).username
+        authinfo = request.getSession(IAuthInfo)
+        myKey = authinfo.username
+        myOrgId = authinfo.organization
+
+
         startDate = utils.getRequestArg(request, 'startDate')
         startTime = utils.getRequestArg(request, 'startTime')
         endDate = utils.getRequestArg(request, 'endDate') or startDate

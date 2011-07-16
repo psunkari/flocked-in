@@ -207,6 +207,7 @@
     <fields>
     
        <field name="id" type="string" indexed="true" stored="true" required="true" />
+       <field name="orgId" type="string" indexed="true" stored="true" required="true" />
        <field name="comment" type = "text" indexed="true" stored="true" />
        <field name="parent" type="text" stored="true" />
        <field name="ownerId" type = "uuid" stored="true" />

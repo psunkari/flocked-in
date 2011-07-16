@@ -72,8 +72,9 @@ class Solr(object):
         d = agent.request(method, url, Headers(allHeaders), producer)
         return d
 
-    def updateIndex(self, itemId, item):
-        fields = [self.elementMaker.field(str(itemId), {"name":"id"})]
+    def updateIndex(self, itemId, item, orgId):
+        fields = [self.elementMaker.field(str(itemId), {"name":"id"}),
+                  self.elementMaker.field(str(orgId), {"name":"orgId"}),]
         itemType = item["meta"].get("type", "status")
         defaultIndex = [("meta", "comment"), ("meta", "parent")]
         if itemType in plugins and \
@@ -101,13 +102,13 @@ class Solr(object):
         url = URL +  "/update?commit=true"
         return self._request("POST", url, {}, XMLBodyProducer(root))
 
-    def search(self, term, start=0):
+    def search(self, term, orgId, start=0):
         def callback(response):
             finished = defer.Deferred()
             response.deliverBody(JsonBodyReceiver(finished))
             return finished
         rows = SEARCH_RESULTS_PER_PAGE
-        url = URL + "/select?q=%s&start=%s&rows=%s" % (term, start, rows)
+        url = URL + "/select?q=%s&start=%s&rows=%s&fq=orgId:%s" % (term, start, rows, orgId)
         d = self._request("GET", url)
         d.addCallback(callback)
         return d
@@ -146,7 +147,7 @@ class FTSResource(base.BaseResource):
             yield renderScriptBlock(request, "search.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-        res = yield solr.search(term, start)
+        res = yield solr.search(term, args['orgKey'], start)
         data = res.data
         convs = []
         numMatched = data.get('response', {}).get('numFound', 0)

@@ -226,7 +226,9 @@ class Poll(object):
     @defer.inlineCallbacks
     @dump_args
     def create(self, request):
-        myId = request.getSession(IAuthInfo).username
+        authinfo = request.getSession(IAuthInfo)
+        myId = authinfo.username
+        myOrgId = authinfo.organization
 
         end = utils.getRequestArg(request, "end")
         start = utils.getRequestArg(request, "start")

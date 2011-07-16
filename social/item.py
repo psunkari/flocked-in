@@ -109,7 +109,7 @@ class ItemResource(base.BaseResource):
                 d = renderScriptBlock(request, "item.mako", "feedback_icon",
                                       landing, "#conv-avatar-%s" % convId,
                                       "set", args=[feedbackType])
-                                        
+
             renderers.append(d)
 
         # A copy of this code for fetching comments is present in _responses
@@ -561,7 +561,7 @@ class ItemResource(base.BaseResource):
                                 '#comments-%s' % convId, 'append', True,
                                 handlers={"onload": "(function(){$('.comment-input', '#comment-form-%s').val(''); $('[name=\"nc\"]', '#comment-form-%s').val('%s');})();" % (convId, convId, numShowing)},
                                 args=[convId, itemId], **args)
-        fts.solr.updateIndex(itemId, {'meta':meta})
+        fts.solr.updateIndex(itemId, {'meta':meta}, args["orgKey"])
 
 
     @profile

@@ -56,6 +56,8 @@ class Links(object):
         target = utils.getRequestArg(request, "target")
         comment = utils.getRequestArg(request, "comment")
         url = utils.getRequestArg(request, "url", sanitize=False)
+        authinfo = request.getSession(IAuthInfo)
+        myOrgId = authinfo.organization
 
         if not url:
             raise errors.MissingParams([_('URL to be shared')])
@@ -100,7 +102,7 @@ class Links(object):
             yield db.insert(convId, "item_files", val, timeuuid, attachmentId)
 
         from social import fts
-        fts.solr.updateIndex(convId, item)
+        fts.solr.updateIndex(convId, item, myOrgId)
         defer.returnValue((convId, item))
 
     @defer.inlineCallbacks
