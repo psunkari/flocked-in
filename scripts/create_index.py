@@ -29,13 +29,28 @@ def createIndex():
     """
     rows = yield db.get_range_slice('items', count=10000, reverse=True)
     data = {}
+    i=0
+    log.msg("no.of items", len(rows))
     for row in rows:
+        i +=1
         itemId = row.key
+        log.msg(itemId, i)
         item = utils.supercolumnsToDict(row.columns)
-        itemType = item['meta'].get('type', '')
+        if 'meta' not in item:
+            continue
+        if 'owner' not in item['meta']:
+            continue
+        owner = item['meta']['owner']
+        try:
+            col = yield db.get(owner, "entities", "org", "basic")
+            ownerOrgId = col.column.value
+        except:
+            log.msg(itemId, "error")
+            continue
+
         if item['meta'].get('type', '') == 'poll':
             item['meta']['options_str'] = ' '.join(item['options'].values())
-        yield fts.solr.updateIndex(itemId, item)
+        yield fts.solr.updateIndex(itemId, item, ownerOrgId)
 
 
 
