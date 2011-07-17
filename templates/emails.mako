@@ -1,15 +1,15 @@
 
 <%def name="invite()">
   <html xmlns="http://www.w3.org/1999/xhtml">
-  <body style="margin:0;padding:0;background-color:#f4f4f4;color:#555;font-family:arial,sans-serif;">
-    <div align="center">
-      <table width="600" cellpadding="0" cellspacing="0" border="0">
+  <body style="margin:5px;padding:0;color:#555;font-family:arial,sans-serif;">
+    <div align="center" style="background-color:#f4f4f4;border-radius:4px;border:1px solid #dddddd;width:600px;">
+      <table width="590" cellpadding="0" cellspacing="0" border="0">
         <tr><td align="left">
           <img src="${rootUrl}/rsrcs/img/flocked-in-small.png"
                alt="flocked.in" style="margin:10px 0;"/>
         </td></tr>
         <tr><td>
-          <table cellspacing="20" cellpadding="0" width="600"
+          <table cellspacing="20" cellpadding="0" width="590"
                  border="0" bgcolor="#ffffff"
                  style="border:1px solid #dddddd;border-radius:4px;">
             <tr>
@@ -39,10 +39,10 @@
         <tr><td style="color:gray;font-size:11px;padding:5px 0;">
           You received this mail because ${senderName} invited you.<br/>
           <a href="${blockSenderUrl}">Click here</a> to block invitations
-          from ${senderName} or to block all invitations from ${brandName}
-          <a href="${blockAllUrl}">click here</a>.
+          from ${senderName}.  You may also block all invitations from ${brandName}
+          <a href="${blockAllUrl}">by clicking here.</a>.
         </td></tr>
-      <table>
+      </table>
     </div>
   </body>
   </html>
