@@ -278,10 +278,11 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
 
                 if not getReason:
                     if x in ["C", "Q"]:
-                        responses[convId].append(item)
-                        toFetchItems.add(item)
+                        if item not in responses.get(convId, []):
+                            responses[convId].append(item)
+                            toFetchItems.add(item)
                     elif x == "L" and convId != item:
-                        if entities:
+                        if entities and item not in responses.get(convId, []):
                             responses[convId].append(item)
                             toFetchItems.add(item)
                     elif x == "L":
