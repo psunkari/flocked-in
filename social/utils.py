@@ -698,7 +698,7 @@ def sendmail(toAddr, subject, textPart, htmlPart=None,
     if htmlPart:
         msg = MIMEMultipart('alternative')
         msg.preamble = 'This is a multi-part message in MIME format.'
-        
+
         msgText = MIMEText(textPart)
         msg.attach(msgText)
 
@@ -737,3 +737,10 @@ def approximate_size(size, a_kilobyte_is_1024_bytes=False):
             return '{0:.1f} {1}'.format(size, suffix)
 
     raise ValueError('number too large')
+
+def uniqify(lst):
+    new_list = []
+    for x in lst:
+        if x not in new_list:
+            new_list.append(x)
+    return new_list

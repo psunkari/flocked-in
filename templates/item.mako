@@ -71,9 +71,13 @@
     <div class="conv-avatar" id="conv-avatar-${convId}">
       <%
         convMeta = items[convId]['meta']
+        if reasonUserIds and reasonUserIds.get(convId, []):
+            reasonUserId = reasonUserIds[convId][0]
+        else:
+            reasonUserId = convMeta["owner"] 
       %>
       %if convMeta['type'] != 'feedback':
-        ${self.conv_owner(convMeta['owner'])}
+        ${self.conv_owner(reasonUserId)}
       %else:
         ${self.feedback_icon(convMeta['subType'])}
       %endif
@@ -247,8 +251,8 @@
                     "You, %s and %s like this"][len(users[:2])]
       else:
         template = ["You and %s like this",
-            "You, %s and %s like this",
-            "You, %s, %s and %s like this"][len(users[:2])]
+                    "You, %s and %s like this",
+                    "You, %s, %s and %s like this"][len(users[:2])]
     else:
       other -= len(users[:2])
       if other == 0 and len(users) > 0:
@@ -257,8 +261,8 @@
                     "%s and %s like this"][len(users[:2])]
       if other >=1:
         template = ["%s likes this",
-            "%s and %s like this",
-            "%s, %s and %s like this"][len(users[:2])]
+                    "%s and %s like this",
+                    "%s, %s and %s like this"][len(users[:2])]
 
     if template:
       vals = [utils.userName(id, entities[id]) for id in users[:2]]

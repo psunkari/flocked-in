@@ -286,18 +286,18 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
                             responses[convId].append(item)
                             toFetchItems.add(item)
                     elif x == "L":
-                        likes[convId].append(user)
+                        likes[convId].insert(0, user)
 
                 elif x in ["C", "Q"]:
                     if x == "C":
-                        responseUsers.append(user)
+                        responseUsers.insert(0, user)
                     elif x == 'Q':
-                        answerUsers.append(user)
+                        answerUsers.insert(0, user)
                     responses[convId].append(item)
                     mostRecentItem = update
                     toFetchItems.add(item)
                 elif x == "L" and convId == item:
-                    likes[convId].append(user)
+                    likes[convId].insert(0, user)
                     mostRecentItem = update
                 elif x == "L":
                     mostRecentItem = update
@@ -316,29 +316,29 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
             if mostRecentItem:
                 (x, userId, itemId) = mostRecentItem[0:3]
                 if x == "C":
-                    reasonUserIds[convId] = set(responseUsers)
+                    reasonUserIds[convId] = utils.uniqify(responseUsers)
                     reasonTmpl[convId] = ["%s commented on %s's %s",
                                           "%s and %s commented on %s's %s",
                                           "%s, %s and %s commented on %s's %s"]\
                                          [len(reasonUserIds[convId])-1]
                 elif x == 'Q':
-                    reasonUserIds[convId] = set(answerUsers)
+                    reasonUserIds[convId] = utils.uniqify(answerUsers)
                     reasonTmpl[convId] = ["%s answered %s's %s",
                                           "%s and %s answered %s's %s",
                                           "%s, %s and %s answered %s's %s"]\
                                          [len(reasonUserIds[convId])-1]
 
                 elif x == "L" and itemId == convId:
-                    reasonUserIds[convId] = set(likes[convId])
+                    reasonUserIds[convId] = utils.uniqify(likes[convId])
                     reasonTmpl[convId] = ["%s liked %s's %s",
                                           "%s and %s liked %s's %s",
                                           "%s, %s and %s liked %s's %s"]\
                                          [len(reasonUserIds[convId])-1]
                 elif x == "L":
-                    reasonUserIds[convId] = set([userId])
+                    reasonUserIds[convId] = [userId]
                     reasonTmpl[convId] = "%s liked a comment on %s's %s"
                 elif x == "T":
-                    reasonUserIds[convId] = set([userId])
+                    reasonUserIds[convId] = [userId]
                     reasonTagId[convId] = tagId
                     reasonTmpl[convId] = "%s added %s on %s's %s"
 
@@ -459,7 +459,6 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
             template = reasonTmpl.get(convId, None)
             conv = items[convId]
             ownerId = conv["meta"]["owner"]
-
             if template:
                 vals = [userName(id, entities[id], "conv-user-cause")\
                         for id in reasonUserIds[convId]]
@@ -476,7 +475,8 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
     # TODO: Fetch any extra entities that the plugins might ask for!
     data.update({"entities": entities, "responses": responses, "likes": likes,
                  "myLikes": myLikes, "conversations": convIds, "tags": tags,
-                 "nextPageStart": nextPageStart, "reasonStr": reasonStr})
+                 "nextPageStart": nextPageStart, "reasonStr": reasonStr,
+                 "reasonUserIds":reasonUserIds})
     defer.returnValue(data)
 
 
