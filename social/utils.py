@@ -222,7 +222,7 @@ def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
     tmpFileIds = getRequestArg(request, 'fId', False, True)
     attachments = {}
     if tmpFileIds:
-        attachments = yield _upload_files(tmpFileIds)
+        attachments = yield _upload_files(owner, tmpFileIds)
         if attachments:
             item["attachments"] = {}
             for attachmentId in attachments:
@@ -233,39 +233,20 @@ def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
 
 
 @defer.inlineCallbacks
-def _upload_files(tmp_fileIds):
+def _upload_files(owner, tmp_fileIds):
     attachments = {}
     if tmp_fileIds:
         cols = yield db.multiget_slice(tmp_fileIds, "tmp_files", ["fileId"])
         cols = multiColumnsToDict(cols)
         for tmpFileId in cols:
-            attachmentId = getUniqueKey()
+            attachmentId = tmpFileId
             timeuuid = uuid.uuid1().bytes
             location, name, size, ftype = cols[tmpFileId]['fileId'].split(':')
-
-            if not os.path.lexists(location):
-                log.msg('file doesnt exist')
-                raise errors.uploadFailed()
-
-            directory, fid = os.path.split(location)
-            newlocation = os.path.join('data', fid[0:2], fid[2:4], fid[4:6], fid)
-            try:
-                file_meta = yield db.get(fid, "files", super_column="meta")
-            except ttypes.NotFoundException:
-                try:
-                    directory, fname = os.path.split(newlocation)
-                    os.makedirs(directory)
-                except OSError:
-                    pass
-                try:
-                    shutil.copy(location, newlocation)
-                except OSError:
-                    log.msg("can't move the file from %s to %s"% (location ,newlocation))
-                    raise errors.uploadFailed()
-
-                meta = {"meta": {"uri": newlocation}}
-                yield db.batch_insert(fid, "files", meta)
-            attachments[attachmentId] = (timeuuid, fid, name, size, ftype)
+            meta = {"meta": {"uri": location, "name":name, "fileType":ftype}}
+            yield db.batch_insert(tmpFileId, "files", meta)
+            yield db.remove(tmpFileId, "tmp_files")
+            yield db.insert(owner, "user_files", name, tmpFileId)
+            attachments[attachmentId] = (timeuuid, tmpFileId, name, size, ftype)
     defer.returnValue(attachments)
 
 

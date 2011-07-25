@@ -4,8 +4,15 @@ import uuid
 import json
 import cgi
 import traceback
-from base64     import urlsafe_b64encode
+import mimetypes
+from base64     import urlsafe_b64encode, urlsafe_b64decode
+from email.header import Header
+
 from telephus.cassandra import ttypes
+from txaws.credentials import AWSCredentials
+from txaws.s3 import client as s3Client
+from boto.s3.connection import S3Connection
+from boto.s3.connection import VHostCallingFormat, SubdomainCallingFormat
 
 from zope.interface     import implements
 from twisted.plugin     import IPlugin
@@ -13,8 +20,9 @@ from twisted.internet   import defer, threads
 from twisted.python     import log
 from twisted.web        import static, server
 
-from social             import db, utils, errors, base, feed, _
+from social             import db, utils, errors, base, feed, _, config
 from social.relations   import Relation
+from social             import constants
 from social.isocial     import IItemType, IAuthInfo
 from social.template    import render, renderScriptBlock, getBlock
 
@@ -32,8 +40,8 @@ def _getFileInfo(fs):
     data = fs.file.read()
     size = len(data)
     name = fs.filename.replace('/', '\/').replace(':', '_')
-    filetype = fs.type
-    return (data, name, size, filetype)
+    fileType = fs.type
+    return (data, name, size, fileType)
 
 def _get_tmpfile_location(fileId):
     return os.path.join('/tmp/social/data', fileId)
@@ -100,7 +108,6 @@ class FilesResource(base.BaseResource):
         authinfo = request.getSession(IAuthInfo)
         myId = authinfo.username
         myOrgId = authinfo.organization
-        relation = Relation(myId, [])
 
         itemId, item = yield utils.getValidItemId(request, 'id')
         attachmentId = utils.getRequestArg(request, "fid", sanitize=False)
@@ -111,34 +118,65 @@ class FilesResource(base.BaseResource):
 
         # Check if the attachmentId belong to item
         if attachmentId not in item['attachments'].keys():
-            raise errors.AccessDenied()
+            raise errors.EntityAccessDenied("attachment", attachmentId)
+
+        item = yield db.get_slice(itemId, "items", ["meta"])
+        item = utils.supercolumnsToDict(item)
+        owner = item["meta"]["owner"]
 
         version = utils.decodeKey(version)
-        fileId, filetype, name = None, 'text/plain', 'file'
+        fileId, fileType, name = None, 'text/plain', 'file'
         cols = yield db.get(itemId, "item_files", version, attachmentId)
         cols = utils.columnsToDict([cols])
         if not cols or version not in cols:
             raise errors.InvalidRequest()
 
-        tuuid, fileId, name, size, filetype = cols[version].split(':')
+        tuuid, fileId, name, size, fileType = cols[version].split(':')
 
         files = yield db.get_slice(fileId, "files", ["meta"])
         files = utils.supercolumnsToDict(files)
 
         url = files['meta']['uri']
-        defer.returnValue([url, filetype, size, name])
+        defer.returnValue([owner, url, fileType, size, name])
 
+    @defer.inlineCallbacks
     def _renderFile(self, request):
-        d = self._getFileInfo(request)
-        def renderFile(fileInfo):
-            url, filetype, size, name = fileInfo
-            fileObj = static.File(url, filetype)
-            request.setHeader('Cache-control', 'no-cache')
-            request.setHeader('Content-Disposition', 'attachment;filename = \"%s\"' %(name))
-            fileObj.render(request)
+        fileInfo = yield self._getFileInfo(request)
+        owner, url, fileType, size, name = fileInfo
+        authinfo = request.getSession(IAuthInfo)
+        myOrgId = authinfo.organization
 
-        d.addCallback(renderFile)
+        filename = urlsafe_b64decode(name)
+        try:
+            filename.decode('ascii')
+        except UnicodeDecodeError:
+            filename = filename.decode('utf-8').encode('utf-8')
+            filename = str(Header(filename, "UTF-8")).encode('string_escape')
+        else:
+            filename = filename.encode('string_escape')
 
+        headers={'response-content-type':fileType,
+                 'response-content-disposition':'attachment;filename=\"%s\"'%filename,
+                 'response-expires':'0'}
+
+        SKey = config.get('CloudFiles', 'SecretKey')
+        AKey = config.get('CloudFiles', 'AccessKey')
+        domain = config.get('CloudFiles', 'Domain')
+        bucket = config.get('CloudFiles', 'Bucket')
+        if domain == "":
+            calling_format = SubdomainCallingFormat()
+        else:
+            calling_format = VHostCallingFormat()
+        conn = S3Connection(AKey, SKey, host=domain,
+                            calling_format=calling_format)
+
+        Location = conn.generate_url(600, 'GET', bucket,
+                                     '%s/%s/%s' %(myOrgId, owner, url),
+                                     response_headers=headers,
+                                     force_http=True)
+
+        request.setResponseCode(307)
+        request.setHeader('Location', Location)
 
     @defer.inlineCallbacks
     def _upload_new_version(self, request):
@@ -183,16 +221,16 @@ class FilesResource(base.BaseResource):
             tmp_files_info = {}
             files = fs['file'] if len(fs.getlist('file')) >1 else [fs['file']]
             for fsi in files:
-                data, name, size, filetype = yield threads.deferToThread(_getFileInfo, fsi)
+                data, name, size, fileType = yield threads.deferToThread(_getFileInfo, fsi)
                 if data:
                     fileId = _getFileId(data)
                     tmpFileId = utils.getUniqueKey()
                     location = _get_tmpfile_location(fileId)
                     try:
                         yield threads.deferToThread(_writeToFile, location, data)
-                        val = "%s:%s:%s:%s"%(location, name, size, filetype)
+                        val = "%s:%s:%s:%s"%(location, name, size, fileType)
                         tmp_files.append((tmpFileId, val))
-                        tmp_files_info[tmpFileId] = [location, name, size, filetype]
+                        tmp_files_info[tmpFileId] = [location, name, size, fileType]
                     except Exception as e:
                         raise errors.uploadFailed()
 
@@ -206,21 +244,150 @@ class FilesResource(base.BaseResource):
                        """ % (json.dumps(tmp_files_info))
             request.write(response)
 
+    @defer.inlineCallbacks
+    def _s3Update(self, request):
+        pass
+
+    @defer.inlineCallbacks
+    def _S3FormData(self, request):
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+
+        landing = not self._ajax
+        myOrgId = args["orgKey"]
+
+        SKey = config.get('CloudFiles', 'SecretKey')
+        AKey = config.get('CloudFiles', 'AccessKey')
+        domain = config.get('CloudFiles', 'Domain')
+        bucket = config.get('CloudFiles', 'Bucket')
+        if domain == "":
+            calling_format = SubdomainCallingFormat()
+        else:
+            calling_format = VHostCallingFormat()
+        conn = S3Connection(AKey, SKey, host=domain,
+                            calling_format=VHostCallingFormat())
+        filename = utils.getRequestArg(request, "name") or None
+        #TODO:If name is None raise an exception
+        mime = utils.getRequestArg(request, "mime") or None
+        if mime:
+            if not mimetypes.guess_extension(mime):
+                mime = mimetypes.guess_type(filename)[0]
+        else:
+            mime = mimetypes.guess_type(filename)[0]
+
+        if not mime:
+            mime = "text/plain"
+
+        filename = urlsafe_b64encode(filename)
+        fileId = utils.getUniqueKey()
+        key = '%s/%s/%s' %(myOrgId, myId, fileId)
+        attachment_filename = 'attachment;filename=\"%s\"' %(filename)
+        x_conds = ['{"x-amz-meta-uid":"%s"}' %myId,
+                   '{"x-amz-meta-filename":"%s"}' %filename,
+                   '{"x-amz-meta-fileId":"%s"}' %fileId,
+                   '{"content-type":"%s"}' %mime]
+
+        x_fields = [{"name":"x-amz-meta-uid","value":"%s" %myId},
+                    {"name":"x-amz-meta-filename","value":"%s" %filename},
+                    {"name":"content-type","value":"%s" %mime},
+                    {"name":"x-amz-meta-fileId","value":"%s" %fileId}]
+
+        max_content_length = constants.MAX_FILE_SIZE
+        x_conds.append('["content-length-range", 0, %i]' % max_content_length)
+
+        redirect_url = config.get('General', 'URL') + "/file/update"
+        form_data = conn.build_post_form_args(bucket,
+                                  key,
+                                  http_method="http",
+                                  fields=x_fields,
+                                  conditions=x_conds,
+                                  success_action_redirect=redirect_url)
+        request.write(json.dumps([form_data]));
+        defer.returnValue(0)
+
+    @defer.inlineCallbacks
+    def _uploadDone(self, request):
+        SKey =  config.get('CloudFiles', 'SecretKey')
+        AKey =  config.get('CloudFiles', 'AccessKey')
+        creds = AWSCredentials(AKey, SKey)
+        client = s3Client.S3Client(creds)
+        bucket = utils.getRequestArg(request, "bucket")
+        key = utils.getRequestArg(request, "key")
+
+        file_info = yield client.head_object(bucket, key)
+        tmp_files_info = {}
+
+        name = file_info['x-amz-meta-filename'][0]
+        size = file_info['content-length'][0]
+        fileType = file_info['content-type'][0]
+        fileId = file_info['x-amz-meta-fileid'][0]
+        val = "%s:%s:%s:%s"%(fileId, name, size, fileType)
+        filename = urlsafe_b64decode(name)
+        tmp_files_info[fileId] = [fileId, filename, size, fileType]
+
+        yield db.insert(fileId, "tmp_files", val, "fileId")
+
+        response = """
+                        <textarea data-type="application/json">
+                          {"ok": true, "files": %s}
+                        </textarea>
+                   """ % (json.dumps(tmp_files_info))
+        request.write(response)
+
+    @defer.inlineCallbacks
+    def _removeTempFile(self, request):
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        landing = not self._ajax
+        myOrgId = args["orgKey"]
+
+        SKey =  config.get('CloudFiles', 'SecretKey')
+        AKey =  config.get('CloudFiles', 'AccessKey')
+        bucket = config.get('CloudFiles', 'Bucket')
+        creds = AWSCredentials(AKey, SKey)
+
+        client = s3Client.S3Client(creds)
+        fileId = utils.getRequestArg(request, "id")
+        key = "%s/%s/%s" %(myOrgId, myId, fileId)
+
+        #Check if the file is not in the "files" CF. In other words, it is not
+        # attached to an existing item. Also check if I am the owner of the
+        # file. Finally clear the existing entry in the "temp_files" CF
+        res = yield db.get_slice(fileId, "tmp_files", ["fileId"])
+        if len(res) == 1:
+            try:
+                res = yield db.get(fileId, "files", super_column="meta")
+            except ttypes.NotFoundException:
+                file_info = yield client.head_object(bucket, key)
+                owner = file_info['x-amz-meta-uid'][0]
+                if owner == myId:
+                    yield client.delete_object(bucket, key)
+                    yield db.remove(fileId, "tmp_files")
+                else:
+                    raise errors.EntityAccessDenied("attachment", fileId)
+            else:
+                raise errors.InvalidRequest()
+
+
+    @defer.inlineCallbacks
+    def _deleteFile(request):
+        pass
+
     def render_GET(self, request):
         d = None
         segmentCount = len(request.postpath)
         if segmentCount == 0:
-            self._renderFile(request)
-            return server.NOT_DONE_YET
-        if segmentCount == 1:
-            d = self._listFileVersions(request)
+            d = self._renderFile(request)
+        elif  segmentCount == 1 and request.postpath[0]=="update":
+            d = self._uploadDone(request)
+
         return self._epilogue(request, d)
 
     def render_POST(self, request):
         d = None
         segmentCount = len(request.postpath)
-        if segmentCount == 0:
-            d = self.upload(request)
-        if segmentCount == 1 and request.postpath[0]=="new_version":
-            d = self._upload_new_version(request)
+        if  segmentCount == 1 and request.postpath[0]=="form":
+            d = self._S3FormData(request)
+        elif  segmentCount == 1 and request.postpath[0]=="remove":
+            d = self._removeTempFile(request)
+        #elif  segmentCount == 1 and request.postpath[0]=="delete":
+        #    d = self._deleteFile(request)
         return self._epilogue(request, d)
