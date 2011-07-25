@@ -9,7 +9,7 @@ from twisted.plugin     import IPlugin
 from twisted.web        import client
 
 from social.template    import renderScriptBlock, getBlock
-from social.isocial     import IItemType
+from social.isocial     import IItemType, IAuthInfo
 from social             import db, utils, errors, _, config
 from social.logging     import profile, dump_args
 
