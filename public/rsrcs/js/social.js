@@ -529,6 +529,13 @@ var convs = {
                    .css('display', 'block')
                    .prev().css('display', 'none')
                    .nextAll('.link-summary').css('display', 'none');
+    },
+
+    remove: function(convId, commentId) {
+        if (commentId === "undefined" || convId == commentId)
+            $('#conv-'+convId).slideUp('fast', function(){$(this).remove();});
+        else
+            $('#comment-'+commentId).slideUp('fast', function(){$(this).remove();});
     }
 };
 

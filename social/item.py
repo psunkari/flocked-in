@@ -2,7 +2,6 @@ import json
 import uuid
 import time
 
-
 from telephus.cassandra import ttypes
 from twisted.internet   import defer
 from twisted.web        import server
@@ -30,8 +29,8 @@ def pushNotifications(notifyType, convId, convType, convOwner,
         if actor != userKey:
             d0 = db.get_slice(userKey, "notificationItems", super_column=notifyId, count=2, reverse=True)
             def deleteOlderNotification(cols):
-                if x and x[-1].column.name != timeUUID:
-                    return db.remove(userKey, "notifications", x[0].column.name)
+                if cols and cols[-1].column.name != timeUUID:
+                    return db.remove(userKey, "notifications", cols[0].column.name)
                 else:
                     return defer.succeed([])
             d0.addCallback(deleteOlderNotification)
@@ -45,6 +44,20 @@ def pushNotifications(notifyType, convId, convType, convOwner,
 
 class ItemResource(base.BaseResource):
     isLeaf = True
+
+    def _cleanupMissingComments(self, convId, missingIds, itemResponses):
+        missingKeys = []
+        for response in itemResponses:
+            userKey, responseKey = response.column.value.split(':')
+            if responseKey in missingIds:
+                missingKeys.append(response.column.name)
+
+        d1 = db.batch_remove({'itemResponses': [convId]}, names=missingKeys)
+        d1.addCallback(lambda x: db.get_count(convId, "itemResponses"))
+        d1.addCallback(lambda x: db.insert(convId, 'items',\
+                                 str(x), 'responseCount', 'meta'))
+        return d1
+
 
     @profile
     @defer.inlineCallbacks
@@ -154,10 +167,22 @@ class ItemResource(base.BaseResource):
         myLikes = yield d3
         fetchedTags = yield d4
 
-        args["items"].update(utils.multiSuperColumnsToDict(fetchedItems))
-        args["entities"].update(utils.multiSuperColumnsToDict(fetchedEntities))
-        args["myLikes"] = utils.multiColumnsToDict(myLikes)
-        args["tags"] = utils.supercolumnsToDict(fetchedTags)
+        fetchedItems = utils.multiSuperColumnsToDict(fetchedItems)
+        fetchedEntities = utils.multiSuperColumnsToDict(fetchedEntities)
+        myLikes = utils.multiColumnsToDict(myLikes)
+        fetchedTags = utils.supercolumnsToDict(fetchedTags)
+
+        # Do some error correction/consistency checking to ensure that the
+        # response items actually exist. I don't know of any reason why these
+        # items may not exist.
+        missingIds = [x for x,y in fetchedItems.items() if not y]
+        if missingIds:
+            yield self._cleanupMissingComments(convId, missingIds, itemResponses)
+
+        args["items"].update(fetchedItems)
+        args["entities"].update(fetchedEntities)
+        args["myLikes"] = myLikes
+        args["tags"] = fetchedTags 
         args["responses"] = {convId: responseKeys}
         if nextPageStart:
             args["oldest"] = utils.encodeKey(nextPageStart)
@@ -337,7 +362,6 @@ class ItemResource(base.BaseResource):
                               "#item-footer-%s"%(itemId), "set",
                               args=[itemId], **args)
         else:
-
             relation = Relation(myId, [])
             yield defer.DeferredList([relation.initFriendsList(),
                                   relation.initSubscriptionsList() ])
@@ -414,7 +438,7 @@ class ItemResource(base.BaseResource):
         likesCount = int(item["meta"].get("likesCount", "1"))
         if likesCount % 5 == 0:
             likesCount = yield db.get_count(itemId, "itemLikes")
-        yield db.insert(itemId, "items", str(likesCount -1), "likesCount", "meta")
+        yield db.insert(itemId, "items", str(likesCount-1), "likesCount", "meta")
 
         responseType = 'L'
         # 2. Don't remove the user from followers list
@@ -477,7 +501,6 @@ class ItemResource(base.BaseResource):
                 entities = utils.multiSuperColumnsToDict(entities)
 
             args["entities"] = entities
-            log.msg(likes, entities.keys())
 
             handler = {"onload":"(function(){$$.convs.showHideComponent('%s', 'likes', false)})();" %(convId)} if not likes else None
             yield renderScriptBlock(request, "item.mako", "conv_footer", False,
@@ -554,14 +577,12 @@ class ItemResource(base.BaseResource):
         items = {itemId: {"meta": meta}, convId:conv}
         args.update({"entities": entities, "items": items})
 
-
         numShowing = utils.getRequestArg(request, "nc") or "0"
         numShowing = int(numShowing) + 1
         isFeed = (utils.getRequestArg(request, "_pg") != "/item")
         yield renderScriptBlock(request, 'item.mako', 'conv_comments_head',
                         False, '#comments-header-%s' % (convId), 'set',
                         args=[convId, responseCount, numShowing, isFeed], **args)
-
 
         yield renderScriptBlock(request, 'item.mako', 'conv_comment', False,
                                 '#comments-%s' % convId, 'append', True,
@@ -638,10 +659,21 @@ class ItemResource(base.BaseResource):
         fetchedEntities = yield d1
         myLikes = yield d3
 
+        fetchedItems = utils.multiSuperColumnsToDict(fetchedItems)
+        fetchedEntities = utils.multiSuperColumnsToDict(fetchedEntities)
+        fetchedLikes = utils.multiColumnsToDict(myLikes)
+
+        # Do some error correction/consistency checking to ensure that the
+        # response items actually exist. I don't know of any reason why these
+        # items may not exist.
+        missingIds = [x for x,y in fetchedItems.items() if not y]
+        if missingIds:
+            yield self._cleanupMissingComments(convId, missingIds, itemResponses)
+
         args.update({"convId": convId, "isFeed": isFeed, "items":{}, "entities": {}})
-        args["items"].update(utils.multiSuperColumnsToDict(fetchedItems))
-        args["entities"].update(utils.multiSuperColumnsToDict(fetchedEntities))
-        args["myLikes"] = utils.multiColumnsToDict(myLikes)
+        args["items"].update(fetchedItems)
+        args["entities"].update(fetchedEntities)
+        args["myLikes"] = myLikes
         args["responses"] = {convId: responseKeys}
         if nextPageStart:
             args["oldest"] = utils.encodeKey(nextPageStart)
@@ -758,7 +790,7 @@ class ItemResource(base.BaseResource):
         responseType = 'T'
 
         yield feed.deleteFromFeed(myId, itemId, convId, convType,
-                                  myId, responseType, tagId= tagId)
+                                  myId, responseType, tagId=tagId)
 
         if followers:
             yield feed.deleteFromOthersFeed(myId, itemId, convId, convType,
@@ -766,118 +798,131 @@ class ItemResource(base.BaseResource):
                                             others=followers, tagId=tagId)
         request.write("$('#conv-tags-%s').children('[tag-id=\"%s\"]').remove();" % (convId, tagId));
 
+
     @defer.inlineCallbacks
-    def _remove(self, request, deleteAll=False):
-
-        #TODO: refactor "delete item likes"
-
-        (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        landing = not self._ajax
-        myOrgId = args["orgKey"]
-        conv = None
-
-        (itemId, item) = yield utils.getValidItemId(request, 'id', columns=["tags"])
+    def _remove(self, request):
+        (itemId, item) = yield utils.getValidItemId(request, 'id', columns=['tags'])
         convId = item["meta"].get("parent", itemId)
-        itemOwner = item["meta"]["owner"]
+        itemOwnerId = item["meta"]["owner"]
+        myId = request.getSession(IAuthInfo).username
 
+        comment = True
         if itemId == convId:
             conv = item
+            comment = False
+            convOwnerId = itemOwnerId
         else:
             conv = yield db.get_slice(convId, "items", ["meta"])
             conv = utils.supercolumnsToDict(conv)
+            if not conv:
+                raise errors.InvalidRequest(_('Conversation does not exist!'))
 
-        if itemOwner != myId and (itemId != convId and not conv):
-            raise errors.InvalidRequest(_("Conversation does not exist!"))
+            convOwnerId = conv["meta"]["owner"]
 
-        # Do I own the item or if the item is a comment, do I own the conversation?
-        if itemOwner != myId and \
-            (itemId == convId or conv["meta"]["owner"] != myId):
-            raise errors.PermissionDenied(_("You should either own the comment or conversation to remove it"))
+        # For comments it's always delete.
+        # For conversations it is delete if I own the conversation
+        # If I don't own the conversation and the request
+        #       is coming from my feed then hide it from my feed
+        # TODO: Admin actions.
 
-        itemType = item["meta"].get("type", "status")
-        convType = conv["meta"]["type"]
+        delete = False
+        if comment or convOwnerId == myId:
+            delete = True
+
+        # Do I have permission to delete the comment
+        if comment and (itemOwnerId != myId and convOwnerId != myId):
+            raise errors.PermissionDenied(_("You must either own the comment or the conversation to delete this comment"))
+
+        # Do I have permission to remove item from the given feed.
+        # Note that If I own the conversation, I don't have to check this
+        elif not delete:
+            feedId = utils.getRequestArg(request, 'feedId') or myId
+            if feedId != myId:
+                raise errors.PermissionDenied(_("You don't have permission to delete this item from the feed"))
+
+        deferreds = []
+        convType = conv["meta"].get('type', 'status')
         convACL = conv["meta"]["acl"]
-        convOwnerId = conv["meta"]["owner"]
+        timestamp = str(int(time.time()))
+        itemUUID = item["meta"]["uuid"]
 
-        #mark the item as deleted.
-        yield db.insert(itemId, "items", '', 'deleted', 'meta')
-        yield db.insert(itemOwner, "deletedConvs", '', convId)
+        if delete:
+            # The conversation is lazy deleted.
+            # If it is the comment being deleted, rollback all feed updates
+            # that were made due to this comment and likes on this comment.
 
-        #TODO: custom data to be deleted by plugins
-        #if itemType and itemType in plugins:
-        #    yield plugins[itemType].delete(itemId)
+            # Delete from tagItems and follower feeds.
+            if not comment and "tags" in conv:
+                for tagId in conv["tags"]:
+                    d = db.remove(tagId, "tagItems", itemUUID)
+                    deferreds.append(d)
 
-        #if the item is tagged remove the itemId from the tagItems and delete
-        # the feed entry corresponding to tag
-        responseType="T"
-        if convId == itemId and deleteAll:
-            for tagId in item.get("tags", {}):
-                userId = item["tags"][tagId]
+            # We maintain an index of all deleted items by ownerId and by
+            # convId - convId is used as key for comments and ownerId for
+            # conversations. Also mark the item as deleted, update responses
+            # and update deleted index
+            d = db.insert(itemId, 'items', timestamp, 'deleted', 'meta')
+            deferreds.append(d)
+            if comment:
+                d1 = db.insert(convId, 'deletedConvs', timestamp, itemId)
+                d2 = db.remove(convId, 'itemResponses', itemUUID)
+                d2.addCallback(lambda x: db.get_count(convId, "itemResponses"))
+                d2.addCallback(lambda x: db.insert(convId, 'items',\
+                                         str(x), 'responseCount', 'meta'))
+                d2.addCallback(lambda x: fts.solr.deleteIndex(itemId))
+                deferreds.extend([d1, d2])
+            else:
+                d1 = db.insert(convOwnerId, 'deletedConvs', timestamp, convId)
+                d1.addCallback(lambda x: fts.solr.deleteIndex(itemId))
+                deferreds.append(d1)
 
-                yield db.remove(tagId, "tagItems", item["meta"]["uuid"])
-                followers = yield db.get_slice(tagId, "tagFollowers")
-                followers = utils.columnsToDict(followers).keys()
+            # Rollback changes to feeds.
+            if comment:
+                d = db.get_slice(itemId, "itemLikes")
+                def removeLikeFromFeeds(result):
+                    likes = utils.columnsToDict(result)
+                    removeLikeDeferreds = []
+                    for actorId, likeUUID in likes.items():
+                        d1 = feed.deleteUserFeed(actorId, convType, likeUUID)
+                        d2 = feed.deleteFeed(actorId, itemId, convId, convType,
+                                    convACL, convOwnerId, 'L', deleteAll=True)
+                        removeLikeDeferreds.extend([d1, d2])
+                    return defer.DeferredList(removeLikeDeferreds)
+                d.addCallback(removeLikeFromFeeds)
+                deferreds.append(d)
 
+                # Delete comment from comment owner's userItems
+                d = feed.deleteUserFeed(itemOwnerId, convType, itemUUID)
+                deferreds.append(d)
 
-                yield feed.deleteFeed(userId, itemId, convId, convType,
-                                         convACL, convOwnerId, responseType,
-                                         followers, tagId, deleteAll=deleteAll)
+                # Rollback updates done to comment owner's follower's feeds.
+                d = feed.deleteFeed(itemOwnerId, itemId, convId, convType,
+                                    convACL, convOwnerId, 'C', deleteAll=True)
+                deferreds.append(d)
 
+        else:
+            # Just remove from my feed and block any further updates of that
+            # item from coming to my feed.
+            d1 = db.get_slice(feedId, "feedItems", super_column=convId)
+            @defer.inlineCallbacks
+            def removeConvFromFeed(x):
+                timestamps = [col.column.name for col in x]
+                if timestamps:
+                    yield db.batch_remove({'feed': [feedId]}, names=timestamps)
+                else:
+                    yield db.remove(feedId, 'feed', conv['meta']['uuid'])
+                yield db.remove(feedId, 'feedItems', super_column=convId)
 
-        #remove from itemLikes
-        itemResponses = yield db.get_slice(convId, "itemResponses")
-        itemResponses = utils.columnsToDict(itemResponses)
-        itemLikes = yield db.get_slice(itemId, "itemLikes")
-        itemLikes = utils.columnsToDict(itemLikes)
-        responseType = "L"
-        for userId in itemLikes:
-            tuuid = itemLikes[userId]
-            yield feed.deleteUserFeed(userId, itemType, tuuid)
-            yield feed.deleteFeed(userId, itemId, convId, convType, convACL,
-                                     convOwnerId, responseType, deleteAll=deleteAll)
+            d1.addCallback(removeConvFromFeed)
+            d2 = db.insert(convId, 'items', timestamp, myId, 'unfollowed')
+            
+            deferreds.extend([d1, d2])
 
-        # if conv is being deleted, delete feed corresponding to commentLikes also.
-        if itemId == convId:
-            for tuuid in itemResponses:
-                userId, responseId = itemResponses[tuuid].split(":")
-                itemLikes = yield db.get_slice(responseId, "itemLikes")
-                itemLikes = utils.columnsToDict(itemLikes)
-                for userId in itemLikes:
-                    tuuid = itemLikes[userId]
-                    yield feed.deleteUserFeed(userId, itemType, tuuid)
-                    yield feed.deleteFeed(userId, responseId, convId,
-                                             convType, convACL, convOwnerId,
-                                             responseType, deleteAll=deleteAll)
+        # Wait till all the operations are finished!
+        yield defer.DeferredList(deferreds)
 
-        #remove from itemResponses
-        responseType = "C"
-        for tuuid in itemResponses:
-            userId, responseId = itemResponses[tuuid].split(":")
-            if itemId == convId or (responseId == itemId):
-                deleteFromFeed = (itemId == convId)
-                yield feed.deleteUserFeed(userId, itemType, tuuid)
-                yield feed.deleteFeed(userId, responseId, convId, convType,
-                                         convACL, convOwnerId, responseType,
-                                         deleteAll=deleteAll)
-                if deleteAll:
-                    yield db.insert(convId, "deletedConvs", '', responseId)
-                    yield db.remove(convId, "itemResponses", tuuid)
-
-        #update itemResponse Count
-        if itemId != convId and deleteAll:
-            responseCount = yield db.get_count(convId, "itemResponses")
-            yield db.insert(convId, "items", str(responseCount), "responseCount", "meta")
-
-        if itemId == convId:
-            responseType="I"
-            yield feed.deleteUserFeed(convOwnerId, convType, conv["meta"]["uuid"])
-            yield feed.deleteFeed(convOwnerId, convId, convId, convType,
-                                     convACL, convOwnerId, responseType,
-                                     deleteAll=deleteAll)
-        if deleteAll:
-            fts.solr.deleteIndex(itemId)
-
-        #TODO: update UI
+        # Update the user interface
+        request.write("$$.convs.remove('%s', '%s');"%(convId,itemId))
 
 
     @profile
@@ -910,6 +955,7 @@ class ItemResource(base.BaseResource):
             if action in availableActions:
                 d = getattr(self, "_" + request.postpath[0])(request)
             elif action == 'delete':
-                d = self._remove(request, True)
+                d = self._remove(request)
 
         return self._epilogue(request, d)
+

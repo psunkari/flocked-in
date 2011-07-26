@@ -49,14 +49,26 @@ class TagsResource(base.BaseResource):
     isLeaf = True
 
     def _getTagItems(self, request, tagId, start='', count=10):
+        itemsFromFeed = {}
+
         @defer.inlineCallbacks
         def getter(start='', count=12):
             items = yield db.get_slice(tagId, "tagItems", count=count,
                                        start=start, reverse=True)
-            defer.returnValue(utils.columnsToDict(items, ordered=True))
+            items = utils.columnsToDict(items, ordered=True)
+            itemsFromFeed.update(items)
+            defer.returnValue(items)
+        
+        @defer.inlineCallbacks
+        def cleaner(convIds):
+            deleteKeys = []
+            for key, value in itemsFromFeed.items():
+                if value in deleted:
+                    deleteKeys.append(key)
+            yield db.batch_remove({'tagItems': [tagId]}, names=deleteKeys)
 
-        return getFeedItems(request, getFn=getter, start=start,
-                                 count=count, getReason=False)
+        return getFeedItems(request, getFn=getter, cleanFn=cleaner,
+                            start=start, count=count, getReason=False)
 
     @profile
     @defer.inlineCallbacks
