@@ -406,9 +406,10 @@ def monthName(num, long=False):
 
 
 def weekName(num, long=False):
-    short = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    full = ['Sunday', 'Monday', 'Tuesday', 'Thursday', 'Friday', 'Saturday']
-    return full[num-1] if long else short[num-1]
+    # weekday starts with Monday.
+    short = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    full = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    return full[num] if long else short[num]
 
 
 def itemLink(itemId, itemType, classes=None):
