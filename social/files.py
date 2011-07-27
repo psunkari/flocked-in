@@ -8,6 +8,7 @@ import mimetypes
 from base64     import urlsafe_b64encode, urlsafe_b64decode
 from email.header import Header
 
+import boto
 from telephus.cassandra import ttypes
 from txaws.credentials import AWSCredentials
 from txaws.s3 import client as s3Client
@@ -95,7 +96,6 @@ class FilesResource(base.BaseResource):
         for attachmentId in cols:
             fileId, ftype, name = None, 'text/plain', 'file'
             for tuuid in cols[attachmentId]:
-                log.msg(cols[attachmentId][tuuid].split(':'))
                 tuuid, fileId, name, size, ftype = cols[attachmentId][tuuid].split(':')
                 files.append([itemId, attachmentId, tuuid, name, size, ftype])
         ##TODO: use some widget to list the files
@@ -260,11 +260,12 @@ class FilesResource(base.BaseResource):
         domain = config.get('CloudFiles', 'Domain')
         bucket = config.get('CloudFiles', 'Bucket')
         if domain == "":
+            domain = "s3.amazonaws.com"
             calling_format = SubdomainCallingFormat()
         else:
             calling_format = VHostCallingFormat()
         conn = S3Connection(AKey, SKey, host=domain,
-                            calling_format=VHostCallingFormat())
+                            calling_format=calling_format)
         filename = utils.getRequestArg(request, "name") or None
         #TODO:If name is None raise an exception
         mime = utils.getRequestArg(request, "mime") or None
@@ -304,10 +305,30 @@ class FilesResource(base.BaseResource):
         request.write(json.dumps([form_data]));
         defer.returnValue(0)
 
+    def _enqueueMessage(self, bucket, key, filename, content_type):
+        SKey =  config.get('CloudFiles', 'SecretKey')
+        AKey =  config.get('CloudFiles', 'AccessKey')
+
+        thumbnailsBucket = config.get('CloudFiles', 'ThumbnailsBucket')
+        thumbnailsQueue = config.get('CloudFiles', 'ThumbnailsQueue')
+
+        sqsConn = boto.connect_sqs(AKey, SKey)
+        queue = sqsConn.get_queue(thumbnailsQueue)
+        if not queue:
+            queue = sqsConn.create_queue(thumbnailsQueue)
+
+        data = {'bucket': bucket, 'filename': filename,
+                 'key': key, 'content-type': content_type}
+        message = queue.new_message(body= json.dumps(data))
+        queue.write(message)
+
+
+
     @defer.inlineCallbacks
     def _uploadDone(self, request):
         SKey =  config.get('CloudFiles', 'SecretKey')
         AKey =  config.get('CloudFiles', 'AccessKey')
+
         creds = AWSCredentials(AKey, SKey)
         client = s3Client.S3Client(creds)
         bucket = utils.getRequestArg(request, "bucket")
@@ -324,6 +345,7 @@ class FilesResource(base.BaseResource):
         filename = urlsafe_b64decode(name)
         tmp_files_info[fileId] = [fileId, filename, size, fileType]
 
+        yield threads.deferToThread(self._enqueueMessage, bucket, key, name, fileType)
         yield db.insert(fileId, "tmp_files", val, "fileId")
 
         response = """
