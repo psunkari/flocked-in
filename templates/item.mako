@@ -1,6 +1,7 @@
 <%! from social import utils, _, __, plugins, constants %>
 <%! from twisted.python import log %>
 <%! from twisted.web.static import formatFileSize %>
+<%! from base64 import urlsafe_b64decode %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -74,7 +75,7 @@
         if reasonUserIds and reasonUserIds.get(convId, []):
             reasonUserId = reasonUserIds[convId][0]
         else:
-            reasonUserId = convMeta["owner"] 
+            reasonUserId = convMeta["owner"]
       %>
       %if convMeta['type'] != 'feedback':
         ${self.conv_owner(reasonUserId)}
@@ -150,14 +151,16 @@
     %for attachmentId in attachments:
       <%
           tuuid, name, size, ftype = attachments[attachmentId].split(':')
+          name =urlsafe_b64decode(name)
           size = formatFileSize(int(size))
+          location = '/file?id=%s&fid=%s&ver=%s'%(convId, attachmentId, tuuid)
       %>
       <tr>
-        <td><a href='/file?id=${convId}&fid=${attachmentId}&ver=${tuuid}' >${name}</a></td>
+        <td><a href="${location}" target="filedownload">${name|h}</a></td>
         %if size:
           <td>${size}</td>
         %endif
-       <td><a onclick="$$.ui.showFileVersions('${convId}' , '${attachmentId}')">versions</a></td>
+       <!--<td><a onclick="$$.ui.showFileVersions('${convId}' , '${attachmentId}')">versions</a></td>-->
       </tr>
       ##<form id="${convId}-file-form" method="post" action = "/file/new_version" enctype="multipart/form-data" >
       ##    <input type="file" name="file" />

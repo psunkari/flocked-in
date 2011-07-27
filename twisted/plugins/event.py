@@ -429,7 +429,7 @@ class Event(object):
             yield db.insert(convId, "item_files", val, timeuuid, attachmentId)
 
         from social import fts
-        d = fts.solr.updateIndex(convId, item)
+        d = fts.solr.updateIndex(convId, item, myOrgId)
         defer.returnValue((convId, item))
 
     @defer.inlineCallbacks

@@ -113,7 +113,7 @@
 
       // We need to disable all other inputs in the form so that they don't get
       // included in the submitted data unexpectedly.
-      form.find(":input:not(:submit)").each(function() {
+      form.find(":input:not(:submit, :hidden)").each(function() {
         if (!this.disabled && (this.type != "file" || files.index(this) < 0)) {
           this.disabled = true;
           disabledFields.push(this);
@@ -135,7 +135,6 @@
         addedFields.push($("<input type='hidden'>").attr("name", name)
           .attr("value", value).appendTo(form));
       });
-
       // Add a hidden `X-Requested-With` field with the value `IFrame` to the
       // field, to help server-side code to determine that the upload happened
       // through this transport.
@@ -158,25 +157,29 @@
             // submission is received. The implementation detects whether the
             // actual payload is embedded in a `<textarea>` element, and
             // prepares the required conversions to be made in that case.
-            iframe.unbind("load").bind("load", function() {
-              var doc = this.contentWindow ? this.contentWindow.document :
-                (this.contentDocument ? this.contentDocument : this.document),
-                root = doc.documentElement ? doc.documentElement : doc.body,
-                textarea = root.getElementsByTagName("textarea")[0],
-                dataType = textarea ? textarea.getAttribute("data-type") : null,
-                headers = {},
-                contents = {};
-              if (dataType) {
-                headers = "Content-Type: " + dataType;
-                contents.text = textarea.value;
-              } else {
-                headers = "Content-Type: text/html";
-                contents.text = root ? root.innerHTML : null;
-              }
-              completeCallback(200, "OK", contents, headers);
-              setTimeout(cleanUp, 50);
-            });
-
+              iframe.unbind("load").bind("load", function() {
+                try{
+                  var doc = this.contentWindow ? this.contentWindow.document :
+                    (this.contentDocument ? this.contentDocument : this.document);
+                  root = doc.documentElement ? doc.documentElement : doc.body,
+                  textarea = root.getElementsByTagName("textarea")[0],
+                  dataType = textarea ? textarea.getAttribute("data-type") : null,
+                  headers = {},
+                  contents = {};
+                  if (dataType) {
+                    headers = "Content-Type: " + dataType;
+                    contents.text = textarea.value;
+                  } else {
+                    headers = "Content-Type: text/html";
+                    contents.text = root ? root.innerHTML : null;
+                  }
+                  completeCallback(200, "OK", contents, headers);
+                  setTimeout(cleanUp, 50);
+                }
+                catch(e){
+                  completeCallback(403, e.message, {}, {});
+                }
+              });
             // Now that the load handler has been set up, reconfigure and
             // submit the form.
             form.attr("action", options.url)
