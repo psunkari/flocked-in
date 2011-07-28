@@ -267,6 +267,26 @@ input::-moz-focus-inner {
   font-size: 90%;
   color: #999;
 }
+.ui-list-action {
+  height: 32px;
+  width: 32px;
+  top: 4px;
+  right: 6px;
+  position: absolute;
+}
+
+.ui-listitem:hover > .ui-list-action > .conv-other-actions {
+    display: block;
+}
+
+.ui-listitem.empty:not(:only-child){
+    display:none;
+}
+
+.ui-listitem.empty:only-child{
+    display:block;
+}
+
 
 /*
  * Toolbar

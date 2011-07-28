@@ -109,6 +109,7 @@
       <ul id="${id}-menu" class="acl-menu" style="display:none;">
         <li><a class="acl-item" _acl="org:${orgKey}"><div class="icon"></div>${_("Company")}</a></li>
         <li><a class="acl-item" _acl="friends"><div class="icon"></div>${_("Friends")}</a></li>
+        <li><a class="acl-item" _acl="custom"><div class="icon"></div>${_("Custom")}</a></li>
       </ul>
     </div>
   %endif
@@ -199,4 +200,19 @@
   %else:
     <div id="next-load-wrapper">No more posts to show</div>
   %endif
+</%def>
+
+<%def name="customAudience()">
+  <div class="ui-dlg-title">Select your audience</div>
+   <div class="" style="width:auto;background-color:#E8EEFA;padding:10px">
+    <input type="text" id="custom-audience-dlg-search" style="display:inline-block;font-size:11px;width:20em" class="input-wrap" placeholder="Search among my friends and groups."/>
+    <input type="checkbox" id="allfriends" style="position:relative;top:3px"/><label for="allfriends">Add all my friends</label>
+    <div class="ui-list-meta" id="footer-info" style="padding-left: 0;"></div>
+   </div>
+  <div class="ui-list ui-dlg-center">
+    <div class="ui-listitem empty">
+      <div class="ui-list-title"></div>
+      <div class="ui-list-meta"></div>
+    </div>
+  </div>
 </%def>

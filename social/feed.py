@@ -662,6 +662,13 @@ class FeedResource(base.BaseResource):
         if plugin:
             yield plugin.renderShareBlock(request, self._ajax)
 
+    @defer.inlineCallbacks
+    def _renderChooseAudience(self, request):
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        
+        yield renderScriptBlock(request, "feed.mako", "customAudience", False,
+                                "#custom-audience-dlg", "set", **args)
+
 
     @profile
     @dump_args
@@ -673,6 +680,8 @@ class FeedResource(base.BaseResource):
             d = self._render(request)
         elif segmentCount == 1 and request.postpath[0] == "more":
             d = self._renderMore(request)
+        elif segmentCount == 1 and request.postpath[0] == "audience":
+            d = self._renderChooseAudience(request)
         elif segmentCount == 2 and request.postpath[0] == "share":
             if self._ajax:
                 d = self._renderShareBlock(request, request.postpath[1])

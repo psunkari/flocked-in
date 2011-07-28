@@ -29,6 +29,14 @@ class AutoCompleteResource(BaseResource):
                 "<div class='ui-ac-meta'>%(meta)s</div></div>"
     _singleLineTemplate = "<div><span class='ui-ac-title'>%(title)s</span>" +\
                           "<span class='ui-ac-meta'>%(meta)s</span></div>"
+    _dlgLinetemplate = """
+      <div class="ui-listitem">
+        <div class="ui-list-icon"><img src='%(icon)s'/></div>
+        <div class="ui-list-title">%(title)s</div>
+        <div class="ui-list-meta">%(meta)s</div>
+        <div class="ui-list-action"></div>
+      </div>
+    """
 
     #
     # For the searchbox, we show the list of users, groups and tags
@@ -219,6 +227,67 @@ class AutoCompleteResource(BaseResource):
 
         request.write(json.dumps(output))
 
+    @defer.inlineCallbacks
+    def _myCollection(self, request, term):
+        authInfo = request.getSession(IAuthInfo)
+        myId = authInfo.username
+        orgId = authInfo.organization
+        finish = _getFinishTerm(term)
+
+        # Fetch list of tags and names that match the given term
+        d2 = db.get_slice(orgId, "nameIndex",
+                          start=term, finish=finish, count=10)
+
+        toFetchEntities = set()
+        users = []
+
+        # List of users that match the given term
+        matchedUsers = yield d2
+        for user in matchedUsers:
+            name, uid = user.column.name.rsplit(':')
+            if uid not in toFetchEntities:
+                users.append(uid)
+                toFetchEntities.add(uid)
+
+        # Fetch the required entities
+        entities = {}
+        if toFetchEntities:
+            results = yield db.multiget(toFetchEntities, "entities", "basic")
+            entities.update(utils.multiSuperColumnsToDict(results))
+
+        output = []
+        template = self._dlgLinetemplate
+        avatar = utils.userAvatar
+
+        for uid in users:
+            if uid in entities:
+                name = entities[uid]["basic"]["name"]
+                data = {"icon": avatar(uid, entities[uid], "s"), "title": name,
+                        "meta": entities[uid]["basic"].get("jobTitle", "")}
+                output.append({"label": template%data,
+                               "type": "user",
+                               "value": uid,})
+
+        cols = yield db.get_slice(myId, "entityGroupsMap")
+        groupIds = [x.column.name for x in cols]
+        avatar = utils.groupAvatar
+        groups = {}
+
+        if groupIds:
+            results = yield db.multiget_slice(groupIds, "entities",
+                        ["name"], super_column="basic")
+            groups.update(utils.multiColumnsToDict(results))
+
+        for groupId in groupIds:
+            if groups[groupId]["name"].lower().startswith(term.lower()):
+                data = {"icon": avatar(groupId, groups[groupId], "s"), "title": groups[groupId]["name"],
+                        "meta": groups[groupId].get("desc", "&nbsp;")}
+                obj = {"value": groupId, "label": template%data, "type":"group"}
+                output.append(obj)
+            else:continue
+
+        request.write(json.dumps(output))
+
 
     def render_GET(self, request):
         if len(request.postpath) == 0:
@@ -242,5 +311,7 @@ class AutoCompleteResource(BaseResource):
             d = self._groups(request, term)
         elif path == "mygroups":
             d = self._myGroups(request)
+        elif path == "mycollection":
+            d = self._myCollection(request, term)
 
         return self._epilogue(request, d)
