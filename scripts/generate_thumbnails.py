@@ -11,7 +11,7 @@ sys.path.append(os.getcwd())
 from social import config, constants
 
 
-MEDIA_MIME = ['image/jpg', 'image/jpeg', 'image/gif', 'image/png']
+MEDIA_MIME = ['image/jpg', 'image/jpeg', 'image/gif', 'image/png', 'application/pdf']
 
 
 def get_count():
