@@ -1,6 +1,8 @@
 <%! from social import utils, _, __, constants %>
 <%! import re %>
 <%! import cgi %>
+<%! from twisted.web.static import formatFileSize %>
+<%! from base64 import urlsafe_b64decode %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -192,20 +194,32 @@
           <input type="hidden" value=${convId} name="parent"/>
       </div>
       <div class="conversation-reply-actions">
+        <ul id="attached-files" class="v-links busy-indicator" style="float:left"></ul>
         <input type="submit" name="send" value="${_('Reply')}" class="button"/>
       </div>
+    </form>
     </div>
-  </form>
+      <div class="file-attach-wrapper conversation-reply-wrapper">
+        <form id="upload" action="/file" method="post" enctype="multipart/form-data">
+          <span class="file-overlay">
+            <input id="file-attach-input" type="file" name="file" multiple size="1"/>
+          </span>
+          <button id="file-share" class="button" type="button" title="${_('Attach a file')}">
+            <img src="/rsrcs/img/attach.png" alt="${_('Attach a file')}"/>
+          </button>
+        </form>
+      </div>
+      <div class="clear"></div>
 </%def>
 
 <%def name="render_composer()">
   <div class="conversation-composer">
     <form method="post" action="/messages/write" class="ajax" id="message_form">
-      <div class="input-wrap conversation-composer-field">
+      <div class="input-wrap conversation-composer-field" onclick="$('.conversation-composer-field-recipient').focus()">
         <div class="conversation-composer-recipients"></div>
         <input name="recipients" id="recipientList" type="hidden"/>
         <div>
-            <input class="conversation-composer-field-recipient" type="text" placeholder="${_('Enter name or email address') |h}"/>
+            <input class="conversation-composer-field-recipient" type="text"  size="15" placeholder="${_('Type a Name') |h}"/>
         </div>
       </div>
       <div class="input-wrap conversation-composer-field">
@@ -215,6 +229,7 @@
         <textarea class="conversation-composer-field-body" placeholder="Write a message to your friends and colleagues" name="body"></textarea>
       </div>
       <div class="conversation-composer-actions">
+        <ul id="attached-files" class="v-links busy-indicator" style="float:left"></ul>
         %if script:
             <button type="submit" class="button default">
                 ${_('Send')}
@@ -227,6 +242,17 @@
         %endif
       </div>
     </form>
+      <div class="file-attach-wrapper">
+        <form id="upload" action="/file" method="post" enctype="multipart/form-data">
+          <span class="file-overlay">
+            <input id="file-attach-input" type="file" name="file" multiple size="1"/>
+          </span>
+          <button id="file-share" class="button" type="button" title="${_('Attach a file')}">
+            <img src="/rsrcs/img/attach.png" alt="${_('Attach a file')}"/>
+          </button>
+        </form>
+      </div>
+      <div class="clear"></div>
   </div>
 </%def>
 
@@ -314,7 +340,10 @@
                     %>
                     %if showDelete:
                         <div class="conversation-people-remove" class="busy-indicator"
-                             onclick="$.post('/ajax/messages/members', 'action=remove&parent=${id}&recipients=${person}')" title="Remove ${people[person]["basic"]["name"]} from this conversation"><span>X</span></div>
+                             title="Remove ${people[person]["basic"]["name"]} from this conversation">
+                          <div class="messaging-icon messaging-delete-icon"
+                               onclick="$.post('/ajax/messages/members', 'action=remove&parent=${id}&recipients=${person}')">&nbsp;</div>
+                        </div>
                     %else:
                         <div class="conversation-people-no-remove">&nbsp;</div>
                     %endif
@@ -333,6 +362,24 @@
                         <input type="text" placeHolder="Your friend's name" id="conversation_add_member"/>
                     </div>
                 </form>
+            </div>
+        </div>
+        <div class="sidebar-chunk">
+            <div class="sidebar-title">${_("Attached Files")}</div>
+            <div class="conversation-attachments-wrapper">
+              <% attachments = conv.get("attachments", {}) %>
+              <ul class="v-links peoplemenu">
+                %for file, file_meta in attachments.iteritems():
+                  <%
+                     tuuid, name, size, ftype = file_meta.split(':')
+                     size = formatFileSize(int(size))
+                     name = urlsafe_b64decode(name)
+                  %>
+                  <li>
+                      <a href='/messages/file?id=${id}&fid=${file}&ver=${tuuid}'>${name|h}</a>
+                  </li>
+                %endfor
+              </ul>
             </div>
         </div>
     %else:

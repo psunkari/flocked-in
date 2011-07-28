@@ -2,12 +2,22 @@ import uuid
 import pickle
 import re
 import pytz, time, datetime
+import mimetypes
+from base64     import urlsafe_b64encode, urlsafe_b64decode
+from email.header import Header
+
+import boto
+from telephus.cassandra import ttypes
+from txaws.credentials import AWSCredentials
+from txaws.s3 import client as s3Client
+from boto.s3.connection import S3Connection
+from boto.s3.connection import VHostCallingFormat, SubdomainCallingFormat
 
 from twisted.internet   import defer
 from twisted.python     import log
-from twisted.web        import server
+from twisted.web        import static, server
 
-from social             import db, utils, base, errors
+from social             import db, utils, base, errors, config
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
@@ -19,6 +29,105 @@ class MessagingResource(base.BaseResource):
                 'archive': 'mArchivedConversations',
                 'trash': 'mDeletedConversations',
                 'unread': 'mUnreadConversations'}
+
+    @defer.inlineCallbacks
+    def _handleAttachments(self, request):
+        authinfo = request.getSession(IAuthInfo)
+        myId = authinfo.username
+        tmpFileIds = utils.getRequestArg(request, 'fId', False, True)
+        attachments = {}
+        attach_meta = {}
+        if tmpFileIds:
+            attachments = yield utils._upload_files(myId, tmpFileIds)
+            if attachments:
+                attach_meta = {}
+                for attachmentId in attachments:
+                    timeuuid, fid, name, size, ftype = attachments[attachmentId]
+                    val = "%s:%s:%s:%s" %(utils.encodeKey(timeuuid), name, size, ftype)
+                    attach_meta[attachmentId] = val
+
+        defer.returnValue((attach_meta, attachments))
+
+    @defer.inlineCallbacks
+    def _getFileInfo(self, request):
+
+        authinfo = request.getSession(IAuthInfo)
+        myId = authinfo.username
+        myOrgId = authinfo.organization
+        itemId = utils.getRequestArg(request, "id", sanitize=False)
+        columns = ["meta", "attachments"]
+
+        item = yield db.get_slice(itemId, "mConversations", columns)
+        if not item:
+            raise errors.InvalidItem("message", itemId)
+
+        item = utils.supercolumnsToDict(item)
+        attachmentId = utils.getRequestArg(request, "fid", sanitize=False)
+        version = utils.getRequestArg(request, "ver", sanitize=False)
+
+        if not attachmentId or not version:
+            raise errors.MissingParams()
+
+        # Check if the attachmentId belong to item
+        if attachmentId not in item['attachments'].keys():
+            raise errors.AccessDenied()
+
+        owner = item["meta"]["owner"]
+
+        version = utils.decodeKey(version)
+        fileId, filetype, name = None, 'text/plain', 'file'
+        cols = yield db.get(itemId, "item_files", version, attachmentId)
+        cols = utils.columnsToDict([cols])
+        if not cols or version not in cols:
+            raise errors.InvalidRequest()
+
+        tuuid, fileId, name, size, filetype = cols[version].split(':')
+
+        files = yield db.get_slice(fileId, "files", ["meta"])
+        files = utils.supercolumnsToDict(files)
+
+        url = files['meta']['uri']
+        defer.returnValue([owner, url, filetype, size, name])
+
+    @defer.inlineCallbacks
+    def _renderFile(self, request):
+        fileInfo = yield self._getFileInfo(request)
+        owner, url, fileType, size, name = fileInfo
+        authinfo = request.getSession(IAuthInfo)
+        myOrgId = authinfo.organization
+
+        filename = urlsafe_b64decode(name)
+        try:
+            filename.decode('ascii')
+        except UnicodeDecodeError:
+            filename = filename.decode('utf-8').encode('utf-8')
+            filename = str(Header(filename, "UTF-8")).encode('string_escape')
+        else:
+            filename = filename.encode('string_escape')
+
+        headers={'response-content-type':fileType,
+                 'response-content-disposition':'attachment;filename=\"%s\"'%filename,
+                 'response-expires':'0'}
+
+        SKey = config.get('CloudFiles', 'SecretKey')
+        AKey = config.get('CloudFiles', 'AccessKey')
+        domain = config.get('CloudFiles', 'Domain')
+        bucket = config.get('CloudFiles', 'Bucket')
+        if domain == "":
+            calling_format = SubdomainCallingFormat()
+            domain = "s3.amazonaws.com"
+        else:
+            calling_format = VHostCallingFormat()
+        conn = S3Connection(AKey, SKey, host=domain,
+                            calling_format=calling_format)
+
+        Location = conn.generate_url(600, 'GET', bucket,
+                                     '%s/%s/%s' %(myOrgId, owner, url),
+                                     response_headers=headers,
+                                     force_http=True)
+
+        request.setResponseCode(307)
+        request.setHeader('Location', Location)
 
     def _parseComposerArgs(self, request):
         #Since we will deal with composer related forms. Take care of santizing
@@ -114,16 +223,12 @@ class MessagingResource(base.BaseResource):
         defer.returnValue(messageId)
 
     @defer.inlineCallbacks
-    def _newConversation(self, ownerId, participants, timeUUID, subject, epoch):
+    def _newConversation(self, ownerId, participants, meta, attachments):
         participants = dict ([(userId, '') for userId in participants])
-        conv_meta = {"owner":ownerId,
-                     "timestamp": str(int(time.time())),
-                     "uuid": timeUUID,
-                     "date_epoch" : str(epoch),
-                     "subject": subject}
         convId = utils.getUniqueKey()
-        yield db.batch_insert(convId, "mConversations", {"meta": conv_meta,
-                                                "participants": participants})
+        yield db.batch_insert(convId, "mConversations", {"meta": meta,
+                                                "participants": participants,
+                                                "attachments":attachments})
         defer.returnValue(convId)
 
     @defer.inlineCallbacks
@@ -152,10 +257,18 @@ class MessagingResource(base.BaseResource):
         snippet = self._fetchSnippet(body)
         meta = {'uuid': timeUUID, 'date_epoch': str(epoch), "snippet":snippet}
 
+        attachments, attachments_meta = yield self._handleAttachments(request)
+
         messageId = yield self._newMessage(myId, timeUUID, body, epoch)
         yield self._deliverMessage(convId, participants, timeUUID, myId)
         yield db.insert(convId, "mConvMessages", messageId, timeUUID)
-        yield db.batch_insert(convId, "mConversations", {'meta':meta})
+        yield db.batch_insert(convId, "mConversations",
+                              {'meta':meta, 'attachments':attachments})
+
+        for file, file_meta in attachments_meta.iteritems():
+            timeuuid, fid, name, size, ftype  = file_meta
+            val = "%s:%s:%s:%s:%s" %(utils.encodeKey(timeuuid), fid, name, size, ftype)
+            yield db.insert(convId, "item_files", val, timeuuid, file)
 
         #XXX:We currently only fetch the message we inserted. Later we may fetch
         # all messages delivered since we last rendered the conversation
@@ -176,6 +289,7 @@ class MessagingResource(base.BaseResource):
         if script:
             onload = """
                         $('.conversation-reply').attr('value', '');
+                        $('#attached-files').empty();
                     """
             yield renderScriptBlock(request, "message.mako",
                                             "render_conversation_messages",
@@ -183,6 +297,31 @@ class MessagingResource(base.BaseResource):
                                             ".conversation-messages-wrapper",
                                             "append", True,
                                             handlers={"onload":onload}, **args)
+
+        #Update the right side bar with any attachments the user uploaded
+        args.update({"conv":conv})
+        participants = set(conv['participants'])
+        people = yield db.multiget_slice(participants, "entities", ['basic'])
+        people = utils.multiSuperColumnsToDict(people)
+
+        args.update({"people":people})
+        args.update({"conv":conv})
+        args.update({"id":convId})
+        args.update({"view":"message"})
+        if script:
+            onload = """
+                     $('#conversation_add_member').autocomplete({
+                           source: '/auto/users',
+                           minLength: 2,
+                           select: function( event, ui ) {
+                               $('#conversation_recipients').attr('value', ui.item.uid)
+                           }
+                      });
+                     """
+            yield renderScriptBlock(request, "message.mako", "right",
+                                    landing, ".right-contents", "set", True,
+                                    handlers={"onload":onload}, **args)
+
         else:
             request.redirect('/messages')
             request.finish()
@@ -209,14 +348,23 @@ class MessagingResource(base.BaseResource):
 
         timeUUID = uuid.uuid1().bytes
         snippet = self._fetchSnippet(body)
-        meta = {'uuid': timeUUID, 'date_epoch': str(epoch), "snippet": snippet}
-        convId = yield self._newConversation(myId, participants, timeUUID,
-                                             subject, epoch)
+        meta = {'uuid': timeUUID, 'date_epoch': str(epoch), "snippet": snippet,
+                'subject':subject, "owner":myId,
+                "timestamp": str(int(time.time()))}
+        attachments, attachments_meta = yield self._handleAttachments(request)
+
+        convId = yield self._newConversation(myId, participants, meta, attachments)
         messageId = yield self._newMessage(myId, timeUUID, body, epoch)
         yield self._deliverMessage(convId, participants, timeUUID, myId)
         yield db.insert(convId, "mConvMessages", messageId, timeUUID)
+
+        for file, file_meta in attachments_meta.iteritems():
+            timeuuid, fid, name, size, ftype  = file_meta
+            val = "%s:%s:%s:%s:%s" %(utils.encodeKey(timeuuid), fid, name, size, ftype)
+            yield db.insert(convId, "item_files", val, timeuuid, file)
+
         #XXX:Is this a duplicate batch insert ?
-        yield db.batch_insert(convId, "mConversations", {'meta':meta})
+        #yield db.batch_insert(convId, "mConversations", {'meta':meta})
 
         if script:
             request.write("$('#composer').empty();$$.fetchUri('/messages');")
@@ -346,7 +494,7 @@ class MessagingResource(base.BaseResource):
                                         landing, ".right-contents", "set", True,
                                         handlers={"onload":onload}, **args)
         else:
-            print "none"
+            raise errors.MissingParams([_('Conversation Id')])
 
     @defer.inlineCallbacks
     def _addMembers(self, request):
@@ -592,6 +740,7 @@ class MessagingResource(base.BaseResource):
                                         handlers={"onload":onload}, **args)
 
                 onload = """
+                         $$.ui.loadFileShareBlock();
                          $('#conversation_add_member').autocomplete({
                                source: '/auto/users',
                                minLength: 2,
@@ -619,6 +768,7 @@ class MessagingResource(base.BaseResource):
             onload = """
                     $$.messaging.autoFillUsers();
                     $('.conversation-composer-field-body').autogrow();
+                    $$.ui.loadFileShareBlock();
                      """
             yield renderScriptBlock(request, "message.mako", "render_composer",
                                     landing, "#composer", "set", True,
@@ -638,7 +788,8 @@ class MessagingResource(base.BaseResource):
             d = self._renderConversation(request)
         elif segmentCount == 1 and request.postpath[0] == "actions":
             d = self._actions(request)
-
+        elif segmentCount == 1 and request.postpath[0] == "file":
+            d = self._renderFile(request)
         return self._epilogue(request, d)
 
     def render_POST(self, request):
