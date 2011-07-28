@@ -839,7 +839,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     position: relative;
     color: #000;
     font-size: 14px;
-    word-wrap:break-word;
+    word-wrap: break-word;
 }
 .item-icon {
     position: absolute;
@@ -1196,6 +1196,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .link-summary {
     font-size: 12px;
     font-family: inherit;
+    margin-top: 4px;
 }
 .link-title {
     margin-top: 5px;
@@ -1203,14 +1204,20 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     font-weight: bold;
 }
 .link-image {
-    float:left;
+    float: left;
     margin-right: 10px;
     max-height: 100px;
     max-width: 100px;
+    border: 1px solid #EEE;
+    padding: 4px;
 }
 .link-url {
     color: gray;
     font-size: 11px;
+    max-width: 350px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 4px;
 }
 .embed-wrapper {
     position: relative;

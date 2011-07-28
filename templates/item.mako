@@ -2,6 +2,7 @@
 <%! from twisted.python import log %>
 <%! from twisted.web.static import formatFileSize %>
 <%! from base64 import urlsafe_b64decode %>
+<%! from urlparse import urlsplit %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -581,7 +582,8 @@
         <a href=${url} target="_blank"><div class="link-title">${_(title)}</div></a>
         <div id="summary" class="link-summary">${_(summary)}</div>
         %if title != url:
-          <div id="url" class="link-url">${url}</div>
+          <% domain = urlsplit(url)[1] %>
+          <div id="url" class="link-url">${domain}</div>
         %endif
       </div>
     </div>
