@@ -697,17 +697,16 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     position:relative;
 }
 
-.conv-data:hover > .conv-other-actions{
-    opacity:1;
-    filter:alpha(opacity=100);
-    filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='/rsrcs/img/cross.jpeg');
+.conv-data:hover > .conv-other-actions {
+    display: block;
 }
 
 .conv-reason {
     display: block;
     color: #999;
     margin-bottom: 4px;
-    word-wrap:break-word;
+    word-wrap: break-word;
+    padding-right: 16px;
 }
 
 .conv-root-render {
@@ -747,20 +746,16 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     position: absolute;
 }
 
-.comment-container,
 .comment-meta {
     padding-left: 38px;
 }
 .comment-container {
-    padding-top: 2px;
-    padding-bottom: 2px;
-    position:relative;
+    padding: 2px 16px 2px 38px;
+    position: relative;
 }
 
 .conv-comment:hover .conv-other-actions {
-    opacity:1;
-    filter:alpha(opacity=100);
-    filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='/rsrcs/img/cross.jpeg');
+    display: block;
 }
 
 .conv-footer {
@@ -819,24 +814,22 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 
 .conv-other-actions {
-    position:absolute;
-    top:0px;
-    right:-2px;
-    height:16px;
-    width:16px;
-    text-align:right;
-    cursor:pointer;
-    font-size:10px;
-    opacity:0;
-    filter:alpha(opacity=0);
-    background-image: url("/rsrcs/img/cross.png");
-    background-position: 3px 3px;
-    background-repeat:no-repeat;
-    box-shadow:1px 1px 1px -1px #CCCCCC;
+    position: absolute;
+    top: 0px;
+    right: -2px;
+    height: 16px;
+    width: 16px;
+    cursor: pointer;
+    font-size: 10px;
+    background-image: url("/rsrcs/img/sprite.png");
+    background-position: -19px -47px;
+    background-repeat: no-repeat;
+    display: none;
 }
 
-.conv-other-actions:active {
-    box-shadow: inset 1px 1px 1px -1px #CCCCCC;
+.conv-other-actions:hover, .conv-other-actions:active {
+    box-shadow: 0 0 2px #888;
+    background-position: -19px -67px;
 }
 
 /*

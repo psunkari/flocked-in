@@ -188,16 +188,19 @@
 }
 
 .messaging-unread-icon {
-    background-position:0px -16px;
+    background-position: 0px -16px;
 }
 
 .messaging-read-icon {
-    background-position:0px 0px;
+    background-position: 0px 0px;
 }
 
 .messaging-delete-icon {
-    background-image: url("/rsrcs/img/cross.png");
-    background-position:center;
+    background-image: url("/rsrcs/img/sprite.png");
+    background-position: -19px -47px;
+}
+.messaging-delete-icon:hover, .messaging-delete-icon:active {
+    background-position: -19px -67px;
 }
 
 .nopad {
