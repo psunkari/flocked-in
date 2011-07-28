@@ -284,45 +284,62 @@ def getCompanyGroups(orgId):
 
 
 @defer.inlineCallbacks
-def expandAcl(userKey, acl, convOwnerId=None):
+def expandAcl(userKey, acl, convId, convOwnerId=None):
     keys = set()
     acl = pickle.loads(acl)
     accept = acl.get("accept", {})
     deny = acl.get('deny', {})
     deniedUsers = deny.get("users", [])
 
-    #if acl in ["friends", "company", "public"]:
+    unfollowed_d = db.get_slice(convId, 'items',
+                                super_column='unfollowed', count=INFINITY)\
+                   if convId else defer.succeed([])
+
+    # When users are explicitly selected, they always
+    # get items in their feeds
     if "users" in accept:
         for uid in accept["users"]:
             if uid not in deniedUsers:
                 keys.add(uid)
+
+    # Posted to a group
     if "groups" in accept:
         groups = accept["groups"][:]
         for groupId in groups[:]:
             if groupId in deny.get("groups", []):
                 groups.remove(groupId)
-        groupMembers = yield db.multiget_slice(groups,"followers")
+        groupMembers = yield db.multiget_slice(groups, "followers")
         groupMembers = multiColumnsToDict(groupMembers)
         for groupId in groupMembers:
             keys.update([uid for uid in groupMembers[groupId].keys() \
                             if uid not in deniedUsers])
         keys.update(groups)
 
+    # See if friends have access to it.
     if any([typ in ["friends", "orgs", "public"] for typ in accept]):
         friends = yield getFriends(userKey, count=INFINITY)
-        if "friends"  in accept and convOwnerId:
-            friends1 = yield getFriends(convOwnerId, count=INFINITY)
-            commonFriends = friends.intersection(friends1)
+
+        # Only send to common friends if ACL is friends and actor
+        # is not the owner of the item.
+        if "friends" in accept and convOwnerId:
+            ownerFriends = yield getFriends(convOwnerId, count=INFINITY)
+            commonFriends = friends.intersection(ownerFriends)
             keys.update([uid for uid in commonFriends if uid not in deniedUsers])
         else:
             keys.update([uid for uid in friends if uid not in deniedUsers])
-    if any([typ in ["followers", "orgs", "public"] for typ in accept ]):
-        followers = yield getFollowers(userKey, count=INFINITY)
-        keys.update([uid for uid in followers if uid not in deniedUsers])
+
+    # See if followers and the company feed should get this update.
     if any([typ in ["orgs", "public"] for typ in accept]):
+        followers = yield getFollowers(userKey, count=INFINITY)
         companyKey = yield getCompanyKey(userKey)
-        keys.update(set([companyKey]))
-    defer.returnValue(keys)
+        keys.update([uid for uid in followers if uid not in deniedUsers])
+        keys.add(companyKey)
+
+    # Remove keys of people who unfollowed the item.
+    unfollowed = yield unfollowed_d
+    unfollowed = set(columnsToDict(unfollowed).keys())
+
+    defer.returnValue(keys.difference(unfollowed))
 
 
 def checkAcl(userId, acl, owner, relation, userOrgId=None):

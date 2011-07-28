@@ -88,7 +88,7 @@ def deleteFromFeed(userId, itemId, convId, itemType,
 def deleteFromOthersFeed(userId, itemId, convId, itemType, acl,
                          convOwner, responseType, others=None, tagId=''):
     if not others:
-        others = yield utils.expandAcl(userId, acl, convOwner)
+        others = yield utils.expandAcl(userId, acl, convId, convOwner)
 
     for key in others:
         yield deleteFromFeed(key, itemId, convId, itemType,
@@ -102,7 +102,7 @@ def pushToOthersFeed(userKey, timeuuid, itemKey, parentKey,
                      acl, responseType, itemType, convOwner,
                      others=None, tagId='', entities=None):
     if not others:
-        others = yield utils.expandAcl(userKey, acl, convOwner)
+        others = yield utils.expandAcl(userKey, acl, parentKey, convOwner)
     for key in others:
         yield pushToFeed(key, timeuuid, itemKey, parentKey,
                          responseType, itemType, convOwner,
@@ -145,7 +145,7 @@ def updateFeedResponses(userKey, parentKey, itemKey, timeuuid, itemType,
     tmp, oldest, latest = {}, None, None
 
     cols = yield db.get_slice(userKey, "feedItems",
-                              super_column = parentKey, reverse=True)
+                              super_column=parentKey, reverse=True)
     cols = utils.columnsToDict(cols, ordered=True)
 
     for tuuid, val in cols.items():
