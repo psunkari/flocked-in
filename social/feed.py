@@ -16,14 +16,15 @@ from social.logging     import profile, dump_args
 def deleteUserFeed(userId, itemType, tuuid):
     yield db.remove(userId, "userItems", tuuid)
     if plugins.has_key(itemType) and plugins[itemType].hasIndex:
-        yield db.remove(userId, "userItems_"+ itemType, tuuid)
+        yield db.remove(userId, "userItems_"+itemType, tuuid)
+
 
 @defer.inlineCallbacks
 def deleteFeed(userId, itemId, convId, itemType, acl, convOwner,
-                responseType, others=None, tagId='', deleteAll=False):
-    """
-    wrapper around deleteFromFeed&deleteFromOthersFeed
-    """
+               responseType, others=None, tagId='', deleteAll=False):
+    # 
+    # Wrapper around deleteFromFeed and deleteFromOthersFeed
+    #
     yield deleteFromFeed(userId, itemId, convId, itemType,
                          userId, responseType, tagId )
     if deleteAll:
@@ -88,9 +89,10 @@ def deleteFromOthersFeed(userId, itemId, convId, itemType, acl,
                          convOwner, responseType, others=None, tagId=''):
     if not others:
         others = yield utils.expandAcl(userId, acl, convOwner)
+
     for key in others:
         yield deleteFromFeed(key, itemId, convId, itemType,
-                             userId, responseType, tagId=tagId )
+                             userId, responseType, tagId=tagId)
 
 
 @profile
@@ -194,6 +196,7 @@ def updateFeedResponses(userKey, parentKey, itemKey, timeuuid, itemType,
 @defer.inlineCallbacks
 def fetchAndFilterConvs(ids, count, relation, items, myId, myOrgId):
     retIds = []
+    deleted = set()
     if not ids:
         defer.returnValue(retIds)
 
@@ -207,19 +210,20 @@ def fetchAndFilterConvs(ids, count, relation, items, myId, myOrgId):
             continue
         meta = items[convId]["meta"]
         if "deleted" in meta:
+            deleted.add(convId)
             continue
         if checkAcl(myId, meta["acl"], meta["owner"], relation, myOrgId):
             retIds.append(convId)
             if len(retIds) == count:
                 break
 
-    defer.returnValue(retIds)
+    defer.returnValue((retIds, deleted))
 
 @profile
 @defer.inlineCallbacks
 @dump_args
 def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
-                 getFn=None, start='', count=10, getReason=True):
+                 getFn=None, cleanFn=None, start='', count=10, getReason=True):
     toFetchItems = set()    # Items and entities that need to be fetched
     toFetchEntities = set() #
     toFetchTags = set()     #
@@ -227,6 +231,8 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
     items = {}              # Fetched items, entities and tags
     entities = {}           #
     tags = {}               #
+    
+    deleted = set()         # List of items that were deleted
 
     responses = {}          # Cached data of item responses and likes
     likes = {}              #
@@ -242,6 +248,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
     feedItems_d = []        # List of deferred used to fetch feedItems
     rawFeedItems = {}       # Feed items - fetched in parallel
     allFetchedConvIds = []  # List of all convIds considered for filtering
+    itemsFromFeed = {}      # All the key-values retrieved from feed
 
     relation = Relation(myId, [])
     relationsFetched = False
@@ -347,8 +354,8 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
     nextPageStart = None
     if not convIds:
         feedId = feedId or myId
-        keysFromFeed = []
-        convIds = []
+        keysFromFeed = []   # Sorted list of keys (used for paging)
+        convIds = []        # List of convIds that will be displayed
 
         fetchStart = utils.decodeKey(start)
         fetchCount = count + 2
@@ -363,6 +370,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
                         fetchedConvIds.append(value)
                         allFetchedConvIds.append(value)
                         keysFromFeed.append(name)
+                        itemsFromFeed[name] = value
 
             # Fetch user's feed when getFn isn't given.
             else:
@@ -374,14 +382,17 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
                         fetchedConvIds.append(value)
                         allFetchedConvIds.append(value)
                         keysFromFeed.append(col.column.name)
+                        itemsFromFeed[col.column.name] = value
 
             if not keysFromFeed:
                 break
 
             fetchStart = keysFromFeed[-1]
             feedItems_d.append(fetchFeedItems(fetchedConvIds))
-            filteredConvIds = yield fetchAndFilterConvs(fetchedConvIds, count, relation, items, myId, myOrgId)
+            (filteredConvIds, deletedIds) = yield fetchAndFilterConvs\
+                        (fetchedConvIds, count, relation, items, myId, myOrgId)
             convIds.extend(filteredConvIds)
+            deleted.update(deletedIds)
 
             if len(results) < fetchCount:
                 break
@@ -393,14 +404,33 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
             nextPageStart = utils.encodeKey(keysFromFeed[-1])
             convIds = convIds[0:-1]
     else:
-        convIds = yield fetchAndFilterConvs(convIds, count, relation, items, myId, myOrgId)
+        (convIds, deletedIds) = yield fetchAndFilterConvs(convIds, count,
+                                                relation, items, myId, myOrgId)
         if len(convIds) > count:
             nextPageStart = utils.encodeKey(convIds[count])
             convIds = convIds[0:count]
+        if deletedIds:
+            data["deleted"] = deletedIds
 
     # We don't have any conversations to display!
     if not convIds:
         defer.returnValue({"conversations": []})
+
+    # Delete any convs that don't exist anymore from the feeds
+    cleanup_d = []
+    if deleted:
+        if cleanFn:
+            d1 = cleanFn(list(deleted))
+        else:
+            deleteKeys = []
+            for key, value in itemsFromFeed.items():
+                if value in deleted:
+                    deleteKeys.append(key)
+
+            d1 = db.batch_remove({'feed': [feedId]}, names=deleteKeys)
+
+        d2 = db.batch_remove({'feedItems': [feedId]}, names=list(deleted))
+        cleanup_d = [d1, d2]
 
     # We now have a filtered list of conversations that can be displayed
     # Let's wait till all the feed items have been fetched and processed
@@ -416,7 +446,6 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
             toFetchEntities.add(conv["meta"]["target"])
         toFetchTags.update(conv.get("tags",{}).keys())
 
-
     tags_d = db.get_slice(myOrgId, "orgTags", toFetchTags) \
                                 if toFetchTags else defer.succeed([])
 
@@ -425,7 +454,6 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
     # Extra data that is required to render special items
     # We already fetched the conversation items, plugins merely
     # add more data to the already fetched items
-    extraData_d = []
     data["items"] = items
     for convId in convIds:
         itemType = items[convId]["meta"]["type"]
@@ -471,22 +499,37 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
                 vals.append(itemLink(convId, itemType))
                 reasonStr[convId] = _(template) % tuple(vals)
 
-    results = yield defer.DeferredList(extraData_d)
-    # TODO: Fetch any extra entities that the plugins might ask for!
+    # Make sure that the cleanup has happened too
+    yield defer.DeferredList(cleanup_d)
+
     data.update({"entities": entities, "responses": responses, "likes": likes,
                  "myLikes": myLikes, "conversations": convIds, "tags": tags,
                  "nextPageStart": nextPageStart, "reasonStr": reasonStr,
-                 "reasonUserIds":reasonUserIds})
+                 "reasonUserIds": reasonUserIds})
     defer.returnValue(data)
 
 
 def _feedFilter(request, feedId, itemType, start='', count=10):
+    itemsFromFeed = {}
+    cf = "feed_%s"%(itemType)
+
     @defer.inlineCallbacks
     def getFn(start='', count=12):
-        cf = "feed_%s"%(itemType)
-        items = yield db.get_slice(feedId, cf, start=start, count=count, reverse=True)
-        defer.returnValue(utils.columnsToDict(items, ordered=True))
-    return getFeedItems(request, getFn=getFn, start=start)
+        items = yield db.get_slice(feedId, cf, start=start,
+                                   count=count, reverse=True)
+        items = utils.columnsToDict(items, ordered=True)
+        itemsFromFeed.update(items)
+        defer.returnValue(items)
+
+    @defer.inlineCallbacks
+    def cleanFn(convIds):
+        deleteKeys = []
+        for key, value in itemsFromFeed.items():
+            if value in deleted:
+                deleteKeys.append(key)
+        yield db.batch_remove({cf: [feedId]}, names=deleteKeys)
+
+    return getFeedItems(request, getFn=getFn, cleanFn=cleanFn, start=start)
 
 
 class FeedResource(base.BaseResource):

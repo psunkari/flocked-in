@@ -355,6 +355,9 @@
 
 <%def name="conv_comment(convId, commentId)">
   <%
+    if not items.get(commentId, {}).get("meta", {}):
+        return ''
+
     item = items[commentId]
     userId = item["meta"]["owner"]
     comment = item["meta"]["comment"]

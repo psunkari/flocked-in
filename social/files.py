@@ -165,6 +165,7 @@ class FilesResource(base.BaseResource):
         bucket = config.get('CloudFiles', 'Bucket')
         if domain == "":
             calling_format = SubdomainCallingFormat()
+            domain = "s3.amazonaws.com"
         else:
             calling_format = VHostCallingFormat()
         conn = S3Connection(AKey, SKey, host=domain,
@@ -260,8 +261,8 @@ class FilesResource(base.BaseResource):
         domain = config.get('CloudFiles', 'Domain')
         bucket = config.get('CloudFiles', 'Bucket')
         if domain == "":
-            domain = "s3.amazonaws.com"
             calling_format = SubdomainCallingFormat()
+            domain = "s3.amazonaws.com"
         else:
             calling_format = VHostCallingFormat()
         conn = S3Connection(AKey, SKey, host=domain,
