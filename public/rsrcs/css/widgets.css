@@ -182,9 +182,10 @@ input::-moz-focus-inner {
 .ui-datepicker,
 .ui-menu {
   position: absolute;
-  box-shadow: 0 4px 6px #AAA;
-  border: 1px solid #CCC !important;
+  box-shadow: 0 2px 3px rgba(200,200,200,0.8);
+  border: 1px solid #DDD !important;
   outline: none !important;
+  padding: 4px !important;
 }
 
 .ui-menu-separator {

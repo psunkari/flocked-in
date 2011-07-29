@@ -109,6 +109,8 @@
       <ul id="${id}-menu" class="acl-menu" style="display:none;">
         <li><a class="acl-item" _acl="org:${orgKey}"><div class="icon"></div>${_("Company")}</a></li>
         <li><a class="acl-item" _acl="friends"><div class="icon"></div>${_("Friends")}</a></li>
+        <li id="sharebar-acl-groups-sep" class="ui-menu-separator"></li>
+        <li id="sharebar-acl-custom-sep" class="ui-menu-separator"></li>
         <li><a class="acl-item" _acl="custom"><div class="icon"></div>${_("Custom")}</a></li>
       </ul>
     </div>

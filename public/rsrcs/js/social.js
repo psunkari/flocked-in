@@ -1243,12 +1243,8 @@ var acl = {
     /* Update list of groups displayed in the menu */
     refreshGroups: function(id) {
         var groupsSeparator = $("#"+id+"-groups-sep");
-        if (!groupsSeparator.length) {
-            groupsSeparator = $("<li class='ui-menu-separator' id='"+id+"-groups-sep'></li>");
-            $('#'+id+'-menu').append(groupsSeparator);
-        }
 
-        groupsSeparator.nextAll().remove();
+        groupsSeparator.nextUntil('#'+id+'-custom-sep').remove();
         groupsSeparator.after("<li class='acl-busy-item'><i>Loading...</i></li>")
 
         $$.data.wait("/auto/mygroups", (function(groups) {
@@ -1262,7 +1258,9 @@ var acl = {
             if (items.length) {
                 groupsSeparator.next().replaceWith(items.join(""));
                 $("#"+id+"-menu").menu("refresh")
+                groupsSeparator.css('display', 'block');
             } else {
+                groupsSeparator.css('display', 'none');
                 groupsSeparator.next().remove();
             }
         }).bind(this));
