@@ -698,7 +698,7 @@ var ui = {
         });
     },
 
-    showPopUp: function(event){
+    showPopup: function(event, right, above){
         var evt = $.event.fix(event),
         $target = $(evt.target),
         $menu = $target.next()
@@ -712,9 +712,12 @@ var ui = {
                  .css("z-index", 2000);
         }
 
+        atX = myX = right? "right": "left";
+        myY = above? "bottom": "top";
+        atY = above? "top": "bottom";
         $menu.show().position({
-                my: "left top",
-                at: "left bottom",
+                my: myX + " " + myY,
+                at: atX + " " + atY,
                 of: $target
             }).focus();
 

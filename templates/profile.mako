@@ -253,7 +253,7 @@
       %if not relations.pending or userKey not in relations.pending:
         <button class="button default" onclick="$.post('/ajax/profile/friend', 'id=${userKey}')"><span class="button-text">Add as Friend</span></button>
       %elif relations.pending.get(userKey) == "1":
-        <button class="acl-button button" onclick="$$.ui.showPopUp(event)">Respond to Friend Request</button>
+        <button class="acl-button button" onclick="$$.ui.showPopup(event)">Respond to Friend Request</button>
         <ul class="acl-menu" style="display:none;">
             <li><a class="acl-item" _acl="public" onclick="$.post('/ajax/profile/friend', 'id=${userKey}')"><div class="icon"></div>${_("Accept")}</a></li>
             <li><a class="acl-item" _acl="friends" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}')"><div class="icon"></div>${_("Reject")}</a></li>
