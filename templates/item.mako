@@ -93,8 +93,8 @@
         convType = convMeta["type"]
         convOwner = convMeta["owner"]
       %>
-      ${self._item_other_actions(convId, convOwner==myKey, convType)}
-      <div id="conv-root-${convId}">
+      <div id="conv-root-${convId}" class="conv-root">
+        ${self._item_other_actions(convId, convOwner==myKey, convType)}
         %if hasReason:
           <span class="conv-reason">${reasonStr[convId]}</span>
           <div class="conv-summary conv-quote">
@@ -675,7 +675,7 @@
 
 <%def name="_item_other_actions(convId, iamOwner, convType)">
   %if convType not in ["activity"]:
-    <span class="conv-other-actions" onclick="$$.ui.showPopUp(event)"></span>
+    <span class="conv-other-actions" onclick="$$.ui.showPopup(event, true);"></span>
     <ul class="acl-menu" style="display:none;">
         %if iamOwner:
           <li><a class="menu-item noicon" onclick="$.post('/ajax/item/delete', {id:'${convId}'});">${_("Delete")}</a></li>

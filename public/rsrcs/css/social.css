@@ -697,7 +697,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     position:relative;
 }
 
-.conv-data:hover > .conv-other-actions {
+.conv-root:hover > .conv-other-actions {
     display: block;
 }
 

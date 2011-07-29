@@ -223,7 +223,7 @@
           %else:
             <span id="event-rsvp-status-${convId}">&nbsp;</span>
           %endif
-          <button class="button-link" onclick="$$.ui.showPopUp(event)">RSVP to this event</button>
+          <button class="button-link" onclick="$$.ui.showPopup(event)">RSVP to this event</button>
           <ul class="acl-menu" style="display:none;">
               <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'yes')">${_("Yes, I will attend")}</a></li>
               <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'no')">${_("No")}</a></li>
