@@ -356,19 +356,23 @@ def checkAcl(userId, acl, owner, relation, userOrgId=None):
        any([groupid in deny.get("groups", []) for groupid in relation.groups]):
         return False
 
+    returnValue = False
     if "public" in accept:
-        return True
-    elif "orgs" in accept:
-        return userOrgId in accept["orgs"]
-    elif "groups" in accept:
-        return any([groupid in accept["groups"] for groupid in relation.groups])
-    elif "friends" in accept:
-        return (userId == owner) or (owner in relation.friends)
-    elif "followers" in accept:
-        return (userId == owner) or (relation.subscriptions and owner in relation.subscriptions)
-    elif "users" in accept:
-        return userId in accept["users"]
-    return False
+        returnValue |=True
+    if "orgs" in accept:
+        returnValue |= userOrgId in accept["orgs"]
+    if "groups" in accept:
+        returnValue |= any([groupid in accept["groups"] for groupid in relation.groups])
+    if "friends" in accept and accept["friends"]:
+        log.msg(owner in relation.friends, "accept-friends")
+        returnValue |= ((userId == owner) or (owner in relation.friends))
+    if "followers" in accept and accept["followers"]:
+        returnValue |= (userId == owner)
+        if relation.subscriptions:
+            returnValue |= (owner in relation.subscriptions)
+    if "users" in accept:
+        returnValue |= userId in accept["users"]
+    return returnValue
 
 
 def encodeKey(key):
