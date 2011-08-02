@@ -199,7 +199,7 @@ def fetchAndFilterConvs(ids, count, relation, items, myId, myOrgId):
     retIds = []
     deleted = set()
     if not ids:
-        defer.returnValue(retIds)
+        defer.returnValue((retIds, deleted))
 
     cols = yield db.multiget_slice(ids, "items", ["meta", "tags", "attachments"])
     items.update(utils.multiSuperColumnsToDict(cols))
