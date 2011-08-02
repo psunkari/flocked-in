@@ -11,6 +11,7 @@ from twisted.python         import log, components
 from social                 import db, utils, base, plugins
 from social.template        import render
 from social.profile         import ProfileResource
+from social.settings        import SettingsResource
 from social.isocial         import IAuthInfo
 from social.feed            import FeedResource
 from social.signup          import SignupResource
@@ -163,6 +164,7 @@ class RootResource(resource.Resource):
     def _initResources(self):
         self._feed = FeedResource(self._isAjax)
         self._profile = ProfileResource(self._isAjax)
+        self._settings = SettingsResource(self._isAjax)
         self._item = ItemResource(self._isAjax)
         self._tags = TagsResource(self._isAjax)
         self._people = PeopleResource(self._isAjax)
@@ -240,6 +242,8 @@ class RootResource(resource.Resource):
             match = self._feed
         elif path == "profile":
             match = self._profile
+        elif path == "settings":
+            match = self._settings
         elif path == "item":
             match = self._item
         elif path == "tags":
