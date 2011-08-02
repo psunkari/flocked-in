@@ -16,7 +16,7 @@ from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
 from social.logging     import profile, dump_args
-from social.profile     import saveAvatarItem
+from social.settings    import saveAvatarItem
 
 
 class GroupsResource(base.BaseResource):

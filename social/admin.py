@@ -10,7 +10,7 @@ from social.isocial     import IAuthInfo
 from social.signup      import getOrgKey # move getOrgKey to utils
 from social.template    import render, renderScriptBlock
 from social.constants   import PEOPLE_PER_PAGE
-from social.profile     import saveAvatarItem
+from social.settings    import saveAvatarItem
 
 
 class Admin(base.BaseResource):
