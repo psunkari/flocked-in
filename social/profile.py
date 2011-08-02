@@ -11,7 +11,7 @@ from telephus.cassandra     import ttypes
 from social.template        import render, renderDef, renderScriptBlock
 from social.relations       import Relation
 from social                 import db, utils, base, plugins, _, __
-from social                 import constants, feed, errors
+from social                 import constants, feed, errors, people
 from social.logging         import dump_args, profile
 from social.isocial         import IAuthInfo
 
@@ -543,18 +543,31 @@ class ProfileResource(base.BaseResource):
                                            relation.initSubscriptionsList()])
 
             isProfile = (utils.getRequestArg(request, "_pg") == "/profile")
+            isFeed =    (utils.getRequestArg(request, "_pg")  == "/feed")
             def renderActions(ign):
-                d = renderScriptBlock(request, "profile.mako", "user_actions",
-                                False, "#user-actions-%s"%targetKey, "set",
-                                args=[targetKey, not isProfile], **data)
-                if isProfile:
-                    def renderSubactions(ign):
-                        return renderScriptBlock(request, "profile.mako",
-                                    "user_subactions", False,
-                                    "#user-subactions-%s"%targetKey, "set",
-                                    args=[targetKey, False], **data)
-                    d.addCallback(renderSubactions)
-                return d
+                if not isFeed:
+                    d = renderScriptBlock(request, "profile.mako", "user_actions",
+                                    False, "#user-actions-%s"%targetKey, "set",
+                                    args=[targetKey, not isProfile], **data)
+                    if isProfile:
+                        def renderSubactions(ign):
+                            return renderScriptBlock(request, "profile.mako",
+                                        "user_subactions", False,
+                                        "#user-subactions-%s"%targetKey, "set",
+                                        args=[targetKey, False], **data)
+                        d.addCallback(renderSubactions)
+                    return d
+                else:
+                    d = people.get_suggestions(request, constants.SUGGESTION_PER_PAGE, mini=True)
+                    def renderSuggestion(res):
+                        suggestions, entities = res
+                        return renderScriptBlock(request, "feed.mako", "_suggestions",
+                                                 False, "#suggestions", "set", True,
+                                                 relations = relation,
+                                                 suggestions = suggestions,
+                                                 entities=entities)
+                    d.addCallback(renderSuggestion)
+                    return d
 
             actionDeferred.addCallback(fetchRelations)
             actionDeferred.addCallback(renderActions)

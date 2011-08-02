@@ -276,6 +276,10 @@ def createColumnFamilies(client):
 
     doNotSpam = CfDef(KEYSPACE, "doNotSpam", "Standard", "BytesType",
                       None, "list of email addresses that requested blocking")
+    yield client.system_add_column_family(doNotSpam)
+    suggestions = CfDef(KEYSPACE, "suggestions", "Standard", "IntegerType",
+                        None, "Friend/Follow suggestions")
+    yield client.system_add_column_family(suggestions)
 
 
 @defer.inlineCallbacks
@@ -751,7 +755,8 @@ def truncateColumnFamilies(client):
                "mConversations", "mAllConversations", "mUnreadConversations",
                "mArchivedConversations", "mDeletedConversations",
                "mConvMessages", "mConvFolders", "latest", "doNotSpam",
-               "files", "tmp_files", "item_files", "invitationsSent", "user_files"]:
+               "files", "tmp_files", "item_files", "invitationsSent",
+               "user_files", "suggestions"]:
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 

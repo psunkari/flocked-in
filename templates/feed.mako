@@ -24,6 +24,11 @@
         </div>
         <div id ="group-links" >
         </div>
+        <div id="suggestions" >
+            % if not script:
+                ${self._suggestions()}
+            % endif
+        </div>
       </div>
       <div id="center">
         <div class="center-header">
@@ -217,4 +222,38 @@
       <div class="ui-list-meta"></div>
     </div>
   </div>
+</%def>
+
+<%def name="_suggestions()">
+    %if suggestions:
+      <div class="sidebar-chunk">
+        <div class="sidebar-title">${_("Suggestions")}</div>
+        %for userId in suggestions:
+          <div style="margin-top: 5px">
+            <div class="users-avatar">
+              <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
+              % if avatarURI:
+                <img src="${avatarURI}" height='32' width='32'></img>
+              % endif
+            </div>
+            <div class="users-details" style="margin-left:36px">
+              <div class="user-details-name">${utils.userName(userId, entities[userId])}</div>
+              <div class="user-details-title">${entities[userId]["basic"].get("jobTitle", '')}</div>
+              <div >
+                <ul id="user-actions-${userId}" class="middle user-actions h-links">
+                %if userId not in relations.friends:
+                  %if not relations.pending or userId not in relations.pending:
+                    <button class="button" onclick="$.post('/ajax/profile/friend', 'id=${userId}')"><span class="button-text" style="font-size:11px">Add as Friend</span></button>
+                  %endif
+                %endif
+                %if userId not in relations.subscriptions and userId not in relations.friends:
+                  <button class="button" onclick="$.post('/ajax/profile/follow', 'id=${userId}')"><span class="button-text" style="font-size:11px;">Follow</span></button>
+                %endif
+                </ul>
+              </div>
+            </div>
+          </div>
+        %endfor
+      </div>
+    %endif
 </%def>

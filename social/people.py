@@ -1,18 +1,159 @@
 import re
+import sys
+import struct
+import random
 
 from twisted.internet   import defer
 from twisted.web        import server
 from twisted.python     import log
 
-from social             import db, utils, base, _, whitelist, blacklist, config
+from social             import db, utils, base, _, whitelist, blacklist
+from social             import config, errors
 from social.relations   import Relation
 from social.template    import render, renderScriptBlock, getBlock
 from social.isocial     import IAuthInfo
-from social.constants   import PEOPLE_PER_PAGE
+from social.constants   import PEOPLE_PER_PAGE, SUGGESTION_PER_PAGE
 from social.logging     import dump_args, profile
 
 INCOMING_REQUEST = '1'
 OUTGOING_REQUEST = '0'
+
+@defer.inlineCallbacks
+def _update_suggestions(request):
+    authinfo = request.getSession(IAuthInfo)
+    myId = authinfo.username
+    orgId = authinfo.organization
+    relation = Relation(myId, [])
+    weights = { 'friend': { 'friend': 100, 'follower': 30, 'subscription': 80, 'group': 50},
+               'group': { 'friend': 50, 'follower': 15, 'subscription': 40, 'group': 60},
+               'follower': { 'friend': 30, 'follower': 9, 'subscription': 24, 'group': 15},
+               'subscription': { 'friend': 40, 'follower': 24, 'subscription': 64, 'group': 40}}
+    defaultWeight = 1
+    people = {}
+    @defer.inlineCallbacks
+    def _compute_weights(userIds, myGroups, type):
+        friends = yield db.multiget_slice(userIds, "connections", count=50)
+        followers = yield db.multiget_slice(userIds, "followers", count=50)
+        subscriptions = yield db.multiget_slice(userIds, "subscriptions", count=50)
+        groups = yield db.multiget_slice(userIds, "entityGroupsMap")
+        friends = utils.multiSuperColumnsToDict(friends)
+        followers = utils.multiColumnsToDict(followers)
+        subscriptions = utils.multiColumnsToDict(subscriptions)
+        for userId in friends:
+            for friend in friends[userId]:
+                people[friend] = people.setdefault(friend, defaultWeight)+ weights[type]['friend']
+        for userId in followers:
+            for follower in followers[userId]:
+                people[follower] = people.setdefault(follower, defaultWeight) + weights[type]['follower']
+        for userId in subscriptions:
+            for subscription in subscriptions[userId]:
+                people[subscription] = people.setdefault(subscription, defaultWeight) + weights[type]['subscription']
+        for userId in groups:
+            for groupId in groups[userId]:
+                if groupId in myGroups:
+                    people[userId] = people.setdefault(userId, defaultWeight) + weights[type]['group']
+
+
+
+    yield defer.DeferredList([relation.initFriendsList(),
+                               relation.initSubscriptionsList(),
+                               relation.initPendingList(),
+                               relation.initFollowersList(),
+                               relation.initGroupsList()])
+    if relation.friends:
+        yield _compute_weights(relation.friends.keys(), relation.groups, 'friend')
+    if relation.followers:
+        yield _compute_weights(relation.followers, relation.groups, 'follower')
+    if relation.subscriptions:
+        yield _compute_weights(relation.subscriptions, relation.subscriptions, 'subscription')
+    if relation.groups:
+        groupMembers = yield db.multiget_slice(relation.groups, "groupMembers", count=20)
+        groupMembers = utils.multiColumnsToDict(groupMembers)
+        for groupId in groupMembers:
+           yield  _compute_weights(groupMembers[groupId], relation.groups, 'group')
+
+
+    cols = yield db.get_slice(orgId, "orgUsers", count=50)
+    for col in cols:
+        userId = col.column.name
+        if userId not in people:
+            people[userId] = people.setdefault(userId, 0) + defaultWeight
+
+    suggestions = {}
+    for userId in people:
+        if userId in relation.friends or userId in relation.subscriptions or userId == myId:
+            continue
+        suggestions.setdefault(people[userId], []).append(userId)
+
+    yield db.remove(myId, "suggestions")
+    weights_userIds_map ={}
+    format = '>l'
+    for weight in suggestions:
+        key = struct.pack(format, weight)
+        weights_userIds_map[key] = ' '.join(suggestions[weight])
+    yield db.batch_insert(myId, "suggestions", weights_userIds_map)
+
+
+@defer.inlineCallbacks
+def get_suggestions(request, count, mini=False):
+    authinfo = request.getSession(IAuthInfo)
+    myId = authinfo.username
+
+    userIds = []
+    update_suggestions = False
+    relation = Relation(myId, [])
+    yield defer.DeferredList([relation.initFriendsList(),
+                               relation.initSubscriptionsList(),
+                               relation.initPendingList(),
+                               relation.initFollowersList()])
+
+    @defer.inlineCallbacks
+    def _get_suggestions(myId):
+        cols = yield db.get_slice(myId, "suggestions", reverse=True)
+        for col in cols:
+            userIds.extend(col.column.value.split())
+
+    def isValidSuggestion(suggestion):
+        return not (suggestion in relation.friends or \
+                    suggestion in relation.subscriptions or \
+                    suggestion in relation.pending or
+                    suggestion in relation.followers)
+
+    yield _get_suggestions(myId)
+    if not userIds:
+        yield _update_suggestions(request)
+        yield _get_suggestions(myId)
+
+    if mini:
+        no_of_samples = count*2
+        population = count*5
+        if len(userIds) < no_of_samples:
+            suggestions = userIds[:]
+        else:
+            suggestions = random.sample(userIds[:population], no_of_samples)
+    else:
+        suggestions = userIds[:]
+    if suggestions:
+        foo = [(x, isValidSuggestion(x)) for x in suggestions]
+        update_suggestions = any(zip(*foo)[1])
+        suggestions = [suggestion for  suggestion, valid in foo if valid ]
+
+    if mini and len(suggestions) < count:
+        for userId in userIds:
+            if userId not in suggestions:
+                if isValidSuggestion(userId):
+                    suggestions.append(userId)
+                else:
+                    update_suggestions = True
+    if update_suggestions:
+        _update_suggestions(request)
+
+    entities = {}
+    if suggestions:
+        suggestions = suggestions[:count]
+        entities = yield db.multiget_slice(suggestions, "entities", ['basic'])
+        entities = utils.multiSuperColumnsToDict(entities)
+    defer.returnValue((suggestions, entities))
 
 @defer.inlineCallbacks
 def _sendInvitations(myOrgUsers, otherOrgUsers, me, myId, myOrg):
@@ -38,7 +179,7 @@ def _sendInvitations(myOrgUsers, otherOrgUsers, me, myId, myOrg):
                  "--\n"\
                  "To block invitations from %(senderName)s visit %(blockSenderUrl)s\n"\
                  "To block all invitations from %(brandName)s visit %(blockAllUrl)s"
-    
+
     blockSenderTmpl = "%(rootUrl)s/signup/blockSender?email=%(emailId)s&token=%(token)s"
     blockAllTmpl = "%(rootUrl)s/signup/blockAll?email=%(emailId)s&token=%(token)s"
     activationTmpl = "%(rootUrl)s/signup?email=%(emailId)s&token=%(token)s"
@@ -392,6 +533,13 @@ class PeopleResource(base.BaseResource):
         else:
             yield render(request, "people.mako", **args)
 
+    @defer.inlineCallbacks
+    def _renderSuggestions(self, request):
+        authinfo = request.getSession(IAuthInfo)
+        myId = authinfo.username
+        suggestions, entities = yield get_suggestions(request, PEOPLE_PER_PAGE, True)
+        #render suggestions
+
     @profile
     @dump_args
     def render_GET(self, request):
@@ -405,6 +553,8 @@ class PeopleResource(base.BaseResource):
             d = self._render(request, viewType, start)
         elif segmentCount == 1 and request.postpath[0] == "invite":
             d = self._renderInvitePeople(request)
+        elif segmentCount == 1 and request.postpath[0] == "suggestions":
+            d = self._renderSuggestions(request)
 
         return self._epilogue(request, d)
 
