@@ -51,7 +51,7 @@
 
 <%!
   def newlinescape(text):
-    return utils.normalizeText(cgi.escape(text))
+    return utils.normalizeText(text)
 %>
 
 <%!
