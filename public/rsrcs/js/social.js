@@ -1356,6 +1356,7 @@ var events = {
         $.get('/ajax/event/invitee?id='+itemId);
     },
     prepareDateTimePickers: function(){
+        var currentTime = new Date();
         // Set the Display Strings
         $('#eventstartdate').datepicker({ minDate: currentTime,
             changeMonth: true, altField: '#startDate', altFormat: '@',
@@ -1372,13 +1373,6 @@ var events = {
             changeMonth: true, altField: '#endDate', altFormat: '@'});
         $('#eventstartdate').datepicker('setDate', new Date());
         $('#eventenddate').datepicker('setDate', new Date());
-        // Set the hidden attrs.  When a user picks a date from the
-        // calendar, the corresponding epoch value is stored in
-        // the hidden field. To the server; only the date component is
-        // important, since the time component is fetched from the startTime
-        // and endTime respectively.
-        $('#startDate').attr('value', startTime);
-        $('#endDate').attr('value', endTime);
 
         $("#allDay").change(function(){
             $('#startTimeWrapper, #endTimeWrapper').toggle()
