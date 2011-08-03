@@ -398,7 +398,7 @@
   others_act_on_my_post = email_preferences &1024
   others_act_on_item_following = email_preferences &2048
 
-  def foo(name, value):
+  def renderSetting(name, value):
     if value:
         return """<input type="checkbox" name="%s" value="1" checked="checked"/>""" %(name)
     else:
@@ -406,26 +406,26 @@
 %>
 <form class="ajax" id="settings-form" action="/settings/notify" method="post"  enctype="multipart/form-data">
   <div class="styledform">
-    <legend> Email me when </legend>
+    <legend>Send me an email notification when </legend>
     <ul>
       <li>
         <div id="new-requests">
           <ul>
             <li>
-              ${foo("new_friend_request", new_friend_request)}
-              ${_("Someone added me as a friend")}
+              ${renderSetting("new_friend_request", new_friend_request)}
+              ${_("Someone adds me as a friend")}
             </li>      
             <li>
-              ${foo("accepted_my_friend_request", accepted_my_friend_request)}
-              ${_("Others accept my friend request")}
+              ${renderSetting("accepted_my_friend_request", accepted_my_friend_request)}
+              ${_("Someone accepts my friend request")}
             </li>
              <li>
-              ${foo("new_follower", new_follower)}
+              ${renderSetting("new_follower", new_follower)}
               ${_("Someone starts following me")}
             </li>
             <li>
-              ${foo("new_member_to_network", new_member_to_network)}
-              ${_("New member joins the network")}
+              ${renderSetting("new_member_to_network", new_member_to_network)}
+              ${_("A new member joins my network")}
             </li>
           </ul>
         </div>
@@ -435,20 +435,20 @@
           <legend>Groups</legend>
           <ul>
             <li>
-              ${foo("new_group_invite", new_group_invite)}
+              ${renderSetting("new_group_invite", new_group_invite)}
               ${_("Someone invites me to join a group")}
             </li>
             <li>
-              ${foo("pending_group_request", pending_group_request)}
-              ${_("Someone requests to join private group for which i am administrator")}
+              ${renderSetting("pending_group_request", pending_group_request)}
+              ${_("Someone sends a request to join a private group for which I am an administrator")}
             </li>
             <li>
-              ${foo("accepted_my_group_membership", accepted_my_group_membership)}
-              ${_("My group membership is accepted")}
+              ${renderSetting("accepted_my_group_membership", accepted_my_group_membership)}
+              ${_("My request for a group membership is accepted")}
             </li>
             <li>
-              ${foo("new_post_to_group", new_post_to_group)}
-              ${_("Someone posts to a group im member of")}
+              ${renderSetting("new_post_to_group", new_post_to_group)}
+              ${_("Someone posts to a group that I am a member of")}
             </li>
           </ul>
         </div>
@@ -458,8 +458,8 @@
           <legend>Messages</legend>
           <ul>
             <li>
-              ${foo("new_message", new_message)}
-              ${_("I receive new message")}
+              ${renderSetting("new_message", new_message)}
+              ${_("I receive a new message")}
             </li>
           </ul>
         </div>
@@ -469,12 +469,12 @@
           <legend>Posts</legend>
           <ul>
             <li>
-              ${foo("others_act_on_my_post", others_act_on_my_post)}
-              ${_("Others liked/commented on my post")}
+              ${renderSetting("others_act_on_my_post", others_act_on_my_post)}
+              ${_("Others like or comment on my post")}
             </li>
             <li>
-              ${foo("others_act_on_item_following", others_act_on_item_following)}
-              ${_("Others liked/liked my comment/commented on posts i liked/commented ")}
+              ${renderSetting("others_act_on_item_following", others_act_on_item_following)}
+              ${_("Others like or comment on posts that I have liked or commented upon")}
             </li>
           </ul>
         </div>
