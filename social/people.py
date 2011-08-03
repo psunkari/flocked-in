@@ -91,7 +91,8 @@ def _update_suggestions(request):
     for weight in suggestions:
         key = struct.pack(format, weight)
         weights_userIds_map[key] = ' '.join(suggestions[weight])
-    yield db.batch_insert(myId, "suggestions", weights_userIds_map)
+    if weights_userIds_map:
+        yield db.batch_insert(myId, "suggestions", weights_userIds_map)
 
 
 @defer.inlineCallbacks
