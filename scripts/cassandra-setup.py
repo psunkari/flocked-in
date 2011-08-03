@@ -444,11 +444,12 @@ def addSampleData(client):
                                     '1998:Acpak Institute of Technology': 'Graduation'
                                 },
                                 'work': {
-                                    ':200706:Recruitment': 'Instrumental in company growth from 50 to 6000 employees'
+                                    ':200706:Recruitment:Head of People': 'Instrumental in company growth from 6000 to 100000 employees',
+                                    '200609:200705:Recruitment:Human Resources Lead': 'Instrumental in company growth from 50 to 6000 employees',
+                                    '200509:200608:Recruitment:Human Resources Principal': 'Instrumental in company growth from 1 to 50 employees'
                                 },
                                 'contact': {
                                     'mail': 'ashok@example.com',
-                                    'phone': '+11234567890'
                                 },
                                 'personal': {
                                     'mail': 'ashok@example.net',

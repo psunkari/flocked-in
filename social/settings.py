@@ -2,6 +2,7 @@ import PythonMagick
 import imghdr
 import uuid
 from random                 import sample
+import datetime
 
 from twisted.web            import resource, server, http
 from twisted.python         import log
@@ -130,6 +131,8 @@ class SettingsResource(base.BaseResource):
     @dump_args
     def _edit(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        landing = not self._ajax
+        
         userInfo = {}
         calls = []
 
@@ -257,9 +260,13 @@ class SettingsResource(base.BaseResource):
             userInfo["employers"][key] = emp_desc
 
         college = utils.getRequestArg(request, "college")
-        degree = utils.getRequestArg(request, "degree") or ''
-        edu_end = utils.getRequestArg(request, "edu_end") or ''
-        if college:
+        degree = utils.getRequestArg(request, "degree") or None
+        edu_end = utils.getRequestArg(request, "edu_end") or None
+        this_year = datetime.date.today().year
+        if edu_end and not (edu_end.isdigit() \
+                                and int(edu_end) in range(1901, this_year)):
+            edu_end = None
+        if college and degree and edu_end:
             userInfo["education"] = {}
             key = "%s:%s" %(edu_end, college)
             userInfo["education"][key] = degree
@@ -270,9 +277,15 @@ class SettingsResource(base.BaseResource):
         if not self._ajax:
             request.redirect("/settings")
         else:
-            pass
-            #TODO: If basic profile was edited, then logo, name and title could
-            # also change, make sure these are reflected too.
+            args["detail"] = ""
+            suggestedSections = yield self._checkProfileCompleteness(request, myKey, args)
+            tmp_suggested_sections = {}
+            for section, items in suggestedSections.iteritems():
+                if len(suggestedSections[section]) > 0:
+                    tmp_suggested_sections[section] = items
+            args.update({'suggested_sections':tmp_suggested_sections})        
+            yield renderScriptBlock(request, "settings.mako", "right",
+                                    landing, ".right-contents", "set", **args)
 
 
     @defer.inlineCallbacks
@@ -342,7 +355,6 @@ class SettingsResource(base.BaseResource):
         detail = utils.getRequestArg(request, "dt") or "basic"
         args["detail"] = detail
         args["editProfile"] = True
-
         if script and landing:
             yield render(request, "settings.mako", **args)
 
@@ -358,8 +370,14 @@ class SettingsResource(base.BaseResource):
             yield renderScriptBlock(request, "settings.mako", "editBasicInfo",
                                     landing, "#settings-content", "set", True,
                                     handlers = handlers, **args)
-
         elif detail == "work":
+            res = yield db.get_slice(myKey, "entities", ['work', 'employers', 'education'])
+            currentWorkInfo = utils.supercolumnsToDict(res).get("work", {})
+            previousWorkInfo = utils.supercolumnsToDict(res).get("employers", {})
+            educationInfo = utils.supercolumnsToDict(res).get("education", {})
+            args.update({"currentWorkInfo":currentWorkInfo,
+                         "previousWorkInfo":previousWorkInfo,
+                         "educationInfo":educationInfo})
             yield renderScriptBlock(request, "settings.mako", "settingsTitle",
                                     landing, "#settings-title", "set", **args)
             yield renderScriptBlock(request, "settings.mako", "editWork",
@@ -399,8 +417,131 @@ class SettingsResource(base.BaseResource):
             yield renderScriptBlock(request, "settings.mako", "emailPreferences",
                                     landing, "#settings-content", "set",True,
                                     handlers=handlers, **args)
+        
+        suggestedSections = yield self._checkProfileCompleteness(request, myKey, args)
+        tmp_suggested_sections = {}
+        for section, items in suggestedSections.iteritems():
+            if len(suggestedSections[section]) > 0:
+                tmp_suggested_sections[section] = items
+        args.update({'suggested_sections':tmp_suggested_sections})        
+        yield renderScriptBlock(request, "settings.mako", "right",
+                                landing, ".right-contents", "set", **args)
+        
+    @defer.inlineCallbacks
+    def _checkProfileCompleteness(self, request, myKey, args):
+        landing = not self._ajax
+        description = [""]
+        detail = args["detail"]
+        
+        if detail == "basic":
+            description = ["""Your Basic details are the most discoverable
+                            fields in your profile. They are visible everytime
+                            someone searches for you. We recommend that you fill
+                            out all the fields in this section.
+                          """]
 
+        elif detail == "work":
+            description = ["""Your work details include your current and
+                             previous work experiences and also about your
+                             educational background. """,
+                           """A thorough work experience builds up a nice
+                             portfolio of your career."""]
 
+        elif detail == "personal":
+            description = ["""Your personal information is only accessible to your
+                             friends.
+                          """]
+
+        elif detail == "contact":
+            description = ["""Your contact information can be used to get in
+                             touch with you by your friends or your followers.
+                             We recommend completing this section if your work
+                             involves being in constant touch with your colleagues.
+                          """]
+
+        elif detail == "passwd":
+            description = ["""Change your password. Use a password consisting of
+                             atleast 8 characters including alphabets, numbers
+                             and special characters.
+                          """]
+
+        elif detail == 'notify':
+            description = ["""flockedIn can notify you of all the activities that
+                             were happening in your
+                             <i title="kol-eeg-o-sfeer">colleagosphere</i>
+                             while you were
+                             away.""",
+                           """ Here you can choose what kind of events you
+                             would you like to be notified of."""]
+            
+        args["description"] = description
+        
+        suggestedSections = {}
+        #Check Basic
+        requiredFields = ["jobTitle", "timezone"]
+        jobTitle = args["me"].get("basic", {}).get("jobTitle", None)
+        myTimezone = args["me"].get("basic", {}).get("timezone", None)
+        suggestedSections["basic"] = []
+        if jobTitle is None:
+            suggestedSections["basic"].append("Add a job title")
+        if myTimezone is None:
+            suggestedSections["basic"].append("Configure your timezone")
+
+        #Check Contact
+        suggestedSections["contact"] = []
+        if "contactInfo" not in args:
+            res = yield db.get_slice(myKey, "entities", ['contact'])
+            contactInfo = utils.supercolumnsToDict(res).get("contact", {})
+        else:
+            contactInfo = args["contactInfo"]
+            
+        phone = contactInfo.get('phone', None)
+        if not phone:
+            suggestedSections["contact"].append("Add a work phone")
+
+        #Check Personal Info
+        suggestedSections["personal"] = []
+        if "personalInfo" not in args:
+            res = yield db.get_slice(myKey, "entities", ['personal'])
+            personalInfo = utils.supercolumnsToDict(res).get("personal", {})
+        else:
+            personalInfo = args["personalInfo"]
+            
+        currentCity = personalInfo.get('currentCity', None)
+        if not currentCity:
+            suggestedSections["personal"].append("Which city are you residing in")
+        
+        #Check Work
+        suggestedSections["work"] = []
+        if "workInfo" not in args:
+            res = yield db.get_slice(myKey, "entities", ['work', 'employers', 'education'])
+            currentWorkInfo = utils.supercolumnsToDict(res).get("work", {})
+            previousWorkInfo = utils.supercolumnsToDict(res).get("employers", {})
+            educationInfo = utils.supercolumnsToDict(res).get("education", {})
+        else:
+            currentWorkInfo = args["currentWorkInfo"]
+            previousWorkInfo = args["previousWorkInfo"]
+            educationInfo = args["educationInfo"]
+        
+        if len(currentWorkInfo.keys()) == 0:
+            suggestedSections["work"].append("Write about your current work")
+        
+        if len(previousWorkInfo.keys()) == 0 and len(educationInfo.keys()) == 0:
+            suggestedSections["work"].append("Write something about your previous work")
+            suggestedSections["work"].append("Write about your academics")
+
+        if len(educationInfo.keys()) == 0:
+            suggestedSections["work"].append("Write about your academics")
+
+        academic_durations = [int(x.split(':')[0]) for x in educationInfo.keys()]
+        last_passed = sorted(academic_durations)[-1]
+        if (datetime.date.today().year - last_passed > 2) and \
+            (len(previousWorkInfo.keys()) == 0):
+            suggestedSections["work"].append("Write about your previous work")
+
+        defer.returnValue(suggestedSections)
+        
+        
     @profile
     @dump_args
     def render_POST(self, request):
