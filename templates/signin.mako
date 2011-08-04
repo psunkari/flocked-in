@@ -9,6 +9,25 @@
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/about.css"/>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/widgets.css"/>
   <link rel="shortcut icon" href="/rsrcs/img/favicon.ico" type="image/x-icon" />
+  <script type="text/javascript">
+    function validate() {
+      var username = document.getElementById('username');
+      var password = document.getElementById('password');
+      var errorMessage = document.getElementById('error-message')
+
+      if (username.value == '') {
+        errorMessage.innerHTML = 'Enter your username';
+        return false;
+      }
+      
+      if (password.value == '') {
+        errorMessage.innerHTML = 'Enter your password';
+        return false;
+      }
+
+      return true;
+    }
+  </script>
 </head>
 
 <body>
@@ -28,9 +47,8 @@
     </div>
     <div id="main">
       %if reason:
-        <span class="error">${reason}</span>
       %endif
-      <form action="/signin" method="POST">
+      <form action="/signin" method="POST" onsubmit="return validate()">
       <div id="main-contents" class="styledform contents" style="width: 600px; margin: 20px auto;">
         <ul>
           <li>
@@ -39,11 +57,12 @@
           </li>
           <li>
             <label for="password">${_('Password')}</label></td>
-            <input id="password" type="password" class="textfield" name="p"></input></td>
+            <input id="password" type="password" class="textfield" name="p"></input>
           </li>
+          <div id="error-message" class="error" style="padding-left: 15em; margin-left: 12px;">${reason}</div>
           <li>
-            <input type="checkbox" id="remember" checked="true" name="remember"/>
             <label for="remember">${_('Remember me')}</label>
+            <input type="checkbox" id="remember" checked="true" name="remember"/>
           </li>
         </ul>
         <div class="styledform-buttons">

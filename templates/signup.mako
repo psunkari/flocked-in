@@ -16,7 +16,7 @@
       var pwdrepeat = document.querySelector('input[name="pwdrepeat"]').value
       if (password != pwdrepeat){
         document.getElementById('messages-wrapper').style.display = 'block';
-        document.getElementById('messages-wrapper').innerHTML = 'Kindly confirm your Password.';
+        document.getElementById('messages-wrapper').innerHTML = 'Passwords do not match.';
         setTimeout(function(){
           document.getElementById('messages-wrapper').style.display = 'none';
           document.getElementById('messages-wrapper').innerHTML = '';
@@ -41,7 +41,7 @@
       var email = document.querySelector('input[name="email"]').value
       if (email == null || email == ""){
         document.getElementById('messages-wrapper').style.display = 'block';
-        document.getElementById('messages-wrapper').innerHTML = 'Kindly enter EmailId';
+        document.getElementById('messages-wrapper').innerHTML = 'Enter your Email.';
         setTimeout(function(){
           document.getElementById('messages-wrapper').style.display = 'none';
           document.getElementById('messages-wrapper').innerHTML = '';
@@ -56,7 +56,7 @@
       var pwdrepeat = document.querySelector('input[name="pwdrepeat"]').value
       if (password != pwdrepeat){
         document.getElementById('messages-wrapper').style.display = 'block';
-        document.getElementById('messages-wrapper').innerHTML = 'Kindly confirm your Password.';
+        document.getElementById('messages-wrapper').innerHTML = 'Passwords do not match.';
         setTimeout(function(){
           document.getElementById('messages-wrapper').style.display = 'none';
           document.getElementById('messages-wrapper').innerHTML = '';
@@ -226,11 +226,11 @@
    <form action="/password/forgotPassword" method="POST" onsubmit="return validate()">
     <div id="main-contents" class="styledform contents" style="width: 600px; margin: 20px auto;">
       <ul>
-        <li style="display:none" id="messages-wrapper" class="messages-error"></li>
           <li>
-            <label for="email">Username:</label>
+            <label for="email">Email:</label>
             <input type="text" name="email" />
           </li>
+          <div id="messages-wrapper" class="error" style="padding-left: 15em; margin-left: 12px;"></div>
       </ul>
       <div class="styledform-buttons" >
         <input type="submit" class="default button" name="submit" value="Submit"></input>
@@ -243,11 +243,6 @@
    <form action="/password/resetPassword" method="POST" onsubmit="return validate()">
     <div id="main-contents" class="styledform contents" style="width: 600px; margin: 20px auto;">
       <ul>
-          <li style="display:none" id="messages-wrapper" class="messages-error"></li>
-          ##<li>
-            ##<label for="username"> Username: </label>
-            ##<span style="font-size:13px;font-weight:bold"> ${email}</span> 
-          ##</li>
           <li>
             <label for="password">Password:</label>
             <input type="password" name="password" />
@@ -257,6 +252,7 @@
             <label for="pwdrepeat">Confirm Password:</label>
             <input type="password" name="pwdrepeat" />
           </li>
+          <div id="messages-wrapper" class="error" style="padding-left: 15em; margin-left: 12px;"></div>
       </ul>
       <input type='hidden' name='email' value=${email} />
       <input type='hidden' name='token' value=${token} />
