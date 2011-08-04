@@ -153,8 +153,6 @@
     options = [('myGroups', 'My Groups'), ('allGroups', 'All Groups'), ('adminGroups', 'Groups managed by Me')]
     if showPendingRequestsTab:
         options.append(("pendingRequests", "Pending Requests"))
-    print options
-    print showPendingRequestsTab
     %>
   <ul class="h-links view-options">
     %for item, display in options:
