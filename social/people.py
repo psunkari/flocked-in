@@ -2,6 +2,7 @@ import re
 import sys
 import struct
 import random
+import time
 
 from twisted.internet   import defer
 from twisted.web        import server
@@ -18,12 +19,19 @@ from social.logging     import dump_args, profile
 INCOMING_REQUEST = '1'
 OUTGOING_REQUEST = '0'
 
+
+def isValidSuggestion(myId, userId, relation):
+    return not (userId in relation.friends or \
+                userId in relation.subscriptions or \
+                userId in relation.pending or
+                userId in relation.followers or
+                userId == myId)
+
 @defer.inlineCallbacks
-def _update_suggestions(request):
+def _update_suggestions(request, relation=None):
     authinfo = request.getSession(IAuthInfo)
     myId = authinfo.username
     orgId = authinfo.organization
-    relation = Relation(myId, [])
     weights = { 'friend': { 'friend': 100, 'follower': 30, 'subscription': 80, 'group': 50},
                'group': { 'friend': 50, 'follower': 15, 'subscription': 40, 'group': 60},
                'follower': { 'friend': 30, 'follower': 9, 'subscription': 24, 'group': 15},
@@ -39,6 +47,7 @@ def _update_suggestions(request):
         friends = utils.multiSuperColumnsToDict(friends)
         followers = utils.multiColumnsToDict(followers)
         subscriptions = utils.multiColumnsToDict(subscriptions)
+        groups = utils.multiColumnsToDict(groups)
         for userId in friends:
             for friend in friends[userId]:
                 people[friend] = people.setdefault(friend, defaultWeight)+ weights[type]['friend']
@@ -54,26 +63,27 @@ def _update_suggestions(request):
                     people[userId] = people.setdefault(userId, defaultWeight) + weights[type]['group']
 
 
-
-    yield defer.DeferredList([relation.initFriendsList(),
-                               relation.initSubscriptionsList(),
-                               relation.initPendingList(),
-                               relation.initFollowersList(),
-                               relation.initGroupsList()])
+    if not relation:
+        relation = Relation(myId, [])
+        yield defer.DeferredList([relation.initFriendsList(),
+                                   relation.initSubscriptionsList(),
+                                   relation.initPendingList(),
+                                   relation.initFollowersList(),
+                                   relation.initGroupsList()])
     if relation.friends:
         yield _compute_weights(relation.friends.keys(), relation.groups, 'friend')
     if relation.followers:
         yield _compute_weights(relation.followers, relation.groups, 'follower')
     if relation.subscriptions:
-        yield _compute_weights(relation.subscriptions, relation.subscriptions, 'subscription')
+        yield _compute_weights(relation.subscriptions, relation.groups, 'subscription')
     if relation.groups:
         groupMembers = yield db.multiget_slice(relation.groups, "groupMembers", count=20)
         groupMembers = utils.multiColumnsToDict(groupMembers)
         for groupId in groupMembers:
-           yield  _compute_weights(groupMembers[groupId], relation.groups, 'group')
+            yield  _compute_weights(groupMembers[groupId], relation.groups, 'group')
 
 
-    cols = yield db.get_slice(orgId, "orgUsers", count=50)
+    cols = yield db.get_slice(orgId, "orgUsers", count=100)
     for col in cols:
         userId = col.column.name
         if userId not in people:
@@ -81,9 +91,8 @@ def _update_suggestions(request):
 
     suggestions = {}
     for userId in people:
-        if userId in relation.friends or userId in relation.subscriptions or userId == myId:
-            continue
-        suggestions.setdefault(people[userId], []).append(userId)
+        if isValidSuggestion(myId, userId, relation):
+            suggestions.setdefault(people[userId], []).append(userId)
 
     yield db.remove(myId, "suggestions")
     weights_userIds_map ={}
@@ -100,54 +109,50 @@ def get_suggestions(request, count, mini=False):
     authinfo = request.getSession(IAuthInfo)
     myId = authinfo.username
 
-    userIds = []
-    update_suggestions = False
+    SUGGESTIONS_UPDATE_FREQUENCY = 3 * 86400 # 5days
+    MAX_INVALID_SUGGESTIONS = 3
+    now = time.time()
+
+    suggestions = []
     relation = Relation(myId, [])
     yield defer.DeferredList([relation.initFriendsList(),
                                relation.initSubscriptionsList(),
                                relation.initPendingList(),
                                relation.initFollowersList()])
 
+
     @defer.inlineCallbacks
-    def _get_suggestions(myId):
+    def _get_suggestions(myId, relation):
+        validSuggestions = []
+        invalidCount = 0
+        FORCE_UPDATE = False
         cols = yield db.get_slice(myId, "suggestions", reverse=True)
         for col in cols:
-            userIds.extend(col.column.value.split())
-
-    def isValidSuggestion(suggestion):
-        return not (suggestion in relation.friends or \
-                    suggestion in relation.subscriptions or \
-                    suggestion in relation.pending or
-                    suggestion in relation.followers)
-
-    yield _get_suggestions(myId)
-    if not userIds:
-        yield _update_suggestions(request)
-        yield _get_suggestions(myId)
-
-    if mini:
-        no_of_samples = count*2
-        population = count*5
-        if len(userIds) < no_of_samples:
-            suggestions = userIds[:]
-        else:
-            suggestions = random.sample(userIds[:population], no_of_samples)
-    else:
-        suggestions = userIds[:]
-    if suggestions:
-        foo = [(x, isValidSuggestion(x)) for x in suggestions]
-        update_suggestions = any(zip(*foo)[1])
-        suggestions = [suggestion for  suggestion, valid in foo if valid ]
-
-    if mini and len(suggestions) < count:
-        for userId in userIds:
-            if userId not in suggestions:
-                if isValidSuggestion(userId):
-                    suggestions.append(userId)
+            if now - col.column.timestamp/1000000 > SUGGESTIONS_UPDATE_FREQUENCY:
+                FORCE_UPDATE = True
+            for userId in col.column.value.split():
+                if isValidSuggestion(myId, userId, relation):
+                    validSuggestions.append(userId)
                 else:
-                    update_suggestions = True
-    if update_suggestions:
-        _update_suggestions(request)
+                    invalidCount +=1
+        defer.returnValue((validSuggestions, invalidCount, FORCE_UPDATE))
+
+
+    validSuggestions, invalidCount, FORCE_UPDATE = yield _get_suggestions(myId, relation)
+    if not validSuggestions:
+        yield _update_suggestions(request, relation)
+        validSuggestions, invalidCount, FORCE_UPDATE = yield _get_suggestions(myId, relation)
+
+    no_of_samples = count*2
+    population = count*5
+    if mini and len(validSuggestions)>= no_of_samples:
+        suggestions = random.sample(validSuggestions[:population], no_of_samples)
+    else:
+        suggestions = validSuggestions[:]
+
+
+    if FORCE_UPDATE or invalidCount > MAX_INVALID_SUGGESTIONS:
+        _update_suggestions(request, relation)
 
     entities = {}
     if suggestions:
