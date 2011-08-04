@@ -36,7 +36,37 @@
         return true
       }
     }
+  %elif view == 'forgotPassword':
+    function validate(){
+      var email = document.querySelector('input[name="email"]').value
+      if (email == null || email == ""){
+        document.getElementById('messages-wrapper').style.display = 'block';
+        document.getElementById('messages-wrapper').innerHTML = 'Kindly enter EmailId';
+        setTimeout(function(){
+          document.getElementById('messages-wrapper').style.display = 'none';
+          document.getElementById('messages-wrapper').innerHTML = '';
+        }, 3000)
+      return false
+      }
+      return true
+    }
+   %elif view == 'resetPassword':
+    function validate(){
+      var password = document.querySelector('input[name="password"]').value
+      var pwdrepeat = document.querySelector('input[name="pwdrepeat"]').value
+      if (password != pwdrepeat){
+        document.getElementById('messages-wrapper').style.display = 'block';
+        document.getElementById('messages-wrapper').innerHTML = 'Kindly confirm your Password.';
+        setTimeout(function(){
+          document.getElementById('messages-wrapper').style.display = 'none';
+          document.getElementById('messages-wrapper').innerHTML = '';
+        }, 3000)
+      return false
+      }
+      return true
+    }
   %endif
+
   </script>
 </head>
 
@@ -68,7 +98,13 @@
         </ul>
       %else:
         <ul id="views-list">
-          <li class="last">${_('Unsubscribed')}</li>
+          % if view in ('forgotPassword'):
+            <li class="selected"><span>${_("Forgot Password?")}</span></li>
+          % elif view in ('resetPassword', 'forgotPassword-post'):
+            <li class="selected"><span>${_("Reset Password")}</span></li>
+          % else:
+            <li class="last">${_('Unsubscribed')}</li>
+          % endif
         </ul>
       %endif
     </div>
@@ -81,6 +117,21 @@
         ${self.invitePeople()}
       %elif view == 'block':
         ${self.unsubscribed()}
+      %elif view == 'forgotPassword':
+        ${self.forgotPassword()}
+      %elif view == 'resetPassword':
+        ${self.resetPassword()}
+      %elif view == 'forgotPassword-post':
+        <div id="main-contents" class="styledform contents" style="width: 600px; margin: 20px auto;">
+          <ul>
+            <li>
+              <span> We have sent an email with instructions to reset your password </span><br>
+              <span> <a href='/signin'>Back to Signin</a> </span>
+            <li>
+            <li>
+            </li>
+          </ul>
+        </div>
       %endif
     </div>
   </div>
@@ -168,5 +219,51 @@
       ${_("In case you change your mind, you can still register by visiting <a href='http://flocked.in'>http://flocked.in</a>")}
     </div>
   </div>
+</%def>
+
+
+<%def name="forgotPassword()">
+   <form action="/password/forgotPassword" method="POST" onsubmit="return validate()">
+    <div id="main-contents" class="styledform contents" style="width: 600px; margin: 20px auto;">
+      <ul>
+        <li style="display:none" id="messages-wrapper" class="messages-error"></li>
+          <li>
+            <label for="email">Username:</label>
+            <input type="text" name="email" />
+          </li>
+      </ul>
+      <div class="styledform-buttons" >
+        <input type="submit" class="default button" name="submit" value="Submit"></input>
+      </div>
+    </div>
+  </form>
+</%def>
+
+<%def name="resetPassword()">
+   <form action="/password/resetPassword" method="POST" onsubmit="return validate()">
+    <div id="main-contents" class="styledform contents" style="width: 600px; margin: 20px auto;">
+      <ul>
+          <li style="display:none" id="messages-wrapper" class="messages-error"></li>
+          ##<li>
+            ##<label for="username"> Username: </label>
+            ##<span style="font-size:13px;font-weight:bold"> ${email}</span> 
+          ##</li>
+          <li>
+            <label for="password">Password:</label>
+            <input type="password" name="password" />
+          </li>
+
+          <li>
+            <label for="pwdrepeat">Confirm Password:</label>
+            <input type="password" name="pwdrepeat" />
+          </li>
+      </ul>
+      <input type='hidden' name='email' value=${email} />
+      <input type='hidden' name='token' value=${token} />
+      <div class="styledform-buttons" >
+        <input type="submit" class="default button" name="submit" value="Submit"></input>
+      </div>
+    </div>
+  </form>
 </%def>
 

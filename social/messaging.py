@@ -17,10 +17,11 @@ from twisted.internet   import defer
 from twisted.python     import log
 from twisted.web        import static, server
 
-from social             import db, utils, base, errors, config
+from social             import db, utils, base, errors, config, _
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
+from social.logging     import profile, dump_args
 
 
 class MessagingResource(base.BaseResource):
@@ -29,8 +30,9 @@ class MessagingResource(base.BaseResource):
                 'archive': 'mArchivedConversations',
                 'trash': 'mDeletedConversations',
                 'unread': 'mUnreadConversations'}
-
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _handleAttachments(self, request):
         authinfo = request.getSession(IAuthInfo)
         myId = authinfo.username
@@ -47,8 +49,9 @@ class MessagingResource(base.BaseResource):
                     attach_meta[attachmentId] = val
 
         defer.returnValue((attach_meta, attachments))
-
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _getFileInfo(self, request):
 
         authinfo = request.getSession(IAuthInfo)
@@ -88,8 +91,9 @@ class MessagingResource(base.BaseResource):
 
         url = files['meta']['uri']
         defer.returnValue([owner, url, filetype, size, name])
-
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _renderFile(self, request):
         fileInfo = yield self._getFileInfo(request)
         owner, url, fileType, size, name = fileInfo
@@ -156,8 +160,9 @@ class MessagingResource(base.BaseResource):
             else:
                 continue
         return snippet
-
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _deliverMessage(self, convId, recipients, timeUUID, owner):
         convFolderMap = {}
         userFolderMap = {}
@@ -209,8 +214,9 @@ class MessagingResource(base.BaseResource):
         if toNotify:
             yield db.batch_mutate(toNotify)
 
-
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _newMessage(self, ownerId, timeUUID, body, epoch):
         messageId = utils.getUniqueKey()
         meta =  { "owner": ownerId,
@@ -222,7 +228,9 @@ class MessagingResource(base.BaseResource):
         yield db.batch_insert(messageId, "messages", {'meta':meta})
         defer.returnValue(messageId)
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _newConversation(self, ownerId, participants, meta, attachments):
         participants = dict ([(userId, '') for userId in participants])
         convId = utils.getUniqueKey()
@@ -231,7 +239,9 @@ class MessagingResource(base.BaseResource):
                                                 "attachments":attachments})
         defer.returnValue(convId)
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _reply(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         convId = utils.getRequestArg(request, 'id')
@@ -326,7 +336,9 @@ class MessagingResource(base.BaseResource):
             request.redirect('/messages')
             request.finish()
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _createConversation(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
@@ -377,7 +389,9 @@ class MessagingResource(base.BaseResource):
         else:
             yield self._createConversation(request)
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _listConversations(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
@@ -451,13 +465,14 @@ class MessagingResource(base.BaseResource):
                      $$.menu.selectItem('%s');
                      $('#mainbar .contents').removeClass("has-right");
                      """ %args["menuId"]
-            yield renderScriptBlock(request, "message.mako", "center", landing,
+            yield renderScriptBlock(request, "message.mako", "render_conversations", landing,
                                     ".center-contents", "set", True,
                                     handlers={"onload": onload}, **args)
         else:
             yield render(request, "message.mako", **args)
-
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _members(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
@@ -496,7 +511,9 @@ class MessagingResource(base.BaseResource):
         else:
             raise errors.MissingParams([_('Conversation Id')])
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _addMembers(self, request):
         myId = request.getSession(IAuthInfo).username
         newMembers, body, subject, convId = self._parseComposerArgs(request)
@@ -522,7 +539,9 @@ class MessagingResource(base.BaseResource):
             yield db.batch_insert(convId, "mConversations", {'participants':newMembers})
             yield self._deliverMessage(convId, newMembers, conv['meta']['uuid'], conv['meta']['owner'])
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _removeMembers(self, request):
         myId = request.getSession(IAuthInfo).username
         members, body, subject, convId = self._parseComposerArgs(request)
@@ -564,7 +583,9 @@ class MessagingResource(base.BaseResource):
             if deferreds:
                 yield deferreds
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _actions(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         convIds = utils.getRequestArg(request, 'selected', multiValued=True) or []
@@ -637,7 +658,9 @@ class MessagingResource(base.BaseResource):
                 else:
                     request.write("$('%s').remove()" %','.join(['#thread-%s' %convId for convId in convIds]))
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _moveConversation(self, request, convIds, toFolder):
         myId = request.getSession(IAuthInfo).username
 
@@ -676,7 +699,9 @@ class MessagingResource(base.BaseResource):
                 yield db.insert(myId, folder, val, timeUUID)
                 yield db.insert(convId, 'mConvFolders', '', folder, myId)
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _renderConversation(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
@@ -686,7 +711,7 @@ class MessagingResource(base.BaseResource):
             yield render(request, "message.mako", **args)
 
         if appchange and script:
-            renderScriptBlock(request, "message.mako", "layout",
+            yield renderScriptBlock(request, "message.mako", "layout",
                               landing, "#mainbar", "set", **args)
 
         if convId:
@@ -698,27 +723,28 @@ class MessagingResource(base.BaseResource):
                 raise errors.Unauthorized()
 
             timeUUID = conv['meta']['uuid']
-            yield db.remove(myId, "mUnreadConversations", timeUUID)
-            yield db.remove(convId, "mConvFolders", 'mUnreadConversations', myId)
-            yield db.remove(myId, "latest", timeUUID, "messages")
+            d1 =  db.remove(myId, "mUnreadConversations", timeUUID)
+            d2 = db.remove(convId, "mConvFolders", 'mUnreadConversations', myId)
+            d3 = db.remove(myId, "latest", timeUUID, "messages")
+            deferreds = [d1, d2, d3]
             cols = yield db.get_slice(convId, "mConvFolders", [myId])
             cols = utils.supercolumnsToDict(cols)
             for folder in cols[myId]:
                 if folder in self._folders:
                     folder = self._folders[folder]
-                yield db.insert(myId, folder, "r:%s"%(convId), timeUUID)
+                d = db.insert(myId, folder, "r:%s"%(convId), timeUUID)
+                deferreds.append(d)
 
             #FIX: make sure that there will be an entry of convId in mConvFolders
             cols = yield db.get_slice(convId, "mConvMessages")
-            mids = []
-            for col in cols:
-                mids.append(col.column.value)
+            mids = [col.column.value for col in cols]
             messages = yield db.multiget_slice(mids, "messages", ["meta"])
             messages = utils.multiSuperColumnsToDict(messages)
-            participants.update([messages[mid]['meta']['owner'] for mid in messages])
 
+            participants.update([messages[mid]['meta']['owner'] for mid in messages])
             people = yield db.multiget_slice(participants, "entities", ['basic'])
             people = utils.multiSuperColumnsToDict(people)
+            yield defer.DeferredList(deferreds)
 
             args.update({"people":people})
             args.update({"conv":conv})
@@ -735,7 +761,7 @@ class MessagingResource(base.BaseResource):
                          $('#mainbar .contents').addClass("has-right");
                          $('.conversation-reply').autogrow();
                          """
-                yield renderScriptBlock(request, "message.mako", "center",
+                renderMessage = renderScriptBlock(request, "message.mako", "render_conversation",
                                         landing, ".center-contents", "set", True,
                                         handlers={"onload":onload}, **args)
 
@@ -749,13 +775,16 @@ class MessagingResource(base.BaseResource):
                                }
                           });
                         """
-                yield renderScriptBlock(request, "message.mako", "right",
+                renderParticipants = renderScriptBlock(request, "message.mako", "right",
                                         landing, ".right-contents", "set", True,
                                         handlers={"onload":onload}, **args)
+                yield defer.DeferredList([renderMessage, renderParticipants])
             else:
                 yield render(request, "message.mako", **args)
 
+    @profile
     @defer.inlineCallbacks
+    @dump_args
     def _renderComposer(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax

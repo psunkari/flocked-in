@@ -1,6 +1,9 @@
 import PythonMagick
 import imghdr
-from hashlib            import md5
+import time
+from hashlib            import md5, sha256
+from datetime           import datetime
+
 
 from twisted.python     import log
 from twisted.internet   import defer
@@ -14,8 +17,9 @@ import social.constants as constants
 from social.base        import BaseResource
 from social             import utils, db, config, people, errors, _
 from social.isocial     import IAuthInfo
-from social.template    import render, renderScriptBlock
+from social.template    import render, renderScriptBlock, getBlock
 from social.logging     import dump_args, profile
+from social.errors      import PermissionDenied, MissingParams
 
 
 class InvalidRegistration(errors.BaseError):
@@ -24,7 +28,6 @@ class InvalidRegistration(errors.BaseError):
 
 class PasswordsNoMatch(errors.BaseError):
     pass
-
 
 @profile
 @defer.inlineCallbacks
@@ -35,6 +38,39 @@ def getOrgKey(domain):
     orgKey = cols.keys()[0] if cols else None
     defer.returnValue(orgKey)
 
+
+@defer.inlineCallbacks
+def _sendmailResetPassword(email, token):
+
+    rootUrl = config.get('General', 'URL')
+    brandName = config.get('Branding', 'Name')
+    body = "you are recieving this mail because you requested a password "\
+           "request on %(brandName)s Please go the the following link to "\
+           "reset the password %(resetPasswdUrl)s"
+    resetPasswdUrl = "%(rootUrl)s/password/resetPassword?email=%(email)s&token=%(token)s"%(locals())
+    args = {"brandName": brandName, "rootUrl": rootUrl, "resetPasswdUrl": resetPasswdUrl}
+    subject = "Reset Password on %(brandName)s" %(locals())
+    htmlBody = getBlock("emails.mako", "forgotPasswd", **args)
+    textBody = body %(locals())
+    yield utils.sendmail(email, subject, textBody, htmlBody)
+
+
+@defer.inlineCallbacks
+def _get_userInfo_tokens(email):
+    tokens = []
+    deleteTokens = []
+    validEmail = False
+    leastTimestamp = time.time()
+    cols = yield db.get_slice(email, "userAuth")
+    for col in cols:
+        if col.column.name.startswith('resetPasswdToken'):
+            tokens.append(col.column.value)
+            deleteTokens.append(col.column.name)
+            if col.column.timestamp/1000000 < leastTimestamp :
+                leastTimestamp = col.column.timestamp/1000000
+        else:
+            validEmail = True
+    defer.returnValue((validEmail, tokens, deleteTokens, leastTimestamp))
 
 class SignupResource(BaseResource):
     isLeaf = True
@@ -187,20 +223,98 @@ class SignupResource(BaseResource):
         args = {'view': 'block', 'blockType': blockType, 'emailId': emailId}
         yield render(request, "signup.mako", **args)
 
+    @defer.inlineCallbacks
+    def resetPassword(self, request):
+        email = utils.getRequestArg(request, 'email')
+        token = utils.getRequestArg(request, 'token')
+        passwd = utils.getRequestArg(request, 'password', False)
+        pwdrepeat = utils.getRequestArg(request, 'pwdrepeat', False)
+
+        if not (email and token and passwd and pwdrepeat):
+            raise MissingParams([''])
+
+        if (passwd != pwdrepeat):
+            raise errors.PasswordsNoMatch()
+
+        validEmail, tokens, deleteTokens, leastTimestamp = yield _get_userInfo_tokens(email)
+        if validEmail:
+            if token not in tokens:
+                raise PermissionDenied("Invalid token. <a href='/password/resend?email=%s'>Click here</a> to reset password"%(email))
+            yield db.insert(email, "userAuth", utils.md5(passwd), 'passwordHash')
+            yield db.batch_remove({"userAuth": [email]}, names=deleteTokens)
+        request.redirect('/signin')
+        #notify user
+
+    @defer.inlineCallbacks
+    def request_resetPassword(self, request):
+        email = utils.getRequestArg(request, 'email')
+
+        if not email:
+            raise MissingParams([''])
+
+        now = time.time()
+        validEmail, tokens, deleteTokens, leastTimestamp = yield _get_userInfo_tokens(email)
+        if len(tokens) >= 10:
+            delta = datetime.fromtimestamp(leastTimestamp + 86399) - datetime.fromtimestamp(now)
+            hours = 1 + delta.seconds/3600
+            raise PermissionDenied('We detected ususual activity from your account.<br/>  Click the link sent to your emailId to reset password or wait for %s hours before you retry'%(hours))
+
+        if validEmail:
+            token = sha256(utils.getUniqueKey()).hexdigest()
+            yield db.insert(email, "userAuth", token, 'resetPasswdToken:%s'%(token), ttl=86400)
+            yield _sendmailResetPassword(email, token)
+
+        args = {"view": "forgotPassword-post"}
+        yield render(request, "signup.mako", **args)
+
+    @defer.inlineCallbacks
+    def renderForgotPassword(self, request):
+        args = {"view": "forgotPassword"}
+        yield render(request, "signup.mako",  **args)
+
+    @defer.inlineCallbacks
+    def renderResetPassword(self, request):
+        email = utils.getRequestArg(request, 'email')
+        token = utils.getRequestArg(request, 'token')
+
+        if not (email and token):
+            raise MissingParams([''])
+
+        validEmail, tokens, deleteTokens, leastTimestamp = yield _get_userInfo_tokens(email)
+        #if not validEmail:
+        #send invite to the user
+        if not validEmail or token not in tokens:
+            raise PermissionDenied("Invalid token. <a href='/password/resend?email=%s'>Click here</a> to reset password"%(email))
+        args = {"view": "resetPassword", "email": email, "token": token}
+        yield render(request, "signup.mako",  **args)
+
 
     @profile
     @dump_args
     def render_GET(self, request):
         segmentCount = len(request.postpath)
+        prepath = []
+        try:
+            prepath = request.prepath
+        except:
+            pass
         d = None
         if segmentCount == 0:
             d = self._signupCheckToken(request)
         elif segmentCount == 1:
             action = request.postpath[0]
-            if action == 'blockSender':
-                d = self._block(request, "sender")
-            elif action == 'blockAll':
-                d = self._block(request, "all")
+            if prepath and prepath[0] == 'password':
+                if action == 'resetPassword':
+                    d = self.renderResetPassword(request)
+                elif action == 'forgotPassword':
+                    d = self.renderForgotPassword(request)
+                elif action == 'resend':
+                    d = self.request_resetPassword(request)
+            else:
+                if action == 'blockSender':
+                    d = self._block(request, "sender")
+                elif action == 'blockAll':
+                    d = self._block(request, "all")
         return self._epilogue(request, d)
 
 
@@ -208,6 +322,11 @@ class SignupResource(BaseResource):
     @dump_args
     def render_POST(self, request):
         segmentCount = len(request.postpath)
+        prepath = []
+        try:
+            prepath = request.prepath
+        except:
+            pass
 
         # We use a static.File resource to render thanks page.
         # It will take care of calling request.finish asyncly
@@ -221,10 +340,16 @@ class SignupResource(BaseResource):
             return server.NOT_DONE_YET
         elif segmentCount == 1:
             action = request.postpath[0]
-            if action == 'invite' :
-                d = self._signupInviteCoworkers(request)
-            elif action == 'create':
-                d = self._signupGotUserData(request)
+            if prepath and prepath[0] == 'password':
+                if action == 'resetPassword':
+                    d = self.resetPassword(request)
+                elif action == 'forgotPassword':
+                    d = self.request_resetPassword(request)
+            else:
+                if action == 'invite' :
+                    d = self._signupInviteCoworkers(request)
+                elif action == 'create':
+                    d = self._signupGotUserData(request)
             return self._epilogue(request, d)
         else:
             return self._epilogue(request)

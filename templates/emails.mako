@@ -48,3 +48,38 @@
   </html>
 </%def>
 
+<%def name="forgotPasswd()">
+  <html xmlns="http://www.w3.org/1999/xhtml">
+  <body style="margin:5px;padding:0;color:#555;font-family:arial,sans-serif;">
+    <div align="center" style="background-color:#f4f4f4;border-radius:4px;border:1px solid #dddddd;width:600px;">
+      <table width="590" cellpadding="0" cellspacing="0" border="0">
+        <tr><td align="left">
+          <img src="${rootUrl}/rsrcs/img/flocked-in-small.png"
+               alt="flocked.in" style="margin:10px 0;"/>
+        </td></tr>
+        <tr><td>
+          <table cellspacing="20" cellpadding="0" width="590"
+                 border="0" bgcolor="#ffffff"
+                 style="border:1px solid #dddddd;border-radius:4px;">
+            <tr>
+              <td style="font-size: 14px;">
+                 You are recieving this mail because you requested a password reset on ${brandName}.
+                 <br/><br/>
+                 Please go to the following page to reset your password. 
+                 <a href="${resetPasswdUrl}">${resetPasswdUrl}</a> 
+              </td>
+            </tr>
+            <tr><td style="border-top:1px solid #DDD; font-size: 14px;padding-top:10px;">
+              ${brandName} is an enterprise social platform built on top of
+              micro-blogging and activity streams that helps you stay connected 
+              with your co-workers.  It helps your company engage and keep
+              everyone informed.
+            </td></tr>
+          </table>
+        </td></tr>
+      </table>
+    </div>
+  </body>
+  </html>
+</%def>
+

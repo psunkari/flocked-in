@@ -276,6 +276,10 @@ def createColumnFamilies(client):
 
     doNotSpam = CfDef(KEYSPACE, "doNotSpam", "Standard", "BytesType",
                       None, "list of email addresses that requested blocking")
+    yield client.system_add_column_family(doNotSpam)
+    suggestions = CfDef(KEYSPACE, "suggestions", "Standard", "IntegerType",
+                        None, "Friend/Follow suggestions")
+    yield client.system_add_column_family(suggestions)
 
 
 @defer.inlineCallbacks
@@ -440,11 +444,12 @@ def addSampleData(client):
                                     '1998:Acpak Institute of Technology': 'Graduation'
                                 },
                                 'work': {
-                                    ':200706:Recruitment': 'Instrumental in company growth from 50 to 6000 employees'
+                                    ':200706:Recruitment:Head of People': 'Instrumental in company growth from 6000 to 100000 employees',
+                                    '200609:200705:Recruitment:Human Resources Lead': 'Instrumental in company growth from 50 to 6000 employees',
+                                    '200509:200608:Recruitment:Human Resources Principal': 'Instrumental in company growth from 1 to 50 employees'
                                 },
                                 'contact': {
                                     'mail': 'ashok@example.com',
-                                    'phone': '+11234567890'
                                 },
                                 'personal': {
                                     'mail': 'ashok@example.net',
@@ -751,7 +756,8 @@ def truncateColumnFamilies(client):
                "mConversations", "mAllConversations", "mUnreadConversations",
                "mArchivedConversations", "mDeletedConversations",
                "mConvMessages", "mConvFolders", "latest", "doNotSpam",
-               "files", "tmp_files", "item_files", "invitationsSent", "user_files"]:
+               "files", "tmp_files", "item_files", "invitationsSent",
+               "user_files", "suggestions"]:
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 

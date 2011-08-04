@@ -1,9 +1,16 @@
 <%! from social import utils, _, __, constants %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<%! import pytz, datetime %>
+<%! import pytz, datetime, calendar %>
 <%! from pytz import timezone %>
-<%! from dateutil.relativedelta import relativedelta %>
+<%! from dateutil.relativedelta import relativedelta, weekday, MO, TU, WE, TH, \
+                                        FR, SA, SU
+%>
+<%! from dateutil.rrule import rrule, rruleset, rrulestr, \
+                                YEARLY, MONTHLY, WEEKLY, DAILY, HOURLY, \
+                                MINUTELY, SECONDLY, MO, TU, WE, TH, FR, SA, SU
+%>
+
 <%namespace name="widgets" file="widgets.mako"/>
 <%namespace name="item" file="item.mako"/>
 <%inherit file="base.mako"/>
@@ -58,30 +65,35 @@
     <input type="text" name="title" placeholder="${_('Title of your event?')}"/>
   </div>
   <div>
-    <div style="display:inline-block;width:10em">
+    <div style="display:inline-block;width:8em">
       <div class="input-wrap">
         <input type="text" id="eventstartdate"/>
         <input type="hidden" name="startDate" id="startDate"/>
       </div>
     </div>
-    <div style="display:inline-block;width:10em" id="startTimeWrapper">
-      <div class="input-wrap">
-        <input type="text" id="eventstarttime"/>
-        <input type="hidden" name="startTime" id="startTime"/>
-      </div>
+    <div style="display:inline-block;width:8em;border:1px solid #C3D9FF" id="startTimeWrapper" class="styledform">
+      <!--<div class="input-wrap">-->
+        <!--<input type="text" id="eventstarttime"/>-->
+        ${self.selectTime("startTime", "Start Time",)}
+        
+      <!--</div>-->
     </div>
     <span> to </span>
-    <div style="display:inline-block;width:10em" id="endTimeWrapper">
-      <div class="input-wrap">
-        <input type="text" id="eventendtime"/>
-        <input type="hidden" id="endTime" name="endTime"/>
-      </div>
+    <div style="display:inline-block;width:8em;border:1px solid #C3D9FF" id="endTimeWrapper" class="styledform">
+      <!--<div class="input-wrap">-->
+        <!--<input type="text" id="eventendtime"/>-->
+        ${self.selectTime("endTime", "End Time",)}
+        
+      <!--</div>-->
     </div>
-    <div style="display:inline-block;width:10em">
+    <div style="display:inline-block;width:8em">
       <div class="input-wrap">
         <input type="text" id="eventenddate"/>
         <input type="hidden" id="endDate" name="endDate"/>
       </div>
+    </div>
+    <div style="display:inline-block">
+      ${timezone(me['basic']['timezone'])}
     </div>
     <div style="display:inline-block;float:right">
       <!--<div class="input-wrap">-->
@@ -97,10 +109,7 @@
   </div>
   <div class="input-wrap">
     <div style="float:left" id="invitees" name="invitees"></div>
-    <input name="invitees" id="inviteeList" type="hidden"/>
-    <div>
-      <input type="text" id="eventInvitees" placeholder="${_('List of Invitees')}"/>
-    </div>
+    <div>To invite a specific group of people or groups, select the custom option from the Audience option below</div>
   </div>
   <input type="hidden" name="type" value="event"/>
 </%def>
@@ -116,7 +125,7 @@
     options = items[convId]["options"] or ["yes", "maybe", "no"]
     owner = items[convId]["meta"]["owner"]
     ownerName = entities[owner]["basic"]["name"]
-    my_tz = timezone(entities[owner]["basic"]["timezone"])
+    my_tz = timezone(me['basic']['timezone'])
     if "invitees" in context.kwargs:
       invited = invitees[convId]
     else:
@@ -167,15 +176,20 @@
     normalize = utils.normalizeText
   %>
   <div class="">
-    <span class="user-cause conv-reason">
-      <a class='ajax' href='/profile?id=${owner}'>${ownerName}</a> has invited you
-        % if len(invited) == 0:
-          to <a href="/item?id=${convId}">${title} </a>
-        % elif len(invited) == 1:
-          and ${entities[invited[0]]["basic"]["name"]} to <a href="/item?id=${convId}">${title} </a>
-        % else:
-          and <a class="ajax" onclick="$$.events.showEventInvitees('${convId}')">${len(invited)}</a> others to <a href="/item?id=${convId}">${title} </a>
-        % endif
+    <span class="conv-reason">
+      %if myKey == owner:
+        <span class="item">
+          <a href="/item?id=${convId}">${title} </a>
+        </span>
+      %else:
+        <span class="item">
+          <a href="/item?id=${convId}">${title} </a>
+        </span>
+        <span class=""> -- ${_("Invitation from")}</span>
+        <span class="user">
+          <a class='ajax' href='/profile?id=${owner}'>${ownerName}</a>
+        </span>
+      %endif
     </span>
     <div class="item-title has-icon">
       <span class="event-date-icon">
@@ -229,6 +243,7 @@
               <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'no')">${_("No")}</a></li>
               <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'maybe')">${_("Maybe")}</a></li>
           </ul>
+          <a class="ajax" onclick="$$.events.showEventInvitees('${convId}')">${len(invited)}</a>
         </div>
       </div>
     </div>
@@ -243,4 +258,39 @@
   % elif response == "maybe":
     <span id="event-rsvp-status-${convId}">${_("You may attend")}</span>
   %endif
+</%def>
+
+<%def name="selectTime(name, label)">
+  <select id="${name}" name="${name}" class="inline-select" style="border:none;width:100% !important">
+    <option value="">${label}</option>
+      <%
+        TODAY = datetime.date.today()
+        TOMORROW = TODAY+relativedelta(days=+1)
+        my_tz = timezone(me['basic']['timezone'])
+        NOW = datetime.datetime.now(my_tz)
+        dts = list(rrule(MINUTELY, dtstart=TODAY, interval=30, until=TOMORROW))
+        dtslabels = [a.strftime('%I:%M %p') for a in dts]
+        dtsvalues = [str(calendar.timegm(a.utctimetuple())) for a in dts]
+      %>
+      %for i in range(len(dts)):
+        <%
+          #
+          #
+          selected = False
+          h = relativedelta(my_tz.normalize(dts[i].replace(tzinfo=my_tz)),NOW).hours
+          if h == 0:
+            m = relativedelta(my_tz.normalize(dts[i].replace(tzinfo=my_tz)),NOW).minutes
+            if m:
+              selected = True
+            else:
+              selected = False
+        %>
+        %if selected:
+          <option selected value="${dtsvalues[i]}000">${dtslabels[i]}</option>
+        %else:
+          <option value="${dtsvalues[i]}000">${dtslabels[i]}</option>
+        %endif
+      %endfor
+  </select>
+  <input type="hidden" id="time${name}" value="${dtsvalues[0]}000"/>
 </%def>

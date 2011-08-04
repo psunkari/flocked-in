@@ -29,38 +29,44 @@ class EventResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _inviteUsers(self, request, convId=None):
-        invitees = utils.getRequestArg(request, 'invitees')
-        invitees = invitees.split(',') if invitees else None
-        myKey = request.getSession(IAuthInfo).username
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        landing = not self._ajax
 
         if not convId:
             convId = utils.getRequestArg(request, 'id')
-
+        acl = utils.getRequestArg(request, 'acl', False)
+        import pickle, json
+        invitees = yield utils.expandAcl(myKey, pickle.dumps(json.loads(acl)), convId)
+        #invitees = utils.getRequestArg(request, 'invitees')
+        #invitees = invitees.split(',') if invitees else None
+        #myKey = request.getSession(IAuthInfo).username
+        #
+        #
         if not convId or not invitees:
             raise errors.MissingParams()
-
+        
         conv = yield db.get_slice(convId, "items")
         conv = utils.supercolumnsToDict(conv)
-
+        
         if not conv:
             raise errors.MissingParams()
-
+        
         if (conv["meta"].has_key("type") and conv["meta"]["type"] != "event"):
             raise errors.InvalidRequest()
-
+        
         convType = conv["meta"]["type"]
         convOwner = conv["meta"]["owner"]
         starttime = int(conv["meta"]["startTime"])
         timeUUID = utils.uuid1(timestamp=starttime)
         timeUUID = timeUUID.bytes
         responseType = "I"
-
+        
         responses = yield db.get_slice(convId, "eventResponses")
         responses = utils.supercolumnsToDict(responses)
         attendees = responses.get("yes", {}).keys() + \
                      responses.get("maybe", {}).keys() + \
                      responses.get("no", {}).keys()
-
+        
         #Check if invitees are valid keys
         for userKey in invitees:
             if userKey not in attendees:
@@ -162,8 +168,6 @@ class EventResource(base.BaseResource):
 
             request.write("$('#event-rsvp-status-%s').text('%s')" %(convId, rsp))
             #TODO:Update the sidebar listing of people attending this event
-
-
 
 
     @profile
@@ -298,6 +302,17 @@ class Event(object):
 
     @defer.inlineCallbacks
     def renderShareBlock(self, request, isAjax):
+        authinfo = request.getSession(IAuthInfo)
+        myKey = authinfo.username
+        orgKey = authinfo.organization
+
+        cols = yield db.multiget_slice([myKey, orgKey], "entities", ["basic"])
+        cols = utils.multiSuperColumnsToDict(cols)
+
+        me = cols.get(myKey, None)
+        org = cols.get(orgKey, None)
+        args = {"myKey": myKey, "orgKey": orgKey, "me": me, "org": org}
+        
         templateFile = "event.mako"
         renderDef = "share_event"
 
@@ -308,11 +323,10 @@ class Event(object):
         yield renderScriptBlock(request, templateFile, renderDef,
                                 not isAjax, "#sharebar", "set", True,
                                 attrs={"publisherName": "event"},
-                                handlers={"onload": onload})
+                                handlers={"onload": onload}, **args)
 
 
     def rootHTML(self, convId, isQuoted, args):
-
         if "convId" in args:
             return getBlock("event.mako", "event_root", **args)
         else:
@@ -364,10 +378,7 @@ class Event(object):
         title = utils.getRequestArg(request, 'title')
         desc = utils.getRequestArg(request, 'desc')
         location = utils.getRequestArg(request, 'location')
-        invitees = utils.getRequestArg(request, "invitees")
-        invitees = invitees.split(',') if invitees else None
         allDay = utils.getRequestArg(request, "allDay")
-        acl = utils.getRequestArg(request, "acl", False)
 
         if not ((title or desc) and startTime and startDate):
             raise errors.InvalidRequest()
@@ -387,18 +398,7 @@ class Event(object):
                                           endTime.minute, endTime.second).replace(tzinfo=utc)
 
         convId = utils.getUniqueKey()
-        #Events have a different ACL than the other plugins. Access is restricted to those
-        # being invited and any group that is being chosen in the acl selector
-        acl = json.loads(acl)
-        if "accept" not in acl:
-            acl["accept"] = dict({"users":[]})
-            acl["accept"] = dict({"org":[]})
-
-        if invitees:
-            acl["accept"]["users"] = invitees
-
-        item, attachments = yield utils.createNewItem(request, self.itemType,
-                                                      acl=acl)
+        item, attachments = yield utils.createNewItem(request, self.itemType)
 
         options = dict([('yes', '0'), ('maybe', '0'), ('no', '0')])
         meta = {"startTime": str(calendar.timegm(startDateTime.utctimetuple()))}
@@ -419,9 +419,8 @@ class Event(object):
         item["options"] = options
 
         yield db.batch_insert(convId, "items", item)
-        if invitees:
-            event = self.getResource(False)
-            yield event._inviteUsers(request, convId)
+        event = self.getResource(False)
+        yield event._inviteUsers(request, convId)
 
         for attachmentId in attachments:
             timeuuid, fid, name, size, ftype  = attachments[attachmentId]

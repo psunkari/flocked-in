@@ -1426,6 +1426,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     text-align: center;
     vertical-align: middle;
     white-space: nowrap;
+    font-size:11px;
 }
 
 .event-date-month {

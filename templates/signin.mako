@@ -23,7 +23,7 @@
   <div id="wrapper">
     <div id="title-banner" class="title-banner banner">
       <ul id="views-list">
-        <li class="selected last"><span>${_('Signin to your account')}</span></li>
+        <li class="selected last"><span>${_('Signin')}</span></li>
       </ul>
     </div>
     <div id="main">
@@ -50,7 +50,7 @@
           %if redirect:
             <input type="hidden" id="_r" value="${redirect}" name="_r"/>
           %endif
-          <a href="/about/support/signin">${_('Need help signing in?')}</a>&nbsp;&nbsp;&nbsp;
+          <a href="/password/forgotPassword">${_('forgot password?')}</a>&nbsp;&nbsp;&nbsp;
           <input type="submit" class="default button" id="submit" value="${_('Sign in')}"/>
         </div>
       </div>

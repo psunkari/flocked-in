@@ -21,7 +21,13 @@
       </div>
     </div>
     <div id="center-right">
-      <div id="right"></div>
+      <div id="right">
+        <div class="right-contents">
+          %if not script:
+            ${right()}
+          %endif
+        </div>
+      </div>
       <div id="center">
         <div id="settings-title" class="center-header">
           %if not script:
@@ -401,3 +407,24 @@
   </form>
 </%def>
 
+<%def name="right()">
+  %if len(suggested_sections.keys()) > 0:
+    <div class="sidebar-chunk">
+      <div class="sidebar-title">${_("Complete your profile")}</div>
+      <ul class="v-links">
+        <%
+          suggestions = []
+          for k,v in suggested_sections.iteritems():
+            suggestions.append([v[0],k])
+        %>
+        %for suggestion in suggestions:
+          %if suggestion[1] == detail:
+            <li>${suggestion[0]}</li>
+          %else:
+            <li><a class="ajax" href="/settings?dt=${suggestion[1]}">${suggestion[0]}</a></li>
+          %endif
+        %endfor
+      </ul>
+    </div>
+  %endif
+</%def>

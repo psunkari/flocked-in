@@ -5,11 +5,12 @@ from twisted.internet   import defer
 from twisted.web        import server
 from twisted.python     import log
 
-from social             import db, utils, base, plugins, _, __, errors
+from social             import db, utils, base, plugins, _, __, errors, people
 from social.isocial     import IAuthInfo
 from social.relations   import Relation
 from social.template    import render, renderDef, renderScriptBlock
 from social.constants   import INFINITY, MAXFEEDITEMS, MAXFEEDITEMSBYTYPE
+from social.constants   import SUGGESTION_PER_PAGE
 from social.logging     import profile, dump_args
 
 @defer.inlineCallbacks
@@ -22,7 +23,7 @@ def deleteUserFeed(userId, itemType, tuuid):
 @defer.inlineCallbacks
 def deleteFeed(userId, itemId, convId, itemType, acl, convOwner,
                responseType, others=None, tagId='', deleteAll=False):
-    # 
+    #
     # Wrapper around deleteFromFeed and deleteFromOthersFeed
     #
     yield deleteFromFeed(userId, itemId, convId, itemType,
@@ -198,7 +199,7 @@ def fetchAndFilterConvs(ids, count, relation, items, myId, myOrgId):
     retIds = []
     deleted = set()
     if not ids:
-        defer.returnValue(retIds)
+        defer.returnValue((retIds, deleted))
 
     cols = yield db.multiget_slice(ids, "items", ["meta", "tags", "attachments"])
     items.update(utils.multiSuperColumnsToDict(cols))
@@ -231,7 +232,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
     items = {}              # Fetched items, entities and tags
     entities = {}           #
     tags = {}               #
-    
+
     deleted = set()         # List of items that were deleted
 
     responses = {}          # Cached data of item responses and likes
@@ -604,6 +605,18 @@ class FeedResource(base.BaseResource):
             feedItems = yield getFeedItems(request, feedId=feedId, start=start)
         args.update(feedItems)
         args['itemType']=itemType
+        suggestions ,entities = yield people.get_suggestions(request, SUGGESTION_PER_PAGE, mini=True)
+        args["suggestions"] = suggestions
+        if "entities" not in args:
+            args["entities"] = entities
+        else:
+            for entity in entities:
+                if entity not in args["entities"]:
+                    args["entities"][entity] = entities[entity]
+        relation = Relation(myId, suggestions)
+        yield defer.DeferredList([relation.initFriendsList(),
+                                  relation.initSubscriptionsList()])
+        args["relations"] = relation
 
         if script:
             onload = "(function(obj){$$.convs.load(obj);})(this);"
@@ -623,6 +636,8 @@ class FeedResource(base.BaseResource):
             yield renderScriptBlock(request, "feed.mako", "groupLinks",
                                     landing, "#group-links", "set", True,
                                     handlers={"onload":onload}, **args)
+            yield renderScriptBlock(request, "feed.mako", "_suggestions",
+                                    landing, "#suggestions", "set", True, **args)
 
         if script and landing:
             request.write("</body></html>")
@@ -665,7 +680,7 @@ class FeedResource(base.BaseResource):
     @defer.inlineCallbacks
     def _renderChooseAudience(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        
+
         yield renderScriptBlock(request, "feed.mako", "customAudience", False,
                                 "#custom-audience-dlg", "set", **args)
 
