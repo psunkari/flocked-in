@@ -1,5 +1,6 @@
 import PythonMagick
 import imghdr
+import time
 import uuid
 from random                 import sample
 
@@ -133,36 +134,39 @@ class SettingsResource(base.BaseResource):
         userInfo = {}
         calls = []
 
+        me = yield db.get_slice(myKey, 'entities')
+        me = utils.supercolumnsToDict(me)
+
+        cols = yield db.get_slice(myKey, 'connections')
+        friends = [item.super_column.name for item in cols]
+
+        # Check if any basic information is being updated.
         for cn in ("jobTitle", "location", "desc", "name", "firstname", "lastname", "timezone"):
             val = utils.getRequestArg(request, cn)
             if val:
                 userInfo.setdefault("basic", {})[cn] = val
 
-        user = yield db.get_slice(myKey, "entities", ["basic"])
-        user = utils.supercolumnsToDict(user)
-
-        cols = yield db.get_slice(myKey, 'connections', )
-        friends = [item.super_column.name for item in cols] + [args["orgKey"]]
-
+        # Update name indicies of organization and friends.
+        nameIndexKeys = friends + [args["orgKey"]]
+        nameIndicesDeferreds = []
         for field in ["name", "lastname", "firstname"]:
             if "basic" in userInfo and field in userInfo["basic"]:
-                d = utils.updateNameIndex(myKey, friends,
+                d = utils.updateNameIndex(myKey, nameIndexKeys,
                                           userInfo["basic"][field],
-                                          user["basic"].get(field, None))
+                                          me["basic"].get(field, None))
                 if field == 'name':
-                    d1 = utils.updateDisplayNameIndex(myKey, friends,
+                    d1 = utils.updateDisplayNameIndex(myKey, nameIndexKeys,
                                                 userInfo["basic"][field],
-                                                user["basic"].get(field, None))
-                    calls.append(d1)
-                calls.append(d)
+                                                me["basic"].get(field, None))
+                    nameIndicesDeferreds.append(d1)
+                nameIndicesDeferreds.append(d)
 
-        if calls:
-            yield defer.DeferredList(calls)
+        # ACL on basic information
+        basicACL = utils.getRequestArg(request, "basicACL") or\
+                                            me['basic'].get('acl', 'public')
+        userInfo.setdefault("basic", {})["acl"] = basicACL
 
-        if "basic" in userInfo:
-            basic_acl = utils.getRequestArg(request, "basic_acl") or 'public'
-            userInfo["basic"]["acl"] = basic_acl
-
+        # Avatar (display picture)
         dp = utils.getRequestArg(request, "dp", sanitize=False)
         if dp:
             avatar = yield saveAvatarItem(myKey, dp)
@@ -170,35 +174,16 @@ class SettingsResource(base.BaseResource):
                 userInfo["basic"] = {}
             userInfo["basic"]["avatar"] = avatar
 
-        expertise = utils.getRequestArg(request, "expertise")
-        expertise_acl = utils.getRequestArg(request, "expertise_acl") or 'public'
-        if expertise:
-            userInfo["expertise"] = {}
-            userInfo["expertise"][expertise]=""
-            userInfo["expertise"]["acl"]=expertise_acl
-
-        language = utils.getRequestArg(request, "language")
-        lr = utils.getRequestArg(request, "language_r") == "on"
-        ls = utils.getRequestArg(request, "language_s") == "on"
-        lw = utils.getRequestArg(request, "language_w") == "on"
-        language_acl = utils.getRequestArg(request, "language_acl") or 'public'
-        if language:
-            userInfo["languages"]= {}
-            userInfo["languages"][language]= "%(lr)s/%(lw)s/%(ls)s" %(locals())
-            userInfo["languages"]["acl"] = language_acl
-
-        c_email = utils.getRequestArg(request, "c_email")
+        # Contact information at work.
         c_im = utils.getRequestArg(request, "c_im")
         c_phone = utils.getRequestArg(request, "c_phone")
         c_mobile = utils.getRequestArg(request, "c_mobile")
-        contacts_acl = utils.getRequestArg(request, "contacts_acl") or 'public'
 
-        if any([c_email, c_im, c_phone]):
+        if any([c_mobile, c_im, c_phone]):
+            contactsACL = utils.getRequestArg(request, "contactsACL") or\
+                                me.get('contact', {}).get('acl', 'public')
             userInfo["contact"] = {}
-            userInfo["contact"]["acl"] = contacts_acl
-
-        if c_email:
-            userInfo["contact"]["mail"] = c_email
+            userInfo["contact"]["acl"] = contactsACL
         if c_im:
             userInfo["contact"]["im"] = c_im
         if c_phone:
@@ -206,26 +191,32 @@ class SettingsResource(base.BaseResource):
         if c_mobile:
             userInfo["contact"]["mobile"] = c_mobile
 
-        interests = utils.getRequestArg(request, "interests")
-        interests_acl = utils.getRequestArg(request, "interests_acl") or 'public'
-        if interests:
-            userInfo["interests"]= {}
-            userInfo["interests"][interests]= interests
-            userInfo["interests"]["acl"] = interests_acl
-
+        # Personal information about the user
         p_email = utils.getRequestArg(request, "p_email")
         p_phone = utils.getRequestArg(request, "p_phone")
         p_mobile = utils.getRequestArg(request, "p_mobile")
         currentCity = utils.getRequestArg(request, "currentCity")
-        dob_day = utils.getRequestArg(request, "dob_day")
-        dob_mon = utils.getRequestArg(request, "dob_mon")
-        dob_year = utils.getRequestArg(request, "dob_year")
+        dob_day = utils.getRequestArg(request, "dob_day") or None
+        dob_mon = utils.getRequestArg(request, "dob_mon") or None
+        dob_year = utils.getRequestArg(request, "dob_year") or None
         hometown = utils.getRequestArg(request, "hometown")
-        currentCity = utils.getRequestArg(request, "currentCity")
-        personal_acl = utils.getRequestArg(request, "personal_acl") or 'public'
-        if any([p_email, p_phone, hometown, currentCity,]) \
-            or all([dob_year, dob_mon, dob_day]):
-            userInfo["personal"]={}
+
+        validDate = False
+        try:
+            dateStr = "%s/%s/%s" % (dob_day, dob_mon, dob_year)
+            date = time.strptime(dateStr, "%d/%m/%Y")
+            if date.tm_year < time.localtime().tm_year:
+                dob_day = "%02d" % date.tm_mday
+                dob_mon = "%02d" % date.tm_mon
+                validDate = True
+        except ValueError:
+            pass
+
+        if any([p_email, p_phone, hometown, currentCity, validDate]):
+            personalACL = utils.getRequestArg(request, "personalACL") or\
+                                    me.get('personal', {}).get('acl', 'public')
+            userInfo["personal"]={"acl": personalACL}
+
         if p_email:
             userInfo["personal"]["email"] = p_email
         if p_phone:
@@ -236,100 +227,71 @@ class SettingsResource(base.BaseResource):
             userInfo["personal"]["hometown"] = hometown
         if currentCity:
             userInfo["personal"]["currentCity"] = currentCity
-        if dob_day and dob_mon and dob_year:
-            if dob_day.isdigit() and dob_mon.isdigit() and dob_year.isdigit():
-                if int(dob_day) in range(1, 31) and \
-                    int(dob_mon) in range(1, 12) and \
-                        int(dob_year) in range(1901, 2099):
-                    if int(dob_mon) < 10:
-                        dob_mon = "%02d" %int(dob_mon)
-                    userInfo["personal"]["birthday"] = "%s%s%s"%(dob_year, dob_mon, dob_day)
+        if validDate:
+            userInfo["personal"]["birthday"] = "%s%s%s" % (dob_year, dob_mon, dob_day)
 
-        employer = utils.getRequestArg(request, "employer")
-        emp_start = utils.getRequestArg(request, "emp_start") or ''
-        emp_end = utils.getRequestArg(request, "emp_end") or ''
-        emp_title = utils.getRequestArg(request, "emp_title") or ''
-        emp_desc = utils.getRequestArg(request, "emp_desc") or ''
-
-        if employer:
-            userInfo["employers"] = {}
-            key = "%s:%s:%s:%s" %(emp_end, emp_start, employer, emp_title)
-            userInfo["employers"][key] = emp_desc
-
-        college = utils.getRequestArg(request, "college")
-        degree = utils.getRequestArg(request, "degree") or ''
-        edu_end = utils.getRequestArg(request, "edu_end") or ''
-        if college:
-            userInfo["education"] = {}
-            key = "%s:%s" %(edu_end, college)
-            userInfo["education"][key] = degree
-
+        # If anything was modified save it.
         if userInfo:
             yield db.batch_insert(myKey, "entities", userInfo)
 
         if not self._ajax:
             request.redirect("/settings")
         else:
-            pass
-            #TODO: If basic profile was edited, then logo, name and title could
+            # TODO: If basic profile was edited, then logo, name and title could
             # also change, make sure these are reflected too.
+            request.write('$$.alerts.info("%s");' % _('Profile updated'))
+        
+        # Wait for name indices to be updated.
+        if nameIndicesDeferreds:
+            yield defer.DeferredList(nameIndicesDeferreds)
+
+
+    #############################################################
+    # XXX: Add any new notification at the end only. Otherwise  #
+    #      all existing preferences would break.                #
+    #############################################################
+    #
+    #    0. Someone sends friend request
+    #    1. Someone accepts friend request
+    #    2. Someone started following me
+    #    3. New user joins the organization network
+    #
+    #    4. Someone wants to join a group
+    #    5. Group request is accepted
+    #    6. Someone invites me to a group
+    #    7. New member joined a group that I am an admin of
+    #
+    #    8. Someone performs an action on my post
+    #       (like/like-comment/comment/vote/rsvp etc;)
+    #    9. Someone acted on a post that I acted upon
+    #   10. Someone mentions me in a post/comment
+    #   11. Other requests and invitations (event invitation etc;)
+    #
+    #   12. New private conversation
+    #   13. New message in an existing conversations
+    #   14. Conversation recipients got changed
+    #
+    notificationTypes = ['friendRequest', 'friendAccept', 'follower',
+        'orgNewUser', 'groupRequest', 'groupAccept', 'groupInvite',
+        'groupNewMember', 'myItemAction', 'myActionAction', 'mention',
+        'itemRequests', 'messageConv', 'messageMessage', 'messageAccessChange']
 
 
     @defer.inlineCallbacks
     def _updateNotifications(self, request):
-
-        """
-            someone sends friend request
-            someone accepts friend request
-            group request is accepted.
-            someone invites me to a group
-            some one is following me
-            someone likes/likes-comment/comments on my post
-            someone commented/liked my comment on others post
-            someone mentions me in a post/comment
-        """
-
         authinfo = request.getSession(IAuthInfo)
         myId = authinfo.username
-        intify = lambda x: int(x or 0)
-        log.msg(request.args)
+        types = self.notificationTypes
+        getArg = utils.getRequestArg
+        def _get(typ):
+            val = getArg(request, typ)
+            try:
+                return val if (0 < int(val) <= 3) else '0'
+            except ValueError:
+                return '0'
 
-        new_friend_request = intify(utils.getRequestArg(request, 'new_friend_request'))
-        accepted_my_friend_request = intify(utils.getRequestArg(request, 'accepted_my_friend_request'))
-        new_follower = intify(utils.getRequestArg(request, 'new_follower'))
-        new_member_to_network = intify(utils.getRequestArg(request, 'new_member_to_network'))
-
-        new_group_invite = intify(utils.getRequestArg(request, 'new_group_invite'))
-        pending_group_request = intify(utils.getRequestArg(request, "pending_group_request")) # admin only
-        accepted_my_group_membership = intify(utils.getRequestArg(request, 'accepted_my_group_membership'))
-        new_post_to_group = intify(utils.getRequestArg(request, 'new_post_to_group'))
-
-        new_message = intify(utils.getRequestArg(request, 'new_message'))
-        #new_message_reply = intify(utils.getRequestArg(request, 'new_message_reply'))
-
-        others_act_on_my_post = intify(utils.getRequestArg(request, 'others_act_on_my_post'))
-        others_act_on_item_following = intify(utils.getRequestArg(request, 'others_act_on_item_following'))
-
-        #mention_in_post = intify(utils.getRequestArg(request, 'mention_in_post'))
-
-        count = 0
-        count |= new_friend_request
-        count |= accepted_my_friend_request<<1
-        count |= new_follower<<2
-        count |= new_member_to_network<<3
-
-        count |= new_group_invite<<4
-        count |= pending_group_request<<5
-        count |= accepted_my_group_membership<<6
-        count |= new_post_to_group<<7
-
-        count |= new_message<<8
-        #count |= new_message_reply<<9
-
-        count |= others_act_on_my_post <<10
-        count |= others_act_on_item_following<<11
-
-        yield db.insert(myId, 'entities', str(count), 'email_preferences', 'basic')
+        notificationPref = [_get(x) for x in types]
+        yield db.insert(myId, 'entities', str(count), 'notify', 'basic')
 
 
     @profile
@@ -342,6 +304,10 @@ class SettingsResource(base.BaseResource):
         detail = utils.getRequestArg(request, "dt") or "basic"
         args["detail"] = detail
         args["editProfile"] = True
+        args['notificationTypes'] = self.notificationTypes
+
+        me = yield db.get_slice(myKey, "entities")
+        args["me"] = utils.supercolumnsToDict(me, ordered=True)
 
         if script and landing:
             yield render(request, "settings.mako", **args)
@@ -350,55 +316,198 @@ class SettingsResource(base.BaseResource):
             yield renderScriptBlock(request, "settings.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-        handlers={"onload": "$$.menu.selectItem('%s');"%detail }
-        if detail == "basic":
-            yield renderScriptBlock(request, "settings.mako", "settingsTitle",
-                                    landing, "#settings-title", "set", **args)
-            handlers["onload"] += """$$.ui.bindFormSubmit('#profile_form');"""
-            yield renderScriptBlock(request, "settings.mako", "editBasicInfo",
-                                    landing, "#settings-content", "set", True,
-                                    handlers = handlers, **args)
+        if script:
+            handlers={"onload": "$$.menu.selectItem('%s');" % detail}
+            if detail == "basic":
+                yield renderScriptBlock(request, "settings.mako", "settingsTitle",
+                                        landing, "#settings-title", "set", **args)
+                handlers["onload"] += """$$.ui.bindFormSubmit('#profile_form');"""
+                yield renderScriptBlock(request, "settings.mako", "editBasicInfo",
+                                        landing, "#settings-content", "set", True,
+                                        handlers = handlers, **args)
+ 
+            elif detail == "work":
+                """
+                yield renderScriptBlock(request, "settings.mako", "settingsTitle",
+                                        landing, "#settings-title", "set", **args)
+                yield renderScriptBlock(request, "settings.mako", "editWork",
+                                        landing, "#settings-content", "set", True,
+                                        handlers=handlers, **args)
+                """
+ 
+            elif detail == "personal":
+                yield renderScriptBlock(request, "settings.mako", "settingsTitle",
+                                        landing, "#settings-title", "set", **args)
+                yield renderScriptBlock(request, "settings.mako", "editPersonal",
+                                        landing, "#settings-content", "set", True,
+                                        handlers=handlers, **args)
+ 
+            elif detail == "contact":
+                yield renderScriptBlock(request, "settings.mako", "settingsTitle",
+                                        landing, "#settings-title", "set", **args)
+                yield renderScriptBlock(request, "settings.mako", "editContact",
+                                        landing, "#settings-content", "set",True,
+                                        handlers=handlers, **args)
+ 
+            elif detail == "passwd":
+                yield renderScriptBlock(request, "settings.mako", "settingsTitle",
+                                        landing, "#settings-title", "set", **args)
+                yield renderScriptBlock(request, "settings.mako", "changePasswd",
+                                        landing, "#settings-content", "set",True,
+                                        handlers=handlers, **args)
+ 
+            elif detail == 'notify':
+                yield renderScriptBlock(request, "settings.mako", "settingsTitle",
+                                        landing, "#settings-title", "set", **args)
+                yield renderScriptBlock(request, "settings.mako", "filterNotifications",
+                                        landing, "#settings-content", "set",True,
+                                        handlers=handlers, **args)
 
-        elif detail == "work":
-            yield renderScriptBlock(request, "settings.mako", "settingsTitle",
-                                    landing, "#settings-title", "set", **args)
-            yield renderScriptBlock(request, "settings.mako", "editWork",
-                                    landing, "#settings-content", "set", True,
-                                    handlers=handlers, **args)
+        if script and landing:
+            request.write("</body></html>")
 
-        elif detail == "personal":
-            res = yield db.get_slice(myKey, "entities", ['personal'])
-            personalInfo = utils.supercolumnsToDict(res).get("personal", {})
-            args.update({"personalInfo":personalInfo})
-            yield renderScriptBlock(request, "settings.mako", "settingsTitle",
-                                    landing, "#settings-title", "set", **args)
-            yield renderScriptBlock(request, "settings.mako", "editPersonal",
-                                    landing, "#settings-content", "set", True,
-                                    handlers=handlers, **args)
+        if not script:
+            yield render(request, "settings.mako", **args)
 
-        elif detail == "contact":
-            res = yield db.get_slice(myKey, "entities", ['contact'])
-            contactInfo = utils.supercolumnsToDict(res).get("contact", {})
-            args.update({"contactInfo":contactInfo})
-            yield renderScriptBlock(request, "settings.mako", "settingsTitle",
-                                    landing, "#settings-title", "set", **args)
-            yield renderScriptBlock(request, "settings.mako", "editContact",
-                                    landing, "#settings-content", "set",True,
-                                    handlers=handlers, **args)
 
-        elif detail == "passwd":
-            yield renderScriptBlock(request, "settings.mako", "settingsTitle",
-                                    landing, "#settings-title", "set", **args)
-            yield renderScriptBlock(request, "settings.mako", "changePasswd",
-                                    landing, "#settings-content", "set",True,
-                                    handlers=handlers, **args)
+    """
+    def _validateYear(self, year, name):
+        try:
+            curr = time.localtime()
+            if not 1900 < int(year) <= curr.tm_year:
+                return None
+        except ValueError:
+            return None
+        return year
 
-        elif detail == 'notify':
-            yield renderScriptBlock(request, "settings.mako", "settingsTitle",
-                                    landing, "#settings-title", "set", **args)
-            yield renderScriptBlock(request, "settings.mako", "emailPreferences",
-                                    landing, "#settings-content", "set",True,
-                                    handlers=handlers, **args)
+
+    @defer.inlineCallbacks
+    def _deleteEmployer(self, request):
+        encodedId = utils.getRequestArg(request, 'id')
+        empId = utils.decodeKey(encodedId)
+        yield db.remove(myId, "entities", empId, "employers")
+        request.write('$("#emp-%s").remove();' % empId)
+
+
+    @defer.inlineCallbacks
+    def _updateEmployer(self, request):
+        encodedId = utils.getRequestArg(request, 'id') or None
+        if encodedId:
+            empId = utils.decodeKey(encodedId)
+            yield db.remove(myId, "entities", empId, "employers")
+
+        company = utils.getRequestArg(request, 'company')
+        desc = utils.getRequestArg(request, 'desc') or ''
+        start = utils.getRequestArg(request, 'start') or ''
+        end = utils.getRequestArg(request, 'end') or ''
+
+        start = self._validateYear(start, "Start")
+        end = self._validateYear(end, "End")
+
+        if not (start or company):
+            raise errors.MissingParams(_(['Start Year', 'Company Name']))
+
+        newEmpId = "%s:%s:%s" % (end, start, company)
+        yield db.insert(myId, "entities", desc, newEmpId, "employers")
+
+        yield renderScriptBlock(request, "settings.mako", "employer",
+                                landing, "#emplist", "append",
+                                args=[start, end, company, desc])
+
+
+    @defer.inlineCallbacks
+    def _deleteWork(self, request):
+        encodedId = utils.getRequestArg(request, 'id')
+        workId = utils.decodeKey(encodedId)
+        yield db.remove(myId, "entities", workId, "work")
+        request.write('$("#work-%s").remove();' % workId)
+
+
+    @defer.inlineCallbacks
+    def _editWorkForm(self, request):
+        encodedId = utils.getRequestArg(request, 'id')
+        end, start, title, desc = None, None, None, None
+        if encodedId:
+            workId = utils.decodeKey(encodedId)
+            try:
+                col = yield db.get(myId, "entities", workId, "work")
+                end, start, title = workId.split(':')
+                desc = col.column.value
+            except ttypes.NotFoundException:
+                workId = None
+
+            yield renderScriptBlock(request, "settings.mako", "workForm",
+                                    False, "#"+workId, "replace",
+                                    args=[start, end, company, desc, encodedId])
+        else:
+            yield renderScriptBlock(request, "settings.mako", "workForm",
+                                    False, "#workadd", "replace")
+
+
+    @defer.inlineCallbacks
+    def _updateWork(self, request):
+        myId = request.getSession(IAuthInfo).username
+        encodedId = utils.getRequestArg(request, 'id') or None
+        if encodedId:
+            workId = utils.decodeKey(encodedId)
+            yield db.remove(myId, "entities", workId, "work")
+
+        title = utils.getRequestArg(request, 'title')
+        desc = utils.getRequestArg(request, 'desc') or ''
+        start = utils.getRequestArg(request, 'start') or ''
+        end = utils.getRequestArg(request, 'end') or ''
+
+        start = self._validateYear(start, "Start")
+        end = self._validateYear(end, "End")
+
+        if not (start or title):
+            raise errors.MissingParams(_(['Start Year', 'Title']))
+
+        newWorkId = "%s:%s:%s" % (end, start, title)
+        yield db.insert(myId, "entities", desc, newWorkId, "work")
+
+        if not encodedId:
+            yield renderScriptBlock(request, "settings.mako", "workitem",
+                                    False, "#worklist", "append",
+                                    args=[start, end, title, desc])
+            yield renderScriptBlock(request, "settings.mako", "workAddButton",
+                                    False, "#workform", "replace")
+        else:
+            yield renderScriptBlock(request, "settings.mako", "workitem",
+                                    False, "#work-"+workId, "replace",
+                                    args=[start, end, title, desc])
+
+
+    @defer.inlineCallbacks
+    def _deleteEducation(self, request):
+        encodedId = utils.getRequestArg(request, 'id')
+        eduId = utils.decodeKey(encodedId)
+        yield db.remove(myId, "entities", eduId, "education")
+        request.write('$("#edu-%s").remove();' % eduId)
+
+
+    @defer.inlineCallbacks
+    def _updateEducation(self, request):
+        encodedId = utils.getRequestArg(request, 'id') or None
+        if encodedId:
+            eduId = utils.decodeKey(encodedId)
+            yield db.remove(myId, "entities", eduId, "education")
+
+        college = utils.getRequestArg(request, 'college')
+        course = utils.getRequestArg(request, 'course')
+        year = utils.getRequestArg(request, 'year') or ''
+        year = self._validateYear(year, "Graduation Year")
+
+        if not (year or college or course):
+            raise errors.MissingParams(_(['Year of graduation', 'College', 'Course']))
+
+        newEduId = "%s:%s:%s" % (year, college, course)
+        yield db.insert(myId, "entities", "", newEduId, "education")
+
+        yield renderScriptBlock(request, "settings.mako", "education",
+                                landing, "#edulist", "append",
+                                args=[year, college, course])
+    """
 
 
     @profile
@@ -414,6 +523,10 @@ class SettingsResource(base.BaseResource):
                 d = self._changePassword(request)
             elif action == "notify":
                 d = self._updateNotifications(request)
+            """
+            elif action == "work":
+                d = self._updateWork(request)
+            """
 
         return self._epilogue(request, d)
 
@@ -425,5 +538,11 @@ class SettingsResource(base.BaseResource):
         d = None
         if segmentCount == 0:
             d = self._render(request)
+        """
+        elif segmentCount == 1:
+            action = request.postpath[0]
+            if action == "work":
+                d = self._editWorkForm(request)
+        """
 
         return self._epilogue(request, d)

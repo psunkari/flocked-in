@@ -1,7 +1,6 @@
 <%! from social import utils, config, _, __ %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <%def name="title()">
   ${config.get('Branding', 'Name')} &mdash; ${_('Private, Secure and Free Social Network for Enterprises')}
@@ -40,6 +39,7 @@
 
 <html>
 <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
   <title>${self.title()}</title>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/social.css"/>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/widgets.css"/>
@@ -113,6 +113,7 @@
   <div id="mainbar">
     ${self.layout()}
   </div>
+  <div id="alertbar"></div>
 %if script:
   <script type="text/javascript" src="/rsrcs/js/jquery-1.6.1.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.js"></script>

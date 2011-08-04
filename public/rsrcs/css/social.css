@@ -920,7 +920,8 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 
 .styledform legend {
-    font-weight:700
+    font-weight: 700;
+    margin: 20px 10px 10px;
 }
 
 .styledform-buttons {
@@ -1446,4 +1447,77 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .event-description {
     margin: 4px 0;
     color:#808080;
+}
+
+
+/*
+ * Styling for preferences
+ */
+#notify-setup {
+    width: 75%;
+    margin: 10px auto;
+}
+#notify-setup td {
+    border-bottom: 1px solid #EEE;
+    padding: 4px;
+}
+#notify-setup th {
+    border-bottom: 1px solid #DDD;
+    padding: 4px;
+    background-color: #EEE;
+}
+
+.workitem {
+    padding: 10px;
+    border-width: 1px;
+    border-style: solid;
+    border-color: rgb(204, 204, 204) rgb(153, 153, 153) rgb(153, 153, 153) rgb(204, 204, 204);
+    box-shadow: 1px 1px 0pt rgb(221, 221, 221);
+    margin-left: 40px;
+    width: 80%;
+    margin-bottom: 5px;
+    background-color: #F5F5F5;
+    position: relative;
+}
+.workitem-duration {
+    font-size: 9px;
+    color: gray;
+    margin-bottom: 6px;
+}
+.workitem-desc {
+    color: #999;
+}
+.workitem:hover > .workitem-delete {
+    display: block;
+}
+.workitem-delete {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    height: 16px;
+    width: 16px;
+    cursor: pointer;
+    font-size: 10px;
+    background-image: url("/rsrcs/img/sprite.png");
+    background-position: -19px -47px;
+    background-repeat: no-repeat;
+    display: none;
+}
+
+.workitem-delete:hover, .workitem-delete:active {
+    box-shadow: 0 0 2px #888;
+    background-position: -19px -67px;
+}
+
+#workform {
+    border: 1px solid #EEE;
+    width: 80%;
+    margin-left: 40px;
+    padding: 10px;
+}
+#workadd {
+    margin-left: 40px;
+    padding-left: 20px;
+    width: 80%;
+    text-align: right;
 }

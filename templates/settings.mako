@@ -21,7 +21,7 @@
       </div>
     </div>
     <div id="center-right">
-      <div id="right"/>
+      <div id="right"></div>
       <div id="center">
         <div id="settings-title" class="center-header">
           %if not script:
@@ -42,20 +42,20 @@
   <%
     def navMenuItem(link, text, id):
       cls = "sidemenu-selected" if id == detail else ''
-      return '<li><a href="%(link)s" id="%(id)s-sideitem" class="ajax busy-indicator %(cls)s"><span class="sidemenu-icon %(id)s-icon"></span><span class="sidemenu-text">%(text)s</a></li>' % locals()
+      return '<li><a href="%(link)s" id="%(id)s-sideitem" class="ajax busy-indicator %(cls)s"><span class="sidemenu-icon %(id)s-icon"></span><span class="sidemenu-text">%(text)s</span></a></li>' % locals()
   %>
   <div id="mymenu-container" class="sidemenu-container">
-    <ul id="mymenu" class="v-links sidemenu">
+    <ul class="v-links sidemenu">
        ${navMenuItem("/feed", _("Back to Home"), "back")}
     </ul>
-    <ul id="mymenu" class="v-links sidemenu">
+    <ul class="v-links sidemenu">
       ${navMenuItem("/settings?dt=basic", _("Basic"), "basic")}
       ${navMenuItem("/settings?dt=contact", _("Contact"), "contact")}
       ${navMenuItem("/settings?dt=personal", _("Personal Info"), "personal")}
-      ${navMenuItem("/settings?dt=work", _("Work & Education"), "work")}
+##      ${navMenuItem("/settings?dt=work", _("Work &amp; Education"), "work")}
     </ul>
-    <ul id="mymenu" class="v-links sidemenu">
-      ${navMenuItem("/settings?dt=passwd", _("Password"), "passwd")}
+    <ul class="v-links sidemenu">
+      ${navMenuItem("/settings?dt=passwd", _("Change Password"), "passwd")}
       ${navMenuItem("/settings?dt=notify", _("Notifications"), "notify")}
     </ul>
  </div>
@@ -65,7 +65,7 @@
   <%
     detail_name_map = {'basic':_('Basic'), 'contact': _('Contact'),
                        'work':_('Work and Education'), 'personal':_('Personal'),
-                       'passwd':_('Password'), 
+                       'passwd':_('Change Password'), 
                        'notify': _('Notifications')}
     name = detail_name_map.get(detail, '')
   %>
@@ -74,175 +74,148 @@
 
 <%def name="editBasicInfo()">
   <%
-  name = me.get("basic", {}).get("name", '')
-  firstname = me.get("basic", {}).get("firstname", '')
-  lastname = me.get("basic", {}).get("lastname", '')
-  jobTitle = me.get("basic", {}).get("jobTitle", '')
-  myTimezone = me.get("basic", {}).get("timezone", "")
+    name = me.get("basic", {}).get("name", '')
+    firstname = me.get("basic", {}).get("firstname", '')
+    lastname = me.get("basic", {}).get("lastname", '')
+    jobTitle = me.get("basic", {}).get("jobTitle", '')
+    myTimezone = me.get("basic", {}).get("timezone", '')
   %>
   <form id="settings-form" action="/settings" method="post" class="ajax" enctype="multipart/form-data">
     <div class="styledform">
       <ul>
         <li>
-            <label for="name"> Display Name</label>
-            <input type="text" id="displayname" name="name" value= "${name}" />
+          <label for="displayname">${_('Display Name')}</label>
+          <input type="text" id="displayname" name="name" value="${name}"/>
         </li>
         <li>
-            <label for="firstname"> First Name</label>
-            <input type="text" id="firstname" name="firstname" value= "${firstname}" />
+          <label for="firstname">${_('First Name')}</label>
+          <input type="text" id="firstname" name="firstname" value="${firstname}"/>
         </li>
         <li>
-            <label for="lastname"> Last Name</label>
-            <input type="text" id="lastname" name="lastname" value= "${lastname}" />
+          <label for="lastname">${_('Last Name')}</label>
+          <input type="text" id="lastname" name="lastname" value="${lastname}"/>
         </li>
         <li>
-            <label for="jobTitle"> Job Title</label>
-            <input type="text" id="jobTitle" name="jobTitle" value="${jobTitle}" />
+          <label for="jobTitle">${_('Job Title')}</label>
+          <input type="text" id="jobTitle" name="jobTitle" value="${jobTitle}"/>
         </li>
         <li>
-          <label for="timezone">Timezone </label>
+          <label for="timezone">${_('Timezone')}</label>
           <select name="timezone" class="single-row">
-            % for timezone in common_timezones:
-              % if timezone == myTimezone:
-                <option value = "${timezone}" selected="">${timezone}</option>
-              % else:
-                <option value = "${timezone}" >${timezone}</option>
-              % endif
-            % endfor
+            %for timezone in common_timezones:
+              %if timezone == myTimezone:
+                <option value="${timezone}" selected="">${timezone}</option>
+              %else:
+                <option value="${timezone}">${timezone}</option>
+              %endif
+            %endfor
           </select>
         </li>
         <li>
-            <label for="dp"> Photo </label>
-            <input type="file" id="dp" name="dp" accept="image/jpx, image/png, image/gif" />
+          <label for="dp">${_('Photo')}</label>
+          <input type="file" id="dp" name="dp" accept="image/jpx,image/png,image/gif"/>
         </li>
 
-        % if emailId and emailId[0]:
-        <input type="hidden" value = ${emailId[0]} name="emailId" />
+        %if emailId and emailId[0]:
+          <input type="hidden" value=${emailId[0]} name="emailId"/>
         %endif
         % if myKey:
-        <input type="hidden" value = ${myKey} name="id" />
+          <input type="hidden" value=${myKey} name="id"/>
         %endif
       </ul>
     </div>
     <div class="styledform-buttons">
-        <input type="submit" class="button default" name="userInfo_submit" value="Save"/>
+      <input type="submit" class="button default" name="userInfo_submit" value="${_('Save')}"/>
     </div>
   </form>
 </%def>
 
 <%def name="changePasswd()">
-<div id="error_block" style="color:red">
-  % if errorMsg:
-    ${errorMsg}
-  %endif
-</div>
-<form class="ajax" id="settings-form" action="/settings/passwd" method="post"  enctype="multipart/form-data">
-  <div class="styledform">
-    <ul>
-      <li>
-        <label for="curr_passwd"> Current Password</label>
-        <input type="password" name="curr_passwd" id="curr_passwd"/>
-      </li>
-      <li>
-        <label for="passwd1"> New Password</label>
-        <input type="password" name="passwd1" id="passwd1"/>
-      </li>
-      <li>
-        <label for="passwd2"> Confirm Password</label>
-        <input type="password" name="passwd2" id="passwd2"/>
-      </li>
-    </ul>
-    <input type="hidden" id = 'dt' name="dt" value="passwd"/>
+  <form class="ajax" id="settings-form" action="/settings/passwd"
+        method="post" enctype="multipart/form-data">
+    <div class="styledform">
+      <ul>
+        <li>
+          <label for="curr_passwd">${_('Current Password')}</label>
+          <input type="password" name="curr_passwd" id="curr_passwd"/>
+        </li>
+        <li>
+          <label for="passwd1">${_('New Password')}</label>
+          <input type="password" name="passwd1" id="passwd1"/>
+        </li>
+        <li>
+          <label for="passwd2">${_('Confirm Password')}</label>
+          <input type="password" name="passwd2" id="passwd2"/>
+        </li>
+      </ul>
+      <input type="hidden" id = 'dt' name="dt" value="passwd"/>
+    </div>
+    <div class="styledform-buttons">
+      <input type="submit" class="button default" name="userInfo_submit" value="${_('Save')}"/>
+    </div>
+  </form>
+</%def>
+
+<%def name="workitem(start, end, title, desc, id)">
+  <div class="workitem" id="work-${id}">
+    <span class="workitem-delete">&nbsp;</span>
+    <div class="workitem-title">${title}</div>
+    <div class="workitem-duration">${_('%(start)s &mdash; %(end)s') % locals()}</div>
+    <div class="workitem-desc">${desc}</div>
   </div>
-  <div class="styledform-buttons">
-    <input type="submit" class="button default" name="userInfo_submit" value="Save"/>
-  </div>
-</form>
 </%def>
 
 <%def name="editWork()">
-<form class="ajax" id="settings-form" action="/settings" method="post"  enctype="multipart/form-data">
-    <div class="styledform">
-        <div id="work">
-          <div>
-            <legend>Current Work</legend>
-            <ul>
-              <li>
-                <label for="employer"> Employer</label>
-                <input type ="text" />
-              </li>
-              <li>
-                <label for="emp_title"> Title</label>
-                <input type ="text" name="jobTitle"/>
-              </li>
-              <li>
-                <label for="emp_start">Working Since</label>
-                ${self.selectYear("c_emp_start", "Start year")}
-              </li>
-            </ul>
-            <legend>Previous Work</legend>
-            <ul>
-              <li>
-                <label for="employer"> Employer</label>
-                <input type ="text" id= "employer" name = "employer"/>
-              </li>
-              <li>
-                <label for="emp_title"> Title</label>
-                <input type ="text" id= "emp_title" name = "emp_title"/>
-              </li>
-              <li>
-                <label for="emp_start"> Years</label>
-                ${self.selectYear("emp_start", "Start year")}
-                ${self.selectYear("emp_end", "End year")}
-              </li>
-            </ul>
-          </div>
-        </div>
-        <div id="education">
-          <div>
-            <legend>Education</legend>
-            <ul>
-              <li>
-                <label for="college"> College</label>
-                <input type ="text" id= "college" name = "college"/>
-              </li>
-            </ul>
-            <ul>
-              <li>
-                <label for="degree"> Degree</label>
-                <input type ="text" id= "degree" name = "degree"/>
-              </li>
-            </ul>
-            <ul>
-              <li>
-                <label for="edu_end"> Year of Completion</label>
-                ${self.selectYear("edu_end","year")}
-              </li>
-            </ul>
-          </div>
-      </div>
+  <div id="work" class="styledform">
+    <% orgName = org["basic"]["name"] %>
+    <legend>${_("Work at %s")%orgName}</legend>
+    <div id="worklist">
+      <%
+        work = me.get('work', {})
+        for key, value in work.items():
+          end, start, title = key.split(':')
+          workitem(start, end, title, value, utils.encodeKey(key))
+      %>
     </div>
-    <div class="styledform-buttons">
-        <input type="submit" class="button default" name="userInfo_submit" value="Save"/>
+    <div id="workadd">
+      <button class="button-link ajax" _ref="/settings/work">${_("+ Add Work")}</button>
     </div>
-    % if emailId and emailId[0]:
-    <input type="hidden" value = ${emailId[0]} name="emailId" />
-    %endif
-    % if myKey:
-    <input type="hidden" value = ${myKey} name="id" />
-    %endif
-</form>
+    <div class="styledform" id="workform" style="display:none;">
+      <form id='settings-form' action='/settings/work' method='post' class='ajax'>
+        <ul>
+          <li>
+            <label for="worktitle">${_('Title')}</label>
+            <input type="text" id="worktitle" name="title"/>
+          </li>
+          <li>
+            <label for="workdesc">${_('Description')}</label>
+            <input type="text" id="workdesc" name="desc"/>
+          </li>
+          <li>
+            <label for="workstart">${_('Duration')}</label>
+            ${self.selectYear("startY", "Start year", id="workstart")}
+            ${self.selectYear("endY", "End year", id="workstart")}
+          </li>
+          <li>
+            <label/>
+            <input type="submit" class="button default" name="submit" value="${_('Save')}"/>
+          </li>
+        </ul>
+      </form>
+    </div>
+  </div>
 </%def>
 
 <%def name="editPersonal()">
-<form class="ajax" id="settings-form" action="/settings" method="post"  enctype="multipart/form-data">
+  <form class="ajax" id="settings-form" action="/settings" method="post"  enctype="multipart/form-data">
+    <% personal = me.get('personal', {}) %>
     <div class="styledform">
       <div id="personal">
         <ul>
           <li>
             <%
               rawstr = r"""(?P<doy>\d{4})(?P<dom>\d{2})(?P<dod>\d{1,2})"""
-              matchstr = personalInfo.get('birthday', '')
+              matchstr = personal.get('birthday', '')
               compile_obj = re.compile(rawstr)
               match_obj = compile_obj.search(matchstr)
               if match_obj:
@@ -252,30 +225,30 @@
               else:
                 doy = dom = dod = None
             %>
-            <label for ="bday"> Date Of Birth</label>
+            <label for ="bday">${_('Date of Birth')}</label>
             ${self.selectDay("dob_day", "Day", dod)}
             ${self.selectMonth("dob_mon", "Month", dom)}
             ${self.selectYear("dob_year", "Year", doy)}
           </li>
           <li>
-            <label for="p_email"> Email</label>
-            <input type ="text" id= "p_email" name = "p_email" value="${personalInfo.get('mail', '')}"/>
+            <label for="p_email">${_('Email')}</label>
+            <input type="text" id="p_email" name="p_email" value="${personal.get('email', '')}"/>
           </li>
           <li>
-            <label for="p_phone"> Phone</label>
-            <input type ="text" id= "p_phone" name = "p_phone" value="${personalInfo.get('phone', '')}"/>
+            <label for="p_phone">${_('Phone')}</label>
+            <input type="text" id="p_phone" name="p_phone" value="${personal.get('phone', '')}"/>
           </li>
           <li>
-            <label for="p_mobile"> Mobile</label>
-            <input type ="text" id= "p_mobile" name = "p_mobile" value="${personalInfo.get('mobile', '')}"/>
+            <label for="p_mobile">${_('Mobile')}</label>
+            <input type="text" id="p_mobile" name="p_mobile" value="${personal.get('mobile', '')}"/>
           </li>
           <li>
-            <label for="hometown"> Hometown</label>
-            <input type ="text" id= "hometown" name = "hometown" value="${personalInfo.get('hometown', '')}"/>
+            <label for="hometown">${_('Hometown')}</label>
+            <input type="text" id="hometown" name="hometown" value="${personal.get('hometown', '')}"/>
           </li>
           <li>
-            <label for="currentCity"> Current City</label>
-            <input type ="text" id= "currentCity" name = "currentCity" value="${personalInfo.get('currentCity', '')}"/>
+            <label for="currentCity">${_('Current City')}</label>
+            <input type="text" id="currentCity" name="currentCity" value="${personal.get('currentCity', '')}"/>
           </li>
         </ul>
       </div>
@@ -287,45 +260,49 @@
         %endif
     </div>
     <div class="styledform-buttons">
-        <input type="submit" class="button default" name="userInfo_submit" value="Save"/>
+        <input type="submit" class="button default" name="userInfo_submit" value="${_('Save')}"/>
     </div>
   </form>
 </%def>
 
 <%def name="editContact()">
-<form class="ajax" id="settings-form" action="/settings" method="post"  enctype="multipart/form-data">
+  <% 
+    contact = me.get('contact', {})
+    emailId = me['basic']['emailId']
+  %>
+  <form class="ajax" id="settings-form" action="/settings" method="post"  enctype="multipart/form-data">
     <div class="styledform">
       <div id="contacts">
         <ul>
             <li>
-                <label for="email"> Email</label>
-                <input type ="text" id= "c_email" name = "c_email" value="${contactInfo.get('mail', '')}"/>
+                <label for="c_email">${_('Email')}</label>
+                <input type="text" id="c_email" name="c_email" value="${emailId}" readonly='true'/>
             </li>
             <li>
-                <label for="im"> IM</label>
-                <input type ="text" id= "c_im" name = "c_im" value="${contactInfo.get('im', '')}"/>
+                <label for="c_im">${_('Chat')}</label>
+                <input type="text" id="c_im" name="c_im" value="${contact.get('im', '')}"/>
             </li>
             <li>
-                <label for="phone">Work Phone</label>
-                <input type ="text" id= "c_phone" name = "c_phone" value="${contactInfo.get('phone', '')}"/>
+                <label for="c_phone">${_('Work Phone')}</label>
+                <input type="text" id="c_phone" name="c_phone" value="${contact.get('phone', '')}"/>
             </li>
             <li>
-                <label for="c_mobile">Work Mobile</label>
-                <input type ="text" id= "c_mobile" name = "c_mobile" value="${contactInfo.get('mobile', '')}"/>
+                <label for="c_mobile">${_('Work Mobile')}</label>
+                <input type="text" id="c_mobile" name="c_mobile" value="${contact.get('mobile', '')}"/>
             </li>
         </ul>
       </div>
       <div class="styledform-buttons">
-          <input type="submit" class="button default" name="userInfo_submit" value="Save"/>
+          <input type="submit" class="button default" name="userInfo_submit" value="${_('Save')}"/>
       </div>
     </div>
-    % if emailId and emailId[0]:
-    <input type="hidden" value = ${emailId[0]} name="emailId" />
+    %if emailId and emailId[0]:
+      <input type="hidden" value = ${emailId[0]} name="emailId" />
     %endif
-    % if myKey:
-    <input type="hidden" value = ${myKey} name="id" />
+    %if myKey:
+      <input type="hidden" value = ${myKey} name="id" />
     %endif
-</form>
+  </form>
 </%def>
 
 <%def name="selectMonth(name, label, dom=None)">
@@ -361,12 +338,12 @@
   </select>
 </%def>
 
-<%def name="selectYear(name, label, doy=None)">
+<%def name="selectYear(name, label, doy=None, id=None)">
   <select name="${name}" class="inline-select">
     <option value="">${label}</option>
       %for d in reversed(range(1901, datetime.date.today().year)):
         <% value = "%d" %d %>
-        %if doy and int(doy)== d:
+        %if doy and int(doy) == d:
           <option selected value="${value}">${d}</option>
         %else:
           <option value="${value}">${d}</option>
@@ -375,116 +352,52 @@
   </select>
 </%def>
 
-<%def name="emailPreferences()">
-<%
-  if 'email_preferences' in me['basic']:
-
-    email_preferences = int(me['basic']['email_preferences'])
-  else:
-    email_preferences = 4095 #2**12-1 
-  new_friend_request = email_preferences &1
-  accepted_my_friend_request = email_preferences &2
-  new_follower = email_preferences &4
-  new_member_to_network = email_preferences &8
-
-  new_group_invite = email_preferences &16
-  pending_group_request = email_preferences &32
-  accepted_my_group_membership = email_preferences &64
-  new_post_to_group = email_preferences &128
-
-  new_message = email_preferences &256
-  #new_message_reply = email_preferences &512
-
-  others_act_on_my_post = email_preferences &1024
-  others_act_on_item_following = email_preferences &2048
-
-  def foo(name, value):
-    if value:
-        return """<input type="checkbox" name="%s" value="1" checked="checked"/>""" %(name)
-    else:
-        return """<input type="checkbox" name="%s" value="0" /> """ %(name)
-%>
-<form class="ajax" id="settings-form" action="/settings/notify" method="post"  enctype="multipart/form-data">
-  <div class="styledform">
-    <legend> Email me when </legend>
-    <ul>
-      <li>
-        <div id="new-requests">
-          <ul>
-            <li>
-              ${foo("new_friend_request", new_friend_request)}
-              ${_("Someone added me as a friend")}
-            </li>      
-            <li>
-              ${foo("accepted_my_friend_request", accepted_my_friend_request)}
-              ${_("Others accept my friend request")}
-            </li>
-             <li>
-              ${foo("new_follower", new_follower)}
-              ${_("Someone starts following me")}
-            </li>
-            <li>
-              ${foo("new_member_to_network", new_member_to_network)}
-              ${_("New member joins the network")}
-            </li>
-          </ul>
-        </div>
-      </li>
-      <li>
-        <div id="edit-setting-groups">
-          <legend>Groups</legend>
-          <ul>
-            <li>
-              ${foo("new_group_invite", new_group_invite)}
-              ${_("Someone invites me to join a group")}
-            </li>
-            <li>
-              ${foo("pending_group_request", pending_group_request)}
-              ${_("Someone requests to join private group for which i am administrator")}
-            </li>
-            <li>
-              ${foo("accepted_my_group_membership", accepted_my_group_membership)}
-              ${_("My group membership is accepted")}
-            </li>
-            <li>
-              ${foo("new_post_to_group", new_post_to_group)}
-              ${_("Someone posts to a group im member of")}
-            </li>
-          </ul>
-        </div>
-      </li>
-      <li>
-        <div id="edit-setting-messages">
-          <legend>Messages</legend>
-          <ul>
-            <li>
-              ${foo("new_message", new_message)}
-              ${_("I receive new message")}
-            </li>
-          </ul>
-        </div>
-      </li>
-      <li>
-        <div id="edit-setting-posts">
-          <legend>Posts</legend>
-          <ul>
-            <li>
-              ${foo("others_act_on_my_post", others_act_on_my_post)}
-              ${_("Others liked/commented on my post")}
-            </li>
-            <li>
-              ${foo("others_act_on_item_following", others_act_on_item_following)}
-              ${_("Others liked/liked my comment/commented on posts i liked/commented ")}
-            </li>
-          </ul>
-        </div>
-      </li>
-    </ul>
-    <input type="hidden" id = 'dt' name="dt" value="email_preferences"/>
-  </div>
-  <div class="styledform-buttons">
-    <input type="submit" class="button default" name="userInfo_submit" value="Save"/>
-  </div>
-</form>
+<%def name="filterNotifications()">
+  <%
+    notify = me['basic'].get('notify', '3'*25)
+    numTypes = len(notificationTypes)
+    labels = ['Someone adds you as a friend',
+              'Your friend request is accepted',
+              'Someone started following you',
+              'New user joins your company network',
+              'User wants to join a group you administer',
+              'Your request to join a group is accepted',
+              'You are invited to join a group',
+              'New user joins a group you administer',
+              'Someone liked or commented on your item',
+              'Someone <abbr title="Liked or Commented">acted</abbr> on an item that you liked or commented',
+              'You are mentioned in a post or comment',
+              'Other requests (event invitations etc;)',
+              'New private conversation',
+              'New message in an existing conversations',
+              'Recipients of a conversation were changed']
+  %>
+  <form class="ajax" id="settings-form" action="/settings/notify" method="post"  enctype="multipart/form-data">
+    <table id='notify-setup' valign='middle' role='display'>
+      <colgroup>
+        <col class='notify-type'/>
+        <col class='notify-medium'/>
+      </colgroup>
+      <tr class='notify-setup-header'>
+        <th></th>
+        <th class='notify-medium-mail'>${_('Mail')}</th>
+      </tr>
+      <% emailTemplate = _('E-mail notification when: %s') %>
+      %for x in range(numTypes):
+        <% emailChecked = "checked='1'" if (int(notify[x]) & 2) else '' %>
+        <tr>
+          <td>${_(labels[x])}</td>
+          <td>
+            <input type='checkbox' name='${notificationTypes[x]}'
+                   title='${emailTemplate % labels[x]}'
+                   value='1' ${emailChecked}/>
+          </td>
+        </tr>
+      %endfor
+    </table>
+    <div class="styledform-buttons">
+      <input type="submit" class="button default" name="userInfo_submit" value="${_('Save')}"/>
+    </div>
+  </form>
 </%def>
 
