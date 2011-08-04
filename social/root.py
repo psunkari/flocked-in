@@ -155,7 +155,7 @@ class HomeResource(resource.Resource):
 # authorization, adding headers for cache busting and busting csrf.
 #
 class RootResource(resource.Resource):
-    _noCSRFReset = set(["avatar", "auto", "rsrcs", "about", "signup", "signin"])
+    _noCSRFReset = set(["avatar", "auto", "rsrcs", "about", "signup", "signin", "password"])
 
     def __init__(self, isAjax=False):
         self._isAjax = isAjax
@@ -235,6 +235,8 @@ class RootResource(resource.Resource):
                 match = self._signup
             elif path == "rsrcs":
                 match = self._rsrcs
+            elif path == 'password':
+                match = self._signup
         elif path == "feedback":
             match = self._feedback
 
@@ -273,13 +275,13 @@ class RootResource(resource.Resource):
             # We have no idea how to handle the given path!
             if not match:
                 return resource.NoResource("Page not found")
-         
+
             if not self._isAjax:
                 # By default prevent caching.
                 # Any resource may change these headers later during the processing
                 request.setHeader('Expires', formatdate(0))
                 request.setHeader('Cache-control', 'private,no-cache,no-store,must-revalidate')
-         
+
             if self._isAjax or (not self._isAjax and match != self._ajax):
                 if hasattr(match, 'requireAuth') and match.requireAuth:
                     d = self._ensureAuth(request, match)
@@ -287,8 +289,8 @@ class RootResource(resource.Resource):
                     d = defer.succeed(match)
             else:
                 d = defer.succeed(match)
-         
-            # 
+
+            #
             # We update the CSRF token when it is a GET request
             # and when one of the below is true
             #  - Ajax resource in which the full page is requested (appchange)

@@ -23,6 +23,7 @@
       ${navMenuItem("/feed", _("News Feed"), "feed")}
       ${navMenuItem("/notifications", _("Notifications"), "notifications")}
       ${navMenuItem("/messages", _("Messages"), "messages")}
+      ${navMenuItem("/event", _("Events"), "events")}
       ${navMenuItem("/people", _("People"), "people")}
       ${navMenuItem("/feed?id=%s" % orgKey, _("Company Feed"), "org")}
       ${navMenuItem("/groups", _("Groups"), "groups")}
