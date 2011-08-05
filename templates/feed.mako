@@ -63,7 +63,8 @@
     <div class="sidebar-title">${_("Invite people")}</div>
     <form method="post" action="/people/invite" class="ajax" autocomplete="off" >
       <div class="input-wrap">
-        <input type="text" name="email" id="invite-others" placeholder="Email Address"/>
+        <% domain = me["basic"]["emailId"].split('@')[1] %>
+        <input type="text" name="email" id="invite-others" placeholder="someone@${domain}"/>
       </div>
       <input type="hidden" name="from" value="sidebar"/>
       <input class="button" type="submit" id="submit" value="${_('Submit')}"/>
@@ -141,7 +142,7 @@
     <form id="share-form" autocomplete="off" method="post" action="/item/new" class="ajax" >
       <div id="sharebar">
             <div class="input-wrap">
-            <input type="text" name="comment" placeholder="${_('What are you currently working on?')}"/>
+            <input type="text" name="comment" placeholder="${_('What are you working on?')}"/>
            </div>
           <input type="hidden" name="type" value="status"/>
       </div>
@@ -168,7 +169,7 @@
 
 <%def name="share_status()">
   <div class="input-wrap">
-    <textarea name="comment" placeholder="${_('What are you currently working on?')}" />
+    <textarea name="comment" placeholder="${_('What are you working on?')}" />
   </div>
   <input type="hidden" name="type" value="status"/>
 </%def>

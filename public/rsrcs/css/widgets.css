@@ -12,6 +12,7 @@ input::-moz-focus-inner {
     color: graytext;
     position: absolute;
     cursor: text;
+    text-align: left;
 }
 
 .button-link {
