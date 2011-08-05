@@ -27,13 +27,19 @@ def pushNotifications(notifyType, convId, convType, convOwner,
     for follower in followers:
         userKey = follower.column.name
         if actor != userKey:
-            d0 = db.get_slice(userKey, "notificationItems", super_column=notifyId, count=2, reverse=True)
-            def deleteOlderNotification(cols):
-                if cols and cols[-1].column.name != timeUUID:
-                    return db.remove(userKey, "notifications", cols[0].column.name)
+            d0 = db.get_slice(userKey, "notificationItems", super_column=notifyId,
+                              count=3, reverse=True)
+            def deleteOlderNotifications(cols, aUserKey):
+                deleteKeys = [col.column.name for col in cols if col.column.name != timeUUID]
+                if deleteKeys:
+                    d00 = db.batch_remove({'notifications': [aUserKey]}, names=deleteKeys)
+                    d01 = db.batch_remove({'latest': [aUserKey]}, names=deleteKeys, 
+                                          supercolumn="notifications")
+                    return defer.DeferredList([d00, d01])
                 else:
                     return defer.succeed([])
-            d0.addCallback(deleteOlderNotification)
+
+            d0.addCallback(deleteOlderNotifications, userKey)
 
             d1 = db.insert(userKey, "notifications", notifyId, timeUUID)
             d2 = db.insert(userKey, "latest", notifyId, timeUUID, "notifications")
