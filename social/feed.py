@@ -325,30 +325,47 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
                 (x, userId, itemId) = mostRecentItem[0:3]
                 if x == "C":
                     reasonUserIds[convId] = utils.uniqify(responseUsers)
-                    reasonTmpl[convId] = ["%s commented on %s's %s",
-                                          "%s and %s commented on %s's %s",
-                                          "%s, %s and %s commented on %s's %s"]\
+                    reasonTmpl[convId] = [["%(user0)s commented on your %(itemType)s",
+                                           "%(user0)s commented on %(owner)s's %(itemType)s"],
+                                          ["%(user0)s and %(user1)s commented on your %(itemType)s",
+                                           "%(user0)s and %(user1)s commented on %(owner)s's %(itemType)s"],
+                                          ["%(user0)s, %(user1)s and %(user2)s commented on your %(itemType)s",
+                                           "%(user0)s, %(user1)s and %(user2)s commented on %(owner)s's %(itemType)s"]]\
                                          [len(reasonUserIds[convId])-1]
                 elif x == 'Q':
                     reasonUserIds[convId] = utils.uniqify(answerUsers)
-                    reasonTmpl[convId] = ["%s answered %s's %s",
-                                          "%s and %s answered %s's %s",
-                                          "%s, %s and %s answered %s's %s"]\
+                    reasonTmpl[convId] = [["%(user0)s answered your %(itemType)s",
+                                          "%(user0)s answered %(owner)s's %(itemType)s"],
+                                          ["%(user0)s and %(user1)s answered your %(itemType)s",
+                                          "%(user0)s and %(user1)s answered %(owner)s's %(itemType)s"],
+                                          ["%(user0)s, %(user1)s and %(user2)s answered your %(itemType)s"
+                                          "%(user0)s, %(user1)s and %(user2)s answered %(owner)s's %(itemType)s"]]\
                                          [len(reasonUserIds[convId])-1]
 
                 elif x == "L" and itemId == convId:
                     reasonUserIds[convId] = utils.uniqify(likes[convId])
-                    reasonTmpl[convId] = ["%s liked %s's %s",
-                                          "%s and %s liked %s's %s",
-                                          "%s, %s and %s liked %s's %s"]\
+                    reasonTmpl[convId] = [["%(user0)s liked your %(itemType)s",
+                                           "%(user0)s liked %(owner)s's %(itemType)s"],
+                                          ["%(user0)s and %(user1)s liked your %(itemType)s",
+                                           "%(user0)s and %(user1)s liked %(owner)s's %(itemType)s"],
+                                          ["%(user0)s, %(user1)s and %(user2)s liked your %(itemType)s",
+                                           "%(user0)s, %(user1)s and %(user2)s liked %(owner)s's %(itemType)s"]]\
                                          [len(reasonUserIds[convId])-1]
                 elif x == "L":
                     reasonUserIds[convId] = [userId]
-                    reasonTmpl[convId] = "%s liked a comment on %s's %s"
+                    reasonTmpl[convId] = [["%(user0)s liked a comment on your %(itemType)s",
+                                           "%(user0)s liked a comment on %(owner)s's %(itemType)s"],
+                                          ["%(user0)s and %(user1)s liked a comment on your %(itemType)s",
+                                           "%(user0)s and %(user1)s liked a comment on %(owner)s's %(itemType)s"],
+                                          ["%(user0)s, %(user1)s and %(user2)s liked a comment on your %(itemType)s",
+                                           "%(user0)s, %(user1)s and %(user2)s liked a comment on %(owner)s's %(itemType)s"]]\
+                                         [len(reasonUserIds[convId])-1]
                 elif x == "T":
                     reasonUserIds[convId] = [userId]
                     reasonTagId[convId] = tagId
-                    reasonTmpl[convId] = "%s added %s on %s's %s"
+                    reasonTmpl[convId] = ["%(user0)s added %(tagName)s on your %(itemType)s", 
+                                          "%(user0)s added %(tagName)s on %(owner)s's %(itemType)s"]
+
 
     # If we don't have a list of conversations,
     # fetch the list of either the given feedId or from the user's feed
@@ -485,20 +502,20 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
     itemLink = utils.itemLink
     if getReason:
         for convId in convIds:
-            template = reasonTmpl.get(convId, None)
             conv = items[convId]
             ownerId = conv["meta"]["owner"]
+            template = reasonTmpl.get(convId, None)
             if template:
-                vals = [userName(id, entities[id], "conv-user-cause")\
-                        for id in reasonUserIds[convId]]
+                template = template[0] if ownerId == myId else template[1]
+                vals = dict([('user'+str(idx), userName(id, entities[id], "conv-user-cause"))\
+                            for idx, id in enumerate(reasonUserIds[convId])])
                 if convId in reasonTagId:
                     tagId = reasonTagId[convId]
                     tagname = tags[tagId]["title"]
-                    vals.append("<a class='ajax' href='/tags?id=%s'>%s</a>"%(tagId, tagname))
-                vals.append(userName(ownerId, entities[ownerId]))
-                itemType = conv["meta"]["type"]
-                vals.append(itemLink(convId, itemType))
-                reasonStr[convId] = _(template) % tuple(vals)
+                    vals['tagName'] = "<a class='ajax' href='/tags?id=%s'>%s</a>"%(tagId, tagname)
+                vals["owner"] = userName(ownerId, entities[ownerId])
+                vals["itemType"] = itemLink(convId, conv["meta"]["type"])
+                reasonStr[convId] = _(template) % vals
 
     # Make sure that the cleanup has happened too
     yield defer.DeferredList(cleanup_d)

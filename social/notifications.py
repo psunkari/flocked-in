@@ -19,26 +19,50 @@ class NotificationsResource(base.BaseResource):
     # String templates used in notifications.
     # Generally there are expected to be in past-tense since
     # notifications are record of something that already happened.
-    _commentTemplate = {1: "%s commented on %s's %s",
-                        2: "%s and %s commented on %s's %s",
-                        3: "%s, %s and 1 other commented on %s's %s",
-                        4: "%s, %s and %s others commented on %s's %s"}
-    _answerTemplate = {1: "%s answered %s's %s",
-                       2: "%s and %s answered %s's %s",
-                       3: "%s, %s and 1 other answered %s's %s",
-                       4: "%s, %s and %s others answered %s's %s"}
-    _likesTemplate = {1: "%s liked %s's %s",
-                      2: "%s and %s liked %s's %s",
-                      3: "%s, %s and 1 other liked %s's %s",
-                      4: "%s, %s and %s others liked %s's %s"}
-    _answerLikesTemplate = {1: "%s liked your answer on %s's %s",
-                            2: "%s and %s liked your answer on  %s's %s",
-                            3: "%s, %s and 1 other liked your answer on  %s's %s",
-                            4: "%s, %s and %s others liked your answer on %s's %s"}
-    _commentLikesTemplate = {1: "%s liked your comment on %s's %s",
-                             2: "%s and %s liked your comment on  %s's %s",
-                             3: "%s, %s and 1 other liked your comment on  %s's %s",
-                             4: "%s, %s and %s others liked your comment on %s's %s"}
+    _commentTemplate = {1: ["%(user0)s commented on your %(itemType)s", 
+                            "%(user0)s commented on %(owner)s's %(itemType)s"],
+                        2: ["%(user0)s and %(user1)s commented on your %(itemType)s",
+                            "%(user0)s and %(user1)s commented on %(owner)s's %(itemType)s"],
+                        3: ["%(user0)s, %(user1)s and 1 other commented on your %(itemType)s",
+                            "%(user0)s, %(user1)s and 1 other commented on %(owner)s's %(itemType)s"],
+                        4: ["%(user0)s, %(user1)s and %(count)s others commented on your %(itemType)s", 
+                            "%(user0)s, %(user1)s and %(count)s others commented on %(owner)s's %(itemType)s"] }
+
+    _answerTemplate = {1: ["%(user0)s answered your %(itemType)s",
+                           "%(user0)s answered %(owner)s's %(itemType)s"],
+                       2: ["%(user0)s and %(user1)s answered your %(itemType)s",
+                           "%(user0)s and %(user1)s answered %(owner)s's %(itemType)s"],
+                       3: ["%(user0)s, %(user1)s and 1 other answered your %(itemType)s",
+                           "%(user0)s, %(user1)s and 1 other answered %(owner)s's %(itemType)s"],
+                       4: ["%(user0)s, %(user1)s and %(count)s others answered your %(itemType)s",
+                           "%(user0)s, %(user1)s and %(count)s others answered %(owner)s's %(itemType)s"] }
+
+    _likesTemplate = {1: ["%(user0)s liked your %(itemType)s",
+                          "%(user0)s liked %(owner)s's %(itemType)s"],
+                      2: ["%(user0)s and %(user1)s liked your %(itemType)s",
+                          "%(user0)s and %(user1)s liked %(owner)s's %(itemType)s"],
+                      3: ["%(user0)s, %(user1)s and 1 other liked your %(itemType)s",
+                          "%(user0)s, %(user1)s and 1 other liked %(owner)s's %(itemType)s"],
+                      4: ["%(user0)s, %(user1)s and %(count)s others liked your %(itemType)s",
+                          "%(user0)s, %(user1)s and %(count)s others liked %(owner)s's %(itemType)s"]}
+
+    _answerLikesTemplate = {1: ["%(user0)s liked your answer on your %(itemType)s",
+                                "%(user0)s liked your answer on %(owner)s's %(itemType)s"],
+                            2: ["%(user0)s and %(user1)s liked your answer on your %(itemType)s",
+                                "%(user0)s and %(user1)s liked your answer on %(owner)s's %(itemType)s"],
+                            3: ["%(user0)s, %(user1)s and 1 other liked your answer on your %(itemType)s",
+                                "%(user0)s, %(user1)s and 1 other liked your answer on %(owner)s's %(itemType)s"],
+                            4: ["%(user0)s, %(user1)s and %(count)s others liked your answer on your %(itemType)s",
+                                "%(user0)s, %(user1)s and %(count)s others liked your answer on %(owner)s's %(itemType)s"]}
+
+    _commentLikesTemplate = {1: ["%(user0)s liked your comment on your %(itemType)s",
+                                 "%(user0)s liked your comment on %(owner)s's %(itemType)s"],
+                             2: ["%(user0)s and %(user1)s liked your comment on your %(itemType)s",
+                                "%(user0)s and %(user1)s liked your comment on  %(owner)s's %(itemType)s"],
+                             3: ["%(user0)s, %(user1)s and 1 other liked your comment on your %(itemType)s",
+                                "%(user0)s, %(user1)s and 1 other liked your comment on %(owner)s's %(itemType)s"],
+                             4: ["%(user0)s, %(user1)s and %(count)s others liked your comment on your %(itemType)s",
+                                "%(user0)s, %(user1)s and %(count)s others liked your comment on %(owner)s's %(itemType)s"]}
 
     # Fetch notifications from the database
     # NotificationIds are stored in a column family called "notifications"
@@ -121,6 +145,7 @@ class NotificationsResource(base.BaseResource):
             notifyId = notify.super_column.name
             notifyIdParts = notifyId.split(':')
             updates = notify.super_column.columns
+            updates.reverse()
             notifyValues[notifyId] = []
 
             if notifyId.startswith(myId):   # Connection/Group/Following
@@ -130,8 +155,8 @@ class NotificationsResource(base.BaseResource):
                         notifyValues[notifyId].append(update.value)
             
             elif len(notifyIdParts) == 4:   # Conversation updates
-                convId, convType, convOwner, notifyType = notifyIdParts
-                toFetchEntities.add(convOwner)
+                convId, convType, convOwnerId, notifyType = notifyIdParts
+                toFetchEntities.add(convOwnerId)
                 for update in updates:
                     toFetchEntities.add(update.value.split(':')[0])
                     notifyValues[notifyId].append(update.value)
@@ -145,17 +170,19 @@ class NotificationsResource(base.BaseResource):
             return ''
 
         def buildConvStr(notifyId):
-            convId, convType, convOwner, x = notifyId.split(':')
-            noOfUsers = len(set(notifyValues[notifyId]))
-            vals = []
-            for userId in notifyValues[notifyId]:
-                userName = utils.userName(userId, entities[userId])
-                if userName not in vals:
-                    vals.append(userName)
-                if len(vals) == noOfUsers or len(vals) == 2:
-                    break
-            if noOfUsers > 3:
-                vals.append(noOfUsers-2)
+            convId, convType, convOwnerId, x = notifyId.split(':')
+
+            userIds = utils.uniqify(notifyValues[notifyId])
+            noOfUsers = len(userIds)
+
+            vals = dict([('user'+str(idx), utils.userName(id, entities[id]))\
+                            for idx, id in enumerate(userIds[0:2])])
+
+            vals["count"] = noOfUsers - 2
+
+            # Limit noOfUsers to 4, to match with keys in template map
+            if (noOfUsers > 4):
+              noOfUsers = 4 
 
             if x == "L":
                 tmpl = self._likesTemplate[noOfUsers]
@@ -168,9 +195,11 @@ class NotificationsResource(base.BaseResource):
             elif x == "LC":
                 tmpl = self._commentLikesTemplate[noOfUsers]
 
-            vals.append(utils.userName(convOwner, entities[convOwner]))
-            vals.append(utils.itemLink(convId, convType))
-            return tmpl % tuple(vals)
+            tmpl = tmpl[0] if convOwnerId == myId else tmpl[1]
+
+            vals["owner"] = utils.userName(convOwnerId, entities[convOwnerId])
+            vals["itemType"] = utils.itemLink(convId, convType)
+            return tmpl % vals
 
         # Build strings
         notifyStrs = {}
