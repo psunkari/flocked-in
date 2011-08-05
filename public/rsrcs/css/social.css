@@ -891,6 +891,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 
 .styledform input[type=text],
+.styledform input[type=email],
 .styledform input[type=password],
 .styledform select,
 .ui-datepicker-title select,

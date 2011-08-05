@@ -28,6 +28,10 @@ input::-moz-focus-inner {
     color: white;
     background-color: #3366CC;
 }
+.button-link.disabled {
+  color: gray;
+  background-color: transparent;
+}
 
 .button {
     font-family: inherit;

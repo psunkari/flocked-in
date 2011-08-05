@@ -246,6 +246,7 @@ a:link, a:visited {
 }
 
 .styledform input[type=text],
+.styledform input[type=email],
 .styledform input[type=password],
 .styledform select,
 .styledform textarea {
