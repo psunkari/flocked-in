@@ -91,7 +91,7 @@
       <ul>
         <li>
           <label for="displayname">${_('Display Name')}</label>
-          <input type="text" id="displayname" name="name" value="${name}"/>
+          <input type="text" id="displayname" name="name" value="${name}" autofocus />
         </li>
         <li>
           <label for="firstname">${_('First Name')}</label>
@@ -138,20 +138,20 @@
 
 <%def name="changePasswd()">
   <form class="ajax" id="settings-form" action="/settings/passwd"
-        method="post" enctype="multipart/form-data">
+        method="post" enctype="multipart/form-data" onsubmit="return validate()">
     <div class="styledform">
       <ul>
         <li>
           <label for="curr_passwd">${_('Current Password')}</label>
-          <input type="password" name="curr_passwd" id="curr_passwd"/>
+          <input type="password" name="curr_passwd" id="curr_passwd" required autofocus />
         </li>
         <li>
           <label for="passwd1">${_('New Password')}</label>
-          <input type="password" name="passwd1" id="passwd1"/>
+          <input type="password" name="passwd1" id="passwd1" required />
         </li>
         <li>
           <label for="passwd2">${_('Confirm Password')}</label>
-          <input type="password" name="passwd2" id="passwd2"/>
+          <input type="password" name="passwd2" id="passwd2" required />
         </li>
       </ul>
       <input type="hidden" id = 'dt' name="dt" value="passwd"/>
@@ -238,7 +238,7 @@
           </li>
           <li>
             <label for="p_email">${_('Email')}</label>
-            <input type="text" id="p_email" name="p_email" value="${personal.get('email', '')}"/>
+            <input type="email" id="p_email" name="p_email" value="${personal.get('email', '')}"/>
           </li>
           <li>
             <label for="p_phone">${_('Phone')}</label>
@@ -282,11 +282,11 @@
         <ul>
             <li>
                 <label for="c_email">${_('Email')}</label>
-                <input type="text" id="c_email" name="c_email" value="${emailId}" readonly='true'/>
+                <input type="email" id="c_email" name="c_email" value="${emailId}" readonly='true' />
             </li>
             <li>
                 <label for="c_im">${_('Chat')}</label>
-                <input type="text" id="c_im" name="c_im" value="${contact.get('im', '')}"/>
+                <input type="text" id="c_im" name="c_im" value="${contact.get('im', '')}" autofocus />
             </li>
             <li>
                 <label for="c_phone">${_('Work Phone')}</label>
@@ -319,7 +319,7 @@
   %>
   <select name="${name}" class="inline-select">
     <option value="">${label}</option>
-    %for m in range(1, 12):
+    %for m in range(1, 13):
       <% value = "%02d" %m %>
       %if dom and int(dom) == m:
         <option selected value="${value}">${months[m-1]}</option>
@@ -333,7 +333,7 @@
 <%def name="selectDay(name, label, dod=None)">
   <select name="${name}" class="inline-select">
     <option value="">${label}</option>
-      %for d in range(1, 31):
+      %for d in range(1, 32):
         <% value = "%d" %d %>
         %if dod and int(dod) == d:
           <option selected value="${value}">${d}</option>
