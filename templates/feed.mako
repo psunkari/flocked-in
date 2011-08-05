@@ -156,13 +156,10 @@
     </form>
     <div class="file-attach-wrapper">
         <form id="upload" action="/file" method="post" enctype="multipart/form-data">
-          <span class="file-overlay">
-            <input id="file-attach-input" type="file" name="file" size="1"/>
-          </span>
-          <button id="file-share" class="button" type="button" title="${_('Attach a file')}">
+          <input id="file-attach-input" type="file" name="file" size="1"/>
+          <button id="file-share" class="button" type="button" title="${_('Attach a file')}" onclick="$('#file-attach-input').click()">
             <img src="/rsrcs/img/attach.png" alt="${_('Attach a file')}"/>
           </button>
-          <!--<input type="submit" value="Submit"/>-->
         </form>
     </div>
     <div class="clear"></div>

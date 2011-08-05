@@ -630,20 +630,13 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 
 #file-attach-input {
-    opacity: 0;
-    filter:alpha(opacity=0);
-    position: relative;
-    width: 36px;
-    z-index: 1;
-    /*left:-85px;*/
-    top:-1px;
-    -ms-filter:"progid:DXImageTransform.Microsoft.Alpha(Opacity=0)";
+    height: 0px;
+    visibility: hidden;
 }
 
 #file-share {
-    left: -39px;
-    position: relative;
-    top: -4px;
+    padding-left: 8px;
+    padding-right: 8px;
 }
 
 #attached-files {
