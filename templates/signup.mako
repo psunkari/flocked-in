@@ -153,7 +153,7 @@
       <ul>
         <li>
           <label for="name">${_('Name')}</label>
-          <input type="text" class="textfield" name="name" />
+          <input type="text" class="textfield" name="name" autofocus required />
         </li>
         <li>
           <label for="jobTitle">${_('Job Title')}</label>
@@ -173,11 +173,11 @@
         </li>
         <li>
           <label for="password">${_('Password')}</label>
-          <input type="password" class="textfield" name="password" autocomplete="off"/>
+          <input type="password" class="textfield" name="password" autocomplete="off" required />
         </li>
         <li>
           <label for="pwdrepeat">${_('Confirm Password')}</label>
-          <input type="password" class="textfield" name="pwdrepeat" autocomplete="off"/>
+          <input type="password" class="textfield" name="pwdrepeat" autocomplete="off" required/>
         </li>
         <li style="display:none" id="messages-wrapper" class="messages-error"></li>
       </ul>
@@ -195,7 +195,11 @@
         %for index in range(5):
           <li>
             <label for="email">Email</label>
-            <input type="text" name="email" />
+            %if index == 0:
+              <input type="email" name="email" autofocus />
+            %else:
+              <input type="email" name="email" />
+            %endif
           </li>
         %endfor
       </ul>
@@ -228,7 +232,7 @@
       <ul>
           <li>
             <label for="email">Email:</label>
-            <input type="text" name="email" />
+            <input type="email" name="email" required autofocus/>
           </li>
           <div id="messages-wrapper" class="error" style="padding-left: 15em; margin-left: 12px;"></div>
       </ul>
@@ -245,12 +249,12 @@
       <ul>
           <li>
             <label for="password">Password:</label>
-            <input type="password" name="password" />
+            <input type="password" name="password" required autofocus />
           </li>
 
           <li>
             <label for="pwdrepeat">Confirm Password:</label>
-            <input type="password" name="pwdrepeat" />
+            <input type="password" name="pwdrepeat" required />
           </li>
           <div id="messages-wrapper" class="error" style="padding-left: 15em; margin-left: 12px;"></div>
       </ul>

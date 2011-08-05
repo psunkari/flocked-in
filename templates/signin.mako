@@ -46,18 +46,16 @@
       </ul>
     </div>
     <div id="main">
-      %if reason:
-      %endif
       <form action="/signin" method="POST" onsubmit="return validate()">
       <div id="main-contents" class="styledform contents" style="width: 600px; margin: 20px auto;">
         <ul>
           <li>
-            <label for="username">${_('Username')}</label>
-            <input id="username" type="text" class="textfield" name="u"></input>
+            <label for="email">${_('Email')}</label>
+            <input id="email" type="email" class="textfield" name="u" required autofocus ></input>
           </li>
           <li>
             <label for="password">${_('Password')}</label></td>
-            <input id="password" type="password" class="textfield" name="p"></input>
+            <input id="password" type="password" class="textfield" name="p" required ></input>
           </li>
           <div id="error-message" class="error" style="padding-left: 15em; margin-left: 12px;">${reason}</div>
           <li>
