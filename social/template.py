@@ -1,15 +1,19 @@
 import re
 import json
 import traceback
+import tempfile
+import os
 
 from mako.template      import Template
 from mako.lookup        import TemplateLookup
 from twisted.internet   import threads, defer
 from twisted.python     import log
 
+tmpDirName = 'social-' + str(os.geteuid())
+tmpDirPath = os.path.join(tempfile.gettempdir(), tmpDirName)
 
 _collection = TemplateLookup(directories=['templates'],
-                             module_directory='/tmp/social_templates',
+                             module_directory=tmpDirPath,
                              output_encoding='utf-8',
                              default_filters=['decode.utf8'],
                              collection_size=100)
