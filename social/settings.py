@@ -101,30 +101,33 @@ class SettingsResource(base.BaseResource):
         passwd1 = utils.getRequestArg(request, "passwd1", sanitize=False)
         passwd2 = utils.getRequestArg(request, "passwd2", sanitize=False)
 
-        yield self._render(request)
-
-        args["errorMsg"] = ""
         if not curr_passwd:
-            args["errorMsg"] = "Please enter your current password."
+            request.write('$$.alerts.error("%s");' % _("Enter your current password"))
+            defer.returnValue(None)
+        if not passwd1:
+            request.write('$$.alerts.error("%s");' % _("Enter new password"))
+            defer.returnValue(None)
+        if not passwd2:
+            request.write('$$.alerts.error("%s");' % _("Confirm new password"))
+            defer.returnValue(None)
         if passwd1 != passwd2:
-            args["errorMsg"] = "New passwords don't match."
+            request.write('$$.alerts.error("%s");' % _("Passwords do not match"))
+            defer.returnValue(None)
+        if curr_passwd == passwd1:
+            request.write('$$.alerts.error("%s");' % _("New password should be different from current password"))
+            defer.returnValue(None)
 
         cols = yield db.get(myKey, "entities", "emailId", "basic")
         emailId = cols.column.value
         col = yield db.get(emailId, "userAuth", "passwordHash")
         passwdHash = col.column.value
         if curr_passwd and passwdHash != utils.md5(curr_passwd):
-            args["errorMsg"] ="Incorrect Password"
+            request.write('$$.alerts.error("%s");' % _("Incorrect Password"))
+            defer.returnValue(None)
 
-        if args["errorMsg"]:
-            yield renderScriptBlock(request, "settings.mako", "changePasswd",
-                                    landing, "#settings-content", "set", **args)
-        else:
-            newPasswd = utils.md5(passwd1)
-            yield db.insert(emailId, "userAuth", newPasswd, "passwordHash")
-            args["successMsg"] = "Password changed."
-            yield renderScriptBlock(request, "settings.mako", "changePasswd",
-                                    landing, "#settings-content", "set", **args)
+        newPasswd = utils.md5(passwd1)
+        yield db.insert(emailId, "userAuth", newPasswd, "passwordHash")
+        request.write('$$.alerts.info("%s");' % _('Password changed'))
 
 
     @profile
@@ -133,7 +136,7 @@ class SettingsResource(base.BaseResource):
     def _edit(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
-        
+
         userInfo = {}
         calls = []
 
@@ -243,7 +246,7 @@ class SettingsResource(base.BaseResource):
             # TODO: If basic profile was edited, then logo, name and title could
             # also change, make sure these are reflected too.
             request.write('$$.alerts.info("%s");' % _('Profile updated'))
-        
+
         # Wait for name indices to be updated.
         if nameIndicesDeferreds:
             yield defer.DeferredList(nameIndicesDeferreds)
@@ -254,7 +257,7 @@ class SettingsResource(base.BaseResource):
         for section, items in suggestedSections.iteritems():
             if len(suggestedSections[section]) > 0:
                 tmp_suggested_sections[section] = items
-        args.update({'suggested_sections':tmp_suggested_sections})        
+        args.update({'suggested_sections':tmp_suggested_sections})
         yield renderScriptBlock(request, "settings.mako", "right",
                                 landing, ".right-contents", "set", **args)
 
@@ -338,7 +341,7 @@ class SettingsResource(base.BaseResource):
                 yield renderScriptBlock(request, "settings.mako", "editBasicInfo",
                                         landing, "#settings-content", "set", True,
                                         handlers = handlers, **args)
- 
+
             elif detail == "work":
                 """
                 yield renderScriptBlock(request, "settings.mako", "settingsTitle",
@@ -347,28 +350,28 @@ class SettingsResource(base.BaseResource):
                                         landing, "#settings-content", "set", True,
                                         handlers=handlers, **args)
                 """
- 
+
             elif detail == "personal":
                 yield renderScriptBlock(request, "settings.mako", "settingsTitle",
                                         landing, "#settings-title", "set", **args)
                 yield renderScriptBlock(request, "settings.mako", "editPersonal",
                                         landing, "#settings-content", "set", True,
                                         handlers=handlers, **args)
- 
+
             elif detail == "contact":
                 yield renderScriptBlock(request, "settings.mako", "settingsTitle",
                                         landing, "#settings-title", "set", **args)
                 yield renderScriptBlock(request, "settings.mako", "editContact",
                                         landing, "#settings-content", "set",True,
                                         handlers=handlers, **args)
- 
+
             elif detail == "passwd":
                 yield renderScriptBlock(request, "settings.mako", "settingsTitle",
                                         landing, "#settings-title", "set", **args)
                 yield renderScriptBlock(request, "settings.mako", "changePasswd",
                                         landing, "#settings-content", "set",True,
                                         handlers=handlers, **args)
- 
+
             elif detail == 'notify':
                 yield renderScriptBlock(request, "settings.mako", "settingsTitle",
                                         landing, "#settings-title", "set", **args)
@@ -381,7 +384,7 @@ class SettingsResource(base.BaseResource):
         for section, items in suggestedSections.iteritems():
             if len(suggestedSections[section]) > 0:
                 tmp_suggested_sections[section] = items
-        args.update({'suggested_sections':tmp_suggested_sections})        
+        args.update({'suggested_sections':tmp_suggested_sections})
         if script:
             yield renderScriptBlock(request, "settings.mako", "right",
                                     landing, ".right-contents", "set", **args)
@@ -536,7 +539,7 @@ class SettingsResource(base.BaseResource):
         landing = not self._ajax
         description = [""]
         detail = args["detail"]
-        
+
         if detail == "basic":
             description = ["""Your Basic details are the most discoverable
                             fields in your profile. They are visible everytime
@@ -575,11 +578,11 @@ class SettingsResource(base.BaseResource):
                              <i title="kol-eeg-o-sfeer">colleagosphere</i>
                              while you were
                              away.""",
-                           """ Here you can choose what kind of events 
+                           """ Here you can choose what kind of events
                              you like to be notified of."""]
-            
+
         args["description"] = description
-        
+
         suggestedSections = {}
 
         # Check Basic
@@ -599,7 +602,7 @@ class SettingsResource(base.BaseResource):
             contactInfo = utils.supercolumnsToDict(res).get("contact", {})
         else:
             contactInfo = args["contactInfo"]
-            
+
         phone = contactInfo.get('phone', None)
         if not phone:
             suggestedSections["contact"].append("Add a work phone")
@@ -611,42 +614,42 @@ class SettingsResource(base.BaseResource):
             personalInfo = utils.supercolumnsToDict(res).get("personal", {})
         else:
             personalInfo = args["personalInfo"]
-            
+
         currentCity = personalInfo.get('currentCity', None)
         if not currentCity:
             suggestedSections["personal"].append("Which city are you residing in")
-        
+
         # Check Work
-        suggestedSections["work"] = []
-        if "workInfo" not in args:
-            res = yield db.get_slice(myKey, "entities", ['work', 'employers', 'education'])
-            currentWorkInfo = utils.supercolumnsToDict(res).get("work", {})
-            previousWorkInfo = utils.supercolumnsToDict(res).get("employers", {})
-            educationInfo = utils.supercolumnsToDict(res).get("education", {})
-        else:
-            currentWorkInfo = args["currentWorkInfo"]
-            previousWorkInfo = args["previousWorkInfo"]
-            educationInfo = args["educationInfo"]
-        
-        if len(currentWorkInfo.keys()) == 0:
-            suggestedSections["work"].append("Write about your current work")
-        
-        if len(previousWorkInfo.keys()) == 0 and len(educationInfo.keys()) == 0:
-            suggestedSections["work"].append("Write something about your previous work")
-            suggestedSections["work"].append("Write about your academics")
+        #suggestedSections["work"] = []
+        #if "workInfo" not in args:
+        #    res = yield db.get_slice(myKey, "entities", ['work', 'employers', 'education'])
+        #    currentWorkInfo = utils.supercolumnsToDict(res).get("work", {})
+        #    previousWorkInfo = utils.supercolumnsToDict(res).get("employers", {})
+        #    educationInfo = utils.supercolumnsToDict(res).get("education", {})
+        #else:
+        #    currentWorkInfo = args["currentWorkInfo"]
+        #    previousWorkInfo = args["previousWorkInfo"]
+        #    educationInfo = args["educationInfo"]
+        #
+        #if len(currentWorkInfo.keys()) == 0:
+        #    suggestedSections["work"].append("Write about your current work")
+        #
+        #if len(previousWorkInfo.keys()) == 0 and len(educationInfo.keys()) == 0:
+        #    suggestedSections["work"].append("Write something about your previous work")
+        #    suggestedSections["work"].append("Write about your academics")
 
-        if len(educationInfo.keys()) == 0:
-            suggestedSections["work"].append("Write about your academics")
+        #if len(educationInfo.keys()) == 0:
+        #    suggestedSections["work"].append("Write about your academics")
 
-        academic_durations = [int(x.split(':')[0]) for x in educationInfo.keys()]
-        last_passed = sorted(academic_durations)[-1]
-        if (datetime.date.today().year - last_passed > 2) and \
-            (len(previousWorkInfo.keys()) == 0):
-            suggestedSections["work"].append("Write about your previous work")
+        #academic_durations = [int(x.split(':')[0]) for x in educationInfo.keys()]
+        #last_passed = sorted(academic_durations)[-1]
+        #if (datetime.date.today().year - last_passed > 2) and \
+        #    (len(previousWorkInfo.keys()) == 0):
+        #    suggestedSections["work"].append("Write about your previous work")
 
         defer.returnValue(suggestedSections)
-        
-        
+
+
     @profile
     @dump_args
     def render_POST(self, request):
