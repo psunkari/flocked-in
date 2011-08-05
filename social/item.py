@@ -182,7 +182,7 @@ class ItemResource(base.BaseResource):
         args["items"].update(fetchedItems)
         args["entities"].update(fetchedEntities)
         args["myLikes"] = myLikes
-        args["tags"] = fetchedTags 
+        args["tags"] = fetchedTags
         args["responses"] = {convId: responseKeys}
         if nextPageStart:
             args["oldest"] = utils.encodeKey(nextPageStart)
@@ -298,6 +298,9 @@ class ItemResource(base.BaseResource):
         (itemId, item) = yield utils.getValidItemId(request, "id")
         extraEntities = [item["meta"]["owner"]]
 
+        #Ignore if i am owner of the item
+        if myId == item["meta"]["owner"]:
+            defer.returnValue(None)
         # Check if I already liked the item
         try:
             cols = yield db.get(itemId, "itemLikes", myId)
@@ -411,6 +414,10 @@ class ItemResource(base.BaseResource):
 
         # Get the item and the conversation
         (itemId, item) = yield utils.getValidItemId(request, "id")
+
+        #Ignore if i am owner of the item
+        if myId == item["meta"]["owner"]:
+            defer.returnValue(None)
         # Make sure that I liked this item
         try:
             cols = yield db.get(itemId, "itemLikes", myId)
@@ -915,7 +922,7 @@ class ItemResource(base.BaseResource):
 
             d1.addCallback(removeConvFromFeed)
             d2 = db.insert(convId, 'items', timestamp, myId, 'unfollowed')
-            
+
             deferreds.extend([d1, d2])
 
         # Wait till all the operations are finished!
