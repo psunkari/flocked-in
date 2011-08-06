@@ -1523,3 +1523,8 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     width: 80%;
     text-align: right;
 }
+#welcome-message ul{
+  padding-left: 20px;
+  margin: 5px;
+}
+
