@@ -12,6 +12,14 @@ from social.isocial         import IAuthInfo
 class RequestFactory(server.Request):
     cookiename = 'session'
     session = None
+    session_saved = False
+
+    @defer.inlineCallbacks
+    def _saveSessionToDB(self, ignored=None):
+        if self.session and not self.session_saved and\
+           self.session.getComponent(IAuthInfo).username:
+            yield self.site.updateSession(self.session.uid, self.session)
+            self.session_saved = True
 
     def getSession(self, sessionInterface=None, create=False):
         def _component():
@@ -25,10 +33,7 @@ class RequestFactory(server.Request):
             return _component()
 
         # Save the updated session (only if we have a valid authinfo)
-        def requestDone(ignored):
-            if self.session and self.session.getComponent(IAuthInfo).username:
-                self.site.updateSession(self.session.uid, self.session)
-        self.notifyFinish().addCallback(requestDone)
+        self.notifyFinish().addErrback(self._saveSessionToDB)
 
         # If we have a session cookie, try to fetch the session from db
         # We use the existing session-id only if create is False
