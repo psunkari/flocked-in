@@ -49,6 +49,7 @@
     <div id="title">
       %if tagId:
         <span class="middle title">${tags[tagId]["title"]}</span>
+        <ul id='tag-actions-${tagId}' class="middle h-links">
           ${tag_actions(tagId, tagFollowing)}
         </ul>
       %else:
