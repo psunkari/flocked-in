@@ -130,23 +130,38 @@ input::-moz-focus-inner {
 .has-tooltip {
     position: relative;
 }
+
 .tooltip {
     display: none;
     position: absolute;
     margin: 0 -1px;
 }
-.tooltip.top {
+.tooltip.top-right {
     bottom: 100%;
-}
-.tooltip.bottom {
-    top: 100%;
-}
-.tooltip.right {
     right: 0;
 }
-.tooltip.left {
+.tooltip.bottom-right {
+    top: 100%;
+    right: 0;
+    margin-right: 4px;
+}
+.tooltip.top-left {
+    bottom: 100%;
     left: 0;
 }
+.tooltip.bottom-left {
+    top: 100%;
+    left: 0;
+}
+.tooltip.right {
+    top: 0;
+    left: 100%;
+}
+.tooltip.left {
+    top: 0;
+    right: 100%;
+}
+
 .tooltip-content {
     display: block;
     white-space: pre;
