@@ -106,14 +106,32 @@
 </%def>
 
 
-<%def name="acl_button(id, defaultVal, defaultLabel)">
+## acl_button can initialize its default value through a select event, using hard-coded values until then
+<%def name="acl_button(id, defaultVal, defaultLabel, defaultTooltip)">
   <input type="hidden" id="${id}" name="acl" value='${defaultVal}'/>
   %if script:
     <div id="${id}-wrapper">
-      <button class="acl-button button" id="${id}-label" onclick="$$.acl.showACL(event, '${id}');">${defaultLabel}</button>
+      <button class="acl-button acl-text-button has-tooltip" id="${id}-button" onclick="$$.acl.showACL(event, '${id}');">
+        <span>${_("With")}</span>
+        <span id="${id}-label">${defaultLabel}</span>
+        <span class="acl-down-arrow">&#9660;</span>
+        <div class="tooltip bottom-right"><span id="${id}-tooltip" class="tooltip-content">${defaultTooltip}</span></div>
+      </button>
       <ul id="${id}-menu" class="acl-menu" style="display:none;">
-        <li><a class="acl-item" _acl="org:${orgKey}"><div class="icon"></div>${_("Company")}</a></li>
-        <li><a class="acl-item" _acl="friends"><div class="icon"></div>${_("Friends")}</a></li>
+        <li>
+          <a class="acl-item has-tooltip" _acl="org:${orgKey}">
+            <div class="icon"></div>
+            <span class="acl-title">${_("Company")}</span>
+            <div class="tooltip left"><span class="tooltip-content">${_("Notifies only your friends and followers")}</span></div>
+          </a>
+        </li>
+        <li>
+          <a class="acl-item has-tooltip" _acl="friends">
+            <div class="icon"></div>
+            <span class="acl-title">${_("Friends")}</span>
+            <div class="tooltip left"><span class="tooltip-content">${_("Notifies all your friends")}</span></div>
+          </a>
+        </li>
         <li id="sharebar-acl-groups-sep" class="ui-menu-separator"></li>
         <li id="sharebar-acl-custom-sep" class="ui-menu-separator"></li>
         <li><a class="acl-item" _acl="custom"><div class="icon"></div>${_("Custom")}</a></li>
@@ -148,7 +166,7 @@
       <div id="sharebar-actions-wrapper">
         <ul id="attached-files" class="v-links busy-indicator" style="float:left"></ul>
         <ul id="sharebar-actions" class="h-links">
-          <li>${acl_button("sharebar-acl", '{"accept":{"orgs":["%s"]}}'%orgKey, "Company")}</li>
+          <li>${acl_button("sharebar-acl", '{"accept":{"orgs":["%s"]}}'%orgKey, "Company", "Notifies only your friends and followers")}</li>
           <li>${widgets.button("sharebar-submit", "submit", "default", None, "Share")}</li>
         </ul>
         <span class="clear" style="display:block"></span>

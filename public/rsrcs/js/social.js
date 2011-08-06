@@ -1079,7 +1079,7 @@ $$.data = data;
 var acl = {
     showACL: function(event, id) {
         var evt = $.event.fix(event),
-            $target = $(evt.target),
+            $target = $("#" + id + "-button"),
             $menu = $target.next()
 
         if (!$menu.hasClass("ui-menu")) {
@@ -1119,7 +1119,8 @@ var acl = {
     updateACL: function(id, ui) {
         var type = ui.item.children("a").first().attr("_acl"),
             aclObj = {accept:{}},
-            str = ui.item.text();
+            str = ui.item.find(".acl-title").text();
+            tooltip = ui.item.find(".tooltip-content").text();
 
         if (type === "public") {
             aclObj.accept.public = true;
@@ -1236,6 +1237,7 @@ var acl = {
             return;
         }
 
+        $("#"+id+"-tooltip").text(tooltip);
         $("#"+id).attr("value", $$.json.stringify(aclObj));
         $("#"+id+"-label").text(str);
     },
@@ -1250,9 +1252,11 @@ var acl = {
         $$.data.wait("/auto/mygroups", (function(groups) {
             items = [];
             $.each(groups || [], function(i, g) {
-                items.push('<li><a class="acl-item" _acl="group:' + g.id +
-                           '" title="'+ g.name +'"><div class="icon"></div>' +
-                           g.name + '</a></li>');
+                items.push('<li><a class="acl-item has-tooltip" _acl="group:' + g.id + '">' + 
+                           '<div class="icon"></div>' +
+                           '<span class="acl-title">' + g.name + '</span>' +
+                           '<div class="tooltip left"><span id="' + g.id + '-tooltip" class="tooltip-content">' + g.name + '</span></div>' + 
+                           '</a></li>');
             });
 
             if (items.length) {

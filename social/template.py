@@ -15,6 +15,7 @@ tmpDirPath = os.path.join(tempfile.gettempdir(), tmpDirName)
 _collection = TemplateLookup(directories=['templates'],
                              module_directory=tmpDirPath,
                              output_encoding='utf-8',
+                             input_encoding='utf-8',
                              default_filters=['decode.utf8'],
                              collection_size=100)
 
