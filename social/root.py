@@ -75,6 +75,7 @@ class SigninResource(resource.Resource):
         authinfo.organization = data.get("org", None)
         authinfo.isAdmin = True if data.has_key("isAdmin") else False
 
+        yield request._saveSessionToDB()
         redirectURL = utils.getRequestArg(request, "_r") or "/feed"
         util.redirectTo(urllib.unquote(redirectURL), request)
         request.finish()

@@ -303,11 +303,12 @@ class SettingsResource(base.BaseResource):
             val = getArg(request, typ)
             try:
                 return val if (0 < int(val) <= 3) else '0'
-            except ValueError:
+            except (ValueError,TypeError):
                 return '0'
 
-        notificationPref = [_get(x) for x in types]
-        yield db.insert(myId, 'entities', str(count), 'notify', 'basic')
+        prefVal = ''.join([_get(x) for x in types])
+        yield db.insert(myId, 'entities', prefVal, 'notify', 'basic')
+        request.write('$$.alerts.info("%s");' % _('Preferences saved'))
 
 
     @profile

@@ -390,7 +390,7 @@
       </tr>
       <% emailTemplate = _('E-mail notification when: %s') %>
       %for x in range(numTypes):
-        <% emailChecked = "checked='1'" if (int(notify[x]) & 2) else '' %>
+        <% emailChecked = "checked='1'" if (int(notify[x]) & 1) else '' %>
         <tr>
           <td>${_(labels[x])}</td>
           <td>
