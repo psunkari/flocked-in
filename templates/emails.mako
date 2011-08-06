@@ -211,7 +211,7 @@
   <td style="font-size: 14px;">
     <b>${senderName}</b> added you to ${groupName}.
     <br/><br/>
-    You can visit <a href="${rootUrl}/groups?start=${groupId}">${rootUrl/groups?start=${groupId}</a> to manage your subscription.
+    You can visit <a href="${rootUrl}/groups?start=${groupId}">${rootUrl}/groups?start=${groupId}</a> to manage your subscription.
   </td>
   ${footer()}
 </%def>
@@ -224,7 +224,7 @@
   <td style="font-size: 14px;">
     <b>${senderName}</b> just joined ${groupName}.
     <br/><br/>
-    You can visit <a href="${rootUrl}/groups">${rootUrl/groups</a> to manage all your groups.
+    You can visit <a href="${rootUrl}/groups">${rootUrl}/groups</a> to manage all your groups.
   </td>
   ${footer()}
 </%def>
