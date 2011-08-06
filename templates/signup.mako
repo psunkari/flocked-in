@@ -72,7 +72,7 @@
 
 <body>
   <div id="header">
-    <img src="/rsrcs/img/flocked-in.png" alt="Synovel">
+    <a href='/'><img id='sitelogo' src="/rsrcs/img/flocked-in.png" alt="Synovel"></a>
   </div>
 
   <div id="wrapper">

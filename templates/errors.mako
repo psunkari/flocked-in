@@ -49,7 +49,7 @@
   
   <body>
     <div id="header">
-      <img alt="Synovel" src="/rsrcs/img/flocked-in.png"/>
+      <a href='/'><img alt="Synovel" src="/rsrcs/img/flocked-in.png"/></a>
     </div>
   
     <div id="wrapper">

@@ -32,7 +32,7 @@
 
 <body>
   <div id="header">
-    <img alt="Synovel" src="/rsrcs/img/flocked-in.png"/>
+    <a href='/'><img id='sitelogo' alt="Synovel" src="/rsrcs/img/flocked-in.png"/></a>
     <ul id="header-links">
       <li><a href="/">Home</a></li>
       <li><a href="/">Signup</a></li>
