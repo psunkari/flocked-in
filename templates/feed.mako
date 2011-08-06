@@ -63,7 +63,8 @@
     <div class="sidebar-title">${_("Invite people")}</div>
     <form method="post" action="/people/invite" class="ajax" autocomplete="off" >
       <div class="input-wrap">
-        <input type="text" name="email" id="invite-others" placeholder="Email Address"/>
+        <% domain = me["basic"]["emailId"].split('@')[1] %>
+        <input type="text" name="email" id="invite-others" placeholder="someone@${domain}"/>
       </div>
       <input type="hidden" name="from" value="sidebar"/>
       <input class="button" type="submit" id="submit" value="${_('Submit')}"/>
@@ -159,7 +160,7 @@
     <form id="share-form" autocomplete="off" method="post" action="/item/new" class="ajax" >
       <div id="sharebar">
             <div class="input-wrap">
-            <input type="text" name="comment" placeholder="${_('What are you currently working on?')}"/>
+            <input type="text" name="comment" placeholder="${_('What are you working on?')}"/>
            </div>
           <input type="hidden" name="type" value="status"/>
       </div>
@@ -174,13 +175,10 @@
     </form>
     <div class="file-attach-wrapper">
         <form id="upload" action="/file" method="post" enctype="multipart/form-data">
-          <span class="file-overlay">
-            <input id="file-attach-input" type="file" name="file" size="1"/>
-          </span>
-          <button id="file-share" class="button" type="button" title="${_('Attach a file')}">
+          <input id="file-attach-input" type="file" name="file" size="1"/>
+          <button id="file-share" class="button" type="button" title="${_('Attach a file')}" onclick="$('#file-attach-input').click()">
             <img src="/rsrcs/img/attach.png" alt="${_('Attach a file')}"/>
           </button>
-          <!--<input type="submit" value="Submit"/>-->
         </form>
     </div>
     <div class="clear"></div>
@@ -189,7 +187,7 @@
 
 <%def name="share_status()">
   <div class="input-wrap">
-    <textarea name="comment" placeholder="${_('What are you currently working on?')}" />
+    <textarea name="comment" placeholder="${_('What are you working on?')}" />
   </div>
   <input type="hidden" name="type" value="status"/>
 </%def>
