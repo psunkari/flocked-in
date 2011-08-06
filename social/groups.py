@@ -341,9 +341,11 @@ class GroupsResource(base.BaseResource):
             yield renderScriptBlock(request, "groups.mako", "layout",
                                     landing, "#mainbar", "set", **args)
         if script:
-             yield renderScriptBlock(request, "groups.mako", "createGroup",
+            yield renderScriptBlock(request, "groups.mako", "createGroup",
                                     landing, "#add-user-wrapper", "set", **args)
-             request.write("$$.ui.bindFormSubmit('#group_form', function(){$('#add-user-wrapper').empty();$$.fetchUri('/groups');})");
+            script = "$$.ui.bindFormSubmit('#group_form', function(){$('#add-user-wrapper').empty();$$.fetchUri('/groups');})"
+            script = "<script>%s</script>"%(script) if landing else script
+            request.write(script);
 
 
     @defer.inlineCallbacks
