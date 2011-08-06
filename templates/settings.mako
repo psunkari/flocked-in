@@ -138,7 +138,7 @@
 
 <%def name="changePasswd()">
   <form class="ajax" id="settings-form" action="/settings/passwd"
-        method="post" enctype="multipart/form-data" onsubmit="return validate()">
+        method="post" enctype="multipart/form-data">
     <div class="styledform">
       <ul>
         <li>

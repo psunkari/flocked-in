@@ -42,11 +42,7 @@
       if (email == null || email == ""){
         document.getElementById('messages-wrapper').style.display = 'block';
         document.getElementById('messages-wrapper').innerHTML = 'Enter your Email.';
-        setTimeout(function(){
-          document.getElementById('messages-wrapper').style.display = 'none';
-          document.getElementById('messages-wrapper').innerHTML = '';
-        }, 3000)
-      return false
+        return false
       }
       return true
     }
@@ -57,16 +53,11 @@
       if (password != pwdrepeat){
         document.getElementById('messages-wrapper').style.display = 'block';
         document.getElementById('messages-wrapper').innerHTML = 'Passwords do not match.';
-        setTimeout(function(){
-          document.getElementById('messages-wrapper').style.display = 'none';
-          document.getElementById('messages-wrapper').innerHTML = '';
-        }, 3000)
-      return false
+        return false
       }
       return true
     }
   %endif
-
   </script>
 </head>
 
