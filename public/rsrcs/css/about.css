@@ -40,11 +40,13 @@ a:link, a:visited {
  * Header and the main navigation links
  */
 #sitelogo {
-    height: 35px;
+    /*height: 35px;
     width: 300px;
-    margin-top: 8px;
+    margin-top: 8px;*/
+    border: 0px none;
+    /*
     background: transparent url(/rsrcs/img/flocked-in.png) left center no-repeat;
-    float: left;
+    float: left;*/
 }
 #header-links {
     display: inline-block;

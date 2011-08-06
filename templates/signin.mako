@@ -11,12 +11,12 @@
   <link rel="shortcut icon" href="/rsrcs/img/favicon.ico" type="image/x-icon" />
   <script type="text/javascript">
     function validate() {
-      var username = document.getElementById('username');
+      var email = document.getElementById('email');
       var password = document.getElementById('password');
       var errorMessage = document.getElementById('error-message')
 
-      if (username.value == '') {
-        errorMessage.innerHTML = 'Enter your username';
+      if (email.value == '') {
+        errorMessage.innerHTML = 'Enter your company email';
         return false;
       }
       
@@ -32,7 +32,7 @@
 
 <body>
   <div id="header">
-    <img alt="Synovel" src="/rsrcs/img/flocked-in.png"/>
+    <a href='/'><img id='sitelogo' alt="Synovel" src="/rsrcs/img/flocked-in.png"/></a>
     <ul id="header-links">
       <li><a href="/">Home</a></li>
       <li><a href="/">Signup</a></li>
