@@ -201,6 +201,19 @@
       except Exception, e:
         log.err(e)
   %>
+  %if not conversations:
+    <span id="welcome-message">
+      Welcome to <a href='/'>Flocked.in.</a>
+      <ul >
+        <li>Share status updates, files, Ask questions, Create polls</li>
+        <li><a href='/people/invite'>Invite</a> your colleagues.</li>
+        <li><a href='/people?type=all'>Follow</a> your colleagues, <a href='/people/type=all'>Add</a> them as Friends</li>
+        <li><a href='/messages'>Send</a> private messages</li>
+        <li><a href='/groups/create'>Create</a> new groups. <a href='/groups?type=allGroups'>Join</a> Groups </li>
+        <li><a href='/settings'>Update</a> your profile</li>
+      </ul>
+    </span>
+  %endif
   %if nextPageStart:
     <% typ_filter = '&type=%s' %(itemType) if itemType else '' %>
     <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" href="/feed?start=${nextPageStart}&id=${feedId}" _ref="/feed/more?start=${nextPageStart}&id=${feedId}${typ_filter}">${_("Fetch older posts")}</a></div>
