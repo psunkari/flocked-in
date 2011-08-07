@@ -499,8 +499,7 @@ class PeopleResource(base.BaseResource):
             src = "sidebar" if len(rawEmailIds) == 1 else "people"
 
         if src == "sidebar" and self._ajax:
-            yield renderScriptBlock(request, "feed.mako", "invitePeopleBlock",
-                                    False, "#invite-people-block", "set")
+            request.write("$('#invite-others').val(''); $$.alerts.info('%s');" % _("Invite(s) sent"))
         elif src == "sidebar":
             request.redirect('/feed')
         elif src == "people" and self._ajax:
