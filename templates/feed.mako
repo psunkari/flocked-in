@@ -1,7 +1,7 @@
-<%! from social import utils, _, __, plugins %>
-<%! from twisted.python import log %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<%! from social import utils, _, __, plugins %>
+<%! from twisted.python import log %>
 
 <%namespace name="widgets" file="widgets.mako"/>
 <%namespace name="item" file="item.mako"/>

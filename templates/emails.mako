@@ -1,4 +1,3 @@
-
 <%def name="invite()">
   <html xmlns="http://www.w3.org/1999/xhtml">
   <body style="margin:5px;padding:0;color:#555;font-family:arial,sans-serif;">
