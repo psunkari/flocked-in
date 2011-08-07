@@ -57,7 +57,7 @@
             <label for="password">${_('Password')}</label></td>
             <input id="password" type="password" class="textfield" name="p" required ></input>
           </li>
-          <div id="error-message" class="error" style="padding-left: 15em; margin-left: 12px;">${reason}</div>
+          <div id="error-message" class="error-input">${reason}</div>
           <li>
             <label for="remember">${_('Remember me')}</label>
             <input type="checkbox" id="remember" checked="true" name="remember"/>

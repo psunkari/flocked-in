@@ -170,7 +170,7 @@
           <label for="pwdrepeat">${_('Confirm Password')}</label>
           <input type="password" class="textfield" name="pwdrepeat" autocomplete="off" required/>
         </li>
-        <li style="display:none" id="messages-wrapper" class="messages-error"></li>
+        <div id="messages-wrapper" class="error-input"></div>
       </ul>
       <div class="styledform-buttons">
         <button type="submit" class="default button" id="submit" value="Next">${_('Create Account')}</button>
@@ -225,7 +225,7 @@
             <label for="email">Email:</label>
             <input type="email" name="email" required autofocus/>
           </li>
-          <div id="messages-wrapper" class="error" style="padding-left: 15em; margin-left: 12px;"></div>
+          <div id="messages-wrapper" class="error-input"></div>
       </ul>
       <div class="styledform-buttons" >
         <input type="submit" class="default button" name="submit" value="Submit"></input>
@@ -247,7 +247,7 @@
             <label for="pwdrepeat">Confirm Password:</label>
             <input type="password" name="pwdrepeat" required />
           </li>
-          <div id="messages-wrapper" class="error" style="padding-left: 15em; margin-left: 12px;"></div>
+          <div id="messages-wrapper" class="error-input"></div>
       </ul>
       <input type='hidden' name='email' value=${email} />
       <input type='hidden' name='token' value=${token} />
