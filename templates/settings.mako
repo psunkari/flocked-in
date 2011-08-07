@@ -284,7 +284,7 @@
                 <input type="email" id="c_email" name="c_email" value="${emailId}" readonly='true' />
             </li>
             <li>
-                <label for="c_im">${_('Chat')}</label>
+                <label for="c_im">${_('Chat Id')}</label>
                 <input type="text" id="c_im" name="c_im" value="${contact.get('im', '')}" autofocus />
             </li>
             <li>
