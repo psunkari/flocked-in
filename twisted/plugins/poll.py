@@ -90,12 +90,6 @@ class PollResource(base.BaseResource):
     def _listVoters(self, request):
         convId, item = yield utils.getValidItemId(request, "id", "poll", ["options"])
 
-        myId = request.getSession(IAuthInfo).username
-        myVote = yield db.get_slice(myId, "userVotes", [convId])
-        myVote = myVote[0].column.value if myVote else None
-        if not myVote:
-            raise errors.InvalidRequest("You cannot see results unless you vote");
-
         option = utils.getRequestArg(request, "option")
         if not option or option not in item.get("options", {}):
             raise errors.MissingParams([_('Option')]);
