@@ -415,6 +415,12 @@ def getLatestCounts(request, asJSON=True):
         defer.returnValue(counts)
 
 
+@defer.inlineCallbacks
+def render_LatestCounts(request):
+    counts = yield getLatestCounts(request)
+    request.write('$$.menu.counts(%s);' % counts)
+ 
+
 #
 # Date and time formating utilities (format based on localizations)
 #

@@ -248,6 +248,7 @@ class NotificationsResource(base.BaseResource):
                 yield renderScriptBlock(request, "notifications.mako", "content",
                                     landing, "#notifications", "set", **args)
 
+            yield utils.render_LatestCounts(request)
 
     @profile
     @dump_args
