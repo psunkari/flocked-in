@@ -256,7 +256,7 @@
 <%def name="_suggestions()">
     %if suggestions:
       <div class="sidebar-chunk">
-        <div class="sidebar-title">${_("Suggestions")}</div>
+        <div class="sidebar-title">${_("Suggested people")}</div>
         %for userId in suggestions:
           <div style="margin-top: 5px">
             <div class="users-avatar">
