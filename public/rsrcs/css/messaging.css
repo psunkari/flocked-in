@@ -31,7 +31,13 @@
     padding: 0;
     min-height: 320px;
 }
-
+#empty-message {
+    text-align: center;
+    padding: 10px 20px;
+    border: 1px solid #3D85C6;
+    background-color: #E8EEFA;
+    margin-top: 25px;
+}
 .peoplemenu {
     margin-top: 4px;
 }

@@ -297,17 +297,24 @@
   </div>
   <div id="threads-wrapper" class="paged-container">
     <form action="/messages/thread" method="post" class="ajax">
+      
+      %if not mids:
+        <div id="empty-message" >No messages</div>
+      %else:
         ${toolbar_layout(view, nextPageStart, prevPageStart)}
         <div class="conversation-layout-container">
-            %for mid in mids:
-              ${render_conversation_row(script, mid, messages[mid])}
-            %endfor
+          %for mid in mids:
+            ${render_conversation_row(script, mid, messages[mid])}
+          %endfor
         </div>
-        <input type="hidden" name="filterType" value="${filterType}"/>
+      %endif
+      <input type="hidden" name="filterType" value="${filterType}"/>
     </form>
   </div>
   <div id="people-paging" class="pagingbar">
+    %if mids:
       ${paging()}
+    %endif
   </div>
 </%def>
 
