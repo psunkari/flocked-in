@@ -399,6 +399,11 @@ def getLatestCounts(request, asJSON=True):
     latest = supercolumnsToDict(latest)
     counts = dict([(key, len(latest[key])) for key in latest])
 
+    # Default keys for which counts should be set
+    defaultKeys = ["notifications", "people", "messages", "groups", "tags"]
+    for key in defaultKeys:
+        counts[key] = counts[key] if key in counts else 0
+
     groups = yield db.get_slice(myId, "entities", ['adminOfGroups'])
     groups = supercolumnsToDict(groups).get('adminOfGroups', {}).keys()
     if groups:
@@ -414,6 +419,12 @@ def getLatestCounts(request, asJSON=True):
     else:
         defer.returnValue(counts)
 
+
+@defer.inlineCallbacks
+def render_LatestCounts(request):
+    counts = yield getLatestCounts(request)
+    request.write('$$.menu.counts(%s);' % counts)
+ 
 
 #
 # Date and time formating utilities (format based on localizations)
