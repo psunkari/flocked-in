@@ -134,26 +134,19 @@
 
 <%def name="user_subactions(userKey, renderWrapper=True)">
   %if myKey != userKey:
-  %if renderWrapper:
-  <div class="sidebar-chunk">
-  <ul id="user-subactions-${userKey}" class="middle user-subactions v-links">
-  %endif
-    %if userKey in relations.friends:
-      <li><a href="/profile/unfriend?id=${userKey}" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}'); $.event.fix(event).preventDefault();">Remove as Friend</a></li>
-    %else:
-      %if relations.pending.get(userKey) == "0":
-        <li><a href="/profile/unfriend?id=${userKey}" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}'); $.event.fix(event).preventDefault();">Cancel Friend Request</a></li>
-      %endif
-      %if userKey in relations.subscriptions:
-        <li><a href="/profile/unfollow?id=${userKey}" onclick="$.post('/ajax/profile/unfollow', 'id=${userKey}'); $.event.fix(event).preventDefault();">Stop Following</a></li>
-      %endif
+    %if renderWrapper:
+      <div class="sidebar-chunk">
+      <ul id="user-subactions-${userKey}" class="middle user-subactions v-links">
+    %endif
+    %if relations.pending.get(userKey) == "0":
+      <li><a href="/profile/unfriend?id=${userKey}" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}'); $.event.fix(event).preventDefault();">Cancel Friend Request</a></li>
     %endif
     <li><a href="/profile/block?id=${userKey}" onclick="$.post('/ajax/profile/block', 'id=${userKey}'); $.event.fix(event).preventDefault();">Block User</a></li>
     <li><a href="/profile/review?id=${userKey}" onclick="$.post('/ajax/profile/review', 'id=${userKey}'); $.event.fix(event).preventDefault();">Request Admin Review</a></li>
-  %if renderWrapper:
-  </ul>
-  </div>
-  %endif
+    %if renderWrapper:
+      </ul>
+      </div>
+    %endif
   %endif
 </%def>
 
@@ -167,7 +160,7 @@
       <div>
         <span class="middle title">${user['basic']['name']}</span>
         <ul id="user-actions-${userKey}" class="middle user-actions h-links">
-          ${user_actions(userKey)}
+          ${user_actions(userKey, True)}
         </ul>
       </div>
       %if user['basic'].has_key('jobTitle'):

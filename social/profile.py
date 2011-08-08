@@ -548,7 +548,7 @@ class ProfileResource(base.BaseResource):
                 if not isFeed:
                     d = renderScriptBlock(request, "profile.mako", "user_actions",
                                     False, "#user-actions-%s"%targetKey, "set",
-                                    args=[targetKey, not isProfile], **data)
+                                    args=[targetKey, True], **data)
                     if isProfile:
                         def renderSubactions(ign):
                             return renderScriptBlock(request, "profile.mako",
