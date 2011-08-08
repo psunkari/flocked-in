@@ -193,9 +193,9 @@
             <textarea class="input-wrap" id="desc" name="desc"></textarea>
         </li>
         <li>
-            <label>Group Visibility</label>
-            <input type="radio" id="access" name="access" value="public">Public</input>
-            <input type="radio" id="access" name="access" value="private">Private</input>
+            <label>Membership</label>
+            <input type="checkbox" id="access" name="access" value="public">(Public) Anyone in the organization can join the group </input><br/>
+            <input type="checkbox" id="access" name="access" value="private">(Private) Membership needs group administrator approval</input>
         </li>
         <li>
             <label for="dp">Group Logo</label>

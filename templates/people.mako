@@ -29,9 +29,6 @@
             </span>
           </div>
           <div id="invite-people-wrapper">
-            %if not script:
-              ${invitePeople()}
-            %endif
           </div>
         </div>
         <div class="center-contents">
@@ -149,35 +146,29 @@
 </%def>
 
 <%def name="invitePeople()">
-  <form method="post" action="/people/invite" class="ajax">
-    <input type="hidden" name="from" value="people"/>
-    <div id="invite-people">
-      <div class="input-wrap">
-        <span class="icon invite-people-entry">&nbsp;</span>
-        <input type="text" name="email" placeholder="${_("Enter your colleague's email address")}"/>
+  <div class="header-form">
+    <form method="post" action="/people/invite" class="ajax">
+      <input type="hidden" name="from" value="people"/>
+      <div id="invite-people">
+        <div class="input-wrap">
+          <span class="icon invite-people-entry">&nbsp;</span>
+          <input type="text" name="email" placeholder="${_("Enter your colleague&#39;s email address")}"/>
+        </div>
+        <div class="input-wrap">
+          <span class="icon invite-people-entry">&nbsp;</span>
+          <input type="text" name="email" placeholder="${_("Enter your colleague&#39;s email address")}"/>
+        </div>
+        <div class="input-wrap">
+          <span class="icon invite-people-entry">&nbsp;</span>
+          <input type="text" name="email" placeholder="${_("Enter your colleague&#39;s email address")}"/>
+        </div>
       </div>
-      <div class="input-wrap">
-        <span class="icon invite-people-entry">&nbsp;</span>
-        <input type="text" name="email" placeholder="${_("Enter your colleague's email address")}"/>
+      <div class="header-form-buttons">
+        <button type="submit" class="button default">${_("Invite")}</button>
+        <button type="button" class="button" onclick="$('#invite-people-wrapper').empty()">${'Cancel'}</button>
       </div>
-      <div class="input-wrap">
-        <span class="icon invite-people-entry">&nbsp;</span>
-        <input type="text" name="email" placeholder="${_("Enter your colleague's email address")}"/>
-      </div>
-    </div>
-    <div class="conversation-composer-actions">
-      %if script:
-          <button type="submit" class="button default">
-              ${_('Invite')}
-          </button>
-          <button type="button" class="button" onclick="$('#invite-people-wrapper').empty()">
-              ${'Cancel'}
-          </button>
-      %else:
-          <a class="ajax" _ref="/messages">${'Cancel'}</a>
-      %endif
-    </div>
-  </form>
+    </form>
+  </div>
 </%def>
 
 <%def name="listInvitations()">
