@@ -62,6 +62,13 @@ class Links(object):
         if not url:
             raise errors.MissingParams([_('URL to be shared')])
 
+        if len(url.split()) >1:
+            match = utils._urlRegEx.search(url)
+            if match:
+                url = match.group()
+            else:
+                raise errors.InvalidRequest(_("Invalid URL '%s'")%(url))
+
         if len(url.split("://")) == 1:
             url = "http://" + url
 
@@ -159,7 +166,7 @@ class Links(object):
                 if element.attrib.get('property', '') == 'og:image':
                     ogImage = element.attrib.get('content', '')
 
-                if element.attrib.get('name', '') in ['description']:
+                if element.attrib.get('name', '') in ['description', 'Description']:
                     summary = element.attrib.get('content', '')
                     summary = summary.encode('utf-8')
 
