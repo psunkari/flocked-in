@@ -338,7 +338,7 @@ class SettingsResource(base.BaseResource):
             if detail == "basic":
                 yield renderScriptBlock(request, "settings.mako", "settingsTitle",
                                         landing, "#settings-title", "set", **args)
-                handlers["onload"] += """$$.ui.bindFormSubmit('#profile_form');"""
+                handlers["onload"] += """$$.ui.bindFormSubmit('#settings-content');"""
                 yield renderScriptBlock(request, "settings.mako", "editBasicInfo",
                                         landing, "#settings-content", "set", True,
                                         handlers = handlers, **args)
