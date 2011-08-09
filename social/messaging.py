@@ -798,6 +798,7 @@ class MessagingResource(base.BaseResource):
                     $$.messaging.autoFillUsers();
                     $('.conversation-composer-field-body').autogrow();
                     $$.ui.loadFileShareBlock();
+                    $$.ui.placeholders('#message_form [placeholder]');
                      """
             yield renderScriptBlock(request, "message.mako", "render_composer",
                                     landing, "#composer", "set", True,
