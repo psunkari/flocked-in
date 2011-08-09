@@ -556,6 +556,11 @@ class ProfileResource(base.BaseResource):
                                         "#user-subactions-%s"%targetKey, "set",
                                         args=[targetKey, False], **data)
                         d.addCallback(renderSubactions)
+
+                    def renderLatestCounts(ign):
+                        return utils.render_LatestCounts(request)
+
+                    d.addCallback(renderLatestCounts)
                     return d
                 else:
                     d = people.get_suggestions(request, constants.SUGGESTION_PER_PAGE, mini=True)
