@@ -558,7 +558,7 @@ class ProfileResource(base.BaseResource):
                         d.addCallback(renderSubactions)
 
                     def renderLatestCounts(ign):
-                        return utils.render_LatestCounts(request)
+                        return utils.render_LatestCounts(request, False)
 
                     d.addCallback(renderLatestCounts)
                     return d

@@ -19,13 +19,13 @@ class NotificationsResource(base.BaseResource):
     # String templates used in notifications.
     # Generally there are expected to be in past-tense since
     # notifications are record of something that already happened.
-    _commentTemplate = {1: ["%(user0)s commented on your %(itemType)s", 
+    _commentTemplate = {1: ["%(user0)s commented on your %(itemType)s",
                             "%(user0)s commented on %(owner)s's %(itemType)s"],
                         2: ["%(user0)s and %(user1)s commented on your %(itemType)s",
                             "%(user0)s and %(user1)s commented on %(owner)s's %(itemType)s"],
                         3: ["%(user0)s, %(user1)s and 1 other commented on your %(itemType)s",
                             "%(user0)s, %(user1)s and 1 other commented on %(owner)s's %(itemType)s"],
-                        4: ["%(user0)s, %(user1)s and %(count)s others commented on your %(itemType)s", 
+                        4: ["%(user0)s, %(user1)s and %(count)s others commented on your %(itemType)s",
                             "%(user0)s, %(user1)s and %(count)s others commented on %(owner)s's %(itemType)s"] }
 
     _answerTemplate = {1: ["%(user0)s answered your %(itemType)s",
@@ -101,7 +101,7 @@ class NotificationsResource(base.BaseResource):
 
         notifyStrs = {}
         notifyClasses = {}
-        
+
         fetchStart = utils.getRequestArg(request, 'start') or ''
         if fetchStart:
             fetchStart = utils.decodeKey(fetchStart)
@@ -153,7 +153,7 @@ class NotificationsResource(base.BaseResource):
                     for update in updates:
                         toFetchEntities.append(update.value)
                         notifyValues[notifyId].append(update.value)
-            
+
             elif len(notifyIdParts) == 4:   # Conversation updates
                 convId, convType, convOwnerId, notifyType = notifyIdParts
                 toFetchEntities.add(convOwnerId)
@@ -182,7 +182,7 @@ class NotificationsResource(base.BaseResource):
 
             # Limit noOfUsers to 4, to match with keys in template map
             if (noOfUsers > 4):
-              noOfUsers = 4 
+              noOfUsers = 4
 
             if x == "L":
                 tmpl = self._likesTemplate[noOfUsers]
@@ -247,8 +247,7 @@ class NotificationsResource(base.BaseResource):
             else:
                 yield renderScriptBlock(request, "notifications.mako", "content",
                                     landing, "#notifications", "set", **args)
-
-            yield utils.render_LatestCounts(request)
+            yield utils.render_LatestCounts(request, landing)
 
     @profile
     @dump_args
