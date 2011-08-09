@@ -1287,7 +1287,7 @@ var messaging = {
             select: function( event, ui ) {
                 $('.conversation-composer-recipients').append(
                     $$.messaging.formatUser(ui.item.value, ui.item.uid));
-                var rcpts = $('#recipientList').val().trim();
+                var rcpts = jQuery.trim($('#recipientList').val());
                 rcpts = (rcpts == "") ? ui.item.uid: rcpts+","+ui.item.uid
                 $('#recipientList').val(rcpts)
                 this.value = "";
