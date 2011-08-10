@@ -21,6 +21,9 @@ _sendingAjaxRequest: function(evt, xhr, options) {
         currentUri = social.parseUri($.address.value()),
         separator = null, csrfToken = null, payload = null;
 
+    if (!social._historyHasStates && (currentUri.path == '' || currentUri.path == '/'))
+        currentUri = social.parseUri(window.location.href);
+
     for (var i=0; i<cookies.length; i++) {
         var cookie = $.trim(cookies[i]);
         if (cookie.indexOf('token') == 0)
