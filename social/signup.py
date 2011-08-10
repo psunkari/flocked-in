@@ -192,6 +192,7 @@ class SignupResource(BaseResource):
             authinfo.username = userId
             authinfo.organization = orgId
             authinfo.isAdmin = False
+            yield request._saveSessionToDB()
 
             cols = yield db.get_slice(domain, "invitations", [emailId])
             cols = utils.supercolumnsToDict(cols)
