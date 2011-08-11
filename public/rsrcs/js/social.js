@@ -766,7 +766,6 @@ var ui = {
           }
           d.then(function(data){
             $$.ui.prepareUploadForm(form, data);
-            //return
             var uploadXhr = $.ajax(form.prop("action"), {
               type: "POST",
               dataType: "json",
@@ -842,13 +841,18 @@ var ui = {
         $(selector).submit(function() {
             $.ajax(this.action, {
                 type: "POST",
-                dataType: "html",
+                dataType: "json",
                 data: $(selector+' :input').not(':file').serializeArray(),
                 files: $(":file", this),
                 processData: false
             }).complete(function(data) {
+                $(selector).find(":file").val("");
+                //if (jQuery.isFunction(onCompleteFunc)){
+                //    onCompleteFunc(data)
+                //}
+            }).success(function(data) {
                 if (jQuery.isFunction(onCompleteFunc)){
-                    onCompleteFunc()
+                    onCompleteFunc(data)
                 }
             });
             return false

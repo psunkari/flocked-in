@@ -87,9 +87,17 @@
     <div class="conv-data">
       <%
         hasReason = reasonStr and reasonStr.has_key(convId)
-        hasComments = responses and len(responses.get(convId, {}))
-        hasLikes = likes and len(likes.get(convId, {}))
-        hasTags = items and items[convId].get("tags", {})
+        hasKnownComments = responses and len(responses.get(convId, {}))
+        hasTags = items[convId].get("tags", {})
+
+        likesCount = int(items[convId]["meta"].get("likesCount", "0"))
+        if likesCount:
+            iLike = myLikes and convId in myLikes and len(myLikes[convId])
+            knownLikes = likes.get(convId, []) if likes else []
+            hasKnownLikes = (likes and len(knownLikes)) or iLike
+        else:
+            hasKnownLikes, iLike = None, None
+
         convType = convMeta["type"]
         convOwner = convMeta["owner"]
       %>
@@ -103,20 +111,18 @@
         %endif
           ${self.conv_root(convId, hasReason)}
           <div id="item-footer-${convId}" class="conv-footer busy-indicator">
-            ${self.conv_footer(convId, hasComments, hasLikes, hasTags)}
+            ${self.conv_footer(convId, hasKnownComments, hasKnownLikes, hasTags)}
           </div>
         </div>
       </div>
-      <div id="conv-meta-wrapper-${convId}" class="conv-meta-wrapper${' no-comments' if not hasComments else ''}${' no-tags' if not hasTags else ''}${' no-likes' if not hasLikes else ''}">
+      <div id="conv-meta-wrapper-${convId}" class="conv-meta-wrapper${' no-comments' if not hasKnownComments else ''}${' no-tags' if not hasTags else ''}${' no-likes' if not hasKnownLikes else ''}">
         <div id="conv-tags-wrapper-${convId}" class="tags-wrapper">
           ${self.conv_tags(convId)}
         </div>
         <div id="conv-likes-wrapper-${convId}" class="likes-wrapper">
           <%
-            count = int(items[convId]["meta"].get("likesCount", "0"))
-            if count:
-              iLike = myLikes and convId in myLikes and len(myLikes[convId])
-              self.conv_likes(convId, count, iLike, likes.get(convId, []) if likes else [])
+            if hasKnownLikes:
+              self.conv_likes(convId, likesCount, iLike, knownLikes)
           %>
         </div>
         <div id="conv-comments-wrapper-${convId}" class="comments-wrapper">

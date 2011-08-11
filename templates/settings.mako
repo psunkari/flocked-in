@@ -85,7 +85,7 @@
     jobTitle = me.get("basic", {}).get("jobTitle", '')
     myTimezone = me.get("basic", {}).get("timezone", '')
   %>
-  <form id="settings-form" action="/settings" method="post" class="ajax" enctype="multipart/form-data">
+  <form id="settings-form" action="/ajax/settings" method="post" class="ajax" enctype="multipart/form-data">
     <div class="styledform">
       <ul>
         <li>

@@ -268,26 +268,20 @@ class ProfileResource(base.BaseResource):
             myItem["meta"]["target"] = targetKey
             d6 = db.batch_insert(myItemId, "items", myItem)
             d7 = db.batch_insert(targetItemId, "items", targetItem)
-            d8 = feed.pushToFeed(myKey, myItem["meta"]["uuid"], myItemId,
-                                  myItemId, responseType, itemType, myKey)
-            d9 = feed.pushToFeed(targetKey, targetItem["meta"]["uuid"],
-                                  targetItemId, targetItemId, responseType,
-                                  itemType, targetKey)
 
             userItemValue = ":".join([responseType, myItemId,
                                       myItemId, "activity", myKey, ""])
-            d10 =  db.insert(myKey, "userItems", userItemValue,
-                             myItem["meta"]['uuid'])
+            d8 = db.insert(myKey, "userItems", userItemValue,
+                           myItem["meta"]['uuid'])
             userItemValue = ":".join([responseType, targetItemId, targetItemId,
                                       itemType, targetKey, ""])
-            d11 =  db.insert(targetKey, "userItems", userItemValue,
-                             targetItem["meta"]['uuid'])
+            d9 = db.insert(targetKey, "userItems", userItemValue,
+                           targetItem["meta"]['uuid'])
 
-            value = ":".join([responseType, myKey, targetItemId, itemType, targetKey])
-
+            # TODO: Push to feeds of friends and followers of both users.
             # TODO: Notify target user about the accepted request.
 
-            calls = [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11]
+            calls = [d1, d2, d3, d4, d5, d6, d7, d8, d9]
             calls.append(self._removeFromPending(myKey, targetKey))
             calls.append(self._removeNotification(myKey, targetKey))
 

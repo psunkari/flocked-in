@@ -217,7 +217,7 @@
         <div class="conversation-composer-recipients"></div>
         <input name="recipients" id="recipientList" type="hidden"/>
         <div>
-            <input class="conversation-composer-field-recipient" type="text"  size="15" placeholder="${_('Type a Name') |h}"/>
+            <input class="conversation-composer-field-recipient" type="text"  size="15" placeholder="${_('Enter a name') |h}"/>
         </div>
       </div>
       <div class="input-wrap conversation-composer-field">

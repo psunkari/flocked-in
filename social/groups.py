@@ -113,16 +113,15 @@ class GroupsResource(base.BaseResource):
         d3 = db.insert(groupId, "groupMembers", itemId, userId)
         d4 = db.batch_insert(itemId, 'items', item)
 
-        d5 = feed.pushToFeed(userId, item["meta"]["uuid"], itemId,
+        d5 = feed.pushToFeed(groupId, item["meta"]["uuid"], itemId,
                              itemId, responseType, itemType, userId)
-        d6 = feed.pushToFeed(groupId, item["meta"]["uuid"], itemId,
-                             itemId, responseType, itemType, userId)
+        d6 = feed.pushToOthersFeed(userId, item["meta"]["uuid"], itemId, itemId,
+                    _acl, responseType, itemType, userId, promoteActor=False)
 
-        d7 = feed.pushToOthersFeed(userId, item["meta"]["uuid"], itemId, itemId,
-                                   _acl, responseType, itemType, userId)
-        d8 = utils.updateDisplayNameIndex(userId, [groupId],
+        d7 = utils.updateDisplayNameIndex(userId, [groupId],
                                           userInfo['basic']['name'], None)
-        deferreds = [d1, d2, d3, d4, d5, d6, d7, d8]
+
+        deferreds = [d1, d2, d3, d4, d5, d6, d7]
         yield defer.DeferredList(deferreds)
 
 
@@ -290,20 +289,17 @@ class GroupsResource(base.BaseResource):
         d2 = db.remove(myId, "entityGroupsMap", groupId)
         d3 = db.batch_insert(itemId, 'items', item)
         d4 = db.remove(groupId, "groupMembers", myId)
-        #d4 = db.insert(groupId, "groupMembers", itemId, myId)
 
-        d5 = feed.pushToFeed(myId, item["meta"]["uuid"], itemId,
-                             itemId, responseType, itemType, myId)
+        d5 = feed.pushToOthersFeed(myId, item["meta"]["uuid"], itemId, itemId,
+                        _acl, responseType, itemType, myId, promoteActor=False)
+        d6 = renderScriptBlock(request, "groups.mako", "group_actions",
+                               landing, "#group-actions-%s" %(groupId),
+                               "set", **args)
 
-        d6 = feed.pushToOthersFeed(myId, item["meta"]["uuid"], itemId, itemId,
-                                   _acl, responseType, itemType, myId)
-        d7 =  renderScriptBlock(request, "groups.mako", "group_actions",
-                                landing, "#group-actions-%s" %(groupId),
-                                "set", **args)
-        d8 = utils.updateDisplayNameIndex(myId, [groupId], None,
+        d7 = utils.updateDisplayNameIndex(myId, [groupId], None,
                                           args['me']['basic']['name'])
 
-        yield defer.DeferredList([d1, d2, d3, d4, d5, d6, d7, d8])
+        yield defer.DeferredList([d1, d2, d3, d4, d5, d6, d7])
 
 
     @profile

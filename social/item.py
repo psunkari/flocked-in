@@ -491,11 +491,13 @@ class ItemResource(base.BaseResource):
             yield db.insert(myId, "userItems_"+convType, userItemValue, timeUUID)
 
         yield feed.pushToFeed(myId, timeUUID, itemId, convId, responseType,
-                              convType, convOwnerId, myId, entities=extraEntities)
+                              convType, convOwnerId, myId,
+                              entities=extraEntities, promote=False)
 
         # 4. update feed, feedItems, feed_* of user's followers/friends
         yield feed.pushToOthersFeed(myId, timeUUID, itemId, convId, convACL,
-                                    responseType, convType, convOwnerId, entities=extraEntities)
+                                    responseType, convType, convOwnerId,
+                                    entities=extraEntities, promoteActor=False)
 
         item["meta"]["likesCount"] = str(likesCount + 1)
         args["items"] = {itemId: item}
@@ -716,12 +718,13 @@ class ItemResource(base.BaseResource):
 
         # 5. Update my feed.
         yield feed.pushToFeed(myId, timeUUID, itemId, convId, responseType,
-                              convType, convOwnerId, myId)
+                              convType, convOwnerId, myId, promote=False)
 
         # 6. Push to other's feeds
         convACL = conv["meta"].get("acl", "company")
         yield feed.pushToOthersFeed(myId, timeUUID, itemId, convId, convACL,
-                                    responseType, convType, convOwnerId)
+                                    responseType, convType, convOwnerId,
+                                    promoteActor=False)
 
         yield self.notify("C", convId, timeUUID, convType=convType,
                           convOwnerId=convOwnerId, myId=myId, me=args["me"],
@@ -897,15 +900,12 @@ class ItemResource(base.BaseResource):
         timeUUID = uuid.uuid1().bytes
         convOwnerId = item["meta"]["owner"]
         responseType = "T"
-
-        yield feed.pushToFeed(myId, timeUUID, itemId, itemId, responseType,
-                              convType, convOwnerId, myId, tagId=tagId)
         if followers:
-            yield feed.pushToOthersFeed(myId, timeUUID, itemId, itemId, convACL,
-                                        responseType, convType, convOwnerId,
-                                        others=followers, tagId=tagId)
-        #TODO: update userFeed
-        #TODO: notifications
+            yield feed.pushToOthersFeed(myId, timeUUID, itemId, itemId,
+                                convACL, responseType, convType, convOwnerId,
+                                others=followers, tagId=tagId, promoteActor=False)
+
+        #TODO: Send notification to the owner of conv
 
 
     @profile
