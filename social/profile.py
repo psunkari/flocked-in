@@ -29,18 +29,21 @@ class ProfileResource(base.BaseResource):
         yield db.insert(targetId, "latest", myId, timeUUID, "people")
 
 
+    @defer.inlineCallbacks
+    def _removeNofitication(self, entityId, targetId):
+        cols = yield db.get_slice(entityId, "latest", ['people'])
+        cols = utils.supercolumnsToDict(cols)
+        for tuuid, key in cols.get('people', {}).items():
+            if key == targetId:
+                yield db.remove(entityId, "latest", tuuid, 'people')
+
+
     # Remove notifications about a particular user.
     # XXX: Assuming that there wouldn't be too many items here.
     @defer.inlineCallbacks
     def _removeFromPending(self, myId, targetId):
         yield db.remove(myId, "pendingConnections", targetId)
         yield db.remove(targetId, "pendingConnections", myId)
-
-        cols = yield db.get_slice(myId, "latest", ['people'])
-        cols = utils.supercolumnsToDict(cols)
-        for tuuid, key in cols.get('people', {}).items():
-            if key == targetId:
-                yield db.remove(myId, "latest", tuuid, 'people')
 
 
     @profile
@@ -181,8 +184,7 @@ class ProfileResource(base.BaseResource):
     def _follow(self, myKey, targetKey):
         d1 = db.insert(myKey, "subscriptions", "", targetKey)
         d2 = db.insert(targetKey, "followers", "", myKey)
-        yield d1
-        yield d2
+        yield defer.DeferredList([d1, d2])
 
 
     @profile
@@ -191,8 +193,7 @@ class ProfileResource(base.BaseResource):
     def _unfollow(self, myKey, targetKey):
         d1 = db.remove(myKey, "subscriptions", targetKey)
         d2 = db.remove(targetKey, "followers", myKey)
-        yield d1
-        yield d2
+        yield defer.DeferredList([d1, d2])
 
 
     @profile
@@ -288,6 +289,7 @@ class ProfileResource(base.BaseResource):
 
             calls = [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11]
             calls.append(self._removeFromPending(myKey, targetKey))
+            calls.append(self._removeNofitication(myKey, targetKey))
 
         # No incoming connection request.  Send a request to the target users.
         except ttypes.NotFoundException:
@@ -300,9 +302,17 @@ class ProfileResource(base.BaseResource):
 
 
     @defer.inlineCallbacks
-    def _cancelFriendRequest(self, myKey, targetKey):
-        yield self._removeFromPending(myKey, targetKey)
-        # TODO: UI update
+    def _cancelFriendRequest(self, myId, targetId):
+        try:
+            col = yield db.get(myId, "pendingConnections", targetId)
+            yield self._removeFromPending(myId, targetId)
+            if col.column.value == '0':
+                yield self._removeNofitication(targetId, myId)
+            else:
+                yield self._removeNofitication(myId, targetId)
+
+        except:
+            pass
 
 
     @defer.inlineCallbacks
@@ -356,7 +366,10 @@ class ProfileResource(base.BaseResource):
         yield db.batch_mutate(mutations)
         # TODO: delete the notifications and items created while
         # sending&accepting friend request
+
+        #TODO: check if removing pending requests & notifications is necessary.
         yield self._removeFromPending(myKey, targetKey)
+        yield self._removeNofitication(myKey, targetKey)
 
 
     @profile
@@ -532,6 +545,8 @@ class ProfileResource(base.BaseResource):
                 actionDeferred = self._follow(myKey, targetKey)
             elif action == "unfollow":
                 actionDeferred = self._unfollow(myKey, targetKey)
+            elif action == 'cancelFR':
+                actionDeferred = self._cancelFriendRequest(myKey, targetKey)
             else:
                 raise errors.NotFoundError()
 

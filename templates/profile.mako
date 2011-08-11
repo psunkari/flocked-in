@@ -139,7 +139,7 @@
       <ul id="user-subactions-${userKey}" class="middle user-subactions v-links">
     %endif
     %if relations.pending.get(userKey) == "0":
-      <li><a href="/profile/unfriend?id=${userKey}" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}'); $.event.fix(event).preventDefault();">Cancel Friend Request</a></li>
+      <li><a href="/profile/cancelFR?id=${userKey}" onclick="$.post('/ajax/profile/cancelFR', 'id=${userKey}'); $.event.fix(event).preventDefault();">Cancel Friend Request</a></li>
     %endif
     <li><a href="/profile/block?id=${userKey}" onclick="$.post('/ajax/profile/block', 'id=${userKey}'); $.event.fix(event).preventDefault();">Block User</a></li>
     <li><a href="/profile/review?id=${userKey}" onclick="$.post('/ajax/profile/review', 'id=${userKey}'); $.event.fix(event).preventDefault();">Request Admin Review</a></li>
@@ -224,7 +224,7 @@
         <button class="acl-button button" onclick="$$.ui.showPopup(event)">Respond to Friend Request</button>
         <ul class="acl-menu" style="display:none;">
             <li><a class="acl-item" _acl="public" onclick="$.post('/ajax/profile/friend', 'id=${userKey}')"><div class="icon"></div>${_("Accept")}</a></li>
-            <li><a class="acl-item" _acl="friends" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}')"><div class="icon"></div>${_("Reject")}</a></li>
+            <li><a class="acl-item" _acl="friends" onclick="$.post('/ajax/profile/cancelFR', 'id=${userKey}')"><div class="icon"></div>${_("Reject")}</a></li>
         </ul>
       %else:
         <button class="button disabled"><span class="button-text">Friend request sent</span></button>
