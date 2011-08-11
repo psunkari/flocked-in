@@ -182,6 +182,11 @@ class GroupsResource(base.BaseResource):
                 cols = yield db.get(groupId, "pendingConnections", userId)
                 yield self._removeFromPending(groupId, userId)
                 yield self._addMember(request, groupId, userId, myOrgId)
+                yield renderScriptBlock(request, "groups.mako",
+                                        "_pendingGroupRequestsActions", False,
+                                        '#pending-group-request-actions-%s' %(userId),
+                                        "set", args=[groupId, userId, "accept"])
+
             except ttypes.NotFoundException:
                 pass
 
@@ -199,6 +204,10 @@ class GroupsResource(base.BaseResource):
             try:
                 cols = yield db.get(groupId, "pendingConnections", userId)
                 yield self._removeFromPending(groupId, userId)
+                yield renderScriptBlock(request, "groups.mako",
+                                        "_pendingGroupRequestsActions", False,
+                                        '#pending-group-request-actions-%s' %(userId),
+                                        "set", args=[groupId, userId, "reject"])
             except ttypes.NotFoundException:
                 pass
 
@@ -216,12 +225,18 @@ class GroupsResource(base.BaseResource):
             raise errors.InvalidRequest(_("An administrator cannot ban himself/herself from the group"))
 
         if myKey in group["admins"]:
-            yield self._removeFromPending(groupId, userId)
-
-            # If the users is already a member, remove the user from the group
-            yield db.remove(groupId, "groupMembers", userId)
-            yield db.remove(groupId, "followers", userId)
-            yield db.remove(userId, "entityGroupsMap", groupId)
+            try:
+                cols = yield db.get(groupId, "pendingConnections", userId)
+                yield self._removeFromPending(groupId, userId)
+                yield renderScriptBlock(request, "groups.mako",
+                                        "_pendingGroupRequestsActions", False,
+                                        '#pending-group-request-actions-%s' %(userId),
+                                        "set", args=[groupId, userId, "block"])
+            except ttypes.NotFoundException:
+                # If the users is already a member, remove the user from the group
+                yield db.remove(groupId, "groupMembers", userId)
+                yield db.remove(groupId, "followers", userId)
+                yield db.remove(userId, "entityGroupsMap", groupId)
 
             # Add user to blocked users
             yield db.insert(groupId, "blockedUsers", '', userId)

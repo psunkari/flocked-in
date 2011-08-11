@@ -282,6 +282,20 @@
   %endif
 </%def>
 
+<%def name="_pendingGroupRequestsActions(groupId, userId, action='')">
+  %if action == 'accept':
+    <button class="button disabled"><span class="button-text">${_("Accepted")}</span></button>
+  %elif action == 'reject':
+    <button class="button disabled"><span class="button-text">${_("Rejected")}</span></button>
+  %elif action == 'block':
+    <button class="button disabled"><span class="button-text">${_("Blocked")}</span></button>
+  %else:
+    <button class="button default" onclick="$.post('/ajax/groups/approve', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Accept")}</span></button>
+    <button class="button default" onclick="$.post('/ajax/groups/reject', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Reject")}</span></button>
+    <button class="button default" onclick="$.post('/ajax/groups/block', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Block")}</span></button>
+  %endif
+
+</%def>
 
 <%def name="_pendingRequestUser(userId, groupId=None)">
   <div class="users-avatar">
@@ -296,10 +310,8 @@
       <div class="user-details-name">${_("Group:")} ${utils.groupName(groupId, entities[groupId])}</div>
     %endif
     <div class="user-details-actions">
-      <ul id="user-actions-${userId}" class="middle user-actions h-links">
-        <button class="button default" onclick="$.post('/ajax/groups/approve', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Accept")}</span></button>
-        <button class="button default" onclick="$.post('/ajax/groups/reject', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Reject")}</span></button>
-        <button class="button default" onclick="$.post('/ajax/groups/block', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Block")}</span></button>
+      <ul id="pending-group-request-actions-${userId}" class="middle user-actions h-links">
+        ${self._pendingGroupRequestsActions(groupId, userId)}
       </ul>
     </div>
   </div>
