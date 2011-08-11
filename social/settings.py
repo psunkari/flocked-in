@@ -4,6 +4,7 @@ import time
 import uuid
 from random                 import sample
 import datetime
+import json
 
 from twisted.web            import resource, server, http
 from twisted.python         import log
@@ -192,6 +193,7 @@ class SettingsResource(base.BaseResource):
 
         userInfo = {}
         calls = []
+        basicUpdatedInfo = {}
 
         me = yield db.get_slice(myKey, 'entities')
         me = utils.supercolumnsToDict(me)
@@ -204,7 +206,10 @@ class SettingsResource(base.BaseResource):
             val = utils.getRequestArg(request, cn)
             if val:
                 userInfo.setdefault("basic", {})[cn] = val
-
+                basicUpdatedInfo[cn] = val
+            else:
+                basicUpdatedInfo[cn] = me['basic'].get(cn, "")
+                
         # Update name indicies of organization and friends.
         nameIndexKeys = friends + [args["orgKey"]]
         nameIndicesDeferreds = []
@@ -232,6 +237,8 @@ class SettingsResource(base.BaseResource):
             if not userInfo.has_key("basic"):
                 userInfo["basic"] = {}
             userInfo["basic"]["avatar"] = avatar
+            avatarURI = utils.userAvatar(myKey, userInfo)
+            basicUpdatedInfo["avatar"] = avatarURI
 
         # Contact information at work.
         c_im = utils.getRequestArg(request, "c_im")
@@ -298,7 +305,15 @@ class SettingsResource(base.BaseResource):
         else:
             # TODO: If basic profile was edited, then logo, name and title could
             # also change, make sure these are reflected too.
-            request.write('$$.alerts.info("%s");' % _('Profile updated'))
+            if len(basicUpdatedInfo.keys()) > 0:
+                response = """
+                                <textarea data-type="application/json">
+                                  %s
+                                </textarea>
+                           """ % (json.dumps(basicUpdatedInfo))
+                request.write(response)
+            else:
+                request.write('$$.alerts.info("%s");' % _('Profile updated'))
 
         # Wait for name indices to be updated.
         if nameIndicesDeferreds:
@@ -311,6 +326,7 @@ class SettingsResource(base.BaseResource):
             if len(suggestedSections[section]) > 0:
                 tmp_suggested_sections[section] = items
         args.update({'suggested_sections':tmp_suggested_sections})
+
         yield renderScriptBlock(request, "settings.mako", "right",
                                 landing, ".right-contents", "set", **args)
 
@@ -357,7 +373,15 @@ class SettingsResource(base.BaseResource):
             if detail == "basic":
                 yield renderScriptBlock(request, "settings.mako", "settingsTitle",
                                         landing, "#settings-title", "set", **args)
-                handlers["onload"] += """$$.ui.bindFormSubmit('#settings-form');"""
+                handlers["onload"] += """$$.ui.bindFormSubmit('#settings-form',
+                    function(data){
+                      if (data.avatar){
+                        var imageUrl = data.avatar
+                        $('#avatar').css('background-image', 'url(' + imageUrl + ')');
+                      }
+                      $('#name').html(data.name + ', ' + data.jobTitle)
+                      $$.alerts.info("%s");
+                    });""" % _('Profile updated')
                 yield renderScriptBlock(request, "settings.mako", "editBasicInfo",
                                         landing, "#settings-content", "set", True,
                                         handlers = handlers, **args)
