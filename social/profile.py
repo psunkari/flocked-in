@@ -30,7 +30,7 @@ class ProfileResource(base.BaseResource):
 
 
     @defer.inlineCallbacks
-    def _removeNofitication(self, entityId, targetId):
+    def _removeNotification(self, entityId, targetId):
         cols = yield db.get_slice(entityId, "latest", ['people'])
         cols = utils.supercolumnsToDict(cols)
         for tuuid, key in cols.get('people', {}).items():
@@ -289,7 +289,7 @@ class ProfileResource(base.BaseResource):
 
             calls = [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11]
             calls.append(self._removeFromPending(myKey, targetKey))
-            calls.append(self._removeNofitication(myKey, targetKey))
+            calls.append(self._removeNotification(myKey, targetKey))
 
         # No incoming connection request.  Send a request to the target users.
         except ttypes.NotFoundException:
@@ -307,9 +307,9 @@ class ProfileResource(base.BaseResource):
             col = yield db.get(myId, "pendingConnections", targetId)
             yield self._removeFromPending(myId, targetId)
             if col.column.value == '0':
-                yield self._removeNofitication(targetId, myId)
+                yield self._removeNotification(targetId, myId)
             else:
-                yield self._removeNofitication(myId, targetId)
+                yield self._removeNotification(myId, targetId)
 
         except:
             pass
@@ -369,7 +369,7 @@ class ProfileResource(base.BaseResource):
 
         #TODO: check if removing pending requests & notifications is necessary.
         yield self._removeFromPending(myKey, targetKey)
-        yield self._removeNofitication(myKey, targetKey)
+        yield self._removeNotification(myKey, targetKey)
 
 
     @profile
