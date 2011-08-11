@@ -99,43 +99,47 @@ def deleteFromOthersFeed(userId, itemId, convId, itemType, acl,
 @profile
 @defer.inlineCallbacks
 @dump_args
-def pushToOthersFeed(userKey, timeuuid, itemKey, parentKey,
-                     acl, responseType, itemType, convOwner,
-                     others=None, tagId='', entities=None):
+def pushToOthersFeed(userKey, timeuuid, itemKey, parentKey, acl,
+                     responseType, itemType, convOwner, others=None,
+                     tagId='', entities=None, promoteActor=True):
     if not others:
         others = yield utils.expandAcl(userKey, acl, parentKey, convOwner)
+
     for key in others:
+        promote = (userKey != key) or (promoteActor)
         yield pushToFeed(key, timeuuid, itemKey, parentKey,
                          responseType, itemType, convOwner,
-                         userKey, tagId, entities)
+                         userKey, tagId, entities, promote=promote)
 
 
 @profile
 @defer.inlineCallbacks
 @dump_args
 def pushToFeed(userKey, timeuuid, itemKey, parentKey, responseType,
-                itemType, convOwner=None, commentOwner=None, tagId='',
-                entities=None):
+               itemType, convOwner=None, commentOwner=None, tagId='',
+               entities=None, promote=True):
     # Caveat: assume itemKey as parentKey if parentKey is None
     parentKey = itemKey if not parentKey else parentKey
     convOwner = userKey if not convOwner else convOwner
     commentOwner = userKey if not commentOwner else commentOwner
 
-    yield db.insert(userKey, "feed", parentKey, timeuuid)
-    if plugins.has_key(itemType) and plugins[itemType].hasIndex:
-        yield db.insert(userKey, "feed_"+itemType, parentKey, timeuuid)
+    # Get this conversation to the top of the feed only if promote is set
+    if promote:
+        yield db.insert(userKey, "feed", parentKey, timeuuid)
+        if plugins.has_key(itemType) and plugins[itemType].hasIndex:
+            yield db.insert(userKey, "feed_"+itemType, parentKey, timeuuid)
 
     yield updateFeedResponses(userKey, parentKey, itemKey, timeuuid, itemType,
-                               responseType, convOwner, commentOwner, tagId,
-                               entities)
+                              responseType, convOwner, commentOwner, tagId,
+                              entities, promote)
 
 
 @profile
 @defer.inlineCallbacks
 @dump_args
 def updateFeedResponses(userKey, parentKey, itemKey, timeuuid, itemType,
-                        responseType, convOwner, commentOwner, tagId='',
-                        entities=None):
+                        responseType, convOwner, commentOwner, tagId,
+                        entities, promote):
     if not entities:
         entities = [commentOwner]
     else:
@@ -149,18 +153,23 @@ def updateFeedResponses(userKey, parentKey, itemKey, timeuuid, itemType,
                               super_column=parentKey, reverse=True)
     cols = utils.columnsToDict(cols, ordered=True)
 
+    feedKeys = []
     for tuuid, val in cols.items():
+        # Bailout if we already know about this update.
         if tuuid == timeuuid:
-            #trying to update feedItems more than once, don't update
             defer.returnValue(None)
+
         rtype = val.split(':')[0]
         if rtype not in  ('!', 'I'):
             tmp.setdefault(val.split(':')[0], []).append(tuuid)
             oldest = tuuid
-        if rtype != "!" and not latest:
-            #to prevent duplicate, feed should have only one entry of convId
-            latest = tuuid
-            yield db.remove(userKey, "feed", tuuid)
+
+        feedKeys.append(tuuid)
+
+    # Remove older entries of this conversation from the feed
+    # only if a new one was added before this function was called.
+    if promote and feedKeys:
+        yield db.batch_remove({'feed': [userKey]}, names=feedKeys)
 
     totalItems = len(cols)
     noOfItems = len(tmp.get(responseType, []))
@@ -270,7 +279,6 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
             mostRecentItem = None
             tagId = None
             responseUsers = []
-            answerUsers = []
             responses[convId] = []
             likes[convId] = []
 
@@ -284,6 +292,10 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
                 if entities:
                     toFetchEntities.update(entities.split(","))
 
+                # If I am the cause for any update ensure that my
+                # name is not listed in the reason string.
+                myAction = True if user == myId else False
+
                 if not getReason:
                     if x in ["C", "Q"]:
                         if item not in responses.get(convId, []):
@@ -296,29 +308,27 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
                     elif x == "L":
                         likes[convId].insert(0, user)
 
-                elif x in ["C", "Q"]:
-                    if x == "C":
+                elif x in ("C", "Q"):
+                    if not myAction:
                         responseUsers.insert(0, user)
-                    elif x == 'Q':
-                        answerUsers.insert(0, user)
                     responses[convId].append(item)
-                    mostRecentItem = update
                     toFetchItems.add(item)
                 elif x == "L" and convId == item:
-                    likes[convId].insert(0, user)
-                    mostRecentItem = update
+                    if not myAction:
+                        likes[convId].insert(0, user)
                 elif x == "L":
-                    mostRecentItem = update
                     if entities:
                         toFetchItems.add(item)
                         if item not in toFetchItems:
                             responses[convId].append(item)
                 elif x == "T":
-                    mostRecentItem = update
                     if len(update) > 4 and update[4]:
                         tagId = update[4]
                         toFetchTags.add(tagId)
-                elif x == "I":
+
+                # Ignore my action when deciding on the most recent
+                # update that happened on this item.
+                if getReason and not myAction:
                     mostRecentItem = update
 
             if mostRecentItem:
@@ -333,7 +343,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
                                            "%(user0)s, %(user1)s and %(user2)s commented on %(owner)s's %(itemType)s"]]\
                                          [len(reasonUserIds[convId])-1]
                 elif x == 'Q':
-                    reasonUserIds[convId] = utils.uniqify(answerUsers)
+                    reasonUserIds[convId] = utils.uniqify(responseUsers)
                     reasonTmpl[convId] = [["%(user0)s answered your %(itemType)s",
                                           "%(user0)s answered %(owner)s's %(itemType)s"],
                                           ["%(user0)s and %(user1)s answered your %(itemType)s",
