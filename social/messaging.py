@@ -30,6 +30,7 @@ class MessagingResource(base.BaseResource):
                 'archive': 'mArchivedConversations',
                 'trash': 'mDeletedConversations',
                 'unread': 'mUnreadConversations'}
+
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -49,6 +50,7 @@ class MessagingResource(base.BaseResource):
                     attach_meta[attachmentId] = val
 
         defer.returnValue((attach_meta, attachments))
+
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -91,6 +93,7 @@ class MessagingResource(base.BaseResource):
 
         url = files['meta']['uri']
         defer.returnValue([owner, url, filetype, size, name])
+
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -160,6 +163,7 @@ class MessagingResource(base.BaseResource):
             else:
                 continue
         return snippet
+
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -470,6 +474,7 @@ class MessagingResource(base.BaseResource):
                                     handlers={"onload": onload}, **args)
         else:
             yield render(request, "message.mako", **args)
+
     @profile
     @defer.inlineCallbacks
     @dump_args

@@ -108,7 +108,7 @@
         <span class="conversation-row-time">&ndash;&nbsp; ${utils.simpleTimestamp(float(conv['meta']["date_epoch"]), people[myKey]["basic"]["timezone"])}</span>
       </div>
       <div class="conversation-row-subject-wrapper">
-        <span class="conversation-row-subject">${conv["meta"]["subject"]|h}</span>
+        <span class="conversation-row-subject">${conv["meta"]["subject"]}</span>
         <span class="conversation-row-snippet">${conv["meta"]["snippet"]}</span>
       </div>
     </a>
@@ -145,7 +145,7 @@
 <%def name="render_conversation()">
     ${toolbar_layout(view)}
     <div class="conversation-headline">
-        <h2 class="conversation-headline-subject">${conv["meta"]["subject"]|h}</h2>
+        <h2 class="conversation-headline-subject">${conv["meta"]["subject"]}</h2>
     </div>
     <div class="conversation-wrapper">
         <div class="conversation-messages-wrapper">
@@ -217,11 +217,11 @@
         <div class="conversation-composer-recipients"></div>
         <input name="recipients" id="recipientList" type="hidden"/>
         <div>
-            <input class="conversation-composer-field-recipient" type="text"  size="15" placeholder="${_('Enter a name') |h}"/>
+            <input class="conversation-composer-field-recipient" type="text"  size="15" placeholder="${_('Enter a name')}"/>
         </div>
       </div>
       <div class="input-wrap conversation-composer-field">
-        <input class="conversation-composer-field-subject" type="text" name="subject" placeholder="${_('Enter a subject of your message') |h}"/>
+        <input class="conversation-composer-field-subject" type="text" name="subject" placeholder="${_('Enter a subject of your message')}"/>
       </div>
       <div class="input-wrap conversation-composer-field">
         <textarea class="conversation-composer-field-body" placeholder="Write a message to your friends and colleagues" name="body"></textarea>
