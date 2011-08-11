@@ -152,10 +152,17 @@
     options = [('myGroups', 'My Groups'), ('allGroups', 'All Groups'), ('adminGroups', 'Groups managed by Me')]
     if showPendingRequestsTab:
         options.append(("pendingRequests", "Pending Requests"))
+    group_request_count = groupRequestCount if groupRequestCount else ''
     %>
   <ul class="h-links view-options">
     %for item, display in options:
-      %if selected == item:
+      %if item == "pendingRequests":
+        %if selected == item:
+          <li class="selected">${_(display)}<span id="pending-group-requests-count" class="view-options-count" >${group_request_count}</span></li>
+        %else:
+          <li><a href="/groups?type=${item}" class="ajax">${_(display)}</a><span id="pending-group-requests-count" class="view-options-count">${group_request_count}</span></li>
+        %endif
+      %elif selected == item:
         <li class="selected">${_(display)}</li>
       %else:
         <li><a href="/groups?type=${item}" class="ajax">${_(display)}</a></li>

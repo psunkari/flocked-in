@@ -413,7 +413,6 @@ def getLatestCounts(request, asJSON=True):
         for groupId in cols:
             for key in cols[groupId]:
                 counts['groups'] += len(cols[groupId][key])
-
     if asJSON:
         defer.returnValue(json.dumps(counts))
     else:
@@ -421,12 +420,18 @@ def getLatestCounts(request, asJSON=True):
 
 
 @defer.inlineCallbacks
-def render_LatestCounts(request, landing=False):
+def render_LatestCounts(request, landing=False, returnJson=False):
+    """
+        counts: json string returned by getLatestCounts
+    """
+
     counts = yield getLatestCounts(request)
     if landing:
         request.write('<script>$$.menu.counts(%s);</script>' % counts)
     else:
         request.write('$$.menu.counts(%s);' % counts)
+
+    defer.returnValue(counts) if returnJson else defer.returnValue(json.loads(counts))
 
 
 #

@@ -461,6 +461,9 @@ class GroupsResource(base.BaseResource):
         showPendingRequestsTab = sum([len(cols[groupId]) for groupId in cols]) > 0
         args["showPendingRequestsTab"] = showPendingRequestsTab
 
+        counts = yield utils.getLatestCounts(request, False)
+        groupRequestCount = args["groupRequestCount"] = counts["groups"]
+
         if script and landing:
             yield render(request,"groups.mako", **args)
         if script and appchange:
@@ -546,7 +549,8 @@ class GroupsResource(base.BaseResource):
         if script:
             yield renderScriptBlock(request, "groups.mako", "viewOptions",
                                     landing, "#groups-view", "set", args=[viewType],
-                                    showPendingRequestsTab=showPendingRequestsTab)
+                                    showPendingRequestsTab=showPendingRequestsTab,
+                                    groupRequestCount=groupRequestCount)
             if viewType == "pendingRequests":
                 yield renderScriptBlock(request, "groups.mako", "allPendingRequests",
                                         landing, "#groups-wrapper", "set", **args)
@@ -740,10 +744,33 @@ class GroupsResource(base.BaseResource):
 
         if segmentCount == 1:
             action = request.postpath[0]
-            availableActions = ["approve", "reject", "block", "unblock",
-                                "invite", "follow", "unfollow", "subscribe",
-                                "unsubscribe", "create"]
-            if action in availableActions:
-                d = getattr(self, "_" + request.postpath[0])(request)
+            if action == 'approve':
+                d = self._approve(request)
+            elif action == 'reject':
+                d = self._reject(request)
+            elif action == 'block':
+                d = self._block(request)
+            elif action == 'unblock':
+                d = self._unblock(request)
+            elif action == 'invite':
+                d = self._invite(request)
+            elif action == 'follow':
+                d = self._follow(request)
+            elif action == 'unfollow':
+                d = self._unfollow(request)
+            elif action == 'subscribe':
+                d = self._subscribe(request)
+            elif action == 'unsubscribe':
+                d = self._unsubscribe(request)
+            elif action == 'create':
+                d = self._create(request)
+            def _updatePendingGroupRequestCount(ign):
+                def _update_count(counts):
+                    pendingRequestCount = counts['groups'] if counts.get('groups', 0)!= 0 else ''
+                    request.write("$('#pending-group-requests-count').html('%s');"%(pendingRequestCount))
+                d01 = utils.render_LatestCounts(request, False, False)
+                d01.addCallback(_update_count)
+                return d01
+            d.addCallback(_updatePendingGroupRequestCount)
 
         return self._epilogue(request, d)
