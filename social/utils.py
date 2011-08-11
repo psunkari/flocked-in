@@ -433,7 +433,6 @@ def render_LatestCounts(request, landing=False, returnJson=False):
 
     defer.returnValue(counts) if returnJson else defer.returnValue(json.loads(counts))
 
-
 #
 # Date and time formating utilities (format based on localizations)
 #
