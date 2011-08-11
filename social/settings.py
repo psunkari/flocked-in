@@ -89,6 +89,59 @@ def _getImageFileFormat(data):
     return imageType
 
 
+#############################################################
+# XXX: Don't change values assigned to notification types   #
+#      If you do, existing preferences will break.          #
+#############################################################
+
+notifyFriendRequest = 0
+notifyFriendAccept = 1
+notifyNewFollower = 2
+notifyNewOrgUser = 3
+
+notifyGroupRequest = 4
+notifyGroupAccept = 5
+notifyGroupInvite = 6
+notifyGroupNewMember = 7
+
+notifyMyItemT = 8
+notifyMyItemC = 9
+notifyMyItemL = 10
+notifyMyItemLC = notifyItemLC = 11
+notifyItemC = 12
+
+notifyMention = 13
+notifyItemRequests = 14
+
+notifyMessageConv = 15
+notifyMessageMessage = 16
+notifyMessageAccessChange = 17
+
+# Total number of notification types and default setting
+_notificationsCount = 18
+defaultNotify = "3" * _notificationsCount
+
+# Notification medium
+notifyByMail = 1
+notifyBySMS = 2
+
+# Names of each notification type (by index as given above)
+_notifyNames = ['friendRequest', 'friendAccept', 'follower', 'newMember',
+    'groupRequest', 'groupAccept', 'groupInvite', 'groupNewMember',
+    'myItemTag', 'myItemComment', 'myItemlike', 'itemCommentLike',
+    'itemComment', 'mention', 'itemRequests',
+    'messageConv', 'messageMessage', 'messageAccessChange']
+    
+# Utility function to help parse the notification preference
+# In case of an exception returns true
+def getNotifyPref(val, typ, medium):
+    try:
+        if not int(val[typ]) & medium:
+            return False
+    except IndexError,ValueError: pass
+    return True
+
+
 class SettingsResource(base.BaseResource):
     isLeaf = True
     resources = {}
@@ -261,43 +314,10 @@ class SettingsResource(base.BaseResource):
         yield renderScriptBlock(request, "settings.mako", "right",
                                 landing, ".right-contents", "set", **args)
 
-
-    #############################################################
-    # XXX: Add any new notification at the end only. Otherwise  #
-    #      all existing preferences would break.                #
-    #############################################################
-    #
-    #    0. Someone sends friend request
-    #    1. Someone accepts friend request
-    #    2. Someone started following me
-    #    3. New user joins the organization network
-    #
-    #    4. Someone wants to join a group
-    #    5. Group request is accepted
-    #    6. Someone invites me to a group
-    #    7. New member joined a group that I am an admin of
-    #
-    #    8. Someone performs an action on my post
-    #       (like/like-comment/comment/vote/rsvp etc;)
-    #    9. Someone acted on a post that I acted upon
-    #   10. Someone mentions me in a post/comment
-    #   11. Other requests and invitations (event invitation etc;)
-    #
-    #   12. New private conversation
-    #   13. New message in an existing conversations
-    #   14. Conversation recipients got changed
-    #
-    notificationTypes = ['friendRequest', 'friendAccept', 'follower',
-        'orgNewUser', 'groupRequest', 'groupAccept', 'groupInvite',
-        'groupNewMember', 'myItemAction', 'myActionAction', 'mention',
-        'itemRequests', 'messageConv', 'messageMessage', 'messageAccessChange']
-
-
     @defer.inlineCallbacks
     def _updateNotifications(self, request):
         authinfo = request.getSession(IAuthInfo)
         myId = authinfo.username
-        types = self.notificationTypes
         getArg = utils.getRequestArg
         def _get(typ):
             val = getArg(request, typ)
@@ -306,7 +326,7 @@ class SettingsResource(base.BaseResource):
             except (ValueError,TypeError):
                 return '0'
 
-        prefVal = ''.join([_get(x) for x in types])
+        prefVal = ''.join([_get(x) for x in _notifyNames])
         yield db.insert(myId, 'entities', prefVal, 'notify', 'basic')
         request.write('$$.alerts.info("%s");' % _('Preferences saved'))
 
@@ -321,7 +341,6 @@ class SettingsResource(base.BaseResource):
         detail = utils.getRequestArg(request, "dt") or "basic"
         args["detail"] = detail
         args["editProfile"] = True
-        args['notificationTypes'] = self.notificationTypes
 
         me = yield db.get_slice(myKey, "entities")
         args["me"] = utils.supercolumnsToDict(me, ordered=True)

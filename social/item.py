@@ -7,49 +7,186 @@ from twisted.internet   import defer
 from twisted.web        import server
 from twisted.python     import log
 
-from social             import base, db, utils, feed
+from social             import base, db, utils, feed, config
 from social             import plugins, constants, tags, fts
-from social             import notifications, _, errors
+from social             import notifications, _, errors, settings
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
-from social.template    import render, renderScriptBlock
-from social.logging      import profile, dump_args
-
-
-@defer.inlineCallbacks
-def pushNotifications(notifyType, convId, convType, convOwner,
-                          actor, timeUUID, followers=None):
-    notifyId = ":".join([convId, convType, convOwner, notifyType])
-    if not followers:
-        followers = yield db.get_slice(convId, "items", super_column="followers")
-    deferreds = []
-
-    for follower in followers:
-        userKey = follower.column.name
-        if actor != userKey:
-            d0 = db.get_slice(userKey, "notificationItems", super_column=notifyId,
-                              count=3, reverse=True)
-            def deleteOlderNotifications(cols, aUserKey):
-                deleteKeys = [col.column.name for col in cols if col.column.name != timeUUID]
-                if deleteKeys:
-                    d00 = db.batch_remove({'notifications': [aUserKey]}, names=deleteKeys)
-                    d01 = db.batch_remove({'latest': [aUserKey]}, names=deleteKeys, 
-                                          supercolumn="notifications")
-                    return defer.DeferredList([d00, d01])
-                else:
-                    return defer.succeed([])
-
-            d0.addCallback(deleteOlderNotifications, userKey)
-
-            d1 = db.insert(userKey, "notifications", notifyId, timeUUID)
-            d2 = db.insert(userKey, "latest", notifyId, timeUUID, "notifications")
-            d3 = db.batch_insert(userKey, "notificationItems", {notifyId:{timeUUID:actor}})
-            deferreds.extend([d0, d1, d2, d3])
-    yield defer.DeferredList(deferreds)
+from social.template    import render, renderScriptBlock, getBlock
+from social.logging     import profile, dump_args
 
 
 class ItemResource(base.BaseResource):
     isLeaf = True
+
+    _mailNotifySubject = {
+        "C": ["[%(brandName)s] %(senderName)s commented on your %(convType)s",
+              "[%(brandName)s] %(senderName)s commented on %(convOwnerName)s's %(convType)s"],
+        "L": ["[%(brandName)s] %(senderName)s liked your %(convType)s"],
+        "T": ["[%(brandName)s] %(senderName)s tagged your %(convType)s as %(tagName)s"],
+       "LC": ["[%(brandName)s] %(senderName)s liked your comment on your %(convType)s",
+              "[%(brandName)s] %(senderName)s liked your comment on %(convOwnerName)s's %(convType)s"]
+    }
+
+    _mailNotifyBody = {
+        "C":  ["Hi,\n\n"\
+               "%(senderName)s commented on your %(convType)s.\n\n"\
+               "%(senderName)s said &mdash; %(comment)s\n\n"\
+               "See the full conversation at %(convUrl)s",
+               "Hi,\n\n"\
+               "%(senderName)s commented on %(convOwnerName)s's %(convType)s.\n\n"\
+               "%(senderName)s said &mdash; %(comment)s\n\n"\
+               "See the full conversation at %(convUrl)s"],
+        "L":  ["Hi,\n\n"\
+               "%(senderName)s liked your %(convType)s.\n"\
+               "See the full conversation at %(convUrl)s"],
+        "T":  ["Hi,\n\n"\
+               "%(senderName)s tagged your %(convType)s as %(tagName)s.\n"\
+               "See the full conversation at %(convUrl)s\n\n"\
+               "You can see all items tagged %(tagName)s at %(tagFeedUrl)s]"],
+        "LC": ["Hi,\n\n"\
+               "%(senderName)s liked your comment on your %(convType)s.\n"\
+               "See the full conversation at %(convUrl)s",
+               "Hi,\n\n"\
+               "%(senderName)s liked your comment on %(convOwnerName)s's %(convType)s.\n"\
+               "See the full conversation at %(convUrl)s"]
+    }
+
+    _mailNotifySignature = "\n\n"\
+            "Flocked.in Team.\n\n\n\n"\
+            "--\n"\
+            "Update your %(brandName) notifications at %(rootUrl)s/settings?dt=notify\n"
+
+
+    # Apart from the what notify needs we also need the list of recipients
+    # and basic information about all the recipients to be available.
+    @defer.inlineCallbacks
+    def notifyByMail(self, notifyType, convId, recipients, **kwargs):
+        rootUrl = config.get('General', 'URL')
+        brandName = config.get('Branding', 'Name')
+
+        # Local variables used to render strings
+        me = kwargs["me"]
+        myId = kwargs["myId"]
+        senderName = me["basic"]["name"]
+        convOwnerId = kwargs["convOwnerId"]
+        entities = kwargs.get("entities", {})
+        convOwnerName = entities[convOwnerId]["name"]
+        stringCache = {}
+
+        # Filter out users who don't need notification
+        def needsNotifyCheck(userId):
+            if userId == myId:
+                return False
+            attr = 'notifyMyItem'+notifyType if convOwnerId == userId\
+                                         else 'notifyItem'+notifyType
+            user = entities[userId]
+            return settings.getNotifyPref(user.get("notify", ''),
+                            getattr(settings, attr), settings.notifyByMail)
+        users = [x for x in recipients if needsNotifyCheck(x)]
+
+        # Actually send the mail notification.
+        def sendNotificationMail(followerId, data):
+            toOwner = True if followerId == convOwnerId else False
+            follower = entities[followerId]
+            mailId = follower.get('emailId', None)
+            if not mailId:
+                return defer.succeed(None)
+
+            # Sending to conversation owner
+            if toOwner:
+                s = self._mailNotifySubject[notifyType][0] % data
+                b = self._mailNotifyBody[notifyType][0] % data
+                b = b + self._mailNotifySignature
+                h = getBlock("emails.mako",
+                             "notifyOwner"+notifyType, **data)
+                return utils.sendmail(mailId, s, b, h)
+
+            # Sending to user other than conversation owner
+            if 'subject' not in stringCache:
+                s = self._mailNotifySubject[notifyType][1] % data
+                b = self._mailNotifyBody[notifyType][1] % data
+                b = b + self._mailNotifySignature
+                h = getBlock("emails.mako", "notifyOther"+notifyType, **data)
+                stringCache.update({'subject':s, 'text':b, 'html':h})
+
+            return utils.sendmail(mailId, stringCache['subject'],
+                                  stringCache['text'], stringCache['html'])
+
+        data = kwargs.copy()
+        convUrl = "%s/item?id=%s" % (rootUrl, convId)
+        senderAvatarUrl = rootUrl + utils.userAvatar(myId, me, "medium")
+        data.update({"senderName": senderName, "convUrl": convUrl,
+                     "senderAvatarUrl": senderAvatarUrl, "rootUrl": rootUrl,
+                     "brandName": brandName, "convOwnerName": convOwnerName})
+
+        deferreds = []
+        for userId in users:
+            deferreds.append(sendNotificationMail(userId, data))
+
+        yield defer.DeferredList(deferreds)
+
+
+    # Expects all the basic arguments as well as some information
+    # about the comments and likes to be available in kwargs.
+    @defer.inlineCallbacks
+    def notify(self, notifyType, convId, timeUUID, **kwargs):
+        deferreds = []
+        convOwnerId = kwargs["convOwnerId"]
+        convType = kwargs["convType"]
+        notifyId = ":".join([convId, convType, convOwnerId, notifyType])
+    
+        # List of people who will get the notification about current action
+        if notifyType == "C":
+            followers = yield db.get_slice(convId, "items", super_column="followers")
+            toFetchEntities = recipients = [x.column.name for x in followers]
+        elif notifyType == "LC":
+            recipients = [kwargs["itemOwnerId"]]
+            toFetchEntities = recipients + [convOwnerId]
+        else:
+            toFetchEntities = recipients = [convOwnerId]
+    
+        # Get recipients' data required to send offline notifications.
+        entities_d = db.multiget_slice(toFetchEntities, "entities",
+                            ["name", "emailId", "notify"], super_column="basic") \
+                            if recipients else defer.succeed([])
+        def sendOfflineNotifications(cols):
+            entities = utils.multiColumnsToDict(cols)
+            kwargs.setdefault('entities', {}).update(entities)
+            self.notifyByMail(notifyType, convId, recipients, **kwargs)
+        entities_d.addCallback(sendOfflineNotifications)
+        deferreds.append(entities_d)
+    
+        # Send in-application notifications.
+        myId = kwargs["myId"]
+        for userId in recipients:
+            if myId != userId:
+                d0 = db.get_slice(userId, "notificationItems",
+                                  super_column=notifyId, count=3, reverse=True)
+                def deleteOlderNotifications(cols, aUserId):
+                    deleteKeys = [col.column.name for col in cols\
+                                                if col.column.name != timeUUID]
+                    if deleteKeys:
+                        d00 = db.batch_remove({'notifications': [aUserId]},
+                                              names=deleteKeys)
+                        d01 = db.batch_remove({'latest': [aUserId]},
+                                              names=deleteKeys, 
+                                              supercolumn="notifications")
+                        return defer.DeferredList([d00, d01])
+                    else:
+                        return defer.succeed([])
+    
+                d0.addCallback(deleteOlderNotifications, userId)
+    
+                d1 = db.insert(userId, "notifications", notifyId, timeUUID)
+                d2 = db.insert(userId, "latest", notifyId,
+                               timeUUID, "notifications")
+                d3 = db.batch_insert(userId, "notificationItems",
+                                     {notifyId:{timeUUID:myId}})
+                deferreds.extend([d0, d1, d2, d3])
+    
+        yield defer.DeferredList(deferreds)
+
 
     def _cleanupMissingComments(self, convId, missingIds, itemResponses):
         missingKeys = []
@@ -304,9 +441,10 @@ class ItemResource(base.BaseResource):
         (itemId, item) = yield utils.getValidItemId(request, "id")
         extraEntities = [item["meta"]["owner"]]
 
-        #Ignore if i am owner of the item
+        # Ignore if I am owner of the item
         if myId == item["meta"]["owner"]:
             defer.returnValue(None)
+
         # Check if I already liked the item
         try:
             cols = yield db.get(itemId, "itemLikes", myId)
@@ -359,18 +497,22 @@ class ItemResource(base.BaseResource):
         yield feed.pushToOthersFeed(myId, timeUUID, itemId, convId, convACL,
                                     responseType, convType, convOwnerId, entities=extraEntities)
 
-        notifyType = "L" if itemId == convId else "LC"
-        yield pushNotifications(notifyType, convId, convType, convOwnerId, myId, timeUUID)
-
         item["meta"]["likesCount"] = str(likesCount + 1)
         args["items"] = {itemId: item}
         args["myLikes"] = {itemId:[myId]}
 
         if itemId != convId:
+            itemOwnerId = item["meta"]["owner"]
+            yield self.notify("LC", convId, timeUUID, convType=convType,
+                              convOwnerId=convOwnerId, myId=myId,
+                              itemOwnerId=itemOwnerId, me=args["me"])
             yield renderScriptBlock(request, "item.mako", "item_footer", False,
                               "#item-footer-%s"%(itemId), "set",
                               args=[itemId], **args)
         else:
+            yield self.notify("L", convId, timeUUID, convType=convType,
+                              convOwnerId=convOwnerId, myId=myId, me=args["me"])
+
             relation = Relation(myId, [])
             yield defer.DeferredList([relation.initFriendsList(),
                                   relation.initSubscriptionsList() ])
@@ -581,8 +723,9 @@ class ItemResource(base.BaseResource):
         yield feed.pushToOthersFeed(myId, timeUUID, itemId, convId, convACL,
                                     responseType, convType, convOwnerId)
 
-        notifyType = "C"
-        yield pushNotifications(notifyType, convId, convType, convOwnerId, myId, timeUUID)
+        yield self.notify("C", convId, timeUUID, convType=convType,
+                          convOwnerId=convOwnerId, myId=myId, me=args["me"],
+                          comment=comment)
 
         # Finally, update the UI
         entities = yield db.get(myId, "entities", super_column="basic")

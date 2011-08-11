@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<%! from social import utils, _, __, plugins %>
+<%! from social import utils, _, __, plugins, settings %>
 <%! from social import relations as r %>
 <%! from pytz import common_timezones %>
 <%! from twisted.python import log %>
@@ -359,20 +359,26 @@
 
 <%def name="filterNotifications()">
   <%
-    notify = me['basic'].get('notify', '3'*25)
-    numTypes = len(notificationTypes)
+    notify = me['basic'].get('notify', '')
     labels = ['Someone adds you as a friend',
               'Your friend request is accepted',
               'Someone started following you',
               'New user joins your company network',
+
               'User wants to join a group you administer',
               'Your request to join a group is accepted',
               'You are invited to join a group',
               'New user joins a group you administer',
-              'Someone liked or commented on your item',
-              'Someone <abbr title="Liked or Commented">acted</abbr> on an item that you liked or commented',
+
+              'Someone tagged an item you shared',
+              'Someone commented on an item you shared',
+              'Someone liked an item you shared',
+              'Someone liked your comment',
+              'Someone commented on an item that you liked/commented on',
+
               'You are mentioned in a post or comment',
               'Other requests (event invitations etc;)',
+
               'New private conversation',
               'New message in an existing conversations',
               'Recipients of a conversation were changed']
@@ -388,12 +394,15 @@
         <th class='notify-medium-mail'>${_('Mail')}</th>
       </tr>
       <% emailTemplate = _('E-mail notification when: %s') %>
-      %for x in range(numTypes):
-        <% emailChecked = "checked='1'" if (int(notify[x]) & 1) else '' %>
+      %for x in range(settings._notificationsCount):
+        <%
+          emailChecked = "checked='1'"\
+            if settings.getNotifyPref(notify, x, settings.notifyByMail)\
+            else '' %>
         <tr>
           <td>${_(labels[x])}</td>
           <td>
-            <input type='checkbox' name='${notificationTypes[x]}'
+            <input type='checkbox' name='${settings._notifyNames[x]}'
                    title='${emailTemplate % labels[x]}'
                    value='1' ${emailChecked}/>
           </td>

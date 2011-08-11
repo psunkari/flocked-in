@@ -617,6 +617,8 @@ class MessagingResource(base.BaseResource):
 
                 yield db.remove(myId, "mUnreadConversations", timeUUID)
                 yield db.remove(convId, "mConvFolders", 'mUnreadConversations', myId)
+                yield db.remove(myId, "latest", timeUUID, "messages")
+
                 cols = yield db.get_slice(convId, "mConvFolders", [myId])
                 cols = utils.supercolumnsToDict(cols)
                 for folder in cols[myId]:
@@ -723,10 +725,12 @@ class MessagingResource(base.BaseResource):
                 raise errors.Unauthorized()
 
             timeUUID = conv['meta']['uuid']
-            d1 =  db.remove(myId, "mUnreadConversations", timeUUID)
+            d1 = db.remove(myId, "mUnreadConversations", timeUUID)
             d2 = db.remove(convId, "mConvFolders", 'mUnreadConversations', myId)
             d3 = db.remove(myId, "latest", timeUUID, "messages")
             deferreds = [d1, d2, d3]
+            yield defer.DeferredList(deferreds)
+            deferreds = []
             cols = yield db.get_slice(convId, "mConvFolders", [myId])
             cols = utils.supercolumnsToDict(cols)
             for folder in cols[myId]:
@@ -744,7 +748,7 @@ class MessagingResource(base.BaseResource):
             participants.update([messages[mid]['meta']['owner'] for mid in messages])
             people = yield db.multiget_slice(participants, "entities", ['basic'])
             people = utils.multiSuperColumnsToDict(people)
-            yield defer.DeferredList(deferreds)
+            s = yield defer.DeferredList(deferreds)
 
             args.update({"people":people})
             args.update({"conv":conv})
@@ -798,6 +802,7 @@ class MessagingResource(base.BaseResource):
                     $$.messaging.autoFillUsers();
                     $('.conversation-composer-field-body').autogrow();
                     $$.ui.loadFileShareBlock();
+                    $$.ui.placeholders('#message_form [placeholder]');
                      """
             yield renderScriptBlock(request, "message.mako", "render_composer",
                                     landing, "#composer", "set", True,

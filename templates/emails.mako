@@ -22,7 +22,7 @@
                    <b>${senderName}</b> invited you to try ${brandName}.
                  %endif
                  <br/><br/>
-                 <a href="${activationUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3366cc;border:1px solid #204573;color:white;font-weight:bold;">Activate your Account</div></a>
+                 <a href="${activationUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">Activate your Account</div></a>
                  <br/><br/>
                  You can also visit <a href="${activationUrl}">${activationUrl}</a> to activate your account.
               </td>
@@ -113,6 +113,90 @@
   </html>
 </%def>
 
+## Apply tag on an item that I shared
+<%def name="notifyOwnerT()">
+  ${header()}
+  <td valign="top" align="right" style="width:48px;" rowspan="2">
+    <img src="${senderAvatarUrl}" alt="">
+  </td>
+  <td style="font-size: 14px;">
+  </td>
+  ${footer()}
+</%def>
+
+<%def name="notifyOwnerC()">
+  ${header()}
+  <td valign="top" align="right" style="width:48px;" rowspan="2">
+    <img src="${senderAvatarUrl}" alt="">
+  </td>
+  <td style="font-size: 14px;">
+    <b>${senderName}</b> commented on your ${convType}.
+    <br/>
+    ${senderName} &mdash; ${comment}
+    <br/><br/>
+    <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View conversation</div></a>
+  </td>
+  ${footer()}
+</%def>
+
+<%def name="notifyOtherC()">
+  ${header()}
+  <td valign="top" align="right" style="width:48px;" rowspan="2">
+    <img src="${senderAvatarUrl}" alt="">
+  </td>
+  <td style="font-size: 14px;">
+    <b>${senderName}</b> commented on ${convOwnerName}'s ${convType}.
+    <br/>
+    ${senderName} &mdash; ${comment}
+    <br/><br/>
+    <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View conversation</div></a>
+  </td>
+  ${footer()}
+</%def>
+
+<%def name="notifyOwnerL()">
+  ${header()}
+  <td valign="top" align="right" style="width:48px;" rowspan="2">
+    <img src="${senderAvatarUrl}" alt="">
+  </td>
+  <td style="font-size: 14px;">
+    <b>${senderName}</b> liked on your ${convType}.
+    <br/><br/>
+    <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View conversation</div></a>
+  </td>
+  ${footer()}
+</%def>
+
+<%def name="notifyOwnerLC()">
+  ${header()}
+  <td valign="top" align="right" style="width:48px;" rowspan="2">
+    <img src="${senderAvatarUrl}" alt="">
+  </td>
+  <td style="font-size: 14px;">
+    <b>${senderName}</b> liked your comment on your ${convType}.
+    <br/><br/>
+    <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View conversation</div></a>
+  </td>
+  ${footer()}
+</%def>
+
+<%def name="notifyOtherLC()">
+  ${header()}
+  <td valign="top" align="right" style="width:48px;" rowspan="2">
+    <img src="${senderAvatarUrl}" alt="">
+  </td>
+  <td style="font-size: 14px;">
+    <b>${senderName}</b> liked your comment on ${convOwnerName}'s ${convType}.
+    <br/><br/>
+    <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View conversation</div></a>
+  </td>
+  ${footer()}
+</%def>
+
+## 
+## Yet to be implemented
+##
+
 <%def name="friendRequest()">
   ${header()}
   <td valign="top" align="right" style="width:48px;" rowspan="2">
@@ -123,7 +207,7 @@
     <br/><br/>
     If you don't know ${senderName} you can ignore this request or block the user from sending similar requests in future.
     <br/><br/>
-    <a href="${actionUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3366cc;border:1px solid #204573;color:white;font-weight:bold;">Add as Friend</div></a>
+    <a href="${actionUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">Add as Friend</div></a>
     <br/><br/>
     You can also visit <a href="${rootUrl}/people">${rootUrl}/people</a> to manage your relationships.
   </td>
@@ -154,10 +238,10 @@
     %elif relations.pending.get(senderId, None) == "1":
       You also have a pending friend request from ${senderName}.
       <br/><br/>
-      <a href="${actionUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3366cc;border:1px solid #204573;color:white;font-weight:bold;">Add as Friend</div></a>
+      <a href="${actionUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">Add as Friend</div></a>
       If you don't know ${senderName} you can ignore this request or block the user from sending similar requests in future.
     %elif senderId not in relations.subscriptions:
-      <a href="${actionUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3366cc;border:1px solid #204573;color:white;font-weight:bold;">Follow ${senderName}</div></a>
+      <a href="${actionUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">Follow ${senderName}</div></a>
     %endif
     You can also visit <a href="${rootUrl}/people">${rootUrl}/people</a> to manage your relationships.
   </td>
@@ -184,7 +268,7 @@
   <td style="font-size: 14px;">
     <b>${senderName}</b> wants to join ${groupName}.
     <br/><br/>
-    <a href="${actionUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3366cc;border:1px solid #204573;color:white;font-weight:bold;">Add to Group</div></a>
+    <a href="${actionUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">Add to Group</div></a>
     You can also visit <a href="${rootUrl}/groups">${rootUrl}/groups</a> to manage all your groups.
   </td>
   ${footer()}
@@ -224,46 +308,6 @@
     <b>${senderName}</b> just joined ${groupName}.
     <br/><br/>
     You can visit <a href="${rootUrl}/groups">${rootUrl}/groups</a> to manage all your groups.
-  </td>
-  ${footer()}
-</%def>
-
-<%def name="myItemAction()">
-  ${header()}
-  <td valign="top" align="right" style="width:48px;" rowspan="2">
-    <img src="${senderAvatarUrl}" alt="">
-  </td>
-  <td style="font-size: 14px;">
-  %if action == "C":
-    <b>${senderName}</b> commented on your ${itemType}.
-    <br/><br/>
-    <blockquote>
-      ${senderName}: ${comment}
-    </blockquote>
-  %elif action == "L":
-    <b>${senderName}</b> liked your ${itemType}.
-  %elif action == "CL":
-    <b>${senderName}</b> liked your comment on ${convOwnerName}'s ${itemType}.
-  %endif
-  </td>
-  ${footer()}
-</%def>
-
-<%def name="myActionAction()">
-  ${header()}
-  <td valign="top" align="right" style="width:48px;" rowspan="2">
-    <img src="${senderAvatarUrl}" alt="">
-  </td>
-  <td style="font-size: 14px;">
-  %if action == "C":
-    <b>${senderName}</b> commented on ${convOwnerName}'s ${itemType}.
-    <br/><br/>
-    <blockquote>
-      ${senderName}: ${comment}
-    </blockquote>
-  %elif action == "L":
-    <b>${senderName}</b> liked ${convOwnerName}'s ${itemType}.
-  %endif
   </td>
   ${footer()}
 </%def>

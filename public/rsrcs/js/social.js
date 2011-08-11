@@ -21,6 +21,9 @@ _sendingAjaxRequest: function(evt, xhr, options) {
         currentUri = social.parseUri($.address.value()),
         separator = null, csrfToken = null, payload = null;
 
+    if (!social._historyHasStates && (currentUri.path == '' || currentUri.path == '/'))
+        currentUri = social.parseUri(window.location.href);
+
     for (var i=0; i<cookies.length; i++) {
         var cookie = $.trim(cookies[i]);
         if (cookie.indexOf('token') == 0)
@@ -1287,7 +1290,7 @@ var messaging = {
             select: function( event, ui ) {
                 $('.conversation-composer-recipients').append(
                     $$.messaging.formatUser(ui.item.value, ui.item.uid));
-                var rcpts = $('#recipientList').val().trim();
+                var rcpts = jQuery.trim($('#recipientList').val());
                 rcpts = (rcpts == "") ? ui.item.uid: rcpts+","+ui.item.uid
                 $('#recipientList').val(rcpts)
                 this.value = "";
