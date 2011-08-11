@@ -580,6 +580,10 @@ class MessagingResource(base.BaseResource):
                     cf = self._folders[folder] if folder in self._folders else folder
                     d = db.remove(recipient, cf, conv['meta']['uuid'])
                     deferreds.append(d)
+            #update latest- messages-count
+            deferreds.append(db.batch_remove({"latest":members},
+                                             names=[conv['meta']['uuid']],
+                                             supercolumn='messages'))
             if deferreds:
                 yield deferreds
 
