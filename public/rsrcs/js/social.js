@@ -187,7 +187,9 @@ _initAjaxRequests: function _initAjaxRequests() {
                    request.status == 404 || request.status == 418) {
             $$.alerts.error(request.responseText);
         } else {
-            console.log("An error occurred while fetching: "+settings.url+" ("+request.status+")");
+            if (window.console){
+                console.log("An error occurred while fetching: "+settings.url+" ("+request.status+")");
+            }
         }
         $('.busy-indicator.busy').removeClass('busy');
     });
@@ -376,7 +378,7 @@ _initChunkLoader: function _initChunkLoader(resources) {
                             try {
                                 (new Function(handlers.onload)).apply(value);
                             } catch(ex) {
-                                if (console)
+                                if (window.console)
                                     console.log(ex);
                             }
                         }
@@ -798,7 +800,10 @@ var ui = {
             });
             var node = $('#attached-files');
             $$.setBusy(uploadXhr, node);
-          }, function(err){console.log(err)})
+          }, function(err){
+                if (window.console){
+                    console.log(err)
+                }})
         });
     },
 
