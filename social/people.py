@@ -435,6 +435,8 @@ class PeopleResource(base.BaseResource):
         orgId = args["orgKey"]
         args["entities"] = {}
         args["menuId"] = "people"
+        counts = yield utils.getLatestCounts(request, False)
+        args["pendingRequestsCount"] = pendingRequestsCount = counts.get('people', 0)
 
         if script and landing:
             yield render(request, "people.mako", **args)
@@ -480,7 +482,8 @@ class PeopleResource(base.BaseResource):
         if script:
             yield renderScriptBlock(request, "people.mako", "viewOptions",
                                     landing, "#people-view", "set", args=[viewType],
-                                    showInvitationsTab=showInvitationsTab)
+                                    showInvitationsTab=showInvitationsTab,
+                                    pendingRequestsCount= pendingRequestsCount)
             yield renderScriptBlock(request, "people.mako", "listPeople",
                                     landing, "#users-wrapper", "set", **args)
             yield renderScriptBlock(request, "people.mako", "paging",

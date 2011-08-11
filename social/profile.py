@@ -544,7 +544,11 @@ class ProfileResource(base.BaseResource):
 
             isProfile = (utils.getRequestArg(request, "_pg") == "/profile")
             isFeed =    (utils.getRequestArg(request, "_pg")  == "/feed")
+            isPeople =  (utils.getRequestArg(request, "_pg")  == "/people")
             def renderActions(ign):
+                def renderLatestCounts(ign):
+                    return utils.render_LatestCounts(request, False)
+
                 if not isFeed:
                     d = renderScriptBlock(request, "profile.mako", "user_actions",
                                     False, "#user-actions-%s"%targetKey, "set",
@@ -556,13 +560,20 @@ class ProfileResource(base.BaseResource):
                                         "#user-subactions-%s"%targetKey, "set",
                                         args=[targetKey, False], **data)
                         d.addCallback(renderSubactions)
-
-                    def renderLatestCounts(ign):
-                        return utils.render_LatestCounts(request, False)
-
+                    if isPeople:
+                        def updatePendingRequestsCount(ign):
+                            def _update_count(counts):
+                                pendingRequestCount = counts['people'] if counts.get('people', 0)!= 0 else ''
+                                request.write("$('#pending-requests-count').html('%s');"%(pendingRequestCount))
+                            d02 = utils.getLatestCounts(request, False)
+                            d02.addCallback(_update_count)
+                            return d02
+                        d.addCallback(updatePendingRequestsCount)
                     d.addCallback(renderLatestCounts)
                     return d
                 else:
+                    # if action == "friend" it is possible that user has accepted
+                    # friend request through suggestions. so update the counts.
                     d = people.get_suggestions(request, constants.SUGGESTION_PER_PAGE, mini=True)
                     def renderSuggestion(res):
                         suggestions, entities = res
@@ -572,6 +583,8 @@ class ProfileResource(base.BaseResource):
                                                  suggestions = suggestions,
                                                  entities=entities)
                     d.addCallback(renderSuggestion)
+                    if action == "friend":
+                        d.addCallback(renderLatestCounts)
                     return d
 
             actionDeferred.addCallback(fetchRelations)
