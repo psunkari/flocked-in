@@ -373,7 +373,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
                 elif x == "T":
                     reasonUserIds[convId] = [userId]
                     reasonTagId[convId] = tagId
-                    reasonTmpl[convId] = ["%(user0)s added %(tagName)s on your %(itemType)s", 
+                    reasonTmpl[convId] = ["%(user0)s added %(tagName)s on your %(itemType)s",
                                           "%(user0)s added %(tagName)s on %(owner)s's %(itemType)s"]
 
 
@@ -585,6 +585,11 @@ class FeedResource(base.BaseResource):
 
             entity = utils.supercolumnsToDict(entity)
             entityType = entity["basic"]['type']
+            basic = entity["basic"]
+
+            orgId = basic["org"] if basic["type"] != "org" else entityId
+            if myOrgId != orgId:
+                raise errors.EntityAccessDenied(entityType, entityId)
 
             if entityType == "org":
                 if entityId != myOrgId:

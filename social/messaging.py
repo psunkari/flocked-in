@@ -60,13 +60,15 @@ class MessagingResource(base.BaseResource):
         myId = authinfo.username
         myOrgId = authinfo.organization
         itemId = utils.getRequestArg(request, "id", sanitize=False)
-        columns = ["meta", "attachments"]
+        columns = ["meta", "attachments", "participants"]
 
         item = yield db.get_slice(itemId, "mConversations", columns)
+        item = utils.supercolumnsToDict(item)
         if not item:
             raise errors.InvalidItem("message", itemId)
+        if myId not in item['participants']:
+            raise errors.EntityAccessDenied('file', itemId)
 
-        item = utils.supercolumnsToDict(item)
         attachmentId = utils.getRequestArg(request, "fid", sanitize=False)
         version = utils.getRequestArg(request, "ver", sanitize=False)
 
@@ -75,7 +77,7 @@ class MessagingResource(base.BaseResource):
 
         # Check if the attachmentId belong to item
         if attachmentId not in item['attachments'].keys():
-            raise errors.AccessDenied()
+            raise errors.EntityAccessDenied('attachment', itemId)
 
         owner = item["meta"]["owner"]
 
@@ -265,7 +267,7 @@ class MessagingResource(base.BaseResource):
 
         participants = cols['participants'].keys()
         if myId not in participants:
-            raise errors.AccessDenied()
+            raise errors.EntityAccessDenied('message', convId)
 
         timeUUID = uuid.uuid1().bytes
         snippet = self._fetchSnippet(body)
@@ -533,7 +535,7 @@ class MessagingResource(base.BaseResource):
         participants =  set(conv['participants'].keys())
 
         if myId not in participants:
-            raise errors.AccessDenied()
+            raise errors.EntityAccessDenied('message', convId)
 
         cols = yield db.multiget_slice(newMembers, "entities", ['basic'])
         newMembers = set([userId for userId in cols if cols[userId]])
@@ -616,24 +618,25 @@ class MessagingResource(base.BaseResource):
             elif action == "read":
                 #Remove it from unreadIndex and mark it as unread in all other
                 # folders
-                convId = convIds[0]
-                cols = yield db.get_slice(convId, "mConversations")
-                conv = utils.supercolumnsToDict(cols)
-                timeUUID = conv['meta']['uuid']
-                participants = conv['participants'].keys()
-                if myId not in participants:
-                    raise errors.Unauthorized()
+                cols = yield db.multiget_slice(convIds, "mConversations")
+                convs = utils.multiSuperColumnsToDict(cols)
+                for convId in convs:
+                    conv = convs[convId]
+                    timeUUID = conv['meta']['uuid']
+                    participants = conv['participants'].keys()
+                    if myId not in participants:
+                        raise errors.Unauthorized()
 
-                yield db.remove(myId, "mUnreadConversations", timeUUID)
-                yield db.remove(convId, "mConvFolders", 'mUnreadConversations', myId)
-                yield db.remove(myId, "latest", timeUUID, "messages")
+                    yield db.remove(myId, "mUnreadConversations", timeUUID)
+                    yield db.remove(convId, "mConvFolders", 'mUnreadConversations', myId)
+                    yield db.remove(myId, "latest", timeUUID, "messages")
 
-                cols = yield db.get_slice(convId, "mConvFolders", [myId])
-                cols = utils.supercolumnsToDict(cols)
-                for folder in cols[myId]:
-                    if folder in self._folders:
-                        folder = self._folders[folder]
-                    yield db.insert(myId, folder, "r:%s"%(convId), timeUUID)
+                    cols = yield db.get_slice(convId, "mConvFolders", [myId])
+                    cols = utils.supercolumnsToDict(cols)
+                    for folder in cols[myId]:
+                        if folder in self._folders:
+                            folder = self._folders[folder]
+                        yield db.insert(myId, folder, "r:%s"%(convId), timeUUID)
 
         if not self._ajax:
             #Not all actions on message(s) happen over ajax, for them do a redirect
@@ -669,22 +672,24 @@ class MessagingResource(base.BaseResource):
                 else:
                     request.write("$('%s').remove()" %','.join(['#thread-%s' %convId for convId in convIds]))
 
+
     @profile
     @defer.inlineCallbacks
     @dump_args
     def _moveConversation(self, request, convIds, toFolder):
         myId = request.getSession(IAuthInfo).username
 
-        for convId in convIds:
-            conv = yield db.get_slice(convId, "mConversations")
+        convs = yield db.multiget_slice(convIds, "mConversations")
+        convs = utils.multiSuperColumnsToDict(convs)
+        for convId in convs:
+            conv = convs.get(convId, {})
             if not conv:
                 raise errors.InvalidRequest()
-            conv = utils.supercolumnsToDict(conv)
-            timeUUID = conv['meta']['uuid']
-            participants = conv['participants'].keys()
+            participants = conv.get('participants', []).keys()
             if myId not in participants:
-                raise errors.Unauthorized()
+                raise errors.EntityAccessDenied('message', convId)
 
+            timeUUID = conv['meta']['uuid']
             val = "%s:%s"%( 'u' if toFolder == 'unread' else 'r', convId)
 
             cols = yield db.get_slice(convId, 'mConvFolders', [myId])
@@ -700,7 +705,6 @@ class MessagingResource(base.BaseResource):
                 else:
                         yield db.insert(myId, cf, "u:%s"%(convId), timeUUID)
 
-
             if toFolder == 'unread':
                 val = "u:%s"%(convId)
                 yield db.insert(convId, 'mConvFolders', '', 'mUnreadConversations', myId)
@@ -709,6 +713,7 @@ class MessagingResource(base.BaseResource):
                 folder = self._folders[toFolder]
                 yield db.insert(myId, folder, val, timeUUID)
                 yield db.insert(convId, 'mConvFolders', '', folder, myId)
+
 
     @profile
     @defer.inlineCallbacks
@@ -829,8 +834,6 @@ class MessagingResource(base.BaseResource):
             d = self._renderComposer(request)
         elif segmentCount == 1 and request.postpath[0] == "thread":
             d = self._renderConversation(request)
-        elif segmentCount == 1 and request.postpath[0] == "actions":
-            d = self._actions(request)
         elif segmentCount == 1 and request.postpath[0] == "file":
             d = self._renderFile(request)
         return self._epilogue(request, d)
