@@ -163,38 +163,32 @@
           ${user_actions(userKey, True)}
         </ul>
       </div>
+
+      <div class="subtitle" class="summary-line">
+      %if (user['basic'].has_key('firstname') and user['basic'].has_key('lastname')):
+        <span class="summary-item">${user['basic']['firstname']} ${user['basic']['lastname']}</span>
+      %endif
+      </div>
+
       %if user['basic'].has_key('jobTitle'):
         <div class="subtitle">${user['basic']['jobTitle']}</div>
       %endif
     </div>
     <div id="summary-block">
-      %if user.has_key('work'):
-        <%
-          keys = [x.split(':')[2] for x in user['work'].keys()]
-          length = len(keys)
-        %>
-        ${'<span id="summary-work" class="summary-item">' + __('Worked on %s', 'Worked on %s and %s', length) % ((keys[0]) if length == 1 else (keys[1], keys[0])) + '</span>'}
-      %endif
-      %if user.get('personal', {}).has_key('birthday'):
-        <%
-          stamp = user['personal']['birthday']  ## YYYYMMDD
-          formatmap = {"year": stamp[0:4], "month": utils.monthName(int(stamp[4:6])), "day": stamp[6:]}
-        %>
-        ${'<span id="summary-born" class="summary-item">' + _('Born on %(month)s %(day)s, %(year)s') % formatmap + '</span>'}
-      %endif
-      %if user.get('contact',{}).has_key('mail'):
-        ${'<span id="summary-workmail" class="summary-item">' + user['contact']['mail'] + '</span>'}
-      %endif
-      %if user.get('contact', {}).has_key('phone'):
-        ${'<span id="summary-phone" class="summary-item">' + user['contact']['phone'] + '</span>'}
-      %endif
-      %if user.get('contact',{}).has_key('mobile'):
-        ${'<span id="summary-mobile" class="summary-item">' + user['contact']['mobile'] + '</span>'}
-      %endif
+      <div id="summary-work-contact" class="summary-line">
+        <span class="summary-item"><a href="${'mailto:' + user['basic']['emailId']}">${user['basic']['emailId']}</a></span>
+        %if user.get('contact', {}).has_key('phone'):
+          <span class="summary-item" title="${_('Work Phone')}">${user['contact']['phone']}</span>
+        %endif
+        %if user.get('contact',{}).has_key('mobile'):
+          <span class="summary-item" title="${_('Work Mobile')}">${user['contact']['mobile']}</span>
+        %endif
+      </div>
 
       %if myKey == userKey:
-        ${'<span id="edit-profile" class="summary-item"><a href="/settings" class="ajax">Edit Profile</a></span>'}
+        ${'<div id="edit-profile" class="summary-line"><span class="summary-item"><a href="/settings" class="ajax">Edit Profile</a></span></div>'}
       %endif
+
     </div>
   </div>
   <div class="clear"></div>
@@ -205,7 +199,7 @@
     <%
       path = "/profile?id=%s&" % userKey
     %>
-    %for item, name in [('activity', 'Activity'), ('info', 'Info')]:
+    %for item, name in [('activity', 'Activity'), ('info', 'More Info')]:
       %if detail == item:
         <li><a href="${path}dt=${item}" id="profile-tab-${item}" class="ajax selected">${_(name)}</a></li>
       %else:
@@ -241,6 +235,35 @@
 </%def>
 
 <%def name="content_info()">
+  <div id="summary-personal">
+      <div id="summary-personal-contact" class="summary-line">
+      %if user.get('personal', {}).has_key('email'):
+        <span class="summary-item" title="${_('Personal Email')}">${user['personal']['email']}</span>
+      %endif
+      %if user.get('personal', {}).has_key('phone'):
+        <span class="summary-item" title="${_('Personal Phone')}">${user['personal']['phone']}</span>
+      %endif
+      %if user.get('personal', {}).has_key('mobile'):
+        <span class="summary-item" title="${_('Personal Mobile')}">${user['personal']['mobile']}</span>
+      %endif
+      </div>
+
+      %if user.get('personal', {}).has_key('birthday'):
+        <div id="summary-born" class="summary-line">
+          <%
+            stamp = user['personal']['birthday']  ## YYYYMMDD
+            formatmap = {"year": stamp[0:4], "month": utils.monthName(int(stamp[4:6])), "day": stamp[6:]}
+          %>
+          ${'<span class="summary-item">' + _('Born on %(month)s %(day)s, %(year)s') % formatmap + '</span>'}
+        </div>
+      %endif
+
+      %if user.get('personal', {}).has_key('currentCity'):
+        <div id="summary-personal-location" class="summary-line">
+          <span class="summary-item">${ _('Currently residing in ' + user['personal']['currentCity']) }</span>
+        </div>
+      %endif
+  </div>
   %if user.has_key('work'):
     <%
       keys = sorted(user['work'].keys(), reverse=True)
@@ -271,7 +294,6 @@
       %endfor
     </dl>
   %endif
-  <div class="content-title"><h4>${_('Recommendations for %s') % user['basic']['name']}</h4></div>
   %if user.has_key('employers'):
     <%
       keys = sorted(user['employers'].keys(), reverse=True)
@@ -314,15 +336,6 @@
       %endfor
     </dl>
   %endif
-  <div class="content-title"><h4>${_('Interests')}</h4></div>
-  <dl id="content-interests">
-  </dl>
-  <div class="content-title"><h4>${_('Contact Information')}</h4></div>
-  <dl id="content-contact">
-  </dl>
-  <div class="content-title"><h4>${_('Other Details')}</h4></div>
-  <dl id="content-other">
-  </dl>
 </%def>
 
 <%def name="activity_block(grp)">

@@ -485,6 +485,10 @@ a:hover, a:active, a:focus {
     padding: 0 8px 0 0;
 }
 
+.summary-line {
+    padding: 8px 0 0 0;
+}
+
 .user-actions {
     /*font-size: 11px;*/
 }
@@ -494,7 +498,7 @@ a:hover, a:active, a:focus {
 }
 
 #profile-content {
-    padding-top: 15px;
+    padding: 15px 0 0 20px;
 }
 
 
