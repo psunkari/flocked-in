@@ -29,7 +29,7 @@
             </tr>
             <tr><td style="border-top:1px solid #DDD; font-size: 14px;padding-top:10px;">
               ${brandName} is an enterprise social platform built on top of
-              micro-blogging and activity streams that helps you stay connected 
+              micro-blogging and activity streams that helps you stay connected
               with your co-workers.  It helps your company engage and keep
               everyone informed.
             </td></tr>
@@ -62,17 +62,14 @@
                  style="border:1px solid #dddddd;border-radius:4px;">
             <tr>
               <td style="font-size: 14px;">
-                 You are recieving this mail because you requested a password reset on ${brandName}.
-                 <br/><br/>
-                 Please go to the following page to reset your password. 
-                 <a href="${resetPasswdUrl}">${resetPasswdUrl}</a> 
+                 You or someone else requested a password reset for ${email} on <a href="${rootUrl}">${brandName}</a>.<br/></br>
+                 Please ignore this mail if you did not request a password reset<br/><br/>
+                 Click the following link to reset your password.<br/>
+                 <a href="${resetPasswdUrl}">${resetPasswdUrl}</a> <br/>
+                 This link is valid for 24hours only.<br/>
               </td>
             </tr>
             <tr><td style="border-top:1px solid #DDD; font-size: 14px;padding-top:10px;">
-              ${brandName} is an enterprise social platform built on top of
-              micro-blogging and activity streams that helps you stay connected 
-              with your co-workers.  It helps your company engage and keep
-              everyone informed.
             </td></tr>
           </table>
         </td></tr>
@@ -193,7 +190,7 @@
   ${footer()}
 </%def>
 
-## 
+##
 ## Yet to be implemented
 ##
 
