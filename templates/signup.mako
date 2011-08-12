@@ -48,11 +48,13 @@
     }
    %elif view == 'resetPassword':
     function validate(){
-      var password = document.querySelector('input[name="password"]').value
-      var pwdrepeat = document.querySelector('input[name="pwdrepeat"]').value
-      if (password != pwdrepeat){
+      var password = document.querySelector('input[name="password"]')
+      var pwdrepeat = document.querySelector('input[name="pwdrepeat"]')
+      if (password.value != pwdrepeat.value){
         document.getElementById('messages-wrapper').style.display = 'block';
         document.getElementById('messages-wrapper').innerHTML = 'Passwords do not match.';
+        password.value ='';
+        pwdrepeat.value ='';
         return false
       }
       return true
