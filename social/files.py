@@ -256,8 +256,6 @@ class FilesResource(base.BaseResource):
         landing = not self._ajax
         myOrgId = args["orgKey"]
 
-        log.msg("-------- S3 from ------------")
-
         SKey = config.get('CloudFiles', 'SecretKey')
         AKey = config.get('CloudFiles', 'AccessKey')
         domain = config.get('CloudFiles', 'Domain')
@@ -305,7 +303,6 @@ class FilesResource(base.BaseResource):
                                   fields=x_fields,
                                   conditions=x_conds,
                                   success_action_redirect=redirect_url)
-        log.msg("--------- form data ---------", form_data)
         request.write(json.dumps([form_data]));
         defer.returnValue(0)
 
