@@ -60,34 +60,39 @@ class MessagingResource(base.BaseResource):
         myId = authinfo.username
         myOrgId = authinfo.organization
         itemId = utils.getRequestArg(request, "id", sanitize=False)
+        attachmentId = utils.getRequestArg(request, "fid", sanitize=False)
+        version = utils.getRequestArg(request, "ver", sanitize=False)
         columns = ["meta", "attachments", "participants"]
+
+        if not (itemId and attachmentId and version):
+            raise errors.MissingParams([])
 
         item = yield db.get_slice(itemId, "mConversations", columns)
         item = utils.supercolumnsToDict(item)
         if not item:
-            raise errors.InvalidItem("message", itemId)
-        if myId not in item['participants']:
-            raise errors.EntityAccessDenied('file', itemId)
-
-        attachmentId = utils.getRequestArg(request, "fid", sanitize=False)
-        version = utils.getRequestArg(request, "ver", sanitize=False)
-
-        if not attachmentId or not version:
-            raise errors.MissingParams()
+            raise errors.InvalidMessage(itemId)
+        if myId not in item.get('participants', {}):
+            raise errors.MessageAccessDenied(itemId)
 
         # Check if the attachmentId belong to item
         if attachmentId not in item['attachments'].keys():
-            raise errors.EntityAccessDenied('attachment', itemId)
+            raise errors.InvalidMessageAttachment(itemId, attachmentId, version)
 
-        owner = item["meta"]["owner"]
+        try:
+            version = utils.decodeKey(version)
+        except TypeError:
+            raise errors.InvalidMessageAttachment(itemId, attachmentId, version)
 
-        version = utils.decodeKey(version)
         fileId, filetype, name = None, 'text/plain', 'file'
-        cols = yield db.get(itemId, "item_files", version, attachmentId)
-        cols = utils.columnsToDict([cols])
-        if not cols or version not in cols:
-            raise errors.InvalidRequest()
+        owner = item["meta"]["owner"]
+        try:
+            cols = yield db.get(itemId, "item_files", version, attachmentId)
+        except ttypes.NotFoundException:
+            raise errors.InvalidMessageAttachment(itemId, attachmentId, version)
+        except ttypes.InvalidRequestException:
+            raise errors.InvalidMessageAttachment(itemId, attachmentId, version)
 
+        cols = utils.columnsToDict([cols])
         tuuid, fileId, name, size, filetype = cols[version].split(':')
 
         files = yield db.get_slice(fileId, "files", ["meta"])
@@ -258,16 +263,15 @@ class MessagingResource(base.BaseResource):
         epoch = int(time.time())
 
         if not convId:
-            raise errors.MissingParams()
+            raise errors.MissingParams([])
 
         cols = yield db.get_slice(convId, "mConversations", ['participants'])
         cols = utils.supercolumnsToDict(cols)
+        participants = cols.get('participants', {}).keys()
         if not cols:
-            raise errors.InvalidRequest()
-
-        participants = cols['participants'].keys()
+            raise errors.InvalidMessage(convId)
         if myId not in participants:
-            raise errors.EntityAccessDenied('message', convId)
+            raise errors.MessageAccessDenied(convId)
 
         timeUUID = uuid.uuid1().bytes
         snippet = self._fetchSnippet(body)
@@ -353,14 +357,14 @@ class MessagingResource(base.BaseResource):
         filterType = utils.getRequestArg(request, "filterType") or None
 
         if not parent and not recipients:
-            raise errors.MissingParams()
+            raise errors.MissingParams([])
 
         cols = yield db.multiget_slice(recipients, "entities", ['basic'])
         recipients = utils.multiSuperColumnsToDict(cols)
         recipients = set([userId for userId in recipients if recipients[userId]])
 
         if not recipients:
-            raise errors.MissingParams()
+            raise errors.MissingParams([])
         recipients.add(myId)
         participants = list(recipients)
 
@@ -486,37 +490,39 @@ class MessagingResource(base.BaseResource):
         action = utils.getRequestArg(request, "action")
         convId = utils.getRequestArg(request, 'parent') or None
 
+        if not convId:
+            raise errors.MissingParams([_('Conversation Id')])
+        if action not in ('add', 'remove'):
+            raise errors.InvalidRequest()
+
         if action == "add":
             yield self._addMembers(request)
         elif action == "remove":
             yield self._removeMembers(request)
 
-        if convId:
-            cols = yield db.get_slice(convId, "mConversations")
-            conv = utils.supercolumnsToDict(cols)
-            participants = set(conv['participants'])
-            people = yield db.multiget_slice(participants, "entities", ['basic'])
-            people = utils.multiSuperColumnsToDict(people)
+        cols = yield db.get_slice(convId, "mConversations")
+        conv = utils.supercolumnsToDict(cols)
+        participants = set(conv['participants'])
+        people = yield db.multiget_slice(participants, "entities", ['basic'])
+        people = utils.multiSuperColumnsToDict(people)
 
-            args.update({"people":people})
-            args.update({"conv":conv})
-            args.update({"id":convId})
-            args.update({"view":"message"})
-            if script:
-                onload = """
-                         $('#conversation_add_member').autocomplete({
-                               source: '/auto/users',
-                               minLength: 2,
-                               select: function( event, ui ) {
-                                   $('#conversation_recipients').attr('value', ui.item.uid)
-                               }
-                          });
-                         """
-                yield renderScriptBlock(request, "message.mako", "right",
-                                        landing, ".right-contents", "set", True,
-                                        handlers={"onload":onload}, **args)
-        else:
-            raise errors.MissingParams([_('Conversation Id')])
+        args.update({"people":people})
+        args.update({"conv":conv})
+        args.update({"id":convId})
+        args.update({"view":"message"})
+        if script:
+            onload = """
+                     $('#conversation_add_member').autocomplete({
+                           source: '/auto/users',
+                           minLength: 2,
+                           select: function( event, ui ) {
+                               $('#conversation_recipients').attr('value', ui.item.uid)
+                           }
+                      });
+                     """
+            yield renderScriptBlock(request, "message.mako", "right",
+                                    landing, ".right-contents", "set", True,
+                                    handlers={"onload":onload}, **args)
 
     @profile
     @defer.inlineCallbacks
@@ -526,16 +532,15 @@ class MessagingResource(base.BaseResource):
         newMembers, body, subject, convId = self._parseComposerArgs(request)
 
         if not (convId and newMembers):
-            raise errors.MissingParams()
+            raise errors.MissingParams([])
 
         conv = yield db.get_slice(convId, "mConversations")
-        if not conv:
-            raise errors.MissingParams()
         conv = utils.supercolumnsToDict(conv)
-        participants =  set(conv['participants'].keys())
-
+        participants =  set(conv.get('participants', {}).keys())
+        if not conv:
+            raise errors.InvalidMessage(convId)
         if myId not in participants:
-            raise errors.EntityAccessDenied('message', convId)
+            raise errors.MessageAccessDenied(convId)
 
         cols = yield db.multiget_slice(newMembers, "entities", ['basic'])
         newMembers = set([userId for userId in cols if cols[userId]])
@@ -546,6 +551,7 @@ class MessagingResource(base.BaseResource):
             yield db.batch_insert(convId, "mConversations", {'participants':newMembers})
             yield self._deliverMessage(convId, newMembers, conv['meta']['uuid'], conv['meta']['owner'])
 
+
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -554,17 +560,15 @@ class MessagingResource(base.BaseResource):
         members, body, subject, convId = self._parseComposerArgs(request)
 
         if not (convId and  members):
-            raise errors.MissingParams()
+            raise errors.MissingParams([])
 
         conv = yield db.get_slice(convId, "mConversations")
-        if not conv:
-            raise errors.MissingParams()
-
         conv = utils.supercolumnsToDict(conv)
-        participants = conv['participants'].keys()
-
+        participants = conv.get('participants', {}).keys()
+        if not conv:
+            raise errors.InvalidMessage(convId)
         if myId not in participants:
-            raise errors.Unauthorized()
+            raise errors.MessageAccessDenied(convId)
 
         cols = yield db.multiget_slice(members, "entities", ['basic'])
         members = set([userId for userId in cols if cols[userId]])
@@ -622,10 +626,11 @@ class MessagingResource(base.BaseResource):
                 convs = utils.multiSuperColumnsToDict(cols)
                 for convId in convs:
                     conv = convs[convId]
+                    if not conv:
+                        raise errors.InvalidMessage(convId)
+                    if myId not in conv.get('participants', {}):
+                        raise errors.MessageAccessDenied(convId)
                     timeUUID = conv['meta']['uuid']
-                    participants = conv['participants'].keys()
-                    if myId not in participants:
-                        raise errors.Unauthorized()
 
                     yield db.remove(myId, "mUnreadConversations", timeUUID)
                     yield db.remove(convId, "mConvFolders", 'mUnreadConversations', myId)
@@ -684,10 +689,9 @@ class MessagingResource(base.BaseResource):
         for convId in convs:
             conv = convs.get(convId, {})
             if not conv:
-                raise errors.InvalidRequest()
-            participants = conv.get('participants', []).keys()
-            if myId not in participants:
-                raise errors.EntityAccessDenied('message', convId)
+                raise errors.InvalidMessage(convId)
+            if myId not in conv.get('participants', {}):
+                raise errors.MessageAccessDenied(convId)
 
             timeUUID = conv['meta']['uuid']
             val = "%s:%s"%( 'u' if toFolder == 'unread' else 'r', convId)
@@ -721,7 +725,9 @@ class MessagingResource(base.BaseResource):
     def _renderConversation(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
-        convId = utils.getRequestArg(request, 'id')
+        convId = utils.getRequestArg(request, 'id', sanitize=False)
+        if not convId:
+            raise errors.MissingParams([])
 
         if script and landing:
             yield render(request, "message.mako", **args)
@@ -730,75 +736,75 @@ class MessagingResource(base.BaseResource):
             yield renderScriptBlock(request, "message.mako", "layout",
                               landing, "#mainbar", "set", **args)
 
-        if convId:
-            cols = yield db.get_slice(convId, "mConversations")
-            conv = utils.supercolumnsToDict(cols)
-            participants = set(conv['participants'])
+        cols = yield db.get_slice(convId, "mConversations")
+        conv = utils.supercolumnsToDict(cols)
+        participants = set(conv.get('participants', {}).keys())
+        if not conv:
+            raise errors.InvalidMessage(convId)
+        if myId not in participants:
+            raise errors.MessageAccessDenied(convId)
 
-            if myId not in participants:
-                raise errors.Unauthorized()
+        timeUUID = conv['meta']['uuid']
+        d1 = db.remove(myId, "mUnreadConversations", timeUUID)
+        d2 = db.remove(convId, "mConvFolders", 'mUnreadConversations', myId)
+        d3 = db.remove(myId, "latest", timeUUID, "messages")
+        deferreds = [d1, d2, d3]
+        yield defer.DeferredList(deferreds)
+        deferreds = []
+        cols = yield db.get_slice(convId, "mConvFolders", [myId])
+        cols = utils.supercolumnsToDict(cols)
+        for folder in cols[myId]:
+            if folder in self._folders:
+                folder = self._folders[folder]
+            d = db.insert(myId, folder, "r:%s"%(convId), timeUUID)
+            deferreds.append(d)
 
-            timeUUID = conv['meta']['uuid']
-            d1 = db.remove(myId, "mUnreadConversations", timeUUID)
-            d2 = db.remove(convId, "mConvFolders", 'mUnreadConversations', myId)
-            d3 = db.remove(myId, "latest", timeUUID, "messages")
-            deferreds = [d1, d2, d3]
-            yield defer.DeferredList(deferreds)
-            deferreds = []
-            cols = yield db.get_slice(convId, "mConvFolders", [myId])
-            cols = utils.supercolumnsToDict(cols)
-            for folder in cols[myId]:
-                if folder in self._folders:
-                    folder = self._folders[folder]
-                d = db.insert(myId, folder, "r:%s"%(convId), timeUUID)
-                deferreds.append(d)
+        #FIX: make sure that there will be an entry of convId in mConvFolders
+        cols = yield db.get_slice(convId, "mConvMessages")
+        mids = [col.column.value for col in cols]
+        messages = yield db.multiget_slice(mids, "messages", ["meta"])
+        messages = utils.multiSuperColumnsToDict(messages)
 
-            #FIX: make sure that there will be an entry of convId in mConvFolders
-            cols = yield db.get_slice(convId, "mConvMessages")
-            mids = [col.column.value for col in cols]
-            messages = yield db.multiget_slice(mids, "messages", ["meta"])
-            messages = utils.multiSuperColumnsToDict(messages)
+        participants.update([messages[mid]['meta']['owner'] for mid in messages])
+        people = yield db.multiget_slice(participants, "entities", ['basic'])
+        people = utils.multiSuperColumnsToDict(people)
+        s = yield defer.DeferredList(deferreds)
 
-            participants.update([messages[mid]['meta']['owner'] for mid in messages])
-            people = yield db.multiget_slice(participants, "entities", ['basic'])
-            people = utils.multiSuperColumnsToDict(people)
-            s = yield defer.DeferredList(deferreds)
+        args.update({"people":people})
+        args.update({"conv":conv})
+        args.update({"messageIds": mids})
+        args.update({'messages': messages})
+        args.update({"id":convId})
+        args.update({"flags":{}})
+        args.update({"view":"message"})
+        args.update({"menuId": "messages"})
 
-            args.update({"people":people})
-            args.update({"conv":conv})
-            args.update({"messageIds": mids})
-            args.update({'messages': messages})
-            args.update({"id":convId})
-            args.update({"flags":{}})
-            args.update({"view":"message"})
-            args.update({"menuId": "messages"})
+        if script:
+            onload = """
+                     $$.menu.selectItem("messages");
+                     $('#mainbar .contents').addClass("has-right");
+                     $('.conversation-reply').autogrow();
+                     """
+            renderMessage = renderScriptBlock(request, "message.mako", "render_conversation",
+                                    landing, ".center-contents", "set", True,
+                                    handlers={"onload":onload}, **args)
 
-            if script:
-                onload = """
-                         $$.menu.selectItem("messages");
-                         $('#mainbar .contents').addClass("has-right");
-                         $('.conversation-reply').autogrow();
-                         """
-                renderMessage = renderScriptBlock(request, "message.mako", "render_conversation",
-                                        landing, ".center-contents", "set", True,
-                                        handlers={"onload":onload}, **args)
-
-                onload = """
-                         $$.ui.loadFileShareBlock();
-                         $('#conversation_add_member').autocomplete({
-                               source: '/auto/users',
-                               minLength: 2,
-                               select: function( event, ui ) {
-                                   $('#conversation_recipients').attr('value', ui.item.uid)
-                               }
-                          });
-                        """
-                renderParticipants = renderScriptBlock(request, "message.mako", "right",
-                                        landing, ".right-contents", "set", True,
-                                        handlers={"onload":onload}, **args)
-                yield defer.DeferredList([renderMessage, renderParticipants])
-            else:
-                yield render(request, "message.mako", **args)
+            onload = """
+                     $$.ui.loadFileShareBlock();
+                     $('#conversation_add_member').autocomplete({
+                           source: '/auto/users',
+                           minLength: 2,
+                           select: function( event, ui ) {
+                               $('#conversation_recipients').attr('value', ui.item.uid)
+                           }
+                      });
+                    """
+            renderParticipants = renderScriptBlock(request, "message.mako", "right",
+                                    landing, ".right-contents", "set", True,
+                                    handlers={"onload":onload}, **args)
+            yield defer.DeferredList([renderMessage, renderParticipants])
+        else:
+            yield render(request, "message.mako", **args)
 
     @profile
     @defer.inlineCallbacks

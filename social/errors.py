@@ -116,6 +116,31 @@ class EntityAccessDenied(BaseError):
         message = _("The requested %s does not exist") % _(entityType)
         BaseError.__init__(self, message, 404)
 
+#
+# Access to File is denied
+#
+class MessageAttachmentAccessDenied(BaseError):
+    attachmentId = None
+    convId = None
+    version = None
+
+    def __init__(self, convId, attachmentId, version):
+        self.attachmentId = attachmentId
+        self.convId = convId
+        self.version = version
+        message = _("The requested file does not exist")
+        BaseError.__init__(self, message, 404)
+
+#
+# Access to File is denied
+#
+class MessageAccessDenied(BaseError):
+    convId = None
+    def __init__(self, convId):
+        self.convId = convId
+        message = _("The requested message does not exist")
+        BaseError.__init__(self, message, 404)
+
 
 #
 # Invalid itemId was given
@@ -152,4 +177,29 @@ class InvalidTag(BaseError):
         message = _("The requested tag does not exist")
         BaseError.__init__(self, message, 404)
 
+#
+# Invalid message was given
+#
+class InvalidMessage(BaseError):
+    convId = None
+
+    def __init__(self, convId):
+        self.convId = convId
+        message = _("The requested tag does not exist")
+        BaseError.__init__(self, message, 404)
+
+#
+# Invalid message-attachment was given
+#
+class InvalidMessageAttachment(BaseError):
+    attachmentId = None
+    convId = None
+    version = None
+
+    def __init__(self, convId, attachmentId, version):
+        self.attachmentId = attachmentId
+        self.convId = convId
+        self.version = version
+        message = _("The requested file does not exist")
+        BaseError.__init__(self, message, 404)
 
