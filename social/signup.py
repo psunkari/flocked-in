@@ -45,20 +45,17 @@ def _sendmailResetPassword(email, token):
     rootUrl = config.get('General', 'URL')
     brandName = config.get('Branding', 'Name')
 
-    footer = "%(brandName)s is an enterprise social platform built on top of "\
-             "micro-blogging and activity streams that helps you stay " \
-             "connected with your co-workers. It helps your company engage " \
-             "and keep everyone informed." %(locals())
-
-    body = "You received this mail because you requested a password "\
-           "reset on %(brandName)s. \n\n Click the following link to "\
-           "reset your password\n %(resetPasswdUrl)s \n "\
-           "The link is valid for 24hours only. \n %(footer)s" \
+    body = "You or someone else requested a password reset "\
+           "for %(email)s on %(brandName)s. \nPlease ignore this mail if you "\
+           "did not request a password reset. \n\n Click the following "\
+           "link to reset your password\n %(resetPasswdUrl)s \n "\
+           "This link is valid for 24hours only."
 
 
     resetPasswdUrl = "%(rootUrl)s/password/resetPassword?email=%(email)s&token=%(token)s"%(locals())
-    args = {"brandName": brandName, "rootUrl": rootUrl, "resetPasswdUrl": resetPasswdUrl}
-    subject = "Reset Password requested on %(brandName)s" %(locals())
+    args = {"brandName": brandName, "rootUrl": rootUrl,
+            "resetPasswdUrl": resetPasswdUrl, "email":email}
+    subject = "[%(brandName)s] Reset Password requested for %(email)s" %(locals())
     htmlBody = getBlock("emails.mako", "forgotPasswd", **args)
     textBody = body %(locals())
     yield utils.sendmail(email, subject, textBody, htmlBody)
