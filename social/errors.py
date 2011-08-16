@@ -119,7 +119,7 @@ class EntityAccessDenied(BaseError):
 #
 # Access to File is denied
 #
-class MessageAttachmentAccessDenied(BaseError):
+class AttachmentAccessDenied(BaseError):
     attachmentId = None
     convId = None
     version = None
@@ -191,7 +191,7 @@ class InvalidMessage(BaseError):
 #
 # Invalid message-attachment was given
 #
-class InvalidMessageAttachment(BaseError):
+class InvalidAttachment(BaseError):
     attachmentId = None
     convId = None
     version = None

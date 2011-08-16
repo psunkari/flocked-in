@@ -76,21 +76,21 @@ class MessagingResource(base.BaseResource):
 
         # Check if the attachmentId belong to item
         if attachmentId not in item['attachments'].keys():
-            raise errors.InvalidMessageAttachment(itemId, attachmentId, version)
+            raise errors.InvalidAttachment(itemId, attachmentId, version)
 
         try:
             version = utils.decodeKey(version)
         except TypeError:
-            raise errors.InvalidMessageAttachment(itemId, attachmentId, version)
+            raise errors.InvalidAttachment(itemId, attachmentId, version)
 
         fileId, filetype, name = None, 'text/plain', 'file'
         owner = item["meta"]["owner"]
         try:
             cols = yield db.get(itemId, "item_files", version, attachmentId)
         except ttypes.NotFoundException:
-            raise errors.InvalidMessageAttachment(itemId, attachmentId, version)
+            raise errors.InvalidAttachment(itemId, attachmentId, version)
         except ttypes.InvalidRequestException:
-            raise errors.InvalidMessageAttachment(itemId, attachmentId, version)
+            raise errors.InvalidAttachment(itemId, attachmentId, version)
 
         cols = utils.columnsToDict([cols])
         tuuid, fileId, name, size, filetype = cols[version].split(':')
