@@ -58,7 +58,7 @@ class TagsResource(base.BaseResource):
             items = utils.columnsToDict(items, ordered=True)
             itemsFromFeed.update(items)
             defer.returnValue(items)
-        
+
         @defer.inlineCallbacks
         def cleaner(convIds):
             deleteKeys = []
@@ -116,8 +116,11 @@ class TagsResource(base.BaseResource):
 
 
     @defer.inlineCallbacks
-    def _renderMore(self, request, start, tagId):
+    def _renderMore(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        (tagId, tagInfo) = yield utils.getValidTagId(request, 'id')
+        start = utils.getRequestArg(request, 'start') or ""
+
         tagItems = yield self._getTagItems(request, tagId, start=start)
         args.update(tagItems)
         args["tagId"] = tagId
@@ -211,9 +214,7 @@ class TagsResource(base.BaseResource):
             if request.postpath[0] == "list":
                 d = self._listTags(request)
             elif request.postpath[0] == "more":
-                tagId = utils.getRequestArg(request, 'id')
-                start = utils.getRequestArg(request, 'start') or ""
-                d = self._renderMore(request, start, tagId)
+                d = self._renderMore(request)
 
         return self._epilogue(request, d)
 
