@@ -466,7 +466,6 @@ class GroupsResource(base.BaseResource):
 
         cols = yield db.get_slice(myId, "entities", super_column='adminOfGroups')
         managedGroupIds = [col.column.name for col in cols]
-        ##TODO: can we use getLatestCounts instead of fetching pendingConnections?
         cols = yield db.multiget_slice(managedGroupIds, "pendingConnections", count=1)
         cols = utils.multiColumnsToDict(cols)
 
