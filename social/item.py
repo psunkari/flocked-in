@@ -217,6 +217,7 @@ class ItemResource(base.BaseResource):
         start = utils.decodeKey(start)
 
         args['convId'] = convId
+        args['isItemView'] = True
         args['items'] = {convId: conv}
         meta = conv["meta"]
         owner = meta["owner"]
@@ -678,8 +679,6 @@ class ItemResource(base.BaseResource):
             raise errors.MissingParams([_("Comment")])
 
         # 0. Fetch conversation and see if I have access to it.
-        # TODO: Check ACL
-
         (convId, conv) = yield utils.getValidItemId(request, "parent")
         convType = conv["meta"].get("type", "status")
 
@@ -699,7 +698,8 @@ class ItemResource(base.BaseResource):
         if responseCount % 5 == 3:
             responseCount = yield db.get_count(convId, "itemResponses")
 
-        convUpdates = {"responseCount": str(responseCount + 1)}
+        responseCount += 1
+        convUpdates = {"responseCount": str(responseCount)}
         yield db.batch_insert(convId, "items", {"meta": convUpdates,
                                                 "followers": followers})
 
@@ -738,10 +738,10 @@ class ItemResource(base.BaseResource):
 
         numShowing = utils.getRequestArg(request, "nc") or "0"
         numShowing = int(numShowing) + 1
-        isFeed = (utils.getRequestArg(request, "_pg") != "/item")
+        isItemView = (utils.getRequestArg(request, "_pg") == "/item")
         yield renderScriptBlock(request, 'item.mako', 'conv_comments_head',
                         False, '#comments-header-%s' % (convId), 'set',
-                        args=[convId, responseCount, numShowing, isFeed], **args)
+                        args=[convId, responseCount, numShowing, isItemView], **args)
 
         yield renderScriptBlock(request, 'item.mako', 'conv_comment', False,
                                 '#comments-%s' % convId, 'append', True,
@@ -838,7 +838,9 @@ class ItemResource(base.BaseResource):
             args["oldest"] = utils.encodeKey(nextPageStart)
 
         if isFeed:
-            handler = {"onload":"(function(){$$.convs.showHideComponent('%s', 'comments', true)})();"%(convId)}
+            args["isItemView"] = False
+            showing = len(responseKeys)
+            handler = {"onload":"(function(){$$.convs.showHideComponent('%s', 'comments', true); $('[name=\"nc\"]', '#comment-form-%s').val('%s');})();"%(convId, convId, showing)}
             yield renderScriptBlock(request, "item.mako", 'conv_comments',
                         not self._ajax, '#conv-comments-wrapper-%s' % convId,
                         'set', True, handlers=handler, **args)
@@ -848,6 +850,7 @@ class ItemResource(base.BaseResource):
             showing = int(showing) + len(responseKeys)
             args["showing"] = showing
             args["total"] = int(args["items"][convId]["meta"].get("responseCount", "0"))
+            args["isItemView"] = True
 
             yield renderScriptBlock(request, "item.mako", 'conv_comments_head',
                                     landing, '#comments-header-%s' % convId,

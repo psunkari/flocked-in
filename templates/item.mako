@@ -126,11 +126,11 @@
           %>
         </div>
         <div id="conv-comments-wrapper-${convId}" class="comments-wrapper">
-          ${self.conv_comments(convId, True)}
+          ${self.conv_comments(convId, isItemView)}
         </div>
         %if script:
         <div id="comment-form-wrapper-${convId}" class="comment-form-wrapper busy-indicator">
-          ${self.conv_comment_form(convId)}
+          ${self.conv_comment_form(convId, isItemView)}
         </div>
         %endif
       </div>
@@ -302,11 +302,11 @@
 </%def>
 
 
-<%def name="conv_comments_head(convId, total, showing, isFeed)">
+<%def name="conv_comments_head(convId, total, showing, isItemView)">
   <% commentString = "answers" if items[convId]['meta']['type'] == "question" else "comments" %>
   %if total > showing:
     <div class="conv-comments-more" class="busy-indicator">
-      %if isFeed:
+      %if not isItemView:
         <a class="ajax" href="/item?id=${convId}" _ref="/item/responses?id=${convId}">${_("View all %s %s &#187;") % (total, commentString)}</a>
       %else:
         <span class="num-comments">${_("%s of %s") % (showing, total)}</span>
@@ -329,14 +329,14 @@
 </%def>
 
 
-<%def name="conv_comments(convId, isFeed=False)">
+<%def name="conv_comments(convId, isItemView=False)">
   <%
     responseCount = int(items[convId]["meta"].get("responseCount", "0"))
     responsesToShow = responses.get(convId, {}) if responses else []
   %>
   <div id="comments-header-${convId}">
     %if responsesToShow:
-      ${self.conv_comments_head(convId, responseCount, len(responsesToShow), isFeed)}
+      ${self.conv_comments_head(convId, responseCount, len(responsesToShow), isItemView)}
     %endif
   </div>
   <div id="comments-${convId}">
@@ -347,15 +347,15 @@
 </%def>
 
 
-<%def name="conv_comment_form(convId)">
+<%def name="conv_comment_form(convId, isItemView)">
   <form method="post" action="/item/comment" class="ajax" autocomplete="off" id="comment-form-${convId}">
     <div class="input-wrap">
       <textarea class="comment-input" name="comment" placeholder="${_('Leave a response...')}" value=""></textarea>
     </div>
     <input type="hidden" name="parent" value=${convId}></input>
-    %if not isFeed:
-      <% nc = len(responses.get(convId, {})) if responses else 0 %>
-      <input type="hidden" name="nc" value=${nc}></input>
+    <% nc = len(responses.get(convId, {})) if responses else 0 %>
+    <input type="hidden" name="nc" value=${nc}></input>
+    %if isItemView and oldest:
       %if oldest:
         <input type="hidden" name="start" value=${oldest}></input>
       %endif
