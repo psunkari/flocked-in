@@ -84,7 +84,7 @@
       <div id="search-container">
         <form id="search" action="/search" method="GET" class="ajaxget">
           <input type="text" id="searchbox" name="q"
-                 placeholder="${_('Search people, messages and statuses...')}"/>
+                 placeholder="${_('Search people, messages and statuses...')}" required title="${_('Search')}"/>
           <input type="submit" id="searchbutton" value="${_('Go!')}"/>
         </form>
       </div>
@@ -124,9 +124,11 @@
   <script type="text/javascript" src="/rsrcs/js/jquery.address-1.4.min.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.autogrow-textarea.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.iframe-transport.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/jquery.html5form-min.js"></script>
   <script type="text/javascript" src="/rsrcs/js/social.js"></script>
   <script type="text/javascript">
     $().ready(function() {$$.ui.init()});
+    $().ready(function() {$('form').html5form({messages: 'en', async: false});});
   </script>
 %else:
 </body>

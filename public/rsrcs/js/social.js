@@ -432,7 +432,7 @@ var publisher = {
         $('#publisher-'+obj.publisherName).addClass('selected-publisher');
 
         // Placeholders
-        $$.ui.placeholders('#sharebar input:text, #sharebar textarea');
+        $('#share-form').html5form({messages: 'en', async: false});
 
         // Auto expand textareas
         $('#sharebar textarea').autogrow();
@@ -452,9 +452,6 @@ $$.publisher = publisher;
 (function($$, $) { if (!$$.convs) {
 var convs = {
     load: function(obj) {
-        // Placeholders in comment input boxes
-        $$.ui.placeholders('.comment-input');
-
         // Auto expand comment boxes
         $('.comment-input').autogrow();
     },
@@ -484,7 +481,7 @@ var convs = {
 
     comment: function(convId) {
         convs.showHideComponent(convId, 'comments', true);
-        $('#comment-form-'+convId).find('.comment-input').focus();
+        $('#comment-form-'+convId).find('.comment-input').select().focus();
     },
 
     showItemLikes: function(itemId) {
@@ -642,7 +639,6 @@ var ui = {
                 return true;
             }
         });
-        ui.placeholders("#searchbox");
 
         /* Install handlers for placeholder text */
         if (!ui._placeholders) {
