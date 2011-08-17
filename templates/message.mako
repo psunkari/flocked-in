@@ -212,19 +212,19 @@
 
 <%def name="render_composer()">
   <div class="conversation-composer">
-    <form method="post" action="/messages/write" class="ajax" id="message_form">
+    <form method="post" action="/messages/write" class="ajax" id="message-form">
       <div class="input-wrap conversation-composer-field" onclick="$('.conversation-composer-field-recipient').focus()">
         <div class="conversation-composer-recipients"></div>
         <input name="recipients" id="recipientList" type="hidden"/>
         <div>
-            <input class="conversation-composer-field-recipient" type="text"  size="15" placeholder="${_('Enter a name')}"/>
+            <input class="conversation-composer-field-recipient" type="text"  size="15" placeholder="${_('Enter a name')}" title="Recipient"/>
         </div>
       </div>
       <div class="input-wrap conversation-composer-field">
-        <input class="conversation-composer-field-subject" type="text" name="subject" placeholder="${_('Enter a subject of your message')}"/>
+        <input class="conversation-composer-field-subject" type="text" name="subject" placeholder="${_('Enter a subject of your message')}" title="Subject"/>
       </div>
       <div class="input-wrap conversation-composer-field">
-        <textarea class="conversation-composer-field-body" placeholder="Write a message to your friends and colleagues" name="body"></textarea>
+        <textarea class="conversation-composer-field-body" placeholder="Write a message to your friends and colleagues" name="body" title="Message"></textarea>
       </div>
       <div class="conversation-composer-actions">
         <ul id="attached-files" class="v-links busy-indicator" style="float:left"></ul>
@@ -240,15 +240,16 @@
         %endif
       </div>
     </form>
-      <div class="file-attach-wrapper">
-        <form id="upload" action="/file" method="post" enctype="multipart/form-data">
-          <input id="file-attach-input" type="file" name="file" size="1"/>
-          <button id="file-share" class="button" type="button" title="${_('Attach a file')}" onclick="$('#file-attach-input').click()">
-            <img src="/rsrcs/img/attach.png" alt="${_('Attach a file')}"/>
-          </button>
-        </form>
-      </div>
-      <div class="clear"></div>
+    <script>$('#message-form').html5form({messages: 'en', async: false});</script>
+    <div class="file-attach-wrapper">
+      <form id="upload" action="/file" method="post" enctype="multipart/form-data">
+        <input id="file-attach-input" type="file" name="file" size="1"/>
+        <button id="file-share" class="button" type="button" title="${_('Attach a file')}" onclick="$('#file-attach-input').click()">
+          <img src="/rsrcs/img/attach.png" alt="${_('Attach a file')}"/>
+        </button>
+      </form>
+    </div>
+    <div class="clear"></div>
   </div>
 </%def>
 

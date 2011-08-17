@@ -350,7 +350,7 @@
 <%def name="conv_comment_form(convId)">
   <form method="post" action="/item/comment" class="ajax" autocomplete="off" id="comment-form-${convId}">
     <div class="input-wrap">
-      <textarea class="comment-input" name="comment" placeholder="${_('Leave a response...')}" value=""></textarea>
+      <textarea class="comment-input" name="comment" placeholder="${_('Leave a response...')}" value="" required title="Comment"></textarea>
     </div>
     <input type="hidden" name="parent" value=${convId}></input>
     %if not isFeed:

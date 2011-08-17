@@ -64,7 +64,7 @@
     <form method="post" action="/people/invite" class="ajax" autocomplete="off" >
       <div class="input-wrap">
         <% domain = me["basic"]["emailId"].split('@')[1] %>
-        <input type="text" name="email" id="invite-others" placeholder="someone@${domain}"/>
+        <input type="email" name="email" id="invite-others" placeholder="someone@${domain}" required title="Email"/>
       </div>
       <input type="hidden" name="from" value="sidebar"/>
       <input class="button" type="submit" id="submit" value="${_('Submit')}"/>
@@ -160,7 +160,7 @@
     <form id="share-form" autocomplete="off" method="post" action="/item/new" class="ajax" >
       <div id="sharebar">
             <div class="input-wrap">
-            <input type="text" name="comment" placeholder="${_('What are you working on?')}"/>
+            <textarea name="comment" placeholder="${_('What are you working on?')}" required title="Comment"></textarea>
            </div>
           <input type="hidden" name="type" value="status"/>
       </div>
@@ -168,7 +168,7 @@
         <ul id="attached-files" class="v-links busy-indicator" style="float:left"></ul>
         <ul id="sharebar-actions" class="h-links">
           <li>${acl_button("sharebar-acl", '{"accept":{"orgs":["%s"]}}'%orgKey, "Company", "Notifies only your friends and followers")}</li>
-          <li>${widgets.button("sharebar-submit", "submit", "default", None, "Share")}</li>
+          <li>${widgets.button("sharebar-submit", "submit", "default", "Share", "Share")}</li>
         </ul>
         <span class="clear" style="display:block"></span>
       </div>
@@ -187,21 +187,21 @@
 
 <%def name="share_status()">
   <div class="input-wrap">
-    <textarea name="comment" placeholder="${_('What are you working on?')}" />
+    <textarea name="comment" placeholder="${_('What are you working on?')}" required title="Status"/>
   </div>
   <input type="hidden" name="type" value="status"/>
 </%def>
 
 <%def name="share_question()">
   <div class="input-wrap">
-    <textarea name="comment" placeholder="${_('What is your question?')}" />
+    <textarea name="comment" placeholder="${_('What is your question?')}" required title="Question"/>
   </div>
   <input type="hidden" name="type" value="question"/>
 </%def>
 
 <%def name="share_link()">
   <div class="input-wrap">
-    <textarea name="url" placeholder="${_('http://')}"/>
+    <textarea name="url" placeholder="${_('http://')}" required title="URL"/>
     </div>
   <div class="input-wrap">
     <textarea name="comment" placeholder="${_('Say something about the link')}" />
