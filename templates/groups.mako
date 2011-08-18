@@ -200,8 +200,8 @@
         </li>
         <li>
             <label>Membership</label>
-            <input type="checkbox" id="access" name="access" value="public">(Public) Anyone in the organization can join the group </input><br/>
-            <input type="checkbox" id="access" name="access" value="private">(Private) Membership needs group administrator approval</input>
+            <input type="radio" id="access" name="access" value="open" checked="checked">(Open) Anyone in the organization can join the group </input><br/>
+            <input type="radio" id="access" name="access" value="closed">(Closed) Membership should be approved by group administrator</input>
         </li>
         <li>
             <label for="dp">Group Logo</label>

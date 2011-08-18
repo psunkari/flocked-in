@@ -145,7 +145,7 @@ class GroupsResource(base.BaseResource):
         try:
             cols = yield db.get(myKey, "entityGroupsMap", groupId)
         except ttypes.NotFoundException:
-            if access == "public":
+            if access == "open":
                 yield self._addMember(request, groupId, myKey, myOrgId)
                 myGroups.append(groupId)
                 groupFollowers[groupId].append(myKey)
@@ -311,7 +311,7 @@ class GroupsResource(base.BaseResource):
 
         name = utils.getRequestArg(request, "name")
         description = utils.getRequestArg(request, "desc")
-        access = utils.getRequestArg(request, "access") or "public"
+        access = utils.getRequestArg(request, "access") or "open"
         dp = utils.getRequestArg(request, "dp", sanitize=False)
 
         if not name:
