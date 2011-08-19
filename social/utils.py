@@ -71,6 +71,7 @@ def columnsToDict(columns, ordered = False):
 
 def _sanitize(text):
     escape_entities = {':':"&#58;"}
+    text = text.decode('utf-8', 'replace').encode('utf-8')
     return sanitizer.escape(text, escape_entities).strip()
 
 def getRequestArg(request, arg, sanitize=True, multiValued=False):

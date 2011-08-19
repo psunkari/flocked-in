@@ -1,6 +1,7 @@
 from lxml                       import etree
 from lxml.builder               import ElementMaker
 from zope.interface             import implements
+from urllib                     import quote, unquote
 
 from twisted.web                import client
 from twisted.web.iweb           import IBodyProducer
@@ -84,7 +85,7 @@ class Solr(object):
                 value = item[sfk].get(columnName, None)
                 if value:
                     if type(value) in [str, unicode]:
-                        value = value.decode('utf8', 'replace')
+                        value = quote(value)
                         fields.append(self.elementMaker.field((value),
                                   {"name":columnName}))
                     else:
