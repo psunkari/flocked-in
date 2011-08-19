@@ -54,7 +54,8 @@ class GroupsResource(base.BaseResource):
         groupId, group = yield utils.getValidEntityId(request, "id", "group")
 
         try:
-            cols = yield db.get(myKey, "entityGroupsMap", groupId)
+            colname = "%s:%s" %(group["basic"]["name"].lower(), groupId)
+            cols = yield db.get(myKey, "entityGroupsMap", colname)
             yield db.insert(groupId, "followers", "", myKey)
             args["groupId"] = groupId
             args["myGroups"] = [groupId]
@@ -75,7 +76,8 @@ class GroupsResource(base.BaseResource):
         landing = not self._ajax
         groupId, group = yield utils.getValidEntityId(request, "id", "group")
         try:
-            cols = yield db.get(myKey, "entityGroupsMap", groupId)
+            colname = "%s:%s" %(group["basic"]["name"].lower(), groupId)
+            cols = yield db.get(myKey, "entityGroupsMap", colname)
             yield db.remove(groupId, "followers", myKey)
 
             args["groupId"] = groupId
@@ -92,7 +94,7 @@ class GroupsResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _addMember(self, request, groupId, userId, orgId):
+    def _addMember(self, request, groupId, userId, orgId, group):
         deferreds = []
         itemType = "activity"
         relation = Relation(userId, [])
@@ -108,7 +110,9 @@ class GroupsResource(base.BaseResource):
                                    acl, "groupJoin", orgId)
         item["meta"]["target"] = groupId
 
-        d1 = db.insert(userId, "entityGroupsMap", "", groupId)
+
+        colname = "%s:%s" %(group["basic"]["name"].lower(), groupId)
+        d1 = db.insert(userId, "entityGroupsMap", "", colname)
         d2 = db.insert(groupId, "followers", "", userId)
         d3 = db.insert(groupId, "groupMembers", itemId, userId)
         d4 = db.batch_insert(itemId, 'items', item)
@@ -142,11 +146,12 @@ class GroupsResource(base.BaseResource):
         if cols:
             raise errors.PermissionDenied(_("You are banned from joining the group by the administrator"))
 
+        colname = "%s:%s" %(group['basic']['name'].lower(), groupId)
         try:
-            cols = yield db.get(myKey, "entityGroupsMap", groupId)
+            cols = yield db.get(myKey, "entityGroupsMap", colname)
         except ttypes.NotFoundException:
             if access == "open":
-                yield self._addMember(request, groupId, myKey, myOrgId)
+                yield self._addMember(request, groupId, myKey, myOrgId, group)
                 myGroups.append(groupId)
                 groupFollowers[groupId].append(myKey)
             else:
@@ -180,7 +185,7 @@ class GroupsResource(base.BaseResource):
             try:
                 cols = yield db.get(groupId, "pendingConnections", userId)
                 yield self._removeFromPending(groupId, userId)
-                yield self._addMember(request, groupId, userId, myOrgId)
+                yield self._addMember(request, groupId, userId, myOrgId, group)
                 yield renderScriptBlock(request, "groups.mako",
                                         "_pendingGroupRequestsActions", False,
                                         '#pending-group-request-actions-%s' %(userId),
@@ -233,9 +238,10 @@ class GroupsResource(base.BaseResource):
                                         "set", args=[groupId, userId, "block"])
             except ttypes.NotFoundException:
                 # If the users is already a member, remove the user from the group
+                colname = "%s:%s" %(group['basic']['name'].lower(), groupId)
                 yield db.remove(groupId, "groupMembers", userId)
                 yield db.remove(groupId, "followers", userId)
-                yield db.remove(userId, "entityGroupsMap", groupId)
+                yield db.remove(userId, "entityGroupsMap", colname)
 
             # Add user to blocked users
             yield db.insert(groupId, "blockedUsers", '', userId)
@@ -264,7 +270,8 @@ class GroupsResource(base.BaseResource):
 
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                       columns=["admins"])
-        userGroup = yield db.get_slice(myId, "entityGroupsMap", [groupId])
+        colname = "%s:%s" %(group['basic']['name'].lower(), groupId)
+        userGroup = yield db.get_slice(myId, "entityGroupsMap", [colname])
         if not userGroup:
             raise errors.InvalidRequest(_("You are not currently a member of this group"))
 
@@ -286,7 +293,7 @@ class GroupsResource(base.BaseResource):
         item["meta"]["target"] = groupId
 
         d1 = db.remove(groupId, "followers", myId)
-        d2 = db.remove(myId, "entityGroupsMap", groupId)
+        d2 = db.remove(myId, "entityGroupsMap", colname)
         d3 = db.batch_insert(itemId, 'items', item)
         d4 = db.remove(groupId, "groupMembers", myId)
 
@@ -317,6 +324,14 @@ class GroupsResource(base.BaseResource):
         if not name:
             raise errors.MissingParams([_("Group name")])
 
+        cols = yield db.get_slice(orgKey, "entityGroupsMap", start=name.lower(), count=2)
+        for col in cols:
+            if col.column.name.split(':')[0] == name.lower():
+                #msg = _("Group ") + "'%s'"%(name) + _(" already exists")
+                #request.write('$$.alerts.error("%s");' % msg)
+                # FIX: Can't display alert message for some reason.
+                raise errors.InvalidGroupName(name)
+
         groupId = utils.getUniqueKey()
         meta = {"name":name,
                 "type":"group",
@@ -332,9 +347,10 @@ class GroupsResource(base.BaseResource):
 
         yield db.batch_insert(groupId, "entities", {"basic": meta,
                                                     "admins": admins})
-        yield db.insert(myKey, "entities", '', groupId, 'adminOfGroups')
-        yield db.insert(orgKey, "entityGroupsMap", '', groupId)
-        yield self._addMember(request, groupId, myKey, orgKey)
+        colname = "%s:%s" %(meta['name'].lower(), groupId)
+        yield db.insert(myKey, "entities", name, groupId, 'adminOfGroups')
+        yield db.insert(orgKey, "entityGroupsMap", '', colname)
+        yield self._addMember(request, groupId, myKey, orgKey, {"basic":meta})
 
 
     @profile
@@ -499,36 +515,37 @@ class GroupsResource(base.BaseResource):
             if viewType in ['myGroups', 'allGroups']:
                 cols = yield db.get_slice(entityId, 'entityGroupsMap',
                                           start=start, count=toFetchCount)
-                groupIds = utils.columnsToDict(cols, ordered=True).keys()
-                toFetchGroups.update(set(groupIds))
+                groupIds = [x.column.name for x in cols]
+                if len(groupIds) > count:
+                    nextPageStart = utils.encodeKey(groupIds[-1])
+                    groupIds = groupIds[0:count]
+                toFetchGroups.update(set([y.split(':', 1)[1] for y in groupIds]))
+                if viewType == "myGroups":
+                    myGroupsIds = [x.split(':', 1)[1] for x in groupIds]
+                elif groupIds:
+                    cols = yield db.get_slice(myId, "entityGroupsMap", groupIds)
+                    myGroupsIds = [x.column.name.split(':', 1)[1] for x in cols]
+                groupIds = [x.split(':', 1)[1] for x in groupIds]
             elif viewType == 'adminGroups':
                 try:
                     cols = yield db.get_slice(myId, "entities",
                                               super_column='adminOfGroups',
                                               start=start, count=toFetchCount)
-                    groupIds = utils.columnsToDict(cols, ordered=True).keys()
+                    groupIds = [x.column.name for x in cols]
                     toFetchGroups.update(set(groupIds))
+                    myGroupsIds = groupIds
+                    if len(groupIds) > count:
+                        nextPageStart = utils.encodeKey(groupIds[-1])
+                        groupIds = groupIds[0:count]
                 except ttypes.NotFoundException:
                     pass
 
-            if toFetchGroups:
-                cols = yield db.get_slice(myId, "entityGroupsMap", list(toFetchGroups))
-            else:
-                cols = []
-            myGroupsIds = utils.columnsToDict(cols, ordered=True).keys()
-
-            if len(groupIds) > count:
-                nextPageStart = utils.encodeKey(groupIds[-1])
-                groupIds = groupIds[0:count]
 
             if start:
                 if viewType in ['myGroups', 'allGroups']:
-                  try:
                     cols = yield db.get_slice(entityId, 'entityGroupsMap',
                                               start=start, count=toFetchCount,
                                               reverse=True)
-                  except Exception, e:
-                    log.err(e)
                 elif viewType == "adminGroups":
                     cols = yield db.get_slice(myId, "entities",
                                               super_column='adminOfGroups',
@@ -700,7 +717,7 @@ class GroupsResource(base.BaseResource):
 
         if myKey in group['admins']:
             # TODO: dont add blocked users
-            yield self._addMember(request, groupId, userId, myOrgId)
+            yield self._addMember(request, groupId, userId, myOrgId, group)
             #yield self._listGroupMembers(request)
             refreshFeedScript = """
                 $("#group_add_invitee").attr("value", "")

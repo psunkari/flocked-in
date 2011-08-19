@@ -58,7 +58,8 @@ def _update_suggestions(request, relation=None):
             for subscription in subscriptions[userId]:
                 people[subscription] = people.setdefault(subscription, defaultWeight) + weights[type]['subscription']
         for userId in groups:
-            for groupId in groups[userId]:
+            groupIds = [x.split(':', 1)[1] for x in groups[userId]]
+            for groupId in groupIds:
                 if groupId in myGroups:
                     people[userId] = people.setdefault(userId, defaultWeight) + weights[type]['group']
 
