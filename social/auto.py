@@ -211,7 +211,7 @@ class AutoCompleteResource(BaseResource):
     def _myGroups(self, request):
         myId = request.getSession(IAuthInfo).username
         cols = yield db.get_slice(myId, "entityGroupsMap")
-        groupIds = [x.column.name for x in cols]
+        groupIds = [x.column.name.split(':', 1)[1] for x in cols]
 
         groups = {}
         if groupIds:
@@ -268,23 +268,21 @@ class AutoCompleteResource(BaseResource):
                                "type": "user",
                                "value": uid,})
 
-        cols = yield db.get_slice(myId, "entityGroupsMap")
-        groupIds = [x.column.name for x in cols]
+        cols = yield db.get_slice(myId, "entityGroupsMap", start=term.lower(),
+                                 finish = finish.lower(), count=10)
+        groupIds = [x.column.name.split(':', 1)[1] for x in cols]
         avatar = utils.groupAvatar
         groups = {}
 
         if groupIds:
-            results = yield db.multiget_slice(groupIds, "entities",
-                        ["name"], super_column="basic")
-            groups.update(utils.multiColumnsToDict(results))
+            results = yield db.multiget_slice(groupIds, "entities",["basic"])
+            groups.update(utils.multiSuperColumnsToDict(results))
 
         for groupId in groupIds:
-            if groups[groupId]["name"].lower().startswith(term.lower()):
-                data = {"icon": avatar(groupId, groups[groupId], "s"), "title": groups[groupId]["name"],
-                        "meta": groups[groupId].get("desc", "&nbsp;")}
-                obj = {"value": groupId, "label": template%data, "type":"group"}
-                output.append(obj)
-            else:continue
+            data = {"icon": avatar(groupId, groups[groupId], "s"), "title": groups[groupId]["basic"]["name"],
+                    "meta": groups[groupId]["basic"].get("desc", "&nbsp;")}
+            obj = {"value": groupId, "label": template%data, "type":"group"}
+            output.append(obj)
 
         request.write(json.dumps(output))
 

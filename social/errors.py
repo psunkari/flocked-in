@@ -203,3 +203,9 @@ class InvalidAttachment(BaseError):
         message = _("The requested file does not exist")
         BaseError.__init__(self, message, 404)
 
+class InvalidGroupName(BaseError):
+    name = None
+    def __init__(self, name):
+        self.name = name
+        message = _("Group '%s' already exists")%(name)
+        BaseError.__init__(self, message, 418)
