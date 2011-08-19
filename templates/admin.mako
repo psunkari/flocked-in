@@ -11,7 +11,13 @@
   <%
     def navMenuItem(link, text, id):
       cls = "sidemenu-selected" if id == menuId else ''
-      return '<li><a href="%(link)s" class="ajax busy-indicator %(id)s-sideitem %(cls)s"><span class="sidemenu-icon icon %(id)s-icon"></span><span class="sidemenu-text">%(text)s</span></a></li>' % locals()
+      return """<li>
+                  <a href="%(link)s" class="ajax busy-indicator %(id)s-sideitem %(cls)s">
+                    <span class="sidemenu-icon icon %(id)s-icon"></span>
+                    <span class="sidemenu-text">%(text)s</span>
+                  </a>
+                </li>
+              """ % locals()
   %>
   <div id="mymenu-container" class="sidemenu-container">
     <ul id="mymenu" class="v-links sidemenu">
@@ -83,7 +89,7 @@
     <div class="user-details-actions">
       <ul id="user-actions-${userId}" class="middle user-actions h-links">
         <button class="button default" onclick="$.post('/ajax/admin/unblock', 'id=${userId}')">
-          Unblock
+          _("Unblock")
         </button>
       </ul>
     </div>
@@ -92,7 +98,7 @@
 
 <%def name="list_blocked()">
   % if not entities:
-    <div id="next-load-wrapper">No blocked users</div>
+    <div id="next-load-wrapper">${_("No blocked users")}</div>
   % else:
     <%
       counter = 0
@@ -134,12 +140,16 @@
 <%def name="paging()">
   <ul class="h-links">
     %if prevPageStart:
-      <li class="button"><a class="ajax" href="/admin/people?start=${prevPageStart}">${_("&#9666; Previous")}</a></li>
+      <li class="button">
+        <a class="ajax" href="/admin/people?start=${prevPageStart}">${_("&#9666; Previous")}</a>
+      </li>
     %else:
       <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
     %endif
     %if nextPageStart:
-      <li class="button"><a class="ajax" href="/admin/people?&start=${nextPageStart}">${_("Next &#9656;")}</a></li>
+      <li class="button">
+        <a class="ajax" href="/admin/people?&start=${nextPageStart}">${_("Next &#9656;")}</a>
+      </li>
     %else:
       <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
     %endif
@@ -158,27 +168,41 @@
   <% myTimezone  = me.get("basic", {}).get("timezone", "") %>
   <div class="tabs">
     <ul class="tablinks h-links">
-      <li><a style="cursor:pointer" class="selected" onclick="$('#add-user-block').toggle();$('#add-users-block').toggle();$(this).toggleClass('selected');$(this).parent().siblings().children().toggleClass('selected')">New User</a></li>
-      <li><a style="cursor:pointer" class="" onclick="$('#add-users-block').toggle();$('#add-user-block').toggle();$(this).toggleClass('selected');$(this).parent().siblings().children().toggleClass('selected')">Multiple Users</a></li>
+      <li><a style="cursor:pointer" class="selected"
+             onclick="$('#add-user-block').toggle();
+                      $('#add-users-block').toggle();
+                      $(this).toggleClass('selected');
+                      $(this).parent().siblings().children().toggleClass('selected')">
+            ${_("New User")}
+          </a>
+      </li>
+      <li><a style="cursor:pointer" class=""
+             onclick="$('#add-users-block').toggle();
+                      $('#add-user-block').toggle();
+                      $(this).toggleClass('selected');
+                      $(this).parent().siblings().children().toggleClass('selected')">
+            ${_("Multiple Users")}
+          </a>
+      </li>
   </div>
   <div class="styledform">
     <div id="add-user-block">
       <form action="/admin/add" method="POST" enctype="multipart/form-data" autocomplete="off">
         <ul>
           <li>
-            <label for="name">Display Name</label>
+            <label for="name">${_("Display Name")}</label>
             <input type="text" name="name" />
           </li>
           <li>
-            <label for="email">Email Address</label>
+            <label for="email">${_("Email Address")}</label>
             <input type="text" name="email" />
           </li>
           <li>
-            <label for="jobTitle">Job Title</label>
+            <label for="jobTitle">${_("Job Title")}</label>
             <input type="text" name="jobTitle" />
           </li>
           <li>
-            <label for="timezone">Timezone </label>
+            <label for="timezone">${_("Timezone")}</label>
             <select name="timezone" class="single-row">
               %for timezone in common_timezones:
                 %if timezone == myTimezone:
@@ -190,13 +214,13 @@
             </select>
           </li>
           <li>
-            <label for="passwd">Password</label>
+            <label for="passwd">${_("Password")}</label>
             <input type="password" name="passwd" />
           </li>
         </ul>
         <div class="styledform-buttons">
-          <button type="submit" class="button default">Add</button>
-          <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">Cancel</button>
+          <button type="submit" class="button default">${_("Add")}</button>
+          <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">${_("Cancel")}</button>
         </div>
       </form>
     </div>
@@ -205,7 +229,7 @@
         <!-- fileupload doesn't work with ajax request.
              TODO: find workaround to submit file in ajax request-->
         <div class="alert alert-info">
-          Please upload a comma or tab separated file containing list of users in the following fields
+          ${_("Please upload a comma or tab separated file containing list of users in the following fields")}
           <div><b>
             <span>Name</span>&nbsp;&nbsp;
             <span>Email Address</span>&nbsp;&nbsp;
@@ -216,18 +240,18 @@
         </div>
         <ul>
           <li>
-            <label for="format">File Type</label>
+            <label for="format">${_("File Type")}</label>
             <input type="radio" name="format" value="csv" checked=True/>CSV
             <input type="radio" name="format" value="tsv"/>TSV
           </li>
           <li>
-            <label for="data">Upload File</label>
+            <label for="data">${_("Upload File")}</label>
             <input type="file" name="data" accept="csv" />
           </li>
         </ul>
         <div class="styledform-buttons">
-          <button type="submit" class="button default">Add</button>
-          <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">Cancel</button>
+          <button type="submit" class="button default">${_("Add")}</button>
+          <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">${_("Cancel")}</button>
         </div>
       </form>
     </div>
@@ -245,16 +269,16 @@
         TODO: find workaround to submit file in ajax request-->
       <ul>
         <li>
-          <label for="name"> Name</label>
+          <label for="name">${_("Name")}</label>
           <input type="text" name="name"  value="${name}"/>
         </li>
         <li>
-          <label for="dp"> Logo</label>
+          <label for="dp">${_("Logo")}</label>
           <input type="file" name="dp" />
         </li>
       </ul>
       <div class="styledform-buttons">
-          <button type="submit" class="button default">Save</button>
+          <button type="submit" class="button default">${_("Save")}</button>
       </div>
     </form>
   </div>

@@ -408,7 +408,7 @@
 <%def name="conv_tags(convId)">
   <% itemTags = items[convId].get("tags", {}) %>
   <div class="conv-tags">
-    <button class="button-link edit-tags-button" title="${_('Edit tags')}" onclick="$$.convs.editTags('${convId}');"><div class="icon edit-tags-icon"></div>Edit Tags</button>
+    <button class="button-link edit-tags-button" title="${_('Edit tags')}" onclick="$$.convs.editTags('${convId}');"><div class="icon edit-tags-icon"></div>${_("Edit Tags")}</button>
     <span id="conv-tags-${convId}">
     %for tagId in itemTags.keys():
       <span class="tag" tag-id="${tagId}">
@@ -427,7 +427,7 @@
       </div>
       <input type="hidden" name="id" value=${convId}></input>
     </form>
-    <button class="button-link done-tags-button" title="${_('Done editing tags')}" onclick="$$.convs.doneTags('${convId}');"><div class="icon done-tags-icon"></div>Done</button>
+    <button class="button-link done-tags-button" title="${_('Done editing tags')}" onclick="$$.convs.doneTags('${convId}');"><div class="icon done-tags-icon"></div>${_("Done")}</button>
   </div>
 </%def>
 
@@ -652,15 +652,15 @@
         <div id="feedback-mood-inner">
           <div id="feedback-happy" class="feedback-mood feedback-mood-selected" onclick="$$.feedback.mood('happy');">
             <div class="feedback-mood-icon happy-icon"></div>
-            Made me Happy
+            ${_("Made me Happy")}
           </div>
           <div id="feedback-sad" class="feedback-mood" onclick="$$.feedback.mood('sad');">
             <div class="feedback-mood-icon sad-icon"></div>
-            Made me Sad
+            ${_("Made me Sad")}
           </div>
           <div id="feedback-idea" class="feedback-mood" onclick="$$.feedback.mood('idea');">
             <div class="feedback-mood-icon idea-icon"></div>
-            I have an Idea
+            ${_("I have an Idea")}
           </div>
           <div style="clear:both;"></div>
         </div>

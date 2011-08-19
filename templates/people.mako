@@ -54,9 +54,9 @@
 
 <%def name="viewOptions(selected)">
  <%
-    tabs = [('friends', 'My friends'), ('all', 'All users'), ('pendingRequests', 'Friend Requests')]
+    tabs = [('friends', _('My friends')), ('all', _('All users')), ('pendingRequests', _('Friend Requests'))]
     if showInvitationsTab:
-        tabs.append(('invitations', 'Invitations'))
+        tabs.append(('invitations', _('Invitations')))
     people_count = pendingRequestsCount if pendingRequestsCount else ''
  %>
   <ul class="h-links view-options">

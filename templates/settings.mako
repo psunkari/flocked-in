@@ -47,7 +47,13 @@
   <%
     def navMenuItem(link, text, id):
       cls = "sidemenu-selected" if id == detail else ''
-      return '<li><a href="%(link)s" id="%(id)s-sideitem" class="ajax busy-indicator %(cls)s"><span class="sidemenu-icon %(id)s-icon"></span><span class="sidemenu-text">%(text)s</span></a></li>' % locals()
+      return """<li>
+                  <a href="%(link)s" id="%(id)s-sideitem" class="ajax busy-indicator %(cls)s">
+                    <span class="sidemenu-icon %(id)s-icon"></span>
+                    <span class="sidemenu-text">%(text)s</span>
+                  </a>
+                </li>
+              """ % locals()
   %>
   <div id="mymenu-container" class="sidemenu-container">
     <ul class="v-links sidemenu">
@@ -360,28 +366,28 @@
 <%def name="filterNotifications()">
   <%
     notify = me['basic'].get('notify', '')
-    labels = ['Someone adds you as a friend',
-              'Your friend request is accepted',
-              'Someone started following you',
-              'New user joins your company network',
+    labels = [_('Someone adds you as a friend'),
+              _('Your friend request is accepted'),
+              _('Someone started following you'),
+              _('New user joins your company network'),
 
-              'User wants to join a group you administer',
-              'Your request to join a group is accepted',
-              'You are invited to join a group',
-              'New user joins a group you administer',
+              _('User wants to join a group you administer'),
+              _('Your request to join a group is accepted'),
+              _('You are invited to join a group'),
+              _('New user joins a group you administer'),
 
-              'Someone tagged an item you shared',
-              'Someone commented on an item you shared',
-              'Someone liked an item you shared',
-              'Someone liked your comment',
-              'Someone commented on an item that you liked/commented on',
+              _('Someone tagged an item you shared'),
+              _('Someone commented on an item you shared'),
+              _('Someone liked an item you shared'),
+              _('Someone liked your comment'),
+              _('Someone commented on an item that you liked/commented on'),
 
-              'You are mentioned in a post or comment',
-              'Other requests (event invitations etc;)',
+              _('You are mentioned in a post or comment'),
+              _('Other requests (event invitations etc;)'),
 
-              'New private conversation',
-              'New message in an existing conversations',
-              'Recipients of a conversation were changed']
+              _('New private conversation'),
+              _('New message in an existing conversations'),
+              _('Recipients of a conversation were changed')]
   %>
   <form class="ajax" id="settings-form" action="/settings/notify" method="post"  enctype="multipart/form-data">
     <table id='notify-setup' valign='middle' role='display'>

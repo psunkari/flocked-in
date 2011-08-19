@@ -96,7 +96,7 @@
               <input type="hidden" name="invitee" id="group_invitee"/>
               <input type="hidden" value = ${groupId} name="id" />
               <div class="input-wrap">
-                <input type="text" id="group_add_invitee" placeHolder="Your colleague's name"/>
+                <input type="text" id="group_add_invitee" placeHolder="${_("Your colleague's name")}"/>
               </div>
               <input type="hidden" name="from" value="sidebar"/>
             </form>
@@ -219,14 +219,14 @@
   %>
   %if not conversations:
     <span id="welcome-message">
-      Welcome to <a href='/'>Flocked.in.</a>
+      ${_("Welcome to ")}<a href='/'>Flocked.in.</a>
       <ul >
-        <li>Share status updates, files, Ask questions, Create polls</li>
-        <li><a href='/people/invite'>Invite</a> your colleagues.</li>
-        <li><a href='/people?type=all'>Follow</a> your colleagues, <a href='/people/type=all'>Add</a> them as Friends</li>
-        <li><a href='/messages'>Send</a> private messages</li>
-        <li><a href='/groups/create'>Create</a> new groups. <a href='/groups?type=allGroups'>Join</a> Groups </li>
-        <li><a href='/settings'>Update</a> your profile</li>
+        <li>${_("Share status updates, files, Ask questions, Create polls")}</li>
+        <li><a href='/people/invite'>${_("Invite")}</a>${_(" your colleagues.")}</li>
+        <li><a href='/people?type=all'>${_("Follow")}</a>${_(" your colleagues, ")}<a href='/people/type=all'>${_("Add")}</a>${_(" them as Friends")}</li>
+        <li><a href='/messages'>${_("Send")}</a>${_(" private messages")}</li>
+        <li><a href='/groups/create'>${_("Create")}</a>${_(" new groups. ")}<a href='/groups?type=allGroups'>${_("Join")}</a>${_(" Groups ")}</li>
+        <li><a href='/settings'>${_("Update")}</a>${_(" your profile")}</li>
       </ul>
     </span>
   %endif
@@ -234,15 +234,15 @@
     <% typ_filter = '&type=%s' %(itemType) if itemType else '' %>
     <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" href="/feed?start=${nextPageStart}&id=${feedId}" _ref="/feed/more?start=${nextPageStart}&id=${feedId}${typ_filter}">${_("Fetch older posts")}</a></div>
   %else:
-    <div id="next-load-wrapper">No more posts to show</div>
+    <div id="next-load-wrapper">${_("No more posts to show")}</div>
   %endif
 </%def>
 
 <%def name="customAudience()">
-  <div class="ui-dlg-title">Select your audience</div>
+  <div class="ui-dlg-title">${_("Select your audience")}</div>
    <div class="" style="width:auto;background-color:#E8EEFA;padding:10px">
-    <input type="text" id="custom-audience-dlg-search" style="display:inline-block;font-size:11px;width:20em" class="input-wrap" placeholder="Search among my friends and groups."/>
-    <input type="checkbox" id="allfriends" style="position:relative;top:3px"/><label for="allfriends">Add all my friends</label>
+    <input type="text" id="custom-audience-dlg-search" style="display:inline-block;font-size:11px;width:20em" class="input-wrap" placeholder="${_("Search among my friends and groups.")}"/>
+    <input type="checkbox" id="allfriends" style="position:relative;top:3px"/><label for="allfriends">${_("Add all my friends")}</label>
     <div class="ui-list-meta" id="footer-info" style="padding-left: 0;"></div>
    </div>
   <div class="ui-list ui-dlg-center">
@@ -272,11 +272,11 @@
                 <ul id="user-actions-${userId}" class="middle user-actions h-links">
                 %if userId not in relations.friends:
                   %if not relations.pending or userId not in relations.pending:
-                    <button class="button" onclick="$.post('/ajax/profile/friend', 'id=${userId}')"><span class="button-text" style="font-size:11px">Add as Friend</span></button>
+                    <button class="button" onclick="$.post('/ajax/profile/friend', 'id=${userId}')"><span class="button-text" style="font-size:11px">${_("Add as Friend")}</span></button>
                   %endif
                 %endif
                 %if userId not in relations.subscriptions and userId not in relations.friends:
-                  <button class="button" onclick="$.post('/ajax/profile/follow', 'id=${userId}')"><span class="button-text" style="font-size:11px;">Follow</span></button>
+                  <button class="button" onclick="$.post('/ajax/profile/follow', 'id=${userId}')"><span class="button-text" style="font-size:11px;">${_("Follow")}</span></button>
                 %endif
                 </ul>
               </div>

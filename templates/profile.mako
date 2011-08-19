@@ -139,10 +139,22 @@
       <ul id="user-subactions-${userKey}" class="middle user-subactions v-links">
     %endif
     %if relations.pending.get(userKey) == "0":
-      <li><a href="/profile/cancelFR?id=${userKey}" onclick="$.post('/ajax/profile/cancelFR', 'id=${userKey}'); $.event.fix(event).preventDefault();">Cancel Friend Request</a></li>
+      <li><a href="/profile/cancelFR?id=${userKey}"
+             onclick="$.post('/ajax/profile/cancelFR', 'id=${userKey}'); $.event.fix(event).preventDefault();">
+            ${_("Cancel Friend Request")}
+          </a>
+      </li>
     %endif
-    <li><a href="/profile/block?id=${userKey}" onclick="$.post('/ajax/profile/block', 'id=${userKey}'); $.event.fix(event).preventDefault();">Block User</a></li>
-    <li><a href="/profile/review?id=${userKey}" onclick="$.post('/ajax/profile/review', 'id=${userKey}'); $.event.fix(event).preventDefault();">Request Admin Review</a></li>
+    <li><a href="/profile/block?id=${userKey}"
+           onclick="$.post('/ajax/profile/block', 'id=${userKey}'); $.event.fix(event).preventDefault();">
+          ${_("Block User")}
+        </a>
+    </li>
+    <li><a href="/profile/review?id=${userKey}"
+           onclick="$.post('/ajax/profile/review', 'id=${userKey}'); $.event.fix(event).preventDefault();">
+          ${_("Request Admin Review")}
+        </a>
+    </li>
     %if renderWrapper:
       </ul>
       </div>
@@ -213,23 +225,35 @@
   %if myKey != userKey:
     %if userKey not in relations.friends:
       %if not relations.pending or userKey not in relations.pending:
-        <button class="button default" onclick="$.post('/ajax/profile/friend', 'id=${userKey}')"><span class="button-text">Add as Friend</span></button>
+        <button class="button default" onclick="$.post('/ajax/profile/friend', 'id=${userKey}')">
+          <span class="button-text">${_("Add as Friend")}</span>
+        </button>
       %elif relations.pending.get(userKey) == "1":
-        <button class="acl-button button" onclick="$$.ui.showPopup(event)">Respond to Friend Request</button>
+        <button class="acl-button button" onclick="$$.ui.showPopup(event)">${_("Respond to Friend Request")}</button>
         <ul class="acl-menu" style="display:none;">
-            <li><a class="acl-item" _acl="public" onclick="$.post('/ajax/profile/friend', 'id=${userKey}')"><div class="icon"></div>${_("Accept")}</a></li>
-            <li><a class="acl-item" _acl="friends" onclick="$.post('/ajax/profile/cancelFR', 'id=${userKey}')"><div class="icon"></div>${_("Reject")}</a></li>
+            <li>
+              <a class="acl-item" _acl="public" onclick="$.post('/ajax/profile/friend', 'id=${userKey}')">${_("Accept")}</a>
+            </li>
+            <li>
+              <a class="acl-item" _acl="friends" onclick="$.post('/ajax/profile/cancelFR', 'id=${userKey}')">${_("Reject")}</a>
+            </li>
         </ul>
       %else:
-        <button class="button disabled"><span class="button-text">Friend request sent</span></button>
+        <button class="button disabled"><span class="button-text">${_("Friend request sent")}</span></button>
       %endif
       %if userKey not in relations.subscriptions and userKey not in relations.friends:
-        <button class="button" onclick="$.post('/ajax/profile/follow', 'id=${userKey}')"><span class="button-text">Follow User</span></button>
+        <button class="button" onclick="$.post('/ajax/profile/follow', 'id=${userKey}')">
+          <span class="button-text">${_("Follow User")}</span>
+        </button>
       %elif showRemove:
-        <button class="button" onclick="$.post('/ajax/profile/unfollow', 'id=${userKey}')"><span class="button-text">Unfollow User</span></button>
+        <button class="button" onclick="$.post('/ajax/profile/unfollow', 'id=${userKey}')">
+          <span class="button-text">${_("Unfollow User")}</span>
+        </button>
       %endif
     %elif showRemove:
-      <button class="button" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}')"><span class="button-text">Unfriend User</span></button>
+      <button class="button" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}')">
+        <span class="button-text">${_("Unfriend User")}</span>
+      </button>
     %endif
   %endif
 </%def>
@@ -372,9 +396,11 @@
       self.activity_block(block)
   %>
   %if nextPageStart:
-    <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" _ref="/profile?id=${userKey}&start=${nextPageStart}">${_("Fetch older posts")}</a></div>
+    <div id="next-load-wrapper" class="busy-indicator">
+      <a id="next-page-load" class="ajax" _ref="/profile?id=${userKey}&start=${nextPageStart}">${_("Fetch older posts")}</a>
+    </div>
   %else:
-    <div id="next-load-wrapper">No more posts to show</div>
+    <div id="next-load-wrapper">${_("No more posts to show")}</div>
   %endif
 </%def>
 

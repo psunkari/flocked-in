@@ -105,7 +105,9 @@
     <a class="conversation-row-cell conversation-row-info ajax" href="/messages/thread?id=${convId}">
       <div class="conversation-row-headers">
         <span class="conversation-row-people">${formatPeopleInConversation(conv, people)}</span>
-        <span class="conversation-row-time">&ndash;&nbsp; ${utils.simpleTimestamp(float(conv['meta']["date_epoch"]), people[myKey]["basic"]["timezone"])}</span>
+        <span class="conversation-row-time">
+          &ndash;&nbsp; ${utils.simpleTimestamp(float(conv['meta']["date_epoch"]), people[myKey]["basic"]["timezone"])}
+        </span>
       </div>
       <div class="conversation-row-subject-wrapper">
         <span class="conversation-row-subject">${conv["meta"]["subject"]}</span>
@@ -120,21 +122,21 @@
           readAction = 'read' if conv['read']=='0' else 'unread'
         %>
         <div class="messaging-icon messaging-${readStatus}-icon"
-             title="Mark this conversation as ${readAction}"
+             title="${_("Mark this conversation as ")}${readAction}"
              onclick="$.post('/ajax/messages/thread', 'action=${readAction}&selected=${convId}&filterType=${filterType}')">&nbsp;</div>
         %elif filterType == "unread":
         <div class="messaging-icon messaging-unread-icon"
-             title="Mark this conversation as read"
+             title="${_("Mark this conversation as read")}"
              onclick="$.post('/ajax/messages/thread', 'action=read&selected=${convId}&filterType=${filterType}')">&nbsp;</div>
         %endif
         %if filterType != "archive":
         <div class="messaging-icon messaging-archive-icon"
-             title="Archive this conversation"
+             title="${_("Archive this conversation")}"
              onclick="$.post('/ajax/messages/thread', 'action=archive&selected=${convId}&filterType=${filterType}')">&nbsp;</div>
         %endif
         %if filterType != "trash":
         <div class="messaging-icon messaging-delete-icon"
-             title="Delete this conversation"
+             title="${_("Delete this conversation")}"
              onclick="$.post('/ajax/messages/thread', 'action=trash&selected=${convId}&filterType=${filterType}')">&nbsp;</div>
         %endif
       </span>
@@ -190,7 +192,7 @@
           ${getAvatarImg(utils.userAvatar(myKey, people[myKey]))}
       </div>
       <div class="input-wrap conversation-reply-wrapper">
-          <textarea class="conversation-reply" name="body" placeholder="Quickly reply to this message"></textarea>
+          <textarea class="conversation-reply" name="body" placeholder="${_("Quickly reply to this message")}"></textarea>
           <input type="hidden" value=${convId} name="parent"/>
       </div>
       <div class="conversation-reply-actions">
@@ -217,14 +219,17 @@
         <div class="conversation-composer-recipients"></div>
         <input name="recipients" id="recipientList" type="hidden"/>
         <div>
-            <input class="conversation-composer-field-recipient" type="text"  size="15" placeholder="${_('Enter a name')}"/>
+            <input class="conversation-composer-field-recipient" type="text"  size="15"
+                   placeholder="${_('Enter a name')}"/>
         </div>
       </div>
       <div class="input-wrap conversation-composer-field">
-        <input class="conversation-composer-field-subject" type="text" name="subject" placeholder="${_('Enter a subject of your message')}"/>
+        <input class="conversation-composer-field-subject" type="text" name="subject"
+               placeholder="${_('Enter a subject of your message')}"/>
       </div>
       <div class="input-wrap conversation-composer-field">
-        <textarea class="conversation-composer-field-body" placeholder="Write a message to your friends and colleagues" name="body"></textarea>
+        <textarea class="conversation-composer-field-body"
+                  placeholder="${_("Write a message to your friends and colleagues")}" name="body"></textarea>
       </div>
       <div class="conversation-composer-actions">
         <ul id="attached-files" class="v-links busy-indicator" style="float:left"></ul>
@@ -243,7 +248,8 @@
       <div class="file-attach-wrapper">
         <form id="upload" action="/file" method="post" enctype="multipart/form-data">
           <input id="file-attach-input" type="file" name="file" size="1"/>
-          <button id="file-share" class="button" type="button" title="${_('Attach a file')}" onclick="$('#file-attach-input').click()">
+          <button id="file-share" class="button" type="button" title="${_('Attach a file')}"
+                  onclick="$('#file-attach-input').click()">
             <img src="/rsrcs/img/attach.png" alt="${_('Attach a file')}"/>
           </button>
         </form>
@@ -261,30 +267,38 @@
             <input id="toolbarAction" name="action" value="" type="hidden"/>
           %endif
           %if filterType == "unread":
-            <input type="submit" name="read" value="Mark as Read" class="button" onclick="$('#toolbarAction').attr('value', 'read')"/>
+            <input type="submit" name="read" value="${_("Mark as Read")}"
+                   class="button" onclick="$('#toolbarAction').attr('value', 'read')"/>
           %endif
           %if filterType != "trash":
-            <input type="submit" name="trash" value="Trash" class="button" onclick="$('#toolbarAction').attr('value', 'trash')"/>
+            <input type="submit" name="trash" value="${_("Trash")}"
+                   class="button" onclick="$('#toolbarAction').attr('value', 'trash')"/>
           %endif
           %if filterType != "archive" and filterType != "trash":
-            <input type="submit" name="archive" value="Archive" class="button" onclick="$('#toolbarAction').attr('value', 'archive')"/>
+            <input type="submit" name="archive" value="${_("Archive")}"
+                   class="button" onclick="$('#toolbarAction').attr('value', 'archive')"/>
           %endif
           %if filterType != "unread":
-            <input type="submit" name="unread" value="Mark as Unread" class="button" onclick="$('#toolbarAction').attr('value', 'unread')"/>
+            <input type="submit" name="unread" value="${_("Mark as Unread")}"
+                   class="button" onclick="$('#toolbarAction').attr('value', 'unread')"/>
           %endif
           %if filterType != "all":
-            <input type="submit" name="inbox" value="Move to Inbox" class="button" onclick="$('#toolbarAction').attr('value', 'inbox')"/>
+            <input type="submit" name="inbox" value="${_("Move to Inbox")}"
+                   class="button" onclick="$('#toolbarAction').attr('value', 'inbox')"/>
           %endif
     </div>
   %elif view == "message":
     <div id="msg-toolbar" class="toolbar">
-      <a class="${'ajax' if script else ''} back-link" href="/messages">Go Back</a>
+      <a class="${'ajax' if script else ''} back-link" href="/messages">${_("Go Back")}</a>
         <form method="post" action="/messages/thread" class="ajax">
             <input type="hidden" name="selected" value="${id}"/>
             <input id="toolbarAction" name="action" value="" type="hidden"/>
-            <input type="submit" name="trash" value="Trash" class="button" onclick="$('#toolbarAction').attr('value', 'trash')"/>
-            <input type="submit" name="archive" value="Archive" class="button" onclick="$('#toolbarAction').attr('value', 'archive')"/>
-            <input type="submit" name="unread" value="Mark as Unread" class="button" onclick="$('#toolbarAction').attr('value', 'unread')"/>
+            <input type="submit" name="trash" value="${_("Trash")}"
+                   class="button" onclick="$('#toolbarAction').attr('value', 'trash')"/>
+            <input type="submit" name="archive" value="${_("Archive")}"
+                   class="button" onclick="$('#toolbarAction').attr('value', 'archive')"/>
+            <input type="submit" name="unread" value="${_("Mark as Unread")}"
+                   class="button" onclick="$('#toolbarAction').attr('value', 'unread')"/>
         </form>
       <span class="clear" style="display:block"></span>
     </div>
@@ -299,7 +313,7 @@
     <form action="/messages/thread" method="post" class="ajax">
       
       %if not mids:
-        <div id="empty-message" >No messages</div>
+        <div id="empty-message" >${_("No messages")}</div>
       %else:
         ${toolbar_layout(view, nextPageStart, prevPageStart)}
         <div class="conversation-layout-container">
@@ -329,12 +343,16 @@
 <%def name="right()">
     % if view == "message":
         <div class="sidebar-chunk">
-          <div class="sidebar-title">People in this conversation</div>
+          <div class="sidebar-title">${_("People in this conversation")}</div>
           <ul class="v-links peoplemenu">
             %for person in conv["participants"]:
                 <li>
-                    <div class="conversation-people-avatar">${getAvatarImg(utils.userAvatar(conv, people[person], "s"), "s")}</div>
-                    <div class="conversation-people-profile"><a href="/profile?id=${person}">${people[person]["basic"]["name"]}</a></div>
+                    <div class="conversation-people-avatar">
+                      ${getAvatarImg(utils.userAvatar(conv, people[person], "s"), "s")}
+                    </div>
+                    <div class="conversation-people-profile">
+                      <a href="/profile?id=${person}">${people[person]["basic"]["name"]}</a>
+                    </div>
                     <%
                         if (person == myKey) or (person == conv["meta"]["owner"]):
                             showDelete = False
@@ -392,7 +410,7 @@
 
 <%def name="viewOptions()">
   <ul class="h-links view-options">
-    %for item, display in [('all', 'Inbox'), ('unread', 'Unread'), ('archive', 'Archive'), ('trash', 'Trash')]:
+    %for item, display in [('all', _('Inbox')), ('unread', _('Unread')), ('archive', _('Archive')), ('trash', _('Trash'))]:
       %if filterType == item:
         <li class="selected">${_(display)}</li>
       %else:
@@ -405,12 +423,16 @@
 <%def name="paging()">
   <ul class="h-links">
     %if prevPageStart:
-      <li class="button"><a class="ajax" href="/messages?type=${filterType}&start=${prevPageStart}">${_("&#9666; Previous")}</a></li>
+      <li class="button">
+        <a class="ajax" href="/messages?type=${filterType}&start=${prevPageStart}">${_("&#9666; Previous")}</a>
+      </li>
     %else:
       <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
     %endif
     %if nextPageStart:
-      <li class="button"><a class="ajax" href="/messages?type=${filterType}&start=${nextPageStart}">${_("Next &#9656;")}</a></li>
+      <li class="button">
+        <a class="ajax" href="/messages?type=${filterType}&start=${nextPageStart}">${_("Next &#9656;")}</a>
+      </li>
     %else:
       <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
     %endif

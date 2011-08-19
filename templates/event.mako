@@ -44,7 +44,7 @@
 
 <%def name="events()">
   %if conversations:
-    <div id="title"> <span class = "middle title"> Events </span> </div>
+    <div id="title"> <span class = "middle title">${_("Events")}</span> </div>
     %for convId in conversations:
       ${item.item_layout(convId)}
     %endfor
@@ -53,7 +53,7 @@
 
 <%def name="invitations()">
  %if inviItems:
-    <div id="title"> <span class = "middle title"> Invitations </span> </div>
+    <div id="title"> <span class = "middle title">${_("Invitations")}</span> </div>
     %for convId in inviItems:
       ${item.item_layout(convId)}
     %endfor
@@ -97,7 +97,7 @@
     </div>
     <div style="display:inline-block;float:right">
       <!--<div class="input-wrap">-->
-        <input type="checkbox" name="allDay" id="allDay"/><label for="allDay">All Day</label>
+        <input type="checkbox" name="allDay" id="allDay"/><label for="allDay">${_("All Day")}</label>
       <!--</div>-->
     </div>
   </div>
@@ -202,9 +202,9 @@
       <div class="item-contents has-icon event-contents">
         %if not allDay:
           % if startsToday:
-            <span>Event starts today from ${event_start}</span>
+            <span>${_("Event starts today from")} ${event_start}</span>
           % else:
-            <span>Event starts on ${event_start}</span>
+            <span>${_("Event starts on")} ${event_start}</span>
           % endif
           % if endsToday:
             <span>to ${event_end}</span>
@@ -213,9 +213,9 @@
           % endif
         %else:
           % if startsToday:
-            <span>Event starts today ${event_start}</span>
+            <span>${_("Event starts today")} ${event_start}</span>
           % else:
-            <span>Event starts on ${event_start}</span>
+            <span>${_("Event starts on")} ${event_start}</span>
           % endif
           % if endsToday:
             <span>for the entire day</span>
@@ -237,7 +237,7 @@
           %else:
             <span id="event-rsvp-status-${convId}">&nbsp;</span>
           %endif
-          <button class="button-link" onclick="$$.ui.showPopup(event)">RSVP to this event</button>
+          <button class="button-link" onclick="$$.ui.showPopup(event)">${_("RSVP to this event")}</button>
           <ul class="acl-menu" style="display:none;">
               <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'yes')">${_("Yes, I will attend")}</a></li>
               <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'no')">${_("No")}</a></li>

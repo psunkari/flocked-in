@@ -81,7 +81,7 @@
 
 <%def name="results()">
   % if not conversations:
-    <div id="next-load-wrapper">No Matching Results</div>
+    <div id="next-load-wrapper">${_("No Matching Results")}</div>
   % else:
     %for convId in conversations:
       ${item.item_layout(convId)}

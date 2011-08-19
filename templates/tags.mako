@@ -75,17 +75,26 @@
         log.err(e)
   %>
   %if nextPageStart:
-    <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" href="/tags?id=${tagId}&start=${nextPageStart}" _ref="/tags/more?id=${tagId}&start=${nextPageStart}">${_("Fetch older posts")}</a></div>
+    <div id="next-load-wrapper" class="busy-indicator">
+      <a id="next-page-load" class="ajax" href="/tags?id=${tagId}&start=${nextPageStart}"
+         _ref="/tags/more?id=${tagId}&start=${nextPageStart}">
+        ${_("Fetch older posts")}
+      </a>
+    </div>
   %else:
-    <div id="next-load-wrapper">No more posts to show</div>
+    <div id="next-load-wrapper">${_("No more posts to show")}</div>
   %endif
 </%def>
 
 <%def name="tag_actions(tagId, tagFollowing)">
   %if not tagFollowing:
-    <button class="button default" onclick="$.post('/ajax/tags/follow', 'id=${tagId}')"><span class="button-text">Follow</span></button>
+    <button class="button default" onclick="$.post('/ajax/tags/follow', 'id=${tagId}')">
+      <span class="button-text">${_("Follow")}</span>
+    </button>
   %else:
-    <button class="button" onclick="$.post('/ajax/tags/unfollow', 'id=${tagId}')"><span class="button-text">Unfollow</span></button>
+    <button class="button" onclick="$.post('/ajax/tags/unfollow', 'id=${tagId}')">
+      <span class="button-text">${_("Unfollow")}</span>
+    </button>
   %endif
 </%def>
 

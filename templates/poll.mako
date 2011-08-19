@@ -58,7 +58,12 @@
             <div class="poll-bar option-${int(option)%10}" style="width:${percent}%;">&nbsp;</div>
           </div>
           %if percent > 0:
-            <div class="poll-percent"><span onclick="$$.dialog.create({id:'poll-users-${option}-${convId}'});$.getScript('/ajax/poll/voters?id=${convId}&option=${option}');">${"%d%%"%percent}</span></div>
+            <div class="poll-percent">
+              <span onclick="$$.dialog.create({id:'poll-users-${option}-${convId}'});
+                             $.getScript('/ajax/poll/voters?id=${convId}&option=${option}');">
+                ${"%d%%"%percent}
+              </span>
+            </div>
           %else:
             <div class="poll-percent"><span>${"%d%%"%percent}</span></div>
           %endif
@@ -102,7 +107,12 @@
                 <div class="poll-bar option-${int(option)%10}" style="width:${percent}%;">&nbsp;</div>
               </div>
               %if percent > 0:
-                <div class="poll-percent"><span onclick="$$.dialog.create({id:'poll-users-${option}-${convId}'});$.getScript('/ajax/poll/voters?id=${convId}&option=${option}');">${"%d%%"%percent}</span></div>
+                <div class="poll-percent">
+                  <span onclick="$$.dialog.create({id:'poll-users-${option}-${convId}'});
+                                                         $.getScript('/ajax/poll/voters?id=${convId}&option=${option}');">
+                    ${"%d%%"%percent}
+                  </span>
+                </div>
               %else:
                 <div class="poll-percent"><span>${"%d%%"%percent}</span></div>
               %endif
