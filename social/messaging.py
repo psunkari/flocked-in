@@ -151,7 +151,7 @@ class MessagingResource(base.BaseResource):
         if body:
             body = body.decode('utf-8').encode('utf-8', "replace")
         parent = utils.getRequestArg(request, "parent") #TODO
-        subject = utils.getRequestArg(request, "subject") or None
+        subject = utils.getRequestArg(request, "subject") or ''
         if subject: subject.decode('utf-8').encode('utf-8', "replace")
 
         recipients = utils.getRequestArg(request, "recipients", sanitize=False)
