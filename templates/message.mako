@@ -192,7 +192,7 @@
           ${getAvatarImg(utils.userAvatar(myKey, people[myKey]))}
       </div>
       <div class="input-wrap conversation-reply-wrapper">
-          <textarea class="conversation-reply" name="body" placeholder="${_('Quickly reply to this message')}" required title="Reply"></textarea>
+          <textarea class="conversation-reply" name="body" placeholder="${_('Quickly reply to this message')}" required title="${_('Reply')}"></textarea>
           <input type="hidden" value=${convId} name="parent"/>
       </div>
       <div class="conversation-reply-actions">
@@ -220,16 +220,16 @@
         <input name="recipients" id="recipientList" type="hidden"/>
         <div>
             <input class="conversation-composer-field-recipient" type="text"  size="15" 
-                   placeholder="${_('Enter a name')}" title="Recipient"/>
+                   placeholder="${_('Enter a name')}" title="${_('Recipient')}"/>
         </div>
       </div>
       <div class="input-wrap conversation-composer-field">
         <input class="conversation-composer-field-subject" type="text" name="subject" 
-               placeholder="${_('Enter a subject of your message')}" title="Subject"/>
+               placeholder="${_('Enter a subject of your message')}" title="${_('Subject')}"/>
       </div>
       <div class="input-wrap conversation-composer-field">
         <textarea class="conversation-composer-field-body"
-                  placeholder="${_("Write a message to your friends and colleagues")}" name="body" title="Message"></textarea>
+                  placeholder="${_("Write a message to your friends and colleagues")}" name="body" title="${_('Message')}"></textarea>
       </div>
       <div class="conversation-composer-actions">
         <ul id="attached-files" class="v-links busy-indicator" style="float:left"></ul>
@@ -361,7 +361,7 @@
                     %>
                     %if showDelete:
                         <div class="conversation-people-remove" class="busy-indicator"
-                             title="Remove ${people[person]["basic"]["name"]} from this conversation">
+                             title="${_('Remove %s from this conversation') % people[person]["basic"]["name"]}">
                           <div class="messaging-icon messaging-delete-icon"
                                onclick="$.post('/ajax/messages/members', 'action=remove&parent=${id}&recipients=${person}')">&nbsp;</div>
                         </div>

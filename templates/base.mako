@@ -32,7 +32,7 @@
 %if script:
   <div id="feedbackmenu-container" class="sidemenu-container">
     <ul id="feedbackmenu" class="v-links sidemenu">
-      <li><a title="Feedback" onclick="$$.feedback.showFeedback()"><span class="sidemenu-icon icon feedback-icon"></span><span class="sidemenu-text">${_('Feedback')}</span></a></li>
+      <li><a title=${_('Feedback')} onclick="$$.feedback.showFeedback()"><span class="sidemenu-icon icon feedback-icon"></span><span class="sidemenu-text">${_('Feedback')}</span></a></li>
     </ul>
   </div>
 %endif

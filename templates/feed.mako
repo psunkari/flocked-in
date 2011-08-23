@@ -64,7 +64,7 @@
     <form id="invite-form" method="post" action="/people/invite" class="ajax" autocomplete="off" >
       <div class="input-wrap">
         <% domain = me["basic"]["emailId"].split('@')[1] %>
-        <input type="email" name="email" id="invite-others" placeholder="someone@${domain}" required title="Email"/>
+        <input type="email" name="email" id="invite-others" placeholder="someone@${domain}" required title="${_('Email')}"/>
       </div>
       <input type="hidden" name="from" value="sidebar"/>
       <input class="button" type="submit" id="submit" value="${_('Submit')}"/>
@@ -161,7 +161,7 @@
     <form id="share-form" autocomplete="off" method="post" action="/item/new" class="ajax" >
       <div id="sharebar">
             <div class="input-wrap">
-            <textarea name="comment" placeholder="${_('What are you working on?')}" required title="Comment"></textarea>
+            <textarea name="comment" placeholder="${_('What are you working on?')}" required title="${_('Comment')}"></textarea>
            </div>
           <input type="hidden" name="type" value="status"/>
       </div>
@@ -188,21 +188,21 @@
 
 <%def name="share_status()">
   <div class="input-wrap">
-    <textarea name="comment" placeholder="${_('What are you working on?')}" required title="Status"/>
+    <textarea name="comment" placeholder="${_('What are you working on?')}" required title="${_('Status')}"/>
   </div>
   <input type="hidden" name="type" value="status"/>
 </%def>
 
 <%def name="share_question()">
   <div class="input-wrap">
-    <textarea name="comment" placeholder="${_('What is your question?')}" required title="Question"/>
+    <textarea name="comment" placeholder="${_('What is your question?')}" required title="${_('Question')}"/>
   </div>
   <input type="hidden" name="type" value="question"/>
 </%def>
 
 <%def name="share_link()">
   <div class="input-wrap">
-    <textarea name="url" placeholder="${_('http://')}" required title="URL"/>
+    <textarea name="url" placeholder="${_('http://')}" required title="${_('URL')}"/>
     </div>
   <div class="input-wrap">
     <textarea name="comment" placeholder="${_('Say something about the link')}" />
