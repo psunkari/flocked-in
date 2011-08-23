@@ -124,11 +124,11 @@
   <script type="text/javascript" src="/rsrcs/js/jquery.address-1.4.min.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.autogrow-textarea.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.iframe-transport.js"></script>
-  <script type="text/javascript" src="/rsrcs/js/jquery.html5form-min.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/jquery.html5form-1.3.js"></script>
   <script type="text/javascript" src="/rsrcs/js/social.js"></script>
   <script type="text/javascript">
     $().ready(function() {$$.ui.init()});
-    $().ready(function() {$('form').html5form({messages: 'en', async: false});});
+    $().ready(function() {$('form').html5form({messages: 'en'});});
   </script>
 %else:
 </body>

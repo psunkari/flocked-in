@@ -184,13 +184,13 @@
 </%def>
 
 <%def name="render_conversation_reply(script, msg, convId)">
-  <form method="post" class="ajax" action="/messages/write">
+  <form id="message-reply-form" method="post" class="ajax" action="/messages/write">
     <div class="conversation-composer">
       <div class="conv-avatar">
           ${getAvatarImg(utils.userAvatar(myKey, people[myKey]))}
       </div>
       <div class="input-wrap conversation-reply-wrapper">
-          <textarea class="conversation-reply" name="body" placeholder="Quickly reply to this message"></textarea>
+          <textarea class="conversation-reply" name="body" placeholder="Quickly reply to this message" required title="Reply"></textarea>
           <input type="hidden" value=${convId} name="parent"/>
       </div>
       <div class="conversation-reply-actions">
@@ -363,7 +363,7 @@
                     <input type="hidden" name="action" value="add" />
                     <input type="hidden" name="recipients" id="conversation_recipients"/>
                     <div class="input-wrap">
-                        <input type="text" placeHolder="Your friend's name" id="conversation_add_member"/>
+                        <input type="text" placeHolder="Your friend's name" id="conversation_add_member" required title="${_('Friend name')}"/>
                     </div>
                 </form>
             </div>

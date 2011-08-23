@@ -191,25 +191,25 @@
     <div class="styledform">
       <ul>
         <li>
-            <label for="name">Group Name</label>
-            <input type="text" id="groupname" name="name" value= ""/>
+            <label for="name">${_('Group Name')}</label>
+            <input type="text" id="groupname" name="name" value= "" required title="${_('Group Name')}" placeholder="${_('Group Name')}"/>
         </li>
         <li>
-            <label for="desc">Description</label>
-            <textarea class="input-wrap" id="desc" name="desc"></textarea>
+            <label for="desc">${_('Description')}</label>
+            <textarea class="input-wrap" id="desc" name="desc" placeholder="${_('Group Description')}"></textarea>
         </li>
         <li>
-            <label>Membership</label>
+            <label>${_('Membership')}</label>
             <input type="checkbox" id="access" name="access" value="public">(Public) Anyone in the organization can join the group </input><br/>
             <input type="checkbox" id="access" name="access" value="private">(Private) Membership needs group administrator approval</input>
         </li>
         <li>
-            <label for="dp">Group Logo</label>
+            <label for="dp">${_('Group Logo')}</label>
             <input type="file" id="dp" name="dp" accept="image/jpx, image/png, image/gif"/>
       </ul>
     <div class="styledform-buttons">
-        <input type="submit" name="userInfo_submit" value="Save" class="button default"/>
-        <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">Cancel</button>
+        <input type="submit" name="userInfo_submit" value="${_('Save')}" class="button default"/>
+        <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">${_('Cancel')}</button>
     </div>
     </div>
     % if myKey:

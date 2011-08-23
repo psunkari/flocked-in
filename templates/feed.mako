@@ -61,7 +61,7 @@
 <%def name="invitePeopleBlock()">
   <div class="sidebar-chunk">
     <div class="sidebar-title">${_("Invite people")}</div>
-    <form method="post" action="/people/invite" class="ajax" autocomplete="off" >
+    <form id="invite-form" method="post" action="/people/invite" class="ajax" autocomplete="off" >
       <div class="input-wrap">
         <% domain = me["basic"]["emailId"].split('@')[1] %>
         <input type="email" name="email" id="invite-others" placeholder="someone@${domain}" required title="Email"/>
@@ -69,6 +69,7 @@
       <input type="hidden" name="from" value="sidebar"/>
       <input class="button" type="submit" id="submit" value="${_('Submit')}"/>
     </form>
+    <script>$('#invite-form').html5form({messages: 'en'})</script>
   </div>
 </%def>
 

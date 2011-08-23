@@ -784,6 +784,7 @@ class MessagingResource(base.BaseResource):
                      $$.menu.selectItem("messages");
                      $('#mainbar .contents').addClass("has-right");
                      $('.conversation-reply').autogrow();
+                     $('#message-reply-form').html5form({messages: 'en'});
                      """
             renderMessage = renderScriptBlock(request, "message.mako", "render_conversation",
                                     landing, ".center-contents", "set", True,
