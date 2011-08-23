@@ -520,18 +520,13 @@ var convs = {
         }
     },
 
-    /* Reset the sizes of autogrow-backplane and placeholder */
+    /* Reset the sizes of autogrow-backplane */
     /* XXX: This copied some code from those respective modules directly */
     _commentFormVisible: function(convId) {
         var input = $('.comment-input', '#comment-form-wrapper-'+convId);
         if (input.next().hasClass('autogrow-backplane')) {
             backplane = input.next();
             backplane.width(input.width() - parseInt(input.css('paddingLeft')) - parseInt(input.css('paddingRight')));
-        }
-        if (input.prev().hasClass("ui-ph-label")) {
-            label = input.prev();
-            label.height(input.outerHeight());
-            label.width(input.outerWidth());
         }
     },
 
@@ -654,64 +649,6 @@ var ui = {
                 }
                 return true;
             }
-        });
-
-        /* Install handlers for placeholder text */
-        if (!ui._placeholders) {
-            $(".ui-ph-label").live("click", function() {
-                var input = this.nextSibling;
-                input.focus();
-            });
-
-            $(".ui-ph-active").live("focus", function() {
-                var label = this.previousSibling;
-                $(label).css('display', 'none');
-                $(this).removeClass('ui-ph-active');
-            })
-
-            $(".ui-ph").live("blur", function() {
-                if (this.value != "")
-                    return;
-
-                var label = this.previousSibling;
-                $(label).css('display', 'block');
-                $(this).addClass('ui-ph-active');
-            })
-        }
-    },
-
-    _placeholders: 'placeholder' in document.createElement('input'),
-    placeholders: function(selector) {
-        if (ui._placeholders)   // Browser supports placeholder text
-            return;
-
-        $(selector).each(function(index, element){
-            var $this, text, label, $label, inputHeight;
-
-            $this = $(this);
-            if ($this.prev().hasClass("ui-ph-label"))
-                return;
-
-            text = $this.attr('placeholder');
-            if (!text)
-                return;
-
-            label = document.createElement("label");
-            try {
-                label.innerText = text;
-                label.textContent = text;
-            } catch(ex) {}
-            label.setAttribute('class', 'ui-ph-label ui-ph-active');
-
-            $label = $(label);
-            inputHeight = $this.outerHeight();
-            $label.height(inputHeight);
-            $label.width($this.outerWidth());
-            $label.css('line-height', inputHeight+'px');
-
-            this.parentNode.insertBefore(label, this);
-            $this.addClass('ui-ph');
-            $this.addClass('ui-ph-active');
         });
     },
 
