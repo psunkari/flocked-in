@@ -370,7 +370,10 @@ class GroupsResource(base.BaseResource):
         if script:
             yield renderScriptBlock(request, "groups.mako", "createGroup",
                                     landing, "#add-user-wrapper", "set", **args)
-            script = "$$.ui.bindFormSubmit('#group_form', function(){$('#add-user-wrapper').empty();$$.fetchUri('/groups');})"
+            script = """
+                        $$.ui.bindFormSubmit('#group_form', function(){$('#add-user-wrapper').empty();$$.fetchUri('/groups');})
+                        $('#group_form').html5form({messages: 'en'});
+                     """
             script = "<script>%s</script>"%(script) if landing else script
             request.write(script);
 

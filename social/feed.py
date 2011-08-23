@@ -656,7 +656,6 @@ class FeedResource(base.BaseResource):
                                     "#user-feed", "set", True,
                                     handlers={"onload": onload}, **args)
             onload = """
-                     $$.ui.placeholders('#invite-others');
                      $('#group_add_invitee').autocomplete({
                            source: '/auto/users',
                            minLength: 2,

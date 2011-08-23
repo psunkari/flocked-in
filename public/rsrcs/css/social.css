@@ -483,10 +483,29 @@ a:hover, a:active, a:focus {
 .summary-item {
     color: gray;
     padding: 0 8px 0 0;
+    vertical-align: middle;
 }
 
 .summary-line {
     padding: 8px 0 0 0;
+}
+
+.summary-icon {
+    background-repeat: no-repeat;
+    width: 16px;
+    height: 16px;
+    margin: 0 auto;
+    position: relative;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.landline-icon {
+    background-image: url(/rsrcs/img/phone-landline.png);
+}
+
+.mobile-icon {
+    background-image: url(/rsrcs/img/phone-mobile.png);
 }
 
 .user-actions {

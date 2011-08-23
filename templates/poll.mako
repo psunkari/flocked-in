@@ -5,16 +5,16 @@
 
 <%def name="share_poll()">
   <div class="input-wrap">
-    <textarea name="question" placeholder="${_('What would you like to know?')}"/>
+    <textarea name="question" placeholder="${_('What would you like to know?')}" required title="Question"/>
   </div>
   <div id="share-poll-options">
     <div class="input-wrap">
       <span class="icon poll-option">&nbsp;</span>
-      <input type="text" name="options" placeholder="${_('Add an option')}"/>
+      <input type="text" name="options" placeholder="${_('Add an option')}" required title="Option"/>
     </div>
     <div class="input-wrap">
       <span class="icon poll-option">&nbsp;</span>
-      <input type="text" name="options" placeholder="${_('Add an option')}"/>
+      <input type="text" name="options" placeholder="${_('Add an option')}" required title="Option"/>
     </div>
     <div class="input-wrap">
       <span class="icon poll-option">&nbsp;</span>

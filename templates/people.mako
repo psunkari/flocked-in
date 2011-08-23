@@ -153,12 +153,12 @@
 
 <%def name="invitePeople()">
   <div class="header-form">
-    <form method="post" action="/people/invite" class="ajax">
+    <form id="invite-people-form" method="post" action="/people/invite" class="ajax">
       <input type="hidden" name="from" value="people"/>
       <div id="invite-people">
         <div class="input-wrap">
           <span class="icon invite-people-entry">&nbsp;</span>
-          <input type="text" name="email" placeholder="${_("Enter your colleague&#39;s email address")}"/>
+          <input type="text" name="email" placeholder="${_("Enter your colleague&#39;s email address")}" autofocus required title="Colleague's email address"/>
         </div>
         <div class="input-wrap">
           <span class="icon invite-people-entry">&nbsp;</span>
@@ -174,6 +174,7 @@
         <button type="button" class="button" onclick="$('#invite-people-wrapper').empty()">${'Cancel'}</button>
       </div>
     </form>
+    <script type="text/javascript">$('#invite-people-form').html5form({messages: 'en', async: false});</script>
   </div>
 </%def>
 

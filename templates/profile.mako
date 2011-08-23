@@ -190,9 +190,11 @@
       <div id="summary-work-contact" class="summary-line">
         <span class="summary-item"><a href="${'mailto:' + user['basic']['emailId']}">${user['basic']['emailId']}</a></span>
         %if user.get('contact', {}).has_key('phone'):
+          <span class="summary-icon landline-icon"/>
           <span class="summary-item" title="${_('Work Phone')}">${user['contact']['phone']}</span>
         %endif
         %if user.get('contact',{}).has_key('mobile'):
+          <span class="summary-icon mobile-icon"/>
           <span class="summary-item" title="${_('Work Mobile')}">${user['contact']['mobile']}</span>
         %endif
       </div>
@@ -265,9 +267,11 @@
         <span class="summary-item" title="${_('Personal Email')}">${user['personal']['email']}</span>
       %endif
       %if user.get('personal', {}).has_key('phone'):
+        <span class="summary-icon landline-icon"/>
         <span class="summary-item" title="${_('Personal Phone')}">${user['personal']['phone']}</span>
       %endif
       %if user.get('personal', {}).has_key('mobile'):
+        <span class="summary-icon mobile-icon"/>
         <span class="summary-item" title="${_('Personal Mobile')}">${user['personal']['mobile']}</span>
       %endif
       </div>

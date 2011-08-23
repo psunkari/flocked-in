@@ -133,8 +133,15 @@ _initAjaxRequests: function _initAjaxRequests() {
         if (this.hasAttribute("disabled"))
             return false;
 
-        var $this = $(this),
-            deferred = $.post('/ajax' + $this.attr('action'),
+        var $this = $(this);
+        var validate = jQuery.Event('html5formvalidate');
+        if ($this.data('html5form')) {
+            $this.trigger(validate);
+            if (validate.isDefaultPrevented())
+                return false;
+        }
+
+        var deferred = $.post('/ajax' + $this.attr('action'),
                                    $this.serialize());
 
         self.setBusy(deferred, $this)
@@ -149,6 +156,7 @@ _initAjaxRequests: function _initAjaxRequests() {
         };
         deferred.then(enabler, enabler);
 
+        $this.trigger('restorePlaceHolders');
         return false;
     });
 
@@ -157,8 +165,15 @@ _initAjaxRequests: function _initAjaxRequests() {
         if (this.hasAttribute("disabled"))
             return false;
 
-        var $this = $(this),
-            uri = '/search?'+$this.serialize(),
+        var $this = $(this);
+        var validate = jQuery.Event('html5formvalidate');
+        if ($this.data('html5form')) {
+            $this.trigger(validate);
+            if (validate.isDefaultPrevented())
+                return false;
+        }
+
+        var uri = '/search?'+$this.serialize(),
             deferred = $.fetchUri(uri);
 
         self.setBusy(deferred, $this)
@@ -173,6 +188,7 @@ _initAjaxRequests: function _initAjaxRequests() {
         };
         deferred.then(enabler, enabler);
 
+        $this.trigger('restorePlaceHolders');
         return false;
     });
 
@@ -432,7 +448,7 @@ var publisher = {
         $('#publisher-'+obj.publisherName).addClass('selected-publisher');
 
         // Placeholders
-        $$.ui.placeholders('#sharebar input:text, #sharebar textarea');
+        $('#share-form').html5form({messages: 'en', async: false});
 
         // Auto expand textareas
         $('#sharebar textarea').autogrow();
@@ -452,9 +468,6 @@ $$.publisher = publisher;
 (function($$, $) { if (!$$.convs) {
 var convs = {
     load: function(obj) {
-        // Placeholders in comment input boxes
-        $$.ui.placeholders('.comment-input');
-
         // Auto expand comment boxes
         $('.comment-input').autogrow();
     },
@@ -484,7 +497,7 @@ var convs = {
 
     comment: function(convId) {
         convs.showHideComponent(convId, 'comments', true);
-        $('#comment-form-'+convId).find('.comment-input').focus();
+        $('#comment-form-'+convId).find('.comment-input').select().focus();
     },
 
     showItemLikes: function(itemId) {
@@ -642,7 +655,6 @@ var ui = {
                 return true;
             }
         });
-        ui.placeholders("#searchbox");
 
         /* Install handlers for placeholder text */
         if (!ui._placeholders) {
@@ -839,6 +851,14 @@ var ui = {
     bindFormSubmit: function(selector, onCompleteFunc) {
         //Force form submits via ajax posts when form contains a input file.
         $(selector).submit(function() {
+            $this = $(this);
+            if ($this.data('html5form')) {
+                var validate = jQuery.Event('html5formvalidate');
+                $this.trigger(validate);
+                if (validate.isDefaultPrevented())
+                    return false;
+            }
+
             $.ajax(this.action, {
                 type: "POST",
                 dataType: "json",
@@ -855,6 +875,7 @@ var ui = {
                     onCompleteFunc(data)
                 }
             });
+            $this.trigger('restorePlaceHolders');
             return false
         });
     }
