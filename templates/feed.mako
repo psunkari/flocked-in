@@ -242,9 +242,11 @@
 <%def name="customAudience()">
   <div class="ui-dlg-title">${_("Select your audience")}</div>
    <div class="" style="width:auto;background-color:#E8EEFA;padding:10px">
-    <input type="text" id="custom-audience-dlg-search" style="display:inline-block;font-size:11px;width:20em" class="input-wrap" placeholder="${_("Search among my friends and groups.")}"/>
-    <input type="checkbox" id="allfriends" style="position:relative;top:3px"/><label for="allfriends">${_("Add all my friends")}</label>
-    <div class="ui-list-meta" id="footer-info" style="padding-left: 0;"></div>
+    <form>
+      <input type="text" id="custom-audience-dlg-search" style="display:inline-block;font-size:11px;width:20em" class="input-wrap" placeholder="${_("Search among my friends and groups.")}"/>
+      <input type="checkbox" id="allfriends" style="position:relative;top:3px"/><label for="allfriends">${_("Add all my friends")}</label>
+      <div class="ui-list-meta" id="footer-info" style="padding-left: 0;"></div>
+    </form>
    </div>
   <div class="ui-list ui-dlg-center">
     <div class="ui-listitem empty">

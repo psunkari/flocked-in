@@ -712,8 +712,10 @@ class FeedResource(base.BaseResource):
     def _renderChooseAudience(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
 
+        onload = "$('form').html5form({messages: 'en'});"
         yield renderScriptBlock(request, "feed.mako", "customAudience", False,
-                                "#custom-audience-dlg", "set", **args)
+                                "#custom-audience-dlg", "set", True,
+                                handlers={"onload": onload}, **args)
 
 
     @profile

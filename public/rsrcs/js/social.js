@@ -1263,7 +1263,6 @@ var acl = {
                         return false;
                     }
                 });
-                $$.ui.placeholders("#custom-audience-dlg-search");
             })
         }
         else {
