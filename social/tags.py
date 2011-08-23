@@ -106,7 +106,10 @@ class TagsResource(base.BaseResource):
         args.update(tagItems)
 
         if script:
-            onload = "(function(obj){$$.convs.load(obj);})(this);"
+            onload = """
+                        (function(obj){$$.convs.load(obj);})(this);
+                        $('form').html5form({messages: 'en'});
+                     """
             yield renderScriptBlock(request, "tags.mako", "itemsLayout",
                                     landing, "#content", "set", True,
                                     handlers={"onload": onload}, **args)
