@@ -246,7 +246,7 @@
         <div class="users-row">
       %endif
     %endif
-    <div class="users-user">${_pendingRequestUser(userId)}</div>
+    <div class="users-user">${_pendingRequestUser(userId, groupId)}</div>
     %if counter % 2 == 1:
       </div>
     %endif
@@ -282,7 +282,7 @@
   %endif
 </%def>
 
-<%def name="_pendingGroupRequestsActions(groupId, userId, action='')">
+<%def name="groupRequestActions(groupId, userId, action='')">
   %if action == 'accept':
     <button class="button disabled"><span class="button-text">${_("Accepted")}</span></button>
   %elif action == 'reject':
@@ -297,7 +297,7 @@
 
 </%def>
 
-<%def name="_pendingRequestUser(userId, groupId=None)">
+<%def name="_pendingRequestUser(userId, groupId)">
   <div class="users-avatar">
     <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
     %if avatarURI:
@@ -310,8 +310,8 @@
       <div class="user-details-name">${_("Group:")} ${utils.groupName(groupId, entities[groupId])}</div>
     %endif
     <div class="user-details-actions">
-      <ul id="pending-group-request-actions-${userId}" class="middle user-actions h-links">
-        ${self._pendingGroupRequestsActions(groupId, userId)}
+      <ul id="group-request-actions-${userId}-${groupId}" class="middle user-actions h-links">
+        ${self.groupRequestActions(groupId, userId)}
       </ul>
     </div>
   </div>

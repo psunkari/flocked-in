@@ -187,8 +187,8 @@ class GroupsResource(base.BaseResource):
                 yield self._removeFromPending(groupId, userId)
                 yield self._addMember(request, groupId, userId, myOrgId, group)
                 yield renderScriptBlock(request, "groups.mako",
-                                        "_pendingGroupRequestsActions", False,
-                                        '#pending-group-request-actions-%s' %(userId),
+                                        "groupRequestActions", False,
+                                        '#group-request-actions-%s-%s' %(userId, groupId),
                                         "set", args=[groupId, userId, "accept"])
 
             except ttypes.NotFoundException:
@@ -209,8 +209,8 @@ class GroupsResource(base.BaseResource):
                 cols = yield db.get(groupId, "pendingConnections", userId)
                 yield self._removeFromPending(groupId, userId)
                 yield renderScriptBlock(request, "groups.mako",
-                                        "_pendingGroupRequestsActions", False,
-                                        '#pending-group-request-actions-%s' %(userId),
+                                        "groupRequestActions", False,
+                                        '#group-request-actions-%s-%s' %(userId, groupId),
                                         "set", args=[groupId, userId, "reject"])
             except ttypes.NotFoundException:
                 pass
@@ -232,8 +232,8 @@ class GroupsResource(base.BaseResource):
                 cols = yield db.get(groupId, "pendingConnections", userId)
                 yield self._removeFromPending(groupId, userId)
                 yield renderScriptBlock(request, "groups.mako",
-                                        "_pendingGroupRequestsActions", False,
-                                        '#pending-group-request-actions-%s' %(userId),
+                                        "groupRequestActions", False,
+                                        '#group-request-actions-%s-%s' %(userId, groupId),
                                         "set", args=[groupId, userId, "block"])
             except ttypes.NotFoundException:
                 # If the users is already a member, remove the user from the group
@@ -682,6 +682,7 @@ class GroupsResource(base.BaseResource):
         args["groupId"] = groupId
         args["nextPageStart"] = nextPageStart
         args["prevPageStart"] = prevPageStart
+        args["entities"][groupId] = group
 
         if script:
             yield renderScriptBlock(request, "groups.mako", "titlebar",
