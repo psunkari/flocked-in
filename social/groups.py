@@ -144,7 +144,7 @@ class GroupsResource(base.BaseResource):
 
         cols = yield db.get_slice(groupId, "blockedUsers", [myKey])
         if cols:
-            raise errors.PermissionDenied(_("You are banned from joining the group by the administrator"))
+            raise errors.PermissionDenied(_("You are banned from joining this group."))
 
         colname = "%s:%s" %(group['basic']['name'].lower(), groupId)
         try:
@@ -179,9 +179,9 @@ class GroupsResource(base.BaseResource):
         myOrgId = args["orgKey"]
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                       columns=["admins"])
-        userId, user = yield utils.getValidEntityId(request, "uid", "user")
 
         if myKey in group["admins"]:
+            userId, user = yield utils.getValidEntityId(request, "uid", "user")
             try:
                 cols = yield db.get(groupId, "pendingConnections", userId)
                 yield self._removeFromPending(groupId, userId)
@@ -202,9 +202,9 @@ class GroupsResource(base.BaseResource):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                       columns=["admins"])
-        userId, user = yield utils.getValidEntityId(request, "uid", "user")
 
         if myKey in group["admins"]:
+            userId, user = yield utils.getValidEntityId(request, "uid", "user")
             try:
                 cols = yield db.get(groupId, "pendingConnections", userId)
                 yield self._removeFromPending(groupId, userId)
@@ -223,12 +223,11 @@ class GroupsResource(base.BaseResource):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                       columns=["admins"])
-        userId, user = yield utils.getValidEntityId(request, "uid", "user")
-
-        if myKey == userId and myKey in group["admins"]:
-            raise errors.InvalidRequest(_("An administrator cannot ban himself/herself from the group"))
 
         if myKey in group["admins"]:
+            userId, user = yield utils.getValidEntityId(request, "uid", "user")
+            if myKey == userId and myKey in group["admins"]:
+                raise errors.InvalidRequest(_("An administrator cannot ban himself/herself from the group"))
             try:
                 cols = yield db.get(groupId, "pendingConnections", userId)
                 yield self._removeFromPending(groupId, userId)
@@ -254,10 +253,11 @@ class GroupsResource(base.BaseResource):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                       columns=["admins"])
-        userId, user = yield utils.getValidEntityId(request, "uid", "user")
 
         if myKey in group["admins"]:
+            userId, user = yield utils.getValidEntityId(request, "uid", "user")
             yield db.remove(groupId, "blockedUsers", userId)
+
 
 
     @profile
