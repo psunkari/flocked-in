@@ -245,7 +245,7 @@
         %endif
       </div>
     </form>
-    <script>$('#message-form').html5form({messages: 'en', async: false});</script>
+    <script>$('#message-form').html5form({messages: 'en'});</script>
     <div class="file-attach-wrapper">
       <form id="upload" action="/file" method="post" enctype="multipart/form-data">
         <input id="file-attach-input" type="file" name="file" size="1"/>

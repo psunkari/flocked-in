@@ -448,7 +448,7 @@ var publisher = {
         $('#publisher-'+obj.publisherName).addClass('selected-publisher');
 
         // Placeholders
-        $('#share-form').html5form({messages: 'en', async: false});
+        $('#share-form').html5form({messages: 'en'});
 
         // Auto expand textareas
         $('#sharebar textarea').autogrow();
