@@ -289,6 +289,8 @@
     <button class="button disabled"><span class="button-text">${_("Rejected")}</span></button>
   %elif action == 'block':
     <button class="button disabled"><span class="button-text">${_("Blocked")}</span></button>
+  %elif action == 'unblock':
+    <button class="button disabled"><span class="button-text">${_("Unblocked")}</span></button>
   %else:
     <button class="button default" onclick="$.post('/ajax/groups/approve', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Accept")}</span></button>
     <button class="button default" onclick="$.post('/ajax/groups/reject', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Reject")}</span></button>

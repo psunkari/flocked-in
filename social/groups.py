@@ -257,8 +257,10 @@ class GroupsResource(base.BaseResource):
         if myKey in group["admins"]:
             userId, user = yield utils.getValidEntityId(request, "uid", "user")
             yield db.remove(groupId, "blockedUsers", userId)
-
-
+            yield renderScriptBlock(request, "groups.mako",
+                                    "groupRequestActions", False,
+                                    '#group-request-actions-%s-%s' %(userId, groupId),
+                                    "set", args=[groupId, userId, "unblock"])
 
     @profile
     @defer.inlineCallbacks
