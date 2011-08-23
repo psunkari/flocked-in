@@ -158,7 +158,7 @@
       <div id="invite-people">
         <div class="input-wrap">
           <span class="icon invite-people-entry">&nbsp;</span>
-          <input type="text" name="email" placeholder="${_("Enter your colleague&#39;s email address")}" autofocus required title="${_('Colleague's email address')}"/>
+          <input type="text" name="email" placeholder="${_("Enter your colleague&#39;s email address")}" autofocus required title="${_("Colleague's email address")}"/>
         </div>
         <div class="input-wrap">
           <span class="icon invite-people-entry">&nbsp;</span>
