@@ -703,56 +703,57 @@ var ui = {
     loadFileShareBlock: function(){
         var _self = this;
         $("#upload :file").change(function() {
-          var form = $(this.form), 
-              d, mime, filename;
-          if (this.files !== undefined){
-            mime = this.files[0].type
-            filename = this.files[0].name
-            d = $.post('/file/form', {"name":filename, "mime":mime}, "json");
-          }else{
-            //Non HTML5 File API browsers IE8 and Opera Presto 2.7
-            filename = _self.getNameFromPath(this.value);
-            d = $.post('/file/form', {"name":filename}, "json");
-          }
-          d.then(function(data){
-            $$.ui.prepareUploadForm(form, data);
-            var uploadXhr = $.ajax(form.prop("action"), {
-              type: "POST",
-              dataType: "json",
-              files: form.find(":file"),
-              data: $('#upload'+' :input').not(':file, :hidden').serializeArray(),
-              processData: false
-            }).complete(function(data) {
-              form.find(":file").val("");
-            }).success(function(data) {
-              //Insert hidden inputs in attached-files
-              var hiddenInputs = [];
-              var fileItems = [];
-              for (var fileId in data.files ){
-                  var fileInfo = data.files[fileId];
-                  var input = "<input type='hidden' name='fId' value='"+ fileId +"'/>";
-                  hiddenInputs.push(input);
-                  $("#attached-files .busy-indicator").before(input);
-                  var list = "<li><input id='"+ fileId +
-                      "' type='checkbox' checked/><label for='"+ fileId +"'>"+ fileInfo[1]  +"</label></li>";
-                  fileItems.push(list);
-              }
-              var textToInsert = hiddenInputs.join("");
-              $("#attached-files .busy-indicator").before(textToInsert);
-              var textToInsert = fileItems.join("");
-              $("#attached-files .busy-indicator").before(textToInsert);
-              for (var fileId in data.files ){
-                  $('input:checkbox[id="'+ fileId +'"]').change($$.ui.removeFileFromShare)
-              }
-            }).error(function(jqXHR, textStatus, errorThrown){
-                form.find(":file").val("");
-            });
-            var node = $('#attached-files .busy-indicator');
-            $$.setBusy(uploadXhr, node);
-          }, function(err){
-                if (window.console){
-                    console.log(err)
-                }})
+            var form = $(this.form),
+                d, mime, filename;
+            if (this.files !== undefined) {
+                mime = this.files[0].type
+                filename = this.files[0].name
+                d = $.post('/file/form', {"name":filename, "mime":mime}, "json");
+            } else {
+                //Non HTML5 File API browsers IE8 and Opera Presto 2.7
+                filename = _self.getNameFromPath(this.value);
+                d = $.post('/file/form', {"name":filename}, "json");
+            }
+            d.then(function(data){
+                $$.ui.prepareUploadForm(form, data);
+                var uploadXhr = $.ajax(form.prop("action"), {
+                    type: "POST",
+                    dataType: "json",
+                    files: form.find(":file"),
+                    data: $('#upload'+' :input').not(':file, :hidden').serializeArray(),
+                    processData: false
+                }).complete(function(data) {
+                    form.find(":file").val("");
+                }).success(function(data) {
+                    //Insert hidden inputs in attached-files
+                    var hiddenInputs = [];
+                    var fileItems = [];
+                    for (var fileId in data.files ) {
+                        var fileInfo = data.files[fileId];
+                        var input = "<input type='hidden' name='fId' value='"+ fileId +"'/>";
+                        hiddenInputs.push(input);
+                        $("#attached-files > .busy-indicator").before(input);
+                        var list = "<li><input id='"+ fileId +
+                            "' type='checkbox' checked/><label for='"+ fileId +"'>"+ fileInfo[1]  +"</label></li>";
+                        fileItems.push(list);
+                    }
+                    var textToInsert = hiddenInputs.join("");
+                    $("#attached-files > .busy-indicator").before(textToInsert);
+                    var textToInsert = fileItems.join("");
+                    $("#attached-files > .busy-indicator").before(textToInsert);
+                    for (var fileId in data.files ) {
+                        $('input:checkbox[id="'+ fileId +'"]').change($$.ui.removeFileFromShare)
+                    }
+                }).error(function(jqXHR, textStatus, errorThrown) {
+                    form.find(":file").val("");
+                });
+                var node = $('#attached-files > .busy-indicator');
+                $$.setBusy(uploadXhr, node);
+            }, function(err) {
+                  if (window.console) {
+                      console.log(err)
+                  }
+            })
         });
     },
 
@@ -775,8 +776,6 @@ var ui = {
                 })
             }
         })
-
-
     },
 
     showFileVersions: function(convId, fileId){

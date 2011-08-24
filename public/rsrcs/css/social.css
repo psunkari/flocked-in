@@ -93,7 +93,7 @@ a:hover, a:active, a:focus {
 }
 .busy-indicator.busy {
     background-image: url(/rsrcs/img/loading.gif);
-    background-position: center center;
+    background-position: right center;
     background-repeat: no-repeat;
 }
 
@@ -627,7 +627,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 
 #sharebar-actions-wrapper {
     float:right;
-    width:80%;
+    width:83%;
     display:inline-block;
 }
 
@@ -692,7 +692,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 #file-attach-input {
     position: absolute;
     top: 0;
-    left: 0;
+    right: 0;
     opacity: 0;
     -moz-opacity: 0;
     filter:alpha(opacity:0);
@@ -707,7 +707,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 
 .file-attach-wrapper {
     float:left;
-    width:95px;
+    width:17%;
     overflow:hidden;
 }
 
