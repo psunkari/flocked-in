@@ -166,7 +166,9 @@
           <input type="hidden" name="type" value="status"/>
       </div>
       <div id="sharebar-actions-wrapper">
-        <ul id="attached-files" class="v-links busy-indicator" style="float:left"></ul>
+        <ul id="attached-files" class="v-links" style="float:left">
+          <li class="busy-indicator"></li>
+        </ul>
         <ul id="sharebar-actions" class="h-links">
           <li>${acl_button("sharebar-acl", '{"accept":{"orgs":["%s"]}}'%orgKey, "Company", "Notifies only your friends and followers")}</li>
           <li>${widgets.button("sharebar-submit", "submit", "default", "Share", "Share")}</li>
@@ -175,12 +177,15 @@
       </div>
     </form>
     <div class="file-attach-wrapper">
-        <form id="upload" action="/file" method="post" enctype="multipart/form-data">
-          <input id="file-attach-input" type="file" name="file" size="1"/>
-          <button id="file-share" class="button" type="button" title="${_('Attach a file')}" onclick="$('#file-attach-input').click()">
-            <img src="/rsrcs/img/attach.png" alt="${_('Attach a file')}"/>
+      <form id="upload" action="/file" method="post" enctype="multipart/form-data">
+        <div id="file-attach-div" class="file-overlay">
+          <input type="file" name="file" id="file-attach-input"/>
+          <button id="file-share" class="acl-button acl-text-button">
+            <span class="background-icon attach-file-icon"/>
+            <span>${_('Attach File')}</span>
           </button>
-        </form>
+        </div>
+      </form>
     </div>
     <div class="clear"></div>
   %endif

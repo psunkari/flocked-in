@@ -703,15 +703,16 @@ var ui = {
     loadFileShareBlock: function(){
         var _self = this;
         $("#upload :file").change(function() {
-          var form = $(this.form);
+          var form = $(this.form), 
+              d, mime, filename;
           if (this.files !== undefined){
-            var mime = this.files[0].type
-            var filename = this.files[0].name
-            var d = $.post('/file/form', {"name":filename, "mime":mime}, "json");
+            mime = this.files[0].type
+            filename = this.files[0].name
+            d = $.post('/file/form', {"name":filename, "mime":mime}, "json");
           }else{
             //Non HTML5 File API browsers IE8 and Opera Presto 2.7
-            var filename = _self.getNameFromPath(this.value);
-            var d = $.post('/file/form', {"name":filename}, "json");
+            filename = _self.getNameFromPath(this.value);
+            d = $.post('/file/form', {"name":filename}, "json");
           }
           d.then(function(data){
             $$.ui.prepareUploadForm(form, data);
@@ -731,22 +732,22 @@ var ui = {
                   var fileInfo = data.files[fileId];
                   var input = "<input type='hidden' name='fId' value='"+ fileId +"'/>";
                   hiddenInputs.push(input);
-                  $("#attached-files").add(input);
+                  $("#attached-files .busy-indicator").before(input);
                   var list = "<li><input id='"+ fileId +
                       "' type='checkbox' checked/><label for='"+ fileId +"'>"+ fileInfo[1]  +"</label></li>";
                   fileItems.push(list);
               }
               var textToInsert = hiddenInputs.join("");
-              $("#attached-files").append(textToInsert);
+              $("#attached-files .busy-indicator").before(textToInsert);
               var textToInsert = fileItems.join("");
-              $("#attached-files").append(textToInsert);
+              $("#attached-files .busy-indicator").before(textToInsert);
               for (var fileId in data.files ){
                   $('input:checkbox[id="'+ fileId +'"]').change($$.ui.removeFileFromShare)
               }
             }).error(function(jqXHR, textStatus, errorThrown){
                 form.find(":file").val("");
             });
-            var node = $('#attached-files');
+            var node = $('#attached-files .busy-indicator');
             $$.setBusy(uploadXhr, node);
           }, function(err){
                 if (window.console){
