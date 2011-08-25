@@ -198,11 +198,6 @@
           <span class="summary-item" title="${_('Work Mobile')}">${user['contact']['mobile']}</span>
         %endif
       </div>
-
-      %if myKey == userKey:
-        ${'<div id="edit-profile" class="summary-line"><span class="summary-item"><a href="/settings" class="ajax">Edit Profile</a></span></div>'}
-      %endif
-
     </div>
   </div>
   <div class="clear"></div>
@@ -257,6 +252,10 @@
         <span class="button-text">${_("Unfriend User")}</span>
       </button>
     %endif
+  %else:
+    <button class="button" onclick="location.href = '/settings'">
+      <span class="button-text">${_("Edit Profile")}</span>
+    </button>
   %endif
 </%def>
 
