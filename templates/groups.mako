@@ -200,8 +200,7 @@
         </li>
         <li>
             <label>${_("Membership")}</label>
-            <input type="checkbox" id="access" name="access" value="open" checked="checked">${_("(Open) Anyone in the organization can join the group")}</input><br/>
-            <input type="checkbox" id="access" name="access" value="closed">${_("(Closed) Membership should be approved by group administrator")}</input>
+            <input type="checkbox" id="access" name="access" value="closed">${_("should be approved by group administrator")}</input>
         </li>
         <li>
             <label for="dp">${_("Group Logo")}</label>
