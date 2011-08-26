@@ -1,3 +1,4 @@
+
 html>body {
     overflow-y: scroll;
 }
@@ -12,11 +13,13 @@ textarea, input {
     font-family: sans-serif;
 }
 
+
 .contents {
     width: 980px;
     margin: 0 auto;
     background-color: transparent;
 }
+
 
 .h-links {
     list-style-type: none;
@@ -32,6 +35,7 @@ textarea, input {
     display: inline-block;
 }
 
+
 .v-links {
     list-style-type: none;
     margin: 0;
@@ -44,6 +48,7 @@ textarea, input {
 .v-links a {
     display: block;
 }
+
 
 a:link, a:visited {
     color: #3366CC;
@@ -64,6 +69,7 @@ a:hover, a:active, a:focus {
     text-decoration: none;
 }
 
+
 .middle {
     vertical-align: middle;
 }
@@ -75,17 +81,10 @@ a:hover, a:active, a:focus {
     display: none !important;
 }
 
-.tabular-form {
-    display: table;
-}
-.tabular-form ul {
-    display: table-row;
-    vertical-align: middle;
-}
-.tabular-form li {
-    display: table-cell;
-    vertical-align: middle;
-}
+
+/*
+ * Busy Indication
+ */
 
 .busy-indicator {
     min-height: 16px;
@@ -96,6 +95,11 @@ a:hover, a:active, a:focus {
     background-position: right center;
     background-repeat: no-repeat;
 }
+
+
+/*
+ * Generic Icon Classes
+ */
 
 .icon {
     height: 16px;
@@ -124,22 +128,43 @@ a:hover, a:active, a:focus {
     vertical-align: middle;
 }
 
+
+/*
+ * Styled text inputs for inline usage.
+ * Note: Fully styled forms use different style for inputs.
+ */
+
 .input-wrap {
     background-color: white;
     border: 1px solid #C3D9FF;
-    padding: 3px;
 }
 .input-wrap input, .input-wrap textarea {
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
     width: 100%;
+    padding: 4px;
     border: none;
-    outline: 0px;
     background-color: transparent;
-    padding: 0px;
     overflow: auto;
-    height: 15px;
     line-height: 15px;
     font-size: 12px;
+    outline: 0px;
 }
+.input-wrap input:-moz-ui-invalid:not(output),
+.input-wrap textarea:-moz-ui-invalid:not(output) {
+    box-shadow: none !important;
+}
+
+/* Extra styles for sharebar and comment input */
+#sharebar textarea, .comment-input {
+    height: 23px;
+}
+
+
+/*
+ * Page Layout - Header.
+ */
 
 #topbar {
     height: 35px;
@@ -179,6 +204,7 @@ a:hover, a:active, a:focus {
     margin: 6px 10px 0;
     border: 1px solid #CCC;
     border-radius: 2px;
+    -moz-border-radius: 2px;
     float: right;
 }
 #searchbox, #searchbutton {
@@ -197,7 +223,9 @@ a:hover, a:active, a:focus {
 }
 
 
-
+/*
+ * Page Layout - MenuBar
+ */
 
 #menubar {
     background-color: #3d85c6;
@@ -231,7 +259,8 @@ a:hover, a:active, a:focus {
 
 
 /*
- * Content layout - controls single, two or three columns
+ * Page Layout - Content
+ * Controls single, two or three columns
  */
 
 #left {
@@ -271,6 +300,9 @@ a:hover, a:active, a:focus {
 
 
 
+/*
+ * Main navigation menu
+ */
 
 .sidemenu {
     padding: 2em 0 0;
@@ -285,6 +317,7 @@ a:hover, a:active, a:focus {
     text-decoration: none;
     position: relative;
     border-radius: 3px 0 0 3px;
+    -moz-border-radius: 3px 0 0 3px;
 }
 
 .sidemenu a:hover, .sidemenu a:active, .sidemenu a:focus {
@@ -311,6 +344,7 @@ a:hover, a:active, a:focus {
     background-color: #b40000;
     color: white;
     border-radius: 2px 2px 2px 2px;
+    -moz-border-radius: 2px 2px 2px 2px;
     box-shadow: 0pt 0pt 2px #888;
     font-weight: bold;
     right: 10px;
@@ -326,6 +360,7 @@ a:hover, a:active, a:focus {
     background-color: #b40000;
     color: white;
     border-radius: 2px 2px 2px 2px;
+    -moz-border-radius: 2px 2px 2px 2px;
     box-shadow: 0pt 0pt 2px #888;
     font-weight: bold;
     bottom: 75%;
@@ -336,6 +371,10 @@ a:hover, a:active, a:focus {
     font-family: monospace;
     font-weight: bold;
 }
+
+/*
+ * Sidemenu icons
+ */
 .feed-icon {
     background-position: 0 -48px;
 }
@@ -362,7 +401,9 @@ a:hover, a:active, a:focus {
 }
 
 
-/*admin page icons*/
+/*
+ * Admin page icons
+ */
 .add-user-icon {
     background-position: 0 -16px;
 }
@@ -377,37 +418,9 @@ a:hover, a:active, a:focus {
 }
 
 
-/*message icons*/
-.sent-icon {
-    background-position: 0 -16px;
-}
-.compose-icon{
-    background-position: 0 -32px;
-}
-.inbox-icon{
-    background-position: 0 -48px;
-}
-.trash-icon {
-    background-position: 0 -80px;
-}
-.back-icon {
-    background-position: 0 -96px;
-}
-.archive-icon {
-    background-position: 0 -112px;
-}
-.star-empty-icon {
-    background-position: 0 -128px;
-}
-.star-icon {
-    background-position: 0 -144px;
-}
-.read-icon {
-    background-position: 0 -160px;
-}
-.unread-icon {
-    background-position: 0 -172px;
-}
+/*
+ * Blocks for the sidebar & Right Bar
+ */
 
 .sidebar-title {
     font-weight: bold;
@@ -432,16 +445,16 @@ a:hover, a:active, a:focus {
     margin: 5px 0;
 }
 
-.invite-input-block .input-wrap {
-    margin: 5px 0;
-}
-
 .user-subactions {
     margin: 5px 10px 0 -10px;
     padding: 5px 10px;
     border-top: 1px solid #DBDBDB;
 }
 
+
+/*
+ * Content title area
+ */
 
 .titlebar {
     margin: 0 0 5px 0;
@@ -465,6 +478,13 @@ a:hover, a:active, a:focus {
 .center-contents {
     padding: 10px;
     font-size: 12px;
+}
+
+.header-form {
+    margin-top: 10px;
+}
+.header-form .header-form-buttons{
+    text-align: right;
 }
 
 
@@ -525,6 +545,10 @@ a:hover, a:active, a:focus {
 }
 
 
+/*
+ * Simple TabView
+ */
+
 .tabs {
     background-color: #E8EEFA;
     border-bottom: 1px solid #C3D9FF;
@@ -546,6 +570,7 @@ a:hover, a:active, a:focus {
     border-style: solid;
     border-color: transparent;
     border-radius: 2px 2px 0 0;
+    -moz-border-radius: 2px 2px 0 0;
 }
 .tablinks a:hover,
 .tablinks a:active, .tablinks a:focus {
@@ -557,6 +582,10 @@ a:hover, a:active, a:focus {
     background-color: white;
 }
 
+
+/*
+ * Main Share Block
+ */
 
 #share-block {
     border-top: 1px solid #C3D9FF;
@@ -613,11 +642,10 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .empty-icon {
     background-position: 0 20px;
 }
+
 #sharebar .input-wrap {
-    padding: 4px;
     margin-bottom: 5px;
 }
-
 #sharebar-actions {
     float: right;
 }
@@ -630,6 +658,11 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     width:83%;
     display:inline-block;
 }
+
+
+/*
+ * ACL
+ */
 
 .acl-menu {
     width: 120px;
@@ -682,8 +715,13 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 
 .menu-item {
-    text-align:left;
+    text-align: left;
 }
+
+
+/*
+ * File Attachment
+ */
 
 #file-attach-div {
     position: relative;
@@ -695,26 +733,32 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     right: 0;
     opacity: 0;
     -moz-opacity: 0;
-    filter:alpha(opacity:0);
+    filter: alpha(opacity:0);
     z-index: 2;
 }
 
 #attached-files {
-    max-width:25em;
+    max-width: 25em;
     padding-top: 1px;
     margin: 0px;
 }
 
 .file-attach-wrapper {
-    float:left;
-    width:17%;
-    overflow:hidden;
+    float: left;
+    width: 17%;
+    overflow: hidden;
 }
 
 
 /*
  * Feed
  */
+
+#welcome-message ul {
+    padding-left: 20px;
+    margin: 5px;
+}
+
 .conv-item {
     padding: 10px 0 16px;
     border-top: 1px dotted #CCC;
@@ -887,9 +931,11 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     background-position: -19px -67px;
 }
 
+
 /*
  * Generic item display
  */
+
 .item-title {
     position: relative;
     color: #000;
@@ -915,10 +961,12 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 
 
 /*
- * Edit profile
+ * Edit profile & Style for a generic form.
+ * Note: When using an input inline with text (always visible and subtle)
+ *       then consider using a "input-wrap" approach (above)
  */
 
-.styledform{
+.styledform {
     width: 100%;
     display: table;
 }
@@ -987,9 +1035,11 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     text-align: right;
 }
 
+
 /*
  * List of users - friends and people in organization
  */
+
 .users-row {
     width: 100%;
     min-height: 50px;
@@ -1082,6 +1132,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     border: 1px solid #C3D9FF;
     background-color: #E8EEFA;
     border-radius: 4px;
+    -moz-border-radius: 4px;
     padding: 2px 3px;
     margin: 0 5px;
 }
@@ -1109,6 +1160,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     background-position: 0 -304px;
     left: 4px;
 }
+
 
 /*
  * Notifications
@@ -1139,6 +1191,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     display: inline-block;
     border: 1px solid #97BFE1;
     border-radius: 0 4px 4px 0;
+    -moz-border-radius: 0 4px 4px 0;
     padding: 1px;
 }
 
@@ -1156,6 +1209,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
         #C3D9FF 63%
     );
     border-radius: 0 4px 4px 0;
+    -moz-border-radius: 0 4px 4px 0;
     display: inline-block;
     height: 18px;
     background-color: #97BFE1;
@@ -1215,9 +1269,11 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     left: 4px;
 }
 
+
 /*
  * Styling for tags
  */
+
 .tag {
     display: inline-block;
     border-width: 1px;
@@ -1227,6 +1283,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     padding: 1px 6px 1px 4px;
     margin: 1px;
     border-radius: 3px;
+    -moz-border-radius: 3px;
 }
 
 .edit-tags-button, .done-tags-button {
@@ -1297,6 +1354,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 /*
  * Feedback dialog
  */
+
 #feedback-center {
     padding: 10px;
 }
@@ -1351,9 +1409,11 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     font-size: inherit;
 }
 
+
 /*
  * Tags listing
  */
+
 .tag-items-count {
     height: 48px;
     width: 48px;
@@ -1371,6 +1431,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 /*
  * Alerts, error and warning display
  */
+
 #alertbar {
     position: fixed;
     width: 100%;
@@ -1415,6 +1476,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 /*
  * Styling for Admin page
  */
+
 #add-user-wrapper {
     background-color:white;
 }
@@ -1450,6 +1512,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 /*
  * Error page
  */
+
 .error-page-contents {
     font-size: 14px;
     text-align: center;
@@ -1464,6 +1527,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 /*
  * Styling for events
  */
+
 .event-date-icon {
     position: absolute;
     width:3em;
@@ -1476,6 +1540,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     background: -moz-linear-gradient(center top , #F9F9F9, #E3E3E3) repeat scroll 0 0 transparent;
     border-color: #CCCCCC #BBBBBB #A0A0A0;
     border-radius: 3px 3px 3px 3px;
+    -moz-border-radius: 3px 3px 3px 3px;
     border-style: solid;
     border-width: 1px;
     box-shadow: 1px 1px 2px #CCCCCC;
@@ -1514,6 +1579,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 /*
  * Styling for preferences
  */
+
 #notify-setup {
     width: 75%;
     margin: 10px auto;
@@ -1582,13 +1648,4 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     width: 80%;
     text-align: right;
 }
-#welcome-message ul{
-  padding-left: 20px;
-  margin: 5px;
-}
-.header-form {
-  margin-top: 10px;
-}
-.header-form .header-form-buttons{
-  text-align: right;
-}
+

@@ -16,7 +16,8 @@
         this.filter('textarea').each(function() {
 
             var $this       = $(this),
-                minHeight   = $this.height(),
+                verticalPad = parseInt($this.css('paddingTop')) + parseInt($this.css('paddingBottom')),
+                minHeight   = $this.outerHeight(),
                 lineHeight  = $this.css('lineHeight');
 
             if ($this.next().hasClass('autogrow-backplane'))
@@ -34,9 +35,12 @@
             }).insertAfter(this).addClass('autogrow-backplane');
 
             var update = function(event) {
+                if ($this.attr('placeholder') == $this.val())
+                    return;
+
                 if (event && event.type === "keydown" && event.which === 13 && !event.shiftKey) {
                     event.preventDefault();
-                    $this.parents("form").submit();
+                    $this.closest("form").submit();
                     return;
                 }
 
@@ -53,7 +57,10 @@
                                     .replace(/ {2,}/g, function(space) { return times('&nbsp;', space.length -1) + ' ' });
 
                 shadow.html(val);
-                $(this).css('height', Math.max(shadow.height() + 15, minHeight));
+                
+                // No clean way to know the property of box-sizing.
+                // Currently assuming it as "border-box"
+                $(this).css('height', Math.max(shadow.height() + 15 + verticalPad, minHeight));
             }
 
             $this.css("resize", "none");

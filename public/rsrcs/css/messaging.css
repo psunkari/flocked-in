@@ -9,6 +9,7 @@
     cursor:pointer;
     box-shadow:1px 1px 1px -1px #CCCCCC;
     border-radius:2px;
+    -moz-border-radius:2px;
     margin-right:2px;
 }
 
@@ -136,7 +137,6 @@
 }
 
 .conversation-message-headers {
-   /*background-color: #E8EEFA;*/
    margin-bottom: 4px;
    padding: 4px 0;
    position:relative;
@@ -145,7 +145,6 @@
 .conversation-message-headers-time {
    float:right;
    display:inline-block;
-   /*background-color: #E8EEFA;*/
    position:absolute;
    right:0;
    top:4px;
@@ -174,8 +173,8 @@
 }
 
 .conversation-message-message {
-   margin:0;
-   word-wrap:break-word;
+   margin: 0;
+   word-wrap: break-word;
 }
 
 .thread-selector-wrapper {
@@ -214,105 +213,98 @@
 }
 
 .conversation-composer-field {
-    padding:5px;
-    min-height:20px;
-    margin-bottom:5px;
+    margin-bottom: 5px;
 }
 
 .conversation-composer-field-body {
-    min-height:80px;
+    min-height: 80px;
 }
 
 .conversation-composer-recipients {
-    float:left;
-}
-
-.conversation-composer-recipient-wrapper {
+    float: left;
 }
 
 .conversation-composer-recipient-label {
-    padding:0 4px;
+    padding: 0 4px;
 }
 
 .conversation-composer-recipient-remove {
-    padding:0 2px;
-    font-size:9px;
+    padding: 0 2px;
+    font-size: 9px;
 }
 
 .conversation-composer-field-recipient {
-    margin-top:2px;
-    width:auto !important;
-}
-
-.conversation-composer-field-subject {
+    width: auto !important;
 }
 
 .conversation-composer-actions {
-    text-align:right;padding:4px 0;
-    float:right;
-    width:86%;
+    text-align: right;
+    padding: 4px 0;
+    float: right;
+    width: 86%;
 }
 
 .conversation-reply-wrapper {
-    margin-left:60px;
+    margin-left: 60px;
 }
 
 #composer #file-share {
-    top:0px;
+    top: 0px;
 }
 
 .conversation-reply-wrapper #file-share {
-    top:0px;
+    top: 0px;
 }
 
 .conversation-message-container {
-    padding-top:0px;min-height:32px;padding-bottom:0px;
-}
-
-.conversation-message-wrapper {
-    /*padding:2px; margin:2px; border:1px solid #E2e2e2;*/
+    padding-top: 0px;
+    min-height: 32px;
+    padding-bottom: 0px;
 }
 
 .conversation-reply-wrapper {
-    margin-left:60px;
+    margin-left: 60px;
 }
 
 .conversation-reply {
-    min-height:60px;
+    min-height: 60px;
 }
 
 .conversation-reply-actions {
-    text-align:right;padding:4px 0;
-    float:right;
-    width:74%;
+    text-align: right;
+    padding: 4px 0;
+    float: right;
+    width: 74%;
 }
 
 .conversation-people-add-wrapper {
-    margin-top:4px;font-size:11px;width:185px;
+    margin-top: 4px;
+    font-size: 11px;
+    width: 185px;
 }
 
 .conversation-people-avatar {
-    display:table-cell
+    display: table-cell
 }
 
 .conversation-people-profile {
-    display:table-cell;
-    vertical-align:middle;
-    padding-left:5px;
-    width:150px;
+    display: table-cell;
+    vertical-align: middle;
+    padding-left: 5px;
+    width: 150px;
 }
 
 .conversation-people-remove {
-    display:table-cell;
-    vertical-align:middle;
-    font-weight:bold;
-    cursor:pointer;
-    font-size:15px;
-    vertical-align:middle;
+    display: table-cell;
+    vertical-align: middle;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 15px;
+    vertical-align: middle;
 }
 
 .conversation-people-no-remove {
-    display:table-cell;
-    vertical-align:middle;
-    font-weight:bold;
+    display: table-cell;
+    vertical-align: middle;
+    font-weight: bold;
 }

@@ -128,7 +128,6 @@
   <script type="text/javascript" src="/rsrcs/js/social.js"></script>
   <script type="text/javascript">
     $().ready(function() {$$.ui.init()});
-    $().ready(function() {$('form').html5form({messages: 'en'});});
   </script>
 %else:
 </body>

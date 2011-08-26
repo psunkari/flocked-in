@@ -25,9 +25,9 @@
         <div id ="group-links" >
         </div>
         <div id="suggestions" >
-            % if not script:
+            %if not script:
                 ${self._suggestions()}
-            % endif
+            %endif
         </div>
       </div>
       <div id="center">
@@ -69,7 +69,6 @@
       <input type="hidden" name="from" value="sidebar"/>
       <input class="button" type="submit" id="submit" value="${_('Submit')}"/>
     </form>
-    <script>$('#invite-form').html5form({messages: 'en'})</script>
   </div>
 </%def>
 

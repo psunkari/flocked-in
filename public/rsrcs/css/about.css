@@ -24,6 +24,7 @@ a:link, a:visited {
     background-color: white;
     border: 1px solid #DDDDDD;
     border-radius: 4px;
+    -moz-border-radius: 4px;
 }
 #footer {
     width: 920px;
@@ -186,6 +187,7 @@ a:link, a:visited {
 #steps {
   background: #C385C6 url(/rsrcs/img/about-banner-bg.png) repeat-x center center;
   border-radius: 2px 2px 0 0;
+  -moz-border-radius: 2px 2px 0 0;
   border-bottom: 1px solid #3D85C6;
 }
 #views-list {

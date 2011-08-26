@@ -447,7 +447,7 @@ var publisher = {
         $('.selected-publisher').removeClass('selected-publisher');
         $('#publisher-'+obj.publisherName).addClass('selected-publisher');
 
-        // Placeholders
+        // Enable HTML5 features
         $('#share-form').html5form({messages: 'en'});
 
         // Auto expand textareas
@@ -468,8 +468,8 @@ $$.publisher = publisher;
 (function($$, $) { if (!$$.convs) {
 var convs = {
     load: function(obj) {
-        // Auto expand comment boxes
-        $('.comment-input').autogrow();
+        // HTML5 form and Auto expand comment boxes
+        $('.comment-input').autogrow().closest('form').html5form({messages:'en'});
     },
 
     editTags: function(convId, addTag) {
@@ -521,7 +521,7 @@ var convs = {
     },
 
     /* Reset the sizes of autogrow-backplane */
-    /* XXX: This copied some code from those respective modules directly */
+    /* XXX: This copied some code from jquery.autogrow-textarea.js directly */
     _commentFormVisible: function(convId) {
         var input = $('.comment-input', '#comment-form-wrapper-'+convId);
         if (input.next().hasClass('autogrow-backplane')) {
@@ -637,6 +637,7 @@ var ui = {
         });
 
         /* Searchbar must support autocomplete */
+        /* HTML5 form emulation for search form */
         $("#searchbox").autocomplete({
             source: '/auto/searchbox',
             minLength: 3,
@@ -649,7 +650,7 @@ var ui = {
                 }
                 return true;
             }
-        });
+        }).closest('form').html5form({messages:'en'});
     },
 
     showPopup: function(event, right, above){

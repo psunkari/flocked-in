@@ -609,9 +609,11 @@ class FeedResource(base.BaseResource):
 
         if script and landing:
             yield render(request, "feed.mako", **args)
+            request.write('<script>$("#invite-form").html5form({messages: "en"})</script>')
         elif script and appchange:
+            onload = '$("#invite-form").html5form({messages: "en"})'
             yield renderScriptBlock(request, "feed.mako", "layout",
-                                    landing, "#mainbar", "set", **args)
+                                    landing, "#mainbar", "set", handlers={'onload':onload}, **args)
         elif script and "feedTitle" in args:
             yield renderScriptBlock(request, "feed.mako", "feed_title",
                                     landing, "#title", "set", True,
@@ -626,7 +628,7 @@ class FeedResource(base.BaseResource):
                 groupId = args['feedId']
                 handlers["onload"] = "$$.acl.switchACL('sharebar-acl', 'group','%s', '%s');" %(groupId, groupName)
 
-            handlers["onload"] = handlers.get("onload", "") + "$$.ui.loadFileShareBlock()"
+            handlers["onload"] = handlers.get("onload", "") + "$$.ui.loadFileShareBlock();"
             yield renderScriptBlock(request, "feed.mako", "share_block",
                                     landing, "#share-block", "set", handlers=handlers, **args)
             yield self._renderShareBlock(request, "status")
