@@ -492,6 +492,7 @@ class MessagingResource(base.BaseResource):
             yield renderScriptBlock(request, "message.mako", "render_conversations", landing,
                                     ".center-contents", "set", True,
                                     handlers={"onload": onload}, **args)
+            yield utils.render_LatestCounts(request, landing)
         else:
             yield render(request, "message.mako", **args)
 
@@ -656,6 +657,7 @@ class MessagingResource(base.BaseResource):
                         if folder in self._folders:
                             folder = self._folders[folder]
                         yield db.insert(myId, folder, "r:%s"%(convId), timeUUID)
+                count = yield utils.render_LatestCounts(request)
 
         if not self._ajax:
             #Not all actions on message(s) happen over ajax, for them do a redirect
@@ -817,7 +819,8 @@ class MessagingResource(base.BaseResource):
             renderParticipants = renderScriptBlock(request, "message.mako", "right",
                                     landing, ".right-contents", "set", True,
                                     handlers={"onload":onload}, **args)
-            yield defer.DeferredList([renderMessage, renderParticipants])
+            renderCounts = utils.render_LatestCounts(request, landing)
+            yield defer.DeferredList([renderMessage, renderParticipants, renderCounts])
         else:
             yield render(request, "message.mako", **args)
 
