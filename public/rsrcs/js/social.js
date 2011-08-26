@@ -133,8 +133,15 @@ _initAjaxRequests: function _initAjaxRequests() {
         if (this.hasAttribute("disabled"))
             return false;
 
-        var $this = $(this),
-            deferred = $.post('/ajax' + $this.attr('action'),
+        var $this = $(this);
+        var validate = jQuery.Event('html5formvalidate');
+        if ($this.data('html5form')) {
+            $this.trigger(validate);
+            if (validate.isDefaultPrevented())
+                return false;
+        }
+
+        var deferred = $.post('/ajax' + $this.attr('action'),
                                    $this.serialize());
 
         self.setBusy(deferred, $this)
@@ -149,6 +156,7 @@ _initAjaxRequests: function _initAjaxRequests() {
         };
         deferred.then(enabler, enabler);
 
+        $this.trigger('restorePlaceHolders');
         return false;
     });
 
@@ -157,8 +165,15 @@ _initAjaxRequests: function _initAjaxRequests() {
         if (this.hasAttribute("disabled"))
             return false;
 
-        var $this = $(this),
-            uri = '/search?'+$this.serialize(),
+        var $this = $(this);
+        var validate = jQuery.Event('html5formvalidate');
+        if ($this.data('html5form')) {
+            $this.trigger(validate);
+            if (validate.isDefaultPrevented())
+                return false;
+        }
+
+        var uri = '/search?'+$this.serialize(),
             deferred = $.fetchUri(uri);
 
         self.setBusy(deferred, $this)
@@ -173,6 +188,7 @@ _initAjaxRequests: function _initAjaxRequests() {
         };
         deferred.then(enabler, enabler);
 
+        $this.trigger('restorePlaceHolders');
         return false;
     });
 
@@ -432,7 +448,7 @@ var publisher = {
         $('#publisher-'+obj.publisherName).addClass('selected-publisher');
 
         // Placeholders
-        $$.ui.placeholders('#sharebar input:text, #sharebar textarea');
+        $('#share-form').html5form({messages: 'en'});
 
         // Auto expand textareas
         $('#sharebar textarea').autogrow();
@@ -452,9 +468,6 @@ $$.publisher = publisher;
 (function($$, $) { if (!$$.convs) {
 var convs = {
     load: function(obj) {
-        // Placeholders in comment input boxes
-        $$.ui.placeholders('.comment-input');
-
         // Auto expand comment boxes
         $('.comment-input').autogrow();
     },
@@ -484,7 +497,7 @@ var convs = {
 
     comment: function(convId) {
         convs.showHideComponent(convId, 'comments', true);
-        $('#comment-form-'+convId).find('.comment-input').focus();
+        $('#comment-form-'+convId).find('.comment-input').select().focus();
     },
 
     showItemLikes: function(itemId) {
@@ -507,18 +520,13 @@ var convs = {
         }
     },
 
-    /* Reset the sizes of autogrow-backplane and placeholder */
+    /* Reset the sizes of autogrow-backplane */
     /* XXX: This copied some code from those respective modules directly */
     _commentFormVisible: function(convId) {
         var input = $('.comment-input', '#comment-form-wrapper-'+convId);
         if (input.next().hasClass('autogrow-backplane')) {
             backplane = input.next();
             backplane.width(input.width() - parseInt(input.css('paddingLeft')) - parseInt(input.css('paddingRight')));
-        }
-        if (input.prev().hasClass("ui-ph-label")) {
-            label = input.prev();
-            label.height(input.outerHeight());
-            label.width(input.outerWidth());
         }
     },
 
@@ -642,65 +650,6 @@ var ui = {
                 return true;
             }
         });
-        ui.placeholders("#searchbox");
-
-        /* Install handlers for placeholder text */
-        if (!ui._placeholders) {
-            $(".ui-ph-label").live("click", function() {
-                var input = this.nextSibling;
-                input.focus();
-            });
-
-            $(".ui-ph-active").live("focus", function() {
-                var label = this.previousSibling;
-                $(label).css('display', 'none');
-                $(this).removeClass('ui-ph-active');
-            })
-
-            $(".ui-ph").live("blur", function() {
-                if (this.value != "")
-                    return;
-
-                var label = this.previousSibling;
-                $(label).css('display', 'block');
-                $(this).addClass('ui-ph-active');
-            })
-        }
-    },
-
-    _placeholders: 'placeholder' in document.createElement('input'),
-    placeholders: function(selector) {
-        if (ui._placeholders)   // Browser supports placeholder text
-            return;
-
-        $(selector).each(function(index, element){
-            var $this, text, label, $label, inputHeight;
-
-            $this = $(this);
-            if ($this.prev().hasClass("ui-ph-label"))
-                return;
-
-            text = $this.attr('placeholder');
-            if (!text)
-                return;
-
-            label = document.createElement("label");
-            try {
-                label.innerText = text;
-                label.textContent = text;
-            } catch(ex) {}
-            label.setAttribute('class', 'ui-ph-label ui-ph-active');
-
-            $label = $(label);
-            inputHeight = $this.outerHeight();
-            $label.height(inputHeight);
-            $label.width($this.outerWidth());
-            $label.css('line-height', inputHeight+'px');
-
-            this.parentNode.insertBefore(label, this);
-            $this.addClass('ui-ph');
-            $this.addClass('ui-ph-active');
-        });
     },
 
     showPopup: function(event, right, above){
@@ -754,55 +703,57 @@ var ui = {
     loadFileShareBlock: function(){
         var _self = this;
         $("#upload :file").change(function() {
-          var form = $(this.form);
-          if (this.files !== undefined){
-            var mime = this.files[0].type
-            var filename = this.files[0].name
-            var d = $.post('/file/form', {"name":filename, "mime":mime}, "json");
-          }else{
-            //Non HTML5 File API browsers IE8 and Opera Presto 2.7
-            var filename = _self.getNameFromPath(this.value);
-            var d = $.post('/file/form', {"name":filename}, "json");
-          }
-          d.then(function(data){
-            $$.ui.prepareUploadForm(form, data);
-            var uploadXhr = $.ajax(form.prop("action"), {
-              type: "POST",
-              dataType: "json",
-              files: form.find(":file"),
-              data: $('#upload'+' :input').not(':file, :hidden').serializeArray(),
-              processData: false
-            }).complete(function(data) {
-              form.find(":file").val("");
-            }).success(function(data) {
-              //Insert hidden inputs in attached-files
-              var hiddenInputs = [];
-              var fileItems = [];
-              for (var fileId in data.files ){
-                  var fileInfo = data.files[fileId];
-                  var input = "<input type='hidden' name='fId' value='"+ fileId +"'/>";
-                  hiddenInputs.push(input);
-                  $("#attached-files").add(input);
-                  var list = "<li><input id='"+ fileId +
-                      "' type='checkbox' checked/><label for='"+ fileId +"'>"+ fileInfo[1]  +"</label></li>";
-                  fileItems.push(list);
-              }
-              var textToInsert = hiddenInputs.join("");
-              $("#attached-files").append(textToInsert);
-              var textToInsert = fileItems.join("");
-              $("#attached-files").append(textToInsert);
-              for (var fileId in data.files ){
-                  $('input:checkbox[id="'+ fileId +'"]').change($$.ui.removeFileFromShare)
-              }
-            }).error(function(jqXHR, textStatus, errorThrown){
-                form.find(":file").val("");
-            });
-            var node = $('#attached-files');
-            $$.setBusy(uploadXhr, node);
-          }, function(err){
-                if (window.console){
-                    console.log(err)
-                }})
+            var form = $(this.form),
+                d, mime, filename;
+            if (this.files !== undefined) {
+                mime = this.files[0].type
+                filename = this.files[0].name
+                d = $.post('/file/form', {"name":filename, "mime":mime}, "json");
+            } else {
+                //Non HTML5 File API browsers IE8 and Opera Presto 2.7
+                filename = _self.getNameFromPath(this.value);
+                d = $.post('/file/form', {"name":filename}, "json");
+            }
+            d.then(function(data){
+                $$.ui.prepareUploadForm(form, data);
+                var uploadXhr = $.ajax(form.prop("action"), {
+                    type: "POST",
+                    dataType: "json",
+                    files: form.find(":file"),
+                    data: $('#upload'+' :input').not(':file, :hidden').serializeArray(),
+                    processData: false
+                }).complete(function(data) {
+                    form.find(":file").val("");
+                }).success(function(data) {
+                    //Insert hidden inputs in attached-files
+                    var hiddenInputs = [];
+                    var fileItems = [];
+                    for (var fileId in data.files ) {
+                        var fileInfo = data.files[fileId];
+                        var input = "<input type='hidden' name='fId' value='"+ fileId +"'/>";
+                        hiddenInputs.push(input);
+                        $("#attached-files > .busy-indicator").before(input);
+                        var list = "<li><input id='"+ fileId +
+                            "' type='checkbox' checked/><label for='"+ fileId +"'>"+ fileInfo[1]  +"</label></li>";
+                        fileItems.push(list);
+                    }
+                    var textToInsert = hiddenInputs.join("");
+                    $("#attached-files > .busy-indicator").before(textToInsert);
+                    var textToInsert = fileItems.join("");
+                    $("#attached-files > .busy-indicator").before(textToInsert);
+                    for (var fileId in data.files ) {
+                        $('input:checkbox[id="'+ fileId +'"]').change($$.ui.removeFileFromShare)
+                    }
+                }).error(function(jqXHR, textStatus, errorThrown) {
+                    form.find(":file").val("");
+                });
+                var node = $('#attached-files > .busy-indicator');
+                $$.setBusy(uploadXhr, node);
+            }, function(err) {
+                  if (window.console) {
+                      console.log(err)
+                  }
+            })
         });
     },
 
@@ -825,8 +776,6 @@ var ui = {
                 })
             }
         })
-
-
     },
 
     showFileVersions: function(convId, fileId){
@@ -839,6 +788,14 @@ var ui = {
     bindFormSubmit: function(selector, onCompleteFunc) {
         //Force form submits via ajax posts when form contains a input file.
         $(selector).submit(function() {
+            $this = $(this);
+            if ($this.data('html5form')) {
+                var validate = jQuery.Event('html5formvalidate');
+                $this.trigger(validate);
+                if (validate.isDefaultPrevented())
+                    return false;
+            }
+
             $.ajax(this.action, {
                 type: "POST",
                 dataType: "json",
@@ -855,6 +812,7 @@ var ui = {
                     onCompleteFunc(data)
                 }
             });
+            $this.trigger('restorePlaceHolders');
             return false
         });
     }
@@ -1242,7 +1200,6 @@ var acl = {
                         return false;
                     }
                 });
-                $$.ui.placeholders("#custom-audience-dlg-search");
             })
         }
         else {

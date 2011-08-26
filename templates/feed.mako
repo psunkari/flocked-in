@@ -61,14 +61,15 @@
 <%def name="invitePeopleBlock()">
   <div class="sidebar-chunk">
     <div class="sidebar-title">${_("Invite people")}</div>
-    <form method="post" action="/people/invite" class="ajax" autocomplete="off" >
+    <form id="invite-form" method="post" action="/people/invite" class="ajax" autocomplete="off" >
       <div class="input-wrap">
         <% domain = me["basic"]["emailId"].split('@')[1] %>
-        <input type="text" name="email" id="invite-others" placeholder="someone@${domain}"/>
+        <input type="email" name="email" id="invite-others" placeholder="someone@${domain}" required title="${_('Email')}"/>
       </div>
       <input type="hidden" name="from" value="sidebar"/>
       <input class="button" type="submit" id="submit" value="${_('Submit')}"/>
     </form>
+    <script>$('#invite-form').html5form({messages: 'en'})</script>
   </div>
 </%def>
 
@@ -160,26 +161,31 @@
     <form id="share-form" autocomplete="off" method="post" action="/item/new" class="ajax" >
       <div id="sharebar">
             <div class="input-wrap">
-            <input type="text" name="comment" placeholder="${_('What are you working on?')}"/>
+            <textarea name="comment" placeholder="${_('What are you working on?')}" required title="${_('Comment')}"></textarea>
            </div>
           <input type="hidden" name="type" value="status"/>
       </div>
       <div id="sharebar-actions-wrapper">
-        <ul id="attached-files" class="v-links busy-indicator" style="float:left"></ul>
+        <ul id="attached-files" class="v-links" style="float:left">
+          <li class="busy-indicator"></li>
+        </ul>
         <ul id="sharebar-actions" class="h-links">
           <li>${acl_button("sharebar-acl", '{"accept":{"orgs":["%s"]}}'%orgKey, "Company", "Notifies only your friends and followers")}</li>
-          <li>${widgets.button("sharebar-submit", "submit", "default", None, "Share")}</li>
+          <li>${widgets.button("sharebar-submit", "submit", "default", "Share", "Share")}</li>
         </ul>
         <span class="clear" style="display:block"></span>
       </div>
     </form>
     <div class="file-attach-wrapper">
-        <form id="upload" action="/file" method="post" enctype="multipart/form-data">
-          <input id="file-attach-input" type="file" name="file" size="1"/>
-          <button id="file-share" class="button" type="button" title="${_('Attach a file')}" onclick="$('#file-attach-input').click()">
-            <img src="/rsrcs/img/attach.png" alt="${_('Attach a file')}"/>
+      <form id="upload" action="/file" method="post" enctype="multipart/form-data">
+        <div id="file-attach-div" class="file-overlay">
+          <input type="file" name="file" id="file-attach-input"/>
+          <button id="file-share" class="acl-button acl-text-button">
+            <span class="background-icon attach-file-icon"/>
+            <span>${_('Attach File')}</span>
           </button>
-        </form>
+        </div>
+      </form>
     </div>
     <div class="clear"></div>
   %endif
@@ -187,21 +193,21 @@
 
 <%def name="share_status()">
   <div class="input-wrap">
-    <textarea name="comment" placeholder="${_('What are you working on?')}" />
+    <textarea name="comment" placeholder="${_('What are you working on?')}" required title="${_('Status')}"/>
   </div>
   <input type="hidden" name="type" value="status"/>
 </%def>
 
 <%def name="share_question()">
   <div class="input-wrap">
-    <textarea name="comment" placeholder="${_('What is your question?')}" />
+    <textarea name="comment" placeholder="${_('What is your question?')}" required title="${_('Question')}"/>
   </div>
   <input type="hidden" name="type" value="question"/>
 </%def>
 
 <%def name="share_link()">
   <div class="input-wrap">
-    <textarea name="url" placeholder="${_('http://')}"/>
+    <textarea name="url" placeholder="${_('http://')}" required title="${_('URL')}"/>
     </div>
   <div class="input-wrap">
     <textarea name="comment" placeholder="${_('Say something about the link')}" />
@@ -241,9 +247,11 @@
 <%def name="customAudience()">
   <div class="ui-dlg-title">${_("Select your audience")}</div>
    <div class="" style="width:auto;background-color:#E8EEFA;padding:10px">
-    <input type="text" id="custom-audience-dlg-search" style="display:inline-block;font-size:11px;width:20em" class="input-wrap" placeholder="${_("Search among my friends and groups.")}"/>
-    <input type="checkbox" id="allfriends" style="position:relative;top:3px"/><label for="allfriends">${_("Add all my friends")}</label>
-    <div class="ui-list-meta" id="footer-info" style="padding-left: 0;"></div>
+    <form>
+      <input type="text" id="custom-audience-dlg-search" style="display:inline-block;font-size:11px;width:20em" class="input-wrap" placeholder="${_("Search among my friends and groups.")}"/>
+      <input type="checkbox" id="allfriends" style="position:relative;top:3px"/><label for="allfriends">${_("Add all my friends")}</label>
+      <div class="ui-list-meta" id="footer-info" style="padding-left: 0;"></div>
+    </form>
    </div>
   <div class="ui-list ui-dlg-center">
     <div class="ui-listitem empty">

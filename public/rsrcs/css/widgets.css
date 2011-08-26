@@ -8,13 +8,6 @@ input::-moz-focus-inner {
     padding:0;
 }
 
-.ui-ph-label {
-    color: graytext;
-    position: absolute;
-    cursor: text;
-    text-align: left;
-}
-
 .button-link {
     border: 0px;
     padding: 2px 4px;

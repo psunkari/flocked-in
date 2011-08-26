@@ -186,13 +186,13 @@
 </%def>
 
 <%def name="render_conversation_reply(script, msg, convId)">
-  <form method="post" class="ajax" action="/messages/write">
+  <form id="message-reply-form" method="post" class="ajax" action="/messages/write">
     <div class="conversation-composer">
       <div class="conv-avatar">
           ${getAvatarImg(utils.userAvatar(myKey, people[myKey]))}
       </div>
       <div class="input-wrap conversation-reply-wrapper">
-          <textarea class="conversation-reply" name="body" placeholder="${_("Quickly reply to this message")}"></textarea>
+          <textarea class="conversation-reply" name="body" placeholder="${_('Quickly reply to this message')}" required title="${_('Reply')}"></textarea>
           <input type="hidden" value=${convId} name="parent"/>
       </div>
       <div class="conversation-reply-actions">
@@ -214,22 +214,22 @@
 
 <%def name="render_composer()">
   <div class="conversation-composer">
-    <form method="post" action="/messages/write" class="ajax" id="message_form">
+    <form method="post" action="/messages/write" class="ajax" id="message-form">
       <div class="input-wrap conversation-composer-field" onclick="$('.conversation-composer-field-recipient').focus()">
         <div class="conversation-composer-recipients"></div>
         <input name="recipients" id="recipientList" type="hidden"/>
         <div>
-            <input class="conversation-composer-field-recipient" type="text"  size="15"
-                   placeholder="${_('Enter a name')}"/>
+            <input class="conversation-composer-field-recipient" type="text"  size="15" 
+                   placeholder="${_('Enter a name')}" title="${_('Recipient')}"/>
         </div>
       </div>
       <div class="input-wrap conversation-composer-field">
-        <input class="conversation-composer-field-subject" type="text" name="subject"
-               placeholder="${_('Enter a subject of your message')}"/>
+        <input class="conversation-composer-field-subject" type="text" name="subject" 
+               placeholder="${_('Enter a subject of your message')}" title="${_('Subject')}"/>
       </div>
       <div class="input-wrap conversation-composer-field">
         <textarea class="conversation-composer-field-body"
-                  placeholder="${_("Write a message to your friends and colleagues")}" name="body"></textarea>
+                  placeholder="${_("Write a message to your friends and colleagues")}" name="body" title="${_('Message')}"></textarea>
       </div>
       <div class="conversation-composer-actions">
         <ul id="attached-files" class="v-links busy-indicator" style="float:left"></ul>
@@ -245,16 +245,16 @@
         %endif
       </div>
     </form>
-      <div class="file-attach-wrapper">
-        <form id="upload" action="/file" method="post" enctype="multipart/form-data">
-          <input id="file-attach-input" type="file" name="file" size="1"/>
-          <button id="file-share" class="button" type="button" title="${_('Attach a file')}"
-                  onclick="$('#file-attach-input').click()">
-            <img src="/rsrcs/img/attach.png" alt="${_('Attach a file')}"/>
-          </button>
-        </form>
-      </div>
-      <div class="clear"></div>
+    <script>$('#message-form').html5form({messages: 'en'});</script>
+    <div class="file-attach-wrapper">
+      <form id="upload" action="/file" method="post" enctype="multipart/form-data">
+        <input id="file-attach-input" type="file" name="file" size="1"/>
+        <button id="file-share" class="button" type="button" title="${_('Attach a file')}" onclick="$('#file-attach-input').click()">
+          <img src="/rsrcs/img/attach.png" alt="${_('Attach a file')}"/>
+        </button>
+      </form>
+    </div>
+    <div class="clear"></div>
   </div>
 </%def>
 
@@ -361,7 +361,7 @@
                     %>
                     %if showDelete:
                         <div class="conversation-people-remove" class="busy-indicator"
-                             title="Remove ${people[person]["basic"]["name"]} from this conversation">
+                             title="${_('Remove %s from this conversation') % people[person]["basic"]["name"]}">
                           <div class="messaging-icon messaging-delete-icon"
                                onclick="$.post('/ajax/messages/members', 'action=remove&parent=${id}&recipients=${person}')">&nbsp;</div>
                         </div>
@@ -380,7 +380,7 @@
                     <input type="hidden" name="action" value="add" />
                     <input type="hidden" name="recipients" id="conversation_recipients"/>
                     <div class="input-wrap">
-                        <input type="text" placeHolder="Your friend's name" id="conversation_add_member"/>
+                        <input type="text" placeHolder="Your friend's name" id="conversation_add_member" required title="${_('Friend name')}"/>
                     </div>
                 </form>
             </div>

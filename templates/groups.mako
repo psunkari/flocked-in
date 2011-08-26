@@ -191,12 +191,12 @@
     <div class="styledform">
       <ul>
         <li>
-            <label for="name">${_("Group Name")}</label>
-            <input type="text" id="groupname" name="name" value= ""/>
+            <label for="name">${_('Group Name')}</label>
+            <input type="text" id="groupname" name="name" value= "" required title="${_('Group Name')}" placeholder="${_('Group Name')}"/>
         </li>
         <li>
-            <label for="desc">${_("Description")}</label>
-            <textarea class="input-wrap" id="desc" name="desc"></textarea>
+            <label for="desc">${_('Description')}</label>
+            <textarea class="input-wrap" id="desc" name="desc" placeholder="${_('Group Description')}"></textarea>
         </li>
         <li>
             <label>${_("Membership")}</label>

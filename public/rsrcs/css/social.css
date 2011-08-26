@@ -483,10 +483,33 @@ a:hover, a:active, a:focus {
 .summary-item {
     color: gray;
     padding: 0 8px 0 0;
+    vertical-align: middle;
 }
 
 .summary-line {
     padding: 8px 0 0 0;
+}
+
+.attach-file-icon {
+    background-image: url(/rsrcs/img/attach.png);
+}
+
+.summary-icon, .background-icon {
+    background-repeat: no-repeat;
+    width: 16px;
+    height: 16px;
+    margin: 0 auto;
+    position: relative;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.landline-icon {
+    background-image: url(/rsrcs/img/phone-landline.png);
+}
+
+.mobile-icon {
+    background-image: url(/rsrcs/img/phone-mobile.png);
 }
 
 .user-actions {
@@ -604,7 +627,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 
 #sharebar-actions-wrapper {
     float:right;
-    width:86%;
+    width:83%;
     display:inline-block;
 }
 
@@ -662,23 +685,29 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     text-align:left;
 }
 
-#file-attach-input {
-    height: 0px;
-    visibility: hidden;
+#file-attach-div {
+    position: relative;
 }
 
-#file-share {
-    padding-left: 8px;
-    padding-right: 8px;
+#file-attach-input {
+    position: absolute;
+    top: 0;
+    right: 0;
+    opacity: 0;
+    -moz-opacity: 0;
+    filter:alpha(opacity:0);
+    z-index: 2;
 }
 
 #attached-files {
     max-width:25em;
+    padding-top: 1px;
+    margin: 0px;
 }
 
 .file-attach-wrapper {
     float:left;
-    width:14%;
+    width:17%;
     overflow:hidden;
 }
 

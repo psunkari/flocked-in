@@ -350,7 +350,7 @@
 <%def name="conv_comment_form(convId, isItemView)">
   <form method="post" action="/item/comment" class="ajax" autocomplete="off" id="comment-form-${convId}">
     <div class="input-wrap">
-      <textarea class="comment-input" name="comment" placeholder="${_('Leave a response...')}" value=""></textarea>
+      <textarea class="comment-input" name="comment" placeholder="${_('Leave a response...')}" value="" required title="${_('Comment')}"></textarea>
     </div>
     <input type="hidden" name="parent" value=${convId}></input>
     <% nc = len(responses.get(convId, {})) if responses else 0 %>
