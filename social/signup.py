@@ -16,6 +16,7 @@ from email.mime.text    import MIMEText
 import social.constants as constants
 from social.base        import BaseResource
 from social             import utils, db, config, people, errors, _
+from social             import notifications
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock, getBlock
 from social.logging     import dump_args, profile
@@ -41,16 +42,14 @@ def getOrgKey(domain):
 
 @defer.inlineCallbacks
 def _sendmailResetPassword(email, token):
-
     rootUrl = config.get('General', 'URL')
     brandName = config.get('Branding', 'Name')
 
-    body = "You or someone else requested a password reset "\
-           "for %(email)s on %(brandName)s. \nPlease ignore this mail if you "\
-           "did not request a password reset. \n\n Click the following "\
-           "link to reset your password\n %(resetPasswdUrl)s \n "\
+    body = "You or someone else requested a new password "\
+           "for %(email)s on %(brandName)s.\nNo action is required if you "\
+           "did not request a new password.\n\nClick the following "\
+           "link to reset your password\n %(resetPasswdUrl)s \n"\
            "This link is valid for 24hours only."
-
 
     resetPasswdUrl = "%(rootUrl)s/password/resetPassword?email=%(email)s&token=%(token)s"%(locals())
     args = {"brandName": brandName, "rootUrl": rootUrl,
@@ -117,6 +116,7 @@ class SignupResource(BaseResource):
 
         args = {'emailId': emailId, 'token': token, 'view': 'userinfo'}
         yield render(request, "signup.mako", **args)
+
 
     # Results of first step in signup - basic user information
     @defer.inlineCallbacks
@@ -202,12 +202,20 @@ class SignupResource(BaseResource):
 
             cols = yield db.get_slice(domain, "invitations", [emailId])
             cols = utils.supercolumnsToDict(cols)
+
             userIds = cols.get(emailId, {}).values()
             if userIds:
                 db.batch_remove({'invitationsSent':userIds}, names=[emailId])
 
             yield db.remove(domain, "invitations", super_column=emailId)
             yield render(request, "signup.mako", **args)
+
+            # Notify all invitees about this user.
+            token = utils.getRequestArg(request, "token")
+            acceptedInvitationSender = cols.get(emailId, {}).get(token)
+            otherInvitees = [x for x in userIds if x != acceptedInvitationSender]
+            yield notifications.notify([acceptedInvitationSender], ":IA", userId)
+            yield notifications.notify(otherInvitees, ":NU", userId)
         else:
             raise InvalidRegistration("A user with this e-mail already exists! Already registered?")
 

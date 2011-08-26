@@ -8,10 +8,11 @@ from twisted.python         import log
 from twisted.internet       import defer
 from telephus.cassandra     import ttypes
 
-from social.template        import render, renderDef, renderScriptBlock
-from social.relations       import Relation
 from social                 import db, utils, base, plugins, _, __
 from social                 import constants, feed, errors, people
+from social                 import notifications
+from social.template        import render, renderDef, renderScriptBlock
+from social.relations       import Relation
 from social.logging         import dump_args, profile
 from social.isocial         import IAuthInfo
 
@@ -24,7 +25,7 @@ class ProfileResource(base.BaseResource):
     # Add a notification (TODO: and send mail notifications to users
     # who prefer getting notifications on e-mail)
     @defer.inlineCallbacks
-    def _notify(self, myId, targetId):
+    def _notifyFriendRequest(self, myId, targetId):
         timeUUID = uuid.uuid1().bytes
         yield db.insert(targetId, "latest", myId, timeUUID, "people")
 
@@ -184,7 +185,8 @@ class ProfileResource(base.BaseResource):
     def _follow(self, myKey, targetKey):
         d1 = db.insert(myKey, "subscriptions", "", targetKey)
         d2 = db.insert(targetKey, "followers", "", myKey)
-        yield defer.DeferredList([d1, d2])
+        d3 = notifications.notify([targetKey], ":NF", myKey)
+        yield defer.DeferredList([d1, d2, d3])
 
 
     @profile
@@ -279,9 +281,10 @@ class ProfileResource(base.BaseResource):
                            targetItem["meta"]['uuid'])
 
             # TODO: Push to feeds of friends and followers of both users.
-            # TODO: Notify target user about the accepted request.
 
-            calls = [d1, d2, d3, d4, d5, d6, d7, d8, d9]
+            d10 = notifications.notify([targetKey], ":FA", myKey)
+
+            calls = [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10]
             calls.append(self._removeFromPending(myKey, targetKey))
             calls.append(self._removeNotification(myKey, targetKey))
 
@@ -289,7 +292,7 @@ class ProfileResource(base.BaseResource):
         except ttypes.NotFoundException:
             d1 = db.insert(myKey, "pendingConnections", '0', targetKey)
             d2 = db.insert(targetKey, "pendingConnections", '1', myKey)
-            d3 = self._notify(myKey, targetKey)
+            d3 = self._notifyFriendRequest(myKey, targetKey)
             calls = [d1, d2, d3]
 
         yield defer.DeferredList(calls)

@@ -11,6 +11,7 @@ except:
 
 
 from social             import base, db, utils, errors, feed, people, _
+from social             import notifications
 from social.constants   import PEOPLE_PER_PAGE
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
@@ -184,12 +185,15 @@ class GroupsResource(base.BaseResource):
             userId, user = yield utils.getValidEntityId(request, "uid", "user")
             try:
                 cols = yield db.get(groupId, "pendingConnections", userId)
-                yield self._removeFromPending(groupId, userId)
-                yield self._addMember(request, groupId, userId, myOrgId, group)
-                yield renderScriptBlock(request, "groups.mako",
-                                        "groupRequestActions", False,
-                                        '#group-request-actions-%s-%s' %(userId, groupId),
-                                        "set", args=[groupId, userId, "accept"])
+                d1 = self._removeFromPending(groupId, userId)
+                d2 = self._addMember(request, groupId, userId, myOrgId, group)
+                d3 = renderScriptBlock(request, "groups.mako",
+                                       "groupRequestActions", False,
+                                       '#group-request-actions-%s-%s' %(userId, groupId),
+                                       "set", args=[groupId, userId, "accept"])
+                d4 = notifications.notify([userId], ":GA", groupId)
+
+                yield defer.DeferredList([d1, d2, d3, d4])
 
             except ttypes.NotFoundException:
                 pass

@@ -7,10 +7,49 @@ from twisted.internet   import defer
 from twisted.web        import server
 from twisted.python     import log
 
-from social             import base, db, utils, feed, plugins, constants, _
+from social             import base, db, utils, feed
+from social             import plugins, constants, _, config
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
 from social.logging     import dump_args, profile
+
+
+def notify(userIds, notifyId, value, timeUUID=None):
+    timeUUID = timeUUID or uuid.uuid1().bytes
+
+    # Delete existing notifications for the same item/activiy
+    d1 = db.multiget_slice(userIds, "notificationItems",
+                           super_column=notifyId, count=3, reverse=True)
+    def deleteOlderNotifications(results):
+        mutations = {}
+        timestamp = int(time.time() * 10000000)
+        for key, cols in results.iteritems():
+            names = [col.column.name for col in cols
+                                     if col.column.name != timeUUID]
+            if names:
+                colmap = dict([(x, None) for x in names])
+                deletion = ttypes.Deletion(timestamp, 'notifications',
+                                    ttypes.SlicePredicate(column_names=names))
+                mutations[key] = {'notifications': colmap,
+                                  'latest': [deletion]}
+
+        if mutations:
+            return db.batch_mutate(mutations)
+        else:
+            return defer.succeed([])
+
+    d1.addCallback(deleteOlderNotifications)
+
+    # Create new notifications
+    mutations = {}
+    for userId in userIds:
+        colmap = {timeUUID: notifyId}
+        mutations[userId] = {'notifications': colmap,
+                             'latest': {'notifications': colmap},
+                             'notificationItems': {notifyId: {timeUUID: value}}}
+    d2 = db.batch_mutate(mutations)
+
+    return defer.DeferredList([d1, d2])
 
 
 class NotificationsResource(base.BaseResource):
@@ -64,6 +103,36 @@ class NotificationsResource(base.BaseResource):
                              4: ["%(user0)s, %(user1)s and %(count)s others liked your comment on your %(itemType)s",
                                 "%(user0)s, %(user1)s and %(count)s others liked your comment on %(owner)s's %(itemType)s"]}
 
+    _inviteAccepted = {1: "%(user0)s accepted your invitation to join %(brandName)s",
+                       2: "%(user0)s and %(user1)s accepted your invitation to join %(brandName)s",
+                       3: "%(user0)s, %(user1)s and 1 other accepted your invitation to join %(brandName)s",
+                       4: "%(user0)s, %(user1)s and %(count)s others accepted your invitation to join %(brandName)s"}
+
+    _orgNewMember = {1: "%(user0)s joined the %(networkName)s network",
+                     2: "%(user0)s and %(user1)s joined the %(networkName)s network",
+                     3: "%(user0)s, %(user1)s and 1 other joined the %(networkName)s network",
+                     4: "%(user0)s, %(user1)s and %(count)s others joined the %(networkName)s network"}
+
+    _newFollowers = {1: "%(user0)s started following you",
+                     2: "%(user0)s and %(user1)s started following you",
+                     3: "%(user0)s, %(user1)s and 1 other started following you",
+                     4: "%(user0)s, %(user1)s and %(count)s others started following you"}
+
+    _friendRequestAccepted = {1: "%(user0)s accepted your friend request",
+                              2: "%(user0)s and %(user1)s accepted your friend request",
+                              3: "%(user0)s, %(user1)s and 1 other accepted your friend request",
+                              4: "%(user0)s, %(user1)s and %(count)s others accepted your friend request"}
+
+    _groupNewMember = {1: "%(user0)s joined %(groupName)s",
+                       2: "%(user0)s and %(user1)s joined %(groupName)s",
+                       3: "%(user0)s, %(user1)s and 1 other joined %(groupName)s",
+                       4: "%(user0)s, %(user1)s and %(count)s others joined %(groupName)s"}
+
+    _groupRequestAccepted = {1: "Your request to join %(group0)s was accepted",
+                             2: "Your requests to join %(group0)s and %(group1)s were accepted",
+                             3: "Your requests to join %(group0)s, %(group1)s and one other were accepted",
+                             4: "Your requests to join %(group0)s, %(group1)s and %(count)s others were accepted"}
+
     # Fetch notifications from the database
     # NotificationIds are stored in a column family called "notifications"
     #
@@ -101,6 +170,7 @@ class NotificationsResource(base.BaseResource):
 
         notifyStrs = {}
         notifyClasses = {}
+        brandName = config.get('Branding', 'Name')
 
         fetchStart = utils.getRequestArg(request, 'start') or ''
         if fetchStart:
@@ -137,6 +207,9 @@ class NotificationsResource(base.BaseResource):
         if not notifyIds:
             defer.returnValue({})
 
+        # We need the name of current user's organization
+        toFetchEntities.add(myOrgId)
+
         # Fetch more data about the notifications
         notifyItems = yield db.get_slice(myId, "notificationItems",
                                          notifyIds, reverse=True)
@@ -148,11 +221,14 @@ class NotificationsResource(base.BaseResource):
             updates.reverse()
             notifyValues[notifyId] = []
 
-            if notifyId.startswith(myId):   # Connection/Group/Following
-                if notifyId.endswith([':G', ':F', ':C']):
-                    for update in updates:
-                        toFetchEntities.append(update.value)
-                        notifyValues[notifyId].append(update.value)
+            if notifyId.startswith(":"):    # Non-conversation updates
+                # Currently, all notifications use only entities
+                # We may have notifications that don't follow the same
+                # symantics in future.  This is the place to fetch
+                # any data required by such notifications.
+                for update in updates:
+                    toFetchEntities.add(update.value)
+                    notifyValues[notifyId].append(update.value)
 
             elif len(notifyIdParts) == 4:   # Conversation updates
                 convId, convType, convOwnerId, notifyType = notifyIdParts
@@ -165,48 +241,79 @@ class NotificationsResource(base.BaseResource):
         fetchedEntities = yield db.multiget_slice(toFetchEntities,
                                                   "entities", ["basic"])
         entities.update(utils.multiSuperColumnsToDict(fetchedEntities))
+        myOrg = entities.get(myOrgId, {'basic': {'name':''}})
 
-        def buildRelationStr(notifyId):
-            return ''
-
+        # Build strings to notify actions on conversations
         def buildConvStr(notifyId):
-            convId, convType, convOwnerId, x = notifyId.split(':')
+            convId, convType, convOwnerId, notifyType = notifyId.split(':')
 
             userIds = utils.uniqify(notifyValues[notifyId])
             noOfUsers = len(userIds)
 
-            vals = dict([('user'+str(idx), utils.userName(id, entities[id]))\
-                            for idx, id in enumerate(userIds[0:2])])
+            vals = dict([('user'+str(idx), utils.userName(uid, entities[uid]))\
+                            for idx, uid in enumerate(userIds[0:2])])
 
             vals["count"] = noOfUsers - 2
 
             # Limit noOfUsers to 4, to match with keys in template map
-            if (noOfUsers > 4):
-              noOfUsers = 4
-
-            if x == "L":
+            noOfUsers = 4 if noOfUsers > 4 else noOfUsers
+            if notifyType == "L":
                 tmpl = self._likesTemplate[noOfUsers]
-            elif x == "C" and convType == "question":
+            elif notifyType == "C" and convType == "question":
                 tmpl = self._answerTemplate[noOfUsers]
-            elif x == "C":
+            elif notifyType == "C":
                 tmpl = self._commentTemplate[noOfUsers]
-            elif x == "LC" and convType == "question":
+            elif notifyType == "LC" and convType == "question":
                 tmpl = self._answerLikesTemplate[noOfUsers]
-            elif x == "LC":
+            elif notifyType == "LC":
                 tmpl = self._commentLikesTemplate[noOfUsers]
 
+            # Strings change if current user owns the conversation
             tmpl = tmpl[0] if convOwnerId == myId else tmpl[1]
 
             vals["owner"] = utils.userName(convOwnerId, entities[convOwnerId])
             vals["itemType"] = utils.itemLink(convId, convType)
             return tmpl % vals
 
+        # Build strings to notify all other actions
+        def buildNotifyStr(notifyId):
+            x = notifyId[1:]
+            userIds = utils.uniqify(notifyValues[notifyId])
+            noOfUsers = len(userIds)
+
+            vals = dict([('user'+str(idx), utils.userName(uid, entities[uid]))\
+                            for idx, uid in enumerate(userIds[0:2])])
+
+            vals["count"] = noOfUsers - 2
+            vals["brandName"] = brandName
+            vals["networkName"] = myOrg['basic']['name']
+
+            if noOfUsers > 4:
+                noOfUsers = 4
+
+            if x == "NF":
+                tmpl = self._newFollowers[noOfUsers]
+            elif x == "GA":
+                groups = {}
+                for key,value in vals.iteritems():
+                    if key.startswith('user'):
+                        groups['group'+key[4:]] = value
+                vals.update(groups)
+                tmpl = self._groupRequestAccepted[noOfUsers]
+            elif x == "FA":
+                tmpl = self._friendRequestAccepted[noOfUsers]
+            elif x == "NU":
+                tmpl = self._orgNewMember[noOfUsers]
+            elif x == "IA":
+                tmpl = self._inviteAccepted[noOfUsers]
+
+            return tmpl % vals
+
         # Build strings
         notifyStrs = {}
         for notifyId in notifyIds:
-            if notifyId.startswith(myId) and\
-               notifyId.endswith([':G', ':F', ':C']):
-                notifyStrs[notifyId] = buildRelationStr(notifyId)
+            if notifyId.startswith(":"):
+                notifyStrs[notifyId] = buildNotifyStr(notifyId)
             else:
                 notifyStrs[notifyId] = buildConvStr(notifyId)
 

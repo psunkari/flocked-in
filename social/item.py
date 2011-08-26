@@ -76,8 +76,6 @@ class ItemResource(base.BaseResource):
 
         # Filter out users who don't need notification
         def needsNotifyCheck(userId):
-            if userId == myId:
-                return False
             attr = 'notifyMyItem'+notifyType if convOwnerId == userId\
                                          else 'notifyItem'+notifyType
             user = entities[userId]
@@ -134,8 +132,9 @@ class ItemResource(base.BaseResource):
         deferreds = []
         convOwnerId = kwargs["convOwnerId"]
         convType = kwargs["convType"]
+        myId = kwargs["myId"]
         notifyId = ":".join([convId, convType, convOwnerId, notifyType])
-    
+
         # List of people who will get the notification about current action
         if notifyType == "C":
             followers = yield db.get_slice(convId, "items", super_column="followers")
@@ -145,7 +144,10 @@ class ItemResource(base.BaseResource):
             toFetchEntities = recipients + [convOwnerId]
         else:
             toFetchEntities = recipients = [convOwnerId]
-    
+
+        # The actor must not be sent a notification
+        recipients = [userId for userId in recipients if userId != myId]
+
         # Get recipients' data required to send offline notifications.
         entities_d = db.multiget_slice(toFetchEntities, "entities",
                             ["name", "emailId", "notify"], super_column="basic") \
@@ -156,35 +158,11 @@ class ItemResource(base.BaseResource):
             self.notifyByMail(notifyType, convId, recipients, **kwargs)
         entities_d.addCallback(sendOfflineNotifications)
         deferreds.append(entities_d)
-    
+
         # Send in-application notifications.
-        myId = kwargs["myId"]
-        for userId in recipients:
-            if myId != userId:
-                d0 = db.get_slice(userId, "notificationItems",
-                                  super_column=notifyId, count=3, reverse=True)
-                def deleteOlderNotifications(cols, aUserId):
-                    deleteKeys = [col.column.name for col in cols\
-                                                if col.column.name != timeUUID]
-                    if deleteKeys:
-                        d00 = db.batch_remove({'notifications': [aUserId]},
-                                              names=deleteKeys)
-                        d01 = db.batch_remove({'latest': [aUserId]},
-                                              names=deleteKeys, 
-                                              supercolumn="notifications")
-                        return defer.DeferredList([d00, d01])
-                    else:
-                        return defer.succeed([])
-    
-                d0.addCallback(deleteOlderNotifications, userId)
-    
-                d1 = db.insert(userId, "notifications", notifyId, timeUUID)
-                d2 = db.insert(userId, "latest", notifyId,
-                               timeUUID, "notifications")
-                d3 = db.batch_insert(userId, "notificationItems",
-                                     {notifyId:{timeUUID:myId}})
-                deferreds.extend([d0, d1, d2, d3])
-    
+        notify_d = notifications.notify(recipients, notifyId, myId, timeUUID)
+        deferreds.append(notify_d)
+
         yield defer.DeferredList(deferreds)
 
 
