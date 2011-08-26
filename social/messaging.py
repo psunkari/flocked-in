@@ -31,7 +31,7 @@ class MessagingResource(base.BaseResource):
                 'trash': 'mDeletedConversations',
                 'unread': 'mUnreadConversations'}
 
-    def _index_message(self, convId, messageId, myOrgId, meta, attachments, body):
+    def _indexMessage(self, convId, messageId, myOrgId, meta, attachments, body):
         meta['type']="message"
         meta['body'] = body
         meta['parent'] = convId
@@ -293,7 +293,7 @@ class MessagingResource(base.BaseResource):
         yield db.batch_insert(convId, "mConversations",
                               {'meta':meta, 'attachments':attachments})
 
-        self._index_message(convId, messageId, myOrgId, meta, attachments, body)
+        self._indexMessage(convId, messageId, myOrgId, meta, attachments, body)
 
 
         for file, file_meta in attachments_meta.iteritems():
@@ -397,7 +397,7 @@ class MessagingResource(base.BaseResource):
             timeuuid, fid, name, size, ftype  = file_meta
             val = "%s:%s:%s:%s:%s" %(utils.encodeKey(timeuuid), fid, name, size, ftype)
             yield db.insert(convId, "item_files", val, timeuuid, file)
-        self._index_message(convId, messageId, myOrgId, meta, attachments, body)
+        self._indexMessage(convId, messageId, myOrgId, meta, attachments, body)
 
         #XXX:Is this a duplicate batch insert ?
         #yield db.batch_insert(convId, "mConversations", {'meta':meta})
