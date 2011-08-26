@@ -492,7 +492,7 @@
      <lst name="defaults">
        <!--<str name="echoParams">all</str>-->
        <int name="rows">10</int>
-       <str name="fl">id,comment,parent,location,summary,desc,itemType,title</str>
+       <str name="fl">id,comment,parent,location,summary,desc,itemType,title,filename,subject,body</str>
        <str name="wt">python</str>
        <str name="indent">on</str>
      </lst>
@@ -532,7 +532,7 @@
         text^0.2 comment^1.1 ownerName^1.5 targetName^1.5
       </str>
       <str name='fl'>
-        id,comment,location,summary,desc,title,question,options_str
+        id,comment,location,summary,desc,title,question,options_str,filename,subject,body
       </str>
       <str name="q.alt">*:*</str>
     </lst>

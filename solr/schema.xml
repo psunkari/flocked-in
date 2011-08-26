@@ -217,6 +217,10 @@
        <field name="title" type = "text" indexed="true" stored="true" />
        <field name="location" type = "text" indexed="true" stored="true" />
        <field name="options_str" type = "text" indexed="true" stored="true" />
+       <field name="filename" type = "text" indexed="true" stored="true" />
+       <field name="subject" type = "text" indexed="true" stored="true" />
+       <field name="body" type = "text" indexed="true" stored="true" />
+       <field name="timestamp" type = "sdouble" indexed="true" stored="true" />
        <field name="question" type = "text" indexed="true" stored="true" />
        <field name="desc" type = "text" indexed="true" stored="true" />
        <field name="acl" type="text" stored="true"   />

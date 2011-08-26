@@ -69,7 +69,7 @@ class Status(object):
             val = "%s:%s:%s:%s:%s" %(utils.encodeKey(timeuuid), fid, name, size, ftype)
             yield db.insert(convId, "item_files", val, timeuuid, attachmentId)
         from social import fts
-        fts.solr.updateIndex(convId, item, myOrgId)
+        fts.solr.updateIndex(convId, item, myOrgId, attachments)
         defer.returnValue((convId, item))
 
     @defer.inlineCallbacks
