@@ -260,7 +260,7 @@ class Poll(object):
             yield db.insert(convId, "item_files", val, timeuuid, attachmentId)
 
         from social import fts
-        fts.solr.updateIndex(convId, item, myOrgId)
+        fts.solr.updateIndex(convId, item, myOrgId, attachments)
         defer.returnValue((convId, item))
 
 

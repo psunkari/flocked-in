@@ -17,7 +17,7 @@ from twisted.internet   import defer
 from twisted.python     import log
 from twisted.web        import static, server
 
-from social             import db, utils, base, errors, config, _
+from social             import db, utils, base, errors, config, _, fts
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
@@ -30,6 +30,14 @@ class MessagingResource(base.BaseResource):
                 'archive': 'mArchivedConversations',
                 'trash': 'mDeletedConversations',
                 'unread': 'mUnreadConversations'}
+
+    def _index_message(self, convId, messageId, myOrgId, meta, attachments, body):
+        meta['type']="message"
+        meta['body'] = body
+        meta['parent'] = convId
+        meta['timestamp'] = meta['date_epoch']
+        meta = {"meta":meta}
+        fts.solr.updateIndex(messageId, meta, myOrgId, attachments)
 
     @profile
     @defer.inlineCallbacks
@@ -255,10 +263,10 @@ class MessagingResource(base.BaseResource):
     @dump_args
     def _reply(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        convId = utils.getRequestArg(request, 'id')
         landing = not self._ajax
+        myOrgId = args['orgKey']
 
-        myId = request.getSession(IAuthInfo).username
+        convId = utils.getRequestArg(request, 'id')
         recipients, body, subject, convId = self._parseComposerArgs(request)
         epoch = int(time.time())
 
@@ -284,6 +292,9 @@ class MessagingResource(base.BaseResource):
         yield db.insert(convId, "mConvMessages", messageId, timeUUID)
         yield db.batch_insert(convId, "mConversations",
                               {'meta':meta, 'attachments':attachments})
+
+        self._index_message(convId, messageId, myOrgId, meta, attachments, body)
+
 
         for file, file_meta in attachments_meta.iteritems():
             timeuuid, fid, name, size, ftype  = file_meta
@@ -352,8 +363,10 @@ class MessagingResource(base.BaseResource):
     def _createConversation(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
-        recipients, body, subject, parent = self._parseComposerArgs(request)
+        myOrgId = args['orgKey']
         epoch = int(time.time())
+
+        recipients, body, subject, parent = self._parseComposerArgs(request)
         filterType = utils.getRequestArg(request, "filterType") or None
 
         if not parent and not recipients:
@@ -384,6 +397,7 @@ class MessagingResource(base.BaseResource):
             timeuuid, fid, name, size, ftype  = file_meta
             val = "%s:%s:%s:%s:%s" %(utils.encodeKey(timeuuid), fid, name, size, ftype)
             yield db.insert(convId, "item_files", val, timeuuid, file)
+        self._index_message(convId, messageId, myOrgId, meta, attachments, body)
 
         #XXX:Is this a duplicate batch insert ?
         #yield db.batch_insert(convId, "mConversations", {'meta':meta})

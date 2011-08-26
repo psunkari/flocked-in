@@ -44,29 +44,29 @@ class EventResource(base.BaseResource):
         #
         if not convId or not invitees:
             raise errors.MissingParams()
-        
+
         conv = yield db.get_slice(convId, "items")
         conv = utils.supercolumnsToDict(conv)
-        
+
         if not conv:
             raise errors.MissingParams()
-        
+
         if (conv["meta"].has_key("type") and conv["meta"]["type"] != "event"):
             raise errors.InvalidRequest()
-        
+
         convType = conv["meta"]["type"]
         convOwner = conv["meta"]["owner"]
         starttime = int(conv["meta"]["startTime"])
         timeUUID = utils.uuid1(timestamp=starttime)
         timeUUID = timeUUID.bytes
         responseType = "I"
-        
+
         responses = yield db.get_slice(convId, "eventResponses")
         responses = utils.supercolumnsToDict(responses)
         attendees = responses.get("yes", {}).keys() + \
                      responses.get("maybe", {}).keys() + \
                      responses.get("no", {}).keys()
-        
+
         #Check if invitees are valid keys
         for userKey in invitees:
             if userKey not in attendees:
@@ -312,7 +312,7 @@ class Event(object):
         me = cols.get(myKey, None)
         org = cols.get(orgKey, None)
         args = {"myKey": myKey, "orgKey": orgKey, "me": me, "org": org}
-        
+
         templateFile = "event.mako"
         renderDef = "share_event"
 
@@ -428,7 +428,7 @@ class Event(object):
             yield db.insert(convId, "item_files", val, timeuuid, attachmentId)
 
         from social import fts
-        d = fts.solr.updateIndex(convId, item, myOrgId)
+        d = fts.solr.updateIndex(convId, item, myOrgId, attachments)
         defer.returnValue((convId, item))
 
     @defer.inlineCallbacks

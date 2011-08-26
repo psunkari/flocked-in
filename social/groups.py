@@ -144,7 +144,7 @@ class GroupsResource(base.BaseResource):
 
         cols = yield db.get_slice(groupId, "blockedUsers", [myKey])
         if cols:
-            raise errors.PermissionDenied(_("You are banned from joining the group by the administrator"))
+            raise errors.PermissionDenied(_("You are banned from joining this group."))
 
         colname = "%s:%s" %(group['basic']['name'].lower(), groupId)
         try:
@@ -179,16 +179,16 @@ class GroupsResource(base.BaseResource):
         myOrgId = args["orgKey"]
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                       columns=["admins"])
-        userId, user = yield utils.getValidEntityId(request, "uid", "user")
 
         if myKey in group["admins"]:
+            userId, user = yield utils.getValidEntityId(request, "uid", "user")
             try:
                 cols = yield db.get(groupId, "pendingConnections", userId)
                 yield self._removeFromPending(groupId, userId)
                 yield self._addMember(request, groupId, userId, myOrgId, group)
                 yield renderScriptBlock(request, "groups.mako",
-                                        "_pendingGroupRequestsActions", False,
-                                        '#pending-group-request-actions-%s' %(userId),
+                                        "groupRequestActions", False,
+                                        '#group-request-actions-%s-%s' %(userId, groupId),
                                         "set", args=[groupId, userId, "accept"])
 
             except ttypes.NotFoundException:
@@ -202,15 +202,15 @@ class GroupsResource(base.BaseResource):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                       columns=["admins"])
-        userId, user = yield utils.getValidEntityId(request, "uid", "user")
 
         if myKey in group["admins"]:
+            userId, user = yield utils.getValidEntityId(request, "uid", "user")
             try:
                 cols = yield db.get(groupId, "pendingConnections", userId)
                 yield self._removeFromPending(groupId, userId)
                 yield renderScriptBlock(request, "groups.mako",
-                                        "_pendingGroupRequestsActions", False,
-                                        '#pending-group-request-actions-%s' %(userId),
+                                        "groupRequestActions", False,
+                                        '#group-request-actions-%s-%s' %(userId, groupId),
                                         "set", args=[groupId, userId, "reject"])
             except ttypes.NotFoundException:
                 pass
@@ -223,18 +223,17 @@ class GroupsResource(base.BaseResource):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                       columns=["admins"])
-        userId, user = yield utils.getValidEntityId(request, "uid", "user")
-
-        if myKey == userId and myKey in group["admins"]:
-            raise errors.InvalidRequest(_("An administrator cannot ban himself/herself from the group"))
 
         if myKey in group["admins"]:
+            userId, user = yield utils.getValidEntityId(request, "uid", "user")
+            if myKey == userId and myKey in group["admins"]:
+                raise errors.InvalidRequest(_("An administrator cannot ban himself/herself from the group"))
             try:
                 cols = yield db.get(groupId, "pendingConnections", userId)
                 yield self._removeFromPending(groupId, userId)
                 yield renderScriptBlock(request, "groups.mako",
-                                        "_pendingGroupRequestsActions", False,
-                                        '#pending-group-request-actions-%s' %(userId),
+                                        "groupRequestActions", False,
+                                        '#group-request-actions-%s-%s' %(userId, groupId),
                                         "set", args=[groupId, userId, "block"])
             except ttypes.NotFoundException:
                 # If the users is already a member, remove the user from the group
@@ -254,11 +253,14 @@ class GroupsResource(base.BaseResource):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                       columns=["admins"])
-        userId, user = yield utils.getValidEntityId(request, "uid", "user")
 
         if myKey in group["admins"]:
+            userId, user = yield utils.getValidEntityId(request, "uid", "user")
             yield db.remove(groupId, "blockedUsers", userId)
-
+            yield renderScriptBlock(request, "groups.mako",
+                                    "groupRequestActions", False,
+                                    '#group-request-actions-%s-%s' %(userId, groupId),
+                                    "set", args=[groupId, userId, "unblock"])
 
     @profile
     @defer.inlineCallbacks
@@ -685,6 +687,7 @@ class GroupsResource(base.BaseResource):
         args["groupId"] = groupId
         args["nextPageStart"] = nextPageStart
         args["prevPageStart"] = prevPageStart
+        args["entities"][groupId] = group
 
         if script:
             yield renderScriptBlock(request, "groups.mako", "titlebar",

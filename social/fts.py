@@ -1,3 +1,5 @@
+import urllib
+from base64                     import urlsafe_b64decode
 from lxml                       import etree
 from lxml.builder               import ElementMaker
 from zope.interface             import implements
@@ -73,26 +75,39 @@ class Solr(object):
         d = agent.request(method, url, Headers(allHeaders), producer)
         return d
 
-    def updateIndex(self, itemId, item, orgId):
+    def updateIndex(self, itemId, item, orgId, attachments={}):
         fields = [self.elementMaker.field(str(itemId), {"name":"id"}),
                   self.elementMaker.field(str(orgId), {"name":"orgId"}),]
         itemType = item["meta"].get("type", "status")
         defaultIndex = [("meta", "comment"), ("meta", "parent")]
+        indices = defaultIndex
         if itemType in plugins and \
             getattr(plugins[itemType], "indexFields", defaultIndex):
-            for key in getattr(plugins[itemType], "indexFields", defaultIndex):
-                sfk, columnName = key
-                value = item[sfk].get(columnName, None)
-                if value:
-                    if type(value) in [str, unicode]:
-                        value = quote(value)
-                        fields.append(self.elementMaker.field((value),
-                                  {"name":columnName}))
-                    else:
-                        fields.append(self.elementMaker.field(str(value),
-                                  {"name":columnName}))
+            indices = getattr(plugins[itemType], "indexFields", defaultIndex)
+        elif itemType == "message":
+            indices = [('meta', 'subject'), ('meta', 'body'), ('meta', 'parent')]
 
 
+        for key in indices:
+            sfk, columnName = key
+            value = item[sfk].get(columnName, None)
+            if value:
+                if type(value) in [str, unicode]:
+                    value = quote(value)
+                    fields.append(self.elementMaker.field((value),
+                              {"name":columnName}))
+                else:
+                    fields.append(self.elementMaker.field(str(value),
+                              {"name":columnName}))
+        file_info = []
+        for attachmentId in attachments:
+            timeuuid, fid, name, size, ftype  = attachments[attachmentId]
+            file_info.append("%s:%s:%s:%s:%s"%(urlsafe_b64decode(name), fid, utils.encodeKey(timeuuid), size, ftype))
+        if file_info:
+            fields.append(self.elementMaker.field(",".join(file_info), {"name":"filename"}))
+        if "timestamp" in item.get("meta", {}):
+            fields.append(self.elementMaker.field(item['meta']['timestamp'], {"name":"timestamp"}))
+        fields.append(self.elementMaker.field(itemType, {"name":"itemType"}))
         root = self.elementMaker.add(self.elementMaker.doc(*fields))
         url = URL +  "/update?commit=true"
         return self._request("POST", url, {}, XMLBodyProducer(root))
@@ -109,7 +124,8 @@ class Solr(object):
             response.deliverBody(JsonBodyReceiver(finished))
             return finished
         rows = SEARCH_RESULTS_PER_PAGE
-        url = URL + "/select?q=%s&start=%s&rows=%s&fq=orgId:%s" % (term, start, rows, orgId)
+        term = urllib.quote(term)
+        url = URL + "/select?q=%s&start=%s&rows=%s&fq=orgId:%s&sort=%s" % (term, start, rows, orgId, urllib.quote('timestamp desc'))
         d = self._request("GET", url)
         d.addCallback(callback)
         return d
@@ -151,10 +167,14 @@ class FTSResource(base.BaseResource):
         res = yield solr.search(term, args['orgKey'], start)
         data = res.data
         convs = []
+        messages = []
         numMatched = data.get('response', {}).get('numFound', 0)
         for item in data.get('response', {}).get('docs', []):
             parent = item.get('parent', None)
-            if parent:
+            if item.get('itemType', '') == "message":
+                if (item.get('id'), parent) not in messages:
+                   messages.append((item.get('id'), parent))
+            elif parent:
                 if parent not in convs:
                     convs.append(parent)
             else:

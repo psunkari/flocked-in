@@ -200,8 +200,7 @@
         </li>
         <li>
             <label>${_("Membership")}</label>
-            <input type="checkbox" id="access" name="access" value="open" checked="checked">${_("(Open) Anyone in the organization can join the group")}</input><br/>
-            <input type="checkbox" id="access" name="access" value="closed">${_("(Closed) Membership should be approved by group administrator")}</input>
+            <input type="checkbox" id="access" name="access" value="closed">${_("should be approved by group administrator")}</input>
         </li>
         <li>
             <label for="dp">${_("Group Logo")}</label>
@@ -246,7 +245,7 @@
         <div class="users-row">
       %endif
     %endif
-    <div class="users-user">${_pendingRequestUser(userId)}</div>
+    <div class="users-user">${_pendingRequestUser(userId, groupId)}</div>
     %if counter % 2 == 1:
       </div>
     %endif
@@ -282,13 +281,15 @@
   %endif
 </%def>
 
-<%def name="_pendingGroupRequestsActions(groupId, userId, action='')">
+<%def name="groupRequestActions(groupId, userId, action='')">
   %if action == 'accept':
     <button class="button disabled"><span class="button-text">${_("Accepted")}</span></button>
   %elif action == 'reject':
     <button class="button disabled"><span class="button-text">${_("Rejected")}</span></button>
   %elif action == 'block':
     <button class="button disabled"><span class="button-text">${_("Blocked")}</span></button>
+  %elif action == 'unblock':
+    <button class="button disabled"><span class="button-text">${_("Unblocked")}</span></button>
   %else:
     <button class="button default" onclick="$.post('/ajax/groups/approve', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Accept")}</span></button>
     <button class="button default" onclick="$.post('/ajax/groups/reject', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Reject")}</span></button>
@@ -297,7 +298,7 @@
 
 </%def>
 
-<%def name="_pendingRequestUser(userId, groupId=None)">
+<%def name="_pendingRequestUser(userId, groupId)">
   <div class="users-avatar">
     <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
     %if avatarURI:
@@ -310,8 +311,8 @@
       <div class="user-details-name">${_("Group:")} ${utils.groupName(groupId, entities[groupId])}</div>
     %endif
     <div class="user-details-actions">
-      <ul id="pending-group-request-actions-${userId}" class="middle user-actions h-links">
-        ${self._pendingGroupRequestsActions(groupId, userId)}
+      <ul id="group-request-actions-${userId}-${groupId}" class="middle user-actions h-links">
+        ${self.groupRequestActions(groupId, userId)}
       </ul>
     </div>
   </div>
