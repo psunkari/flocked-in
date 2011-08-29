@@ -41,6 +41,7 @@
 <html>
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=8" >
   <title>${self.title()}</title>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/social.css"/>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/widgets.css"/>
