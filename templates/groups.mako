@@ -149,7 +149,7 @@
 
 <%def name="viewOptions(selected)">
   <%
-    options = [('myGroups', 'My Groups'), ('allGroups', 'All Groups'), ('adminGroups', 'Groups managed by Me')]
+    options = [('myGroups', 'My Groups'), ('allGroups', 'All Groups'), ('adminGroups', 'Groups managed by Me'), ('invitations', 'Group Invitations')]
     if showPendingRequestsTab:
         options.append(("pendingRequests", "Pending Requests"))
     group_request_count = groupRequestCount if groupRequestCount else ''

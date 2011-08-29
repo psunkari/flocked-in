@@ -16,8 +16,8 @@ from social.isocial     import IAuthInfo
 from social.constants   import PEOPLE_PER_PAGE, SUGGESTION_PER_PAGE
 from social.logging     import dump_args, profile
 
-INCOMING_REQUEST = '1'
-OUTGOING_REQUEST = '0'
+INCOMING_REQUEST = 'FI'
+OUTGOING_REQUEST = 'FO'
 
 
 def isValidSuggestion(myId, userId, relation):
@@ -355,7 +355,7 @@ def _getInvitationsSent(userId, start='', count=PEOPLE_PER_PAGE):
 @defer.inlineCallbacks
 def _get_pending_conncetions(userId, start='', count=PEOPLE_PER_PAGE, entityType='user'):
     toFetchCount = count + 1
-    toFetchStart = start
+    toFetchStart = start if start else INCOMING_REQUEST
     prevPageStart = None
     nextPageStart = None
     blockedUsers = []
@@ -369,8 +369,8 @@ def _get_pending_conncetions(userId, start='', count=PEOPLE_PER_PAGE, entityType
                                   count=toFetchCount)
         if cols:
             toFetchStart = cols[-1].column.name
-
-        ids = [col.column.name for col in cols if col.column.value == INCOMING_REQUEST]
+        #TOFIX: len(col.column.name.split(':')) == 2 is not necessary
+        ids = [col.column.name.split(':')[1] for col in cols if len(col.column.name.split(':')) ==2 and col.column.name.split(':')[0] == INCOMING_REQUEST]
         if ids:
             tmp_entities = yield db.multiget_slice(ids, "entities", ["basic"])
             tmp_entities = utils.multiSuperColumnsToDict(tmp_entities)
@@ -387,7 +387,7 @@ def _get_pending_conncetions(userId, start='', count=PEOPLE_PER_PAGE, entityType
             break
 
     if len(entities) == toFetchCount:
-        nextPageStart = entityIds[-1]
+        nextPageStart = utils.encodeKey(":".join([INCOMING_REQUEST, entityIds[-1]]))
         entityIds = entityIds[0:count]
     relation = Relation(userId, entityIds)
     relation_d =  defer.DeferredList([relation.initPendingList(),
@@ -403,7 +403,7 @@ def _get_pending_conncetions(userId, start='', count=PEOPLE_PER_PAGE, entityType
                                      reverse=True)
             if cols:
                 toFetchStart = cols[-1].column.name
-            ids = [col.column.name for col in cols if col.column.value == INCOMING_REQUEST]
+            ids = [col.column.name.split(':', 1)[1] for col in cols if len(col.column.name.split(':')) == 2 and col.column.name.split(':')[0] == INCOMING_REQUEST]
             if ids:
                 tmp_entities = yield db.multiget_slice(ids, "entities", ["basic"])
                 tmp_entities = utils.multiSuperColumnsToDict(tmp_entities)
@@ -413,7 +413,7 @@ def _get_pending_conncetions(userId, start='', count=PEOPLE_PER_PAGE, entityType
                         tmp_count +=1
                         tmp_ids.append(entityId)
                     if tmp_count == toFetchCount:
-                        prevPageStart = entityId
+                        prevPageStart = utils.encodeKey(':'.join([INCOMING_REQUEST, entityId]))
                         break
             if len(cols) < toFetchCount:
                 break

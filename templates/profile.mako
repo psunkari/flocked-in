@@ -138,9 +138,9 @@
       <div class="sidebar-chunk">
       <ul id="user-subactions-${userKey}" class="middle user-subactions v-links">
     %endif
-    %if relations.pending.get(userKey) == "0":
-      <li><a href="/profile/cancelFR?id=${userKey}"
-             onclick="$.post('/ajax/profile/cancelFR', 'id=${userKey}'); $.event.fix(event).preventDefault();">
+    %if relations.pending.get(userKey) == 0:
+      <li><a href="/profile/friend?id=${userKey}&action=cancel"
+             onclick="$.post('/ajax/profile/friend', 'id=${userKey}&action=cancel'); $.event.fix(event).preventDefault();">
             ${_("Cancel Friend Request")}
           </a>
       </li>
@@ -222,17 +222,17 @@
   %if myKey != userKey:
     %if userKey not in relations.friends:
       %if not relations.pending or userKey not in relations.pending:
-        <button class="button default" onclick="$.post('/ajax/profile/friend', 'id=${userKey}')">
+        <button class="button default" onclick="$.post('/ajax/profile/friend', 'id=${userKey}&action=add')">
           <span class="button-text">${_("Add as Friend")}</span>
         </button>
-      %elif relations.pending.get(userKey) == "1":
+      %elif relations.pending.get(userKey) == 1:
         <button class="acl-button button" onclick="$$.ui.showPopup(event)">${_("Respond to Friend Request")}</button>
         <ul class="acl-menu" style="display:none;">
             <li>
-              <a class="acl-item" _acl="public" onclick="$.post('/ajax/profile/friend', 'id=${userKey}')">${_("Accept")}</a>
+              <a class="acl-item" _acl="public" onclick="$.post('/ajax/profile/friend', 'id=${userKey}&action=accept')">${_("Accept")}</a>
             </li>
             <li>
-              <a class="acl-item" _acl="friends" onclick="$.post('/ajax/profile/cancelFR', 'id=${userKey}')">${_("Reject")}</a>
+              <a class="acl-item" _acl="friends" onclick="$.post('/ajax/profile/friend', 'id=${userKey}&action=reject')">${_("Reject")}</a>
             </li>
         </ul>
       %else:
