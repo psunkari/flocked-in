@@ -193,7 +193,7 @@ class SettingsResource(base.BaseResource):
 
         userInfo = {}
         calls = []
-        basicUpdatedInfo = {}
+        basicUpdatedInfo, basicUpdate = {}, False
 
         me = yield db.get_slice(myKey, 'entities')
         me = utils.supercolumnsToDict(me)
@@ -207,8 +207,10 @@ class SettingsResource(base.BaseResource):
             if val:
                 userInfo.setdefault("basic", {})[cn] = val
                 basicUpdatedInfo[cn] = val
+                basicUpdated = True
             else:
                 basicUpdatedInfo[cn] = me['basic'].get(cn, "")
+                basicUpdated = False
                 
         # Update name indicies of organization and friends.
         nameIndexKeys = friends + [args["orgKey"]]
@@ -239,6 +241,7 @@ class SettingsResource(base.BaseResource):
             userInfo["basic"]["avatar"] = avatar
             avatarURI = utils.userAvatar(myKey, userInfo)
             basicUpdatedInfo["avatar"] = avatarURI
+            basicUpdated = True
 
         # Contact information at work.
         c_im = utils.getRequestArg(request, "c_im")
@@ -303,7 +306,8 @@ class SettingsResource(base.BaseResource):
         if not self._ajax:
             request.redirect("/settings")
         else:
-            if len(basicUpdatedInfo.keys()) > 0:
+            print basicUpdated
+            if basicUpdated:
                 response = """
                             <script>
                                 var data = %s;
