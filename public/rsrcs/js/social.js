@@ -786,7 +786,7 @@ var ui = {
         $$.dialog.create(dialogOptions);
         $.get('/ajax/file/versions?id='+convId+'&fid='+fileId);
     },
-    bindFormSubmit: function(selector, onCompleteFunc) {
+    bindFormSubmit: function(selector) {
         //Force form submits via ajax posts when form contains a input file.
         $(selector).submit(function() {
             $this = $(this);
@@ -799,20 +799,13 @@ var ui = {
 
             $.ajax(this.action, {
                 type: "POST",
-                dataType: "json",
+                dataType: "script",
                 data: $(selector+' :input').not(':file').serializeArray(),
                 files: $(":file", this),
                 processData: false
             }).complete(function(data) {
                 $(selector).find(":file").val("");
-                //if (jQuery.isFunction(onCompleteFunc)){
-                //    onCompleteFunc(data)
-                //}
-            }).success(function(data) {
-                if (jQuery.isFunction(onCompleteFunc)){
-                    onCompleteFunc(data)
-                }
-            });
+            }).success(function(data) {});
             $this.trigger('restorePlaceHolders');
             return false
         });

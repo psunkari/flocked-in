@@ -303,14 +303,18 @@ class SettingsResource(base.BaseResource):
         if not self._ajax:
             request.redirect("/settings")
         else:
-            # TODO: If basic profile was edited, then logo, name and title could
-            # also change, make sure these are reflected too.
             if len(basicUpdatedInfo.keys()) > 0:
                 response = """
-                                <textarea data-type="application/json">
-                                  %s
-                                </textarea>
-                           """ % (json.dumps(basicUpdatedInfo))
+                            <script>
+                                var data = %s;
+                                if (data.avatar){
+                                  var imageUrl = data.avatar;
+                                  parent.$('#avatar').css('background-image', 'url(' + imageUrl + ')');
+                                }
+                                parent.$('#name').html(data.name + ', ' + data.jobTitle);
+                                parent.$$.alerts.info("%s");
+                            </script>
+                           """ % (json.dumps(basicUpdatedInfo),  _("Profile updated"))
                 request.write(response)
             else:
                 request.write('$$.alerts.info("%s");' % _('Profile updated'))
@@ -373,15 +377,7 @@ class SettingsResource(base.BaseResource):
             if detail == "basic":
                 yield renderScriptBlock(request, "settings.mako", "settingsTitle",
                                         landing, "#settings-title", "set", **args)
-                handlers["onload"] += """$$.ui.bindFormSubmit('#settings-form',
-                    function(data){
-                      if (data.avatar){
-                        var imageUrl = data.avatar
-                        $('#avatar').css('background-image', 'url(' + imageUrl + ')');
-                      }
-                      $('#name').html(data.name + ', ' + data.jobTitle)
-                      $$.alerts.info("%s");
-                    });""" % _('Profile updated')
+                handlers["onload"] += """$$.ui.bindFormSubmit('#settings-form');"""
                 yield renderScriptBlock(request, "settings.mako", "editBasicInfo",
                                         landing, "#settings-content", "set", True,
                                         handlers = handlers, **args)

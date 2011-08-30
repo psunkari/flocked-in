@@ -358,6 +358,16 @@ class GroupsResource(base.BaseResource):
         yield db.insert(orgKey, "entityGroupsMap", '', colname)
         yield self._addMember(request, groupId, myKey, orgKey, {"basic":meta})
 
+        response = """
+                    <script>
+                        parent.$$.alerts.info('%s');
+                        parent.$.get('/ajax/notifications/new');
+                        parent.$$.fetchUri('/groups');
+                        parent.$('#add-user-wrapper').empty();
+                    </script>
+                   """ %(_("Group Created"))
+        request.write(response)
+
 
     @profile
     @defer.inlineCallbacks
@@ -377,9 +387,10 @@ class GroupsResource(base.BaseResource):
             yield renderScriptBlock(request, "groups.mako", "createGroup",
                                     landing, "#add-user-wrapper", "set", **args)
             script = """
-                        $$.ui.bindFormSubmit('#group_form', function(){$('#add-user-wrapper').empty();$$.fetchUri('/groups');})
+                        $$.ui.bindFormSubmit('#group_form');
                         $('#group_form').html5form({messages: 'en'});
                      """
+            
             script = "<script>%s</script>"%(script) if landing else script
             request.write(script);
 
@@ -810,6 +821,7 @@ class GroupsResource(base.BaseResource):
                 d01 = utils.render_LatestCounts(request, False, False)
                 d01.addCallback(_update_count)
                 return d01
-            d.addCallback(_updatePendingGroupRequestCount)
+            if action not in ["create"]:
+                d.addCallback(_updatePendingGroupRequestCount)
 
         return self._epilogue(request, d)
