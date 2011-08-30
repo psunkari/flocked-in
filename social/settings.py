@@ -193,7 +193,7 @@ class SettingsResource(base.BaseResource):
 
         userInfo = {}
         calls = []
-        basicUpdatedInfo, basicUpdate = {}, False
+        basicUpdatedInfo, basicUpdated = {}, False
 
         me = yield db.get_slice(myKey, 'entities')
         me = utils.supercolumnsToDict(me)
@@ -306,7 +306,6 @@ class SettingsResource(base.BaseResource):
         if not self._ajax:
             request.redirect("/settings")
         else:
-            print basicUpdated
             if basicUpdated:
                 response = """
                             <script>
