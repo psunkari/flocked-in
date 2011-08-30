@@ -199,7 +199,7 @@ class ProfileResource(base.BaseResource):
             raise errors.InvalidRequest(_("A similar request is already pending"))
         d1 = db.insert(myId, "pendingConnections", '', "FO:%s"%(targetId))
         d2 = db.insert(targetId, "pendingConnections", '', "FI:%s"%(myId))
-        d3 = self._notify(myId, targetId)
+        d3 = self._notifyFriendRequest(myId, targetId)
         calls = [d1, d2, d3]
         yield defer.DeferredList(calls)
 
@@ -287,7 +287,7 @@ class ProfileResource(base.BaseResource):
             d10 = db.remove(myId, "pendingConnections", "FI:%s"%(targetId))
             d11 = db.remove(targetId, "pendingConnections", "FO:%s"%(myId))
 
-            d12 = notifications.notify([targetKey], ":FA", myId)
+            d12 = notifications.notify([targetId], ":FA", myId)
 
             calls = [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12]
             calls.append(self._removeNotification(myId, targetId))
@@ -560,8 +560,6 @@ class ProfileResource(base.BaseResource):
                 actionDeferred = self._follow(myKey, targetKey)
             elif action == "unfollow":
                 actionDeferred = self._unfollow(myKey, targetKey)
-            elif action == 'cancelFR':
-                actionDeferred = self._cancelFriendRequest(myKey, targetKey)
             else:
                 raise errors.NotFoundError()
 
