@@ -205,7 +205,7 @@ class ProfileResource(base.BaseResource):
 
     @profile
     @defer.inlineCallbacks
-    def _acceptFriend_request(self, request, myId, targetId):
+    def _acceptFriendRequest(self, request, myId, targetId):
 
         # Circles are just tags that a user would set on his connections
         circles = utils.getRequestArg(request, 'circle', True) or []
@@ -306,7 +306,7 @@ class ProfileResource(base.BaseResource):
           raise errors.InvalidRequest(_("Malformed request"))
 
         if action == 'accept':
-            yield self._acceptFriend_request(request, myId, targetId)
+            yield self._acceptFriendRequest(request, myId, targetId)
         elif action == 'reject':
             yield self._rejectFriendRequest(request, myId, targetId)
         elif action == 'add':
