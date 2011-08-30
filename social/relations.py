@@ -68,10 +68,19 @@ class Relation(object):
     @dump_args
     def initPendingList(self):
         if self.others:
-            cols = yield db.get_slice(self.me, 'pendingConnections', self.others)
+            others = []
+            for other in self.others:
+                others.append('FI:%s'%(other))
+                others.append('FO:%s'%(other))
+            cols = yield db.get_slice(self.me, 'pendingConnections', others)
         else:
             cols = yield db.get_slice(self.me, 'pendingConnections')
-        self.pending = dict((x.column.name, x.column.value) for x in cols)
+        for col in cols:
+            try:
+                requestType, userId = col.column.name.split(':')
+                self.pending[userId] = int(requestType == 'FI')
+            except ValueError:
+                pass
 
     @defer.inlineCallbacks
     def initGroupsList(self):

@@ -1,6 +1,4 @@
-import json
 import uuid
-from twisted.web        import server
 from twisted.python     import log
 from twisted.internet   import defer
 from telephus.cassandra import ttypes
@@ -36,12 +34,14 @@ class GroupsResource(base.BaseResource):
     # XXX: Assuming that there wouldn't be too many items here.
     @defer.inlineCallbacks
     def _removeFromPending(self, groupId, userId):
-        yield db.remove(groupId, "pendingConnections", userId)
-        yield db.remove(userId, "pendingConnections", groupId)
+        yield db.remove(groupId, "pendingConnections", "GI:%s"%(userId))
+        yield db.remove(userId, "pendingConnections", "GO:%s"%(groupId))
+        #also remove any group invites
+        yield db.remove(userId, "pendingConnections", "GI:%s"%(groupId))
 
         cols = yield db.get_slice(groupId, "latest", ['groups'])
         cols = utils.supercolumnsToDict(cols)
-        for tuuid, key in cols['groups'].items():
+        for tuuid, key in cols.get('groups', {}).items():
             if key == userId:
                 yield db.remove(groupId, "latest", tuuid, 'groups')
 
@@ -107,8 +107,9 @@ class GroupsResource(base.BaseResource):
         _acl = pickle.dumps(acl)
 
         itemId = utils.getUniqueKey()
-        item, attachments = yield utils.createNewItem(request, "activity", userId,
-                                   acl, "groupJoin", orgId)
+        item, attachments = yield utils.createNewItem(request, "activity",
+                                                      userId, acl,
+                                                      "groupJoin", orgId)
         item["meta"]["target"] = groupId
 
 
@@ -155,10 +156,11 @@ class GroupsResource(base.BaseResource):
                 yield self._addMember(request, groupId, myKey, myOrgId, group)
                 myGroups.append(groupId)
                 groupFollowers[groupId].append(myKey)
+                yield self._removeFromPending(groupId, myKey)
             else:
                 # Add to pending connections
-                yield db.insert(myKey, "pendingConnections", '0', groupId)
-                yield db.insert(groupId, "pendingConnections", '1', myKey)
+                yield db.insert(myKey, "pendingConnections", '', "GO:%s" %(groupId))
+                yield db.insert(groupId, "pendingConnections", '', "GI:%s"%(myKey))
 
                 yield self._notify(groupId, myKey)
                 pendingRequests[groupId] = myKey
@@ -184,7 +186,7 @@ class GroupsResource(base.BaseResource):
         if myKey in group["admins"]:
             userId, user = yield utils.getValidEntityId(request, "uid", "user")
             try:
-                cols = yield db.get(groupId, "pendingConnections", userId)
+                yield db.get(groupId, "pendingConnections", "GI:%s"%(userId))
                 d1 = self._removeFromPending(groupId, userId)
                 d2 = self._addMember(request, groupId, userId, myOrgId, group)
                 d3 = renderScriptBlock(request, "groups.mako",
@@ -210,7 +212,7 @@ class GroupsResource(base.BaseResource):
         if myKey in group["admins"]:
             userId, user = yield utils.getValidEntityId(request, "uid", "user")
             try:
-                cols = yield db.get(groupId, "pendingConnections", userId)
+                yield db.get(groupId, "pendingConnections", "GI:%s"%(userId))
                 yield self._removeFromPending(groupId, userId)
                 yield renderScriptBlock(request, "groups.mako",
                                         "groupRequestActions", False,
@@ -233,7 +235,7 @@ class GroupsResource(base.BaseResource):
             if myKey == userId and myKey in group["admins"]:
                 raise errors.InvalidRequest(_("An administrator cannot ban himself/herself from the group"))
             try:
-                cols = yield db.get(groupId, "pendingConnections", userId)
+                yield db.get(groupId, "pendingConnections", "GI:%s"%(userId))
                 yield self._removeFromPending(groupId, userId)
                 yield renderScriptBlock(request, "groups.mako",
                                         "groupRequestActions", False,
@@ -335,7 +337,7 @@ class GroupsResource(base.BaseResource):
             if col.column.name.split(':')[0] == name.lower():
                 #msg = _("Group ") + "'%s'"%(name) + _(" already exists")
                 #request.write('$$.alerts.error("%s");' % msg)
-                # FIX: Can't display alert message for some reason.
+                #XXX: Can't display alert message for some reason.
                 raise errors.InvalidGroupName(name)
 
         groupId = utils.getUniqueKey()
@@ -379,7 +381,7 @@ class GroupsResource(base.BaseResource):
         args["menuId"] = "groups"
 
         if script and landing:
-            yield render(request,"groups.mako", **args)
+            yield render(request, "groups.mako", **args)
         if script and appchange:
             yield renderScriptBlock(request, "groups.mako", "layout",
                                     landing, "#mainbar", "set", **args)
@@ -409,9 +411,10 @@ class GroupsResource(base.BaseResource):
         startKey = ''
         startGroupId = managedGroupIds[0]
         if len(start.split(':')) == 2:
-            startKey, startGroupId = start.split(":")
+            userId, startGroupId = start.split(":")
+            startKey = "GI:%s" %(userId)
 
-        toFetchStart = startKey
+        toFetchStart = startKey or "GI"
         toFetchGroup = startGroupId
         count = PEOPLE_PER_PAGE
         toFetchCount = count + 1
@@ -429,14 +432,14 @@ class GroupsResource(base.BaseResource):
         while len(userIds) < toFetchCount:
             cols = yield db.get_slice(toFetchGroup, "pendingConnections",
                                       start=toFetchStart, count=toFetchCount)
-            userIds.extend([(col.column.name, toFetchGroup) for col in cols])
+            userIds.extend([(col.column.name.split(':')[1], toFetchGroup) for col in cols if len(col.column.name.split(':')) == 2 and col.column.name.split(':')[0] == "GI"])
             if len(userIds) >= toFetchCount:
                 break
             if len(cols) < toFetchCount:
                 if index + 1 < len(managedGroupIds):
                     index = index+1
                     toFetchGroup = managedGroupIds[index]
-                    toFetchStart = ''
+                    toFetchStart = 'GI'
                 else:
                     break;
 
@@ -461,7 +464,7 @@ class GroupsResource(base.BaseResource):
                 cols = yield db.get_slice(toFetchGroup, "pendingConnections",
                                           start=toFetchStart, reverse=True,
                                           count=toFetchCount)
-                tmpIds.extend([(col.column.name, toFetchGroup) for col in cols])
+                tmpIds.extend([(col.column.name.split(':')[1], toFetchGroup) for col in cols if len(col.column.name.split(':')) == 2])
 
                 if len(tmpIds) >= toFetchCount:
                     tmpIds = tmpIds[0:toFetchCount]
@@ -481,6 +484,37 @@ class GroupsResource(base.BaseResource):
 
         defer.returnValue((userIds, entities, prevPageStart, nextPageStart))
 
+    @defer.inlineCallbacks
+    def _get_group_invitations(self, request):
+        appchange, script, args, myId = yield self._getBasicArgs(request)
+        start = utils.getRequestArg(request, 'start') or 'GI'
+        start = utils.decodeKey(start)
+        count = PEOPLE_PER_PAGE
+        toFetchCount = count + 1
+        nextPageStart = None
+        prevPageStart = None
+        toFetchEntities = set()
+
+        toFetchStart = start
+        cols = yield db.get_slice(myId, "pendingConnections",
+                                  start= toFetchStart, count= toFetchCount)
+        groupIds = [x.column.name.split(':')[1] for x in cols if len(x.column.name.split(':'))==2 and x.column.name.split(':')[0] == 'GI']
+        if len(groupIds) == toFetchCount:
+            groupIds= groupIds[:count]
+            nextPageStart = utils.encodeKey(cols[-1].column.name)
+        toFetchEntities.update(groupIds)
+        cols = yield db.get_slice(myId, "pendingConnections", reverse=True,
+                                  start= toFetchStart, count= toFetchCount)
+        cols = [x for x in cols if len(x.column.name.split(':'))==2 and x.column.name.split(':')[1] == 'GI']
+
+        if len(cols) >1:
+            prevPageStart = utils.encodeKey(cols[-1].column.name)
+        toFetchEntities.add(myId)
+        entities = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
+        entities = utils.multiSuperColumnsToDict(entities)
+
+        defer.returnValue((groupIds, entities, prevPageStart, nextPageStart))
+
 
     @profile
     @defer.inlineCallbacks
@@ -494,7 +528,7 @@ class GroupsResource(base.BaseResource):
         start = utils.getRequestArg(request, 'start') or ''
         start = utils.decodeKey(start)
 
-        viewTypes = ['myGroups', 'allGroups', 'adminGroups', 'pendingRequests']
+        viewTypes = ['myGroups', 'allGroups', 'adminGroups', 'pendingRequests', 'invitations']
         viewType = 'myGroups' if viewType not in viewTypes else viewType
 
         args["menuId"] = "groups"
@@ -513,12 +547,12 @@ class GroupsResource(base.BaseResource):
         groupRequestCount = args["groupRequestCount"] = counts["groups"]
 
         if script and landing:
-            yield render(request,"groups.mako", **args)
+            yield render(request, "groups.mako", **args)
         if script and appchange:
             yield renderScriptBlock(request, "groups.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-        if viewType != 'pendingRequests':
+        if viewType not in ['pendingRequests', 'invitations']:
             count = PEOPLE_PER_PAGE
             toFetchCount = count+1
             groups = {}
@@ -579,8 +613,8 @@ class GroupsResource(base.BaseResource):
                 groups = utils.multiSuperColumnsToDict(groups)
                 groupFollowers = yield db.multiget_slice(toFetchGroups, "followers", names=[myId])
                 groupFollowers = utils.multiColumnsToDict(groupFollowers)
-                cols = yield db.get_slice(myId, 'pendingConnections', toFetchGroups)
-                pendingConnections = dict((x.column.name, x.column.value) for x in cols)
+                cols = yield db.get_slice(myId, 'pendingConnections', ["GO:%s"%(x) for x in toFetchGroups])
+                pendingConnections = dict((x.column.name.split(':')[1], x.column.value) for x in cols if len(x.column.name.split(':') == 2))
             args["groups"] = groups
             args["groupIds"] = groupIds
             args["myGroups"] = myGroupsIds
@@ -588,12 +622,21 @@ class GroupsResource(base.BaseResource):
             args["pendingConnections"] = pendingConnections
             args['nextPageStart'] = nextPageStart
             args['prevPageStart'] = prevPageStart
-        else:
+        elif viewType == 'pendingRequests':
             userIds, entities, prevPageStart, nextPageStart = yield self._getPendingGroupRequests(request)
             args["userIds"] = userIds
             args["entities"] = entities
             args["prevPageStart"] = prevPageStart
             args["nextPageStart"] = nextPageStart
+        elif viewType == 'invitations':
+            groupIds, entities, prevPageStart, nextPageStart = yield self._get_group_invitations(request)
+            args["groupIds"] = groupIds
+            args["groups"] = entities
+            args["prevPageStart"] = prevPageStart
+            args["nextPageStart"] = nextPageStart
+            args["pendingConnections"] = []
+            args["myGroups"] = []
+            args["groupFollowers"] = []
 
         if script:
             yield renderScriptBlock(request, "groups.mako", "viewOptions",
@@ -627,7 +670,7 @@ class GroupsResource(base.BaseResource):
         args["menuId"] = "groups"
 
         if script and landing:
-            yield render(request,"groups.mako", **args)
+            yield render(request, "groups.mako", **args)
         if script and appchange:
             yield renderScriptBlock(request, "groups.mako", "layout",
                                     landing, "#mainbar", "set", **args)
@@ -658,7 +701,7 @@ class GroupsResource(base.BaseResource):
     def _listPendingSubscriptions(self, request):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         landing = not self._ajax
-        start = utils.getRequestArg(request, 'start') or ''
+        start = utils.getRequestArg(request, 'start') or 'GI'
         count = PEOPLE_PER_PAGE
         toFetchCount = count+1
         nextPageStart = None
@@ -669,7 +712,7 @@ class GroupsResource(base.BaseResource):
         args["menuId"] = "groups"
 
         if script and landing:
-            yield render(request,"groups.mako", **args)
+            yield render(request, "groups.mako", **args)
         if script and appchange:
             yield renderScriptBlock(request, "groups.mako", "layout",
                                     landing, "#mainbar", "set", **args)
@@ -678,8 +721,7 @@ class GroupsResource(base.BaseResource):
             #or myKey in moderators #if i am moderator
             cols = yield db.get_slice(groupId, "pendingConnections",
                                       start=start, count=toFetchCount)
-            cols = utils.columnsToDict(cols, ordered=True)
-            userIds = cols.keys()
+            userIds = [x.column.name.split(':')[1] for x in cols if len(x.column.name.split(':'))==2]
             if len(userIds) == toFetchCount:
                 nextPageStart = userIds[-1]
                 userIds = userIds[0:count]
@@ -722,27 +764,37 @@ class GroupsResource(base.BaseResource):
 
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                       columns=["admins"])
-        userId = utils.getRequestArg(request, "invitee")
-        #cols = yield db.get_slice(emailId, "userAuth", ["user"])
-        #if not cols:
-        #    raise errors.InvalidRequest()
-        #userId = cols[0].column.value
         args["groupId"] = groupId
         args["heading"] = group["basic"]["name"]
 
         if script and landing:
-            yield render(request,"groups.mako", **args)
+            yield render(request, "groups.mako", **args)
         if script and appchange:
             yield renderScriptBlock(request, "groups.mako", "layout",
                                     landing, "#mainbar", "set", **args)
+        try:
+            yield db.get(groupId, "groupMembers", myKey)
+        except ttypes.NotFoundException:
+            request.write('$$.alerts.error("You should be member of the group to Invite Others");')
+            defer.returnValue(None)
 
-        if myKey in group['admins']:
-            # TODO: dont add blocked users
-            yield self._addMember(request, groupId, userId, myOrgId, group)
-            #yield self._listGroupMembers(request)
+        userId, user = yield utils.getValidEntityId(request, "invitee", "user")
+        #ignore the request if user is already a member
+        try:
+            yield db.get(groupId, "groupMembers", userId)
+        except ttypes.NotFoundException:
+            cols = yield db.get_slice(userId, "pendingConnections", ["GI:%s"%(groupId)])
+            invited_by = set()
+            if cols:
+                invited_by.update(cols[0].column.value.split(','))
+            invited_by.add(myKey)
+            yield db.insert(userId, "pendingConnections", ",".join(invited_by), "GI:%s"%(groupId))
+            #TODO:
+            #notify user
+        finally:
             refreshFeedScript = """
-                $("#group_add_invitee").attr("value", "")
-                """
+                $("#group_add_invitee").attr("value", "");
+                $$.alerts.info("%s is invited to the %s");""" %(user["basic"]["name"], group["basic"]["name"])
             request.write(refreshFeedScript)
 
 
@@ -758,7 +810,7 @@ class GroupsResource(base.BaseResource):
         args["heading"] = group["basic"]["name"]
 
         if script and landing:
-            yield render(request,"groups.mako", **args)
+            yield render(request, "groups.mako", **args)
         if script and appchange:
             yield renderScriptBlock(request, "groups.mako", "layout",
                                     landing, "#mainbar", "set", **args)

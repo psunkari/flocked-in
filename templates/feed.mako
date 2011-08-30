@@ -88,7 +88,6 @@
         <li><a class="ajax" href="/groups/members?id=${groupId}">${_('Members List')}</a></li>
       </ul>
     </div>
-    %if myKey in groupAdmins:
     <div class="invite-input-block">
         <div class="sidebar-chunk">
             <div class="sidebar-title">${_("Invite your colleague to this group")}</div>
@@ -96,13 +95,12 @@
               <input type="hidden" name="invitee" id="group_invitee"/>
               <input type="hidden" value = ${groupId} name="id" />
               <div class="input-wrap">
-                <input type="text" id="group_add_invitee" placeHolder="${_("Your colleague's name")}"/>
+                <input type="text" id="group_add_invitee" placeHolder="${_("Your colleague&#39;s name")}"/>
               </div>
               <input type="hidden" name="from" value="sidebar"/>
             </form>
         </div>
     </div>
-    %endif
   %endif
 </%def>
 
@@ -279,7 +277,7 @@
                 <ul id="user-actions-${userId}" class="middle user-actions h-links">
                 %if userId not in relations.friends:
                   %if not relations.pending or userId not in relations.pending:
-                    <button class="button" onclick="$.post('/ajax/profile/friend', 'id=${userId}')"><span class="button-text" style="font-size:11px">${_("Add as Friend")}</span></button>
+                    <button class="button" onclick="$.post('/ajax/profile/friend', 'id=${userId}&action=add')"><span class="button-text" style="font-size:11px">${_("Add as Friend")}</span></button>
                   %endif
                 %endif
                 %if userId not in relations.subscriptions and userId not in relations.friends:
