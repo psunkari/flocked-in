@@ -226,7 +226,7 @@
       <ul >
         <li>${_("Share status updates, files, Ask questions, Create polls")}</li>
         <li><a href='/people/invite'>${_("Invite")}</a>${_(" your colleagues.")}</li>
-        <li><a href='/people?type=all'>${_("Follow")}</a>${_(" your colleagues, ")}<a href='/people/type=all'>${_("Add")}</a>${_(" them as Friends")}</li>
+        <li><a href='/people?type=all'>${_("Follow")}</a>${_(" your colleagues, ")}<a href='/people?type=all'>${_("Add")}</a>${_(" them as Friends")}</li>
         <li><a href='/messages'>${_("Send")}</a>${_(" private messages")}</li>
         <li><a href='/groups/create'>${_("Create")}</a>${_(" new groups. ")}<a href='/groups?type=allGroups'>${_("Join")}</a>${_(" Groups ")}</li>
         <li><a href='/settings'>${_("Update")}</a>${_(" your profile")}</li>
