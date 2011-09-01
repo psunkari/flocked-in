@@ -1311,6 +1311,9 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     display: inline-block;
 }
 
+.link-details {
+    display: table-cell;
+}
 .link-summary {
     font-size: 12px;
     font-family: inherit;

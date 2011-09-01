@@ -1,5 +1,6 @@
 import embedly
 import urllib
+import re
 from lxml               import etree
 
 from zope.interface     import implements
@@ -13,7 +14,21 @@ from social.isocial     import IItemType, IAuthInfo
 from social             import db, utils, errors, _, config
 from social.logging     import profile, dump_args
 
-_encode = lambda x: type(x) == unicode and x.encode('utf8', 'replace') or x
+def _sanitize(text, strip=False):
+    unitext = text if type(text) == unicode\
+                   else text.decode('utf-8', 'replace')
+    if strip and len(unitext) > 250:
+        chopped = unitext[:250]
+        match = re.match(r'(.*)\s', chopped, re.L|re.U)
+        if match:
+            chopped = match.group(1)
+        if len(chopped) < len(unitext):
+            chopped = chopped + unichr(0x2026)
+        unitext = chopped
+
+    return unitext.encode('utf-8')
+
+
 embedlyKey = config.get('Embedly', 'Key')
 embedlyClient = None
 if embedlyKey:
@@ -73,8 +88,8 @@ class Links(object):
             url = "http://" + url
 
         summary, title, image, embed = yield self._summary(url)
-        summary = _encode(summary)
-        title = _encode(title)
+        summary = _sanitize(summary, True)
+        title = _sanitize(title)
 
         convId = utils.getUniqueKey()
         item, attachments = yield utils.createNewItem(request, self.itemType)

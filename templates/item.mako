@@ -589,12 +589,14 @@
         %elif imgsrc:
           <img src='${imgsrc}' class="link-image"/>
         %endif
-        <a href=${url} target="_blank"><div class="link-title">${_(title)}</div></a>
-        <div id="summary" class="link-summary">${_(summary)}</div>
-        %if title != url:
-          <% domain = urlsplit(url)[1] %>
-          <div id="url" class="link-url">${domain}</div>
-        %endif
+        <div class="link-details">
+          <a href=${url} target="_blank"><div class="link-title">${_(title)}</div></a>
+          <div id="summary" class="link-summary">${_(summary)}</div>
+          %if title != url:
+            <% domain = urlsplit(url)[1] %>
+            <div id="url" class="link-url">${domain}</div>
+          %endif
+        </div>
       </div>
     </div>
   </div>
