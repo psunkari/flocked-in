@@ -31,7 +31,7 @@
                 fontSize:   $this.css('fontSize'),
                 fontFamily: $this.css('fontFamily'),
                 lineHeight: $this.css('lineHeight'),
-                resize:     'none'
+                wordWrap:   'break-word'
             }).insertAfter(this).addClass('autogrow-backplane');
 
             var update = function(event) {
@@ -63,7 +63,7 @@
                 $(this).css('height', Math.max(shadow.height() + 15 + verticalPad, minHeight));
             }
 
-            $this.css("resize", "none");
+            $this.css({resize: 'none', overflow: 'auto'});
             $this.change(update).keyup(update).keydown(update);
             update.apply(this);
         });

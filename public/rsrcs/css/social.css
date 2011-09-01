@@ -146,10 +146,10 @@ a:hover, a:active, a:focus {
     padding: 4px;
     border: none;
     background-color: transparent;
-    overflow: auto;
     line-height: 15px;
     font-size: 12px;
     outline: 0px;
+    margin: 0px;
 }
 .input-wrap input:-moz-ui-invalid:not(output),
 .input-wrap textarea:-moz-ui-invalid:not(output) {
