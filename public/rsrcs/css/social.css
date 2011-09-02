@@ -221,6 +221,11 @@ a:hover, a:active, a:focus {
     width: 350px;
     font-size:12px;
 }
+/* Sometimes error pages are getting rendered in quirks mode.
+   In quirks more browsers add 1em margin-bottom to the forms */
+#search {
+    margin-bottom: 0 !important;
+}
 
 
 /*
