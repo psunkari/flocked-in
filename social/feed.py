@@ -217,8 +217,11 @@ def fetchAndFilterConvs(ids, count, relation, items, myId, myOrgId):
     # Filter the items (checkAcl only for conversations)
     for convId in ids:
         if convId not in items:
+            log.msg('Missing item: ', convId)
             continue
-        meta = items[convId]["meta"]
+        meta = items.get(convId, {}).get("meta", {})
+        if not meta:
+            continue
         if "deleted" in meta:
             deleted.add(convId)
             continue
