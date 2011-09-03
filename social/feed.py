@@ -626,20 +626,24 @@ class FeedResource(base.BaseResource):
             if "groupId" in args:
                 groupName = args["feedTitle"].split(":", 1)[1].strip()
                 groupId = args['feedId']
-                handlers["onload"] = "$$.acl.switchACL('sharebar-acl', 'group','%s', '%s');" %(groupId, groupName)
+                handlers["onload"] = "$$.acl.switchACL('sharebar-acl', 'group','%s', '%s');" % (groupId, groupName)
 
-            handlers["onload"] = handlers.get("onload", "") + "$$.ui.loadFileShareBlock();"
+            handlers["onload"] = handlers.get("onload", "") +\
+                                 "$$.files.init('sharebar-attach');"
             yield renderScriptBlock(request, "feed.mako", "share_block",
-                                    landing, "#share-block", "set", handlers=handlers, **args)
+                                    landing, "#share-block", "set",
+                                    handlers=handlers, **args)
             yield self._renderShareBlock(request, "status")
 
         if itemType and itemType in plugins and plugins[itemType].hasIndex:
             feedItems = yield _feedFilter(request, feedId, itemType, start)
         else:
             feedItems = yield getFeedItems(request, feedId=feedId, start=start)
+
         args.update(feedItems)
         args['itemType']=itemType
-        suggestions ,entities = yield people.get_suggestions(request, SUGGESTION_PER_PAGE, mini=True)
+        suggestions, entities = yield people.get_suggestions(request,
+                                                SUGGESTION_PER_PAGE, mini=True)
         args["suggestions"] = suggestions
         if "entities" not in args:
             args["entities"] = entities
@@ -647,6 +651,7 @@ class FeedResource(base.BaseResource):
             for entity in entities:
                 if entity not in args["entities"]:
                     args["entities"][entity] = entities[entity]
+
         relation = Relation(myId, suggestions)
         yield defer.DeferredList([relation.initFriendsList(),
                                   relation.initSubscriptionsList()])

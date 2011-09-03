@@ -320,8 +320,8 @@ class MessagingResource(base.BaseResource):
         if script:
             onload = """
                         $('.conversation-reply').attr('value', '');
-                        $('#attached-files').empty();
-                    """
+                        $('#msgreply-attach-uploaded').empty();
+                     """
             yield renderScriptBlock(request, "message.mako",
                                             "render_conversation_messages",
                                             landing,
@@ -807,7 +807,7 @@ class MessagingResource(base.BaseResource):
                                     handlers={"onload":onload}, **args)
 
             onload = """
-                     $$.ui.loadFileShareBlock();
+                     $$.files.init('msgreply-attach');
                      $('#conversation_add_member').autocomplete({
                            source: '/auto/users',
                            minLength: 2,
@@ -839,7 +839,7 @@ class MessagingResource(base.BaseResource):
             onload = """
                     $$.messaging.autoFillUsers();
                     $('.conversation-composer-field-body').autogrow();
-                    $$.ui.loadFileShareBlock();
+                    $$.files.init('msgcompose-attach');
                      """
             yield renderScriptBlock(request, "message.mako", "render_composer",
                                     landing, "#composer", "set", True,

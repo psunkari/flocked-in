@@ -167,14 +167,7 @@
         %if size:
           <td>${size}</td>
         %endif
-       <!--<td><a onclick="$$.ui.showFileVersions('${convId}' , '${attachmentId}')">versions</a></td>-->
       </tr>
-      ##<form id="${convId}-file-form" method="post" action = "/file/new_version" enctype="multipart/form-data" >
-      ##    <input type="file" name="file" />
-      ##    <input type="hidden" name="id" value="${convId}" />
-      ##    <input type="hidden" name="fid" value="${attachmentId}" />
-      ##    <input type="submit" name="upload" value="upload" />
-      ##</form>
     %endfor
     </table>
   %endif

@@ -28,52 +28,11 @@ from social.isocial     import IItemType, IAuthInfo
 from social.template    import render, renderScriptBlock, getBlock
 
 
-def _getFileId(data):
-    return hashlib.sha1(data).hexdigest()
-
-def _getFilePath(fileId):
-    dirs = ['data', fileId[0:2], fileId[2:4], fileId[4:6]]
-    return os.path.join(dirpath, fileId)
-
-def _getFileInfo(fs):
-    if fs.filename  is None:
-        return (None, None, None, None)
-    data = fs.file.read()
-    size = len(data)
-    name = fs.filename.replace('/', '\/').replace(':', '_')
-    fileType = fs.type
-    return (data, name, size, fileType)
-
-def _get_tmpfile_location(fileId):
-    return os.path.join('/tmp/social/data', fileId)
-
-def _createDirs(dirpath):
-    try:
-        os.makedirs(dirpath, 0700)
-    except OSError:
-        pass
-
-def _writeToFile(filepath, data):
-
-    dirpath, filename = os.path.split(filepath)
-    _createDirs(dirpath)
-
-    if not os.path.lexists(filepath):
-        try:
-            with open(filepath, 'wb') as f:
-                f.write(data)
-        except IOError as e:
-            traceback.print_exc()
-            log.msg(e)
-            raise e
-
-
 class FilesResource(base.BaseResource):
     isLeaf = True
 
     @defer.inlineCallbacks
     def _listFileVersions(self, request):
-
         authinfo = request.getSession(IAuthInfo)
         myId = authinfo.username
         myOrgId = authinfo.organization
@@ -104,7 +63,6 @@ class FilesResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _getFileInfo(self, request):
-
         authinfo = request.getSession(IAuthInfo)
         myId = authinfo.username
         myOrgId = authinfo.organization
@@ -138,6 +96,7 @@ class FilesResource(base.BaseResource):
 
         url = files['meta']['uri']
         defer.returnValue([owner, url, fileType, size, name])
+
 
     @defer.inlineCallbacks
     def _renderFile(self, request):
@@ -179,75 +138,11 @@ class FilesResource(base.BaseResource):
         request.setResponseCode(307)
         request.setHeader('Location', Location)
 
-    @defer.inlineCallbacks
-    def _upload_new_version(self, request):
-
-        attachmentId = utils.getRequestArg(request, 'fid')
-        itemId, item = yield utils.getValidItemId(request, 'id')
-
-        if attachmentId not in item.get('attachments', {}).keys():
-            raise errors.uploadFailed()
-
-        fs = cgi.FieldStorage(request.content,
-                              request.getAllHeaders(),
-                              environ={'REQUEST_METHOD':'POST'})
-
-        if 'file' in fs:
-            fsi = fs['file'][0] if len(fs.getlist('file')) >1 else fs['file']
-            data, name, size, ftype = yield threads.deferToThread(_getFileInfo, fsi)
-            if data:
-                fileId = _getFileId(data)
-                location = _getFilePath(fileId)
-                timeuuid = uuid.uuid1().bytes
-                try:
-                    yield threads.deferToThread(_writeToFile, location, data)
-                    val = "%s:%s:%s:%s" %(utils.encodeKey(timeuuid), name, size, ftype)
-                    val1= "%s:%s:%s:%s:%s" %(utils.encodeKey(timeuuid), fileId, name, size, ftype)
-                    yield db.insert(itemId, "items", val, attachmentId, "attachments")
-                    yield db.insert(itemId, "item_files", val1, timeuuid, attachmentId)
-                    #args = [itemId, attachmentId, utils.encodeKey(timeuuid),name, size]
-                    #yield renderScriptBlock(request, 'item.mako', 'set_attachment', False,
-                    #                        "#%s"%(attachmentId), "set", args = args)
-                except OSError:
-                    raise errors.uploadFailed()
-
-
-    @defer.inlineCallbacks
-    def upload(self, request):
-        fs = cgi.FieldStorage(request.content,
-                              request.getAllHeaders(),
-                              environ={'REQUEST_METHOD':'POST'})
-        if 'file' in fs:
-            tmp_files = []
-            tmp_files_info = {}
-            files = fs['file'] if len(fs.getlist('file')) >1 else [fs['file']]
-            for fsi in files:
-                data, name, size, fileType = yield threads.deferToThread(_getFileInfo, fsi)
-                if data:
-                    fileId = _getFileId(data)
-                    tmpFileId = utils.getUniqueKey()
-                    location = _get_tmpfile_location(fileId)
-                    try:
-                        yield threads.deferToThread(_writeToFile, location, data)
-                        val = "%s:%s:%s:%s"%(location, name, size, fileType)
-                        tmp_files.append((tmpFileId, val))
-                        tmp_files_info[tmpFileId] = [location, name, size, fileType]
-                    except Exception as e:
-                        raise errors.uploadFailed()
-
-            for tmp_file, val in tmp_files:
-                yield db.insert(tmp_file, "tmp_files", val, "fileId")
-
-            response = """
-                            <textarea data-type="application/json">
-                              {"ok": true, "files": %s}
-                            </textarea>
-                       """ % (json.dumps(tmp_files_info))
-            request.write(response)
 
     @defer.inlineCallbacks
     def _s3Update(self, request):
         pass
+
 
     @defer.inlineCallbacks
     def _S3FormData(self, request):
@@ -306,6 +201,7 @@ class FilesResource(base.BaseResource):
         request.write(json.dumps([form_data]));
         defer.returnValue(0)
 
+
     def _enqueueMessage(self, bucket, key, filename, content_type):
         SKey =  config.get('CloudFiles', 'SecretKey')
         AKey =  config.get('CloudFiles', 'AccessKey')
@@ -322,7 +218,6 @@ class FilesResource(base.BaseResource):
                  'key': key, 'content-type': content_type}
         message = queue.new_message(body= json.dumps(data))
         queue.write(message)
-
 
 
     @defer.inlineCallbacks
@@ -355,6 +250,7 @@ class FilesResource(base.BaseResource):
                         </textarea>
                    """ % (json.dumps(tmp_files_info))
         request.write(response)
+
 
     @defer.inlineCallbacks
     def _removeTempFile(self, request):

@@ -398,7 +398,7 @@ class ItemResource(base.BaseResource):
             data = {"items":{convId:conv},
                     "entities":{myId: args['me']}, "script": True}
             args.update(data)
-            onload = "(function(obj){$$.convs.load(obj);})(this);$('#attached-files').empty()"
+            onload = "(function(obj){$$.convs.load(obj);$('#sharebar-attach-uploaded').empty();})(this);"
             d1 = renderScriptBlock(request, "item.mako", "item_layout",
                             False, "#user-feed", "prepend", args=[convId, 'conv-item-created'],
                             handlers={"onload":onload}, **args)

@@ -681,111 +681,6 @@ var ui = {
         evt.preventDefault();
     },
 
-    removeFileFromShare: function(){
-        //Destroy both the checkbox and the hidden input
-        var item = $(this);
-        $('#attached-files input:hidden[value="'+ item.attr('id') +'"]').remove();
-        $('#attached-files input:checkbox[id="'+ item.attr('id') +'"]').parent("li").remove()
-        $.post("/ajax/file/remove", "id="+item.attr('id')+"")
-    },
-
-    getNameFromPath: function(strFilepath) {
-        var objRE = new RegExp(/([^\/\\]+)$/);
-        var strName = objRE.exec(strFilepath);
-
-        if (strName == null) {
-            return null;
-        }
-        else {
-            return strName[0];
-        }
-    },
-
-    loadFileShareBlock: function(){
-        var _self = this;
-        $("#upload :file").change(function() {
-            var form = $(this.form),
-                d, mime, filename;
-            if (this.files !== undefined) {
-                mime = this.files[0].type
-                filename = this.files[0].name
-                d = $.post('/file/form', {"name":filename, "mime":mime}, "json");
-            } else {
-                //Non HTML5 File API browsers IE8 and Opera Presto 2.7
-                filename = _self.getNameFromPath(this.value);
-                d = $.post('/file/form', {"name":filename}, "json");
-            }
-            d.then(function(data){
-                $$.ui.prepareUploadForm(form, data);
-                var uploadXhr = $.ajax(form.prop("action"), {
-                    type: "POST",
-                    dataType: "json",
-                    files: form.find(":file"),
-                    data: $('#upload'+' :input').not(':file, :hidden').serializeArray(),
-                    processData: false
-                }).complete(function(data) {
-                    form.find(":file").val("");
-                }).success(function(data) {
-                    //Insert hidden inputs in attached-files
-                    var hiddenInputs = [];
-                    var fileItems = [];
-                    for (var fileId in data.files ) {
-                        var fileInfo = data.files[fileId];
-                        var input = "<input type='hidden' name='fId' value='"+ fileId +"'/>";
-                        hiddenInputs.push(input);
-                        $("#attached-files > .busy-indicator").before(input);
-                        var list = "<li><input id='"+ fileId +
-                            "' type='checkbox' checked/><label for='"+ fileId +"'>"+ fileInfo[1]  +"</label></li>";
-                        fileItems.push(list);
-                    }
-                    var textToInsert = hiddenInputs.join("");
-                    $("#attached-files > .busy-indicator").before(textToInsert);
-                    var textToInsert = fileItems.join("");
-                    $("#attached-files > .busy-indicator").before(textToInsert);
-                    for (var fileId in data.files ) {
-                        $('input:checkbox[id="'+ fileId +'"]').change($$.ui.removeFileFromShare)
-                    }
-                }).error(function(jqXHR, textStatus, errorThrown) {
-                    form.find(":file").val("");
-                });
-                var node = $('#attached-files > .busy-indicator');
-                $$.setBusy(uploadXhr, node);
-            }, function(err) {
-                  if (window.console) {
-                      console.log(err)
-                  }
-            })
-        });
-    },
-
-    prepareUploadForm: function(form, map){
-        var data_map = jQuery.parseJSON(map);
-        $.each(data_map[0], function(k, val) {
-            if (k=="action"){
-                form.attr("action", val)
-            }else{
-                fields = val;
-                $.each(fields, function(idx, field){
-                    if (form.find(':input').filter(':hidden[name=key]').length==1){
-                        form.find(':input').
-                            filter(':hidden[name='+ field.name +']').
-                                attr("value", field.value);
-                    }else{
-                        $("<input type='hidden'>").attr("name", field.name)
-                          .attr("value", field.value).prependTo(form);
-                    }
-                })
-            }
-        })
-    },
-
-    showFileVersions: function(convId, fileId){
-        var dialogOptions = {
-            id: 'file-versions-dlg-'+fileId
-        };
-        $$.dialog.create(dialogOptions);
-        $.get('/ajax/file/versions?id='+convId+'&fid='+fileId);
-    },
     bindFormSubmit: function(selector) {
         //Force form submits via ajax posts when form contains a input file.
         $(selector).submit(function() {
@@ -798,14 +693,14 @@ var ui = {
             }
 
             $.ajax(this.action, {
-                type: "POST",
-                dataType: "script",
-                data: $(selector+' :input').not(':file').serializeArray(),
-                files: $(":file", this),
-                processData: false
-            }).complete(function(data) {
-                $(selector).find(":file").val("");
-            }).success(function(data) {});
+                     type: "POST",
+                     dataType: "script",
+                     data: $(selector+' :input').serializeArray(),
+                     files: $(":file", this),
+                     processData: false
+                 }).complete(function(data) {
+                     $(selector).find(":file").val("");
+                 }).success(function(data) {});
             $this.trigger('restorePlaceHolders');
             return false
         });
@@ -814,6 +709,108 @@ var ui = {
 
 $$.ui = ui;
 }})(social, jQuery);
+
+
+/* File uploads and related handling */
+(function($$, $){ if (!$$.files) {
+var files = {
+    removeFromShare: function(fileId) {
+        $('#upload-'+fileId).remove();
+        $('#upload-input-'+fileId).remove();
+        $.post("/ajax/file/remove", {id: fileId});
+    },
+
+    getNameFromPath: function(strFilepath) {
+        var objRE = new RegExp(/([^\/\\]+)$/),
+            strName = objRE.exec(strFilepath);
+
+        return strName? strName[0]: null;
+    },
+
+    init: function(id){
+        var _self = this;
+
+        $("#"+id+" :file").change(function() {
+            var form = $(this.form), d, mime, filename;
+
+            /* Get basic information about the files */
+            if (this.files !== undefined) {
+                mimeType = this.files[0].type
+                filename = this.files[0].name
+                d = $.post('/file/form',
+                           {"name":filename, "mimeType":mimeType}, "json");
+            } else {
+                filename = _self.getNameFromPath(this.value);
+                d = $.post('/file/form', {"name":filename}, "json");
+            }
+
+            d.then(function(data) {
+                var fileInputs, uploadXhr, uploadedContainer;
+
+                fileInputs = form.find(':file');
+                files.prepareUploadForm(form, data);
+                uploadXhr =
+                    $.ajax(form.prop("action"), {
+                            type: "POST",
+                            dataType: "json",
+                            files: fileInputs,
+                            data: form.find(":input:not(:hidden)").serializeArray(),
+                            processData: false
+                        })
+                     .success(function(data) {
+                            var hiddenInputs = [], uploaded = [],
+                                fileId, fileInfo, inputItem, listItem,
+                                textToInsert;
+
+                            for (fileId in data.files) {
+                                fileInfo = data.files[fileId];
+                                fileSize = parseInt(fileInfo[2])/1000;
+                                inputItem = "<input type='hidden' id='upload-input-" +
+                                              fileId + "' name='fId' value='"+ fileId +"'/>";
+                                listItem = "<div id='upload-"+fileId+"' class='uploaded-file'>" +
+                                              "<span class='upload-file-name'>"+fileInfo[1]+"</span>" +
+                                              "<button type='button' class='uploaded-file-del' onclick='" +
+                                                  "$$.files.removeFromShare(\""+fileId+"\")'/>" +
+                                              "<span class='uploaded-file-meta'>"+fileSize.toFixed(2)+
+                                                  "&nbsp;<abbr title='Kilobytes'>kB</abbr></span>"
+
+                                hiddenInputs.push(inputItem);
+                                uploaded.push(listItem);
+                            }
+                    
+                            $('#'+id+'-uploaded').append(hiddenInputs.join(''))
+                                                 .append(uploaded.join('')); })
+                     .complete(function(data) {
+                            fileInputs.val("");
+                        });
+                $$.setBusy(uploadXhr, $('#'+id+'-wrapper'));
+            }, function (err) {
+                if (window.console)
+                    console.log(err);
+            })
+        });
+    },
+
+    prepareUploadForm: function(form, map){
+        var dataMap = $.parseJSON(map);
+        $.each(dataMap[0], function(k, val) {
+            if (k == "action") {
+                form.attr("action", val);
+            } else if (k == "fields") {
+                $.each(val, function(idx, field) {
+                    form.find('input[name="'+field.name+'"]').remove();
+                    $("<input type='hidden'>").attr("name", field.name)
+                                              .attr("value", field.value)
+                                              .prependTo(form);
+                });
+            }
+        });
+    }
+}
+
+$$.files = files;
+}})(social, jQuery);
+
 
 
 /*

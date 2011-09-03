@@ -1,5 +1,5 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-                    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<%! from social import utils, _, __, constants %>
+
 ## Render a button.
 ## Depending on the type and arguments given, we decide on rendering
 ## one of "input" and "button" tags.
@@ -25,3 +25,16 @@
   </button>
 %endif
 </%def>
+
+<%def name="fileUploadButton(formId)">
+  <form id="${formId}" action="/file" method="post" enctype="multipart/form-data">
+    <div id="${formId}-wrapper" class="file-attach-outer busy-indicator">
+      <input type="file" name="file" id="$formId}-file-input" class="file-attach-input"/>
+      <button id="${formId}-fileshare" class="file-attach-button acl-button acl-text-button">
+        <span class="background-icon attach-file-icon"/>
+        <span>${_('Attach File')}</span>
+      </button>
+    </div>
+  </form>
+</%def>
+

@@ -195,21 +195,16 @@
           <textarea class="conversation-reply" name="body" placeholder="${_('Quickly reply to this message')}" required title="${_('Reply')}"></textarea>
           <input type="hidden" value=${convId} name="parent"/>
       </div>
+      <div id="msgreply-attach-uploaded" class="uploaded-filelist"></div>
       <div class="conversation-reply-actions">
-        <ul id="attached-files" class="v-links busy-indicator" style="float:left"></ul>
         <input type="submit" name="send" value="${_('Reply')}" class="button"/>
       </div>
     </form>
     </div>
-      <div class="file-attach-wrapper conversation-reply-wrapper">
-        <form id="upload" action="/file" method="post" enctype="multipart/form-data">
-          <input id="file-attach-input" type="file" name="file" size="1"/>
-          <button id="file-share" class="button" type="button" title="${_('Attach a file')}" onclick="$('#file-attach-input').click()">
-            <img src="/rsrcs/img/attach.png" alt="${_('Attach a file')}"/>
-          </button>
-        </form>
-      </div>
-      <div class="clear"></div>
+    <div class="file-attach-wrapper conversation-reply-wrapper">
+      ${widgets.fileUploadButton('msgreply-attach')}
+    </div>
+    <div class="clear"></div>
 </%def>
 
 <%def name="render_composer()">
@@ -231,28 +226,23 @@
         <textarea class="conversation-composer-field-body"
                   placeholder="${_("Write a message to your friends and colleagues")}" name="body" title="${_('Message')}"></textarea>
       </div>
+      <div id="msgcompose-attach-uploaded" class="uploaded-filelist"></div>
       <div class="conversation-composer-actions">
-        <ul id="attached-files" class="v-links busy-indicator" style="float:left"></ul>
         %if script:
-            <button type="submit" class="button default">
-                ${_('Send')}
-            </button>
-            <button type="button" class="button" onclick="$('#composer').empty()">
-                ${'Cancel'}
-            </button>
+          <button type="submit" class="button default">
+            ${_('Send')}
+          </button>
+          <button type="button" class="button" onclick="$('#composer').empty()">
+            ${_('Cancel')}
+          </button>
         %else:
-            <a class="ajax" _ref="/messages">${'Cancel'}</a>
+          <a class="ajax" _ref="/messages">${'Cancel'}</a>
         %endif
       </div>
     </form>
     <script>$('#message-form').html5form({messages: 'en'});</script>
     <div class="file-attach-wrapper">
-      <form id="upload" action="/file" method="post" enctype="multipart/form-data">
-        <input id="file-attach-input" type="file" name="file" size="1"/>
-        <button id="file-share" class="button" type="button" title="${_('Attach a file')}" onclick="$('#file-attach-input').click()">
-          <img src="/rsrcs/img/attach.png" alt="${_('Attach a file')}"/>
-        </button>
-      </form>
+      ${widgets.fileUploadButton('msgcompose-attach')}
     </div>
     <div class="clear"></div>
   </div>

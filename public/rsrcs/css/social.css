@@ -659,9 +659,8 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 
 #sharebar-actions-wrapper {
-    float:right;
-    width:83%;
-    display:inline-block;
+    float: right;
+    display: inline-block;
 }
 
 
@@ -728,32 +727,66 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
  * File Attachment
  */
 
-#file-attach-div {
+.file-attach-outer {
     position: relative;
+    padding-right: 25px;
+}
+.file-attach-outer.busy .file-attach-button {
+    color: gray !important;
+}
+.file-attach-button {
+    padding-left: 0;
 }
 
-#file-attach-input {
+.file-attach-input {
     position: absolute;
     top: 0;
-    right: 0;
+    right: 25px;
     opacity: 0;
     -moz-opacity: 0;
     filter: alpha(opacity:0);
     z-index: 2;
 }
 
-#attached-files {
-    max-width: 25em;
-    padding-top: 1px;
-    margin: 0px;
-}
-
 .file-attach-wrapper {
     float: left;
-    width: 17%;
     overflow: hidden;
 }
 
+.uploaded-filelist {
+    margin-bottom: 6px;
+}
+.uploaded-file {
+    padding: 4px 6px;
+    border-bottom: 1px solid #C3D9FF;
+    min-height: 16px;
+    line-height: 16px;
+    font-size: 110%;
+}
+.uploaded-file-meta {
+    float: right;
+    margin-right: 10px;
+    max-width: 80px;
+    overflow: hidden;
+    opacity: 0.5;
+}
+.uploaded-file-name {
+    max-width: 420px;
+    overflow: hidden;
+}
+.uploaded-file-del {
+    height: 16px;
+    width: 16px;
+    background: transparent url("/rsrcs/img/sprite.png") -19px -47px no-repeat;
+    border: 0px none;
+    outline: 0px none;
+    float: right;
+    vertical-align: middle;
+}
+.uploaded-file-del:hover {
+    box-shadow: 0 0 2px #888;
+    background-position: -19px -67px;
+}
 
 /*
  * Feed
