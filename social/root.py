@@ -69,8 +69,9 @@ class SigninResource(resource.Resource):
     UNKNOWN_ERROR = 'Unknown Error. Please try again after sometime'
 
     @defer.inlineCallbacks
-    def _saveSessionAndRedirect(self, request, data):
-        authinfo = yield defer.maybeDeferred(request.getSession, IAuthInfo, True)
+    def _saveSessionAndRedirect(self, request, data, remember=False):
+        authinfo = yield defer.maybeDeferred(request.getSession,
+                                             IAuthInfo, True, remember)
         authinfo.username = data["user"]
         authinfo.organization = data.get("org", None)
         authinfo.isAdmin = True if data.has_key("isAdmin") else False
@@ -105,6 +106,7 @@ class SigninResource(resource.Resource):
         try:
             username = request.args['u'][0]
             password = request.args['p'][0]
+            remember = request.args['r'][0] if 'r' in request.args else None
             if not username or not password:
                 raise KeyError
         except KeyError:
@@ -118,7 +120,7 @@ class SigninResource(resource.Resource):
                 return self._renderSigninForm(request, self.AUTHENTICATION_FAILED)
             if cols.has_key("isBlocked"):
                 return self._renderSigninForm(request, self.USER_BLOCKED)
-            self._saveSessionAndRedirect(request, cols)
+            self._saveSessionAndRedirect(request, cols, remember)
         def errback(error):
             return self._renderSigninForm(request, self.UNKNOWN_ERROR)
         d.addCallback(callback)

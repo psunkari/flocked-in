@@ -60,7 +60,7 @@
           <div id="error-message" class="error-input">${reason}</div>
           <li>
             <label for="remember">${_('Remember me')}</label>
-            <input type="checkbox" id="remember" checked="true" name="remember"/>
+            <input type="checkbox" id="remember" name="r" value="r"/>
           </li>
         </ul>
         <div class="styledform-buttons">

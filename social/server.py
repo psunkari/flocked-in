@@ -1,5 +1,7 @@
 
 import cPickle as pickle
+import time
+from email.utils            import formatdate
 
 from twisted.web            import resource, server, static, util
 from twisted.internet       import defer
@@ -21,7 +23,7 @@ class RequestFactory(server.Request):
             yield self.site.updateSession(self.session.uid, self.session)
             self.session_saved = True
 
-    def getSession(self, sessionInterface=None, create=False):
+    def getSession(self, sessionInterface=None, create=False, remember=False):
         def _component():
             if sessionInterface:
                 return self.session.getComponent(sessionInterface)
@@ -48,7 +50,11 @@ class RequestFactory(server.Request):
             return _component()
         def errback(failure):
             self.session = self.site.makeSession()
-            self.addCookie(self.cookiename, self.session.uid, path='/')
+            if remember:    # Cookie expires in 1 year
+                self.addCookie(self.cookiename, self.session.uid, path='/',
+                               expires=formatdate(time.time()+31536000))
+            else:           # Cookie expires at the end of browser session
+                self.addCookie(self.cookiename, self.session.uid, path='/')
             return _component()
         d.addCallbacks(callback)
         d.addErrback(errback)
