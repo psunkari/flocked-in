@@ -9,121 +9,15 @@ from twisted.python     import log
 
 from social             import base, db, utils, feed, config
 from social             import plugins, constants, tags, fts
-from social             import notifications, _, errors, settings
+from social             import notifications, _, errors
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
-from social.template    import render, renderScriptBlock, getBlock
+from social.template    import render, renderScriptBlock
 from social.logging     import profile, dump_args
 
 
 class ItemResource(base.BaseResource):
     isLeaf = True
-
-    _mailNotifySubject = {
-        "C": ["[%(brandName)s] %(senderName)s commented on your %(convType)s",
-              "[%(brandName)s] %(senderName)s commented on %(convOwnerName)s's %(convType)s"],
-        "L": ["[%(brandName)s] %(senderName)s liked your %(convType)s"],
-        "T": ["[%(brandName)s] %(senderName)s tagged your %(convType)s as %(tagName)s"],
-       "LC": ["[%(brandName)s] %(senderName)s liked your comment on your %(convType)s",
-              "[%(brandName)s] %(senderName)s liked your comment on %(convOwnerName)s's %(convType)s"]
-    }
-
-    _mailNotifyBody = {
-        "C":  ["Hi,\n\n"\
-               "%(senderName)s commented on your %(convType)s.\n\n"\
-               "%(senderName)s said &mdash; %(comment)s\n\n"\
-               "See the full conversation at %(convUrl)s",
-               "Hi,\n\n"\
-               "%(senderName)s commented on %(convOwnerName)s's %(convType)s.\n\n"\
-               "%(senderName)s said &mdash; %(comment)s\n\n"\
-               "See the full conversation at %(convUrl)s"],
-        "L":  ["Hi,\n\n"\
-               "%(senderName)s liked your %(convType)s.\n"\
-               "See the full conversation at %(convUrl)s"],
-        "T":  ["Hi,\n\n"\
-               "%(senderName)s tagged your %(convType)s as %(tagName)s.\n"\
-               "See the full conversation at %(convUrl)s\n\n"\
-               "You can see all items tagged %(tagName)s at %(tagFeedUrl)s]"],
-        "LC": ["Hi,\n\n"\
-               "%(senderName)s liked your comment on your %(convType)s.\n"\
-               "See the full conversation at %(convUrl)s",
-               "Hi,\n\n"\
-               "%(senderName)s liked your comment on %(convOwnerName)s's %(convType)s.\n"\
-               "See the full conversation at %(convUrl)s"]
-    }
-
-    _mailNotifySignature = "\n\n"\
-            "Flocked.in Team.\n\n\n\n"\
-            "--\n"\
-            "Update your %(brandName) notifications at %(rootUrl)s/settings?dt=notify\n"
-
-
-    # Apart from the what notify needs we also need the list of recipients
-    # and basic information about all the recipients to be available.
-    @defer.inlineCallbacks
-    def notifyByMail(self, notifyType, convId, recipients, **kwargs):
-        rootUrl = config.get('General', 'URL')
-        brandName = config.get('Branding', 'Name')
-
-        # Local variables used to render strings
-        me = kwargs["me"]
-        myId = kwargs["myId"]
-        senderName = me["basic"]["name"]
-        convOwnerId = kwargs["convOwnerId"]
-        entities = kwargs.get("entities", {})
-        convOwnerName = entities[convOwnerId]["name"]
-        stringCache = {}
-
-        # Filter out users who don't need notification
-        def needsNotifyCheck(userId):
-            attr = 'notifyMyItem'+notifyType if convOwnerId == userId\
-                                         else 'notifyItem'+notifyType
-            user = entities[userId]
-            return settings.getNotifyPref(user.get("notify", ''),
-                            getattr(settings, attr), settings.notifyByMail)
-        users = [x for x in recipients if needsNotifyCheck(x)]
-
-        # Actually send the mail notification.
-        def sendNotificationMail(followerId, data):
-            toOwner = True if followerId == convOwnerId else False
-            follower = entities[followerId]
-            mailId = follower.get('emailId', None)
-            if not mailId:
-                return defer.succeed(None)
-
-            # Sending to conversation owner
-            if toOwner:
-                s = self._mailNotifySubject[notifyType][0] % data
-                b = self._mailNotifyBody[notifyType][0] % data
-                b = b + self._mailNotifySignature
-                h = getBlock("emails.mako",
-                             "notifyOwner"+notifyType, **data)
-                return utils.sendmail(mailId, s, b, h)
-
-            # Sending to user other than conversation owner
-            if 'subject' not in stringCache:
-                s = self._mailNotifySubject[notifyType][1] % data
-                b = self._mailNotifyBody[notifyType][1] % data
-                b = b + self._mailNotifySignature
-                h = getBlock("emails.mako", "notifyOther"+notifyType, **data)
-                stringCache.update({'subject':s, 'text':b, 'html':h})
-
-            return utils.sendmail(mailId, stringCache['subject'],
-                                  stringCache['text'], stringCache['html'])
-
-        data = kwargs.copy()
-        convUrl = "%s/item?id=%s" % (rootUrl, convId)
-        senderAvatarUrl = rootUrl + utils.userAvatar(myId, me, "medium")
-        data.update({"senderName": senderName, "convUrl": convUrl,
-                     "senderAvatarUrl": senderAvatarUrl, "rootUrl": rootUrl,
-                     "brandName": brandName, "convOwnerName": convOwnerName})
-
-        deferreds = []
-        for userId in users:
-            deferreds.append(sendNotificationMail(userId, data))
-
-        yield defer.DeferredList(deferreds)
-
 
     # Expects all the basic arguments as well as some information
     # about the comments and likes to be available in kwargs.
@@ -148,21 +42,22 @@ class ItemResource(base.BaseResource):
         # The actor must not be sent a notification
         recipients = [userId for userId in recipients if userId != myId]
 
-        # Get recipients' data required to send offline notifications.
-        entities_d = db.multiget_slice(toFetchEntities, "entities",
+        # Get all data that is required to send offline notifications
+        # XXX: Entities generally contains a map of userId => {Basic: Data}
+        #      In this case it will contain userId => data directly.
+        notify_d = db.multiget_slice(toFetchEntities, "entities",
                             ["name", "emailId", "notify"], super_column="basic") \
                             if recipients else defer.succeed([])
-        def sendOfflineNotifications(cols):
+        def _gotEntities(cols):
             entities = utils.multiColumnsToDict(cols)
             kwargs.setdefault('entities', {}).update(entities)
-            self.notifyByMail(notifyType, convId, recipients, **kwargs)
-        entities_d.addCallback(sendOfflineNotifications)
-        deferreds.append(entities_d)
+        def _sendNotifications(ignored):
+            return notifications.notify(recipients, notifyId,
+                                        myId, timeUUID, **kwargs)
+        notify_d.addCallback(_gotEntities)
+        notify_d.addCallback(_sendNotifications)
 
-        # Send in-application notifications.
-        notify_d = notifications.notify(recipients, notifyId, myId, timeUUID)
         deferreds.append(notify_d)
-
         yield defer.DeferredList(deferreds)
 
 

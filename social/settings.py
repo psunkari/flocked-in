@@ -96,12 +96,13 @@ def _getImageFileFormat(data):
 #############################################################
 
 notifyFriendRequest = 0
-notifyFriendAccept = 1
-notifyNewFollower = 2
-notifyNewOrgUser = 3
+notifyFA = 1
+notifyNF = 2
+notifyNU = 3
+notifyIA = 3    # Invitation accept and invited user joining are same
 
 notifyGroupRequest = 4
-notifyGroupAccept = 5
+notifyGA = 5
 notifyGroupInvite = 6
 notifyGroupNewMember = 7
 

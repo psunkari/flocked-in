@@ -214,8 +214,13 @@ class SignupResource(BaseResource):
             token = utils.getRequestArg(request, "token")
             acceptedInvitationSender = cols.get(emailId, {}).get(token)
             otherInvitees = [x for x in userIds if x != acceptedInvitationSender]
-            yield notifications.notify([acceptedInvitationSender], ":IA", userId)
-            yield notifications.notify(otherInvitees, ":NU", userId)
+            
+            cols = yield db.multiget_slice(userIds+[orgId, userId], "entities", ["basic"])
+            entities = utils.multiSuperColumnsToDict(cols)
+            data = {"entities": entities, 'orgId': orgId}
+
+            yield notifications.notify([acceptedInvitationSender], ":IA", userId, **data)
+            yield notifications.notify(otherInvitees, ":NU", userId, **data)
         else:
             raise InvalidRegistration("A user with this e-mail already exists! Already registered?")
 

@@ -193,7 +193,8 @@ class GroupsResource(base.BaseResource):
                                        "groupRequestActions", False,
                                        '#group-request-actions-%s-%s' %(userId, groupId),
                                        "set", args=[groupId, userId, "accept"])
-                d4 = notifications.notify([userId], ":GA", groupId)
+                data = {"entities": {groupId: group, userId: user}}
+                d4 = notifications.notify([userId], ":GA", groupId, **data)
 
                 yield defer.DeferredList([d1, d2, d3, d4])
 

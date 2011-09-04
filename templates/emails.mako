@@ -190,6 +190,66 @@
   ${footer()}
 </%def>
 
+<%def name="notifyFA()">
+  ${header()}
+  <td valign="top" align="right" style="width:48px;" rowspan="2">
+    <img src="${senderAvatarUrl}" alt="">
+  </td>
+  <td style="font-size: 14px;">
+    <b>${senderName}</b> accepted your friend request.<br/>
+    You can visit <a href="${rootUrl}/people">${rootUrl}/people</a> to see the list of all your friends.
+  </td>
+  ${footer()}
+</%def>
+
+<%def name="notifyNF()">
+  ${header()}
+  <td valign="top" align="right" style="width:48px;" rowspan="2">
+    <img src="${senderAvatarUrl}" alt="">
+  </td>
+  <td style="font-size: 14px;">
+    <b>${senderName}</b> started following you on ${brandName}.<br/>
+    Visit <a href="${rootUrl}/profile?id=${senderId}">${senderName}'s profile</a> to follow ${senderName}.<br/>
+  </td>
+  ${footer()}
+</%def>
+
+<%def name="notifyIA()">
+  ${header()}
+  <td valign="top" align="right" style="width:48px;" rowspan="2">
+    <img src="${senderAvatarUrl}" alt="">
+  </td>
+  <td style="font-size: 14px;">
+    <b>${senderName}</b> accepted your invitation to join ${brandName}.<br/>
+    Visit <a href="${rootUrl}/profile?id=${senderId}">${senderName}'s profile</a> to follow or to add ${senderName} as your friend.
+  </td>
+  ${footer()}
+</%def>
+
+<%def name="notifyNU()">
+  ${header()}
+  <td valign="top" align="right" style="width:48px;" rowspan="2">
+    <img src="${senderAvatarUrl}" alt="">
+  </td>
+  <td style="font-size: 14px;">
+    <b>${senderName}</b> just joined ${brandName}.<br/>
+    Visit <a href="${rootUrl}/profile?id=${senderId}">${senderName}'s profile</a> to follow or to add ${senderName} as your friend.
+  </td>
+  ${footer()}
+</%def>
+
+<%def name="notifyGA()">
+  ${header()}
+  <td valign="top" align="right" style="width:48px;" rowspan="2">
+    <img src="${senderAvatarUrl}" alt="">
+  </td>
+  <td style="font-size: 14px;">
+    Your request to join <b>${senderName}</b> was accepted by an administrator.<br/>
+    Visit <a href="${rootUrl}/groups">${rootUrl}/groups</a> to see a list of all your groups.
+  </td>
+  ${footer()}
+</%def>
+
 ##
 ## Yet to be implemented
 ##
@@ -206,53 +266,7 @@
     <br/><br/>
     <a href="${actionUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">Add as Friend</div></a>
     <br/><br/>
-    You can also visit <a href="${rootUrl}/people">${rootUrl}/people</a> to manage your relationships.
-  </td>
-  ${footer()}
-</%def>
-
-<%def name="friendAccept()">
-  ${header()}
-  <td valign="top" align="right" style="width:48px;" rowspan="2">
-    <img src="${senderAvatarUrl}" alt="">
-  </td>
-  <td style="font-size: 14px;">
-    <b>${senderName}</b> accepted your friend request.
-    You can also visit <a href="${rootUrl}/people">${rootUrl}/people</a> to manage your relationships.
-  </td>
-  ${footer()}
-</%def>
-
-<%def name="follower()">
-  ${header()}
-  <td valign="top" align="right" style="width:48px;" rowspan="2">
-    <img src="${senderAvatarUrl}" alt="">
-  </td>
-  <td style="font-size: 14px;">
-    <b>${senderName}</b> started following you on ${brandName}
-    %if senderId in relations.friends:
-      <a href="${actionUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#dddddd;border:1px solid #cccccc;color:#333333;font-weight:bold;">${senderName} is already your friend</div></a>
-    %elif relations.pending.get(senderId, None) == "1":
-      You also have a pending friend request from ${senderName}.
-      <br/><br/>
-      <a href="${actionUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">Add as Friend</div></a>
-      If you don't know ${senderName} you can ignore this request or block the user from sending similar requests in future.
-    %elif senderId not in relations.subscriptions:
-      <a href="${actionUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">Follow ${senderName}</div></a>
-    %endif
-    You can also visit <a href="${rootUrl}/people">${rootUrl}/people</a> to manage your relationships.
-  </td>
-  ${footer()}
-</%def>
-
-<%def name="orgNewUser()">
-  ${header()}
-  <td valign="top" align="right" style="width:48px;" rowspan="2">
-    <img src="${senderAvatarUrl}" alt="">
-  </td>
-  <td style="font-size: 14px;">
-    <b>${senderName}</b> just joined ${brandName}.
-    Visit <a href="${rootUrl}/profile?id=${senderId}">${senderName}'s profile</a> to follow or add him/her as your friend.
+    You can also visit <a href="${rootUrl}/people">${rootUrl}/people</a> to your relationships.
   </td>
   ${footer()}
 </%def>
@@ -267,18 +281,6 @@
     <br/><br/>
     <a href="${actionUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">Add to Group</div></a>
     You can also visit <a href="${rootUrl}/groups">${rootUrl}/groups</a> to manage all your groups.
-  </td>
-  ${footer()}
-</%def>
-
-<%def name="groupAccept()">
-  ${header()}
-  <td valign="top" align="right" style="width:48px;" rowspan="2">
-    <img src="${groupAvatarUrl}" alt="">
-  </td>
-  <td style="font-size: 14px;">
-    Your request to join <b>${groupName}</b> was accepted by the administrator.
-    You can also visit <a href="${rootUrl}/groups">${rootUrl}/groups</a> to manage your group memberships.
   </td>
   ${footer()}
 </%def>

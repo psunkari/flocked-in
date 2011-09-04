@@ -7,14 +7,39 @@ from twisted.internet   import defer
 from twisted.web        import server
 from twisted.python     import log
 
-from social             import base, db, utils, feed
+from social             import base, db, utils, feed, settings
 from social             import plugins, constants, _, config
 from social.isocial     import IAuthInfo
-from social.template    import render, renderScriptBlock
+from social.template    import render, renderScriptBlock, getBlock
 from social.logging     import dump_args, profile
 
+# 
+# Database schema for notifications
+#
+#     notifications (Standard CF):
+#       Key: UserId
+#       Column Name: TimeUUID
+#       Column Value: NotifyId
+#           (ConvId:ConvType:ConvOwner:X, :Y)
+#               X => Type of action (Like/Comment/Like a comment)
+#               Y => Type of action (Friend/Group/Following)
+#    
+#     notificationItems (Super CF):
+#       Key: UserId
+#       Supercolumn Name: notifyId
+#       Column Name: TimeUUID
+#       Column Value: specific to type of notification
+#           (Actor:ItemId, UserId, GroupId, UserId)
+#    
 
-def notify(userIds, notifyId, value, timeUUID=None):
+# Various notification handlers.
+# Currently we only have a e-mail handler.
+notificationHandlers = []
+
+def notify(userIds, notifyId, value, timeUUID=None, **kwargs):
+    if not userIds:
+        return defer.succeed([])
+
     timeUUID = timeUUID or uuid.uuid1().bytes
 
     # Delete existing notifications for the same item/activiy
@@ -49,9 +74,200 @@ def notify(userIds, notifyId, value, timeUUID=None):
                              'notificationItems': {notifyId: {timeUUID: value}}}
     d2 = db.batch_mutate(mutations)
 
-    return defer.DeferredList([d1, d2])
+    deferreds = [d1, d2]
+    notifyIdParts = notifyId.split(':')
+    if notifyIdParts[0]:
+        convId, convType, convOwner, notifyType = notifyIdParts
+        for handler in notificationHandlers:
+            d = handler.notifyConvUpdate(userIds, notifyType, convId, **kwargs)
+            deferreds.append(d)
+    else:
+        for handler in notificationHandlers:
+            d = handler.notifyOtherUpdate(userIds, notifyId, value, **kwargs)
+            deferreds.append(d)
+
+    return defer.DeferredList(deferreds)
 
 
+#
+# NotifcationByMail: Send notifications by e-mail
+#
+class NotificationByMail(object):
+
+    _convNotifySubject = {
+        "C": ["[%(brandName)s] %(senderName)s commented on your %(convType)s",
+              "[%(brandName)s] %(senderName)s commented on %(convOwnerName)s's %(convType)s"],
+        "L": ["[%(brandName)s] %(senderName)s liked your %(convType)s"],
+        "T": ["[%(brandName)s] %(senderName)s tagged your %(convType)s as %(tagName)s"],
+       "LC": ["[%(brandName)s] %(senderName)s liked your comment on your %(convType)s",
+              "[%(brandName)s] %(senderName)s liked your comment on %(convOwnerName)s's %(convType)s"]
+    }
+
+    _convNotifyBody = {
+        "C": ["Hi,\n\n"\
+              "%(senderName)s commented on your %(convType)s.\n\n"\
+              "%(senderName)s said - %(comment)s\n\n"\
+              "See the full conversation at %(convUrl)s",
+              "Hi,\n\n"\
+              "%(senderName)s commented on %(convOwnerName)s's %(convType)s.\n\n"\
+              "%(senderName)s said - %(comment)s\n\n"\
+              "See the full conversation at %(convUrl)s"],
+        "L": ["Hi,\n\n"\
+              "%(senderName)s liked your %(convType)s.\n"\
+              "See the full conversation at %(convUrl)s"],
+        "T": ["Hi,\n\n"\
+              "%(senderName)s tagged your %(convType)s as %(tagName)s.\n"\
+              "See the full conversation at %(convUrl)s\n\n"\
+              "You can see all items tagged %(tagName)s at %(tagFeedUrl)s]"],
+       "LC": ["Hi,\n\n"\
+              "%(senderName)s liked your comment on your %(convType)s.\n"\
+              "See the full conversation at %(convUrl)s",
+              "Hi,\n\n"\
+              "%(senderName)s liked your comment on %(convOwnerName)s's %(convType)s.\n"\
+              "See the full conversation at %(convUrl)s"]
+    }
+
+    _otherNotifySubject = {
+        "IA": "[%(brandName)s] %(senderName)s accepted your invitation to join %(brandName)s",
+        "NU": "[%(brandName)s] %(senderName)s joined the %(networkName)s network",
+        "NF": "[%(brandName)s] %(senderName)s started following you",
+        "FA": "[%(brandName)s] %(senderName)s accepted your friend request",
+        "GA": "[%(brandName)s] Your request to join %(senderName)s was accepted"
+    }
+
+    _otherNotifyBody = {
+        "IA": "Hi,\n\n"\
+              "%(senderName)s accepted your invitation to join %(brandName)s",
+        "NU": "Hi,\n\n"\
+              "%(senderName)s joined the %(networkName)s network",
+        "NF": "Hi,\n\n"\
+              "%(senderName)s started following you",
+        "FA": "Hi,\n\n"\
+              "%(senderName)s accepted your friend request",
+        "GA": "Hi,\n\n"\
+              "Your request to join %(senderName)s was accepted by an admistrator"
+    }
+
+    _signature = "\n\n"\
+            "Flocked.in Team.\n\n\n\n"\
+            "--\n"\
+            "Update your %(brandName)s notifications at %(rootUrl)s/settings?dt=notify\n"
+
+    @defer.inlineCallbacks
+    def notifyConvUpdate(self, recipients, notifyType, convId, **kwargs):
+        rootUrl = config.get('General', 'URL')
+        brandName = config.get('Branding', 'Name')
+
+        # Local variables used to render strings
+        me = kwargs["me"]
+        myId = kwargs["myId"]
+        senderName = me["basic"]["name"]
+        convOwnerId = kwargs["convOwnerId"]
+        entities = kwargs.get("entities", {})
+        convOwnerName = entities[convOwnerId]["name"]
+        stringCache = {}
+
+        # Filter out users who don't need notification
+        def needsNotifyCheck(userId):
+            attr = 'notifyMyItem'+notifyType if convOwnerId == userId\
+                                         else 'notifyItem'+notifyType
+            user = entities[userId]
+            return settings.getNotifyPref(user.get("notify", ''),
+                            getattr(settings, attr), settings.notifyByMail)
+        users = [x for x in recipients if needsNotifyCheck(x)]
+
+        # Actually send the mail notification.
+        def sendNotificationMail(followerId, data):
+            toOwner = True if followerId == convOwnerId else False
+            follower = entities[followerId]
+            mailId = follower.get('emailId', None)
+            if not mailId:
+                return defer.succeed(None)
+
+            # Sending to conversation owner
+            if toOwner:
+                s = self._convNotifySubject[notifyType][0] % data
+                b = self._convNotifyBody[notifyType][0] + self._signature
+                b = b % data
+                h = getBlock("emails.mako",
+                             "notifyOwner"+notifyType, **data)
+                return utils.sendmail(mailId, s, b, h)
+
+            # Sending to user other than conversation owner
+            if 'subject' not in stringCache:
+                s = self._convNotifySubject[notifyType][1] % data
+                b = self._convNotifyBody[notifyType][1] + self._signature
+                b = b % data
+                h = getBlock("emails.mako", "notifyOther"+notifyType, **data)
+                stringCache.update({'subject':s, 'text':b, 'html':h})
+
+            return utils.sendmail(mailId, stringCache['subject'],
+                                  stringCache['text'], stringCache['html'])
+
+        data = kwargs.copy()
+        convUrl = "%s/item?id=%s" % (rootUrl, convId)
+        senderAvatarUrl = rootUrl + utils.userAvatar(myId, me, "medium")
+        data.update({"senderName": senderName, "convUrl": convUrl,
+                     "senderAvatarUrl": senderAvatarUrl, "rootUrl": rootUrl,
+                     "brandName": brandName, "convOwnerName": convOwnerName})
+
+        deferreds = []
+        for userId in users:
+            deferreds.append(sendNotificationMail(userId, data))
+
+        yield defer.DeferredList(deferreds)
+
+
+    # Sends the same message to all the recipients
+    @defer.inlineCallbacks
+    def notifyOtherUpdate(self, recipients, notifyId, value, **kwargs):
+        rootUrl = config.get('General', 'URL')
+        brandName = config.get('Branding', 'Name')
+
+        notifyIdParts = notifyId.split(':')
+        notifyType = notifyIdParts[1]
+
+        entities = kwargs['entities']
+        data = kwargs.copy()
+        senderName = entities[value]['basic']['name']
+        senderAvatarUrl = rootUrl +\
+                          utils.userAvatar(value, entities[value], 'medium')
+
+        if 'orgId' in data:
+            orgId = data['orgId']
+            data['networkName'] = entities[orgId]['basic']['name']
+
+        data.update({'rootUrl': rootUrl, 'brandName': brandName,
+                     'senderId': value, 'senderName': senderName,
+                     'senderAvatarUrl': senderAvatarUrl})
+
+        subject = self._otherNotifySubject[notifyType] % data
+        body = self._otherNotifyBody[notifyType] + self._signature
+        body = body % data
+        html = getBlock("emails.mako", "notify"+notifyType, **data)
+
+        # Sent the mail if recipient prefers to get it.
+        deferreds = []
+        prefAttr = getattr(settings, 'notify'+notifyType)
+        prefMedium = settings.notifyByMail
+        for userId in recipients:
+            user = entities[userId]['basic']
+            mailId = user.get('emailId', None)
+            sendMail = settings.getNotifyPref(user.get("notify", ''),
+                                              prefAttr, prefMedium)
+            if sendMail and mailId:
+                deferreds.append(utils.sendmail(mailId, subject, body, html))
+
+        yield defer.DeferredList(deferreds)
+
+
+notificationHandlers.append(NotificationByMail())
+
+
+
+#
+# NotificationResource: Display in-system notifications to the user
+#
 class NotificationsResource(base.BaseResource):
     isLeaf = True
 
@@ -123,33 +339,14 @@ class NotificationsResource(base.BaseResource):
                               3: "%(user0)s, %(user1)s and 1 other accepted your friend request",
                               4: "%(user0)s, %(user1)s and %(count)s others accepted your friend request"}
 
-    _groupNewMember = {1: "%(user0)s joined %(groupName)s",
-                       2: "%(user0)s and %(user1)s joined %(groupName)s",
-                       3: "%(user0)s, %(user1)s and 1 other joined %(groupName)s",
-                       4: "%(user0)s, %(user1)s and %(count)s others joined %(groupName)s"}
-
     _groupRequestAccepted = {1: "Your request to join %(group0)s was accepted",
                              2: "Your requests to join %(group0)s and %(group1)s were accepted",
                              3: "Your requests to join %(group0)s, %(group1)s and one other were accepted",
                              4: "Your requests to join %(group0)s, %(group1)s and %(count)s others were accepted"}
 
+    # 
     # Fetch notifications from the database
     # NotificationIds are stored in a column family called "notifications"
-    #
-    # notifications (Standard CF):
-    #   Key: UserId
-    #   Column Name: TimeUUID
-    #   Column Value: NotifyId
-    #       (ConvId:ConvType:ConvOwner:X, UserId:Y)
-    #           X => Type of action (Like/Comment/Like a comment)
-    #           Y => Type of action (Friend/Group/Following)
-    #
-    # notificationItems (Super CF):
-    #   Key: UserId
-    #   Supercolumn Name: notifyId
-    #   Column Name: TimeUUID
-    #   Column Value: specific to type of notification
-    #       (Actor:ItemId, UserId, GroupId, UserId)
     #
     @defer.inlineCallbacks
     def _getNotifications(self, request, count=15):
@@ -281,7 +478,8 @@ class NotificationsResource(base.BaseResource):
             userIds = utils.uniqify(notifyValues[notifyId])
             noOfUsers = len(userIds)
 
-            vals = dict([('user'+str(idx), utils.userName(uid, entities[uid]))\
+            pfx = 'group' if x == 'GA' else 'user'
+            vals = dict([(pfx+str(idx), utils.userName(uid, entities[uid]))\
                             for idx, uid in enumerate(userIds[0:2])])
 
             vals["count"] = noOfUsers - 2
@@ -294,11 +492,6 @@ class NotificationsResource(base.BaseResource):
             if x == "NF":
                 tmpl = self._newFollowers[noOfUsers]
             elif x == "GA":
-                groups = {}
-                for key,value in vals.iteritems():
-                    if key.startswith('user'):
-                        groups['group'+key[4:]] = value
-                vals.update(groups)
                 tmpl = self._groupRequestAccepted[noOfUsers]
             elif x == "FA":
                 tmpl = self._friendRequestAccepted[noOfUsers]

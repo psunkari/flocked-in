@@ -176,7 +176,14 @@ class ProfileResource(base.BaseResource):
     def _follow(self, myKey, targetKey):
         d1 = db.insert(myKey, "subscriptions", "", targetKey)
         d2 = db.insert(targetKey, "followers", "", myKey)
-        d3 = notifications.notify([targetKey], ":NF", myKey)
+
+        d3 = db.multiget_slice([myKey, targetKey], "entities", ["basic"])
+        def notifyFollow(cols):
+            users = utils.multiSuperColumnsToDict(cols)
+            data = {'entities': users}
+            return notifications.notify([targetKey], ":NF", myKey, **data)
+        d3.addCallback(notifyFollow)
+
         yield defer.DeferredList([d1, d2, d3])
 
 
@@ -287,7 +294,8 @@ class ProfileResource(base.BaseResource):
             d10 = db.remove(myId, "pendingConnections", "FI:%s"%(targetId))
             d11 = db.remove(targetId, "pendingConnections", "FO:%s"%(myId))
 
-            d12 = notifications.notify([targetId], ":FA", myId)
+            data = {"entities": users}
+            d12 = notifications.notify([targetId], ":FA", myId, **data)
 
             calls = [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12]
             calls.append(self._removeNotification(myId, targetId))
