@@ -624,6 +624,7 @@ class MessagingResource(base.BaseResource):
         archive = utils.getRequestArg(request, "archive") or None
         unread = utils.getRequestArg(request, "unread") or None
         inbox = utils.getRequestArg(request, "inbox") or None
+        view = utils.getRequestArg(request, "view") or "messages"
 
         if trash:action = "trash"
         elif archive:action = "archive"
@@ -669,16 +670,26 @@ class MessagingResource(base.BaseResource):
             # archive view, we can simply remove the conv.
             if action in ["inbox", "archive", "trash"]:
                 if filterType != "unread":
-                    request.write("$('%s').remove()" %','.join(['#thread-%s' %convId for convId in convIds]))
+                    request.write("$('%s').remove();" %','.join(['#thread-%s' %convId for convId in convIds]))
+                if view == "message":
+                    reason = _("Message has been moved to the %s" %(action.capitalize()))
+                    if action == "archive":
+                        reason = _("Message has been archived")
+                    
+                    request.write("""$$.fetchUri('/messages?type=%s');$$.alerts.info("%s");""" %(filterType, _(reason)))                    
             elif action == "unread":
                 query_template = """
                               $('#thread-%s').removeClass('row-read').addClass('row-unread');
                               $('#thread-%s .messaging-read-icon').removeClass('messaging-read-icon').addClass('messaging-unread-icon');
-                              $('#thread-%s .messaging-unread-icon').attr("title", "Mark this conversation as read")
-                              $('#thread-%s .messaging-unread-icon')[0].onclick = function(event) { $.post('/ajax/messages/thread', 'action=read&selected=%s&filterType=%s', null, 'script') }
+                              $('#thread-%s .messaging-unread-icon').attr("title", "Mark this conversation as read");
+                              $('#thread-%s .messaging-unread-icon')[0].onclick = function(event) { $.post('/ajax/messages/thread', 'action=read&selected=%s&filterType=%s', null, 'script') };
                               """
                 query = "".join([query_template % (convId, convId, convId, convId, convId, filterType) for convId in convIds])
-                request.write(query)
+                
+                if view == "message":
+                    request.write("""$$.fetchUri('/messages');$$.alerts.info("%s");""" %("Message has been marked as unread"))
+                else:
+                    request.write(query)
             elif action == "read":
                 # If we are in unread view, remove the conv else swap the styles
                 if filterType != "unread":
@@ -775,6 +786,7 @@ class MessagingResource(base.BaseResource):
             d = db.insert(myId, folder, "r:%s"%(convId), timeUUID)
             deferreds.append(d)
 
+        inFolders =  cols[myId].keys()
         #FIX: make sure that there will be an entry of convId in mConvFolders
         cols = yield db.get_slice(convId, "mConvMessages")
         mids = [col.column.value for col in cols]
@@ -794,6 +806,7 @@ class MessagingResource(base.BaseResource):
         args.update({"flags":{}})
         args.update({"view":"message"})
         args.update({"menuId": "messages"})
+        args.update({"inFolders":inFolders})
 
         if script:
             onload = """

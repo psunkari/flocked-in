@@ -279,16 +279,38 @@
     </div>
   %elif view == "message":
     <div id="msg-toolbar" class="toolbar">
-      <a class="${'ajax' if script else ''} back-link" href="/messages">${_("Go Back")}</a>
+      <%
+        if "mAllConversations" in inFolders:
+          tail = "?type=all"
+        elif "mArchivedConversations" in inFolders:
+          tail = "?type=archive"
+        elif "mDeletedConversations" in inFolders:
+          tail = "?type=trash"
+      %>
+      <a class="${'ajax' if script else ''} back-link" href="/messages${tail}">Go Back</a>
         <form method="post" action="/messages/thread" class="ajax">
             <input type="hidden" name="selected" value="${id}"/>
             <input id="toolbarAction" name="action" value="" type="hidden"/>
-            <input type="submit" name="trash" value="${_("Trash")}"
-                   class="button" onclick="$('#toolbarAction').attr('value', 'trash')"/>
-            <input type="submit" name="archive" value="${_("Archive")}"
-                   class="button" onclick="$('#toolbarAction').attr('value', 'archive')"/>
-            <input type="submit" name="unread" value="${_("Mark as Unread")}"
+            %if "mAllConversations" in inFolders:
+              <input type="submit" name="trash" value="${_('Move to Trash')}"
+                     class="button" onclick="$('#toolbarAction').attr('value', 'trash')"/>
+              <input type="submit" name="archive" value="${_('Archive')}"
+                     class="button" onclick="$('#toolbarAction').attr('value', 'archive')"/>
+              <input type="hidden" name="filterType" value="all"/>
+            %elif "mArchivedConversations" in inFolders:
+              <input type="submit" name="trash" value="${_('Move to Trash')}"
+                     class="button" onclick="$('#toolbarAction').attr('value', 'trash')"/>
+              <input type="submit" name="unread" value="${_('Move to Inbox')}"
+                     class="button" onclick="$('#toolbarAction').attr('value', 'inbox')"/>
+              <input type="hidden" name="filterType" value="archive"/>
+            %elif "mDeletedConversations" in inFolders:
+              <input type="submit" name="unread" value="${_('Move to Inbox')}"
+                     class="button" onclick="$('#toolbarAction').attr('value', 'inbox')"/>
+              <input type="hidden" name="filterType" value="trash"/>
+            %endif
+            <input type="submit" name="unread" value="${_('Mark as Unread')}"
                    class="button" onclick="$('#toolbarAction').attr('value', 'unread')"/>
+            <input type="hidden" name="view" value="message"/>
         </form>
       <span class="clear" style="display:block"></span>
     </div>
@@ -313,6 +335,7 @@
         </div>
       %endif
       <input type="hidden" name="filterType" value="${filterType}"/>
+      <input type="hidden" name="view" value="messages"/>
     </form>
   </div>
   <div id="people-paging" class="pagingbar">
