@@ -172,7 +172,7 @@
       <div>
         <span class="middle title">${user['basic']['name']}</span>
         <ul id="user-actions-${userKey}" class="middle user-actions h-links">
-          ${user_actions(userKey, True)}
+          ${user_actions(userKey, True, True)}
         </ul>
       </div>
 
@@ -218,7 +218,7 @@
   </ul>
 </%def>
 
-<%def name="user_actions(userKey, showRemove=False)">
+<%def name="user_actions(userKey, showRemove=False, showEditProfile=False)">
   %if myKey != userKey:
     %if userKey not in relations.friends:
       %if not relations.pending or userKey not in relations.pending:
@@ -252,7 +252,7 @@
         <span class="button-text">${_("Unfriend User")}</span>
       </button>
     %endif
-  %else:
+  %elif showEditProfile:
     <button class="button" onclick="location.href = '/settings'">
       <span class="button-text">${_("Edit Profile")}</span>
     </button>
