@@ -76,7 +76,7 @@
   <%
     detail_name_map = {'basic':_('Basic'), 'contact': _('Contact'),
                        'work':_('Work and Education'), 'personal':_('Personal'),
-                       'passwd':_('Change Password'), 
+                       'passwd':_('Change Password'),
                        'notify': _('Notifications')}
     name = detail_name_map.get(detail, '')
   %>
@@ -124,7 +124,7 @@
         </li>
         <li>
           <label for="dp">${_('Photo')}</label>
-          <input type="file" id="dp" name="dp" accept="image/jpx,image/png,image/gif"/>
+          <input type="file" id="dp" name="dp" accept="image/jpeg,image/png,image/gif"/>
         </li>
 
         %if emailId and emailId[0]:
@@ -277,7 +277,7 @@
 </%def>
 
 <%def name="editContact()">
-  <% 
+  <%
     contact = me.get('contact', {})
     emailId = me['basic']['emailId']
   %>
