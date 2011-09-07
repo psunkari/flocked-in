@@ -1,7 +1,7 @@
-<%! from social import utils, _, __, plugins, constants %>
+<%! from social import utils, _, __, plugins, constants, config %>
 <%! from twisted.python import log %>
 <%! from twisted.web.static import formatFileSize %>
-<%! from base64 import urlsafe_b64decode %>
+<%! from base64 import b64encode, urlsafe_b64decode %>
 <%! from urlparse import urlsplit %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -561,6 +561,11 @@
         hasEmbed = True
 
     title = title if title else url
+    if imgsrc:
+      try:
+        proxy = config.get('General', 'SecureProxy')
+        imgsrc = proxy % b64encode(imgsrc)
+      except Exception, e: pass
   %>
   %if not isQuoted:
     ${utils.userName(userId, entities[userId], "conv-user-cause")}
