@@ -31,6 +31,15 @@ class MessagingResource(base.BaseResource):
                 'trash': 'mDeletedConversations',
                 'unread': 'mUnreadConversations'}
 
+    def _formatAttachMeta(self, attachments):
+        attach_meta = {}
+        for attachmentId in attachments:
+            timeuuid, fid, name, size, ftype = attachments[attachmentId]
+            val = "%s:%s:%s:%s" %(utils.encodeKey(timeuuid), name, size, ftype)
+            attach_meta[attachmentId] = val
+        
+        return attach_meta
+
     def _indexMessage(self, convId, messageId, myOrgId, meta, attachments, body):
         meta['type']="message"
         meta['body'] = body
@@ -47,17 +56,9 @@ class MessagingResource(base.BaseResource):
         myId = authinfo.username
         tmpFileIds = utils.getRequestArg(request, 'fId', False, True)
         attachments = {}
-        attach_meta = {}
         if tmpFileIds:
             attachments = yield utils._upload_files(myId, tmpFileIds)
-            if attachments:
-                attach_meta = {}
-                for attachmentId in attachments:
-                    timeuuid, fid, name, size, ftype = attachments[attachmentId]
-                    val = "%s:%s:%s:%s" %(utils.encodeKey(timeuuid), name, size, ftype)
-                    attach_meta[attachmentId] = val
-
-        defer.returnValue((attach_meta, attachments))
+        defer.returnValue((attachments))
 
     @profile
     @defer.inlineCallbacks
@@ -253,9 +254,10 @@ class MessagingResource(base.BaseResource):
     def _newConversation(self, ownerId, participants, meta, attachments):
         participants = dict ([(userId, '') for userId in participants])
         convId = utils.getUniqueKey()
+        attach_meta = self._formatAttachMeta(attachments)        
         yield db.batch_insert(convId, "mConversations", {"meta": meta,
                                                 "participants": participants,
-                                                "attachments":attachments})
+                                                "attachments":attach_meta})
         defer.returnValue(convId)
 
     @profile
@@ -285,18 +287,19 @@ class MessagingResource(base.BaseResource):
         snippet = self._fetchSnippet(body)
         meta = {'uuid': timeUUID, 'date_epoch': str(epoch), "snippet":snippet}
 
-        attachments, attachments_meta = yield self._handleAttachments(request)
+        attachments = yield self._handleAttachments(request)
+        attach_meta = self._formatAttachMeta(attachments)
 
         messageId = yield self._newMessage(myId, timeUUID, body, epoch)
         yield self._deliverMessage(convId, participants, timeUUID, myId)
         yield db.insert(convId, "mConvMessages", messageId, timeUUID)
         yield db.batch_insert(convId, "mConversations",
-                              {'meta':meta, 'attachments':attachments})
+                              {'meta':meta, 'attachments':attach_meta})
 
         self._indexMessage(convId, messageId, myOrgId, meta, attachments, body)
 
 
-        for file, file_meta in attachments_meta.iteritems():
+        for file, file_meta in attachments.iteritems():
             timeuuid, fid, name, size, ftype  = file_meta
             val = "%s:%s:%s:%s:%s" %(utils.encodeKey(timeuuid), fid, name, size, ftype)
             yield db.insert(convId, "item_files", val, timeuuid, file)
@@ -386,14 +389,14 @@ class MessagingResource(base.BaseResource):
         meta = {'uuid': timeUUID, 'date_epoch': str(epoch), "snippet": snippet,
                 'subject':subject, "owner":myId,
                 "timestamp": str(int(time.time()))}
-        attachments, attachments_meta = yield self._handleAttachments(request)
+        attachments = yield self._handleAttachments(request)
 
         convId = yield self._newConversation(myId, participants, meta, attachments)
         messageId = yield self._newMessage(myId, timeUUID, body, epoch)
         yield self._deliverMessage(convId, participants, timeUUID, myId)
         yield db.insert(convId, "mConvMessages", messageId, timeUUID)
 
-        for file, file_meta in attachments_meta.iteritems():
+        for file, file_meta in attachments.iteritems():
             timeuuid, fid, name, size, ftype  = file_meta
             val = "%s:%s:%s:%s:%s" %(utils.encodeKey(timeuuid), fid, name, size, ftype)
             yield db.insert(convId, "item_files", val, timeuuid, file)
@@ -566,7 +569,6 @@ class MessagingResource(base.BaseResource):
             yield db.batch_insert(convId, "mConversations", {'participants':newMembers})
             yield self._deliverMessage(convId, newMembers, conv['meta']['uuid'], conv['meta']['owner'])
 
-
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -703,7 +705,6 @@ class MessagingResource(base.BaseResource):
                     request.write(query)
                 else:
                     request.write("$('%s').remove()" %','.join(['#thread-%s' %convId for convId in convIds]))
-
 
     @profile
     @defer.inlineCallbacks
