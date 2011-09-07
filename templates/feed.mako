@@ -132,8 +132,6 @@
           </a>
         </li>
         <li id="sharebar-acl-groups-sep" class="ui-menu-separator"></li>
-        <li id="sharebar-acl-custom-sep" class="ui-menu-separator"></li>
-        <li><a class="acl-item" _acl="custom"><div class="icon"></div>${_("Custom")}</a></li>
       </ul>
     </div>
   %endif
