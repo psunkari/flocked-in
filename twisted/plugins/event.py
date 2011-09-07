@@ -264,7 +264,7 @@ class Event(object):
     implements(IPlugin, IItemType)
     itemType = "event"
     position = 4
-    disabled = False
+    disabled = True
     hasIndex = False
     #fields indexed by solr
     indexFields = [('meta', 'parent'),('meta', 'desc'),
