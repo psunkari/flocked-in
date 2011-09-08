@@ -241,7 +241,9 @@ class FilesResource(base.BaseResource):
         filename = urlsafe_b64decode(name)
         tmp_files_info[fileId] = [fileId, filename, size, fileType]
 
-        yield threads.deferToThread(self._enqueueMessage, bucket, key, name, fileType)
+        # XXX: We currently don't generate any thumbnails!
+        # yield threads.deferToThread(self._enqueueMessage, bucket, key, name, fileType)
+
         yield db.insert(fileId, "tmp_files", val, "fileId")
 
         response = """
