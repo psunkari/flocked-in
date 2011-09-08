@@ -31,7 +31,7 @@
     <div id="${formId}-wrapper" class="file-attach-outer busy-indicator">
       <input type="file" name="file" id="$formId}-file-input" class="file-attach-input"/>
       <button id="${formId}-fileshare" class="file-attach-button acl-button acl-text-button">
-        <span class="background-icon attach-file-icon"/>
+        <span class="background-icon attach-file-icon icon"/>
         <span>${_('Attach File')}</span>
       </button>
     </div>

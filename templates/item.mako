@@ -416,11 +416,12 @@
     </span>
     <form method="post" action="/item/tag" class="ajax edit-tags-form" autocomplete="off" id="addtag-form-${convId}">
       <div class="input-wrap">
-        <input type="text" class="conv-tags-input" name="tag" value="" placeholder="${_('Add tag')}"></input>
+        <input type="text" class="conv-tags-input" name="tag" value="" placeholder="${_('Add tag')}" required title="Tag"></input>
       </div>
       <input type="hidden" name="id" value=${convId}></input>
     </form>
     <button class="button-link done-tags-button" title="${_('Done editing tags')}" onclick="$$.convs.doneTags('${convId}');"><div class="icon done-tags-icon"></div>${_("Done")}</button>
+    <span class="clear"></span>
   </div>
 </%def>
 

@@ -516,7 +516,7 @@ a:hover, a:active, a:focus {
 }
 
 .attach-file-icon {
-    background-image: url(/rsrcs/img/attach.png);
+    background-position: -16px -110px;
 }
 
 .summary-icon, .background-icon {
@@ -864,6 +864,11 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     border-bottom: 1px solid #E3E3E3;
     margin: 1px 0 0;
     padding: 4px 6px;
+}
+
+.conv-tags-input {
+    font-size: 11px !important;
+    padding: 2px !important;
 }
 
 .conv-comment {
@@ -1334,6 +1339,11 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .tags-icon,
 .edit-tags-icon {
     background-position: 0 -240px;
+    padding: 0 2px;
+}
+.done-tags-icon {
+    padding: 0 2px;
+    background-position: -16px -90px;
 }
 
 .delete-tags,
@@ -1347,6 +1357,14 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .editing-tags .done-tags-button,
 .editing-tags .edit-tags-form {
     display: inline-block;
+}
+
+.edit-tags-form {
+    margin-top: 4px !important;
+}
+
+.done-tags-button {
+    margin-top: 4px !important;
 }
 
 .link-details {

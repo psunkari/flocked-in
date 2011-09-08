@@ -470,6 +470,7 @@ var convs = {
     load: function(obj) {
         // HTML5 form and Auto expand comment boxes
         $('.comment-input').autogrow().closest('form').html5form({messages:'en'});
+        $('.conv-tags-input').closest('form').html5form({messages:'en'});
     },
 
     editTags: function(convId, addTag) {
@@ -486,7 +487,7 @@ var convs = {
 
         convs.showHideComponent(convId, 'tags', true);
         if (addTag)
-          $input.focus();
+          $input.select().focus();
     },
 
     doneTags: function(convId) {
