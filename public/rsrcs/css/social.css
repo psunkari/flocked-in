@@ -655,7 +655,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     float: right;
 }
 #sharebar-submit {
-    margin-left: 6px;
+    margin: 0 0 0 6px;
 }
 
 #sharebar-actions-wrapper {
@@ -669,7 +669,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
  */
 
 .acl-menu {
-    width: 120px;
+    width: 180px;
 }
 .acl-footer {
     border-top: 1px solid #CCC;
@@ -678,7 +678,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     padding: 2px;
 }
 .acl-item {
-    padding-left: 20px !important;
+    padding-left: 5px !important;
     padding-right: 5px !important;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -686,7 +686,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 
 .acl-title {
     overflow: hidden;
-    width: 90px;
+    width: 150px;
     display: inline-block;
 }
 
@@ -710,16 +710,37 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 
 .acl-text-button {
-    padding-top: 3px;
-    padding-right: 3px;
+    padding: 3px 0;
+    margin: 0 4px;
     background: transparent;
     border: none;
-    font-size: 12px;
+    font-size: inherit;
+    font-family: inherit;
     color: #36C;
+}
+.acl-button > span {
+    overflow: hidden;
+    display: inline-block;
+    white-space: nowrap;
+}
+.acl-label {
+    max-width: 120px;
+    text-overflow: ellipsis;
 }
 
 .menu-item {
     text-align: left;
+}
+
+.acltip {
+    white-space: normal;
+    font-family: "lucida grande",tahoma,verdana,arial,sans-serif;
+    font-size: 0.9em;
+    opacity: 0.5;
+}
+
+.acl-button > .tooltip {
+    width: 190px;
 }
 
 

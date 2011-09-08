@@ -1082,7 +1082,7 @@ var acl = {
         var type = ui.item.children("a").first().attr("_acl"),
             aclObj = {accept:{}},
             str = ui.item.find(".acl-title").text();
-            tooltip = ui.item.find(".tooltip-content").text();
+            tooltip = ui.item.find(".acltip").text();
 
         if (type === "public") {
             aclObj.accept.public = true;
@@ -1115,10 +1115,9 @@ var acl = {
         $$.data.wait("/auto/mygroups", (function(groups) {
             items = [];
             $.each(groups || [], function(i, g) {
-                items.push('<li><a class="acl-item has-tooltip" _acl="group:' + g.id + '">' + 
-                           '<div class="icon"></div>' +
+                items.push('<li><a class="acl-item" _acl="group:' + g.id + '">' + 
                            '<span class="acl-title">' + g.name + '</span>' +
-                           '<div class="tooltip left"><span id="' + g.id + '-tooltip" class="tooltip-content">' + g.name + '</span></div>' + 
+                           '<div class="acltip" style="display:none;">' + g.name + '</div>' + 
                            '</a></li>');
             });
 

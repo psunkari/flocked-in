@@ -112,23 +112,21 @@
     <div id="${id}-wrapper">
       <button class="acl-button acl-text-button has-tooltip" id="${id}-button" onclick="$$.acl.showACL(event, '${id}');">
         <span>${_("With")}</span>
-        <span id="${id}-label">${defaultLabel}</span>
+        <span class="acl-label" id="${id}-label">${defaultLabel}</span>
         <span class="acl-down-arrow">&#9660;</span>
-        <div class="tooltip bottom-right"><span id="${id}-tooltip" class="tooltip-content">${defaultTooltip}</span></div>
+        <div class="tooltip top-right"><span id="${id}-tooltip" class="tooltip-content">${defaultTooltip}</span></div>
       </button>
       <ul id="${id}-menu" class="acl-menu" style="display:none;">
         <li>
-          <a class="acl-item has-tooltip" _acl="org:${orgKey}">
-            <div class="icon"></div>
+          <a class="acl-item" _acl="org:${orgKey}">
             <span class="acl-title">${_("Company")}</span>
-            <div class="tooltip left"><span class="tooltip-content">${_("Notifies only your friends and followers")}</span></div>
+            <div class="acltip">${_("Notifies only your friends and followers")}</div>
           </a>
         </li>
         <li>
-          <a class="acl-item has-tooltip" _acl="friends">
-            <div class="icon"></div>
+          <a class="acl-item" _acl="friends">
             <span class="acl-title">${_("Friends")}</span>
-            <div class="tooltip left"><span class="tooltip-content">${_("Notifies all your friends")}</span></div>
+            <div class="acltip">${_("Notifies all your friends")}</div>
           </a>
         </li>
         <li id="sharebar-acl-groups-sep" class="ui-menu-separator"></li>

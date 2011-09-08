@@ -130,39 +130,56 @@ input::-moz-focus-inner {
     display: none;
     position: absolute;
     margin: 0 -1px;
+    background-color: transparent;
+    background-repeat: no-repeat;
+    background-image: url(/rsrcs/img/tooltip-arrows.gif);
+    min-height: 20px;
+    min-width: 20px;
 }
 .tooltip.top-right {
     bottom: 100%;
     right: 0;
+    padding-bottom: 4px;
+    background-position: right bottom;
 }
 .tooltip.bottom-right {
     top: 100%;
     right: 0;
     margin-right: 4px;
+    padding-top: 4px;
+    background-position: right top;
 }
 .tooltip.top-left {
     bottom: 100%;
     left: 0;
+    padding-bottom: 4px;
+    background-position: left bottom;
 }
 .tooltip.bottom-left {
     top: 100%;
     left: 0;
+    padding-top: 4px;
+    background-position: left top;
 }
 .tooltip.right {
     top: 0;
     left: 100%;
+    padding-left: 4px;
+    background-position: left center;
 }
 .tooltip.left {
     top: 0;
     right: 100%;
+    padding-right: 4px;
+    background-position: right center;
 }
 
 .tooltip-content {
     display: block;
-    white-space: pre;
     background-color: #333;
-    padding: 5px;
+    padding: 5px 10px;
     color: white;
+    text-align: left;
 }
 .has-tooltip:hover .tooltip {
     display: block;
