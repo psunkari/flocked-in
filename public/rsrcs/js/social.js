@@ -47,7 +47,7 @@ parseUri: function parseUri(str) {
     var i = 14
     while (i--) uri[keys[i]] = matches[i];
 
-    return uri
+    return uri;
 },
 
 /*
@@ -1085,7 +1085,7 @@ var acl = {
             tooltip = ui.item.find(".acltip").text();
 
         if (type === "public") {
-            aclObj.accept.public = true;
+            aclObj.accept.pub = true;
         }
         else if (type === "friends") {
             aclObj.accept.friends = true;
