@@ -22,7 +22,11 @@
                    <b>${senderName}</b> invited you to try ${brandName}.
                  %endif
                  <br/><br/>
-                 <a href="${activationUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">${'Join the %s network' % senderOrgName}</div></a>
+                 %if sameOrg:
+                    <a href="${activationUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">${'Join %s network' % senderOrgName}</div></a>
+                 %else:
+                    <a href="${activationUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">${'Join %s' % brandName}</div></a>
+                 %endif
                  <br/><br/>
                  You can also visit <a href="${activationUrl}">${activationUrl}</a> to activate your account.
               </td>
