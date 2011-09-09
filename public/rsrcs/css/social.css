@@ -777,24 +777,38 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .uploaded-filelist {
     margin-bottom: 6px;
 }
+.attachment-list {
+    float: left;
+    margin: 10px 0 0;
+}
+
+.uploaded-file,
+.attachment-item {
+    min-height: 16px;
+    line-height: 16px;
+}
 .uploaded-file {
     padding: 4px 6px;
     border-bottom: 1px solid #C3D9FF;
-    min-height: 16px;
-    line-height: 16px;
     font-size: 110%;
 }
-.uploaded-file-meta {
-    float: right;
-    margin-right: 10px;
+
+.uploaded-file-meta,
+.attachment-meta {
     max-width: 80px;
     overflow: hidden;
     opacity: 0.5;
 }
-.uploaded-file-name {
-    max-width: 420px;
+.uploaded-file-meta {
+    float: right;
+}
+
+.uploaded-file-name,
+.attachment-name {
+    max-width: 350px;
     overflow: hidden;
 }
+
 .uploaded-file-del {
     height: 16px;
     width: 16px;
