@@ -516,7 +516,7 @@ a:hover, a:active, a:focus {
 }
 
 .attach-file-icon {
-    background-position: -16px -110px;
+    background-position: 0px -416px;
 }
 
 .summary-icon, .background-icon {
@@ -1364,7 +1364,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 .done-tags-icon {
     padding: 0 2px;
-    background-position: -16px -90px;
+    background-position: 0 -400px;
 }
 
 .delete-tags,
