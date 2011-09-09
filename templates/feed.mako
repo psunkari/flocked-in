@@ -67,7 +67,7 @@
         <input type="email" name="email" id="invite-others" placeholder="someone@${domain}" required title="${_('Email')}"/>
       </div>
       <input type="hidden" name="from" value="sidebar"/>
-      <input class="button" type="submit" id="submit" value="${_('Submit')}"/>
+      <input class="button" type="submit" id="submit" value="${_('Invite')}"/>
     </form>
   </div>
 </%def>
