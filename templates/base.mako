@@ -117,12 +117,12 @@
   </div>
   <div id="alertbar"></div>
 %if script:
-  <script type="text/javascript" src="/rsrcs/js/jquery-1.6.1.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/jquery-1.6.3.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.menu.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.autocomplete.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.datepicker.js"></script>
-  <script type="text/javascript" src="/rsrcs/js/jquery.address-1.4.min.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/jquery.address-1.4.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.autogrow-textarea.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.iframe-transport.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.html5form-1.3.js"></script>
