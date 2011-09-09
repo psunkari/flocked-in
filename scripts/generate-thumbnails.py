@@ -15,7 +15,6 @@ MEDIA_MIME = ['image/jpg', 'image/jpeg', 'image/gif', 'image/png', 'application/
 
 
 def get_count():
-
     secretKey =  config.get('CloudFiles', 'SecretKey')
     accessKey =  config.get('CloudFiles', 'AccessKey')
     thumbnailsQueue = config.get('CloudFiles', 'ThumbnailsQueue')
@@ -23,8 +22,8 @@ def get_count():
     queue = sqsConn.get_queue(thumbnailsQueue)
     print '%s -- %s' %(thumbnailsQueue, queue.count())
 
-def generate_thumbnails(dry_run=True):
 
+def generate_thumbnails(dry_run=True):
     def _generate_thumbnail(filename, size, thumbKey, content_type, thumbnailsBucket):
         tmpFile = tempfile.NamedTemporaryFile()
         image = PythonMagick.Image(filename)
@@ -97,8 +96,6 @@ def generate_thumbnails(dry_run=True):
 
 
 if __name__== '__main__':
-
-
     parser = optparse.OptionParser()
     parser.add_option('--run', dest="run", action="store_true", default=False,
                       help="start processing the queued requests")
