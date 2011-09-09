@@ -127,13 +127,12 @@ class FilesResource(base.BaseResource):
             domain = "s3.amazonaws.com"
         else:
             calling_format = VHostCallingFormat()
-        conn = S3Connection(AKey, SKey, host=domain,
+        conn = S3Connection(AKey, SKey, host=domain, is_secure=True,
                             calling_format=calling_format)
 
         Location = conn.generate_url(600, 'GET', bucket,
                                      '%s/%s/%s' %(myOrgId, owner, url),
-                                     response_headers=headers,
-                                     force_http=True)
+                                     response_headers=headers)
 
         request.setResponseCode(307)
         request.setHeader('Location', Location)
@@ -160,7 +159,7 @@ class FilesResource(base.BaseResource):
             domain = "s3.amazonaws.com"
         else:
             calling_format = VHostCallingFormat()
-        conn = S3Connection(AKey, SKey, host=domain,
+        conn = S3Connection(AKey, SKey, host=domain, is_secure=True,
                             calling_format=calling_format)
         filename = utils.getRequestArg(request, "name") or None
         #TODO:If name is None raise an exception
@@ -194,7 +193,7 @@ class FilesResource(base.BaseResource):
         redirect_url = config.get('General', 'URL') + "/file/update"
         form_data = conn.build_post_form_args(bucket,
                                   key,
-                                  http_method="http",
+                                  http_method="https",
                                   fields=x_fields,
                                   conditions=x_conds,
                                   success_action_redirect=redirect_url)
