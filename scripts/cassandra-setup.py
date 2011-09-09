@@ -333,7 +333,7 @@ def addSampleData(client):
                                     "type": "group" },
                                 "admins": {
                                     adminKey:''}})
-    yield client.insert(exampleKey, "entityGroupsMap", '', managementGroupId)
+    yield client.insert(exampleKey, "entityGroupsMap", '', 'management:%s'%(managementGroupId))
 
     programmersGroupId = utils.getUniqueKey()
     yield client.batch_insert(programmersGroupId, "entities", {
@@ -345,7 +345,7 @@ def addSampleData(client):
                                     "type": "group" },
                                 "admins": {
                                     adminKey:''}})
-    yield client.insert(exampleKey, "entityGroupsMap", '', programmersGroupId)
+    yield client.insert(exampleKey, "entityGroupsMap", '', 'programmers:%s'%(programmersGroupId))
 
     # Index used to sort users in company user's list
     yield client.insert(exampleKey, "displayNameIndex", "", "kevin:"+kevinKey)
