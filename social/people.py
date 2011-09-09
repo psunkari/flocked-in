@@ -507,7 +507,7 @@ class PeopleResource(base.BaseResource):
         elif src == "sidebar":
             request.redirect('/feed')
         elif src == "people" and self._ajax:
-            request.write("$('#invite-people-wrapper').empty()")
+            request.write("$('#invite-people-wrapper').empty();$$.alerts.info('%s')"%(_("Invite(s) sent")))
         elif src == "people":
             request.redirect('/people')
 
