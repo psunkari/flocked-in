@@ -154,22 +154,21 @@
   %endif
   <% attachments = items[convId].get("attachments", {}) %>
   %if len(attachments.keys()) > 0:
-    <table>
-    %for attachmentId in attachments:
-      <%
+    <div class="attachment-list">
+      %for attachmentId in attachments:
+        <%
           tuuid, name, size, ftype = attachments[attachmentId].split(':')
-          name =urlsafe_b64decode(name)
+          name = urlsafe_b64decode(name)
           size = formatFileSize(int(size))
           location = '/file?id=%s&fid=%s&ver=%s'%(convId, attachmentId, tuuid)
-      %>
-      <tr>
-        <td><a href="${location}" target="filedownload">${name|h}</a></td>
-        %if size:
-          <td>${size}</td>
-        %endif
-      </tr>
-    %endfor
-    </table>
+        %>
+        <div class="attachment-item">
+          <span class="icon attach-file-icon"></span>
+          <span class="attachment-name"><a href="${location}" target="filedownload">${name|h}</a></span>
+          <span class="attachment-meta">&nbsp;&nbsp;&ndash;&nbsp;&nbsp;${size}</span>
+        </div>
+      %endfor
+    </div>
   %endif
 </%def>
 
@@ -466,43 +465,6 @@
   </div>
 </%def>
 
-##<%def name="render_files(convId, isQuoted=False)">
-##  <%
-##    conv = items[convId]
-##    convType = conv["meta"]["type"]
-##    userId = conv["meta"]["owner"]
-##    normalize = utils.normalizeText
-##    attachments = conv.get("attachments", {})
-##
-##  %>
-##  %if not isQuoted:
-##    ${utils.userName(userId, entities[userId], "conv-user-cause")}
-##  %endif
-##  <div class="item-title">
-##    <div class="">
-##      %if isQuoted:
-##        ${utils.userName(userId, entities[userId])}
-##      %endif
-##      %if conv["meta"].has_key("comment"):
-##        ${conv["meta"]["comment"]|normalize}
-##      %endif
-##      % for attachmentId in attachments:
-##         <%
-##            timeuuid, fileId, name, size, filetype = attachments[attachmentId]
-##            size = formatFileSize(int(size))
-##         %>
-##         <div>
-##         <a href='/file?id=${convId}&fid=${attachmentId}&ver=${timeuuid}' >${name}</a>
-##         % if size:
-##            ##(${formatFileSize(size)})
-##            (${size})
-##         %endif
-##         </div>
-##      % endfor
-##    </div>
-##  </div>
-##</%def>
-
 
 <%def name="feedback_icon(type)">
   <div class="feedback-mood-icon ${type}-icon"></div>
@@ -676,13 +638,6 @@
   </div>
 </%def>
 
-<%def name="set_attachment(itemId, attachmentId, timeuuid, name, size)">
-     <% size = formatFileSize(int(size)) %>
-      <a href='/file?id=${itemId}&fid=${attachmentId}&ver=${timeuuid}' >${name}</a>
-      %if size:
-        ${size}
-      %endif
-</%def>
 
 <%def name="_item_other_actions(convId, iamOwner, convType)">
   %if convType not in ["activity"]:

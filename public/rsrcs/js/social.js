@@ -769,7 +769,7 @@ var files = {
                                 inputItem = "<input type='hidden' id='upload-input-" +
                                               fileId + "' name='fId' value='"+ fileId +"'/>";
                                 listItem = "<div id='upload-"+fileId+"' class='uploaded-file'>" +
-                                              "<span class='upload-file-name'>"+fileInfo[1]+"</span>" +
+                                              "<span class='uploaded-file-name'>"+fileInfo[1]+"</span>" +
                                               "<button type='button' class='uploaded-file-del' onclick='" +
                                                   "$$.files.removeFromShare(\""+fileId+"\")'/>" +
                                               "<span class='uploaded-file-meta'>"+fileSize.toFixed(2)+
@@ -778,7 +778,7 @@ var files = {
                                 hiddenInputs.push(inputItem);
                                 uploaded.push(listItem);
                             }
-                    
+
                             $('#'+id+'-uploaded').append(hiddenInputs.join(''))
                                                  .append(uploaded.join('')); })
                      .complete(function(data) {
