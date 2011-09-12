@@ -474,7 +474,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
         conv = items[convId]
         toFetchEntities.add(conv["meta"]["owner"])
         if "target" in conv["meta"]:
-            toFetchEntities.add(conv["meta"]["target"])
+            toFetchEntities.update(conv["meta"]["target"].split(','))
         toFetchTags.update(conv.get("tags",{}).keys())
 
     tags_d = db.get_slice(myOrgId, "orgTags", toFetchTags) \
@@ -536,7 +536,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
     data.update({"entities": entities, "responses": responses, "likes": likes,
                  "myLikes": myLikes, "conversations": convIds, "tags": tags,
                  "nextPageStart": nextPageStart, "reasonStr": reasonStr,
-                 "reasonUserIds": reasonUserIds})
+                 "reasonUserIds": reasonUserIds, "relation":relation})
     defer.returnValue(data)
 
 

@@ -201,11 +201,11 @@
   %elif myLikes and myLikes.has_key(convId) and len(myLikes[convId]):
     <button class="button-link ajaxpost" _ref="/item/unlike?id=${convId}">${_("Unlike")}</button>&#183;<button 
   %else:
-    <button class="button-link ajaxpost" _ref="/item/like?id=${convId}">${_("Like")}</button>&#183;<button
+    <button class="button-link ajaxpost" _ref="/item/like?id=${convId}">${_("Like")}</button>&#183;<button 
   %endif
   ## Comment on this conversation
   <% commentString = "Answer" if convType == "question" else "Comment" %>
-  class="button-link" onclick="$$.convs.comment('${convId}');" >${_(commentString)}</button>&#183;<button
+  class="button-link" onclick="$$.convs.comment('${convId}');" >${_(commentString)}</button>&#183;<button  
   ## Add a tag
   class="button-link" title="${_('Add Tag')}" onclick="$$.convs.editTags('${convId}', true);">${_("Add Tag")}</button>
 </%def>
@@ -445,9 +445,17 @@
     normalize = utils.normalizeText
     has_icon = "has-icon" if convType in ["question"] else ''
     itemTitleText = "item-title-text" if has_icon else ''
+    target = items[convId]["meta"].get('target', '')
+    target = target.split(',') if target else ''
+    if target:
+      target = [x for x in target if x in relation.groups]
   %>
   %if not isQuoted:
-    ${utils.userName(userId, entities[userId], "conv-user-cause")}
+    %if not target:
+      ${utils.userName(userId, entities[userId], "conv-user-cause")}
+    %else:
+      ${utils.userName(userId, entities[userId], "conv-user-cause")}  ${_("on")} ${utils.groupName(target[0], entities[target[0]])}
+    %endif
   %endif
   <div class="item-title ${has_icon}">
     %if has_icon:
@@ -529,9 +537,18 @@
         proxy = config.get('General', 'SecureProxy')
         imgsrc = proxy % b64encode(imgsrc)
       except Exception, e: pass
+    
+    target = items[convId]["meta"].get('target', '')
+    target = target.split(',') if target else ''
+    if target:
+      target = [x for x in target if x in relation.groups]
   %>
   %if not isQuoted:
-    ${utils.userName(userId, entities[userId], "conv-user-cause")}
+    %if not target:
+      ${utils.userName(userId, entities[userId], "conv-user-cause")}
+    %else:
+      ${utils.userName(userId, entities[userId], "conv-user-cause")}  ${_("on")} ${utils.groupName(target[0], entities[target[0]])}
+    %endif
   %endif
   <div class="item-title has-icon">
     <span class="icon item-icon link-icon"></span>
