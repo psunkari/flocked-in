@@ -71,7 +71,7 @@
       try:
         item.item_layout(convId)
       except Exception, e:
-        log.msg("Exception when displaying %s in tags" % convId)
+        log.err("Exception when displaying %s in tags" % convId)
         log.err(e)
   %>
   %if nextPageStart:

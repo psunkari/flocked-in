@@ -393,7 +393,7 @@
         elif convType in plugins:
           block.append(key)
       except Exception, e:
-        log.msg("Error when displaying UserItem:", key)
+        log.err("Error when displaying UserItem:", key)
         log.err(e)
     if block:
       self.activity_block(block)

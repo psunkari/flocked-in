@@ -364,7 +364,7 @@ def checkAcl(userId, acl, owner, relation, userOrgId=None):
     if "groups" in accept:
         returnValue |= any([groupid in accept["groups"] for groupid in relation.groups])
     if "friends" in accept and accept["friends"]:
-        log.msg(owner in relation.friends, "accept-friends")
+        log.info(owner in relation.friends, "accept-friends")
         returnValue |= ((userId == owner) or (owner in relation.friends))
     if "followers" in accept and accept["followers"]:
         returnValue |= (userId == owner)
