@@ -1,0 +1,56 @@
+
+System Setup
+------------
+
+1. Set a complicated password for root.
+
+2. Create a new user - "mirage"
+
+3. Copy SSH keys to "/home/mirage/.ssh/authorized_keys2"
+
+4. Secure SSH (/etc/ssh/sshd_config)
+     PermitRootLogin without-password
+     Protocol 2
+     PasswordAuthentication no
+     LoginGraceTime 45
+     AllowUsers mirage
+
+5. Setup Firewall - firewall-appserver.sh
+
+6. Setup portknocking
+     apt-get install knockd
+   See manpage for setup information
+
+7. Install pre-requisite applications
+     Python packages:
+       apt-get install python-twisted
+       apt-get install python-setuptools
+       apt-get install python-dev
+       apt-get install python-txaws
+       apt-get install python-pythonmagick
+       apt-get install python-dateutil
+       apt-get install python-html5lib
+       apt-get install python-lxml
+       easy_install OrderedDict
+       easy_install thrift
+       easy_install Mako
+       easy_install boto
+       easy_install pytz
+       install telephus from https://github.com/driftx/Telephus
+       install embedly client from https://github.com/embedly/embedly-python
+     nginX
+       apt-get install nginx
+
+9. Configure nginX
+
+
+Application Setup
+-----------------
+
+1. Create a new user - "social"
+
+2. Copy SSH keys to "/home/mirage/.ssh/authorized_keys2"
+
+3. Allow SSH to "social" only from selected IPs
+
+4. Deploy application - deploy-app.sh

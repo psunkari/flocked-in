@@ -4,6 +4,7 @@
 # Assumes a lot of things - please test with a staging system
 #
 
+set -x
 
 #
 # Repository settings
@@ -127,7 +128,7 @@ function _bundle() {
       awk_output=$tmp_dir/`basename $name`.awk
       awk "!/($match_expr)/ { print \$0 };
             /($match_expr)/ && !done {
-              gsub(/($match_expr)/, \"$cdn_host/static/$checksum.$ext\");
+              gsub(/\/($match_expr)/, \"$cdn_host/static/$checksum.$ext\");
               print \$0;
               done=1
             };" $name > $awk_output
@@ -154,7 +155,7 @@ rm -rf $source/.hg
 for remote in ${app_hosts[*]}; do
   scp -r $static social@$remote:
   scp -r $source social@$remote:
-  ssh social@$remote "incoming/scripts/deployment/update-social.sh"
+  ssh social@$remote "source/scripts/deployment/update-social.sh"
 done
 
 cd $cur_dir
