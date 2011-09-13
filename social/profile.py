@@ -4,7 +4,6 @@ import uuid
 from random                 import sample
 
 from twisted.web            import resource, server, http
-from twisted.python         import log
 from twisted.internet       import defer
 from telephus.cassandra     import ttypes
 
@@ -13,7 +12,7 @@ from social                 import constants, feed, errors, people
 from social                 import notifications
 from social.template        import render, renderDef, renderScriptBlock
 from social.relations       import Relation
-from social.logging         import dump_args, profile
+from social.logging         import dump_args, profile, log
 from social.isocial         import IAuthInfo
 
 
@@ -137,7 +136,7 @@ class ProfileResource(base.BaseResource):
             itemType = meta["type"]
             toFetchEntities.add(meta["owner"])
             if "target" in meta:
-                toFetchEntities.add(meta["target"])
+                toFetchEntities.update(meta["target"].split(','))
 
             toFetchTags.update(items[convId].get("tags", {}).keys())
 

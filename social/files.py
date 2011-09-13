@@ -18,7 +18,6 @@ from boto.s3.connection import VHostCallingFormat, SubdomainCallingFormat
 from zope.interface     import implements
 from twisted.plugin     import IPlugin
 from twisted.internet   import defer, threads
-from twisted.python     import log
 from twisted.web        import static, server
 
 from social             import db, utils, errors, base, feed, _, config
@@ -26,6 +25,7 @@ from social.relations   import Relation
 from social             import constants
 from social.isocial     import IItemType, IAuthInfo
 from social.template    import render, renderScriptBlock, getBlock
+from social.logging     import log
 
 
 class FilesResource(base.BaseResource):

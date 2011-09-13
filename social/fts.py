@@ -8,7 +8,6 @@ from urllib                     import quote, unquote
 from twisted.web                import client
 from twisted.web.iweb           import IBodyProducer
 from twisted.internet           import protocol, reactor, defer
-from twisted.python             import log
 from twisted.web.http           import PotentialDataLoss
 from twisted.web.http_headers   import Headers
 
@@ -16,7 +15,7 @@ from social                     import base, utils, config, feed
 from social                     import errors, plugins, _
 from social.constants           import SEARCH_RESULTS_PER_PAGE
 from social.template            import render, renderScriptBlock
-from social.logging             import dump_args, profile
+from social.logging             import dump_args, profile, log
 
 
 URL = config.get('SOLR', 'HOST')

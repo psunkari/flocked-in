@@ -8,12 +8,12 @@ from operator               import itemgetter
 
 from telephus.cassandra     import ttypes
 from twisted.internet       import defer
-from twisted.python         import log
 from twisted.web            import resource, server, http
 
 from social                 import _, __, db, utils
 from social.base            import BaseResource
 from social.isocial         import IAuthInfo
+from social.logging         import log
 
 
 def _getFinishTerm(term):

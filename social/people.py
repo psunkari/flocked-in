@@ -6,7 +6,6 @@ import time
 
 from twisted.internet   import defer
 from twisted.web        import server
-from twisted.python     import log
 
 from social             import db, utils, base, _, whitelist, blacklist
 from social             import config, errors
@@ -14,7 +13,7 @@ from social.relations   import Relation
 from social.template    import render, renderScriptBlock, getBlock
 from social.isocial     import IAuthInfo
 from social.constants   import PEOPLE_PER_PAGE, SUGGESTION_PER_PAGE
-from social.logging     import dump_args, profile
+from social.logging     import dump_args, profile, log
 
 INCOMING_REQUEST = 'FI'
 OUTGOING_REQUEST = 'FO'

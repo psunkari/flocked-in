@@ -5,7 +5,6 @@ import time
 from telephus.cassandra import ttypes
 from twisted.internet   import defer
 from twisted.web        import server
-from twisted.python     import log
 
 from social             import base, db, utils, feed, config
 from social             import plugins, constants, tags, fts
@@ -13,7 +12,7 @@ from social             import notifications, _, errors
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
-from social.logging     import profile, dump_args
+from social.logging     import profile, dump_args, log
 
 
 class ItemResource(base.BaseResource):

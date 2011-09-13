@@ -1,5 +1,4 @@
 <%! from social import utils, _, __, plugins, constants, config %>
-<%! from twisted.python import log %>
 <%! from twisted.web.static import formatFileSize %>
 <%! from base64 import b64encode, urlsafe_b64decode %>
 <%! from urlparse import urlsplit %>

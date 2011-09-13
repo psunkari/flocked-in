@@ -4,7 +4,6 @@ import re
 from lxml               import etree
 
 from zope.interface     import implements
-from twisted.python     import log
 from twisted.internet   import defer, threads
 from twisted.plugin     import IPlugin
 from twisted.web        import client
@@ -12,7 +11,7 @@ from twisted.web        import client
 from social.template    import renderScriptBlock, getBlock
 from social.isocial     import IItemType, IAuthInfo
 from social             import db, utils, errors, _, config
-from social.logging     import profile, dump_args
+from social.logging     import profile, dump_args, log
 
 def _sanitize(text, strip=False):
     unitext = text if type(text) == unicode\
@@ -202,7 +201,7 @@ class Links(object):
                         break
             defer.returnValue((ogSummary or summary, ogTitle or title, ogImage or image, embed))
         except Exception as e:
-            log.msg(e)
+            log.info(e)
             defer.returnValue((ogSummary or summary, ogTitle or title, ogImage or image, embed))
 
 

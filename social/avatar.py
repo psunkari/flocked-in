@@ -3,11 +3,10 @@ import time
 from email.utils            import formatdate
 
 from twisted.internet       import defer
-from twisted.python         import log
 from twisted.web            import resource, server, http
 
 from social                 import _, __, db, utils
-from social.logging         import profile, dump_args
+from social.logging         import profile, dump_args, log
 
 class AvatarResource(resource.Resource):
     isLeaf = True
@@ -40,7 +39,7 @@ class AvatarResource(resource.Resource):
             request.finish()
 
         def errback(err):
-            log.msg("Avatar fetching: ", err)
+            log.error("Avatar fetching: ", err)
             request.finish()
 
         d.addCallback(callback)

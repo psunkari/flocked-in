@@ -5,7 +5,6 @@ from email.utils        import formatdate
 from telephus.cassandra import ttypes
 from twisted.internet   import defer
 from twisted.web        import server
-from twisted.python     import log
 
 from social             import db, utils, _, __, base, plugins
 from social             import constants, errors
@@ -13,7 +12,7 @@ from social.feed        import getFeedItems
 from social.template    import render, renderDef, renderScriptBlock
 from social.isocial     import IAuthInfo
 from social.relations   import Relation
-from social.logging     import profile, dump_args
+from social.logging     import profile, dump_args, log
 
 
 @profile

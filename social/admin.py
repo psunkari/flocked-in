@@ -3,7 +3,6 @@ from csv import reader
 
 from twisted.web        import server
 from twisted.internet   import defer
-from twisted.python     import log
 
 from social             import base, db, utils, people, errors
 from social.isocial     import IAuthInfo
@@ -11,6 +10,7 @@ from social.signup      import getOrgKey # move getOrgKey to utils
 from social.template    import render, renderScriptBlock
 from social.constants   import PEOPLE_PER_PAGE
 from social.settings    import saveAvatarItem
+from social.logging     import log
 
 
 class Admin(base.BaseResource):
@@ -75,7 +75,7 @@ class Admin(base.BaseResource):
                     email, displayName, jobTitle, passwd, timezone = row
                     existingUser = yield utils.existingUser(email)
                     if existingUser:
-                        log.msg("%s is already a member of the network."
+                        log.info("%s is already a member of the network."
                                 "not adding it again"%(email))
                         continue
                     userKey = yield utils.addUser(email, displayName, passwd,

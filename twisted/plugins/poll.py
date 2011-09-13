@@ -5,14 +5,13 @@ from ordereddict        import OrderedDict
 from zope.interface     import implements
 from twisted.plugin     import IPlugin
 from twisted.internet   import defer
-from twisted.python     import log
 from twisted.web        import server
 
 from social             import db, utils, base, errors, _
 from social.template    import renderScriptBlock, render, getBlock
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
-from social.logging     import profile, dump_args
+from social.logging     import profile, dump_args, log
 
 
 class PollResource(base.BaseResource):
@@ -119,13 +118,14 @@ class PollResource(base.BaseResource):
         def success(response):
             request.finish()
         def failure(err):
-            log.msg(err)
+            log.err(err)
             request.setResponseCode(500)
             request.finish()
 
         segmentCount = len(request.postpath)
         if segmentCount == 1 and request.postpath[0] == 'vote':
             d = self._vote(request)
+            ##XXX: should we use BaseResource._epilogue ?
             d.addCallbacks(success, failure)
             return server.NOT_DONE_YET
 
@@ -146,7 +146,7 @@ class PollResource(base.BaseResource):
             def success(response):
                 request.finish()
             def failure(err):
-                log.msg(err)
+                log.err(err)
                 request.setResponseCode(500)
                 request.finish()
             d.addCallbacks(success, failure)
