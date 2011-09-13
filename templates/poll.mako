@@ -143,18 +143,10 @@
     voted = myVotes[convId] if (myVotes and myVotes.get(convId, False))\
                             else False
     normalize = utils.normalizeText
-    target = items[convId]["meta"].get('target', '')
-    target = target.split(',') if target else ''
-    if target:
-      target = [x for x in target if x in relation.groups]
   %>
   %if not isQuoted:
     <span class="conv-reason">
-      %if not target:
-        ${utils.userName(userId, entities[userId], "conv-user-cause")}
-      %else:
-        ${utils.userName(userId, entities[userId], "conv-user-cause")}  ${_("on")} ${utils.groupName(target[0], entities[target[0]])}
-      %endif
+      ${utils.userName(userId, entities[userId], "conv-user-cause")}
     </span>
   %endif
   <div class="item-title has-icon">

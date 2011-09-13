@@ -94,11 +94,8 @@ class Links(object):
         convId = utils.getUniqueKey()
         item, attachments = yield utils.createNewItem(request, self.itemType)
         meta = {"comment": comment}
-        if target and  "target" in item["meta"]:
-            item['meta']['target'] = ",".join(item['meta']['target'].split(',') + [target])
-        elif target:
-            item["meta"]["target"] =  target
-
+        if target:
+            meta["target"] = target
         if summary:
             meta["summary"] = summary
         if title:
