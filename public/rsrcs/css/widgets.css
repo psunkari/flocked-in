@@ -312,11 +312,11 @@ input::-moz-focus-inner {
     display: block;
 }
 
-.ui-listitem.empty:not(:only-child){
+.ui-listitem.empty:not(:only-child) {
     display:none;
 }
 
-.ui-listitem.empty:only-child{
+.ui-listitem.empty:only-child {
     display:block;
 }
 
