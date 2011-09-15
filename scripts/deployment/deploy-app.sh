@@ -4,12 +4,12 @@
 # Assumes a lot of things - please test with a staging system
 #
 
-set -x
+set -e
 
 #
 # Repository settings
 #
-repo_url='/home/tux/social'
+repo_url='/home/tux/social-copy'
 repo_revision='tip'
 
 
@@ -45,7 +45,7 @@ img_dir='rsrcs/img'
 #
 # Deployment environment configuration
 #
-app_hosts=('app-2.flocked.in')
+app_hosts=('app-1.flocked.in')
 cdn_host='https://doy9z51iqd595.cloudfront.net'
 
 
@@ -60,30 +60,37 @@ yui_compressor='/opt/yuicompressor-2.4.6/build/yuicompressor-2.4.6.jar'
 #
 
 cur_dir=`pwd`
-tmp_dir=`mktemp -d`
+tmp_dir=`mktemp -d -t social.XXXXXX`
 
-source=$tmp_dir/source
+src=$tmp_dir/src
 static=$tmp_dir/static
-public=$source/public
+public=$src/public
 mkdir $static
 
 
 function cleanup() {
   rm -rf $tmp_dir
 }
+trap cleanup 0
 
-function error_exit() {
-  echo "ERROR ABORT: $*"
-  cleanup
-  exit -1
+function error() {
+  local PARENT_LINENO="$1"
+  local MESSAGE="$2"
+  local CODE="${3:-1}"
+  if [[ -n "$MESSAGE" ]] ; then
+    echo "Error at line ${PARENT_LINENO}: ${MESSAGE}; exiting with status ${CODE}"
+  else
+    echo "Error at line ${PARENT_LINENO}; exiting with status ${CODE}"
+  fi
+  exit "${CODE}"
 }
-
+trap 'error ${LINENO}' ERR
 
 #
 # Fetch files from the repository.
 # Don't use stale files from the current checkout.
 #
-(hg clone $repo_url $source && cd $source && hg update -r $repo_revision) || error_exit "Could not clone the repository"
+hg clone $repo_url $src && cd $src && hg update -r $repo_revision
 
 
 #
@@ -96,7 +103,7 @@ for img in `ls -1 $img_dir`; do
   filename=$checksum.${img##*.}
   cp $img_dir/$img $static/$filename
 
-  find $source/templates $source/social $public/rsrcs/js $public/rsrcs/css -type f \
+  find $src/templates $src/social $public/rsrcs/js $public/rsrcs/css -type f \
         | xargs sed -i "s=/rsrcs/img/$img=$cdn_host/static/$filename="
 done
 
@@ -112,9 +119,9 @@ function _bundle() {
   files=`echo $outfile | sed 's/:/ /g'`
   (
     for file in ${files[*]}; do
-      java -jar $yui_compressor $public/$file || error_exit "An error occurred while processing $file";
+      java -jar $yui_compressor $public/$file
     done
-  ) > $tmp_dir/compressed.$ext || error_exit "An error occurred while processing stylesheets"
+  ) > $tmp_dir/compressed.$ext
 
   if [ -f $tmp_dir/compressed.$ext ]; then
     checksum=`md5sum $tmp_dir/compressed.$ext | cut -f1 -d' '`
@@ -124,7 +131,7 @@ function _bundle() {
     paths_escaped=`echo $outfile | sed -e 's/\\(\\.\\|\\/\\|\\*\\|\\[\\|\\]\\|\\\\\\)/\\\\&/g'`
     match_expr=`echo $paths_escaped | sed 's/:/\|/g'`
 
-    find $source/templates $source/social -type f | while read name; do
+    find $src/templates $src/social -type f | while read name; do
       awk_output=$tmp_dir/`basename $name`.awk
       awk "!/($match_expr)/ { print \$0 };
             /($match_expr)/ && !done {
@@ -148,14 +155,20 @@ for outfile in ${out_scripts[*]}; do
   _bundle $outfile "js"
 done
 
-# Remove mercurial data from source folder
-rm -rf $source/.hg
+# Remove mercurial data from src folder
+rm -rf $src/.hg
 
-# Copy static files and the modified source to application servers
+# Decrypt configuration file and copy it to the right path
+# and create a tarball of source and static files.
+cd $tmp_dir
+$src/scripts/deployment/encrypt-files.sh decrypt \
+    $src/scripts/deployment/files.tbz.asc && mv files/production.cfg $src/etc/
+tar -cvjf upload.tar.bz2 static src
+
+# Copy static files and the modified src to application servers
 for remote in ${app_hosts[*]}; do
-  scp -r $static social@$remote:
-  scp -r $source social@$remote:
-  ssh social@$remote "source/scripts/deployment/update-social.sh"
+  scp upload.tar.bz2 social@$remote:
+  ssh social@$remote "tar -xjf upload.tar.bz2; src/scripts/deployment/update-social.sh"
 done
 
 cd $cur_dir

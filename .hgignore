@@ -19,3 +19,6 @@ etc/production.cfg
 *~
 *.komodoproject
 glob:data/
+
+# Decrypted (deployment files)
+scripts/deployment/files/*

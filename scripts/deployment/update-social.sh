@@ -1,36 +1,21 @@
 #
-# Copy the latest source from "incoming" to "deploy"
+# Move the latest source from "src" to "deploy"
 # and restart the application
 #
 
 cur_dir=`pwd` && cd $HOME
 
+tar -xjf upload.tar.bz2 || exit 1
+
 if [ -f deploy/twistd.pid ]; then
   pid=`cat deploy/twistd.pid` && kill $pid
 fi
 
-del_older=(public scripts social social.tac templates twisted)
-mv_newer=(public scripts social social.tac templates twisted)
+# Remove existing code
+rm -rf deploy
 
-if [ ! -d deploy ]; then
-  if [ -a deploy ]; then
-    mv deploy deploy.old
-  fi
-  mkdir deploy;
-fi
-
-# Remove older files
-for name in ${del_older[*]}; do
-  rm -rf deploy/$name
-done
-
-# Copy new files
-for name in ${mv_newer[*]}; do
-  mv source/$name deploy/
-done
-
-# Copy updated default configurations
-cp -a source/etc/* deploy/etc/
+# Copy new code
+mv src deploy
 
 # Start twisted daemon
 cd deploy && twistd -y social.tac
