@@ -3,7 +3,6 @@ import uuid
 
 from twisted.internet   import defer
 from twisted.web        import server
-from twisted.python     import log
 
 from social             import db, utils, base, plugins, _, __, errors, people
 from social.isocial     import IAuthInfo
@@ -11,7 +10,7 @@ from social.relations   import Relation
 from social.template    import render, renderDef, renderScriptBlock
 from social.constants   import INFINITY, MAXFEEDITEMS, MAXFEEDITEMSBYTYPE
 from social.constants   import SUGGESTION_PER_PAGE
-from social.logging     import profile, dump_args
+from social.logging     import profile, dump_args, log
 
 @defer.inlineCallbacks
 def deleteUserFeed(userId, itemType, tuuid):
@@ -217,7 +216,7 @@ def fetchAndFilterConvs(ids, count, relation, items, myId, myOrgId):
     # Filter the items (checkAcl only for conversations)
     for convId in ids:
         if convId not in items:
-            log.msg('Missing item: ', convId)
+            log.info('Missing item: ', convId)
             continue
         meta = items.get(convId, {}).get("meta", {})
         if not meta:

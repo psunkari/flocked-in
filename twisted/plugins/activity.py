@@ -2,7 +2,6 @@ import time
 import uuid
 
 from zope.interface     import implements
-from twisted.python     import log
 from twisted.internet   import defer
 from twisted.plugin     import IPlugin
 
@@ -10,7 +9,7 @@ from social             import db, base, utils, errors
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
 from social.template    import render, renderScriptBlock, getBlock
-from social.logging     import dump_args, profile
+from social.logging     import dump_args, profile, log
 
 
 class Activity(object):

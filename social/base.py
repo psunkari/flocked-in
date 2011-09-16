@@ -3,11 +3,11 @@ import urlparse
 
 from twisted.web            import resource, server
 from twisted.internet       import defer
-from twisted.python         import log
 
 from social.isocial         import IAuthInfo
 from social                 import db, utils, errors
 from social.template        import render, renderScriptBlock, renderDef
+from social.logging         import log
 
 
 class BaseResource(resource.Resource):
@@ -60,14 +60,14 @@ class BaseResource(resource.Resource):
                 Please try after sometime"""
             log.err(failure)
 
-        log.msg(fullErrorStr)
+        log.info(fullErrorStr)
         referer = request.getHeader('referer')
 
         try:
             appchange, script, args, myId = yield self._getBasicArgs(request)
             ajax = self._ajax
             args["referer"] = referer
-         
+
             if ajax and not appchange:
                 request.setResponseCode(ajaxErrorCode)
                 request.write(ajaxErrorStr)
@@ -83,7 +83,7 @@ class BaseResource(resource.Resource):
                         args["isDeepLink"] = True
                 else:
                     args["isDeepLink"] = True
-         
+
                 args["msg"] = fullErrorStr
                 if script:
                     request.write("<script>$('body').empty();</script>")

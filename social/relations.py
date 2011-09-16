@@ -1,10 +1,8 @@
-
-from twisted.python     import log
 from twisted.internet   import defer
 from telephus.cassandra import ttypes
 
 from social             import db, constants
-from social.logging     import profile, dump_args
+from social.logging     import profile, dump_args, log
 
 #
 # Determine how the other person is related to me.

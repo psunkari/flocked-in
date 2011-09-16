@@ -7,7 +7,6 @@ import datetime
 import json
 
 from twisted.web            import resource, server, http
-from twisted.python         import log
 from twisted.internet       import defer
 from telephus.cassandra     import ttypes
 
@@ -15,7 +14,7 @@ from social.template        import render, renderDef, renderScriptBlock
 from social.relations       import Relation
 from social                 import db, utils, base, plugins, _, __
 from social                 import constants, feed, errors
-from social.logging         import dump_args, profile
+from social.logging         import dump_args, profile, log
 from social.isocial         import IAuthInfo
 
 
@@ -133,7 +132,7 @@ _notifyNames = ['friendRequest', 'friendAccept', 'follower', 'newMember',
     'myItemTag', 'myItemComment', 'myItemlike', 'itemCommentLike',
     'itemComment', 'mention', 'itemRequests',
     'messageConv', 'messageMessage', 'messageAccessChange']
-    
+
 # Utility function to help parse the notification preference
 # In case of an exception returns true
 def getNotifyPref(val, typ, medium):
@@ -211,7 +210,7 @@ class SettingsResource(base.BaseResource):
                 basicUpdated = True
             else:
                 basicUpdatedInfo[cn] = me['basic'].get(cn, "")
-                
+
         # Update name indicies of organization and friends.
         nameIndexKeys = friends + [args["orgKey"]]
         nameIndicesDeferreds = []

@@ -6,7 +6,7 @@ from email.utils            import formatdate
 from zope.interface         import implements
 from twisted.web            import resource, server, static, util, http
 from twisted.internet       import defer
-from twisted.python         import log, components
+from twisted.python         import components
 
 from social                 import db, utils, base, plugins
 from social.template        import render
@@ -29,6 +29,7 @@ from social.admin           import Admin
 from social.server          import SessionFactory
 from social.files           import FilesResource
 from social.embed           import EmbedResource
+from social.logging         import log
 
 
 def getPluggedResources(ajax=False):

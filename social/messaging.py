@@ -14,14 +14,13 @@ from boto.s3.connection import S3Connection
 from boto.s3.connection import VHostCallingFormat, SubdomainCallingFormat
 
 from twisted.internet   import defer
-from twisted.python     import log
 from twisted.web        import static, server
 
 from social             import db, utils, base, errors, config, _, fts
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
-from social.logging     import profile, dump_args
+from social.logging     import profile, dump_args, log
 
 
 class MessagingResource(base.BaseResource):
@@ -37,7 +36,7 @@ class MessagingResource(base.BaseResource):
             timeuuid, fid, name, size, ftype = attachments[attachmentId]
             val = "%s:%s:%s:%s" %(utils.encodeKey(timeuuid), name, size, ftype)
             attach_meta[attachmentId] = val
-        
+
         return attach_meta
 
     def _indexMessage(self, convId, messageId, myOrgId, meta, attachments, body):
@@ -254,7 +253,7 @@ class MessagingResource(base.BaseResource):
     def _newConversation(self, ownerId, participants, meta, attachments):
         participants = dict ([(userId, '') for userId in participants])
         convId = utils.getUniqueKey()
-        attach_meta = self._formatAttachMeta(attachments)        
+        attach_meta = self._formatAttachMeta(attachments)
         yield db.batch_insert(convId, "mConversations", {"meta": meta,
                                                 "participants": participants,
                                                 "attachments":attach_meta})
@@ -677,8 +676,8 @@ class MessagingResource(base.BaseResource):
                     reason = _("Message has been moved to the %s" %(action.capitalize()))
                     if action == "archive":
                         reason = _("Message has been archived")
-                    
-                    request.write("""$$.fetchUri('/messages?type=%s');$$.alerts.info("%s");""" %(filterType, _(reason)))                    
+
+                    request.write("""$$.fetchUri('/messages?type=%s');$$.alerts.info("%s");""" %(filterType, _(reason)))
             elif action == "unread":
                 query_template = """
                               $('#thread-%s').removeClass('row-read').addClass('row-unread');
@@ -687,7 +686,7 @@ class MessagingResource(base.BaseResource):
                               $('#thread-%s .messaging-unread-icon')[0].onclick = function(event) { $.post('/ajax/messages/thread', 'action=read&selected=%s&filterType=%s', null, 'script') };
                               """
                 query = "".join([query_template % (convId, convId, convId, convId, convId, filterType) for convId in convIds])
-                
+
                 if view == "message":
                     request.write("""$$.fetchUri('/messages');$$.alerts.info("%s");""" %("Message has been marked as unread"))
                 else:

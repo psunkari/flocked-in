@@ -2,7 +2,6 @@ import time
 import uuid
 
 from zope.interface     import implements
-from twisted.python     import log
 from twisted.internet   import defer
 from twisted.plugin     import IPlugin
 
@@ -10,7 +9,7 @@ from social             import db, base, utils, errors, _
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
 from social.template    import render, renderScriptBlock, getBlock
-from social.logging     import profile, dump_args
+from social.logging     import profile, dump_args, log
 
 
 class Status(object):

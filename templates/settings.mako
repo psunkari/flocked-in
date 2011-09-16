@@ -3,7 +3,6 @@
 <%! from social import utils, _, __, plugins, settings %>
 <%! from social import relations as r %>
 <%! from pytz import common_timezones %>
-<%! from twisted.python import log %>
 <%! import re, datetime %>
 
 <%inherit file="base.mako"/>

@@ -1,6 +1,6 @@
 
-from twisted.python     import log
 from social             import _
+from social.logging     import log
 
 #
 # Base for all exceptions in social
@@ -28,7 +28,7 @@ class BaseError(Exception):
         return ("<p>%s<p>"%self.message, self.errcode, self.message)
 
     def logError(self):
-        log.msg(self.message)
+        log.err(self.message)
 
 
 #

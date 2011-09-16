@@ -5,10 +5,11 @@ from email.utils            import formatdate
 
 from twisted.web            import resource, server, static, util
 from twisted.internet       import defer
-from twisted.python         import log, components
+from twisted.python         import components
 
 from social                 import db, utils, base, plugins
 from social.isocial         import IAuthInfo
+from social.logging         import log
 
 
 class RequestFactory(server.Request):

@@ -5,15 +5,14 @@ import json
 from telephus.cassandra import ttypes
 from twisted.internet   import defer
 from twisted.web        import server
-from twisted.python     import log
 
 from social             import base, db, utils, feed, settings
 from social             import plugins, constants, _, config
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock, getBlock
-from social.logging     import dump_args, profile
+from social.logging     import dump_args, profile, log
 
-# 
+#
 # Database schema for notifications
 #
 #     notifications (Standard CF):
@@ -23,14 +22,14 @@ from social.logging     import dump_args, profile
 #           (ConvId:ConvType:ConvOwner:X, :Y)
 #               X => Type of action (Like/Comment/Like a comment)
 #               Y => Type of action (Friend/Group/Following)
-#    
+#
 #     notificationItems (Super CF):
 #       Key: UserId
 #       Supercolumn Name: notifyId
 #       Column Name: TimeUUID
 #       Column Value: specific to type of notification
 #           (Actor:ItemId, UserId, GroupId, UserId)
-#    
+#
 
 # Various notification handlers.
 # Currently we only have a e-mail handler.
@@ -344,7 +343,7 @@ class NotificationsResource(base.BaseResource):
                              3: "Your requests to join %(group0)s, %(group1)s and one other were accepted",
                              4: "Your requests to join %(group0)s, %(group1)s and %(count)s others were accepted"}
 
-    # 
+    #
     # Fetch notifications from the database
     # NotificationIds are stored in a column family called "notifications"
     #

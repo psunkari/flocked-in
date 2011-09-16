@@ -1,10 +1,10 @@
 from twisted.internet   import defer
-from twisted.python     import log
 from twisted.web        import server
 
 from social             import db, utils, base, tags, _, config, errors, feed
 from social.template    import render, renderScriptBlock
 from social.isocial     import IAuthInfo
+from social.logging     import log
 
 
 class FeedbackResource(base.BaseResource):

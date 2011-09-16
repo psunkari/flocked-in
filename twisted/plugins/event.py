@@ -12,14 +12,13 @@ except:
 from zope.interface     import implements
 from twisted.plugin     import IPlugin
 from twisted.internet   import defer
-from twisted.python     import log
 from twisted.web        import server
 
 from social             import db, utils, base, errors, _
 from social.template    import renderScriptBlock, render, getBlock
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
-from social.logging     import dump_args, profile
+from social.logging     import dump_args, profile, log
 
 
 class EventResource(base.BaseResource):
@@ -433,7 +432,7 @@ class Event(object):
 
     @defer.inlineCallbacks
     def delete(self, itemId):
-        log.msg("plugin:delete", itemId)
+        log.info("plugin:delete", itemId)
         yield db.get_slice(itemId, "entities")
 
     _ajaxResource = None

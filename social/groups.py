@@ -1,5 +1,4 @@
 import uuid
-from twisted.python     import log
 from twisted.internet   import defer
 from telephus.cassandra import ttypes
 try:
@@ -14,7 +13,7 @@ from social.constants   import PEOPLE_PER_PAGE
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
-from social.logging     import profile, dump_args
+from social.logging     import profile, dump_args, log
 from social.settings    import saveAvatarItem
 
 
@@ -393,7 +392,7 @@ class GroupsResource(base.BaseResource):
                         $$.ui.bindFormSubmit('#group_form');
                         $('#group_form').html5form({messages: 'en'});
                      """
-            
+
             script = "<script>%s</script>"%(script) if landing else script
             request.write(script);
 
@@ -615,7 +614,7 @@ class GroupsResource(base.BaseResource):
                 groupFollowers = yield db.multiget_slice(toFetchGroups, "followers", names=[myId])
                 groupFollowers = utils.multiColumnsToDict(groupFollowers)
                 cols = yield db.get_slice(myId, 'pendingConnections', ["GO:%s"%(x) for x in toFetchGroups])
-                pendingConnections = dict((x.column.name.split(':')[1], x.column.value) for x in cols if len(x.column.name.split(':') == 2))
+                pendingConnections = dict((x.column.name.split(':')[1], x.column.value) for x in cols if len(x.column.name.split(':')) == 2)
             args["groups"] = groups
             args["groupIds"] = groupIds
             args["myGroups"] = myGroupsIds

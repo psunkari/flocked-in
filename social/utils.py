@@ -21,14 +21,13 @@ from dateutil.tz        import gettz
 from telephus.cassandra import ttypes
 
 from twisted.internet   import defer, threads
-from twisted.python     import log
 from twisted.mail       import smtp
 
 from social             import db, _, __, config, errors
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.constants   import INFINITY
-from social.logging     import profile, dump_args
+from social.logging     import profile, dump_args, log
 
 
 def md5(text):
@@ -365,7 +364,7 @@ def checkAcl(userId, acl, owner, relation, userOrgId=None):
     if "groups" in accept:
         returnValue |= any([groupid in accept["groups"] for groupid in relation.groups])
     if "friends" in accept and accept["friends"]:
-        log.msg(owner in relation.friends, "accept-friends")
+        log.info(owner in relation.friends, "accept-friends")
         returnValue |= ((userId == owner) or (owner in relation.friends))
     if "followers" in accept and accept["followers"]:
         returnValue |= (userId == owner)

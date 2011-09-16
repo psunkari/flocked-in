@@ -2,8 +2,8 @@
                     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <%! from social import utils, _, __, plugins %>
 <%! from social import relations as r %>
+<%! from social.logging import log %>
 <%! from pytz import common_timezones %>
-<%! from twisted.python import log %>
 <%! import re, datetime %>
 
 <%inherit file="base.mako"/>
@@ -393,7 +393,7 @@
         elif convType in plugins:
           block.append(key)
       except Exception, e:
-        log.msg("Error when displaying UserItem:", key)
+        log.err("Error when displaying UserItem:", key)
         log.err(e)
     if block:
       self.activity_block(block)

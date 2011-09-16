@@ -5,7 +5,6 @@ from hashlib            import md5, sha256
 from datetime           import datetime
 
 
-from twisted.python     import log
 from twisted.internet   import defer
 from twisted.web        import server, resource, static
 from twisted.mail.smtp  import sendmail
@@ -19,7 +18,7 @@ from social             import utils, db, config, people, errors, _
 from social             import notifications
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock, getBlock
-from social.logging     import dump_args, profile
+from social.logging     import dump_args, profile, log
 from social.errors      import PermissionDenied, MissingParams
 
 
@@ -214,7 +213,7 @@ class SignupResource(BaseResource):
             token = utils.getRequestArg(request, "token")
             acceptedInvitationSender = cols.get(emailId, {}).get(token)
             otherInvitees = [x for x in userIds if x != acceptedInvitationSender]
-            
+
             cols = yield db.multiget_slice(userIds+[orgId, userId], "entities", ["basic"])
             entities = utils.multiSuperColumnsToDict(cols)
             data = {"entities": entities, 'orgId': orgId}
