@@ -73,7 +73,7 @@ class logger(object):
         python.log.msg(*message, **kw)
 
     def msg(self, *message, **kw):
-        self.critical("log.msg is DEPRECATE. use log.info")
+        self.critical("log.msg has been deprecated. use log.info")
         self.info(*message, **kw)
 
 
