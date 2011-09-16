@@ -351,7 +351,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
                                           "%(user0)s answered %(owner)s's %(itemType)s"],
                                           ["%(user0)s and %(user1)s answered your %(itemType)s",
                                           "%(user0)s and %(user1)s answered %(owner)s's %(itemType)s"],
-                                          ["%(user0)s, %(user1)s and %(user2)s answered your %(itemType)s"
+                                          ["%(user0)s, %(user1)s and %(user2)s answered your %(itemType)s",
                                           "%(user0)s, %(user1)s and %(user2)s answered %(owner)s's %(itemType)s"]]\
                                          [len(reasonUserIds[convId])-1]
 
