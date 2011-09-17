@@ -9,7 +9,7 @@ set -e
 #
 # Repository settings
 #
-repo_url='/home/tux/social-copy'
+repo_url='ssh://one.synovel.pvt/social'
 repo_revision='tip'
 
 
@@ -46,7 +46,7 @@ img_dir='rsrcs/img'
 # Deployment environment configuration
 #
 app_hosts=('app-1.flocked.in')
-cdn_host='https://doy9z51iqd595.cloudfront.net'
+cdn_host='https://d3aeyh6yzpchnb.cloudfront.net'
 
 
 #

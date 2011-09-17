@@ -29,7 +29,7 @@ class AvatarResource(resource.Resource):
             format = avatarInfo["format"]\
                      if avatarInfo.has_key("format") else "jpg"
             data = avatarInfo[size]
-            expires = formatdate(time.time() + 864000)
+            expires = formatdate(time.time() + 31536000)
 
             request.setHeader('Content-Type', 'image/%s' % format)
             request.setHeader('Content-Length', len(data))
