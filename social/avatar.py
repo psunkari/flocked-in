@@ -33,8 +33,12 @@ class AvatarResource(resource.Resource):
 
             request.setHeader('Content-Type', 'image/%s' % format)
             request.setHeader('Content-Length', len(data))
-            request.setHeader('Cache-control', 'public')
+            request.setHeader('Cache-Control', 'public')
             request.setHeader('Expires', expires)
+            try:
+                timestamp = cols[0].column.timestamp
+                request.setHeader('Last-Modified', formatdate(timestamp/1000000))
+            except Exception, e: pass
             request.write(data)
             request.finish()
 
