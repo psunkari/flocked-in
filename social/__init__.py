@@ -12,12 +12,14 @@ from social.isocial     import IItemType
 
 
 #
-# Read configuration
+# Read configuration + cache a few values
 #
 config = ConfigParser.ConfigParser()
 with open('etc/defaults.cfg') as defaults:
     config.readfp(defaults)
 config.read(['etc/devel.cfg','etc/production.cfg'])
+cdnHost = config.get("General", "CDNHost")
+secureProxy = config.get("General", "SecureProxy")
 
 
 #
@@ -64,5 +66,5 @@ except IOError:
     pass
 
 
-
-__all__ = [config, db, plugins, whitelist, blacklist, _, __]
+__all__ = [config, db, plugins, whitelist,
+           blacklist, cdnHost, secureProxy, _, __]
