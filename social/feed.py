@@ -153,6 +153,8 @@ def updateFeedResponses(userKey, parentKey, itemKey, timeuuid, itemType,
     cols = utils.columnsToDict(cols, ordered=True)
 
     feedKeys = []
+    userFeedItems = []
+    userFeedItemsByType = {}
     for tuuid, val in cols.items():
         # Bailout if we already know about this update.
         if tuuid == timeuuid:
@@ -160,7 +162,10 @@ def updateFeedResponses(userKey, parentKey, itemKey, timeuuid, itemType,
 
         rtype = val.split(':')[0]
         if rtype not in  ('!', 'I'):
-            tmp.setdefault(val.split(':')[0], []).append(tuuid)
+            tmp.setdefault(rtype, []).append(tuuid)
+            if val.split(':')[1] == userKey:
+                userFeedItems.append(tuuid)
+                userFeedItemsByType.setdefault(rtype, []).append(tuuid)
             oldest = tuuid
 
         feedKeys.append(tuuid)
@@ -174,11 +179,20 @@ def updateFeedResponses(userKey, parentKey, itemKey, timeuuid, itemType,
     noOfItems = len(tmp.get(responseType, []))
 
     if noOfItems == MAXFEEDITEMSBYTYPE:
-        oldest = tmp[responseType][noOfItems-1]
+        if (len(userFeedItemsByType.get(responseType, {})) == MAXFEEDITEMSBYTYPE  and not promote)\
+           or (tmp[responseType][noOfItems-1] not in userFeedItemsByType.get(responseType, {}) \
+               and len(userFeedItemsByType.get(responseType, {})) == MAXFEEDITEMSBYTYPE-1 and not promote):
+             oldest = userFeedItemsByType[responseType][noOfItems-2]
+        else:
+            oldest = tmp[responseType][noOfItems-1]
+
+    if ((len(userFeedItems)== MAXFEEDITEMS-1 and not promote) or \
+       (oldest not in userFeedItems and len(userFeedItems) == MAXFEEDITEMS-2 and not promote)):
+
+        oldest = userFeedItems[-2]
 
     if noOfItems == MAXFEEDITEMSBYTYPE or totalItems == MAXFEEDITEMS:
         yield db.remove(userKey, "feedItems", oldest, parentKey)
-        yield db.remove(userKey, "feed", oldest)
         if plugins.has_key(itemType) and plugins[itemType].hasIndex:
             yield db.remove(userKey, "feed_"+itemType, oldest)
 
