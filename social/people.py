@@ -510,16 +510,16 @@ class PeopleResource(base.BaseResource):
         elif src == "people":
             request.redirect('/people')
         if not stats and self._ajax:
-            request.write("$$.alerts.error('%s');"%(_("Invitations cannot be sent to verified domains only.")))
+            request.write("$$.alerts.error('%s');"%(_("Use company email-ids only.")))
         elif stats and self._ajax:
             if len(stats[0]) == 1:
-                request.write("$$.alerts.info('%s');" %_("Invite sent"))
+                request.write("$$.alerts.info('%s');" %_("Invitation sent"))
             elif len(stats[0]) >1:
-                request.write("$$.alerts.info('%s');" %_("Invites sent"))
+                request.write("$$.alerts.info('%s');" %_("Invitations sent"))
             else:
                 #TODO: when user tries to send invitations to existing members,
                 #      show these members as add-as-friend/follow list
-                request.write("$$.alerts.info('%s');" %_("Invite sent"))
+                request.write("$$.alerts.info('%s');" %_("Invitation sent"))
 
 
     @defer.inlineCallbacks
