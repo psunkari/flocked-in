@@ -45,8 +45,8 @@ img_dir='rsrcs/img'
 #
 # Deployment environment configuration
 #
-app_hosts=('app-1.flocked.in')
-cdn_host='https://d3aeyh6yzpchnb.cloudfront.net'
+app_hosts=('app-1.flocked.in' 'app-2.flocked.in')
+cdn_host='https://depmigrvpjbd.cloudfront.net'
 
 
 #
@@ -59,6 +59,7 @@ yui_compressor='/opt/yuicompressor-2.4.6/build/yuicompressor-2.4.6.jar'
 ####################  END OF CONFIGURATION ###################
 #
 
+set -x
 cur_dir=`pwd`
 tmp_dir=`mktemp -d -t social.XXXXXX`
 
@@ -172,4 +173,3 @@ for remote in ${app_hosts[*]}; do
 done
 
 cd $cur_dir
-cleanup
