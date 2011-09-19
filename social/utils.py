@@ -23,7 +23,7 @@ from telephus.cassandra import ttypes
 from twisted.internet   import defer, threads
 from twisted.mail       import smtp
 
-from social             import db, _, __, config, errors
+from social             import db, _, __, config, errors, cdnHost
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.constants   import INFINITY
@@ -462,31 +462,51 @@ def userName(id, user, classes=None):
            "<a class='ajax' href='/profile?id=%s'>%s</a></span>"\
            % (id, user["basic"]["name"])
 
+
 def groupName(id, user, classes=None):
     return "<span><a class='ajax' href='/feed?id=%s'>%s</a></span>"\
            % (id, user["basic"]["name"])
 
 
+# These paths are replaced during deployment where a CDN will be used.
+avatar_f_l="/rsrcs/img/avatar_f_l.png"
+avatar_f_m="/rsrcs/img/avatar_f_m.png"
+avatar_f_s="/rsrcs/img/avatar_f_s.png"
+avatar_m_l="/rsrcs/img/avatar_m_l.png"
+avatar_m_m="/rsrcs/img/avatar_m_m.png"
+avatar_m_s="/rsrcs/img/avatar_m_s.png"
 def userAvatar(id, userInfo, size=None):
     size = size[0] if (size and len(size) != 0) else "m"
     avatar = userInfo.get("basic", {}).get("avatar", None)
     sex = userInfo.get("basic", {}).get("sex", "M").lower()
     if avatar:
         imgType, itemId = avatar.split(":")
-        return "/avatar/%s_%s.%s" % (size, itemId, imgType)
+        url = "/avatar/%s_%s.%s" % (size, itemId, imgType)
+        if cdnHost:
+            url = cdnHost + url
     else:
         sex = "m" if sex != "f" else "f"
-        return "/rsrcs/img/avatar_%s_%s.png" % (sex, size)
+        url = globals().get("avatar_%s_%s" % (sex, size))
+
+    return url
 
 
+# These paths are replaced during deployment where a CDN will be used.
+avatar_g_l="/rsrcs/img/avatar_g_l.png"
+avatar_g_m="/rsrcs/img/avatar_g_m.png"
+avatar_g_s="/rsrcs/img/avatar_g_s.png"
 def groupAvatar(id, groupInfo, size=None):
     size = size[0] if (size and len(size) != 0) else "m"
     avatar = groupInfo.get("basic", {}).get("avatar", None)
     if avatar:
         imgType, itemId = avatar.split(":")
-        return "/avatar/%s_%s.%s" % (size, itemId, imgType)
+        url = "/avatar/%s_%s.%s" % (size, itemId, imgType)
+        if cdnHost:
+            url = cdnHost + url
     else:
-        return "/rsrcs/img/avatar_g_%s.png" % size
+        url = globals().get("avatar_g_%s" % size)
+
+    return url
 
 
 def companyLogo(orgInfo, size=None):

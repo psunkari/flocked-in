@@ -1,4 +1,4 @@
-<%! from social import utils, _, __, plugins, constants, config %>
+<%! from social import utils, _, __, plugins, constants, config, secureProxy %>
 <%! from twisted.web.static import formatFileSize %>
 <%! from base64 import b64encode, urlsafe_b64decode %>
 <%! from urlparse import urlsplit %>
@@ -523,11 +523,8 @@
         hasEmbed = True
 
     title = title if title else url
-    if imgsrc:
-      try:
-        proxy = config.get('General', 'SecureProxy')
-        imgsrc = proxy % b64encode(imgsrc)
-      except Exception, e: pass
+    if imgsrc and secureProxy:
+        imgsrc = secureProxy % b64encode(imgsrc)
   %>
   %if not isQuoted:
     ${utils.userName(userId, entities[userId], "conv-user-cause")}
