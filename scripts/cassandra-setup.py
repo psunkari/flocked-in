@@ -493,6 +493,10 @@ def addSampleData(client):
                                     'mail': 'william@gmail.com',
                                     'hometown': 'Berlin, Germany',
                                     'currentcity': 'San Fransisco'
+                                },
+                                'adminOfGroups':{
+                                    managementGroupId:'',
+                                    programmersGroupId:''
                                 }})
     yield client.batch_insert(paulKey, 'entities', {
                                 'basic': {
