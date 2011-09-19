@@ -209,6 +209,11 @@ def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
     accept_groups = acl.get('accept', {}).get('groups', [])
     deny_groups = acl.get('deny', {}).get('groups', [])
     groups = [x for x in accept_groups if x not in deny_groups]
+    if groups:
+        relation = Relation(owner, [])
+        yield relation.initGroupsList()
+        if not all([x in relation.groups for x in groups]):
+            raise errors.PermissionDenied(_("Only group members can post to a group"))
 
     acl = pickle.dumps(acl)
     item = {
