@@ -547,8 +547,10 @@
           <img src='${imgsrc}' class="link-image"/>
         %endif
         <div class="link-details">
-          <a href=${url} target="_blank"><div class="link-title">${_(title)}</div></a>
-          <div id="summary" class="link-summary">${_(summary)}</div>
+          <a href=${url} target="_blank"><div class="link-title">${title}</div></a>
+          %if summary:
+            <div id="summary" class="link-summary">${summary}</div>
+          %endif
           %if title != url:
             <% domain = urlsplit(url)[1] %>
             <div id="url" class="link-url">${domain}</div>
