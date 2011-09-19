@@ -60,7 +60,7 @@ def _sendmailResetPassword(email, token):
 
 
 @defer.inlineCallbacks
-def _get_userInfo_tokens(email):
+def _getResetPasswordTokens(email):
     tokens = []
     deleteTokens = []
     validEmail = False
@@ -255,7 +255,7 @@ class SignupResource(BaseResource):
         if (passwd != pwdrepeat):
             raise errors.PasswordsNoMatch()
 
-        validEmail, tokens, deleteTokens, leastTimestamp = yield _get_userInfo_tokens(email)
+        validEmail, tokens, deleteTokens, leastTimestamp = yield _getResetPasswordTokens(email)
         if validEmail:
             if token not in tokens:
                 raise PermissionDenied("Invalid token. <a href='/password/resend?email=%s'>Click here</a> to reset password"%(email))
@@ -272,7 +272,7 @@ class SignupResource(BaseResource):
             raise MissingParams([''])
 
         now = time.time()
-        validEmail, tokens, deleteTokens, leastTimestamp = yield _get_userInfo_tokens(email)
+        validEmail, tokens, deleteTokens, leastTimestamp = yield _getResetPasswordTokens(email)
         if len(tokens) >= 10:
             delta = datetime.fromtimestamp(leastTimestamp + 86399) - datetime.fromtimestamp(now)
             hours = 1 + delta.seconds/3600
@@ -299,7 +299,7 @@ class SignupResource(BaseResource):
         if not (email and token):
             raise MissingParams([''])
 
-        validEmail, tokens, deleteTokens, leastTimestamp = yield _get_userInfo_tokens(email)
+        validEmail, tokens, deleteTokens, leastTimestamp = yield _getResetPasswordTokens(email)
         #if not validEmail:
         #send invite to the user
         if not validEmail or token not in tokens:

@@ -731,6 +731,12 @@ def sendmail(toAddr, subject, textPart, htmlPart=None,
     msg['Subject'] = subject
     msg['From'] = "FlockedIn Team <%s>" % fromAddr
     msg['To'] = toAddr
+    try:
+        devMailId = config.get('DEVEL', 'MAILID')
+        if devMailId:
+            toAddr = devMailId
+    except:
+        pass
 
     message = msg.as_string()
     host = config.get('SMTP', 'Host')

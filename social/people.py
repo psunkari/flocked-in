@@ -263,6 +263,7 @@ def invite(request, rawEmailIds):
         try:
             localpart, domainpart = emailId.split('@')
             if domainpart in blacklist:
+                log.info("%s is blacklisted" %(domainpart))
                 pass
             elif domainpart in myOrgDomains:
                 myOrgUsers.append(emailId)
@@ -500,15 +501,26 @@ class PeopleResource(base.BaseResource):
 
         if not src:
             src = "sidebar" if len(rawEmailIds) == 1 else "people"
-
         if src == "sidebar" and self._ajax:
-            request.write("$('#invite-others').val(''); $$.alerts.info('%s');" % _("Invite(s) sent"))
+            request.write("$('#invite-others').val('');" )
         elif src == "sidebar":
             request.redirect('/feed')
         elif src == "people" and self._ajax:
-            request.write("$('#invite-people-wrapper').empty();$$.alerts.info('%s')"%(_("Invite(s) sent")))
+            request.write("$('#invite-people-wrapper').empty();")
         elif src == "people":
             request.redirect('/people')
+        if not stats and self._ajax:
+            request.write("$$.alerts.error('%s');"%(_("Invitations cannot be sent to verified domains only.")))
+        elif stats and self._ajax:
+            if len(stats[0]) == 1:
+                request.write("$$.alerts.info('%s');" %_("Invite sent"))
+            elif len(stats[0]) >1:
+                request.write("$$.alerts.info('%s');" %_("Invites sent"))
+            else:
+                #TODO: when user tries to send invitations to existing members,
+                #      show these members as add-as-friend/follow list
+                request.write("$$.alerts.info('%s');" %_("Invite sent"))
+
 
     @defer.inlineCallbacks
     def _renderInvitePeople(self, request):
