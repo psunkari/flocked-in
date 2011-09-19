@@ -206,6 +206,10 @@ def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
                 raise Exception("User does not belong to any company!")
             acl = {"accept":{"orgs":[org]}}
 
+    accept_groups = acl.get('accept', {}).get('groups', [])
+    deny_groups = acl.get('deny', {}).get('groups', [])
+    groups = [x for x in accept_groups if x not in deny_groups]
+
     acl = pickle.dumps(acl)
     item = {
         "meta": {
@@ -219,6 +223,8 @@ def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
     }
     if subType:
         item["meta"]["subType"] = subType
+    if groups:
+        item["meta"]["target"] = ",".join(groups)
     tmpFileIds = getRequestArg(request, 'fId', False, True)
     attachments = {}
     if tmpFileIds:
@@ -364,7 +370,6 @@ def checkAcl(userId, acl, owner, relation, userOrgId=None):
     if "groups" in accept:
         returnValue |= any([groupid in accept["groups"] for groupid in relation.groups])
     if "friends" in accept and accept["friends"]:
-        log.info(owner in relation.friends, "accept-friends")
         returnValue |= ((userId == owner) or (owner in relation.friends))
     if "followers" in accept and accept["followers"]:
         returnValue |= (userId == owner)

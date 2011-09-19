@@ -196,9 +196,9 @@
   &#183;
   ## Like this conversation
   %if myKey == meta["owner"]:
-    <button class="button-link disabled">${_("Like")}</button>&#183;<button 
+    <button class="button-link disabled">${_("Like")}</button>&#183;<button
   %elif myLikes and myLikes.has_key(convId) and len(myLikes[convId]):
-    <button class="button-link ajaxpost" _ref="/item/unlike?id=${convId}">${_("Unlike")}</button>&#183;<button 
+    <button class="button-link ajaxpost" _ref="/item/unlike?id=${convId}">${_("Unlike")}</button>&#183;<button
   %else:
     <button class="button-link ajaxpost" _ref="/item/like?id=${convId}">${_("Like")}</button>&#183;<button
   %endif
@@ -444,9 +444,17 @@
     normalize = utils.normalizeText
     has_icon = "has-icon" if convType in ["question"] else ''
     itemTitleText = "item-title-text" if has_icon else ''
+    target = items[convId]["meta"].get('target', '')
+    target = target.split(',') if target else ''
+    if target:
+      target = [x for x in target if x in relation.groups]
   %>
   %if not isQuoted:
-    ${utils.userName(userId, entities[userId], "conv-user-cause")}
+    %if not target:
+      ${utils.userName(userId, entities[userId], "conv-user-cause")}
+    %else:
+      ${utils.userName(userId, entities[userId], "conv-user-cause")}  ${_("on")} ${utils.groupName(target[0], entities[target[0]])}
+    %endif
   %endif
   <div class="item-title ${has_icon}">
     %if has_icon:
@@ -525,9 +533,17 @@
     title = title if title else url
     if imgsrc and secureProxy:
         imgsrc = secureProxy % b64encode(imgsrc)
+    target = items[convId]["meta"].get('target', '')
+    target = target.split(',') if target else ''
+    if target:
+      target = [x for x in target if x in relation.groups]
   %>
   %if not isQuoted:
-    ${utils.userName(userId, entities[userId], "conv-user-cause")}
+    %if not target:
+      ${utils.userName(userId, entities[userId], "conv-user-cause")}
+    %else:
+      ${utils.userName(userId, entities[userId], "conv-user-cause")}  ${_("on")} ${utils.groupName(target[0], entities[target[0]])}
+    %endif
   %endif
   <div class="item-title has-icon">
     <span class="icon item-icon link-icon"></span>

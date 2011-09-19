@@ -112,7 +112,7 @@ class ItemResource(base.BaseResource):
 
         toFetchEntities.add(conv['meta']['owner'])
         if "target" in conv["meta"]:
-            toFetchEntities.add(conv['meta']['target'])
+            toFetchEntities.update(conv['meta']['target'].split(','))
 
         entities = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
         entities = utils.multiSuperColumnsToDict(entities)
@@ -262,12 +262,25 @@ class ItemResource(base.BaseResource):
             convId, conv = yield plugin.create(request)
             timeUUID = conv["meta"]["uuid"]
             convACL = conv["meta"]["acl"]
+            target = conv["meta"].get("target", None)
+            toFetchEntities = set()
+            entities = {}
+            deferreds = []
+            relation = Relation(myId, [])
+            deferreds.append(relation.initGroupsList())
+            if target:
+                toFetchEntities.update(target.split(','))
+            if toFetchEntities:
+                d = db.multiget_slice(toFetchEntities, "entities", ["basic"])
+                def _getEntities(cols):
+                    entities.update(utils.multiSuperColumnsToDict(cols))
+                d.addCallback(_getEntities)
+                deferreds.append(d)
 
             commentSnippet = ""
             userItemValue = ":".join([responseType, convId, convId,
                                       convType, myId, commentSnippet])
 
-            deferreds = []
             d = feed.pushToFeed(myId, timeUUID, convId, parent,
                                 responseType, convType, convOwner, myId)
             deferreds.append(d)
@@ -289,8 +302,9 @@ class ItemResource(base.BaseResource):
             deferredList = defer.DeferredList(deferreds)
             yield deferredList
 
-            data = {"items":{convId:conv},
-                    "entities":{myId: args['me']}, "script": True}
+            entities[myId] = args["me"]
+            data = {"items":{convId:conv}, "relation": relation,
+                    "entities":entities, "script": True}
             args.update(data)
             onload = "(function(obj){$$.convs.load(obj);$('#sharebar-attach-uploaded').empty();})(this);"
             d1 = renderScriptBlock(request, "item.mako", "item_layout",
