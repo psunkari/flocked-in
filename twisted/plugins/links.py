@@ -13,8 +13,9 @@ from social.isocial     import IItemType, IAuthInfo
 from social             import db, utils, errors, _, config
 from social.logging     import profile, dump_args, log
 
+
 def _sanitize(text, strip=False):
-    unitext = text if type(text) == unicode\
+    unitext = text if type(text) == unicode or not text\
                    else text.decode('utf-8', 'replace')
     if strip and len(unitext) > 250:
         chopped = unitext[:250]
@@ -87,8 +88,6 @@ class Links(object):
             url = "http://" + url
 
         summary, title, image, embed = yield self._summary(url)
-        summary = _sanitize(summary, True)
-        title = _sanitize(title)
 
         convId = utils.getUniqueKey()
         item, attachments = yield utils.createNewItem(request, self.itemType)
@@ -96,8 +95,10 @@ class Links(object):
         if target:
             meta["target"] = target
         if summary:
+            summary = _sanitize(summary, True)
             meta["summary"] = summary
         if title:
+            title = _sanitize(title)
             meta["title"] = title
         if image:
             meta['imgSrc'] = image
@@ -188,7 +189,7 @@ class Links(object):
                 defer.returnValue((ogSummary or summary, ogTitle or title,  ogImage or image, embed ))
             if not (ogSummary or summary):
                 for element in tree.xpath("body//p"):
-                    if element.text:
+                    if element.text and len(element.text) > 25:
                         summary = element.text
                         break
             if not (ogImage or image):
@@ -196,7 +197,6 @@ class Links(object):
                     if 'src' in element.attrib \
                       and element.attrib['src'].startswith('http://') \
                       and domain in element.attrib['src']:
-
                         image = element.attrib['src']
                         break
             defer.returnValue((ogSummary or summary, ogTitle or title, ogImage or image, embed))
