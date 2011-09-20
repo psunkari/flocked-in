@@ -193,8 +193,10 @@ class FTSResource(base.BaseResource):
         args["prevPageStart"] = prevPageStart
 
         if script:
+            onload = "(function(obj){$$.convs.load(obj);})(this);"
             yield renderScriptBlock(request, "search.mako", "results", landing,
-                                    "#user-feed", "set", **args)
+                                    "#user-feed", "set", True,
+                                    handlers={"onload": onload}, **args)
             yield renderScriptBlock(request, "search.mako", "paging", landing,
                                     "#search-paging", "set", **args)
 
