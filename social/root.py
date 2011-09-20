@@ -306,12 +306,14 @@ class RootResource(resource.Resource):
                         and request.method == "GET":
                 def addTokenCallback(rsrc):
                     ad = defer.maybeDeferred(request.getSession, IAuthInfo)
+                    @defer.inlineCallbacks
                     def gotAuthInfo(authinfo):
                         if authinfo.username:
                             token = str(uuid.uuid4())[:8]
                             request.addCookie('token', token, path='/')
                             authinfo.token = token
-                        return rsrc
+                            yield request._saveSessionToDB()
+                        defer.returnValue(rsrc)
                     ad.addCallback(gotAuthInfo)
                     return ad
                 d.addCallback(addTokenCallback)
