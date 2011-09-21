@@ -1,0 +1,28 @@
+
+System Setup
+------------
+
+1. Set a complicated password for root.
+
+2. Create a new user - "mirage"
+
+3. Copy SSH keys to "/home/mirage/.ssh/authorized_keys2"
+
+4. Secure SSH (/etc/ssh/sshd_config)
+     PermitRootLogin without-password
+     Protocol 2
+     PasswordAuthentication no
+     LoginGraceTime 45
+     AllowUsers mirage
+
+5. Setup Firewall - firewall-appserver.sh
+     run from /etc/network/if-up.d/iptables
+
+6. Setup portknocking
+     apt-get install knockd
+   See manpage for setup information
+
+7. Install pre-requisite applications
+     Java 1.6 (canonical partner repository)
+     Cassandra (apache cassandra repository)
+
