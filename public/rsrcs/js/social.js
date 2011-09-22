@@ -40,11 +40,11 @@ _sendingAjaxRequest: function(evt, xhr, options) {
  * Based on http://blog.stevenlevithan.com/archives/parseuri
  */
 parseUri: function parseUri(str) {
-    var matches = /^(?:([^:\/?#]+):)?(?:\/\/((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\/?#]*)(?::(\d*))?))?((((?:[^?#\/]*\/)*)([^?#]*))(?:\?([^#]*))?(?:#(.*))?)/.exec(str);
-    var keys = ["source","protocol","authority","userInfo","user","password","host","port","relative","path","directory","file","query","anchor"];
-    var uri = {}
+    var matches = /^(?:([^:\/?#]+):)?(?:\/\/((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\/?#]*)(?::(\d*))?))?((((?:[^?#\/]*\/)*)([^?#]*))(?:\?([^#]*))?(?:#(.*))?)/.exec(str),
+        keys = ["source","protocol","authority","userInfo","user","password","host","port","relative","path","directory","file","query","anchor"],
+        uri = {};
 
-    var i = 14
+    var i = 14;
     while (i--) uri[keys[i]] = matches[i];
 
     return uri;
