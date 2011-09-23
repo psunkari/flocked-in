@@ -279,7 +279,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
     relation = Relation(myId, [])
     relationsFetched = False
     yield defer.DeferredList([relation.initFriendsList(),
-                                      relation.initGroupsList()])
+                              relation.initGroupsList()])
 
     # Fetch and process feed items
     reasonUserIds = {}
@@ -549,7 +549,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
     data.update({"entities": entities, "responses": responses, "likes": likes,
                  "myLikes": myLikes, "conversations": convIds, "tags": tags,
                  "nextPageStart": nextPageStart, "reasonStr": reasonStr,
-                 "reasonUserIds": reasonUserIds, "relation":relation})
+                 "reasonUserIds": reasonUserIds, "relations":relation})
     defer.returnValue(data)
 
 
@@ -667,11 +667,13 @@ class FeedResource(base.BaseResource):
             for entity in entities:
                 if entity not in args["entities"]:
                     args["entities"][entity] = entities[entity]
-
-        relation = Relation(myId, suggestions)
+        if "relations" not in args:
+            relation = Relation(myId, suggestions)
+            args["relations"] = relation
+        else:
+            relation = args["relations"]
         yield defer.DeferredList([relation.initFriendsList(),
                                   relation.initSubscriptionsList()])
-        args["relations"] = relation
 
         if script:
             onload = "(function(obj){$$.convs.load(obj);})(this);"
