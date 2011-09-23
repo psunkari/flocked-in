@@ -26,7 +26,7 @@
           <div class="titlebar">
             <span class="middle title">${_('Messages')}</span>
             <span class="button title-button">
-              <a class="ajax" href="/messages/write" _ref="/messages/write">${_('New Message')}</a>
+              <a class="ajax" href="/messages/write" data-ref="/messages/write">${_('New Message')}</a>
             </span>
           </div>
           <div id="composer">
@@ -236,7 +236,7 @@
             ${_('Cancel')}
           </button>
         %else:
-          <a class="ajax" _ref="/messages">${'Cancel'}</a>
+          <a class="ajax" data-ref="/messages">${'Cancel'}</a>
         %endif
       </div>
     </form>

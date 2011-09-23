@@ -74,7 +74,7 @@
   <div class="item-subactions">
     ${_("%d total votes")%total}
     &nbsp;&#183;&nbsp;
-    <a class="ajax" _ref="/poll/change?id=${convId}">${_("Change vote")}</a>
+    <a class="ajax" data-ref="/poll/change?id=${convId}">${_("Change vote")}</a>
   </div>
 </%def>
 
@@ -124,7 +124,7 @@
         <input type="hidden" name="id" value="${convId}"/>
         %if voted:
           <input style="font-size:11px" type="submit" class="button" id="submit" value="${_('Update')}"/>&nbsp;
-          <a class="ajax" _ref="/poll/results?id=${convId}">${_('Go back to results')}</a>
+          <a class="ajax" data-ref="/poll/results?id=${convId}">${_('Go back to results')}</a>
         %else:
           <input type="submit" id="submit" value="${_('Vote')}"/>
         %endif

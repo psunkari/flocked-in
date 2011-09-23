@@ -24,7 +24,7 @@
           <div class="titlebar">
             <span class="middle title">${_('People')}</span>
             <span class="button title-button">
-              <a class="ajax" href="/people/invite" _ref="/people/invite">${_('Invite more people')}</a>
+              <a class="ajax" href="/people/invite" data-ref="/people/invite">${_('Invite more people')}</a>
             </span>
           </div>
           <div id="invite-people-wrapper">
@@ -106,9 +106,9 @@
       <ul id="user-actions-${userId}" class="middle user-actions h-links">
         %if showBlocked:
           %if userId not in blockedUsers:
-            <button class="button default" onclick="$.post('/ajax/admin/block', 'id=${userId}')">Block</button>
+            <li><button class="button default" onclick="$.post('/ajax/admin/block', 'id=${userId}')">Block</button></li>
           %endif
-          <button class="button default" onclick="$.post('/ajax/admin/delete', 'id=${userId}')">Remove</button>
+          <li><button class="button default" onclick="$.post('/ajax/admin/delete', 'id=${userId}')">Remove</button></li>
         %else:
           ${profile.user_actions(userId, True)}
         %endif
@@ -212,7 +212,7 @@
     <div class="user-details-name">${emailId}</div>
     <div class="user-details-actions">
       <ul id="user-actions-${emailId}" class="middle user-actions h-links">
-        ##<button class="button disabled" onclick="$.post('/ajax/people/invite/resend', 'id=${emailId}')"><span class="button-text">Invite Again</span></button>
+        ##<li><button class="button disabled" onclick="$.post('/ajax/people/invite/resend', 'id=${emailId}')"><span class="button-text">Invite Again</span></button></li>
       </ul>
     </div>
   </div>

@@ -580,7 +580,7 @@ def simpleTimestamp(timestamp, timezone='Asia/Kolkata'):
         else:
             formatted = _("%(month)s %(date)s, %(year)s at %(12hour)s:%(minutes)02d%(ampm)s") % params
 
-    return "<abbr class='timestamp' title='%s' _ts='%s'>%s</abbr>" %(tooltip, timestamp, formatted)
+    return "<abbr class='timestamp' title='%s' data-ts='%s'>%s</abbr>" %(tooltip, timestamp, formatted)
 
 
 def toSnippet(comment):

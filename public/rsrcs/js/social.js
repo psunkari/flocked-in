@@ -85,7 +85,7 @@ setBusy: function _setBusy(deferred, node) {
 
     if (node.hasClass('busy-indicator'))
         busyIndicator = node;
-    else if (bi = node.attr("_bi"))
+    else if (bi = node.attr("data-bi"))
         busyIndicator = $('#' + bi);
     else
         busyIndicator = node.closest('.busy-indicator');
@@ -107,7 +107,7 @@ _initAjaxRequests: function _initAjaxRequests() {
             deferred = null,
             url = null;
 
-        if (url = node.attr('_ref'))
+        if (url = node.attr('data-ref'))
             deferred = $.get('/ajax' + url);
         else if (url = node.attr('href'))
             deferred = self.fetchUri(url);
@@ -119,7 +119,7 @@ _initAjaxRequests: function _initAjaxRequests() {
     /* Async Post */
     $("a.ajaxpost,button.ajaxpost").live("click", function() {
         var node = $(this),
-            url = node.attr('_ref');
+            url = node.attr('data-ref');
         parsed = social.parseUri(url);
 
         deferred = $.post('/ajax' + parsed.path, parsed.query);
@@ -1079,7 +1079,7 @@ var acl = {
     },
 
     updateACL: function(id, ui) {
-        var type = ui.item.children("a").first().attr("_acl"),
+        var type = ui.item.children("a").first().attr("data-acl"),
             aclObj = {accept:{}},
             str = ui.item.find(".acl-title").text();
             tooltip = ui.item.find(".acltip").text();
@@ -1115,7 +1115,7 @@ var acl = {
         $$.data.wait("/auto/mygroups", (function(groups) {
             items = [];
             $.each(groups || [], function(i, g) {
-                items.push('<li><a class="acl-item" _acl="group:' + g.id + '">' + 
+                items.push('<li><a class="acl-item" data-acl="group:' + g.id + '">' + 
                            '<span class="acl-title">' + g.name + '</span>' +
                            '<div class="acltip" style="display:none;">' + g.name + '</div>' + 
                            '</a></li>');

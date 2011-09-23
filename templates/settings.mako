@@ -188,7 +188,7 @@
       %>
     </div>
     <div id="workadd">
-      <button class="button-link ajax" _ref="/settings/work">${_("+ Add Work")}</button>
+      <button class="button-link ajax" data-ref="/settings/work">${_("+ Add Work")}</button>
     </div>
     <div class="styledform" id="workform" style="display:none;">
       <form id='settings-form' action='/settings/work' method='post' class='ajax'>

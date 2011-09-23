@@ -1,6 +1,5 @@
 <%! from social import utils, config, _, __ %>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-                    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE HTML>
 
 <%def name="title()">
   ${config.get('Branding', 'Name')} &mdash; ${_('Private, Secure and Free Social Network for Enterprises')}
@@ -41,7 +40,6 @@
 <html>
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-  <meta http-equiv="X-UA-Compatible" content="IE=8" >
   <title>${self.title()}</title>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/social.css"/>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/widgets.css"/>
@@ -101,14 +99,12 @@
       %>
       <div id="name">${name}</div>
       <div id="menubar-links-wrapper">
-        <ul class="h-links">
-          <li><a href="/feed" class="ajax">${_("Home")}</a></li>
-          %if isOrgAdmin:
-            <li><a href="/admin" class="ajax">${_("Admin")}</a></li>
-          %endif
-          <li><a href="/profile?id=${myKey}" class="ajax">${_("My Profile")}</a></li>
-          <li><a href="/signout">${_("Sign out")}</a></li>
-        </ul>
+        <a href="/feed" class="ajax">${_("Home")}</a>
+        %if isOrgAdmin:
+          <a href="/admin" class="ajax">${_("Admin")}</a>
+        %endif
+        <a href="/profile?id=${myKey}" class="ajax">${_("My Profile")}</a>
+        <a href="/signout">${_("Sign out")}</a>
       </div>
     </div>
   </div>

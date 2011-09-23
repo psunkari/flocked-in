@@ -191,16 +191,16 @@
   %endif
   ## Number of comments when none of my friends commented on it
   %if not hasComments and commentsCount > 0:
-    <button class="button-link ajax" title="${commentsCount} Comments" href="/item?id=${convId}" _ref="/item/responses?id=${convId}"><div class="small-icon small-comment"></div>${commentsCount}</button>
+    <button class="button-link ajax" title="${commentsCount} Comments" href="/item?id=${convId}" data-ref="/item/responses?id=${convId}"><div class="small-icon small-comment"></div>${commentsCount}</button>
   %endif
   &#183;
   ## Like this conversation
   %if myKey == meta["owner"]:
     <button class="button-link disabled">${_("Like")}</button>&#183;<button
   %elif myLikes and myLikes.has_key(convId) and len(myLikes[convId]):
-    <button class="button-link ajaxpost" _ref="/item/unlike?id=${convId}">${_("Unlike")}</button>&#183;<button
+    <button class="button-link ajaxpost" data-ref="/item/unlike?id=${convId}">${_("Unlike")}</button>&#183;<button
   %else:
-    <button class="button-link ajaxpost" _ref="/item/like?id=${convId}">${_("Like")}</button>&#183;<button
+    <button class="button-link ajaxpost" data-ref="/item/like?id=${convId}">${_("Like")}</button>&#183;<button
   %endif
   ## Comment on this conversation
   <% commentString = "Answer" if convType == "question" else "Comment" %>
@@ -226,9 +226,9 @@
   %if myKey == meta["owner"]:
     <button class="button-link disabled">${_("Like")}</button>&#183;
   %elif myLikes and myLikes.has_key(itemId) and len(myLikes[itemId]):
-    <button class="button-link ajaxpost" _ref="/item/unlike?id=${itemId}">${_("Unlike")}</button>
+    <button class="button-link ajaxpost" data-ref="/item/unlike?id=${itemId}">${_("Unlike")}</button>
   %else:
-    <button class="button-link ajaxpost" _ref="/item/like?id=${itemId}">${_("Like")}</button>
+    <button class="button-link ajaxpost" data-ref="/item/like?id=${itemId}">${_("Like")}</button>
   %endif
 </%def>
 
@@ -298,13 +298,13 @@
   %if total > showing:
     <div class="conv-comments-more" class="busy-indicator">
       %if not isItemView:
-        <a class="ajax" href="/item?id=${convId}" _ref="/item/responses?id=${convId}">${_("View all %s %s &#187;") % (total, commentString)}</a>
+        <a class="ajax" href="/item?id=${convId}" data-ref="/item/responses?id=${convId}">${_("View all %s %s &#187;") % (total, commentString)}</a>
       %else:
         <span class="num-comments">${_("%s of %s") % (showing, total)}</span>
         %if oldest:
-          <a class="ajax" href="/item?id=${convId}&start=${oldest}" _ref="/item/responses?id=${convId}&nc=${showing}&start=${oldest}">${_("View older %s &#187;"%(commentString))}</a>
+          <a class="ajax" href="/item?id=${convId}&start=${oldest}" data-ref="/item/responses?id=${convId}&nc=${showing}&start=${oldest}">${_("View older %s &#187;"%(commentString))}</a>
         %else:
-          <a class="ajax" href="/item?id=${convId}" _ref="/item/responses?id=${convId}&nc=${showing}">${_("View older %s &#187;"%(commentString))}</a>
+          <a class="ajax" href="/item?id=${convId}" data-ref="/item/responses?id=${convId}&nc=${showing}">${_("View older %s &#187;"%(commentString))}</a>
         %endif
       %endif
     </div>
@@ -341,7 +341,7 @@
 <%def name="conv_comment_form(convId, isItemView)">
   <form method="post" action="/item/comment" class="ajax" autocomplete="off" id="comment-form-${convId}">
     <div class="input-wrap">
-      <textarea class="comment-input" name="comment" placeholder="${_('Leave a response...')}" value="" required title="${_('Comment')}"></textarea>
+      <textarea class="comment-input" name="comment" placeholder="${_('Leave a response...')}" required title="${_('Comment')}"></textarea>
     </div>
     <input type="hidden" name="parent" value=${convId}></input>
     <% nc = len(responses.get(convId, {})) if responses else 0 %>
@@ -399,7 +399,7 @@
 <%def name="conv_tags(convId)">
   <% itemTags = items[convId].get("tags", {}) %>
   <div class="conv-tags">
-    <button class="button-link edit-tags-button" title="${_('Edit tags')}" onclick="$$.convs.editTags('${convId}');"><div class="icon edit-tags-icon"></div>${_("Edit Tags")}</button>
+    <button class="button-link edit-tags-button" title="${_('Edit tags')}" onclick="$$.convs.editTags('${convId}');"><span class="icon edit-tags-icon"></span>${_("Edit Tags")}</button>
     <span id="conv-tags-${convId}">
     %for tagId in itemTags.keys():
       <span class="tag" tag-id="${tagId}">
@@ -418,7 +418,7 @@
       </div>
       <input type="hidden" name="id" value=${convId}></input>
     </form>
-    <button class="button-link done-tags-button" title="${_('Done editing tags')}" onclick="$$.convs.doneTags('${convId}');"><div class="icon done-tags-icon"></div>${_("Done")}</button>
+    <button class="button-link done-tags-button" title="${_('Done editing tags')}" onclick="$$.convs.doneTags('${convId}');"><span class="icon done-tags-icon"></span>${_("Done")}</button>
     <span class="clear"></span>
   </div>
 </%def>

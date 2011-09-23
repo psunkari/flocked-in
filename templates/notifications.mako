@@ -36,7 +36,7 @@
       </div>
     %endfor
     %if nextPageStart:
-      <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" _ref="/notifications?start=${nextPageStart}">${_("Fetch older Notifications")}</a></div>
+      <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" data-ref="/notifications?start=${nextPageStart}">${_("Fetch older Notifications")}</a></div>
     %else:
       <div id="next-load-wrapper">${_("No more Notifications to show")}</div>
     %endif

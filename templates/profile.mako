@@ -222,40 +222,40 @@
   %if myKey != userKey:
     %if userKey not in relations.friends:
       %if not relations.pending or userKey not in relations.pending:
-        <button class="button default" onclick="$.post('/ajax/profile/friend', 'id=${userKey}&action=add')">
+        <li><button class="button default" onclick="$.post('/ajax/profile/friend', 'id=${userKey}&action=add')">
           <span class="button-text">${_("Add as Friend")}</span>
-        </button>
+        </button></li>
       %elif relations.pending.get(userKey) == 1:
-        <button class="acl-button button" onclick="$$.ui.showPopup(event)">${_("Respond to Friend Request")}</button>
+        <li><button class="acl-button button" onclick="$$.ui.showPopup(event)">${_("Respond to Friend Request")}</button>
         <ul class="acl-menu" style="display:none;">
             <li>
-              <a class="acl-item" _acl="public" onclick="$.post('/ajax/profile/friend', 'id=${userKey}&action=accept')">${_("Accept")}</a>
+              <a class="acl-item" data-acl="public" onclick="$.post('/ajax/profile/friend', 'id=${userKey}&action=accept')">${_("Accept")}</a>
             </li>
             <li>
-              <a class="acl-item" _acl="friends" onclick="$.post('/ajax/profile/friend', 'id=${userKey}&action=reject')">${_("Reject")}</a>
+              <a class="acl-item" data-acl="friends" onclick="$.post('/ajax/profile/friend', 'id=${userKey}&action=reject')">${_("Reject")}</a>
             </li>
-        </ul>
+        </ul></li>
       %else:
-        <button class="button disabled"><span class="button-text">${_("Friend request sent")}</span></button>
+        <li><button class="button disabled"><span class="button-text">${_("Friend request sent")}</span></button></li>
       %endif
       %if userKey not in relations.subscriptions and userKey not in relations.friends:
-        <button class="button" onclick="$.post('/ajax/profile/follow', 'id=${userKey}')">
+        <li><button class="button" onclick="$.post('/ajax/profile/follow', 'id=${userKey}')">
           <span class="button-text">${_("Follow User")}</span>
-        </button>
+        </button></li>
       %elif showRemove:
-        <button class="button" onclick="$.post('/ajax/profile/unfollow', 'id=${userKey}')">
+        <li><button class="button" onclick="$.post('/ajax/profile/unfollow', 'id=${userKey}')">
           <span class="button-text">${_("Unfollow User")}</span>
-        </button>
+        </button></li>
       %endif
     %elif showRemove:
-      <button class="button" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}')">
+      <li><button class="button" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}')">
         <span class="button-text">${_("Unfriend User")}</span>
-      </button>
+      </button></li>
     %endif
   %elif showEditProfile:
-    <button class="button" onclick="location.href = '/settings'">
+    <li><button class="button" onclick="location.href = '/settings'">
       <span class="button-text">${_("Edit Profile")}</span>
-    </button>
+    </button></li>
   %endif
 </%def>
 
@@ -400,7 +400,7 @@
   %>
   %if nextPageStart:
     <div id="next-load-wrapper" class="busy-indicator">
-      <a id="next-page-load" class="ajax" _ref="/profile?id=${userKey}&start=${nextPageStart}">${_("Fetch older posts")}</a>
+      <a id="next-page-load" class="ajax" data-ref="/profile?id=${userKey}&start=${nextPageStart}">${_("Fetch older posts")}</a>
     </div>
   %else:
     <div id="next-load-wrapper">${_("No more posts to show")}</div>

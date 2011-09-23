@@ -77,7 +77,7 @@
   %if nextPageStart:
     <div id="next-load-wrapper" class="busy-indicator">
       <a id="next-page-load" class="ajax" href="/tags?id=${tagId}&start=${nextPageStart}"
-         _ref="/tags/more?id=${tagId}&start=${nextPageStart}">
+         data-ref="/tags/more?id=${tagId}&start=${nextPageStart}">
         ${_("Fetch older posts")}
       </a>
     </div>

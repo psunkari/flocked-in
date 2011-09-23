@@ -30,6 +30,7 @@ textarea, input {
 .h-links > li {
     float: left;
     display: block;
+    padding: 0 5px 0 0;
 }
 .h-links a {
     display: inline-block;
@@ -251,13 +252,15 @@ a:hover, a:active, a:focus {
     float: right;
 }
 #menubar a {
+    display: inline-block;
     padding: 0 10px;
+    line-height: 25px;
     height: 25px;
     color: white;
     text-decoration: none;
 }
 #name:hover, #name:focus, #name:active,
-#menubar-links a:hover, #menubar-links a:active, #menubar-links a:focus {
+#menubar a:hover, #menubar a:active, #menubar a:focus {
     background-color: #4d95d6;
 }
 
@@ -298,7 +301,6 @@ a:hover, a:active, a:focus {
 #right {
     float: right;
     word-wrap: break-word;
-    min-height: 250px;
     width: 0px;
 }
 .has-right #right { width: 220px !important }
@@ -653,9 +655,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 #sharebar-actions {
     float: right;
-}
-#sharebar-submit {
-    margin: 0 0 0 6px;
+    margin-right: -4px;
 }
 
 #sharebar-actions-wrapper {

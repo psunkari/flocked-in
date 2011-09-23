@@ -53,7 +53,7 @@
               <span class="middle title">${_("Admin Console")}</span>
             %endif
             <span class="button title-button">
-              <a class="ajax" href="/admin/add" _ref="/admin/add">${_('Add Users')}</a>
+              <a class="ajax" href="/admin/add" data-ref="/admin/add">${_('Add Users')}</a>
             </span>
           </div>
           <div id="add-user-wrapper"></div>
@@ -88,9 +88,9 @@
     <div class="user-details-title">${entities[userId]["basic"].get("jobTitle", '')}</div>
     <div class="user-details-actions">
       <ul id="user-actions-${userId}" class="middle user-actions h-links">
-        <button class="button default" onclick="$.post('/ajax/admin/unblock', 'id=${userId}')">
+        <li><button class="button default" onclick="$.post('/ajax/admin/unblock', 'id=${userId}')">
           _("Unblock")
-        </button>
+        </button></li>
       </ul>
     </div>
   </div>

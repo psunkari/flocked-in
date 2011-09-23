@@ -118,13 +118,13 @@
       </button>
       <ul id="${id}-menu" class="acl-menu" style="display:none;">
         <li>
-          <a class="acl-item" _acl="org:${orgKey}">
+          <a class="acl-item" data-acl="org:${orgKey}">
             <span class="acl-title">${_("Company")}</span>
             <div class="acltip">${_("Notifies only your friends and followers")}</div>
           </a>
         </li>
         <li>
-          <a class="acl-item" _acl="friends">
+          <a class="acl-item" data-acl="friends">
             <span class="acl-title">${_("Friends")}</span>
             <div class="acltip">${_("Notifies all your friends")}</div>
           </a>
@@ -145,9 +145,9 @@
           supported = [(plugin.itemType.capitalize(), plugin.itemType) for plugin in sortedList if plugin.position > 0]
           itemName, itemType = supported[0]
         %>
-        <li><a _ref="/feed/share/${itemType}" id="publisher-${itemType}" class="ajax selected"><span class="sharebar-icon icon ${itemType}-icon"></span><span class="sharebar-text">${_(itemName)}</span></a></li>
+        <li><a data-ref="/feed/share/${itemType}" id="publisher-${itemType}" class="ajax selected"><span class="sharebar-icon icon ${itemType}-icon"></span><span class="sharebar-text">${_(itemName)}</span></a></li>
         %for itemName, itemType in supported[1:]:
-          <li><a _ref="/feed/share/${itemType}" id="publisher-${itemType}" class="ajax"><span class="sharebar-icon icon ${itemType}-icon"></span><span class="sharebar-text">${_(itemName)}</span></a></li>
+          <li><a data-ref="/feed/share/${itemType}" id="publisher-${itemType}" class="ajax"><span class="sharebar-icon icon ${itemType}-icon"></span><span class="sharebar-text">${_(itemName)}</span></a></li>
         %endfor
       </ul>
     </div>
@@ -221,7 +221,7 @@
   %endif
   %if nextPageStart:
     <% typ_filter = '&type=%s' %(itemType) if itemType else '' %>
-    <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" href="/feed?start=${nextPageStart}&id=${feedId}" _ref="/feed/more?start=${nextPageStart}&id=${feedId}${typ_filter}">${_("Fetch older posts")}</a></div>
+    <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" href="/feed?start=${nextPageStart}&id=${feedId}" data-ref="/feed/more?start=${nextPageStart}&id=${feedId}${typ_filter}">${_("Fetch older posts")}</a></div>
   %else:
     <div id="next-load-wrapper">${_("No more posts to show")}</div>
   %endif
@@ -263,11 +263,11 @@
                 <ul id="user-actions-${userId}" class="middle user-actions h-links">
                 %if userId not in relations.friends:
                   %if not relations.pending or userId not in relations.pending:
-                    <button class="button" onclick="$.post('/ajax/profile/friend', 'id=${userId}&action=add')"><span class="button-text" style="font-size:11px">${_("Add as Friend")}</span></button>
+                    <li><button class="button" onclick="$.post('/ajax/profile/friend', 'id=${userId}&action=add')"><span class="button-text" style="font-size:11px">${_("Add as Friend")}</span></button></li>
                   %endif
                 %endif
                 %if userId not in relations.subscriptions and userId not in relations.friends:
-                  <button class="button" onclick="$.post('/ajax/profile/follow', 'id=${userId}')"><span class="button-text" style="font-size:11px;">${_("Follow")}</span></button>
+                  <li><button class="button" onclick="$.post('/ajax/profile/follow', 'id=${userId}')"><span class="button-text" style="font-size:11px;">${_("Follow")}</span></button></li>
                 %endif
                 </ul>
               </div>
