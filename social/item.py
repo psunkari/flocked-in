@@ -303,7 +303,7 @@ class ItemResource(base.BaseResource):
             yield deferredList
 
             entities[myId] = args["me"]
-            data = {"items":{convId:conv}, "relation": relation,
+            data = {"items":{convId:conv}, "relations": relation,
                     "entities":entities, "script": True}
             args.update(data)
             onload = "(function(obj){$$.convs.load(obj);$('#sharebar-attach-uploaded').empty();})(this);"

@@ -146,7 +146,7 @@
     target = items[convId]["meta"].get('target', '')
     target = target.split(',') if target else ''
     if target:
-      target = [x for x in target if x in relation.groups]
+      target = [x for x in target if x in relations.groups]
   %>
   %if not isQuoted:
     <span class="conv-reason">

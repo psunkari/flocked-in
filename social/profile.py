@@ -447,7 +447,8 @@ class ProfileResource(base.BaseResource):
         args["relations"] = relation
         yield defer.DeferredList([relation.initFriendsList(),
                                   relation.initPendingList(),
-                                  relation.initSubscriptionsList()])
+                                  relation.initSubscriptionsList(),
+                                  relation.initGroupsList()])
 
         # Reload all user-depended blocks if the currently displayed user is
         # not the same as the user for which new data is being requested.
