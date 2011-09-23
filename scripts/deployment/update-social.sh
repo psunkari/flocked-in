@@ -17,6 +17,11 @@ rm -rf deploy
 # Copy new code
 mv src deploy
 
+# Create the logs folder if it does not exist
+if [ ! -d logs ]; then
+  mkdir logs
+fi
+
 # Start twisted daemon
 cd deploy && twistd -y social.tac
 cd $cur_dir

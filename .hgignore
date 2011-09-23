@@ -22,3 +22,6 @@ glob:data/
 
 # Decrypted (deployment files)
 scripts/deployment/files/*
+
+# Ignore log files
+logs/*
