@@ -478,7 +478,11 @@ class NotificationsResource(base.BaseResource):
             noOfUsers = len(userIds)
 
             pfx = 'group' if x == 'GA' else 'user'
-            vals = dict([(pfx+str(idx), utils.userName(uid, entities[uid]))\
+            if x == 'GA':
+                vals = dict([(pfx+str(idx), utils.groupName(uid, entities[uid]))\
+                            for idx, uid in enumerate(userIds[0:2])])
+            else:
+                vals = dict([(pfx+str(idx), utils.userName(uid, entities[uid]))\
                             for idx, uid in enumerate(userIds[0:2])])
 
             vals["count"] = noOfUsers - 2

@@ -106,27 +106,25 @@ class GroupsResource(base.BaseResource):
         _acl = pickle.dumps(acl)
 
         itemId = utils.getUniqueKey()
+        colname = "%s:%s" %(group["basic"]["name"].lower(), groupId)
+        yield db.insert(userId, "entityGroupsMap", "", colname)
+        yield db.insert(groupId, "groupMembers", itemId, userId)
         item, attachments = yield utils.createNewItem(request, "activity",
                                                       userId, acl,
                                                       "groupJoin", orgId)
         item["meta"]["target"] = groupId
 
-
-        colname = "%s:%s" %(group["basic"]["name"].lower(), groupId)
-        d1 = db.insert(userId, "entityGroupsMap", "", colname)
-        d2 = db.insert(groupId, "followers", "", userId)
-        d3 = db.insert(groupId, "groupMembers", itemId, userId)
-        d4 = db.batch_insert(itemId, 'items', item)
-
-        d5 = feed.pushToFeed(groupId, item["meta"]["uuid"], itemId,
+        d1 = db.insert(groupId, "followers", "", userId)
+        d2 = db.batch_insert(itemId, 'items', item)
+        d3 = feed.pushToFeed(groupId, item["meta"]["uuid"], itemId,
                              itemId, responseType, itemType, userId)
-        d6 = feed.pushToOthersFeed(userId, item["meta"]["uuid"], itemId, itemId,
+        d4 = feed.pushToOthersFeed(userId, item["meta"]["uuid"], itemId, itemId,
                     _acl, responseType, itemType, userId, promoteActor=False)
 
-        d7 = utils.updateDisplayNameIndex(userId, [groupId],
+        d5 = utils.updateDisplayNameIndex(userId, [groupId],
                                           userInfo['basic']['name'], None)
 
-        deferreds = [d1, d2, d3, d4, d5, d6, d7]
+        deferreds = [d1, d2, d3, d4, d5]
         yield defer.DeferredList(deferreds)
 
 
