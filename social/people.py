@@ -539,7 +539,8 @@ class PeopleResource(base.BaseResource):
 
         if script:
             onload = """
-                    (function(obj){$$.publisher.load(obj);
+                    (function(obj){
+                        $('#invite-people-form').html5form({messages: 'en'});
                         $('#invite-people').delegate('.input-wrap:last-child','focus',function(event){
                             $(event.target.parentNode).clone().appendTo('#invite-people').find('input:text').blur();
                         });
@@ -552,12 +553,14 @@ class PeopleResource(base.BaseResource):
         else:
             yield render(request, "people.mako", **args)
 
+
     @defer.inlineCallbacks
     def _renderSuggestions(self, request):
         authinfo = request.getSession(IAuthInfo)
         myId = authinfo.username
         suggestions, entities = yield get_suggestions(request, PEOPLE_PER_PAGE, True)
         #render suggestions
+
 
     @profile
     @dump_args

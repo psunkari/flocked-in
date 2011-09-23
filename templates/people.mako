@@ -174,7 +174,6 @@
         <button type="button" class="button" onclick="$('#invite-people-wrapper').empty()">${'Cancel'}</button>
       </div>
     </form>
-    <script type="text/javascript">$('#invite-people-form').html5form({messages: 'en'});</script>
   </div>
 </%def>
 
