@@ -117,7 +117,7 @@
   </div>
   <div id="alertbar"></div>
 %if script:
-  <script type="text/javascript" src="/rsrcs/js/jquery-1.6.3.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/jquery-1.6.4.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.menu.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.autocomplete.js"></script>

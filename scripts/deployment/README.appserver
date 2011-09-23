@@ -16,8 +16,7 @@ System Setup
      AllowUsers mirage
 
 5. Setup Firewall - firewall-appserver.sh
-     iptables-save > /etc/iptables.rules
-     iptables-restore < /etc/iptables.rules (/etc/network/if-up.d/iptables)
+     run from /etc/network/if-up.d/iptables
 
 6. Setup portknocking
      apt-get install knockd
@@ -45,7 +44,7 @@ System Setup
      nginX
        apt-get install nginx
 
-9. Configure nginX
+9. Configure nginX.
 
 
 Application Setup
