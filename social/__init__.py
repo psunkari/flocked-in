@@ -19,6 +19,7 @@ with open('etc/defaults.cfg') as defaults:
 config.read(['etc/devel.cfg','etc/production.cfg'])
 cdnHost = config.get("General", "CDNHost")
 secureProxy = config.get("General", "SecureProxy")
+rootUrl = config.get("General", "URL")
 
 
 #

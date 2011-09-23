@@ -23,7 +23,7 @@ from telephus.cassandra import ttypes
 from twisted.internet   import defer, threads
 from twisted.mail       import smtp
 
-from social             import db, _, __, config, errors, cdnHost
+from social             import db, _, __, config, errors, cdnHost, rootUrl
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.constants   import INFINITY
@@ -492,11 +492,12 @@ def userAvatar(id, userInfo, size=None):
     if avatar:
         imgType, itemId = avatar.split(":")
         url = "/avatar/%s_%s.%s" % (size, itemId, imgType)
-        if cdnHost:
-            url = cdnHost + url
+        url = cdnHost + url if cdnHost else rootUrl + url
     else:
         sex = "m" if sex != "f" else "f"
         url = globals().get("avatar_%s_%s" % (sex, size))
+        if not url.startswith('http'):
+            url = rootUrl + url
 
     return url
 
@@ -511,10 +512,11 @@ def groupAvatar(id, groupInfo, size=None):
     if avatar:
         imgType, itemId = avatar.split(":")
         url = "/avatar/%s_%s.%s" % (size, itemId, imgType)
-        if cdnHost:
-            url = cdnHost + url
+        url = cdnHost + url if cdnHost else rootUrl + url
     else:
         url = globals().get("avatar_g_%s" % size)
+        if not url.startswith('http'):
+            url = rootUrl + url
 
     return url
 
@@ -762,7 +764,7 @@ def sendmail(toAddr, subject, textPart, htmlPart=None,
     msg['From'] = "FlockedIn Team <%s>" % fromAddr
     msg['To'] = toAddr
     try:
-        devMailId = config.get('DEVEL', 'MAILID')
+        devMailId = config.get('Devel', 'MailId')
         if devMailId:
             toAddr = devMailId
     except:

@@ -205,7 +205,7 @@ class NotificationByMail(object):
 
         data = kwargs.copy()
         convUrl = "%s/item?id=%s" % (rootUrl, convId)
-        senderAvatarUrl = rootUrl + utils.userAvatar(myId, me, "medium")
+        senderAvatarUrl = utils.userAvatar(myId, me, "medium")
         data.update({"senderName": senderName, "convUrl": convUrl,
                      "senderAvatarUrl": senderAvatarUrl, "rootUrl": rootUrl,
                      "brandName": brandName, "convOwnerName": convOwnerName})
@@ -229,8 +229,7 @@ class NotificationByMail(object):
         entities = kwargs['entities']
         data = kwargs.copy()
         senderName = entities[value]['basic']['name']
-        senderAvatarUrl = rootUrl +\
-                          utils.userAvatar(value, entities[value], 'medium')
+        senderAvatarUrl = utils.userAvatar(value, entities[value], 'medium')
 
         if 'orgId' in data:
             orgId = data['orgId']

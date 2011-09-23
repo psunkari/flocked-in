@@ -167,7 +167,7 @@ def _sendInvitations(myOrgUsers, otherOrgUsers, me, myId, myOrg):
     brandName = config.get('Branding', 'Name')
     senderName = me["basic"]["name"]
     senderOrgName = myOrg["basic"]["name"]
-    senderAvatarUrl = rootUrl + utils.userAvatar(myId, me, "medium")
+    senderAvatarUrl = utils.userAvatar(myId, me, "medium")
     sentUsers = []
     blockedUsers = []
     existingUsers = []

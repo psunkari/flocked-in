@@ -118,8 +118,8 @@
         <div id="main-contents" class="styledform contents" style="width: 600px; margin: 20px auto;">
           <ul>
             <li>
-              <span> We have sent an email with instructions to reset your password </span><br>
-              <span> <a href='/signin'>Back to Signin</a> </span>
+              <span>${_('Please check your mail for instructions to reset your password')}</span><br>
+              <span><a href='/signin'>${_('Back to Signin')}</a></span>
             <li>
             <li>
             </li>

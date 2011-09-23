@@ -1,10 +1,16 @@
-<%def name="invite()">
+
+<%def name="header()">
+  <%
+    logoSrc = '/rsrcs/img/flocked-in-small.png'
+    if not logoSrc.startswith('http'):
+      logoSrc = rootUrl+logoSrc
+  %>
   <html xmlns="http://www.w3.org/1999/xhtml">
   <body style="margin:5px;padding:0;color:#555;font-family:arial,sans-serif;">
     <div align="center" style="background-color:#f4f4f4;border-radius:4px;border:1px solid #dddddd;width:600px;">
       <table width="590" cellpadding="0" cellspacing="0" border="0">
         <tr><td align="left">
-          <img src="${rootUrl}/rsrcs/img/flocked-in-small.png"
+          <img src="${logoSrc}"
                alt="flocked.in" style="margin:10px 0;"/>
         </td></tr>
         <tr><td>
@@ -12,6 +18,26 @@
                  border="0" bgcolor="#ffffff"
                  style="border:1px solid #dddddd;border-radius:4px;">
             <tr>
+</%def>
+
+<%def name="footer(text=True)">
+            </tr>
+          </table>
+        </td></tr>
+        <tr><td style="color:gray;font-size:11px;padding:5px 0;">
+          %if text:
+            <a href="${rootUrl}/settings?dt=notify">Change your notification preferences</a> to choose what mails ${brandName} sends you.
+          %endif
+        </td></tr>
+      </table>
+    </div>
+  </body>
+  </html>
+</%def>
+
+## Invita someone to flocked.in
+<%def name="invite()">
+  ${header()}
               <td valign="top" align="right" style="width:48px;" rowspan="2">
                 <img src="${senderAvatarUrl}" alt="">
               </td>
@@ -51,67 +77,17 @@
   </html>
 </%def>
 
+## Forgot password email
 <%def name="forgotPasswd()">
-  <html xmlns="http://www.w3.org/1999/xhtml">
-  <body style="margin:5px;padding:0;color:#555;font-family:arial,sans-serif;">
-    <div align="center" style="background-color:#f4f4f4;border-radius:4px;border:1px solid #dddddd;width:600px;">
-      <table width="590" cellpadding="0" cellspacing="0" border="0">
-        <tr><td align="left">
-          <img src="${rootUrl}/rsrcs/img/flocked-in-small.png"
-               alt="flocked.in" style="margin:10px 0;"/>
-        </td></tr>
-        <tr><td>
-          <table cellspacing="20" cellpadding="0" width="590"
-                 border="0" bgcolor="#ffffff"
-                 style="border:1px solid #dddddd;border-radius:4px;">
-            <tr>
-              <td style="font-size: 14px;">
-                 You or someone else requested a password reset for ${email} on <a href="${rootUrl}">${brandName}</a>.<br/></br>
-                 Please ignore this mail if you did not request a password reset<br/><br/>
-                 Click the following link to reset your password.<br/>
-                 <a href="${resetPasswdUrl}">${resetPasswdUrl}</a> <br/>
-                 This link is valid for 24hours only.<br/>
-              </td>
-            </tr>
-            <tr><td style="border-top:1px solid #DDD; font-size: 14px;padding-top:10px;">
-            </td></tr>
-          </table>
-        </td></tr>
-      </table>
-    </div>
-  </body>
-  </html>
-</%def>
-
-## Generic notifications.
-
-<%def name="header()">
-  <html xmlns="http://www.w3.org/1999/xhtml">
-  <body style="margin:5px;padding:0;color:#555;font-family:arial,sans-serif;">
-    <div align="center" style="background-color:#f4f4f4;border-radius:4px;border:1px solid #dddddd;width:600px;">
-      <table width="590" cellpadding="0" cellspacing="0" border="0">
-        <tr><td align="left">
-          <img src="${rootUrl}/rsrcs/img/flocked-in-small.png"
-               alt="flocked.in" style="margin:10px 0;"/>
-        </td></tr>
-        <tr><td>
-          <table cellspacing="20" cellpadding="0" width="590"
-                 border="0" bgcolor="#ffffff"
-                 style="border:1px solid #dddddd;border-radius:4px;">
-            <tr>
-</%def>
-
-<%def name="footer()">
-            </tr>
-          </table>
-        </td></tr>
-        <tr><td style="color:gray;font-size:11px;padding:5px 0;">
-          <a href="${rootUrl}/settings?dt=notify">Change your notification preferences</a> to choose what mails ${brandName} sends you.
-        </td></tr>
-      </table>
-    </div>
-  </body>
-  </html>
+  ${header()}
+  <td style="font-size: 14px;">
+    A request was received to reset the password for ${email} on <a href="${rootUrl}">${brandName}</a>.
+    To change the password please click the following link, or paste it into your browser:<br/><br/>
+    <a href="${resetPasswdUrl}">${resetPasswdUrl}</a> <br/>
+    This link is valid for 24 hours only.<br/>
+    If you did not request this email there is no need for further action<br/>
+  </td>
+  ${footer(text=False)}
 </%def>
 
 ## Apply tag on an item that I shared

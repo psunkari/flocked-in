@@ -44,11 +44,11 @@ def _sendmailResetPassword(email, token):
     rootUrl = config.get('General', 'URL')
     brandName = config.get('Branding', 'Name')
 
-    body = "You or someone else requested a new password "\
-           "for %(email)s on %(brandName)s.\nNo action is required if you "\
-           "did not request a new password.\n\nClick the following "\
-           "link to reset your password\n %(resetPasswdUrl)s \n"\
-           "This link is valid for 24hours only."
+    body = "A request was received to reset the password "\
+           "for %(email)s on %(brandName)s.\nTo change the password please click the following "\
+           "link, or paste it in your browser.\n\n%(resetPasswdUrl)s\n\n"\
+           "This link is valid for 24hours only.\n"\
+           "If you did not request this email there is no need for further action\n"
 
     resetPasswdUrl = "%(rootUrl)s/password/resetPassword?email=%(email)s&token=%(token)s"%(locals())
     args = {"brandName": brandName, "rootUrl": rootUrl,
