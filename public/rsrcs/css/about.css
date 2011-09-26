@@ -1,3 +1,15 @@
+@font-face{
+font-family: 'MyriadPro_Regular';
+src: url( 'http://fnt.webink.com/wfs/?drawer=25370D65-6F93-4527-9FA1-263956D084A9&font=73E6C83D-7F13-A8AE-4770-C315AE5061C3');
+font-weight:normal;font-style:normal;font-variant:normal;
+}
+
+@font-face{
+font-family: 'MyriadPro_Light';
+src: url( 'http://fnt.webink.com/wfs/?drawer=25370D65-6F93-4527-9FA1-263956D084A9&font=2C42CC2B-4E14-2FB2-85C0-9E10EFCC5735');
+font-weight:normal;font-style:normal;font-variant:normal;
+}
+
 html>body {
     overflow-y: scroll;
 }
@@ -5,7 +17,7 @@ html>body {
 body {
     margin: 0;
     padding: 0;
-    font-family: "lucida grande",tahoma,verdana,arial,sans-serif;
+    font-family: 'MyriadPro_Regular', "Georgia", "Trebuchet", "lucida grande", tahoma, verdana, arial, sans-serif;
     color: #333;
     font-size: 16px;
     line-height: 1.5em;
