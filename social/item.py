@@ -94,6 +94,12 @@ class ItemResource(base.BaseResource):
         meta = conv["meta"]
         owner = meta["owner"]
 
+        relation = Relation(myKey, [])
+        yield defer.DeferredList([relation.initFriendsList(),
+                                  relation.initSubscriptionsList(),
+                                  relation.initGroupsList()])
+        args["relations"] = relation
+
         if script and landing:
             yield render(request, "item.mako", **args)
 
@@ -165,9 +171,6 @@ class ItemResource(base.BaseResource):
             toFetchEntities.add(userKey)
         responseKeys.reverse()
 
-        relation = Relation(myKey, [])
-        yield defer.DeferredList([relation.initFriendsList(),
-                                  relation.initSubscriptionsList()])
         friends_subscriptions = relation.friends.keys() + list(relation.subscriptions)
         likes = yield db.get_slice(convId, "itemLikes", friends_subscriptions) \
                             if friends_subscriptions else defer.succeed([])
