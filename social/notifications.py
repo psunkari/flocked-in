@@ -346,6 +346,11 @@ class NotificationsResource(base.BaseResource):
                              3: "Your requests to join %(group0)s, %(group1)s and one other were accepted",
                              4: "Your requests to join %(group0)s, %(group1)s and %(count)s others were accepted"}
 
+    _groupInvitation = {1: "%(user0)s invited you to join %(group0)s",
+                        2: "%(user0)s and %(user1)s invited you to join %(group0)s",
+                        3: "%(user0)s and %(user1)s and 1 other invited you to join %(group0)s",
+                        4: "%(user0)s and %(user1)s and %(count)s others invited you to join %(group0)s"}
+
     #
     # Fetch notifications from the database
     # NotificationIds are stored in a column family called "notifications"
@@ -428,6 +433,8 @@ class NotificationsResource(base.BaseResource):
                 for update in updates:
                     toFetchEntities.add(update.value)
                     notifyValues[notifyId].append(update.value)
+                if notifyIdParts[1] == 'GI':
+                    toFetchEntities.add(notifyIdParts[2])
 
             elif len(notifyIdParts) == 4:   # Conversation updates
                 convId, convType, convOwnerId, notifyType = notifyIdParts
@@ -477,6 +484,7 @@ class NotificationsResource(base.BaseResource):
         # Build strings to notify all other actions
         def buildNotifyStr(notifyId):
             x = notifyId[1:]
+            x = notifyId.split(':')[1]
             userIds = utils.uniqify(notifyValues[notifyId])
             noOfUsers = len(userIds)
 
@@ -487,6 +495,9 @@ class NotificationsResource(base.BaseResource):
             else:
                 vals = dict([(pfx+str(idx), utils.userName(uid, entities[uid]))\
                             for idx, uid in enumerate(userIds[0:2])])
+            if x == 'GI':
+                groupId = notifyId.split(':')[2]
+                vals.update({'group0': utils.groupName(groupId, entities[groupId])})
 
             vals["count"] = noOfUsers - 2
             vals["brandName"] = brandName
@@ -505,6 +516,8 @@ class NotificationsResource(base.BaseResource):
                 tmpl = self._orgNewMember[noOfUsers]
             elif x == "IA":
                 tmpl = self._inviteAccepted[noOfUsers]
+            elif x == "GI":
+                tmpl = self._groupInvitation[noOfUsers]
 
             return tmpl % vals
 

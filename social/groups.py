@@ -789,7 +789,7 @@ class GroupsResource(base.BaseResource):
             yield db.insert(userId, "pendingConnections", ",".join(invited_by), "GI:%s"%(groupId))
             data = {"entities": {groupId: group, userId: user, myId:args["me"]},
                     "groupName": group["basic"]["name"]}
-            yield notifications.notify([userId], ":GI", myId, **data)
+            yield notifications.notify([userId], ":GI:%s"%(groupId), myId, **data)
         finally:
             refreshFeedScript = """
                 $("#group_add_invitee").attr("value", "");
