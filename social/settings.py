@@ -102,7 +102,7 @@ notifyIA = 3    # Invitation accept and invited user joining are same
 
 notifyGroupRequest = 4
 notifyGA = 5
-notifyGroupInvite = 6
+notifyGI = 6
 notifyGroupNewMember = 7
 
 notifyMyItemT = 8

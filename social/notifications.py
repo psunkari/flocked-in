@@ -131,7 +131,8 @@ class NotificationByMail(object):
         "NU": "[%(brandName)s] %(senderName)s joined the %(networkName)s network",
         "NF": "[%(brandName)s] %(senderName)s started following you",
         "FA": "[%(brandName)s] %(senderName)s accepted your friend request",
-        "GA": "[%(brandName)s] Your request to join %(senderName)s was accepted"
+        "GA": "[%(brandName)s] Your request to join %(senderName)s was accepted",
+        "GI": "[%(brandName)s] %(senderName)s invited you to join %(groupName)s"
     }
 
     _otherNotifyBody = {
@@ -144,7 +145,10 @@ class NotificationByMail(object):
         "FA": "Hi,\n\n"\
               "%(senderName)s accepted your friend request",
         "GA": "Hi,\n\n"\
-              "Your request to join %(senderName)s was accepted by an admistrator"
+              "Your request to join %(senderName)s was accepted by an admistrator",
+        "GI": "Hi,\n\n"\
+              "%(senderName)s invited you to join %(groupName)s group.\n"\
+              "Visit %(rootUrl)s/groups?type=invitations to accept the invitation."
     }
 
     _signature = "\n\n"\
