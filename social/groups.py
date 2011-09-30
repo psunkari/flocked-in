@@ -756,7 +756,7 @@ class GroupsResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _invite(self, request):
-        appchange, script, args, myKey = yield self._getBasicArgs(request)
+        appchange, script, args, myId = yield self._getBasicArgs(request)
         myOrgId = args["orgKey"]
         landing = not self._ajax
 
@@ -771,7 +771,7 @@ class GroupsResource(base.BaseResource):
             yield renderScriptBlock(request, "groups.mako", "layout",
                                     landing, "#mainbar", "set", **args)
         try:
-            yield db.get(groupId, "groupMembers", myKey)
+            yield db.get(groupId, "groupMembers", myId)
         except ttypes.NotFoundException:
             request.write('$$.alerts.error("You should be member of the group to Invite Others");')
             defer.returnValue(None)
@@ -785,10 +785,11 @@ class GroupsResource(base.BaseResource):
             invited_by = set()
             if cols:
                 invited_by.update(cols[0].column.value.split(','))
-            invited_by.add(myKey)
+            invited_by.add(myId)
             yield db.insert(userId, "pendingConnections", ",".join(invited_by), "GI:%s"%(groupId))
-            #TODO:
-            #notify user
+            data = {"entities": {groupId: group, userId: user, myId:args["me"]},
+                    "groupName": group["basic"]["name"]}
+            yield notifications.notify([userId], ":GI:%s"%(groupId), myId, **data)
         finally:
             refreshFeedScript = """
                 $("#group_add_invitee").attr("value", "");
