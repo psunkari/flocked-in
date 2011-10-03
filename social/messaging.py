@@ -202,7 +202,7 @@ class MessagingResource(base.BaseResource):
             # so recipient may not necessarily be present in cols
             if recipient != owner:
                 toNotify[recipient]= {'latest': {'messages':{timeUUID: convId}}}
-            toRemove['latest'].append(recipient)
+                toRemove['latest'].append(recipient)
 
             for folder in cols.get(recipient, []):
                 cf = self._folders[folder] if folder in self._folders else folder
@@ -227,11 +227,11 @@ class MessagingResource(base.BaseResource):
 
         yield db.batch_mutate(convFolderMap)
         yield db.batch_insert(convId, "mConvFolders", userFolderMap)
-        if toRemove['latest'] and oldTimeUUID != timeUUID:
+
+        if toRemove and oldTimeUUID != timeUUID:
             yield db.batch_remove(toRemove, names=[oldTimeUUID], supercolumn="messages")
         if toNotify:
             yield db.batch_mutate(toNotify)
-
 
     @profile
     @defer.inlineCallbacks
