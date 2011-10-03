@@ -227,11 +227,11 @@ class MessagingResource(base.BaseResource):
 
         yield db.batch_mutate(convFolderMap)
         yield db.batch_insert(convId, "mConvFolders", userFolderMap)
-
-        if toRemove and oldTimeUUID != timeUUID:
+        if toRemove['latest'] and oldTimeUUID != timeUUID:
             yield db.batch_remove(toRemove, names=[oldTimeUUID], supercolumn="messages")
         if toNotify:
             yield db.batch_mutate(toNotify)
+
 
     @profile
     @defer.inlineCallbacks
