@@ -14,21 +14,41 @@
     function validate() {
       var password = document.querySelector('input[name="password"]').value
       var pwdrepeat = document.querySelector('input[name="pwdrepeat"]').value
-      if (password != pwdrepeat){
-        document.getElementById('messages-wrapper').style.display = 'block';
-        document.getElementById('messages-wrapper').innerHTML = 'Passwords do not match.';
+      message_wrapper = document.getElementById('messages-wrapper')
+      if (document.querySelector('input[name="name"]').value == ""){
+        message_wrapper.style.display = 'block';
+        message_wrapper.innerHTML = 'Name cannot be empty';
         setTimeout(function(){
-          document.getElementById('messages-wrapper').style.display = 'none';
-          document.getElementById('messages-wrapper').innerHTML = '';
+          message_wrapper.style.display = 'none';
+          message_wrapper.innerHTML = '';
         }, 3000)
       return false
       }
-      else if (document.querySelector('input[name="name"]').value == ""){
-        document.getElementById('messages-wrapper').style.display = 'block';
-        document.getElementById('messages-wrapper').innerHTML = 'Your Name is a required field.';
+      else if (document.querySelector('input[name="jobTitle"]').value == ""){
+        message_wrapper.style.display = 'block';
+        message_wrapper.innerHTML = 'Job-Title cannot be empty';
         setTimeout(function(){
-          document.getElementById('messages-wrapper').style.display = 'none';
-          document.getElementById('messages-wrapper').innerHTML = '';
+          message_wrapper.style.display = 'none';
+          message_wrapper.innerHTML = '';
+        }, 3000)
+      return false
+      }
+      else if (password == ''){
+        message_wrapper.style.display = 'block';
+        message_wrapper.innerHTML = 'Password cannot be empty';
+        setTimeout(function(){
+          message_wrapper.style.display = 'none';
+          message_wrapper.innerHTML = '';
+        }, 3000)
+      return false
+
+      }
+      else if (password != pwdrepeat){
+        message_wrapper.style.display = 'block';
+        message_wrapper.innerHTML = 'Passwords do not match.';
+        setTimeout(function(){
+          message_wrapper.style.display = 'none';
+          message_wrapper.innerHTML = '';
         }, 3000)
       return false
       }
@@ -150,7 +170,7 @@
         </li>
         <li>
           <label for="jobTitle">${_('Job Title')}</label>
-          <input name="jobTitle" id="jobTitle" type="text" />
+          <input name="jobTitle" id="jobTitle" type="text"  required />
         </li>
         <li>
           <label for="timezone">${_('Timezone')}</label>
