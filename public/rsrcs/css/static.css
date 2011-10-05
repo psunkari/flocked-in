@@ -408,6 +408,7 @@ a:link, a:visited {
 .styledform ul {
     list-style-type: none;
     margin: 0;
+    padding: 0;
 }
 
 .styledform li {
@@ -422,12 +423,12 @@ a:link, a:visited {
     margin-right: 1%;
     text-align: right;
     width: 32%;
+    font-size: 12px;
 }
 
 .styledform input, .styledform select, .styledform textarea {
     width: 350px;
     float: left;
-    font-size: 13px;
     background-color: white;
     border-width: 1px;
     border-style: solid;
@@ -446,14 +447,16 @@ a:link, a:visited {
 }
 
 .styledform .buttons-wrapper {
-    padding: 4px 25px;
+    padding: 4px;
     margin: 20px 20% 10px 33%;
+    width: 350px;
+    text-align: right;
 }
 
-.styledform-buttons .button {
-    font-size: 14px;
+.styledform .error-input {
+    font-size: 12px;
+    color: #d60000;
     font-weight: bold;
-    padding: 3px 8px;
 }
 
 .form-header {
@@ -514,6 +517,34 @@ a:link, a:visited {
     text-shadow: 1px 1px #204573;
     box-shadow: 1px 1px 2px #888;
 }
+
+
+/*
+ * Signup Wizard
+ */
+
+#steps-banner {
+  padding-top: 2em;
+  border-bottom: 1px dotted #3D85C6;
+  text-align: center;
+}
+#views-list {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  display: inline-block;
+}
+#views-list > li {
+  float: left;
+  display: block;
+  padding: 0px 30px;
+  color: #AAA;
+  font-size: 25px;
+}
+#views-list > li.selected {
+  color: black;
+}
+
 
 
 /*

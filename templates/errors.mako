@@ -43,15 +43,15 @@
   <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <title>${_('Error')} &mdash; ${config.get('Branding', 'Name')}</title>
-    <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/about.css"/>
+    <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/static.css"/>
     <link rel="shortcut icon" href="/rsrcs/img/favicon.ico" type="image/x-icon" />
   </head>
-  
+
   <body>
     <div id="header">
       <a href='/'><img alt="Synovel" src="/rsrcs/img/flocked-in.png"/></a>
     </div>
-  
+
     <div id="wrapper">
       <div id="title-banner" class="title-banner banner">
         <ul id="views-list">

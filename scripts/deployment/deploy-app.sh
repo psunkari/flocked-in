@@ -19,7 +19,7 @@ repo_revision='tip'
 social_css='rsrcs/css/social.css:rsrcs/css/messaging.css:'\
 'rsrcs/css/jquery.ui.css:rsrcs/css/widgets.css'
 
-about_css='rsrcs/css/about.css'
+about_css='rsrcs/css/static.css'
 
 jquery_js='rsrcs/js/jquery-1.6.3.js:rsrcs/js/jquery.address-1.4.js:'\
 'rsrcs/js/jquery.autogrow-textarea.js:rsrcs/js/jquery.html5form-1.3.js:'\
