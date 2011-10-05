@@ -7,10 +7,14 @@ from twisted.web            import resource, server, static, util
 from twisted.internet       import defer
 from twisted.python         import components
 
-from social                 import db, utils, base, plugins
+from social                 import db, utils, base, plugins, config
 from social.isocial         import IAuthInfo
 from social.logging         import log
 
+secureCookies = False
+try:
+    secureCookies = config.get("General", "SSLOnlyCookies")
+except: pass
 
 class RequestFactory(server.Request):
     cookiename = 'session'
@@ -53,13 +57,43 @@ class RequestFactory(server.Request):
             self.session = self.site.makeSession()
             if remember:    # Cookie expires in 1 year
                 self.addCookie(self.cookiename, self.session.uid, path='/',
-                               expires=formatdate(time.time()+31536000))
+                               expires=formatdate(time.time()+31536000),
+                               secure=secureCookies, http_only=True)
             else:           # Cookie expires at the end of browser session
-                self.addCookie(self.cookiename, self.session.uid, path='/')
+                self.addCookie(self.cookiename, self.session.uid, path='/',
+                               secure=secureCookies, http_only=True)
             return _component()
         d.addCallbacks(callback)
         d.addErrback(errback)
         return d
+
+    # Copy of code from twisted.web.http
+    # Adds support for httpOnly flag in cookie
+    def addCookie(self, k, v, expires=None, domain=None, path=None,
+                  max_age=None, comment=None, secure=None, http_only=None):
+        """
+        Set an outgoing HTTP cookie.
+
+        In general, you should consider using sessions instead of cookies, see
+        L{twisted.web.server.Request.getSession} and the
+        L{twisted.web.server.Session} class for details.
+        """
+        cookie = '%s=%s' % (k, v)
+        if expires is not None:
+            cookie = cookie +"; Expires=%s" % expires
+        if domain is not None:
+            cookie = cookie +"; Domain=%s" % domain
+        if path is not None:
+            cookie = cookie +"; Path=%s" % path
+        if max_age is not None:
+            cookie = cookie +"; Max-Age=%s" % max_age
+        if comment is not None:
+            cookie = cookie +"; Comment=%s" % comment
+        if secure:
+            cookie = cookie +"; Secure"
+        if http_only:
+            cookie = cookie +"; HttpOnly"
+        self.cookies.append(cookie)
 
 
 class SessionFactory(components.Componentized):
