@@ -35,7 +35,7 @@
   </html>
 </%def>
 
-## Invita someone to flocked.in
+## Invite someone to flocked.in
 <%def name="invite()">
   ${header()}
               <td valign="top" align="right" style="width:48px;" rowspan="2">
@@ -76,6 +76,45 @@
   </body>
   </html>
 </%def>
+
+
+<%def name="signup()">
+  ${header()}
+              <td style="font-size: 14px;">
+                Welcome to ${brandName}.<br/>
+                Please click below to activate your account.
+                 <br/><br/>
+                 <a href="${activationUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">${'Join %s' % brandName}</div></a>
+                 <br/><br/>
+                 You can also visit <a href="${activationUrl}">${activationUrl}</a> to activate your account.
+              </td>
+            </tr>
+            <tr><td style="border-top:1px solid #DDD; font-size: 14px;padding-top:10px;">
+              ${brandName} is an enterprise social platform built on top of
+              micro-blogging and activity streams that helps you stay connected
+              with your co-workers.  It helps your company engage and keep
+              everyone informed.
+            </td></tr>
+          </table>
+        </td></tr>
+        <tr><td style="color:gray;font-size:11px;padding:5px 0;">
+        </td></tr>
+      </table>
+    </div>
+  </body>
+  </html>
+</%def>
+
+
+<%def name="accountExists()">
+  ${header()}
+  <td style="font-size: 14px;">
+    You already have an account on ${brandName}.<br/><br/>
+    <a href="${rootUrl}/signin" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">Sign-in to ${brandName}</div></a>
+  </td>
+  ${footer(text=False)}
+</%def>
+
 
 ## Forgot password email
 <%def name="forgotPasswd()">

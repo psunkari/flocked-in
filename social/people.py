@@ -15,6 +15,7 @@ from social.isocial     import IAuthInfo
 from social.constants   import PEOPLE_PER_PAGE, SUGGESTION_PER_PAGE
 from social.logging     import dump_args, profile, log
 
+
 INCOMING_REQUEST = 'FI'
 OUTGOING_REQUEST = 'FO'
 
@@ -120,7 +121,6 @@ def get_suggestions(request, count, mini=False):
                                relation.initPendingList(),
                                relation.initFollowersList()])
 
-
     @defer.inlineCallbacks
     def _get_suggestions(myId, relation):
         validSuggestions = []
@@ -160,6 +160,7 @@ def get_suggestions(request, count, mini=False):
         entities = yield db.multiget_slice(suggestions, "entities", ['basic'])
         entities = utils.multiSuperColumnsToDict(entities)
     defer.returnValue((suggestions, entities))
+
 
 @defer.inlineCallbacks
 def _sendInvitations(myOrgUsers, otherOrgUsers, me, myId, myOrg):
@@ -244,7 +245,6 @@ def _sendInvitations(myOrgUsers, otherOrgUsers, me, myId, myOrg):
 def invite(request, rawEmailIds):
     authinfo = request.getSession(IAuthInfo)
     emailIds = []
-
     expr = re.compile(', *')
     for commaSeparated in rawEmailIds:
         emailIds.extend(expr.split(commaSeparated))
@@ -353,7 +353,7 @@ def _getInvitationsSent(userId, start='', count=PEOPLE_PER_PAGE):
     defer.returnValue((emailIds, prevPageStart, nextPageStart))
 
 @defer.inlineCallbacks
-def _get_pending_conncetions(userId, start='', count=PEOPLE_PER_PAGE, entityType='user'):
+def _getPendingConnections(userId, start='', count=PEOPLE_PER_PAGE, entityType='user'):
     toFetchCount = count + 1
     toFetchStart = start if start else INCOMING_REQUEST
     prevPageStart = None
@@ -452,7 +452,7 @@ class PeopleResource(base.BaseResource):
         elif viewType == "friends":
             d = getPeople(myId, myId, orgId, start=start, fetchBlocked=False)
         elif viewType == 'pendingRequests':
-            d = _get_pending_conncetions(myId, start=start)
+            d = _getPendingConnections(myId, start=start)
         elif viewType == "invitations":
             d = _getInvitationsSent(myId, start=start)
         else:

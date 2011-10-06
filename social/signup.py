@@ -15,7 +15,7 @@ from email.mime.text    import MIMEText
 import social.constants as constants
 from social.base        import BaseResource
 from social             import utils, db, config, people, errors, _
-from social             import notifications
+from social             import notifications, blacklist
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock, getBlock
 from social.logging     import dump_args, profile, log
@@ -28,6 +28,15 @@ class InvalidRegistration(errors.BaseError):
 
 class PasswordsNoMatch(errors.BaseError):
     pass
+
+
+class InvalidEmailId(errors.BaseError):
+    pass
+
+
+class DomainBlacklisted(errors.BaseError):
+    pass
+
 
 @profile
 @defer.inlineCallbacks
@@ -75,6 +84,52 @@ def _getResetPasswordTokens(email):
         else:
             validEmail = True
     defer.returnValue((validEmail, tokens, deleteTokens, leastTimestamp))
+
+
+@defer.inlineCallbacks
+def _sendSignupInvitation(emailId):
+    if len(emailId.split('@')) != 2:
+        raise InvalidEmailId()
+
+    mailId, domain = emailId.split('@')
+    if domain in blacklist:
+        raise DomainBlacklisted()
+
+    rootUrl = config.get('General', 'URL')
+    brandName = config.get('Branding', 'Name')
+    signature = "Flocked-in Team.\n\n\n\n"
+
+    myOrgId = yield getOrgKey(domain)
+    if myOrgId:
+        entities = yield db.get_slice(myOrgId, "entities", ["basic"])
+        myOrg =  utils.supercolumnsToDict(entities)
+        orgName = myOrg['basic']['name']
+    else:
+        orgName =  domain
+
+    existing = yield db.get_slice(emailId, "userAuth", ["user"])
+    existing = utils.columnsToDict(existing)
+    if existing and existing.get('user', ''):
+        subject = "[%s] Account exists" % (brandName)
+        body = "You already have an account on %(brandName)s.\n"\
+               "Please visit %(rootUrl)s/signin to sign-in.\n\n"
+        textBody = (body + signature) % locals()
+        htmlBody = getBlock("emails.mako", "accountExists", **locals())
+    else:
+        subject = "Welcome to %s" %(brandName)
+        body = "Please click the following link to join %(orgName)s network on %(brandName)s\n"\
+               "%(activationUrl)s\n\n"
+        activationTmpl = "%(rootUrl)s/signup?email=%(emailId)s&token=%(token)s"
+
+        token = utils.getRandomKey('invite')
+        insert_d = db.insert(domain, "invitations", emailId, token, emailId)
+        activationUrl = activationTmpl % locals()
+        textBody = (body + signature) % locals()
+        htmlBody = getBlock("emails.mako", "signup", **locals())
+        yield insert_d
+
+    yield utils.sendmail(emailId, subject, textBody, htmlBody)
+
 
 class SignupResource(BaseResource):
     isLeaf = True
@@ -146,18 +201,20 @@ class SignupResource(BaseResource):
         request.redirect('/feed')
 
 
-    # We are currently in a private demo mode.
-    # Signups => Notify when we are public
-    # We categorize them by domains, so that we can rollout by domain.
     @defer.inlineCallbacks
     def _signup(self, request):
         if not self.thanksPage:
             self.thanksPage = static.File("public/thanks.html")
 
         emailId = utils.getRequestArg(request, "email")
-        local, domain = emailId.split('@')
-        yield db.insert(domain, "notifyOnRelease", '', emailId)
-        self.thanksPage.render_GET(request)
+
+        try:
+            yield _sendSignupInvitation(emailId)
+            self.thanksPage.render_GET(request)
+            defer.returnValue(None)
+        except (InvalidEmailId, DomainBlacklisted), e:
+            request.redirect('/')
+            request.finish()
 
 
     @profile
@@ -212,7 +269,8 @@ class SignupResource(BaseResource):
             # Notify all invitees about this user.
             token = utils.getRequestArg(request, "token")
             acceptedInvitationSender = cols.get(emailId, {}).get(token)
-            otherInvitees = [x for x in userIds if x != acceptedInvitationSender]
+            otherInvitees = [x for x in userIds
+                             if x not in (acceptedInvitationSender, emailId)]
 
             cols = yield db.multiget_slice(userIds+[orgId, userId], "entities", ["basic"])
             entities = utils.multiSuperColumnsToDict(cols)

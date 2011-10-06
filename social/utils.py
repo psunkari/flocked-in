@@ -761,7 +761,7 @@ def sendmail(toAddr, subject, textPart, htmlPart=None,
         msg = MIMEText(textPart)
 
     msg['Subject'] = subject
-    msg['From'] = "FlockedIn Team <%s>" % fromAddr
+    msg['From'] = "Flocked-in<%s>" % fromAddr
     msg['To'] = toAddr
     try:
         devMailId = config.get('Devel', 'MailId')
