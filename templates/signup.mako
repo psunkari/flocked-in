@@ -205,10 +205,13 @@
           <label for="pwdrepeat" class="styled-label">${_('Confirm Password')}</label>
           <input type="password" class="textfield" name="pwdrepeat" autocomplete="off" required/>
         </li>
+        <li>
+        </li>
         <div id="messages-wrapper" class="error-input"></div>
       </ul>
       <div class="buttons-wrapper">
-        <button type="submit" class="default button" id="submit" value="Next">${_('Create Account')}</button>
+        <span id="accept-tos">By clicking on "Create Account" below you agreeing with the Flocked-in <a href="/about/tos.html" target="new">Terms of Service</a> and the <a href="/about/privacy.html" target="new">Privacy Policy</a></span>
+        <button type="submit" class="default button" id="submit">${_('Create Account')}</button>
       </div>
     </form>
   </div>
