@@ -29,6 +29,7 @@ from social.admin           import Admin
 from social.server          import SessionFactory
 from social.files           import FilesResource
 from social.embed           import EmbedResource
+from social.contact         import ContactResource
 from social.logging         import log
 
 
@@ -189,6 +190,7 @@ class RootResource(resource.Resource):
             self._signup = SignupResource()
             self._signin = SigninResource()
             self._embed = EmbedResource()
+            self._contact = ContactResource()
         else:
             self._feedback = FeedbackResource(True)
 
@@ -235,6 +237,8 @@ class RootResource(resource.Resource):
                 match = self._avatars
             elif path == "about":
                 match = self._about
+            elif path == "contact":
+                match = self._contact
             elif path == "signup":
                 match = self._signup
             elif path == "rsrcs":

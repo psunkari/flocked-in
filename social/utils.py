@@ -747,7 +747,7 @@ def updateNameIndex(userKey, targetKeys, newName, oldName):
 @defer.inlineCallbacks
 @dump_args
 def sendmail(toAddr, subject, textPart, htmlPart=None,
-             fromAddr='noreply@flocked.in'):
+             fromAddr='noreply@flocked.in', fromName='Flocked-in'):
     if htmlPart:
         msg = MIMEMultipart('alternative')
         msg.preamble = 'This is a multi-part message in MIME format.'
@@ -761,7 +761,7 @@ def sendmail(toAddr, subject, textPart, htmlPart=None,
         msg = MIMEText(textPart)
 
     msg['Subject'] = subject
-    msg['From'] = "Flocked-in<%s>" % fromAddr
+    msg['From'] = "%s <%s>" % (fromName, fromAddr)
     msg['To'] = toAddr
     try:
         devMailId = config.get('Devel', 'MailId')
