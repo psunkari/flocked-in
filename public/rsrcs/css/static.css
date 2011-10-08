@@ -147,6 +147,13 @@ a:link, a:visited {
     -webkit-box-shadow: 0 1px 3px #555;
     box-shadow: 0 1px 3px #555;
 }
+#signup-placeholder {
+    color: #AAA;
+    text-transform: uppercase;
+    font-size: 12px;
+    padding: 4px;
+    font-weight: bold;
+}
 #signup-submit {
     color: #fef4e9;
     border: solid 1px #da7c0c;
