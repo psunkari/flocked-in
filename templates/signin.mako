@@ -1,4 +1,6 @@
 <%! from social import utils, config, _, __ %>
+
+<!DOCTYPE HTML>
 <html lang="en" dir="ltr" xml:lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
   <title>Sign In</title>
