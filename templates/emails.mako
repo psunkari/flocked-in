@@ -58,10 +58,10 @@
               </td>
             </tr>
             <tr><td style="border-top:1px solid #DDD; font-size: 14px;padding-top:10px;">
-              ${brandName} is an enterprise social platform built on top of
-              micro-blogging and activity streams that helps you stay connected
-              with your co-workers.  It helps your company engage and keep
-              everyone informed.
+              ${brandName} is a social network exclusively for people within your company
+              to help you collaborate better. It revolutionizes communication at
+              workplace with a much richer, easier and more effective form of communication
+              &ndash; <a href="${rootUrl}/about/features.html">View all features &#187;</a>
             </td></tr>
           </table>
         </td></tr>
@@ -90,10 +90,10 @@
               </td>
             </tr>
             <tr><td style="border-top:1px solid #DDD; font-size: 14px;padding-top:10px;">
-              ${brandName} is an enterprise social platform built on top of
-              micro-blogging and activity streams that helps you stay connected
-              with your co-workers.  It helps your company engage and keep
-              everyone informed.
+              ${brandName} is a social network exclusively for people within your company
+              to help you collaborate better. It revolutionizes communication at
+              workplace with a much richer, easier and more effective form of communication
+              &ndash; <a href="${rootUrl}/about/features.html">View all features &#187;</a>
             </td></tr>
           </table>
         </td></tr>
