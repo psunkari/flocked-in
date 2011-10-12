@@ -273,19 +273,18 @@
 ## Yet to be implemented
 ##
 
-<%def name="friendRequest()">
+<%def name="notifyFR()">
   ${header()}
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
   <td style="font-size: 14px;">
     <b>${senderName}</b> requested to be your friend on ${brandName}.
+    <br/>
+    <a href="${rootUrl}/profile?id=${senderId}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">Add as Friend</div></a>
     <br/><br/>
-    If you don't know ${senderName} you can ignore this request or block the user from sending similar requests in future.
+    You can also visit <a href="${rootUrl}/people">${rootUrl}/people</a> to view friends and subscriptions.
     <br/><br/>
-    <a href="${actionUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">Add as Friend</div></a>
-    <br/><br/>
-    You can also visit <a href="${rootUrl}/people">${rootUrl}/people</a> to your relationships.
   </td>
   ${footer()}
 </%def>

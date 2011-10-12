@@ -40,41 +40,44 @@ def notify(userIds, notifyId, value, timeUUID=None, **kwargs):
         return defer.succeed([])
 
     timeUUID = timeUUID or uuid.uuid1().bytes
+    notifyIdParts = notifyId.split(':')
+    deferreds = []
 
     # Delete existing notifications for the same item/activiy
-    d1 = db.multiget_slice(userIds, "notificationItems",
-                           super_column=notifyId, count=3, reverse=True)
-    def deleteOlderNotifications(results):
+    if not notifyIdParts[0] and notifyIdParts[1] not in ["FR"]:
+        d1 = db.multiget_slice(userIds, "notificationItems",
+                               super_column=notifyId, count=3, reverse=True)
+        def deleteOlderNotifications(results):
+            mutations = {}
+            timestamp = int(time.time() * 10000000)
+            for key, cols in results.iteritems():
+                names = [col.column.name for col in cols
+                                         if col.column.name != timeUUID]
+                if names:
+                    colmap = dict([(x, None) for x in names])
+                    deletion = ttypes.Deletion(timestamp, 'notifications',
+                                        ttypes.SlicePredicate(column_names=names))
+                    mutations[key] = {'notifications': colmap,
+                                      'latest': [deletion]}
+
+            if mutations:
+                return db.batch_mutate(mutations)
+            else:
+                return defer.succeed([])
+
+        d1.addCallback(deleteOlderNotifications)
+
+        # Create new notifications
+        deferreds.append(d1)
         mutations = {}
-        timestamp = int(time.time() * 10000000)
-        for key, cols in results.iteritems():
-            names = [col.column.name for col in cols
-                                     if col.column.name != timeUUID]
-            if names:
-                colmap = dict([(x, None) for x in names])
-                deletion = ttypes.Deletion(timestamp, 'notifications',
-                                    ttypes.SlicePredicate(column_names=names))
-                mutations[key] = {'notifications': colmap,
-                                  'latest': [deletion]}
+        for userId in userIds:
+            colmap = {timeUUID: notifyId}
+            mutations[userId] = {'notifications': colmap,
+                                 'latest': {'notifications': colmap},
+                                 'notificationItems': {notifyId: {timeUUID: value}}}
+        deferreds.append(db.batch_mutate(mutations))
 
-        if mutations:
-            return db.batch_mutate(mutations)
-        else:
-            return defer.succeed([])
 
-    d1.addCallback(deleteOlderNotifications)
-
-    # Create new notifications
-    mutations = {}
-    for userId in userIds:
-        colmap = {timeUUID: notifyId}
-        mutations[userId] = {'notifications': colmap,
-                             'latest': {'notifications': colmap},
-                             'notificationItems': {notifyId: {timeUUID: value}}}
-    d2 = db.batch_mutate(mutations)
-
-    deferreds = [d1, d2]
-    notifyIdParts = notifyId.split(':')
     if notifyIdParts[0]:
         convId, convType, convOwner, notifyType = notifyIdParts
         for handler in notificationHandlers:
@@ -132,7 +135,8 @@ class NotificationByMail(object):
         "NF": "[%(brandName)s] %(senderName)s started following you",
         "FA": "[%(brandName)s] %(senderName)s accepted your friend request",
         "GA": "[%(brandName)s] Your request to join %(senderName)s was accepted",
-        "GI": "[%(brandName)s] %(senderName)s invited you to join %(groupName)s"
+        "GI": "[%(brandName)s] %(senderName)s invited you to join %(groupName)s",
+        "FR": "[%(brandName)s] %(senderName)s wants to be your friend on %(networkName)s network"
     }
 
     _otherNotifyBody = {
@@ -148,11 +152,15 @@ class NotificationByMail(object):
               "Your request to join %(senderName)s was accepted by an admistrator",
         "GI": "Hi,\n\n"\
               "%(senderName)s invited you to join %(groupName)s group.\n"\
-              "Visit %(rootUrl)s/groups?type=invitations to accept the invitation."
+              "Visit %(rootUrl)s/groups?type=invitations to accept the invitation.",
+        "FR": "Hi,\n\n"\
+              "%(senderName)s requested to be your friend on %(networkName)s network.\n"\
+              "To accept the request visit %(senderName)s's profile at %(rootUrl)s/profile?id=%(senderId)s."
+
     }
 
     _signature = "\n\n"\
-            "Flocked.in Team.\n\n\n\n"\
+            "%(brandName)s Team.\n\n\n\n"\
             "--\n"\
             "Update your %(brandName)s notifications at %(rootUrl)s/settings?dt=notify\n"
 

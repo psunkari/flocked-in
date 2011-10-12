@@ -94,7 +94,7 @@ def _getImageFileFormat(data):
 #      If you do, existing preferences will break.          #
 #############################################################
 
-notifyFriendRequest = 0
+notifyFR = 0
 notifyFA = 1
 notifyNF = 2
 notifyNU = 3
