@@ -17,6 +17,7 @@ from twisted.internet   import defer
 from twisted.web        import static, server
 
 from social             import db, utils, base, errors, config, _, fts
+from social             import notifications
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
@@ -316,6 +317,17 @@ class MessagingResource(base.BaseResource):
         people = yield db.multiget_slice(participants, "entities", ['basic'])
         people = utils.multiSuperColumnsToDict(people)
 
+        value = myId
+        data = {"entities": people}
+        data["entities"].update({args['orgKey']: args["org"]})
+        data["orgId"] = args["orgKey"]
+        data["convId"] = convId
+        data["message"] = body
+
+        users = participants - set([myId])
+        if users:
+            yield notifications.notify(users, ":MR", value, timeUUID, **data)
+
         args.update({"people":people})
         args.update({"messageIds": mids})
         args.update({'messages': messages})
@@ -401,8 +413,19 @@ class MessagingResource(base.BaseResource):
             yield db.insert(convId, "item_files", val, timeuuid, file)
         self._indexMessage(convId, messageId, myOrgId, meta, attachments, body)
 
-        #XXX:Is this a duplicate batch insert ?
+        #XXX: Is this a duplicate batch insert?
         #yield db.batch_insert(convId, "mConversations", {'meta':meta})
+        people = yield db.multiget_slice(participants, "entities", ["basic"])
+        people = utils.multiSuperColumnsToDict(people)
+        value = myId
+        data = {"entities": people}
+        data["entities"].update({args['orgKey']: args["org"]})
+        data["orgId"] = args["orgKey"]
+        data["convId"] = convId
+        data["message"] = body
+        users = set(participants) - set([myId])
+        if users:
+            yield notifications.notify(users, ":NM", myId, timeUUID, **data)
 
         if script:
             request.write("$('#composer').empty();$$.fetchUri('/messages');")
@@ -546,6 +569,7 @@ class MessagingResource(base.BaseResource):
     @dump_args
     def _addMembers(self, request):
         myId = request.getSession(IAuthInfo).username
+        orgId = request.getSession(IAuthInfo).organization
         newMembers, body, subject, convId = self._parseComposerArgs(request)
 
         if not (convId and newMembers):
@@ -563,16 +587,29 @@ class MessagingResource(base.BaseResource):
         newMembers = set([userId for userId in cols if cols[userId]])
         newMembers = newMembers - participants
 
+        mailNotificants = participants - set([myId])
+        toFetchEntities = mailNotificants.union([myId, orgId]).union(newMembers)
+        entities = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
+        entities = utils.multiSuperColumnsToDict(entities)
+        data = {"entities": entities}
+        data["orgId"] = orgId
+        data["convId"] = convId
         if newMembers:
+            data["message"] = conv["meta"]["snippet"]
             newMembers = dict([(userId, '') for userId in newMembers])
             yield db.batch_insert(convId, "mConversations", {'participants':newMembers})
             yield self._deliverMessage(convId, newMembers, conv['meta']['uuid'], conv['meta']['owner'])
+            yield notifications.notify(newMembers, ":NM", myId, **data)
+        if mailNotificants and newMembers:
+            data["addedMembers"] = newMembers
+            yield notifications.notify(mailNotificants, ":MA", myId, **data)
 
     @profile
     @defer.inlineCallbacks
     @dump_args
     def _removeMembers(self, request):
         myId = request.getSession(IAuthInfo).username
+        orgId = request.getSession(IAuthInfo).organization
         members, body, subject, convId = self._parseComposerArgs(request)
 
         if not (convId and  members):
@@ -613,6 +650,18 @@ class MessagingResource(base.BaseResource):
                                              supercolumn='messages'))
             if deferreds:
                 yield deferreds
+
+        mailNotificants = set(participants) - members -set([myId])
+        if mailNotificants and members:
+            toFetchEntities = mailNotificants.union([myId, orgId]).union(members)
+            entities = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
+            entities = utils.multiSuperColumnsToDict(entities)
+            data = {"entities": entities}
+            data["orgId"] = orgId
+            data["convId"] = convId
+            data["removedMembers"] = members
+            yield notifications.notify(mailNotificants, ":MA", myId, **data)
+
 
     @profile
     @defer.inlineCallbacks

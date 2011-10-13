@@ -114,9 +114,9 @@ notifyItemC = 12
 notifyMention = 13
 notifyItemRequests = 14
 
-notifyMessageConv = 15
-notifyMessageMessage = 16
-notifyMessageAccessChange = 17
+notifyNM = 15
+notifyMR = 16
+notifyMA = 17
 
 # Total number of notification types and default setting
 _notificationsCount = 18
