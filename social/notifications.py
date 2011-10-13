@@ -66,9 +66,9 @@ def notify(userIds, notifyId, value, timeUUID=None, **kwargs):
                 return defer.succeed([])
 
         d1.addCallback(deleteOlderNotifications)
+        deferreds.append(d1)
 
         # Create new notifications
-        deferreds.append(d1)
         mutations = {}
         for userId in userIds:
             colmap = {timeUUID: notifyId}
