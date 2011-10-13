@@ -95,8 +95,11 @@ def getValidEntityId(request, arg, type="user", columns=None):
     if not entityId:
         raise errors.MissingParams([_('%s id') % _(type).capitalize()])
 
-    entity = yield db.get_slice(entityId, "entities",
-                                ["basic"].extend(columns if columns else []))
+    if not columns:
+        columns = []
+    columns.extend(['basic'])
+
+    entity = yield db.get_slice(entityId, "entities", columns)
     if not entity:
         raise errors.InvalidEntity(type, entityId)
 

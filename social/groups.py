@@ -135,7 +135,7 @@ class GroupsResource(base.BaseResource):
         appchange, script, args, myKey = yield self._getBasicArgs(request)
         landing = not self._ajax
         myOrgId = args["orgKey"]
-        groupId, group = yield utils.getValidEntityId(request, "id", "group")
+        groupId, group = yield utils.getValidEntityId(request, "id", "group", ["admins"])
         access = group["basic"]["access"]
         myGroups = []
         pendingRequests = {}
@@ -161,6 +161,12 @@ class GroupsResource(base.BaseResource):
 
                 yield self._notify(groupId, myKey)
                 pendingRequests[groupId] = myKey
+
+                entities = yield db.multiget_slice(group["admins"], "entities", ["basic"])
+                entities = utils.multiSuperColumnsToDict(entities)
+                entities.update({groupId: group, args["orgKey"]: args["org"], myKey: args["me"]})
+                data = {"entities": entities , "groupName": group['basic']['name']}
+                yield notifications.notify(group["admins"], ":GR", myKey, **data)
 
             args["pendingConnections"] = pendingRequests
             args["groupFollowers"] = groupFollowers

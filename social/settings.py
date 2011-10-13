@@ -100,7 +100,7 @@ notifyNF = 2
 notifyNU = 3
 notifyIA = 3    # Invitation accept and invited user joining are same
 
-notifyGroupRequest = 4
+notifyGR = 4
 notifyGA = 5
 notifyGI = 6
 notifyGroupNewMember = 7

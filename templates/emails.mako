@@ -289,7 +289,7 @@
   ${footer()}
 </%def>
 
-<%def name="groupRequest()">
+<%def name="notifyGR()">
   ${header()}
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
@@ -297,7 +297,8 @@
   <td style="font-size: 14px;">
     <b>${senderName}</b> wants to join ${groupName}.
     <br/><br/>
-    <a href="${actionUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">Add to Group</div></a>
+    <a href="${rootUrl}/groups?type=pendingRequests" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View all pending requests</div></a>
+    <br/>
     You can also visit <a href="${rootUrl}/groups">${rootUrl}/groups</a> to manage all your groups.
   </td>
   ${footer()}

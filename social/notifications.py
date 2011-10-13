@@ -44,7 +44,7 @@ def notify(userIds, notifyId, value, timeUUID=None, **kwargs):
     deferreds = []
 
     # Delete existing notifications for the same item/activiy
-    if not notifyIdParts[0] and notifyIdParts[1] not in ["FR"]:
+    if not notifyIdParts[0] and notifyIdParts[1] not in ["FR", "GR"]:
         d1 = db.multiget_slice(userIds, "notificationItems",
                                super_column=notifyId, count=3, reverse=True)
         def deleteOlderNotifications(results):
@@ -136,7 +136,8 @@ class NotificationByMail(object):
         "FA": "[%(brandName)s] %(senderName)s accepted your friend request",
         "GA": "[%(brandName)s] Your request to join %(senderName)s was accepted",
         "GI": "[%(brandName)s] %(senderName)s invited you to join %(groupName)s",
-        "FR": "[%(brandName)s] %(senderName)s wants to be your friend on %(networkName)s network"
+        "FR": "[%(brandName)s] %(senderName)s wants to be your friend on %(networkName)s network",
+        "GR": "[%(brandName)s] %(senderName)s wants to join %(groupName)s"
     }
 
     _otherNotifyBody = {
@@ -155,8 +156,10 @@ class NotificationByMail(object):
               "Visit %(rootUrl)s/groups?type=invitations to accept the invitation.",
         "FR": "Hi,\n\n"\
               "%(senderName)s requested to be your friend on %(networkName)s network.\n"\
-              "To accept the request visit %(senderName)s's profile at %(rootUrl)s/profile?id=%(senderId)s."
-
+              "To accept the request visit %(senderName)s's profile at %(rootUrl)s/profile?id=%(senderId)s.",
+        "GR": "Hi.\n\n"\
+              "%(senderName)s wants to join %(groupName)s group\n"\
+              "Visit %(rootUrl)s/groups?type=pendingRequests to accept the request"
     }
 
     _signature = "\n\n"\
