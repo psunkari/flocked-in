@@ -1072,38 +1072,49 @@ class GroupsResource(base.BaseResource):
                                     landing, "#center-content", "set", True,
                                     handlers=handlers, **args)
 
-    #@profile
-    #@defer.inlineCallbacks
-    #@dump_args
-    #def _edit(self, request):
+    @profile
+    @defer.inlineCallbacks
+    @dump_args
+    def _edit(self, request):
 
-    #    appchange, script, args, myId = yield self._getBasicArgs(request)
-    #    myOrgId = args["orgKey"]
-    #    landing = not self._ajax
+        appchange, script, args, myId = yield self._getBasicArgs(request)
+        myOrgId = args["orgKey"]
+        landing = not self._ajax
 
-    #    groupId, group = yield utils.getValidEntityId(request, "id", "group",
-    #                                                  columns=["admins"])
-    #    if myId not in group['admins']:
-    #        raise errors.PermissionDenied('You should be an administrator to edit group meta data')
-    #    name = utils.getRequestArg(request, 'name')
-    #    desc = utils.getRequestArg(request, 'desc')
-    #    access = utils.getRequestArg(request, 'access')
-    #    dp = utils.getRequestArg(request, "dp", sanitize=False) or ''
-    #    meta = {'basic':{}}
-    #    if name:
-    #        meta['basic']['name'] = name
-    #    if desc:
-    #        meta['basic']['desc'] = desc
-    #    if access and access in ['closed', 'open']:
-    #        meta['basic']['access'] = access
-    #    if dp:
-    #        avatar = yield saveAvatarItem(groupId, dp)
-    #        meta['basic']['avatar'] = avatar
-    #    if meta['basic']:
-    #        yield db.batch_insert(groupId, 'entities', meta)
-    #        #XXX: update groupEnitityMap with new name for all entities involved
-    #        if script:
-    #            request.write("<script>parent.$$.alerts.info('updated successful');</script>")
+        groupId, group = yield utils.getValidEntityId(request, "id", "group",
+                                                      columns=["admins"])
+        if myId not in group['admins']:
+            raise errors.PermissionDenied('You should be an administrator to edit group meta data')
+        name = utils.getRequestArg(request, 'name')
+        desc = utils.getRequestArg(request, 'desc')
+        access = utils.getRequestArg(request, 'access')
+        dp = utils.getRequestArg(request, "dp", sanitize=False) or ''
+        meta = {'basic':{}}
+        if name:
+            meta['basic']['name'] = name
+        if desc:
+            meta['basic']['desc'] = desc
+        if access and access in ['closed', 'open']:
+            meta['basic']['access'] = access
+        if dp:
+            avatar = yield saveAvatarItem(groupId, dp)
+            meta['basic']['avatar'] = avatar
+        if meta['basic']:
+            #XXX: update groupEnitityMap with new name for all entities involved
+            if name and name!=group["basic"]["name"]:
+                members = yield db.get_slice(groupId, "groupMembers")
+                members = utils.columnsToDict(members).keys()
+                entities = members + [args["orgKey"]]
+                oldColName = "%s:%s"%(group["basic"]["name"].lower(), groupId)
+                colname = '%s:%s' %(name.lower(), groupId)
+                mutations = {}
+                for entity in entities:
+                    mutations[entity] = {'entityGroupsMap':{colname:'', oldColName:None}}
+                yield db.batch_mutate(mutations)
+
+            yield db.batch_insert(groupId, 'entities', meta)
+            if script:
+                request.write("<script>parent.$$.alerts.info('updated successful');</script>")
 
 
     @profile
@@ -1123,9 +1134,9 @@ class GroupsResource(base.BaseResource):
                 d = self._listPendingSubscriptions(request)
             elif request.postpath[0] == 'feed':
                 d = self._groupFeed(request)
-            #elif request.postpath[0] == 'edit':
-            #    d = self._renderEditGroup(request)
-        elif segmentCount ==2 and request.postpath[1] == "more":
+            elif request.postpath[0] == 'edit':
+                d = self._renderEditGroup(request)
+        elif segmentCount ==2 and request.postpath == ['feed', 'more']:
             d = self._renderMore(request)
 
         return self._epilogue(request, d)
@@ -1161,8 +1172,8 @@ class GroupsResource(base.BaseResource):
                 d = self._cancelGroupInvitaiton(request)
             elif action == 'create':
                 d = self._create(request)
-            #elif action == 'edit':
-            #    d = self._edit(request)
+            elif action == 'edit':
+                d = self._edit(request)
 
             def _updatePendingGroupRequestCount(ign):
                 def _update_count(counts):

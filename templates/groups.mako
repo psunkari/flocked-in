@@ -359,7 +359,7 @@
   %if groupId:
     <span class="middle title">${entities[groupId]["basic"]["name"].capitalize()}</span>
     <span class="button title-button">
-      <a class="ajax" href="/groups/feed?id${groupId}" _ref="/groups/feed?id=${groupId}">${_('Back To Group')}</a>
+      <a class="ajax" href="/groups/feed?id=${groupId}" _ref="/groups/feed?id=${groupId}">${_('Back To Group')}</a>
     </span>
   %endif
 

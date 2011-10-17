@@ -607,19 +607,16 @@ class FeedResource(base.BaseResource):
                 orgId = entityId
                 feedTitle = _("Company Feed: %s") % entity["basic"]["name"]
             elif entityType == 'group':
-                menuId = "groups"
-                orgId = entity["basic"]["org"]
-                args["groupId"] = entityId
-                args["groupAdmins"] = entity["admins"]
-                feedTitle = _("Group Feed: %s") % entity["basic"]["name"]
+                log.info("group-feed should be handled by groups resource")
+                request.redirect("/groups/feed?id=%s"%(entityId))
+                defer.returnValue(None)
             else:
                 if entityId != myId:
                     raise errors.EntityAccessDenied("feed", entityId)
                 orgId = entity["basic"]["org"]
 
             if myOrgId != orgId:
-                entityType = "Organization" if entityType == 'org' else 'Group'
-                raise errors.EntityAccessDenied(entityType, entityId)
+                raise errors.EntityAccessDenied("Organization", entityId)
 
         suggestions, entities = yield people.get_suggestions(request,
                                                 SUGGESTION_PER_PAGE, mini=True)
@@ -641,11 +638,6 @@ class FeedResource(base.BaseResource):
 
         if script:
             handlers = {}
-            if "groupId" in args:
-                groupName = feedTitle.split(":", 1)[1].strip()
-                groupId = feedId
-                handlers["onload"] = "$$.acl.switchACL('sharebar-acl', 'group','%s', '%s');" % (groupId, groupName)
-
             handlers["onload"] = handlers.get("onload", "") +\
                                  "$$.files.init('sharebar-attach');"
             yield renderScriptBlock(request, "feed.mako", "share_block",
@@ -678,18 +670,6 @@ class FeedResource(base.BaseResource):
             yield renderScriptBlock(request, "feed.mako", "feed", landing,
                                     "#user-feed", "set", True,
                                     handlers={"onload": onload}, **args)
-            onload = """
-                     $('#group_add_invitee').autocomplete({
-                           source: '/auto/users',
-                           minLength: 2,
-                           select: function( event, ui ) {
-                               $('#group_invitee').attr('value', ui.item.uid)
-                           }
-                      });
-                     """
-            yield renderScriptBlock(request, "feed.mako", "groupLinks",
-                                    landing, "#group-links", "set", True,
-                                    handlers={"onload":onload}, **args)
             yield renderScriptBlock(request, "feed.mako", "_suggestions",
                                     landing, "#suggestions", "set", True, **args)
 
@@ -708,6 +688,11 @@ class FeedResource(base.BaseResource):
         entityId = utils.getRequestArg(request, "id")
         start = utils.getRequestArg(request, "start") or ""
         itemType = utils.getRequestArg(request, 'type')
+
+        entity = yield db.get_slice(entityId, "entities", ["basic"])
+        if entity and entity["basic"].get("type", '') == "group":
+            request.redirect('/groups/feed/more?id=%s' %(entityId))
+            defer.returnValue(None)
 
         if itemType and itemType in plugins and plugins[itemType].hasIndex:
             feedItems = yield _feedFilter(request, entityId, itemType, start)

@@ -133,7 +133,7 @@
   %if groupId:
     <div class="sidebar-chunk">
       %if myKey in entities[groupId].get("admins", {}):
-        <div class="sidebar-title">${_("Manage")}</div>
+        <div class="sidebar-title">${_("Manage Group")}</div>
       %else:
         <div class="sidebar-title">${_("Group")}</div>
       %endif
