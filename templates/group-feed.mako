@@ -144,18 +144,18 @@
           <li><a class="ajax" href="/groups/members?id=${groupId}">${_('Members')}</a></li>
       </ul>
     </div>
-    <div class="invite-input-block">
-        <div class="sidebar-chunk">
-            <div class="sidebar-title">${_("Invite your colleague to this group")}</div>
-            <form method="post" action="/groups/invite" class="ajax" autocomplete="off">
-              <input type="hidden" name="invitee" id="group_invitee"/>
-              <input type="hidden" value = ${groupId} name="id" />
-              <div class="input-wrap">
-                <input type="text" id="group_add_invitee" placeHolder="${_("Your colleague&#39;s name")}"/>
-              </div>
-              <input type="hidden" name="from" value="sidebar"/>
-            </form>
-        </div>
+    <div class="sidebar-chunk">
+      <div class="sidebar-title">${_("Invite your colleague to this group")}</div>
+      <div class="invite-input-block">
+        <form method="post" action="/groups/invite" class="ajax" autocomplete="off">
+          <input type="hidden" name="invitee" id="group_invitee"/>
+          <input type="hidden" value = ${groupId} name="id" />
+          <div class="input-wrap">
+            <input type="text" id="group_add_invitee" placeHolder="${_("Your colleague&#39;s name")}"/>
+          </div>
+          <input type="hidden" name="from" value="sidebar"/>
+        </form>
+      </div>
     </div>
   %endif
 </%def>
@@ -203,7 +203,7 @@
 <%def name="groupAdmins()">
   <% print entities[groupId]["admins"], [x in entities for x in entities[groupId]["admins"]] %>
   <div class="sidebar-chunk">
-    <div class="sidebar-title">${_("Group Administrators")}</div>
+    <div class="sidebar-title">${_("Administrators")}</div>
       <ul class="v-links">
         % if entities[groupId]["admins"]:
           % for admin in entities[groupId]["admins"].keys()[:4]:
