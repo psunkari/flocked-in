@@ -477,7 +477,7 @@ def userName(id, user, classes=None):
 
 
 def groupName(id, user, classes=None):
-    return "<span><a class='ajax' href='/feed?id=%s'>%s</a></span>"\
+    return "<span><a class='ajax' href='/groups/feed?id=%s'>%s</a></span>"\
            % (id, user["basic"]["name"])
 
 
