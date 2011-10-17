@@ -57,7 +57,7 @@
                                     .replace(/ {2,}/g, function(space) { return times('&nbsp;', space.length -1) + ' ' });
 
                 shadow.html(val);
-                
+
                 // No clean way to know the property of box-sizing.
                 // Currently assuming it as "border-box"
                 $(this).css('height', Math.max(shadow.height() + 15 + verticalPad, minHeight));

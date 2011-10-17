@@ -1,5 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-                    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE HTML>
 <%! from social import utils, _, __, plugins %>
 <%! from social.logging import log %>
 
@@ -15,6 +14,9 @@
       </div>
     </div>
     <div id="center-right">
+      <div class="titlebar center-header">
+        <div id="title">${self.feed_title()}</div>
+      </div>
       <div id="right">
         <div id="home-notifications"></div>
         <div id="home-events"></div>
@@ -31,16 +33,11 @@
         </div>
       </div>
       <div id="center">
-        <div class="center-header">
-          <div class="titlebar">
-            <div id="title">${self.feed_title()}</div>
-          </div>
-          %if script:
-          <div id="share-block">
-            ${self.share_block()}
-          </div>
-          %endif
+        %if script:
+        <div id="share-block">
+          ${self.share_block()}
         </div>
+        %endif
         <div id="user-feed" class="center-contents">
           %if not script or tmp_files:
             ${self.feed()}
@@ -48,6 +45,7 @@
           <div id="foot-loader"></div>
         </div>
       </div>
+      <div class="clear"></div>
     </div>
   </div>
 </%def>

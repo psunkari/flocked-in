@@ -1,7 +1,6 @@
 <%! from social import utils, _, __, plugins %>
 <%! from pytz import common_timezones %>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-                    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE HTML>
 
 <%namespace name="widgets" file="widgets.mako"/>
 <%namespace name="people" file="people.mako"/>
@@ -39,25 +38,25 @@
       </div>
     </div>
     <div id="center-right">
+      <div class="center-header">
+        <div class="titlebar">
+          %if title:
+            <span class="middle title">${_(title)}</span>
+          %else:
+            <span class="middle title">${_("Admin Console")}</span>
+          %endif
+          <span class="button title-button">
+            <a class="ajax" href="/admin/add" data-ref="/admin/add">${_('Add Users')}</a>
+          </span>
+        </div>
+        <div id="add-user-wrapper"></div>
+      </div>
       <div id="right">
         <div id="home-notifications"></div>
         <div id="home-events"></div>
         <div id="home-todo"></div>
       </div>
       <div id="center">
-        <div class="center-header">
-          <div class="titlebar">
-            %if title:
-              <span class="middle title">${_(title)}</span>
-            %else:
-              <span class="middle title">${_("Admin Console")}</span>
-            %endif
-            <span class="button title-button">
-              <a class="ajax" href="/admin/add" data-ref="/admin/add">${_('Add Users')}</a>
-            </span>
-          </div>
-          <div id="add-user-wrapper"></div>
-        </div>
         <div class="center-contents">
           <div id="users-view" class="viewbar">
             %if not script:
@@ -71,6 +70,7 @@
           </div>
         </div>
       </div>
+      <div class="clear"></div>
     </div>
   </div>
 </%def>

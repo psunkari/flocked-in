@@ -3,8 +3,8 @@
 <%! import cgi %>
 <%! from twisted.web.static import formatFileSize %>
 <%! from base64 import urlsafe_b64decode %>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-                    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<!DOCTYPE HTML>
 
 <%namespace name="widgets" file="widgets.mako"/>
 <%inherit file="base.mako"/>
@@ -17,26 +17,26 @@
       </div>
     </div>
     <div id="center-right">
+      <div class="center-header">
+        <div class="titlebar">
+          <span class="middle title">${_('Messages')}</span>
+          <span class="button title-button">
+            <a class="ajax" href="/messages/write" data-ref="/messages/write">${_('New Message')}</a>
+          </span>
+        </div>
+        <div id="composer">
+          %if view == "compose":
+            %if not script:
+              ${render_composer()}
+            %endif
+          %endif
+        </div>
+      </div>
       <div id="right">
         <div class="right-contents">
         </div>
       </div>
       <div id="center">
-        <div class="center-header">
-          <div class="titlebar">
-            <span class="middle title">${_('Messages')}</span>
-            <span class="button title-button">
-              <a class="ajax" href="/messages/write" data-ref="/messages/write">${_('New Message')}</a>
-            </span>
-          </div>
-          <div id="composer">
-            %if view == "compose":
-              %if not script:
-                ${render_composer()}
-              %endif
-            %endif
-          </div>
-        </div>
         <div class="center-contents">
           %if view != "compose":
             %if not script:
@@ -45,6 +45,7 @@
           %endif
         </div>
       </div>
+      <div class="clear"></div>
     </div>
   </div>
 </%def>

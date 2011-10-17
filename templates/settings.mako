@@ -1,5 +1,5 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-                    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE HTML>
+
 <%! from social import utils, _, __, plugins, settings %>
 <%! from social import relations as r %>
 <%! from pytz import common_timezones %>
@@ -19,6 +19,11 @@
       </div>
     </div>
     <div id="center-right">
+      <div id="settings-title" class="center-header">
+        %if not script:
+          ${self.settingsTitle()}
+        %endif
+      </div>
       <div id="right">
         <div class="right-contents">
           %if not script:
@@ -27,13 +32,9 @@
         </div>
       </div>
       <div id="center">
-        <div id="settings-title" class="center-header">
-          %if not script:
-            ${self.settingsTitle()}
-          %endif
-        </div>
         <div class="center-contents" id="settings-content"></div>
       </div>
+      <div class="clear"></div>
     </div>
   </div>
 </%def>
