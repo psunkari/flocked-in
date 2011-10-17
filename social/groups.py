@@ -1100,7 +1100,6 @@ class GroupsResource(base.BaseResource):
             avatar = yield saveAvatarItem(groupId, dp)
             meta['basic']['avatar'] = avatar
         if meta['basic']:
-            #XXX: update groupEnitityMap with new name for all entities involved
             if name and name!=group["basic"]["name"]:
                 members = yield db.get_slice(groupId, "groupMembers")
                 members = utils.columnsToDict(members).keys()
@@ -1110,6 +1109,7 @@ class GroupsResource(base.BaseResource):
                 mutations = {}
                 for entity in entities:
                     mutations[entity] = {'entityGroupsMap':{colname:'', oldColName:None}}
+                #XXX:notify group-members about the change in name
                 yield db.batch_mutate(mutations)
 
             yield db.batch_insert(groupId, 'entities', meta)
