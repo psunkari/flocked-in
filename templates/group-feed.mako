@@ -17,14 +17,10 @@
     </div>
     <div id="center-right">
       <div id="right">
-        <div id="home-notifications"></div>
-        <div id="home-events"></div>
-        <div id="home-todo"></div>
-        <div id="invite-people-block"></div>
-        <div id = "group-admins"></div>
+        <div id ="group-admins"></div>
         <div id ="group-links" ></div>
-        <div id="group-events" ></div>
-        <div id="group-files" ></div>
+        <div id ="group-files" ></div>
+        <div id ="group-events" ></div>
       </div>
       <div id="center">
         <div class="center-header">
@@ -127,6 +123,8 @@
     ##</div>
   </div>
   <div class="clear"></div>
+</%def>
+<%def name="groupFiles()">
 </%def>
 
 <%def name="groupLinks()">
