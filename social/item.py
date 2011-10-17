@@ -944,8 +944,9 @@ class ItemResource(base.BaseResource):
                 deferreds.append(d)
 
                 # Rollback updates done to comment owner's follower's feeds.
+                responseType = "Q" if convType == "question" else 'C'
                 d = feed.deleteFeed(itemOwnerId, itemId, convId, convType,
-                                    convACL, convOwnerId, 'C', deleteAll=True)
+                                    convACL, convOwnerId, responseType, deleteAll=True)
                 deferreds.append(d)
 
         else:
