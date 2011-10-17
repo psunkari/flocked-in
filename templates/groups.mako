@@ -6,6 +6,7 @@
 <%inherit file="base.mako"/>
 <%namespace name="profile" file="profile.mako"/>
 <%namespace name="people" file="people.mako"/>
+<%namespace name="group_feed" file="group-feed.mako"/>
 
 ##
 ## People page is displayed in a 3-column layout.
@@ -77,23 +78,6 @@
   %endif
 </%def>
 
-
-
-<%def name="group_actions(groupId)">
-  %if groupId in pendingConnections:
-    <li><button class="button disabled"><span class="button-text">${_('Request Pending')}</span></button></li>
-  %elif groupId not in myGroups:
-    <li><button class="button default" onclick="$.post('/ajax/groups/subscribe', 'id=${groupId}')"><span class="button-text">${('Join')}</span></button></li>
-  %else:
-    <li><button class="button" onclick="$.post('/ajax/groups/unsubscribe', 'id=${groupId}')"><span class="button-text">${('Leave')}</span></button></li>
-    %if myKey in groupFollowers[groupId]:
-      <li><button class="button" onclick="$.post('/ajax/groups/unfollow', 'id=${groupId}')"><span class="button-text">${('Stop Following')}</span></button></li>
-    %else:
-      <li><button class="button default" onclick="$.post('/ajax/groups/follow', 'id=${groupId}')"><span class="button-text">${('Follow')}</span></button></li>
-    %endif
-  %endif
-</%def>
-
 <%def name="listGroups()">
   <%
     counter = 0
@@ -122,18 +106,18 @@
 <%def name="_displayGroup(groupId)">
   <% button_class = 'default' %>
   <div class="users-avatar">
-    <% avatarURI = utils.groupAvatar(groupId, groups[groupId], "medium") %>
+    <% avatarURI = utils.groupAvatar(groupId, entities[groupId], "medium") %>
     %if avatarURI:
       <img src="${avatarURI}" height='48' width='48'></img>
     %endif
   </div>
   <div class="users-details">
     <%
-      groupName = groups[groupId]["basic"].get("name", "-")
-      groupDesc = groups[groupId]["basic"].get("desc", None)
+      groupName = entities[groupId]["basic"].get("name", "-")
+      groupDesc = entities[groupId]["basic"].get("desc", None)
     %>
-    <div class="user-details-name"><a href ="/feed?id=${groupId}">${groupName}</a></div>
-    <div class="group-details-title">${groups[groupId]["basic"]["access"].capitalize()}</div>
+    <div class="user-details-name"><a href ="/groups/feed?id=${groupId}">${groupName}</a></div>
+    <div class="group-details-title">${entities[groupId]["basic"]["access"].capitalize()}</div>
     %if groupDesc:
         <div class="group-details-desc">&nbsp;&ndash;&nbsp;${groupDesc}</div>
     %else:
@@ -141,7 +125,7 @@
     %endif
     <div class="user-details-actions">
       <ul id="group-actions-${groupId}" class="middle user-actions h-links">
-        ${group_actions(groupId)}
+        ${group_feed.group_actions(groupId)}
       </ul>
     </div>
   </div>
@@ -149,7 +133,9 @@
 
 <%def name="viewOptions(selected)">
   <%
-    options = [('myGroups', 'My Groups'), ('allGroups', 'All Groups'), ('adminGroups', 'Groups managed by Me'), ('invitations', 'Group Invitations')]
+    options = [('myGroups', 'My Groups'), ('allGroups', 'All Groups'), ('adminGroups', 'Groups managed by Me')]
+    if showInvitaitonsTab:
+      options.append(('invitations', 'Group Invitations'))
     if showPendingRequestsTab:
         options.append(("pendingRequests", "Pending Requests"))
     group_request_count = groupRequestCount if groupRequestCount else ''
@@ -331,4 +317,50 @@
       <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
     %endif
   </ul>
+</%def>
+
+<%def name="edit_group()">
+  <%
+    groupName = entities[groupId]["basic"].get("name", 'Group Name')
+    desc = entities[groupId]["basic"].get("desc", 'Description')
+    access = entities[groupId]["basic"].get("access", '')
+  %>
+
+  <form id="group-form" action="/ajax/groups/edit" method="post" enctype="multipart/form-data">
+    <div class="styledform">
+      <ul>
+        <li>
+            <label for="name">${_('Group Name')}</label>
+            <input type="text" id="groupname" name="name" required title="${_('Group Name')}" value="${_(groupName)}"/>
+        </li>
+        <li>
+            <label for="desc">${_('Description')}</label>
+            <textarea class="input-wrap" id="desc" name="desc" value="${_(desc)}"></textarea>
+        </li>
+        <li>
+            <label>${_("Membership")}</label>
+            <input type="checkbox" id="access" name="access" value="${access}">${_("should be approved by group administrator")}</input>
+        </li>
+        <li>
+            <label for="dp">${_("Group Logo")}</label>
+            <input type="file" id="dp" name="dp" accept="image/jpx, image/png, image/gif"/>
+      </ul>
+    <div class="styledform-buttons">
+        <input type="submit" name="userInfo_submit" value="${_("Save")}" class="button default"/>
+        <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">${_("Cancel")}</button>
+    </div>
+    </div>
+    % if groupId:
+      <input type="hidden" value = ${groupId} name="id" />
+    %endif
+  </form>
+</%def>
+<%def name="backToGroupLink()">
+  %if groupId:
+    <span class="middle title">${entities[groupId]["basic"]["name"].capitalize()}</span>
+    <span class="button title-button">
+      <a class="ajax" href="/groups/feed?id${groupId}" _ref="/groups/feed?id=${groupId}">${_('Back To Group')}</a>
+    </span>
+  %endif
+
 </%def>

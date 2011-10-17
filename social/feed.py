@@ -587,12 +587,13 @@ class FeedResource(base.BaseResource):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         itemType = utils.getRequestArg(request, 'type')
         entityId = utils.getRequestArg(request, 'id')
+        start = utils.getRequestArg(request, "start") or ''
 
         landing = not self._ajax
         myOrgId = args["orgKey"]
 
-        args["feedTitle"] = _("News Feed")
-        args["menuId"] = "feed"
+        feedTitle = _("News Feed")
+        menuId = "feed"
 
         if entityId:
             entity = yield db.get_slice(entityId, "entities", ["basic", "admins"])
@@ -601,27 +602,30 @@ class FeedResource(base.BaseResource):
 
             entity = utils.supercolumnsToDict(entity)
             entityType = entity["basic"]['type']
-            basic = entity["basic"]
+            if entityType == 'org':
+                menuId = "org"
+                orgId = entityId
+                feedTitle = _("Company Feed: %s") % entity["basic"]["name"]
+            elif entityType == 'group':
+                menuId = "groups"
+                orgId = entity["basic"]["org"]
+                args["groupId"] = entityId
+                args["groupAdmins"] = entity["admins"]
+                feedTitle = _("Group Feed: %s") % entity["basic"]["name"]
+            else:
+                if entityId != myId:
+                    raise errors.EntityAccessDenied("feed", entityId)
+                orgId = entity["basic"]["org"]
 
-            orgId = basic["org"] if basic["type"] != "org" else entityId
             if myOrgId != orgId:
+                entityType = "Organization" if entityType == 'org' else 'Group'
                 raise errors.EntityAccessDenied(entityType, entityId)
 
-            if entityType == "org":
-                if entityId != myOrgId:
-                    raise errors.EntityAccessDenied("feed", entityId)
-                args["feedTitle"] = _("Company Feed: %s") % entity["basic"]["name"]
-                args["menuId"] = "org"
-            elif entityType == "group":
-                args["feedTitle"] = _("Group Feed: %s") % entity["basic"]["name"]
-                args["groupAdmins"] = entity["admins"]
-                args["groupId"] = entityId
-                args["menuId"] = "groups"
-            elif entityId != myId:
-                raise errors.EntityAccessDenied("feed", entityId)
+        suggestions, entities = yield people.get_suggestions(request,
+                                                SUGGESTION_PER_PAGE, mini=True)
 
         feedId = entityId or myId
-        args["feedId"] = feedId
+        args["feedTitle"] = feedTitle
 
         if script and landing:
             yield render(request, "feed.mako", **args)
@@ -630,18 +634,16 @@ class FeedResource(base.BaseResource):
             onload = '$("#invite-form").html5form({messages: "en"})'
             yield renderScriptBlock(request, "feed.mako", "layout",
                                     landing, "#mainbar", "set", handlers={'onload':onload}, **args)
-        elif script and "feedTitle" in args:
+        elif script and feedTitle:
             yield renderScriptBlock(request, "feed.mako", "feed_title",
                                     landing, "#title", "set", True,
-                                    handlers={"onload": "$$.menu.selectItem('%s')"%args["menuId"]}, **args)
-
-        start = utils.getRequestArg(request, "start") or ''
+                                    handlers={"onload": "$$.menu.selectItem('%s')"%(menuId)}, **args)
 
         if script:
             handlers = {}
             if "groupId" in args:
-                groupName = args["feedTitle"].split(":", 1)[1].strip()
-                groupId = args['feedId']
+                groupName = feedTitle.split(":", 1)[1].strip()
+                groupId = feedId
                 handlers["onload"] = "$$.acl.switchACL('sharebar-acl', 'group','%s', '%s');" % (groupId, groupName)
 
             handlers["onload"] = handlers.get("onload", "") +\
@@ -657,23 +659,19 @@ class FeedResource(base.BaseResource):
             feedItems = yield getFeedItems(request, feedId=feedId, start=start)
 
         args.update(feedItems)
+
+        args["feedId"] = feedId
+        args["menuId"] = menuId
         args['itemType']=itemType
-        suggestions, entities = yield people.get_suggestions(request,
-                                                SUGGESTION_PER_PAGE, mini=True)
         args["suggestions"] = suggestions
+
         if "entities" not in args:
             args["entities"] = entities
         else:
             for entity in entities:
                 if entity not in args["entities"]:
                     args["entities"][entity] = entities[entity]
-        if "relations" not in args:
-            relation = Relation(myId, suggestions)
-            args["relations"] = relation
-        else:
-            relation = args["relations"]
-        yield defer.DeferredList([relation.initFriendsList(),
-                                  relation.initSubscriptionsList()])
+        yield args["relations"].initSubscriptionsList()
 
         if script:
             onload = "(function(obj){$$.convs.load(obj);})(this);"
@@ -749,7 +747,7 @@ class FeedResource(base.BaseResource):
         segmentCount = len(request.postpath)
         d = None
 
-        if segmentCount == 0:
+        if segmentCount == 0 or (segmentCount==1 and request.postpath[0]==''):
             d = self._render(request)
         elif segmentCount == 1 and request.postpath[0] == "more":
             d = self._renderMore(request)

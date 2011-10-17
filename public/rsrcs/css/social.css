@@ -508,6 +508,17 @@ a:hover, a:active, a:focus {
     background-color: transparent;
     float: right;
 }
+
+#groupavatar {
+    height: 64px;
+    width: 64px;
+    padding: 4px;
+    border: 1px solid #C3D9FF;
+    background-color: transparent;
+    margin-right: 10px;
+    float: left ;
+}
+
 #profile-summary {
     margin-bottom: -21px;
 }
