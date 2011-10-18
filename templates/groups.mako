@@ -339,7 +339,11 @@
         </li>
         <li>
             <label>${_("Membership")}</label>
-            <input type="checkbox" id="access" name="access" value="${access}">${_("should be approved by group administrator")}</input>
+            %if access == 'open':
+              <input type="checkbox" id="access" name="access" value="${access}" >${_("should be approved by group administrator")}</input>
+            %else:
+              <input type="checkbox" id="access" name="access" value="${access}" checked="checked" >${_("should be approved by group administrator")}</input>
+            %endif
         </li>
         <li>
             <label for="dp">${_("Group Logo")}</label>
