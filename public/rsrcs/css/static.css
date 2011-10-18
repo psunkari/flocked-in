@@ -348,38 +348,38 @@ a:link, a:visited {
 
 #questions div.usecase {
     background-image: url("/rsrcs/img/qa.png");
-    height: 314px;
-    width: 471px;
+    height: 360px;
+    width: 480px;
 }
 
 #micro-blogging div.usecase {
     background-image: url("/rsrcs/img/share.png");
-    height: 308px;
-    width: 472px;
+    height: 277px;
+    width: 485px;
 }
 
 #people div.usecase {
     background-image: url("/rsrcs/img/people.png");
-    height: 308px;
-    width: 333px;
+    height: 300px;
+    width: 480px;
 }
 
 #groups div.usecase {
     background-image: url("/rsrcs/img/groups.png");
-    height: 284px;
-    width: 465px;
+    height: 330px;
+    width: 485px;
 }
 
 #ideas div.usecase {
     background-image: url("/rsrcs/img/idea.png");
-    height: 252px;
-    width: 472px;
+    height: 260px;
+    width: 485px;
 }
 
 #tags div.usecase {
     background-image: url("/rsrcs/img/tag.png");
-    height: 338px;
-    width: 472px;
+    height: 352px;
+    width: 486px;
 }
 
 
