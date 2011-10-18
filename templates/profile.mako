@@ -1,5 +1,5 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-                    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE HTML>
+
 <%! from social import utils, _, __, plugins %>
 <%! from social import relations as r %>
 <%! from social.logging import log %>
@@ -24,52 +24,55 @@
       </div>
     </div>
     <div id="center-right">
-      <div id="right">
-        <div id="user-me">
-          %if not script:
-            ${self.user_me()}
-          %endif
-        </div>
-        <div id="user-groups">
-          %if not script:
-            ${self.user_groups()}
-          %endif
-        </div>
-        <div id="user-subscriptions">
-          %if not script:
-            ${self.user_subscriptions()}
-          %endif
-        </div>
-        <div id="user-followers">
-          %if not script:
-            ${self.user_followers()}
-          %endif
-        </div>
-        <div id="user-subactions">
-          %if not script:
-            ${self.user_subactions(userKey)}
-          %endif
-        </div>
+      <div id="profile-summary">
+        %if not script:
+          ${self.summary()}
+        %endif
       </div>
-      <div id="center">
-        <div id="profile-summary" class="center-header">
-          %if not script:
-            ${self.summary()}
-          %endif
-        </div>
-        <div class="center-contents">
-          <div id="profile-tabs" class="tabs busy-indicator">
-          %if not script:
-            ${self.tabs()}
-          %endif
+      <div id="profile-center-right">
+        <div id="right">
+          <div id="user-me">
+            %if not script:
+              ${self.user_me()}
+            %endif
           </div>
-          <div id="profile-content">
-          %if not script:
-            ${self.content()}
-          %endif
+          <div id="user-groups">
+            %if not script:
+              ${self.user_groups()}
+            %endif
+          </div>
+          <div id="user-subscriptions">
+            %if not script:
+              ${self.user_subscriptions()}
+            %endif
+          </div>
+          <div id="user-followers">
+            %if not script:
+              ${self.user_followers()}
+            %endif
+          </div>
+          <div id="user-subactions">
+            %if not script:
+              ${self.user_subactions(userKey)}
+            %endif
           </div>
         </div>
+        <div id="center">
+          <div class="center-contents">
+            <div id="profile-tabs" class="tabs busy-indicator">
+            %if not script:
+              ${self.tabs()}
+            %endif
+            </div>
+            <div id="profile-content">
+            %if not script:
+              ${self.content()}
+            %endif
+            </div>
+          </div>
+        </div>
       </div>
+      <div class="clear"></div>
     </div>
   </div>
 </%def>
@@ -164,29 +167,25 @@
 
 <%def name="summary()">
   <% avatarURI = utils.userAvatar(userKey, user, "large") %>
-  %if avatarURI:
-     <div id="useravatar" class="avatar" style="background-image:url('${avatarURI}')"></div>
-  %endif
-  <div id="userprofile">
-    <div class="titlebar">
-      <div>
-        <span class="middle title">${user['basic']['name']}</span>
-        <ul id="user-actions-${userKey}" class="middle user-actions h-links">
-          ${user_actions(userKey, True, True)}
-        </ul>
-      </div>
-
-      <div class="subtitle" class="summary-line">
-      %if (user['basic'].has_key('firstname') and user['basic'].has_key('lastname')):
-        <span class="summary-item">${user['basic']['firstname']} ${user['basic']['lastname']}</span>
-      %endif
-      </div>
-
-      %if user['basic'].has_key('jobTitle'):
-        <div class="subtitle">${user['basic']['jobTitle']}</div>
-      %endif
+  <div class="titlebar center-header">
+    %if avatarURI:
+      <div id="useravatar" class="avatar" style="background-image:url('${avatarURI}')"></div>
+    %endif
+    <div id="title">
+      <span class="middle title">${user['basic']['name']}</span>
+      <ul id="user-actions-${userKey}" class="middle user-actions h-links">
+        ${user_actions(userKey, True, True)}
+      </ul>
     </div>
+  </div>
+  <div id="userprofile">
     <div id="summary-block">
+      <div class="subtitle" class="summary-line">
+        %if (user['basic'].has_key('firstname') and user['basic'].has_key('lastname')):
+          <span>${user['basic']['firstname']} ${user['basic']['lastname']}</span>,
+        %endif
+        <span>${user['basic']['jobTitle']}</div>
+      </div>
       <div id="summary-work-contact" class="summary-line">
         <span class="summary-item"><a href="${'mailto:' + user['basic']['emailId']}">${user['basic']['emailId']}</a></span>
         %if user.get('contact', {}).has_key('phone'):
@@ -200,7 +199,6 @@
       </div>
     </div>
   </div>
-  <div class="clear"></div>
 </%def>
 
 <%def name="tabs()">

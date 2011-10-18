@@ -199,6 +199,7 @@ class ProfileResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _addAsFriend(self, request, myId, targetId):
+        orgId = request.getSession(IAuthInfo).organization
         cols = yield db.get_slice(myId, "pendingConnections",
                                   ["FI:%s"%(targetId)])
         if cols:
@@ -206,7 +207,14 @@ class ProfileResource(base.BaseResource):
         d1 = db.insert(myId, "pendingConnections", '', "FO:%s"%(targetId))
         d2 = db.insert(targetId, "pendingConnections", '', "FI:%s"%(myId))
         d3 = self._notifyFriendRequest(myId, targetId)
-        calls = [d1, d2, d3]
+        d4 = db.multiget_slice([myId, targetId, orgId], "entities", ["basic"])
+        @defer.inlineCallbacks
+        def notifyByMail(entities):
+            entities = utils.multiSuperColumnsToDict(entities)
+            data = {"entities":entities, "orgId": orgId}
+            yield notifications.notify([targetId], ":FR", myId, **data)
+        d4.addCallback(notifyByMail)
+        calls = [d1, d2, d3, d4]
         yield defer.DeferredList(calls)
 
     @profile

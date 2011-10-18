@@ -1,5 +1,5 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-                    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE HTML>
+
 <%! from social import utils, _, __, plugins %>
 <%! from social import relations as r %>
 
@@ -17,19 +17,18 @@
       </div>
     </div>
     <div id="center-right">
-      <div id="right">
-      </div>
-      <div id="center">
-        <div class="center-header">
-          <div class="titlebar">
-            <span class="middle title">${_('People')}</span>
-            <span class="button title-button">
-              <a class="ajax" href="/people/invite" data-ref="/people/invite">${_('Invite more people')}</a>
-            </span>
-          </div>
-          <div id="invite-people-wrapper">
-          </div>
+      <div class="center-header">
+        <div class="titlebar">
+          <span class="middle title">${_('People')}</span>
+          <span class="button title-button">
+            <a class="ajax" href="/people/invite" data-ref="/people/invite">${_('Invite more people')}</a>
+          </span>
         </div>
+        <div id="invite-people-wrapper">
+        </div>
+      </div>
+      <div id="right"></div>
+      <div id="center">
         <div class="center-contents">
           <div id="people-view" class="viewbar">
             %if not script:
@@ -48,6 +47,7 @@
           </div>
         </div>
       </div>
+      <div class="clear"></div>
     </div>
   </div>
 </%def>

@@ -94,13 +94,13 @@ def _getImageFileFormat(data):
 #      If you do, existing preferences will break.          #
 #############################################################
 
-notifyFriendRequest = 0
+notifyFR = 0
 notifyFA = 1
 notifyNF = 2
 notifyNU = 3
 notifyIA = 3    # Invitation accept and invited user joining are same
 
-notifyGroupRequest = 4
+notifyGR = 4
 notifyGA = 5
 notifyGI = 6
 notifyGroupNewMember = 7
@@ -114,9 +114,9 @@ notifyItemC = 12
 notifyMention = 13
 notifyItemRequests = 14
 
-notifyMessageConv = 15
-notifyMessageMessage = 16
-notifyMessageAccessChange = 17
+notifyNM = 15
+notifyMR = 16
+notifyMA = 17
 
 # Total number of notification types and default setting
 _notificationsCount = 18

@@ -40,41 +40,44 @@ def notify(userIds, notifyId, value, timeUUID=None, **kwargs):
         return defer.succeed([])
 
     timeUUID = timeUUID or uuid.uuid1().bytes
+    notifyIdParts = notifyId.split(':')
+    deferreds = []
 
     # Delete existing notifications for the same item/activiy
-    d1 = db.multiget_slice(userIds, "notificationItems",
-                           super_column=notifyId, count=3, reverse=True)
-    def deleteOlderNotifications(results):
+    if not notifyIdParts[0] and notifyIdParts[1] not in ["FR", "GR", "NM", "MR", "MA"]:
+        d1 = db.multiget_slice(userIds, "notificationItems",
+                               super_column=notifyId, count=3, reverse=True)
+        def deleteOlderNotifications(results):
+            mutations = {}
+            timestamp = int(time.time() * 10000000)
+            for key, cols in results.iteritems():
+                names = [col.column.name for col in cols
+                                         if col.column.name != timeUUID]
+                if names:
+                    colmap = dict([(x, None) for x in names])
+                    deletion = ttypes.Deletion(timestamp, 'notifications',
+                                        ttypes.SlicePredicate(column_names=names))
+                    mutations[key] = {'notifications': colmap,
+                                      'latest': [deletion]}
+
+            if mutations:
+                return db.batch_mutate(mutations)
+            else:
+                return defer.succeed([])
+
+        d1.addCallback(deleteOlderNotifications)
+        deferreds.append(d1)
+
+        # Create new notifications
         mutations = {}
-        timestamp = int(time.time() * 10000000)
-        for key, cols in results.iteritems():
-            names = [col.column.name for col in cols
-                                     if col.column.name != timeUUID]
-            if names:
-                colmap = dict([(x, None) for x in names])
-                deletion = ttypes.Deletion(timestamp, 'notifications',
-                                    ttypes.SlicePredicate(column_names=names))
-                mutations[key] = {'notifications': colmap,
-                                  'latest': [deletion]}
+        for userId in userIds:
+            colmap = {timeUUID: notifyId}
+            mutations[userId] = {'notifications': colmap,
+                                 'latest': {'notifications': colmap},
+                                 'notificationItems': {notifyId: {timeUUID: value}}}
+        deferreds.append(db.batch_mutate(mutations))
 
-        if mutations:
-            return db.batch_mutate(mutations)
-        else:
-            return defer.succeed([])
 
-    d1.addCallback(deleteOlderNotifications)
-
-    # Create new notifications
-    mutations = {}
-    for userId in userIds:
-        colmap = {timeUUID: notifyId}
-        mutations[userId] = {'notifications': colmap,
-                             'latest': {'notifications': colmap},
-                             'notificationItems': {notifyId: {timeUUID: value}}}
-    d2 = db.batch_mutate(mutations)
-
-    deferreds = [d1, d2]
-    notifyIdParts = notifyId.split(':')
     if notifyIdParts[0]:
         convId, convType, convOwner, notifyType = notifyIdParts
         for handler in notificationHandlers:
@@ -100,6 +103,7 @@ class NotificationByMail(object):
         "T": ["[%(brandName)s] %(senderName)s tagged your %(convType)s as %(tagName)s"],
        "LC": ["[%(brandName)s] %(senderName)s liked your comment on your %(convType)s",
               "[%(brandName)s] %(senderName)s liked your comment on %(convOwnerName)s's %(convType)s"]
+
     }
 
     _convNotifyBody = {
@@ -132,7 +136,12 @@ class NotificationByMail(object):
         "NF": "[%(brandName)s] %(senderName)s started following you",
         "FA": "[%(brandName)s] %(senderName)s accepted your friend request",
         "GA": "[%(brandName)s] Your request to join %(senderName)s was accepted",
-        "GI": "[%(brandName)s] %(senderName)s invited you to join %(groupName)s"
+        "GI": "[%(brandName)s] %(senderName)s invited you to join %(groupName)s",
+        "FR": "[%(brandName)s] %(senderName)s wants to be your friend on %(networkName)s network",
+        "GR": "[%(brandName)s] %(senderName)s wants to join %(groupName)s",
+        "NM": "[%(brandName)s] %(senderName)s sent a private message",
+        "MR": "[%(brandName)s] %(senderName)s sent a reply to private message",
+        "MA": "[%(brandName)s] %(senderName)s changed access controls of a message"
     }
 
     _otherNotifyBody = {
@@ -148,11 +157,26 @@ class NotificationByMail(object):
               "Your request to join %(senderName)s was accepted by an admistrator",
         "GI": "Hi,\n\n"\
               "%(senderName)s invited you to join %(groupName)s group.\n"\
-              "Visit %(rootUrl)s/groups?type=invitations to accept the invitation."
+              "Visit %(rootUrl)s/groups?type=invitations to accept the invitation.",
+        "FR": "Hi,\n\n"\
+              "%(senderName)s requested to be your friend on %(networkName)s network.\n"\
+              "To accept the request visit %(senderName)s's profile at %(rootUrl)s/profile?id=%(senderId)s.",
+        "GR": "Hi.\n\n"\
+              "%(senderName)s wants to join %(groupName)s group\n"\
+              "Visit %(rootUrl)s/groups?type=pendingRequests to accept the request",
+        "NM": "Hi,\n\n"\
+              "%(senderName)s sent a message. \n"\
+              "Vist the url to check the message: %(convUrl)s",
+        "MR": "Hi, \n\n"\
+              "%(senderName)s replied to a message. \n"\
+              "Visit the url to check the message:  %(convUrl)s",
+        "MA": "Hi, \n\n"\
+              "%(senderName)s changed access controls of a message. \n"\
+              "Visit the url to check the message: %(convUrl)s",
     }
 
     _signature = "\n\n"\
-            "Flocked.in Team.\n\n\n\n"\
+            "%(brandName)s Team.\n\n\n\n"\
             "--\n"\
             "Update your %(brandName)s notifications at %(rootUrl)s/settings?dt=notify\n"
 
@@ -243,6 +267,11 @@ class NotificationByMail(object):
                      'senderId': value, 'senderName': senderName,
                      'senderAvatarUrl': senderAvatarUrl})
 
+        if notifyType in ['NM', 'MR', 'MA']:
+            convId = data['convId']
+            convUrl = "%s/messages/thread?id=%s" %(rootUrl, convId)
+            data.update({"convUrl": convUrl})
+
         subject = self._otherNotifySubject[notifyType] % data
         body = self._otherNotifyBody[notifyType] + self._signature
         body = body % data
@@ -261,7 +290,6 @@ class NotificationByMail(object):
                 deferreds.append(utils.sendmail(mailId, subject, body, html))
 
         yield defer.DeferredList(deferreds)
-
 
 notificationHandlers.append(NotificationByMail())
 

@@ -2,51 +2,8 @@
 <%! from twisted.web.static import formatFileSize %>
 <%! from base64 import b64encode, urlsafe_b64decode %>
 <%! from urlparse import urlsplit %>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-                    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-<%namespace name="widgets" file="widgets.mako"/>
-<%inherit file="base.mako"/>
-
-
-<%def name="layout()">
-  <div class="contents has-left has-right">
-    <div id="left">
-      <div id="nav-menu">
-        ${self.nav_menu()}
-      </div>
-    </div>
-    <div id="center-right">
-      <div id="right">
-        <div id="item-me">
-          %if not script:
-            ${self.item_me()}
-          %endif
-        </div>
-        <div id="item-meta">
-          %if not script:
-            ${self.item_meta()}
-          %endif
-        </div>
-        <div id="item-subactions">
-          %if not script:
-            ${self.item_subactions()}
-          %endif
-        </div>
-      </div>
-      <div id="center">
-        <div class="center-contents">
-          %if script:
-            ${self.item_lazy_layout(convId)}
-          %else:
-            ${self.item_layout(convId)}
-          %endif
-        </div>
-      </div>
-    </div>
-  </div>
-</%def>
-
+<!DOCTYPE HTML>
 
 <%def name="item_lazy_layout(convId)">
   <div id="conv-${convId}" class="conv-item">

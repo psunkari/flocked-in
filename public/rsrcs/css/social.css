@@ -52,11 +52,11 @@ textarea, input {
 
 
 a:link, a:visited {
-    color: #3366CC;
+    color: #3366cc;
     text-decoration: none;
 }
 a.ajax {
-    color: #3366CC;
+    color: #3366cc;
     cursor: pointer;
 }
 a:hover, a:active, a:focus {
@@ -66,7 +66,7 @@ a:hover, a:active, a:focus {
     color: inherit;
 }
 .invisible:hover, .invisible:active, .invisible:focus {
-    color: #3366CC;
+    color: #3366cc;
     text-decoration: none;
 }
 
@@ -137,7 +137,7 @@ a:hover, a:active, a:focus {
 
 .input-wrap {
     background-color: white;
-    border: 1px solid #C3D9FF;
+    border: 1px solid #e0d7cf;
 }
 .input-wrap input, .input-wrap textarea {
     -moz-box-sizing: border-box;
@@ -158,7 +158,11 @@ a:hover, a:active, a:focus {
 }
 
 /* Extra styles for sharebar and comment input */
-#sharebar textarea, .comment-input {
+#sharebar textarea {
+    height: 31px;
+    padding: 8px;
+}
+.comment-input {
     height: 23px;
 }
 
@@ -198,7 +202,7 @@ a:hover, a:active, a:focus {
     line-height: 35px;
     font-size: 16px;
     font-weight: bold;
-    color: #3D85C6;
+    color: #3e3d39;
 }
 #search-container {
     padding: 1px;
@@ -234,7 +238,7 @@ a:hover, a:active, a:focus {
  */
 
 #menubar {
-    background-color: #3d85c6;
+    background-color: #3e3d39;
     height: 25px;
     line-height: 25px;
     font-weight: bold;
@@ -261,7 +265,9 @@ a:hover, a:active, a:focus {
 }
 #name:hover, #name:focus, #name:active,
 #menubar a:hover, #menubar a:active, #menubar a:focus {
-    background-color: #4d95d6;
+    -moz-transition: background-color 0.2s ease-in-out 0s;
+    -webkit-transition: background-color 0.2s ease-in-out 0s;
+    background-color: #73563d;
 }
 
 
@@ -284,18 +290,18 @@ a:hover, a:active, a:focus {
 }
 #center-right {
     display: block;
+    border-style: solid;
+    border-color: #e0d7cf;
+    border-width: 0 1px 1px;
+    margin-bottom: 20px;
 }
 
 #center {
     min-height: 250px;
     float: left;
-    border-style: solid;
-    border-color: #C3D9FF;
-    border-width: 0 1px 1px;
     width: 980px;
-    margin-bottom: 20px;
 }
-.has-left.has-right #center { width: 575px !important; }
+.has-left.has-right #center { width: 555px !important; }
 .has-left #center, .has-right #center { width: 800px !important; }
 
 #right {
@@ -328,11 +334,13 @@ a:hover, a:active, a:focus {
 }
 
 .sidemenu a:hover, .sidemenu a:active, .sidemenu a:focus {
-    background-color: #E8EEFA;
+    -moz-transition: background-color 0.2s ease-in-out 0s;
+    -webkit-transition: background-color 0.2s ease-in-out 0s;
+    background-color: #f2f1f0;
 }
 
 .sidemenu-selected {
-    background-color: #C3D9FF !important;
+    background-color: #e0d7cf !important;
     font-weight:bold;
 }
 
@@ -467,9 +475,6 @@ a:hover, a:active, a:focus {
  * Content title area
  */
 
-.titlebar {
-    margin: 0 0 5px 0;
-}
 .title {
     font-size: 20px;
     font-weight: bold;
@@ -478,12 +483,13 @@ a:hover, a:active, a:focus {
 .subtitle {
     color: gray;
     font-size: 16px;
+    margin-top: 6px;
 }
 
 .center-header {
-    background-color: #E8EEFA;
+    background-color: #f2f1f0;
     padding: 15px;
-    border-bottom: 1px solid #C3D9FF;
+    border-bottom: 1px solid #e0d7cf;
 }
 
 .center-contents {
@@ -504,21 +510,18 @@ a:hover, a:active, a:focus {
     height: 128px;
     width: 128px;
     padding: 4px;
-    border: 1px solid #C3D9FF;
+    border: 1px solid #e0d7cf;
     background-color: transparent;
     float: right;
+    margin-left: 15px;
 }
-#profile-summary {
-    margin-bottom: -21px;
+#userprofile {
+    padding-left: 15px;
 }
 .summary-item {
     color: gray;
     padding: 0 8px 0 0;
     vertical-align: middle;
-}
-
-.summary-line {
-    padding: 8px 0 0 0;
 }
 
 .attach-file-icon {
@@ -543,16 +546,18 @@ a:hover, a:active, a:focus {
     background-image: url(/rsrcs/img/phone-mobile.png);
 }
 
-.user-actions {
-    /*font-size: 11px;*/
-}
 .user-actions > .button {
     margin-right: 6px;
     font-size:100%;
 }
 
+#profile-center-right {
+  width: 100%;
+  float: left;
+}
+
 #profile-content {
-    padding: 15px 0 0 20px;
+    padding: 15px 0 0;
 }
 
 
@@ -561,13 +566,14 @@ a:hover, a:active, a:focus {
  */
 
 .tabs {
-    background-color: #E8EEFA;
-    border-bottom: 1px solid #C3D9FF;
+    background-color: #f2f1f0;
+    border-bottom: 1px solid #e0d7cf;
+    border-top: 1px solid #e0d7cf;
     height: 20px;
     line-height: 20px;
     font-weight: bold;
-    margin: -10px -10px 0;
-    padding: 0 15px;
+    margin: 0 -10px;
+    padding: 5px 15px 0;
 }
 .tablinks {
 }
@@ -575,7 +581,7 @@ a:hover, a:active, a:focus {
     padding: 0 10px;
     margin: 0 2px;
     height: 20px;
-    color: #3D85C6;
+    color: #3e3d39;
     text-decoration: none;
     border-width: 1px 1px 0;
     border-style: solid;
@@ -585,11 +591,11 @@ a:hover, a:active, a:focus {
 }
 .tablinks a:hover,
 .tablinks a:active, .tablinks a:focus {
-    border-color: #C3D9FF #C3D9FF transparent;
+    border-color: #e0d7cf #e0d7cf transparent;
 }
 .tablinks .selected {
     margin-bottom: -1px;
-    border-color: #C3D9FF #C3D9FF transparent !important;
+    border-color: #e0d7cf #e0d7cf transparent !important;
     background-color: white;
 }
 
@@ -599,8 +605,9 @@ a:hover, a:active, a:focus {
  */
 
 #share-block {
-    border-top: 1px solid #C3D9FF;
-    padding-top: 5px;
+    padding: 10px;
+    border-bottom: 1px solid #e0d7cf;
+    margin-bottom: 10px;
 }
 #sharebar-links li {
     padding: 5px 5px 5px 0;
@@ -611,12 +618,11 @@ a:hover, a:active, a:focus {
     display: inline-block;
     padding: 5px 0px 5px 5px;
     margin: -5px 10px -5px 0;
-    color: #3366CC;
+    color: #73563d;
     position: relative;
 }
 #sharebar-links a:hover,
 #sharebar-links a:active, #sharebar-links a:focus {
-    color: #4d95d6;
     text-decoration: none;
 }
 a:hover > .sharebar-text,
@@ -656,6 +662,8 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 
 #sharebar .input-wrap {
     margin-bottom: 5px;
+    border-color: #E0D7CF #AAA #AAA #E0D7CF;
+    box-shadow: 1px 1px 0 #AAA;
 }
 #sharebar-actions {
     float: right;
@@ -720,7 +728,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     border: none;
     font-size: inherit;
     font-family: inherit;
-    color: #36C;
+    color: #73563d;
 }
 .acl-button > span {
     overflow: hidden;
@@ -760,7 +768,13 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     color: gray !important;
 }
 .file-attach-button {
-    padding-left: 0;
+    border: 0px;
+    padding: 2px 4px 2px 0;
+    margin: 0px;
+    color: #73563d;
+    font-size: inherit;
+    font-family: inherit;
+    background: transparent;
 }
 
 .file-attach-input {
@@ -793,7 +807,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 .uploaded-file {
     padding: 4px 6px;
-    border-bottom: 1px solid #C3D9FF;
+    border-bottom: 1px solid #e0d7cf;
     font-size: 110%;
 }
 
@@ -834,6 +848,10 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 #welcome-message ul {
     padding-left: 20px;
     margin: 5px;
+}
+
+#user-feed {
+    padding: 10px 20px 20px;
 }
 
 .conv-item {
@@ -961,9 +979,21 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 
 #next-load-wrapper {
     padding: 10px 20px;
-    border: 1px solid #3D85C6;
-    background-color: #E8EEFA;
+    border-top: 1px solid #E0D7CF;
+    background-color: #f2f1f0;
     margin-top: 25px;
+    background-image: linear-gradient(bottom, #FFFFFF 0%, #F2F1F0 100%);
+    background-image: -o-linear-gradient(bottom, #FFFFFF 0%, #F2F1F0 100%);
+    background-image: -moz-linear-gradient(bottom, #FFFFFF 0%, #F2F1F0 100%);
+    background-image: -webkit-linear-gradient(bottom, #FFFFFF 0%, #F2F1F0 100%);
+    background-image: -ms-linear-gradient(bottom, #FFFFFF 0%, #F2F1F0 100%);
+    background-image: -webkit-gradient(
+        linear,
+        left bottom,
+        left top,
+        color-stop(0, #FFFFFF),
+        color-stop(1, #F2F1F0)
+    );
 }
 
 .no-likes .likes-wrapper,
@@ -1111,7 +1141,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 
 .styledform-buttons {
-    border-top: 1px solid #C3D9FF;
+    border-top: 1px solid #e0d7cf;
     padding-top: 4px;
     margin: 20px 0;
     text-align: right;
@@ -1185,7 +1215,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .viewbar {
     margin: 0;
     padding: 0 0 10px;
-    border-bottom: 1px solid #C3D9FF;
+    border-bottom: 1px solid #e0d7cf;
 }
 
 .paged-container {
@@ -1196,7 +1226,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .pagingbar {
     margin: 10px 0 5px;
     padding: 10px 0;
-    border-top: 1px solid #C3D9FF;
+    border-top: 1px solid #e0d7cf;
     text-align: right;
 }
 
@@ -1211,8 +1241,8 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 
 .view-options .selected {
     color: black !important;
-    border: 1px solid #C3D9FF;
-    background-color: #E8EEFA;
+    border: 1px solid #e0d7cf;
+    background-color: #f2f1f0;
     border-radius: 4px;
     -moz-border-radius: 4px;
     padding: 2px 3px;
@@ -1283,12 +1313,12 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
         left bottom,
         left top,
         color-stop(0.26, #97BFE1),
-        color-stop(0.63, #C3D9FF)
+        color-stop(0.63, #e0d7cf)
     );
     background-image: -moz-linear-gradient(
         center bottom,
         #97BFE1 26%,
-        #C3D9FF 63%
+        #e0d7cf 63%
     );
     border-radius: 0 4px 4px 0;
     -moz-border-radius: 0 4px 4px 0;
@@ -1360,8 +1390,8 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     display: inline-block;
     border-width: 1px;
     border-style: solid;
-    border-color: #FFF #FFF #C3D9FF #C3D9FF;
-    background-color: #E8EEFA;
+    border-color: #FFF #FFF #e0d7cf #e0d7cf;
+    background-color: #f2f1f0;
     padding: 1px 6px 1px 4px;
     margin: 1px;
     border-radius: 3px;
@@ -1472,7 +1502,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     background-color: #F0F0F0;
 }
 .feedback-mood-selected {
-    background-color: #E8EEFA !important;
+    background-color: #f2f1f0 !important;
     box-shadow: inset 2px 2px 5px #888;
 }
 .feedback-mood-icon {
@@ -1503,7 +1533,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     resize: none;
     height: 60px;
     width: 100%;
-    border: 1px solid #C3D9FF;
+    border: 1px solid #e0d7cf;
     font-size: inherit;
 }
 
@@ -1589,9 +1619,9 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 
 #add-user-wrapper .styledform {
-    border-bottom: 1px solid #C3D9FF;
-    border-left: 1px solid #C3D9FF;
-    border-right: 1px solid #C3D9FF;
+    border-bottom: 1px solid #e0d7cf;
+    border-left: 1px solid #e0d7cf;
+    border-right: 1px solid #e0d7cf;
 }
 
 #add-user-wrapper #next-load-wrapper {

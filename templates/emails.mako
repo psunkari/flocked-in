@@ -1,4 +1,5 @@
 
+<%! from social import utils, _, __%>
 <%def name="header()">
   <%
     logoSrc = '/rsrcs/img/flocked-in-small.png'
@@ -273,24 +274,23 @@
 ## Yet to be implemented
 ##
 
-<%def name="friendRequest()">
+<%def name="notifyFR()">
   ${header()}
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
   <td style="font-size: 14px;">
     <b>${senderName}</b> requested to be your friend on ${brandName}.
+    <br/>
+    <a href="${rootUrl}/profile?id=${senderId}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">Add as Friend</div></a>
     <br/><br/>
-    If you don't know ${senderName} you can ignore this request or block the user from sending similar requests in future.
+    You can also visit <a href="${rootUrl}/people">${rootUrl}/people</a> to view friends and subscriptions.
     <br/><br/>
-    <a href="${actionUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">Add as Friend</div></a>
-    <br/><br/>
-    You can also visit <a href="${rootUrl}/people">${rootUrl}/people</a> to your relationships.
   </td>
   ${footer()}
 </%def>
 
-<%def name="groupRequest()">
+<%def name="notifyGR()">
   ${header()}
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
@@ -298,7 +298,8 @@
   <td style="font-size: 14px;">
     <b>${senderName}</b> wants to join ${groupName}.
     <br/><br/>
-    <a href="${actionUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">Add to Group</div></a>
+    <a href="${rootUrl}/groups?type=pendingRequests" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View all pending requests</div></a>
+    <br/>
     You can also visit <a href="${rootUrl}/groups">${rootUrl}/groups</a> to manage all your groups.
   </td>
   ${footer()}
@@ -342,7 +343,8 @@
   ${footer()}
 </%def>
 
-<%def name="messageConv()">
+##notify new private conversation
+<%def name="notifyNM()">
   ${header()}
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
@@ -352,12 +354,15 @@
     <br/><br/>
     <blockquote>
       ${senderName}: ${message}
+    <br/><br/>
+      <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View Private Conversation</div></a>
     </blockquote>
   </td>
   ${footer()}
 </%def>
 
-<%def name="messageMessage()">
+##notify new reply
+<%def name="notifyMR()">
   ${header()}
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
@@ -367,18 +372,29 @@
     <br/><br/>
     <blockquote>
       ${senderName}: ${message}
+    <br/><br/>
+      <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View Reply</div></a>
     </blockquote>
   </td>
   ${footer()}
 </%def>
 
-<%def name="messageAccessChange()">
+##notify message access change
+<%def name="notifyMA()">
   ${header()}
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
   <td style="font-size: 14px;">
-    <b>${senderName}</b> updated access permissions of a private conversation
+    %if addedMembers:
+        <b>${senderName}</b> added ${" ".join([utils.userName(member, entities[member]) for member in addedMembers])} to the private conversation
+    %elif removedMembers:
+        <b>${senderName}</b> removed ${" ".join([utils.userName(member, entities[member]) for member in removedMembers])} from the private conversation
+    %else:
+        <b>${senderName}</b> updated access premissions of the private conversation
+    %endif
+    <br/><br/>
+      <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View Private Message</div></a>
   </td>
   ${footer()}
 </%def>
