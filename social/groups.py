@@ -1064,9 +1064,6 @@ class GroupsResource(base.BaseResource):
                                     landing, "#mainbar", "set", **args)
         if script:
             handlers = {}
-            yield renderScriptBlock(request, "groups.mako", "backToGroupLink",
-                                    landing, "#titlebar", "set", **args)
-
             handlers["onload"] = """$$.ui.bindFormSubmit('#group-form');"""
             yield renderScriptBlock(request, "groups.mako", "edit_group",
                                     landing, "#center-content", "set", True,

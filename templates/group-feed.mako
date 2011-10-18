@@ -138,6 +138,7 @@
       <ul class="v-links">
         %if myKey in entities[groupId].get("admins", {}):
           <li><a class="ajax" href="/groups/pending?id=${groupId}">${_('Pending Requests')}</a></li>
+          <li><a class="ajax" href="/groups/edit?id=${groupId}">${_('Edit Group Settings')}</a></li>
         %endif
           <li><a class="ajax" href="/groups/members?id=${groupId}">${_('Members')}</a></li>
       </ul>
