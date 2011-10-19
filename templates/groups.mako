@@ -294,26 +294,6 @@
   </div>
 </%def>
 
-##<%def name="_pendingRequestUser(userId, groupId)">
-##  <div class="users-avatar">
-##    <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
-##    %if avatarURI:
-##        <img src="${avatarURI}" height='48' width='48'></img>
-##    %endif
-##  </div>
-##  <div class="users-details">
-##    <div class="user-details-name">${utils.userName(userId, entities[userId])}</div>
-##    % if groupId:
-##      <div class="user-details-name">${_("Group:")} ${utils.groupName(groupId, entities[groupId])}</div>
-##    %endif
-##    <div class="user-details-actions">
-##      <ul id="group-request-actions-${userId}-${groupId}" class="middle user-actions h-links">
-##        ${self.groupRequestActions(groupId, userId)}
-##      </ul>
-##    </div>
-##  </div>
-##</%def>
-
 <%def name="pendingRequestsPaging()">
   <ul class="h-links">
     %if prevPageStart:
