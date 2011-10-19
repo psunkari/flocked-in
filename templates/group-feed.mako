@@ -84,10 +84,14 @@
       <div>
       <div class="middle title" id="group-name">${entities[groupId]['basic']['name'].capitalize()}</div>
         <div class="summary-line">
+          <span class="summary-item" id="group-type">${_(entities[groupId]['basic']['access'].capitalize())} ${_("Group")}</span>
+        </div>
+        <div class="summary-line">
           %if entities[groupId]['basic'].has_key('desc'):
             <span class="summary-item" id="group-desc">${entities[groupId]['basic']['desc']}</span>
           %endif
-          </div>
+        </div>
+
         <ul id="group-actions-${groupId}" class="middle user-actions h-links">
           ${self.group_actions(groupId)}
         </ul>
@@ -138,7 +142,7 @@
       <ul class="v-links">
         %if myKey in entities[groupId].get("admins", {}):
           <li><a class="ajax" href="/groups/pending?id=${groupId}">${_('Pending Requests')}</a></li>
-          <li><a class="ajax" href="/groups/edit?id=${groupId}">${_('Edit Group Settings')}</a></li>
+          <li><a class="ajax" href="/groupsettings?id=${groupId}">${_('Edit Group Settings')}</a></li>
         %endif
           <li><a class="ajax" href="/groups/members?id=${groupId}">${_('Members')}</a></li>
       </ul>

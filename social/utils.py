@@ -476,8 +476,13 @@ def userName(id, user, classes=None):
            % (id, user["basic"]["name"])
 
 
-def groupName(id, user, classes=None):
-    return "<span><a class='ajax' href='/groups/feed?id=%s'>%s</a></span>"\
+def groupName(id, user, classes=None, element='span'):
+    if element == 'div':
+        classes= classes if classes else ''
+        return "<div class='%s'><a class='ajax' href='/group?id=%s'>%s</a></div>"\
+               % (classes, id, user["basic"]["name"])
+    else:
+        return "<span><a class='ajax' href='/group?id=%s'>%s</a></span>"\
            % (id, user["basic"]["name"])
 
 

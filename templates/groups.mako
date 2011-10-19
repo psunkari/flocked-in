@@ -9,7 +9,6 @@
 <%namespace name="group_feed" file="group-feed.mako"/>
 
 ##
-## People page is displayed in a 3-column layout.
 ##
 <%def name="layout()">
   <div class="contents has-left">
@@ -61,23 +60,6 @@
   %endif
 </%def>
 
-<%def name="listGroupMembers()">
-  <% counter = 0 %>
-  %for userId in userIds:
-    %if counter % 2 == 0:
-      <div class="users-row">
-    %endif
-    <div class="users-user">${people._displayUser(userId)}</div>
-    %if counter % 2 == 1:
-      </div>
-    %endif
-    <% counter += 1 %>
-  %endfor
-  %if counter % 2 == 1:
-    </div>
-  %endif
-</%def>
-
 <%def name="listGroups()">
   <%
     counter = 0
@@ -116,7 +98,7 @@
       groupName = entities[groupId]["basic"].get("name", "-")
       groupDesc = entities[groupId]["basic"].get("desc", None)
     %>
-    <div class="user-details-name"><a href ="/groups/feed?id=${groupId}">${groupName}</a></div>
+    ${utils.groupName(groupId, entities[groupId], "user-details-name", "div")}
     <div class="group-details-title">${entities[groupId]["basic"]["access"].capitalize()}</div>
     %if groupDesc:
         <div class="group-details-desc">&nbsp;&ndash;&nbsp;${groupDesc}</div>
@@ -203,44 +185,7 @@
   </form>
 </%def>
 
-<%def name="inviteMembers()">
-  <form action="/groups/invite" class="ajax" method="post"  >
-    <div class="styledform">
-      <ul>
-        <li><label for="name"> EmailId: </label></li>
-        <li><input type="text" id="invitee" name="invitee" /></li>
-        <li><input type="hidden" value = ${groupId} name="id" /></li>
-        <li><input type="submit" name="userInfo_submit" value="Save"/> </li>
-      </ul>
-    </div>
-  </form>
-</%def>
 
-
-<%def name="pendingRequests()">
-  <%
-    counter = 0
-    firstRow = True
-  %>
-  %for userId in userIds:
-    %if counter % 2 == 0:
-      %if firstRow:
-        <div class="users-row users-row-first">
-        <% firstRow = False %>
-      %else:
-        <div class="users-row">
-      %endif
-    %endif
-    <div class="users-user">${_pendingRequestUser(userId, groupId)}</div>
-    %if counter % 2 == 1:
-      </div>
-    %endif
-    <% counter += 1 %>
-  %endfor
-  %if counter % 2 == 1:
-    </div>
-  %endif
-</%def>
 
 <%def name="allPendingRequests()">
   <%
@@ -256,7 +201,7 @@
         <div class="users-row">
       %endif
     %endif
-    <div class="users-user">${_pendingRequestUser(userId, groupId)}</div>
+    <div class="users-user">${_displayUser(userId, groupId, True)}</div>
     %if counter % 2 == 1:
       </div>
     %endif
@@ -273,18 +218,53 @@
   %elif action == 'reject':
     <button class="button disabled"><span class="button-text">${_("Rejected")}</span></button>
   %elif action == 'block':
-    <button class="button disabled"><span class="button-text">${_("Blocked")}</span></button>
+    <button class="button disabled"><span class="button-text">${_("Banned")}</span></button>
   %elif action == 'unblock':
-    <button class="button disabled"><span class="button-text">${_("Unblocked")}</span></button>
+    <button class="button disabled"><span class="button-text">${_("Un-banned")}</span></button>
+  %elif action == 'removed':
+    <button class="button disabled"><span class="button-text">${_("Removed")}</span></button>
+  %elif action == 'show_blocked':
+    <button class="button default" onclick="$.post('/ajax/groups/unblock', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Un-ban")}</span></button>
+  %elif action == 'show_manage':
+    <button class="button default" onclick="$.post('/ajax/groups/remove', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Remove")}</span></button>
+    <button class="button default" onclick="$.post('/ajax/groups/block', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Ban")}</span></button>
   %else:
     <button class="button default" onclick="$.post('/ajax/groups/approve', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Accept")}</span></button>
     <button class="button default" onclick="$.post('/ajax/groups/reject', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Reject")}</span></button>
-    <button class="button default" onclick="$.post('/ajax/groups/block', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Block")}</span></button>
+    <button class="button default" onclick="$.post('/ajax/groups/block', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Ban")}</span></button>
   %endif
 
 </%def>
 
-<%def name="_pendingRequestUser(userId, groupId)">
+<%def name="displayUsers()">
+  <%
+    counter = 0
+    firstRow = True
+  %>
+  %for userId in userIds:
+    %if counter % 2 == 0:
+      %if firstRow:
+        <div class="users-row users-row-first">
+        <% firstRow = False %>
+      %else:
+        <div class="users-row">
+      %endif
+    %endif
+    <div class="users-user">${_displayUser(userId, groupId)}</div>
+
+    %if counter % 2 == 1:
+      </div>
+    %endif
+    <% counter += 1 %>
+  %endfor
+  %if counter % 2 == 1:
+    </div>
+  %endif
+</%def>
+
+
+
+<%def name="_displayUser(userId, groupId, showGroupName=False)">
   <div class="users-avatar">
     <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
     %if avatarURI:
@@ -293,16 +273,46 @@
   </div>
   <div class="users-details">
     <div class="user-details-name">${utils.userName(userId, entities[userId])}</div>
-    % if groupId:
+    <div class="user-details-title">${entities[userId]["basic"].get("jobTitle", '')}</div>
+    % if groupId and showGroupName:
       <div class="user-details-name">${_("Group:")} ${utils.groupName(groupId, entities[groupId])}</div>
+
     %endif
     <div class="user-details-actions">
       <ul id="group-request-actions-${userId}-${groupId}" class="middle user-actions h-links">
-        ${self.groupRequestActions(groupId, userId)}
+        %if tab == 'pending':
+          ${self.groupRequestActions(groupId, userId)}
+        %elif tab == 'banned':
+          ${self.groupRequestActions(groupId, userId, action="show_blocked")}
+        % elif tab == 'manage members':
+          ${self.groupRequestActions(groupId, userId, action="show_manage")}
+        %else:
+          ${profile.user_actions(userId, True)}
+        %endif
       </ul>
     </div>
   </div>
 </%def>
+
+##<%def name="_pendingRequestUser(userId, groupId)">
+##  <div class="users-avatar">
+##    <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
+##    %if avatarURI:
+##        <img src="${avatarURI}" height='48' width='48'></img>
+##    %endif
+##  </div>
+##  <div class="users-details">
+##    <div class="user-details-name">${utils.userName(userId, entities[userId])}</div>
+##    % if groupId:
+##      <div class="user-details-name">${_("Group:")} ${utils.groupName(groupId, entities[groupId])}</div>
+##    %endif
+##    <div class="user-details-actions">
+##      <ul id="group-request-actions-${userId}-${groupId}" class="middle user-actions h-links">
+##        ${self.groupRequestActions(groupId, userId)}
+##      </ul>
+##    </div>
+##  </div>
+##</%def>
 
 <%def name="pendingRequestsPaging()">
   <ul class="h-links">
@@ -318,6 +328,38 @@
     %endif
   </ul>
 </%def>
+
+<%def name="bannedUsersPaging()">
+  <ul class="h-links">
+    %if prevPageStart:
+      <li class="button"><a class="ajax" href="/groups/banned?start=${prevPageStart}&id=${groupId}">${_("&#9666; Previous")}</a></li>
+    %else:
+      <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
+    %endif
+    %if nextPageStart:
+      <li class="button"><a class="ajax" href="/groups/banned?start=${nextPageStart}&id=${groupId}">${_("Next &#9656;")}</a></li>
+    %else:
+      <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
+    %endif
+  </ul>
+</%def>
+
+<%def name="_paging(prevPageHref, nextPageHref)">
+  <ul class="h-links">
+    %if prevPageStart:
+      <li class="button"><a class="ajax" href="${prevPageHref}">${_("&#9666; Previous")}</a></li>
+    %else:
+      <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
+    %endif
+    %if nextPageStart:
+      <li class="button"><a class="ajax" href="${nextPageHref}">${_("Next &#9656;")}</a></li>
+    %else:
+      <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
+    %endif
+  </ul>
+</%def>
+
+
 
 <%def name="edit_group()">
   <%
@@ -363,7 +405,7 @@
   %if groupId:
     <span class="middle title">${entities[groupId]["basic"]["name"].capitalize()}</span>
     <span class="button title-button">
-      <a class="ajax" href="/groups/feed?id=${groupId}" _ref="/groups/feed?id=${groupId}">${_('Back To Group')}</a>
+      <a class="ajax" href="/group?id=${groupId}" _ref="/group?id=${groupId}">${_('Back To Group')}</a>
     </span>
   %endif
 

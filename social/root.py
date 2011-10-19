@@ -20,6 +20,8 @@ from social.people          import PeopleResource
 from social.avatar          import AvatarResource
 from social.notifications   import NotificationsResource
 from social.groups          import GroupsResource
+from social.groups          import GroupFeedResource
+from social.groups          import GroupSettingsResource
 from social.fts             import FTSResource
 from social.tags            import TagsResource
 from social.auto            import AutoCompleteResource
@@ -175,6 +177,9 @@ class RootResource(resource.Resource):
         self._people = PeopleResource(self._isAjax)
         self._notifications = NotificationsResource(self._isAjax)
         self._groups = GroupsResource(self._isAjax)
+        self._groupFeed = GroupFeedResource(self._isAjax)
+        self._groupSetting = GroupSettingsResource(self._isAjax)
+        print "init resource", self._groupSetting
         self._search = FTSResource(self._isAjax)
         self._admin = Admin(self._isAjax)
         self._pluginResources = getPluggedResources(self._isAjax)
@@ -264,6 +269,10 @@ class RootResource(resource.Resource):
             match = self._notifications
         elif path == "groups":
             match = self._groups
+        elif path == 'group':
+            match = self._groupFeed
+        elif path == 'groupsettings':
+            match = self._groupSetting
         elif path == "search":
             match = self._search
         elif path == "messages":
