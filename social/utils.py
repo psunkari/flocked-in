@@ -588,27 +588,15 @@ def simpleTimestamp(timestamp, timezone='Asia/Kolkata'):
     return "<abbr class='timestamp' title='%s' data-ts='%s'>%s</abbr>" %(tooltip, timestamp, formatted)
 
 
-def toSnippet(comment):
-    commentSnippet = []
-    length = 0
-    words = comment.split()
-
-    # If it's a single word (eg:link) only make sure that
-    # the word isn't too long.
-    if len(words) == 1:
-        if len(words[0]) > 35:
-            return words[0][0:30] + "&hellip;"
-        else:
-            return words[0]
-
-    # More than one words. Break only at spaces.
-    for word in words:
-        if length+len(word) > 35:
-            commentSnippet.append("&hellip;")
-            break
-        commentSnippet.append(word)
-        length += len(word)
-    return " ".join(commentSnippet)
+_snippetRE = re.compile(r'(.*)\s', re.L|re.U|re.S)
+def toSnippet(text, maxlen):
+    chopped = text[:maxlen]
+    match = _snippetRE.match(chopped)
+    if match:
+        chopped = match.group(1)
+    if len(chopped) < len(text):
+        chopped = chopped + unichr(0x2026)
+    return chopped
 
 
 def uuid1(node=None, clock_seq=None, timestamp=None):

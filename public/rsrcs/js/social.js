@@ -550,6 +550,26 @@ var convs = {
             $('#conv-'+convId).slideUp('fast', function(){$(this).remove();});
         else
             $('#comment-'+commentId).slideUp('fast', function(){$(this).remove();});
+    },
+
+    expandComment: function(commentId) {
+        $('#comment-'+commentId+' .comment-text').css('display', 'inline');
+        $('#comment-'+commentId+' .comment-collapser').css('display', 'block');
+        $('#comment-'+commentId+' .comment-preview').css('display', 'none');
+        $('#comment-'+commentId+' .comment-expander').css('display', 'none');
+    },
+
+    collapseComment: function(commentId) {
+        $('#comment-'+commentId+' .comment-preview').css('display', 'inline');
+        $('#comment-'+commentId+' .comment-expander').css('display', 'inline');
+        $('#comment-'+commentId+' .comment-text').css('display', 'none');
+        $('#comment-'+commentId+' .comment-collapser').css('display', 'none');
+    },
+
+    expandPost: function(convId) {
+    },
+
+    collapsePost: function(convId) {
     }
 };
 

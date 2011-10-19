@@ -358,12 +358,13 @@
 
 <%def name="conv_comment(convId, commentId)">
   <%
-    if not items.get(commentId, {}).get("meta", {}):
+    meta = items.get(commentId, {}).get("meta", {})
+    if not meta:
         return ''
 
-    item = items[commentId]
-    userId = item["meta"]["owner"]
-    comment = item["meta"]["comment"]
+    userId = meta["owner"]
+    comment = meta["comment"]
+    commentPreview = meta.get('commentPreview', None)
     normalize = utils.normalizeText
   %>
   <div class="conv-comment" id="comment-${commentId}">
@@ -376,7 +377,15 @@
     <div class="comment-container">
       <span class="conv-other-actions" onclick="$.post('/ajax/item/delete', {id:'${commentId}'});">&nbsp;</span>
       <span class="comment-user">${utils.userName(userId, entities[userId])}</span>
-      <span class="comment-text">${comment|normalize}</span>
+      %if commentPreview:
+        <span class="comment-preview">${commentPreview|normalize}</span>
+        <span class="comment-text" style="display:none;">${comment|normalize}</span>
+        &nbsp;&nbsp;
+        <button class="comment-expander" onclick="$$.convs.expandComment('${commentId}');">${_('Expand this comment &#187;')}</button>
+        <button class="comment-collapser" style="display:none;" onclick="$$.convs.collapseComment('${commentId}');">${_('Collapse this comment')}</button>
+      %else:
+        <span class="comment-text">${comment|normalize}</span>
+      %endif
     </div>
     <div class="comment-meta" id = "item-footer-${commentId}">
       ${self.item_footer(commentId)}

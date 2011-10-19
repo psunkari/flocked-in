@@ -14,18 +14,11 @@ from social             import db, utils, errors, _, config
 from social.logging     import profile, dump_args, log
 
 
-def _sanitize(text, strip=False):
+def _sanitize(text, maxlen=0):
     unitext = text if type(text) == unicode or not text\
                    else text.decode('utf-8', 'replace')
-    if strip and len(unitext) > 250:
-        chopped = unitext[:250]
-        match = re.match(r'(.*)\s', chopped, re.L|re.U)
-        if match:
-            chopped = match.group(1)
-        if len(chopped) < len(unitext):
-            chopped = chopped + unichr(0x2026)
-        unitext = chopped
-
+    if maxlen and len(unitext) > maxlen:
+        unitext = utils.toSnippet(unitext, maxlen)
     return unitext.encode('utf-8')
 
 
@@ -98,10 +91,10 @@ class Links(object):
             item["meta"]["target"] =  target
 
         if summary:
-            summary = _sanitize(summary, True)
+            summary = _sanitize(summary, 200)
             meta["summary"] = summary
         if title:
-            title = _sanitize(title)
+            title = _sanitize(title, 75)
             meta["title"] = title
         if image:
             meta['imgSrc'] = image

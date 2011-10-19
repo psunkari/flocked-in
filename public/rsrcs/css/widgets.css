@@ -45,7 +45,7 @@ input::-moz-focus-inner {
     vertical-align: middle;
     white-space: nowrap;
     text-shadow: 1px 1px white;
-    box-shadow: -1px -2px rgba(0,0,0,0.1) inset, 0 2px rgba(0,0,0,0.1);
+    box-shadow: -1px -2px rgba(0,0,0,0.1) inset;
     line-height:16px;
     font-size:12px;
     padding: 2px 16px !important;
@@ -109,12 +109,12 @@ input::-moz-focus-inner {
 .button:hover, .button:focus {
     -moz-transition: box-shadow 0.2s ease-in-out 0s;
     -webkit-transition: box-shadow 0.2s ease-in-out 0s;
-    box-shadow: -1px -2px rgba(0,0,0,0.1) inset, 0 2px rgba(0,0,0,0.1), 0 0 20px rgba(255,255,255,0.4) inset;
+    box-shadow: -1px -2px rgba(0,0,0,0.1) inset, 0 0 20px rgba(255,255,255,0.4) inset;
 }
 .button:active {
     -moz-transition: none;
     -webkit-transition: none;
-    box-shadow: 0 0 10px rgba(0,0,0,0.3) inset, 0 2px rgba(0,0,0,0.1);
+    box-shadow: 0 0 10px rgba(0,0,0,0.3) inset;
 }
 
 .title-button {
@@ -333,7 +333,4 @@ input::-moz-focus-inner {
     border-bottom: 1px solid #E0D7CF;
     background-color: #F9F9F9;
     padding: 5px;
-}
-.toolbar .button {
-    box-shadow: none;
 }

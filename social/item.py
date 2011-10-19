@@ -347,7 +347,10 @@ class ItemResource(base.BaseResource):
         if convId:
             conv = yield db.get(convId, "items", super_column="meta")
             conv = utils.supercolumnsToDict([conv])
-            commentSnippet = utils.toSnippet(item["meta"].get("comment"))
+            commentText = item["meta"].get("comment")
+            if commentText:
+                commentSnippet = utils.toSnippet(commentText.decode('utf-8', 'replace'), 35)
+                commentSnippet = commentSnippet.encode('utf-8')
         else:
             convId = itemId
             conv = item
@@ -577,6 +580,12 @@ class ItemResource(base.BaseResource):
                 "timestamp": str(int(time.time())), "uuid": timeUUID}
         followers = {myId: ''}
         itemId = utils.getUniqueKey()
+
+        unitext = comment.decode('utf-8', 'replace')
+        if len(unitext) > (constants.COMMENT_PREVIEW_LENGTH + 50):
+            commentPreview = utils.toSnippet(unitext, constants.COMMENT_PREVIEW_LENGTH)
+            meta['commentPreview'] = commentPreview.encode('utf-8')
+
         yield db.batch_insert(itemId, "items", {'meta': meta,
                                                 'followers': followers})
 
@@ -598,7 +607,7 @@ class ItemResource(base.BaseResource):
 
         # 4. Update userItems and userItems_*
         responseType = "Q" if convType == "question" else 'C'
-        commentSnippet = utils.toSnippet(comment)
+        commentSnippet = utils.toSnippet(unitext, 35).encode('utf-8')
         userItemValue = ":".join([responseType, itemId, convId, convType,
                                   convOwnerId, commentSnippet])
         yield db.insert(myId, "userItems", userItemValue, timeUUID)

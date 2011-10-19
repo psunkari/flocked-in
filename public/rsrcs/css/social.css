@@ -495,6 +495,7 @@ a:hover, a:active, a:focus {
 .center-contents {
     padding: 10px;
     font-size: 12px;
+    line-height: 1.3em;
 }
 
 .header-form {
@@ -930,6 +931,24 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 
 .conv-comment {
     min-height: 32px;
+}
+
+.comment-expander, .comment-collapser {
+    border: 0px;
+    margin: 0px;
+    padding: 0px;
+    color: #3366cc;
+    font-size: inherit;
+    font-family: inherit;
+    background: transparent;
+    cursor: pointer;
+}
+.comment-collapser {
+    display: block;
+}
+.comment-expander:focus, .comment-collapser:focus {
+    text-decoration: underline;
+    outline: 1px dotted #3366cc;
 }
 
 .conv-quote {
