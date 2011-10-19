@@ -381,12 +381,3 @@
     %endif
   </form>
 </%def>
-<%def name="backToGroupLink()">
-  %if groupId:
-    <span class="middle title">${entities[groupId]["basic"]["name"].capitalize()}</span>
-    <span class="button title-button">
-      <a class="ajax" href="/group?id=${groupId}" _ref="/group?id=${groupId}">${_('Back To Group')}</a>
-    </span>
-  %endif
-
-</%def>
