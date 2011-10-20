@@ -516,9 +516,15 @@ a:hover, a:active, a:focus {
     float: right;
     margin-left: 15px;
 }
+
+#profile-summary {
+    margin-bottom: -21px;
+}
+
 #userprofile {
     padding-left: 15px;
 }
+
 .summary-item {
     color: gray;
     padding: 0 8px 0 0;
