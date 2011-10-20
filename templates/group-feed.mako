@@ -35,11 +35,12 @@
                 ${feed_mako.share_block()}
               %endif
             </div>
-          <div id="user-feed">
-            %if not script or tmp_files:
-              ${self.feed()}
-            %endif
-            <div id="foot-loader"></div>
+            <div id="user-feed">
+              %if not script or tmp_files:
+                ${self.feed()}
+              %endif
+              <div id="foot-loader"></div>
+            </div>
           </div>
         </div>
       </div>

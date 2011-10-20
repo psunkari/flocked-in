@@ -1,5 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-                    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE HTML>
 <%! from social import utils, _, __, plugins %>
 <%! from social import relations as r %>
 
@@ -9,7 +8,6 @@
 <%namespace name="group_feed" file="group-feed.mako"/>
 
 ##
-## People page is displayed in a 3-column layout.
 ##
 
 <%def name="nav_menu()">
