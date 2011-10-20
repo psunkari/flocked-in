@@ -217,20 +217,20 @@
   %elif action == 'reject':
     <button class="button disabled"><span class="button-text">${_("Rejected")}</span></button>
   %elif action == 'block':
-    <button class="button disabled"><span class="button-text">${_("Banned")}</span></button>
+    <button class="button disabled"><span class="button-text">${_("Blocked")}</span></button>
   %elif action == 'unblock':
-    <button class="button disabled"><span class="button-text">${_("Un-banned")}</span></button>
+    <button class="button disabled"><span class="button-text">${_("Unblocked")}</span></button>
   %elif action == 'removed':
     <button class="button disabled"><span class="button-text">${_("Removed")}</span></button>
   %elif action == 'show_blocked':
     <button class="button default" onclick="$.post('/ajax/groups/unblock', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Un-ban")}</span></button>
   %elif action == 'show_manage':
     <button class="button default" onclick="$.post('/ajax/groups/remove', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Remove")}</span></button>
-    <button class="button default" onclick="$.post('/ajax/groups/block', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Ban")}</span></button>
+    <button class="button default" onclick="$.post('/ajax/groups/block', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Block")}</span></button>
   %else:
     <button class="button default" onclick="$.post('/ajax/groups/approve', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Accept")}</span></button>
     <button class="button default" onclick="$.post('/ajax/groups/reject', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Reject")}</span></button>
-    <button class="button default" onclick="$.post('/ajax/groups/block', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Ban")}</span></button>
+    <button class="button default" onclick="$.post('/ajax/groups/block', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Block")}</span></button>
   %endif
 
 </%def>
