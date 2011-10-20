@@ -179,7 +179,6 @@ class RootResource(resource.Resource):
         self._groups = GroupsResource(self._isAjax)
         self._groupFeed = GroupFeedResource(self._isAjax)
         self._groupSetting = GroupSettingsResource(self._isAjax)
-        print "init resource", self._groupSetting
         self._search = FTSResource(self._isAjax)
         self._admin = Admin(self._isAjax)
         self._pluginResources = getPluggedResources(self._isAjax)
