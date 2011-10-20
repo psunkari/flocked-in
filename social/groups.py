@@ -1002,12 +1002,6 @@ class GroupsResource(base.BaseResource):
                 d = self._listPendingSubscriptions(request)
             elif request.postpath[0] == 'banned':
                 d = self._listBannedUsers(request)
-            elif request.postpath[0] == 'feed':
-                d = self._groupFeed(request)
-            elif request.postpath[0] == 'edit':
-                d = self._renderEditGroup(request)
-        elif segmentCount ==2 and request.postpath == ['feed', 'more']:
-            d = self._renderMore(request)
 
         return self._epilogue(request, d)
 

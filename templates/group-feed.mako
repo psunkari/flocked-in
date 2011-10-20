@@ -1,5 +1,5 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-                    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE HTML>
+
 <%! from social import utils, _, __, plugins %>
 <%! from social.logging import log %>
 
@@ -16,34 +16,34 @@
       </div>
     </div>
     <div id="center-right">
-      <div id="right">
-        <div id ="group-admins"></div>
-        <div id ="group-links" ></div>
-        <div id ="group-files" ></div>
-        <div id ="group-events" ></div>
+      <div id="group-summary">
+        %if not script:
+          ${self.summary()}
+        %endif
       </div>
-      <div id="center">
-        <div class="center-header">
-          <div id ="group-summary">
-            %if not script:
-              ${self.summary()}
+      <div id='profile-center-right'>
+        <div id="right">
+          <div id ="group-admins"></div>
+          <div id ="group-links" ></div>
+          <div id ="group-files" ></div>
+          <div id ="group-events" ></div>
+        </div>
+        <div id="center">
+          <div class='center-contents' >
+            <div id="share-block" style="border-top:none; padding:none;">
+              %if script:
+                ${feed_mako.share_block()}
+              %endif
+            </div>
+          <div id="user-feed">
+            %if not script or tmp_files:
+              ${self.feed()}
             %endif
+            <div id="foot-loader"></div>
           </div>
         </div>
-        <div class='center-header' style='margin:5px;border:1px solid #C3D9FF;padding:10px;'>
-          %if script:
-            <div id="share-block" style="border-top:none; padding:none;">
-              ${feed_mako.share_block()}
-            </div>
-          %endif
-        </div>
-        <div id="user-feed" class="center-contents">
-          %if not script or tmp_files:
-            ${self.feed()}
-          %endif
-          <div id="foot-loader"></div>
-        </div>
       </div>
+      <div class="clear"></div>
     </div>
   </div>
 </%def>
@@ -76,32 +76,27 @@
 
 <%def name="summary()">
   <% avatarURI = utils.groupAvatar(groupId, entities[groupId], "large") %>
-  %if avatarURI:
-     <div id="groupavatar" class="avatar" style="background-image:url('${avatarURI}')"></div>
-  %endif
-  <div id="userprofile">
-    <div class="titlebar">
-      <div>
-      <div class="middle title" id="group-name">${entities[groupId]['basic']['name'].capitalize()}</div>
-        <div class="summary-line">
-          <span class="summary-item" id="group-type">${_(entities[groupId]['basic']['access'].capitalize())} ${_("Group")}</span>
-        </div>
-        <div class="summary-line">
-          %if entities[groupId]['basic'].has_key('desc'):
-            <span class="summary-item" id="group-desc">${entities[groupId]['basic']['desc']}</span>
-          %endif
-        </div>
-
-        <ul id="group-actions-${groupId}" class="middle user-actions h-links">
-          ${self.group_actions(groupId)}
-        </ul>
-      </div>
-
-
-      ##%if user['basic'].has_key('jobTitle'):
-      ##  <div class="subtitle">${user['basic']['jobTitle']}</div>
-      ##%endif
+  <div class="titlebar center-header">
+    %if avatarURI:
+      <div id="useravatar" class="avatar" style="background-image:url('${avatarURI}')"></div>
+    %endif
+    <div id="title">
+      <span class="middle title" id="group-name">${entities[groupId]['basic']['name'].capitalize()}</span>
+      <ul id="group-actions-${groupId}" class="middle user-actions h-links">
+        ${self.group_actions(groupId)}
+      </ul>
     </div>
+  </div>
+  <div id='userprofile'>
+    <div class="summary-block">
+      <div class='subtitle summary-line' >
+        <span id="group-type">${_(entities[groupId]['basic']['access'].capitalize())} ${_("Group")}</span>
+        %if entities[groupId]['basic'].has_key('desc'):
+          <span class="summary-item" id="group-desc">${entities[groupId]['basic']['desc']}</span>
+        %endif
+      </div>
+    </div>
+  </div>
     ##<div>
     ##  <% admins = ",".join([utils.userName(x, entities[x]) for x in entities[groupId]["admins"].keys()[:3]]) %>
     ##  <div class="summary-item" id="admin-block">
@@ -110,24 +105,8 @@
     ##  <div class="summary-item">
     ##   ${_("Type:")} ${_(entities[groupId]["basic"]["access"])}
     ##  </div>
-
-
-
-    ##  ##<div id="summary-work-contact" class="summary-line">
-    ##  ##  <span class="summary-item"><a href="${'mailto:' + user['basic']['emailId']}">${user['basic']['emailId']}</a></span>
-    ##  ##  %if user.get('contact', {}).has_key('phone'):
-    ##  ##    <span class="summary-icon landline-icon"/>
-    ##  ##    <span class="summary-item" title="${_('Work Phone')}">${user['contact']['phone']}</span>
-    ##  ##  %endif
-    ##  ##  %if user.get('contact',{}).has_key('mobile'):
-    ##  ##    <span class="summary-icon mobile-icon"/>
-    ##  ##    <span class="summary-item" title="${_('Work Mobile')}">${user['contact']['mobile']}</span>
-    ##  ##  %endif
-    ##  ##</div>
-    ##</div>
-  </div>
-  <div class="clear"></div>
 </%def>
+
 <%def name="groupFiles()">
 </%def>
 
