@@ -245,7 +245,7 @@
             <div class="users-avatar">
               <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
               % if avatarURI:
-                <img src="${avatarURI}" height='32' width='32'></img>
+                <img src="${avatarURI}" style="max-height:32px; max-width:32px"></img>
               % endif
             </div>
             <div class="users-details" style="margin-left:36px">

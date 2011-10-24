@@ -142,7 +142,7 @@
 <%def name="conv_owner(ownerId)">
   <% avatarURI = utils.userAvatar(ownerId, entities[ownerId]) %>
   %if avatarURI:
-    <img src="${avatarURI}" height="48" width="48"/>
+    <img src="${avatarURI}" style="max-height: 48px; max-width: 48px;"/>
   %endif
 </%def>
 
@@ -371,7 +371,7 @@
     <div class="comment-avatar">
       <% avatarURI = utils.userAvatar(userId, entities[userId], "small") %>
       %if avatarURI:
-        <img src="${avatarURI}" height='32' width='32'/>
+        <img src="${avatarURI}" style="max-height: 32px; max-width: 32px;"/>
       %endif
     </div>
     <div class="comment-container">

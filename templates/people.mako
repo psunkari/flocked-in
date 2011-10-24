@@ -89,7 +89,7 @@
   <div class="users-avatar">
     <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
     %if avatarURI:
-      <img src="${avatarURI}" height='48' width='48'></img>
+      <img src="${avatarURI}" style="max-height:48px; max-width:48px"></img>
     %endif
   </div>
   <div class="users-details">
@@ -151,7 +151,7 @@
       <div id="invite-people">
         <div class="input-wrap">
           <span class="icon invite-people-entry">&nbsp;</span>
-          <input type="text" name="email" placeholder="${_("Enter your colleague&#39;s email address")}" autofocus required title="${_("Colleague's email address")}"/>
+          <input type="text" name="email" placeholder="${_("Enter your colleague&#39;s email address")}" autofocus required title="${_("Colleague&#39;s email address")}"/>
         </div>
         <div class="input-wrap">
           <span class="icon invite-people-entry">&nbsp;</span>
@@ -198,7 +198,7 @@
 <%def name="_displayInvitation(emailId)">
   <% button_class = 'default' %>
   <div class="users-avatar">
-      <img width="48" height="48" src="/rsrcs/img/avatar_m_m.png">
+      <img style="max-width:48px; max-height:48px" src="/rsrcs/img/avatar_m_m.png">
   </div>
   <div class="users-details">
     <div class="user-details-name">${emailId}</div>

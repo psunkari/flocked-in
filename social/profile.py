@@ -1,5 +1,3 @@
-import PythonMagick
-import imghdr
 import uuid
 from random                 import sample
 

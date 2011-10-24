@@ -305,7 +305,7 @@ a:hover, a:active, a:focus {
     float: left;
     width: 980px;
 }
-.has-left.has-right #center { width: 555px !important; }
+.has-left.has-right #center { width: 570px !important; }
 .has-left #center, .has-right #center { width: 800px !important; }
 
 #right {
@@ -856,7 +856,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 
 #user-feed {
-    padding: 10px 20px 20px;
+    padding: 10px 10px 20px 20px;
 }
 
 .conv-item {
