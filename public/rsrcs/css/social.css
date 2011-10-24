@@ -937,7 +937,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     min-height: 32px;
 }
 
-.comment-expander, .comment-collapser {
+.text-expander, .text-collapser {
     border: 0px;
     margin: 0px;
     padding: 0px;
@@ -947,10 +947,10 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     background: transparent;
     cursor: pointer;
 }
-.comment-collapser {
+.text-collapser {
     display: block;
 }
-.comment-expander:focus, .comment-collapser:focus {
+.text-expander:focus, .text-collapser:focus {
     text-decoration: underline;
     outline: 1px dotted #3366cc;
 }
@@ -996,8 +996,8 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     border: none;
 }
 
-.comment-text {
-    word-wrap:break-word;
+.text-full, .text-preview {
+    word-wrap: break-word;
 }
 
 #next-load-wrapper {
@@ -1459,6 +1459,9 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     margin-top: 4px !important;
 }
 
+.link-item {
+    margin-top: 6px;
+}
 .link-details {
     display: table-cell;
 }

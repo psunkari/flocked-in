@@ -552,24 +552,26 @@ var convs = {
             $('#comment-'+commentId).slideUp('fast', function(){$(this).remove();});
     },
 
-    expandComment: function(commentId) {
-        $('#comment-'+commentId+' .comment-text').css('display', 'inline');
-        $('#comment-'+commentId+' .comment-collapser').css('display', 'block');
-        $('#comment-'+commentId+' .comment-preview').css('display', 'none');
-        $('#comment-'+commentId+' .comment-expander').css('display', 'none');
+    expandText: function(event) {
+        var evt = $.event.fix(event),
+            $target = $(evt.target),
+            $container = $target.parent();
+
+        $container.find('.text-full').css('display', 'inline');
+        $container.find('.text-collapser').css('display', 'block');
+        $container.find('.text-preview').css('display', 'none');
+        $container.find('.text-expander').css('display', 'none');
     },
 
-    collapseComment: function(commentId) {
-        $('#comment-'+commentId+' .comment-preview').css('display', 'inline');
-        $('#comment-'+commentId+' .comment-expander').css('display', 'inline');
-        $('#comment-'+commentId+' .comment-text').css('display', 'none');
-        $('#comment-'+commentId+' .comment-collapser').css('display', 'none');
-    },
+    collapseText: function(event) {
+        var evt = $.event.fix(event),
+            $target = $(evt.target),
+            $container = $target.parent();
 
-    expandPost: function(convId) {
-    },
-
-    collapsePost: function(convId) {
+        $container.find('.text-preview').css('display', 'inline');
+        $container.find('.text-expander').css('display', 'inline');
+        $container.find('.text-full').css('display', 'none');
+        $container.find('.text-collapser').css('display', 'none');
     }
 };
 
@@ -676,8 +678,8 @@ var ui = {
 
     showPopup: function(event, right, above){
         var evt = $.event.fix(event),
-        $target = $(evt.target),
-        $menu = $target.next()
+            $target = $(evt.target),
+            $menu = $target.next();
 
         if (!$menu.hasClass("ui-menu")) {
             $menu.menu({

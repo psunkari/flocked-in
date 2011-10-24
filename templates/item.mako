@@ -364,7 +364,7 @@
 
     userId = meta["owner"]
     comment = meta["comment"]
-    commentPreview = meta.get('commentPreview', None)
+    snippet = meta.get('snippet', None)
     normalize = utils.normalizeText
   %>
   <div class="conv-comment" id="comment-${commentId}">
@@ -377,15 +377,7 @@
     <div class="comment-container">
       <span class="conv-other-actions" onclick="$.post('/ajax/item/delete', {id:'${commentId}'});">&nbsp;</span>
       <span class="comment-user">${utils.userName(userId, entities[userId])}</span>
-      %if commentPreview:
-        <span class="comment-preview">${commentPreview|normalize}</span>
-        <span class="comment-text" style="display:none;">${comment|normalize}</span>
-        &nbsp;&nbsp;
-        <button class="comment-expander" onclick="$$.convs.expandComment('${commentId}');">${_('Expand this comment &#187;')}</button>
-        <button class="comment-collapser" style="display:none;" onclick="$$.convs.collapseComment('${commentId}');">${_('Collapse this comment')}</button>
-      %else:
-        <span class="comment-text">${comment|normalize}</span>
-      %endif
+      ${_renderText(snippet, comment, _('Expand this comment &#187;'), _('Collapse this comment'))}
     </div>
     <div class="comment-meta" id = "item-footer-${commentId}">
       ${self.item_footer(commentId)}
@@ -445,16 +437,30 @@
 <%def name="item_subactions()">
 </%def>
 
+<%def name="_renderText(snippet, text, expandStr=None, collapseStr=None)">
+  <%
+    normalize = utils.normalizeText
+  %>
+  %if snippet:
+    <span class="text-preview">${snippet|normalize}</span>
+    <span class="text-full" style="display:none;">${text|normalize}</span>
+    &nbsp;&nbsp;
+    <button class="text-expander" onclick="$$.convs.expandText(event);">${expandStr or _('Expand this post &#187;')}</button>
+    <button class="text-collapser" style="display:none;" onclick="$$.convs.collapseText(event);">${collapseStr or _('Collapse this post')}</button>
+  %else:
+    <span class="text-full">${text|normalize}</span>
+  %endif
+</%def>
 
 <%def name="render_status(convId, isQuoted=False)">
   <%
     conv = items[convId]
-    convType = conv["meta"]["type"]
-    userId = conv["meta"]["owner"]
-    normalize = utils.normalizeText
+    meta = conv["meta"]
+    convType = meta["type"]
+    userId = meta["owner"]
     has_icon = "has-icon" if convType in ["question"] else ''
     itemTitleText = "item-title-text" if has_icon else ''
-    target = items[convId]["meta"].get('target', '')
+    target = meta.get('target', '')
     target = target.split(',') if target else ''
     if target:
       target = [x for x in target if x in relations.groups]
@@ -475,9 +481,11 @@
       %if isQuoted and not has_icon:
         ${utils.userName(userId, entities[userId])}
       %endif
-      %if conv["meta"].has_key("comment"):
-        ${conv["meta"]["comment"]|normalize}
-      %endif
+      <%
+        comment = meta.get('comment', '')
+        snippet = meta.get('snippet', '')
+      %>
+      ${_renderText(snippet, comment)}
     </div>
   </div>
 </%def>
@@ -491,7 +499,6 @@
 <%def name="render_feedback(convId, isQuoted=False)">
   <%
     conv = items[convId]
-    normalize = utils.normalizeText
     meta = conv["meta"]
     mood = meta["subType"]
     user = entities[meta['userId']]
@@ -511,9 +518,11 @@
         </span>
         (${userOrg["basic"]["name"]})<br/>
       %endif
-      %if conv["meta"].has_key("comment"):
-        ${conv["meta"]["comment"]|normalize}
-      %endif
+      <%
+        comment = meta.get('comment', '')
+        snippet = meta.get('snippet', '')
+      %>
+      ${_renderText(snippet, comment)}
     </div>
   </div>
 </%def>
@@ -524,19 +533,21 @@
     conv = items[convId]
     convType = conv["meta"]["type"]
     userId = conv["meta"]["owner"]
-    normalize = utils.normalizeText
 
+    ## "url" is replaced by "link_url" in the new schema.
+    ## the older column names are here for backward compatibility
+    ## can be removed after DB update
     meta = conv["meta"]
-    url = meta.get("url", "")
-    title = meta.get("title", '')
-    imgsrc = meta.get("imgSrc", '')
-    summary = meta.get("summary", '')
+    url = meta.get("link_url", '') or meta.get("url", '')
+    title = meta.get("title", '') or meta.get("title", '')
+    imgsrc = meta.get("link_imgSrc", '') or meta.get("imgSrc", '')
+    summary = meta.get("link_summary", '') or meta.get("summary", '')
 
     hasEmbed = False
-    embedType = meta.get("embedType", '')
-    embedSrc = meta.get("embedSrc", '')
-    embedWidth = meta.get("embedWidth", 0)
-    embedHeight = meta.get("embedHeight", 0)
+    embedType = meta.get("link_embedType", '') or meta.get("embedType", '')
+    embedSrc = meta.get("link_embedSrc", '') or meta.get("embedSrc", '')
+    embedWidth = meta.get("link_embedWidth", '') or meta.get("embedWidth", 0)
+    embedHeight = meta.get("link_embedHeight", '') or meta.get("embedHeight", 0)
     if embedType and embedSrc and embedWidth and embedHeight:
         hasEmbed = True
 
@@ -558,9 +569,11 @@
   <div class="item-title has-icon">
     <span class="icon item-icon link-icon"></span>
     <div class="item-title-text">
-      %if conv["meta"].has_key("comment"):
-        ${conv["meta"]["comment"]|normalize}
-      %endif
+      <%
+        comment = meta.get('comment', '')
+        snippet = meta.get('snippet', '')
+      %>
+      ${_renderText(snippet, comment)}
       <div class="link-item">
         %if imgsrc and hasEmbed:
           <div onclick="$$.convs.embed('${convId}');" class="embed-wrapper">

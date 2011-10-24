@@ -348,8 +348,7 @@ class ItemResource(base.BaseResource):
             conv = utils.supercolumnsToDict([conv])
             commentText = item["meta"].get("comment")
             if commentText:
-                commentSnippet = utils.toSnippet(commentText.decode('utf-8', 'replace'), 35)
-                commentSnippet = commentSnippet.encode('utf-8')
+                commentSnippet = utils.toSnippet(commentText, 35)
         else:
             convId = itemId
             conv = item
@@ -563,7 +562,8 @@ class ItemResource(base.BaseResource):
     @dump_args
     def _comment(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        comment = utils.getRequestArg(request, "comment")
+        snippet, comment = utils.getTextWithSnippet(request, "comment",
+                                            constants.COMMENT_PREVIEW_LENGTH)
         if not comment:
             raise errors.MissingParams([_("Comment")])
 
@@ -577,11 +577,8 @@ class ItemResource(base.BaseResource):
                 "timestamp": str(int(time.time())), "uuid": timeUUID}
         followers = {myId: ''}
         itemId = utils.getUniqueKey()
-
-        unitext = comment.decode('utf-8', 'replace')
-        if len(unitext) > (constants.COMMENT_PREVIEW_LENGTH + 50):
-            commentPreview = utils.toSnippet(unitext, constants.COMMENT_PREVIEW_LENGTH)
-            meta['commentPreview'] = commentPreview.encode('utf-8')
+        if snippet:
+            meta['snippet'] = snippet
 
         yield db.batch_insert(itemId, "items", {'meta': meta,
                                                 'followers': followers})
@@ -604,7 +601,7 @@ class ItemResource(base.BaseResource):
 
         # 4. Update userItems and userItems_*
         responseType = "Q" if convType == "question" else 'C'
-        commentSnippet = utils.toSnippet(unitext, 35).encode('utf-8')
+        commentSnippet = utils.toSnippet(comment, 35)
         userItemValue = ":".join([responseType, itemId, convId, convType,
                                   convOwnerId, commentSnippet])
         yield db.insert(myId, "userItems", userItemValue, timeUUID)

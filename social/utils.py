@@ -68,12 +68,13 @@ def columnsToDict(columns, ordered = False):
         retval[item.column.name] = item.column.value
     return retval
 
-def _sanitize(text):
-    escape_entities = {':':"&#58;"}
-    text = text.decode('utf-8', 'replace').encode('utf-8')
-    return sanitizer.escape(text, escape_entities).strip()
 
 def getRequestArg(request, arg, sanitize=True, multiValued=False):
+    def _sanitize(text):
+        escape_entities = {':':"&#58;"}
+        text = text.decode('utf-8', 'replace').encode('utf-8')
+        return sanitizer.escape(text, escape_entities).strip()
+
     if request.args.has_key(arg):
         if not multiValued:
             if sanitize:
@@ -87,6 +88,22 @@ def getRequestArg(request, arg, sanitize=True, multiValued=False):
 
     else:
         return None
+
+
+def getTextWithSnippet(request, name, length):
+    escapeEntities = {':': '&#58;'}
+    if name in request.args:
+        text = request.args[name][0]
+        preview = None
+        unitext = text.decode('utf-8', 'replace')
+        if len(unitext) > length + 50:
+            preview = toSnippet(unitext, length)
+            preview = sanitizer.escape(preview, escapeEntities).strip()
+
+        text = unitext.encode('utf-8')
+        text = sanitizer.escape(text, escapeEntities).strip()
+        return (preview, text)
+    return None
 
 
 @defer.inlineCallbacks
@@ -232,6 +249,7 @@ def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
         item["meta"]["subType"] = subType
     if groups:
         item["meta"]["target"] = ",".join(groups)
+
     tmpFileIds = getRequestArg(request, 'fId', False, True)
     attachments = {}
     if tmpFileIds:
@@ -566,13 +584,18 @@ def simpleTimestamp(timestamp, timezone='Asia/Kolkata'):
 
 _snippetRE = re.compile(r'(.*)\s', re.L|re.U|re.S)
 def toSnippet(text, maxlen):
-    chopped = text[:maxlen]
+    unitext = text if type(text) == unicode or not text\
+                   else text.decode('utf-8', 'replace')
+    if len(unitext) <= maxlen:
+        return unitext.encode('utf-8')
+
+    chopped = unitext[:maxlen]
     match = _snippetRE.match(chopped)
     if match:
         chopped = match.group(1)
-    if len(chopped) < len(text):
+    if len(chopped) < len(unitext):
         chopped = chopped + unichr(0x2026)
-    return chopped
+    return chopped.encode('utf-8')
 
 
 def uuid1(node=None, clock_seq=None, timestamp=None):
