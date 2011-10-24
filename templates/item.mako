@@ -183,14 +183,14 @@
     myTimezone = me['basic'].get("timezone", None)
   %>
   ${utils.simpleTimestamp(timestamp, myTimezone)}\
-  ## If none of my friends liked it, show the count of likes (onclick show the likes)
+  ## If none of my subscriptions liked it, show the count of likes (onclick show the likes)
   %if (not hasLikes and likesCount) or (not hasComments and commentsCount):
     &#183;
   %endif
   %if not hasLikes and likesCount > 0:
     <button class="button-link" title="${likesCount} Likes" onclick="$$.convs.showItemLikes('${convId}')"><div class="small-icon small-like"></div>${likesCount}</button>
   %endif
-  ## Number of comments when none of my friends commented on it
+  ## Number of comments when none of my subscriptions commented on it
   %if not hasComments and commentsCount > 0:
     <button class="button-link ajax" title="${commentsCount} Comments" href="/item?id=${convId}" data-ref="/item/responses?id=${convId}"><div class="small-icon small-comment"></div>${commentsCount}</button>
   %endif
@@ -596,16 +596,17 @@
     target = conv["meta"]["target"]
     fmtUser = utils.userName
     fmtGroup = utils.groupName
-    if subtype == "connection":
-      activity = _("%s and %s are now friends.") % (fmtUser(userId, entities[userId]), fmtUser(target, entities[target]))
-    elif subtype == "following":
+    activity = None
+    if subtype == "following":
       activity = _("%s started following %s.") % (fmtUser(userId, entities[userId]), fmtUser(target, entities[target]))
     elif subtype == "groupJoin":
       activity = _("%s joined %s.") % (fmtUser(userId, entities[userId]), fmtGroup(target, entities[target]))
     elif subtype == "groupLeave":
       activity = _("%s left %s.") % (fmtUser(userId, entities[userId]), fmtGroup(target, entities[target]))
   %>
-  ${activity}
+  %if activity:
+    ${activity}
+  %endif
 </%def>
 
 

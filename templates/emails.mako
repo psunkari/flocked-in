@@ -210,18 +210,6 @@
   ${footer()}
 </%def>
 
-<%def name="notifyFA()">
-  ${header()}
-  <td valign="top" align="right" style="width:48px;" rowspan="2">
-    <img src="${senderAvatarUrl}" alt="">
-  </td>
-  <td style="font-size: 14px;">
-    <b>${senderName}</b> accepted your friend request.<br/>
-    You can visit <a href="${rootUrl}/people">${rootUrl}/people</a> to see the list of all your friends.
-  </td>
-  ${footer()}
-</%def>
-
 <%def name="notifyNF()">
   ${header()}
   <td valign="top" align="right" style="width:48px;" rowspan="2">
@@ -241,7 +229,7 @@
   </td>
   <td style="font-size: 14px;">
     <b>${senderName}</b> accepted your invitation to join ${brandName}.<br/>
-    Visit <a href="${rootUrl}/profile?id=${senderId}">${senderName}'s profile</a> to follow or to add ${senderName} as your friend.
+    Visit <a href="${rootUrl}/profile?id=${senderId}">${senderName}'s profile</a> to follow ${senderName}.
   </td>
   ${footer()}
 </%def>
@@ -253,7 +241,7 @@
   </td>
   <td style="font-size: 14px;">
     <b>${senderName}</b> just joined ${brandName}.<br/>
-    Visit <a href="${rootUrl}/profile?id=${senderId}">${senderName}'s profile</a> to follow or to add ${senderName} as your friend.
+    Visit <a href="${rootUrl}/profile?id=${senderId}">${senderName}'s profile</a> to follow ${senderName}.
   </td>
   ${footer()}
 </%def>
@@ -273,22 +261,6 @@
 ##
 ## Yet to be implemented
 ##
-
-<%def name="notifyFR()">
-  ${header()}
-  <td valign="top" align="right" style="width:48px;" rowspan="2">
-    <img src="${senderAvatarUrl}" alt="">
-  </td>
-  <td style="font-size: 14px;">
-    <b>${senderName}</b> requested to be your friend on ${brandName}.
-    <br/>
-    <a href="${rootUrl}/profile?id=${senderId}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">Add as Friend</div></a>
-    <br/><br/>
-    You can also visit <a href="${rootUrl}/people">${rootUrl}/people</a> to view friends and subscriptions.
-    <br/><br/>
-  </td>
-  ${footer()}
-</%def>
 
 <%def name="notifyGR()">
   ${header()}

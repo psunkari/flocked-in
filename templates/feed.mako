@@ -118,13 +118,7 @@
         <li>
           <a class="acl-item" data-acl="org:${orgKey}">
             <span class="acl-title">${_("Company")}</span>
-            <div class="acltip">${_("Notifies only your friends and followers")}</div>
-          </a>
-        </li>
-        <li>
-          <a class="acl-item" data-acl="friends">
-            <span class="acl-title">${_("Friends")}</span>
-            <div class="acltip">${_("Notifies all your friends")}</div>
+            <div class="acltip">${_("Sent to your followers and company's feed")}</div>
           </a>
         </li>
         <li id="sharebar-acl-groups-sep" class="ui-menu-separator"></li>
@@ -159,7 +153,7 @@
       <div id="sharebar-attach-uploaded" class="uploaded-filelist"></div>
       <div id="sharebar-actions-wrapper">
         <ul id="sharebar-actions" class="h-links">
-          <li>${acl_button("sharebar-acl", '{"accept":{"orgs":["%s"]}}'%orgKey, "Company", "Notifies only your friends and followers")}</li>
+          <li>${acl_button("sharebar-acl", '{"accept":{"orgs":["%s"]}}'%orgKey, "Company", "Sent to your followers and company's feed")}</li>
           <li>${widgets.button("sharebar-submit", "submit", "default", "Share", "Share")}</li>
         </ul>
         <span class="clear" style="display:block"></span>
@@ -210,7 +204,7 @@
       <ul >
         <li>${_("Share status updates, files, Ask questions, Create polls")}</li>
         <li><a href='/people/invite'>${_("Invite")}</a>${_(" your colleagues.")}</li>
-        <li><a href='/people?type=all'>${_("Follow")}</a>${_(" your colleagues, ")}<a href='/people?type=all'>${_("Add")}</a>${_(" them as Friends")}</li>
+        <li><a href='/people?type=all'>${_("Follow")}</a>${_(" your colleagues, ")}</li>
         <li><a href='/messages'>${_("Send")}</a>${_(" private messages")}</li>
         <li><a href='/groups/create'>${_("Create")}</a>${_(" new groups. ")}<a href='/groups?type=allGroups'>${_("Join")}</a>${_(" Groups ")}</li>
         <li><a href='/settings'>${_("Update")}</a>${_(" your profile")}</li>
@@ -259,12 +253,7 @@
               <div class="user-details-title">${entities[userId]["basic"].get("jobTitle", '')}</div>
               <div >
                 <ul id="user-actions-${userId}" class="middle user-actions h-links">
-                %if userId not in relations.friends:
-                  %if not relations.pending or userId not in relations.pending:
-                    <li><button class="button" onclick="$.post('/ajax/profile/friend', 'id=${userId}&action=add')"><span class="button-text" style="font-size:11px">${_("Add as Friend")}</span></button></li>
-                  %endif
-                %endif
-                %if userId not in relations.subscriptions and userId not in relations.friends:
+                %if userId not in relations.subscriptions:
                   <li><button class="button" onclick="$.post('/ajax/profile/follow', 'id=${userId}')"><span class="button-text" style="font-size:11px;">${_("Follow")}</span></button></li>
                 %endif
                 </ul>

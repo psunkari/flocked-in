@@ -21,7 +21,7 @@ from social.logging     import dump_args, profile, log
 #       Column Value: NotifyId
 #           (ConvId:ConvType:ConvOwner:X, :Y)
 #               X => Type of action (Like/Comment/Like a comment)
-#               Y => Type of action (Friend/Group/Following)
+#               Y => Type of action (Group/Following)
 #
 #     notificationItems (Super CF):
 #       Key: UserId
@@ -44,7 +44,7 @@ def notify(userIds, notifyId, value, timeUUID=None, **kwargs):
     deferreds = []
 
     # Delete existing notifications for the same item/activiy
-    if not notifyIdParts[0] and notifyIdParts[1] not in ["FR", "GR", "NM", "MR", "MA"]:
+    if not notifyIdParts[0] and notifyIdParts[1] not in ["GR", "NM", "MR", "MA"]:
         d1 = db.multiget_slice(userIds, "notificationItems",
                                super_column=notifyId, count=3, reverse=True)
         def deleteOlderNotifications(results):
@@ -134,10 +134,8 @@ class NotificationByMail(object):
         "IA": "[%(brandName)s] %(senderName)s accepted your invitation to join %(brandName)s",
         "NU": "[%(brandName)s] %(senderName)s joined the %(networkName)s network",
         "NF": "[%(brandName)s] %(senderName)s started following you",
-        "FA": "[%(brandName)s] %(senderName)s accepted your friend request",
         "GA": "[%(brandName)s] Your request to join %(senderName)s was accepted",
         "GI": "[%(brandName)s] %(senderName)s invited you to join %(groupName)s",
-        "FR": "[%(brandName)s] %(senderName)s wants to be your friend on %(networkName)s network",
         "GR": "[%(brandName)s] %(senderName)s wants to join %(groupName)s",
         "NM": "[%(brandName)s] %(senderName)s sent a private message",
         "MR": "[%(brandName)s] %(senderName)s sent a reply to private message",
@@ -151,16 +149,11 @@ class NotificationByMail(object):
               "%(senderName)s joined the %(networkName)s network",
         "NF": "Hi,\n\n"\
               "%(senderName)s started following you",
-        "FA": "Hi,\n\n"\
-              "%(senderName)s accepted your friend request",
         "GA": "Hi,\n\n"\
               "Your request to join %(senderName)s was accepted by an admistrator",
         "GI": "Hi,\n\n"\
               "%(senderName)s invited you to join %(groupName)s group.\n"\
               "Visit %(rootUrl)s/groups?type=invitations to accept the invitation.",
-        "FR": "Hi,\n\n"\
-              "%(senderName)s requested to be your friend on %(networkName)s network.\n"\
-              "To accept the request visit %(senderName)s's profile at %(rootUrl)s/profile?id=%(senderId)s.",
         "GR": "Hi.\n\n"\
               "%(senderName)s wants to join %(groupName)s group\n"\
               "Visit %(rootUrl)s/groups?type=pendingRequests to accept the request",
@@ -364,11 +357,6 @@ class NotificationsResource(base.BaseResource):
                      3: "%(user0)s, %(user1)s and 1 other started following you",
                      4: "%(user0)s, %(user1)s and %(count)s others started following you"}
 
-    _friendRequestAccepted = {1: "%(user0)s accepted your friend request",
-                              2: "%(user0)s and %(user1)s accepted your friend request",
-                              3: "%(user0)s, %(user1)s and 1 other accepted your friend request",
-                              4: "%(user0)s, %(user1)s and %(count)s others accepted your friend request"}
-
     _groupRequestAccepted = {1: "Your request to join %(group0)s was accepted",
                              2: "Your requests to join %(group0)s and %(group1)s were accepted",
                              3: "Your requests to join %(group0)s, %(group1)s and one other were accepted",
@@ -538,14 +526,14 @@ class NotificationsResource(base.BaseResource):
                 tmpl = self._newFollowers[noOfUsers]
             elif x == "GA":
                 tmpl = self._groupRequestAccepted[noOfUsers]
-            elif x == "FA":
-                tmpl = self._friendRequestAccepted[noOfUsers]
             elif x == "NU":
                 tmpl = self._orgNewMember[noOfUsers]
             elif x == "IA":
                 tmpl = self._inviteAccepted[noOfUsers]
             elif x == "GI":
                 tmpl = self._groupInvitation[noOfUsers]
+            else:
+                return ''
 
             return tmpl % vals
 

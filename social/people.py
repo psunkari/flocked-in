@@ -21,9 +21,7 @@ OUTGOING_REQUEST = 'FO'
 
 
 def isValidSuggestion(myId, userId, relation):
-    return not (userId in relation.friends or \
-                userId in relation.subscriptions or \
-                userId in relation.pending or
+    return not (userId in relation.subscriptions or \
                 userId in relation.followers or
                 userId == myId)
 
@@ -32,25 +30,19 @@ def _update_suggestions(request, relation=None):
     authinfo = request.getSession(IAuthInfo)
     myId = authinfo.username
     orgId = authinfo.organization
-    weights = { 'friend': { 'friend': 100, 'follower': 30, 'subscription': 80, 'group': 50},
-               'group': { 'friend': 50, 'follower': 15, 'subscription': 40, 'group': 60},
-               'follower': { 'friend': 30, 'follower': 9, 'subscription': 24, 'group': 15},
-               'subscription': { 'friend': 40, 'follower': 24, 'subscription': 64, 'group': 40}}
+    weights = {'group': { 'follower': 15, 'subscription': 40, 'group': 30},
+               'follower': { 'follower': 9, 'subscription': 24, 'group': 15},
+               'subscription': { 'follower': 24, 'subscription': 64, 'group': 40}}
     defaultWeight = 1
     people = {}
     @defer.inlineCallbacks
     def _compute_weights(userIds, myGroups, type):
-        friends = yield db.multiget_slice(userIds, "connections", count=50)
         followers = yield db.multiget_slice(userIds, "followers", count=50)
         subscriptions = yield db.multiget_slice(userIds, "subscriptions", count=50)
         groups = yield db.multiget_slice(userIds, "entityGroupsMap")
-        friends = utils.multiSuperColumnsToDict(friends)
         followers = utils.multiColumnsToDict(followers)
         subscriptions = utils.multiColumnsToDict(subscriptions)
         groups = utils.multiColumnsToDict(groups)
-        for userId in friends:
-            for friend in friends[userId]:
-                people[friend] = people.setdefault(friend, defaultWeight)+ weights[type]['friend']
         for userId in followers:
             for follower in followers[userId]:
                 people[follower] = people.setdefault(follower, defaultWeight) + weights[type]['follower']
@@ -63,16 +55,11 @@ def _update_suggestions(request, relation=None):
                 if groupId in myGroups:
                     people[userId] = people.setdefault(userId, defaultWeight) + weights[type]['group']
 
-
     if not relation:
         relation = Relation(myId, [])
-        yield defer.DeferredList([relation.initFriendsList(),
-                                   relation.initSubscriptionsList(),
-                                   relation.initPendingList(),
-                                   relation.initFollowersList(),
-                                   relation.initGroupsList()])
-    if relation.friends:
-        yield _compute_weights(relation.friends.keys(), relation.groups, 'friend')
+        yield defer.DeferredList([relation.initSubscriptionsList(),
+                                  relation.initFollowersList(),
+                                  relation.initGroupsList()])
     if relation.followers:
         yield _compute_weights(relation.followers, relation.groups, 'follower')
     if relation.subscriptions:
@@ -82,7 +69,6 @@ def _update_suggestions(request, relation=None):
         groupMembers = utils.multiColumnsToDict(groupMembers)
         for groupId in groupMembers:
             yield  _compute_weights(groupMembers[groupId], relation.groups, 'group')
-
 
     cols = yield db.get_slice(orgId, "orgUsers", count=100)
     for col in cols:
@@ -116,10 +102,8 @@ def get_suggestions(request, count, mini=False):
 
     suggestions = []
     relation = Relation(myId, [])
-    yield defer.DeferredList([relation.initFriendsList(),
-                               relation.initSubscriptionsList(),
-                               relation.initPendingList(),
-                               relation.initFollowersList()])
+    yield defer.DeferredList([relation.initSubscriptionsList(),
+                              relation.initFollowersList()])
 
     @defer.inlineCallbacks
     def _get_suggestions(myId, relation):
@@ -137,7 +121,6 @@ def get_suggestions(request, count, mini=False):
                     invalidCount +=1
         defer.returnValue((validSuggestions, invalidCount, FORCE_UPDATE))
 
-
     validSuggestions, invalidCount, FORCE_UPDATE = yield _get_suggestions(myId, relation)
     if not validSuggestions:
         yield _update_suggestions(request, relation)
@@ -149,7 +132,6 @@ def get_suggestions(request, count, mini=False):
         suggestions = random.sample(validSuggestions[:population], no_of_samples)
     else:
         suggestions = validSuggestions[:]
-
 
     if FORCE_UPDATE or invalidCount > MAX_INVALID_SUGGESTIONS:
         _update_suggestions(request, relation)
@@ -321,8 +303,6 @@ def getPeople(myId, entityId, orgId, start='',
     usersDeferred = db.multiget_slice(toFetchUsers, "entities", ["basic"])
     relation = Relation(myId, userIds)
     results = yield defer.DeferredList([usersDeferred,
-                                        relation.initFriendsList(),
-                                        relation.initPendingList(),
                                         relation.initSubscriptionsList()])
     users = utils.multiSuperColumnsToDict(results[0][1])
 
@@ -351,6 +331,7 @@ def _getInvitationsSent(userId, start='', count=PEOPLE_PER_PAGE):
             prevPageStart = utils.encodeKey(prevCols[-1].column.name)
 
     defer.returnValue((emailIds, prevPageStart, nextPageStart))
+
 
 @defer.inlineCallbacks
 def _getPendingConnections(userId, start='', count=PEOPLE_PER_PAGE, entityType='user'):
@@ -436,8 +417,6 @@ class PeopleResource(base.BaseResource):
         orgId = args["orgKey"]
         args["entities"] = {}
         args["menuId"] = "people"
-        counts = yield utils.getLatestCounts(request, False)
-        args["pendingRequestsCount"] = pendingRequestsCount = counts.get('people', 0)
 
         if script and landing:
             yield render(request, "people.mako", **args)
@@ -449,10 +428,6 @@ class PeopleResource(base.BaseResource):
         d = None
         if viewType == "all":
             d = getPeople(myId, orgId, orgId, start=start, fetchBlocked=False)
-        elif viewType == "friends":
-            d = getPeople(myId, myId, orgId, start=start, fetchBlocked=False)
-        elif viewType == 'pendingRequests':
-            d = _getPendingConnections(myId, start=start)
         elif viewType == "invitations":
             d = _getInvitationsSent(myId, start=start)
         else:
@@ -460,7 +435,7 @@ class PeopleResource(base.BaseResource):
 
         sentInvitationsCount = yield db.get_count(myId, "invitationsSent")
 
-        if viewType in ['all', 'friends', 'pendingRequests']:
+        if viewType == 'all':
             users, relations, userIds,\
                 blockedUsers, nextPageStart, prevPageStart = yield d
 
@@ -483,8 +458,7 @@ class PeopleResource(base.BaseResource):
         if script:
             yield renderScriptBlock(request, "people.mako", "viewOptions",
                                     landing, "#people-view", "set", args=[viewType],
-                                    showInvitationsTab=showInvitationsTab,
-                                    pendingRequestsCount= pendingRequestsCount)
+                                    showInvitationsTab=showInvitationsTab)
             yield renderScriptBlock(request, "people.mako", "listPeople",
                                     landing, "#users-wrapper", "set", **args)
             yield renderScriptBlock(request, "people.mako", "paging",
@@ -566,8 +540,8 @@ class PeopleResource(base.BaseResource):
     @dump_args
     def render_GET(self, request):
         segmentCount = len(request.postpath)
-        viewType = utils.getRequestArg(request, "type") or "friends"
-        start = utils.getRequestArg(request, "start") or ''
+        viewType = utils.getRequestArg(request, "type") or "all"
+        start = utils.getRequestArg(request, "start") or ""
         start = utils.decodeKey(start)
         d = None
 

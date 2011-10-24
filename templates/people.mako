@@ -54,20 +54,13 @@
 
 <%def name="viewOptions(selected)">
  <%
-    tabs = [('friends', _('My friends')), ('all', _('All users')), ('pendingRequests', _('Friend Requests'))]
+    tabs = [('all', _('All users'))]
     if showInvitationsTab:
         tabs.append(('invitations', _('Invitations')))
-    people_count = pendingRequestsCount if pendingRequestsCount else ''
  %>
   <ul class="h-links view-options">
     %for item, display in tabs:
-      %if item == "pendingRequests":
-        %if selected == item:
-          <li class="selected">${_(display)}<span id="pending-requests-count" class="view-options-count" >${people_count}</span></li>
-        %else:
-          <li><a href="/people?type=${item}" class="ajax">${_(display)}</a><span id="pending-requests-count" class="view-options-count">${people_count}</span></li>
-        %endif
-      %elif selected == item:
+      %if selected == item:
         <li class="selected">${_(display)}</li>
       %else:
         <li><a href="/people?type=${item}" class="ajax">${_(display)}</a></li>

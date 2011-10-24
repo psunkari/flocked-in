@@ -1107,9 +1107,6 @@ var acl = {
         if (type === "public") {
             aclObj.accept.pub = true;
         }
-        else if (type === "friends") {
-            aclObj.accept.friends = true;
-        }
         else if (type.match(/^org:/)) {
             aclObj.accept.orgs = type.substr(4).split(",");
         }
@@ -1135,9 +1132,9 @@ var acl = {
         $$.data.wait("/auto/mygroups", (function(groups) {
             items = [];
             $.each(groups || [], function(i, g) {
-                items.push('<li><a class="acl-item" data-acl="group:' + g.id + '">' + 
+                items.push('<li><a class="acl-item" data-acl="group:' + g.id + '">' +
                            '<span class="acl-title">' + g.name + '</span>' +
-                           '<div class="acltip" style="display:none;">' + g.name + '</div>' + 
+                           '<div class="acltip" style="display:none;">' + g.name + '</div>' +
                            '</a></li>');
             });
 

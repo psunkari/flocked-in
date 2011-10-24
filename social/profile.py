@@ -21,14 +21,6 @@ class ProfileResource(base.BaseResource):
     resources = {}
 
 
-    # Add a notification (TODO: and send mail notifications to users
-    # who prefer getting notifications on e-mail)
-    @defer.inlineCallbacks
-    def _notifyFriendRequest(self, myId, targetId):
-        timeUUID = uuid.uuid1().bytes
-        yield db.insert(targetId, "latest", myId, timeUUID, "people")
-
-
     @defer.inlineCallbacks
     def _removeNotification(self, entityId, targetId):
         cols = yield db.get_slice(entityId, "latest", ['people'])
@@ -62,8 +54,7 @@ class ProfileResource(base.BaseResource):
         args = {"myKey": myKey}
 
         relation = Relation(myKey, [])
-        yield defer.DeferredList([relation.initFriendsList(),
-                                  relation.initGroupsList()])
+        yield relation.initGroupsList()
 
         toFetchEntities.add(userKey)
 
@@ -198,213 +189,6 @@ class ProfileResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _addAsFriend(self, request, myId, targetId):
-        orgId = request.getSession(IAuthInfo).organization
-        cols = yield db.get_slice(myId, "pendingConnections",
-                                  ["FI:%s"%(targetId)])
-        if cols:
-            raise errors.InvalidRequest(_("A similar request is already pending"))
-        d1 = db.insert(myId, "pendingConnections", '', "FO:%s"%(targetId))
-        d2 = db.insert(targetId, "pendingConnections", '', "FI:%s"%(myId))
-        d3 = self._notifyFriendRequest(myId, targetId)
-        d4 = db.multiget_slice([myId, targetId, orgId], "entities", ["basic"])
-        @defer.inlineCallbacks
-        def notifyByMail(entities):
-            entities = utils.multiSuperColumnsToDict(entities)
-            data = {"entities":entities, "orgId": orgId}
-            yield notifications.notify([targetId], ":FR", myId, **data)
-        d4.addCallback(notifyByMail)
-        calls = [d1, d2, d3, d4]
-        yield defer.DeferredList(calls)
-
-    @profile
-    @defer.inlineCallbacks
-    def _acceptFriendRequest(self, request, myId, targetId):
-
-        # Circles are just tags that a user would set on his connections
-        circles = utils.getRequestArg(request, 'circle', True) or []
-        circles.append("__default__")
-        circlesMap = dict([(circle, '') for circle in circles])
-
-        # Check if we have a request pending from this user.
-        # If yes, this just becomes accepting a local pending request
-        # Else create a friend request that will be pending on the target user
-        calls = []
-        responseType = "I"
-        itemType = "activity"
-        cols = yield db.multiget_slice([myId, targetId], "entities", ["basic"])
-        users = utils.multiSuperColumnsToDict(cols)
-
-        # We have a pending incoming connection.  Accept It.
-        try:
-            cols = yield db.get(myId, "pendingConnections", "FI:%s"%(targetId))
-
-            d1 = db.batch_insert(myId, "connections", {targetId: circlesMap})
-            d2 = db.batch_insert(targetId, "connections", {myId: {'__default__':''}})
-
-            #
-            # Update name indices
-            #
-            myName = users[myId]["basic"].get("name", None)
-            myFirstName = users[myId]["basic"].get("firstname", None)
-            myLastName = users[myId]["basic"].get("lastname", None)
-            targetName = users[targetId]['basic'].get('name', None)
-            targetFirstName = users[targetId]["basic"].get("firstname", None)
-            targetLastName = users[targetId]["basic"].get("lastname", None)
-
-            d3 = utils.updateDisplayNameIndex(targetId, [myId], targetName, None)
-            d4 = utils.updateDisplayNameIndex(myId, [targetId], myName, None)
-
-            mutMap = {}
-            for field in ['name', 'firstname', 'lastname']:
-                name = users[myId]["basic"].get(field, None)
-                if name:
-                    colName = name.lower() + ":" + myId
-                    mutMap.setdefault(targetId, {}).setdefault('nameIndex', {})[colName]=''
-                name = users[targetId]['basic'].get(field, None)
-                if name:
-                    colName = name.lower() + ":" + targetId
-                    mutMap.setdefault(myId, {}).setdefault('nameIndex', {})[colName] = ''
-            d5 = db.batch_mutate(mutMap)
-
-            #
-            # Add to feeds
-            #
-            myItemId = utils.getUniqueKey()
-            targetItemId = utils.getUniqueKey()
-            orgId = users[myId]["basic"]["org"]
-            myItem, attachments = yield utils.createNewItem(request, itemType,
-                                                            ownerId=myId,
-                                                            subType="connection",
-                                                            ownerOrgId=orgId)
-            targetItem, attachments = yield utils.createNewItem(request,
-                                                            itemType,
-                                                            ownerId=targetId,
-                                                            subType="connection",
-                                                            ownerOrgId=orgId)
-            targetItem["meta"]["target"] = myId
-            myItem["meta"]["target"] = targetId
-            d6 = db.batch_insert(myItemId, "items", myItem)
-            d7 = db.batch_insert(targetItemId, "items", targetItem)
-
-            userItemValue = ":".join([responseType, myItemId,
-                                      myItemId, "activity", myId, ""])
-            d8 = db.insert(myId, "userItems", userItemValue,
-                           myItem["meta"]['uuid'])
-            userItemValue = ":".join([responseType, targetItemId, targetItemId,
-                                      itemType, targetId, ""])
-            d9 = db.insert(targetId, "userItems", userItemValue,
-                           targetItem["meta"]['uuid'])
-
-            # TODO: Push to feeds of friends and followers of both users.
-
-            d10 = db.remove(myId, "pendingConnections", "FI:%s"%(targetId))
-            d11 = db.remove(targetId, "pendingConnections", "FO:%s"%(myId))
-
-            data = {"entities": users}
-            d12 = notifications.notify([targetId], ":FA", myId, **data)
-
-            calls = [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12]
-            calls.append(self._removeNotification(myId, targetId))
-            yield defer.DeferredList(calls)
-
-        # No incoming connection request.  Send a request to the target users.
-        except ttypes.NotFoundException:
-            pass
-
-    @profile
-    @defer.inlineCallbacks
-    @dump_args
-    def _friend(self, request, myId, targetId):
-        action = utils.getRequestArg(request, "action")
-        if action not in ['add', 'cancel', 'reject', 'accept']:
-          raise errors.InvalidRequest(_("Malformed request"))
-
-        if action == 'accept':
-            yield self._acceptFriendRequest(request, myId, targetId)
-        elif action == 'reject':
-            yield self._rejectFriendRequest(request, myId, targetId)
-        elif action == 'add':
-            yield self._addAsFriend(request, myId, targetId)
-        elif action == 'cancel':
-            yield self._cancelFriendRequest(request, myId, targetId)
-
-    @defer.inlineCallbacks
-    def _rejectFriendRequest(self, request, myId, targetId):
-        try:
-            yield db.get(myId, "pendingConnections", "FI:%s"%(targetId))
-            yield db.remove(myId, "pendingConnections", "FI:%s"%(targetId))
-            yield db.remove(targetId, "pendingConnections", "FO:%s"%(myId))
-            yield self._removeNotification(myId, targetId)
-        except:
-            pass
-
-    @defer.inlineCallbacks
-    def _cancelFriendRequest(self, request, myId, targetId):
-        try:
-            yield db.get(myId, "pendingConnections", "FO:%s"%(targetId))
-            yield db.remove(myId, "pendingConnections", "FO:%s"%(targetId))
-            yield db.remove(targetId, "pendingConnections", "FI:%s"%(myId))
-            yield self._removeNotification(targetId, myId)
-        except:
-            pass
-
-
-    @defer.inlineCallbacks
-    def _archiveFriendRequest(self, myKey, targetKey):
-        try:
-            cols = yield db.get_slice(myKey, "latest", ["people"])
-            cols = utils.supercolumnsToDict(cols)
-            for tuuid, key in cols['people'].items():
-                if key == targetKey:
-                    yield db.remove(myKey, "latest", tuuid, "people")
-        except ttypes.NotFoundException:
-            pass
-        # TODO: UI update
-
-
-    @profile
-    @defer.inlineCallbacks
-    @dump_args
-    def _unfriend(self, myKey, targetKey):
-        cols = yield db.multiget_slice([myKey, targetKey], "entities",
-                                        ["basic"])
-        users = utils.multiSuperColumnsToDict(cols)
-        targetDisplayName = users[targetKey]["basic"]["name"]
-        myDisplayName = users[myKey]["basic"]["name"]
-        myFirstName = users[myKey]["basic"].get("firstname", None)
-        myLastName = users[myKey]["basic"].get("lastname", None)
-        targetFirstName = users[targetKey]["basic"].get("firstname", None)
-        targetLastName = users[targetKey]["basic"].get("lastname", None)
-        _getColName = lambda name,Id: ":".join([name.lower(), Id])
-
-        mutations = {myKey:{}, targetKey:{}}
-        mutations[myKey]["connections"] = {targetKey: None}
-        mutations[myKey]["displayNameIndex"] = {_getColName(targetDisplayName, targetKey):None}
-        mutations[targetKey]["connections"] = {myKey:None}
-        mutations[targetKey]["displayNameIndex"] = {_getColName(myDisplayName, myKey):None}
-
-        if any([myDisplayName, myFirstName, myLastName]):
-            mutations[targetKey]["nameIndex"]={}
-        if any([targetDisplayName, targetFirstName, targetLastName]):
-            mutations[myKey]["nameIndex"] = {}
-
-        for name in [myDisplayName, myFirstName, myLastName]:
-            if name:
-                colname = _getColName(name, myKey)
-                mutations[targetKey]["nameIndex"][colname] = None
-        for name in [targetDisplayName, targetFirstName, targetLastName]:
-            if name:
-                colname = _getColName(name, targetKey)
-                mutations[myKey]["nameIndex"][colname] = None
-
-        yield db.batch_mutate(mutations)
-        # TODO: delete the notifications and items created while
-        # sending&accepting friend request
-
-    @profile
-    @defer.inlineCallbacks
-    @dump_args
     def _render(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
 
@@ -453,9 +237,7 @@ class ProfileResource(base.BaseResource):
         # that I don't have access to.
         relation = Relation(myKey, [userKey])
         args["relations"] = relation
-        yield defer.DeferredList([relation.initFriendsList(),
-                                  relation.initPendingList(),
-                                  relation.initSubscriptionsList(),
+        yield defer.DeferredList([relation.initSubscriptionsList(),
                                   relation.initGroupsList()])
 
         # Reload all user-depended blocks if the currently displayed user is
@@ -498,16 +280,9 @@ class ProfileResource(base.BaseResource):
         followers = set(utils.columnsToDict(cols).keys())
         args["followers"] = followers
 
-        # List the user's friends (if allowed and look for common friends)
-        cols = yield db.multiget_slice([myKey, userKey], "connections")
-        myFriends = set(utils.supercolumnsToDict(cols[myKey]).keys())
-        userFriends = set(utils.supercolumnsToDict(cols[userKey]).keys())
-        commonFriends = myFriends.intersection(userFriends)
-        args["commonFriends"] = commonFriends
-
         # Fetch item data (name and avatar) for subscriptions, followers,
         # user groups and common items.
-        entitiesToFetch = followers.union(subscriptions, commonFriends)\
+        entitiesToFetch = followers.union(subscriptions)\
                                    .difference(fetchedEntities)
         cols = yield db.multiget_slice(entitiesToFetch,
                                        "entities", super_column="basic")
@@ -568,11 +343,7 @@ class ProfileResource(base.BaseResource):
 
         def callback((targetKey, target)):
             actionDeferred = None
-            if action == "friend":
-                actionDeferred = self._friend(request, myKey, targetKey)
-            elif action == "unfriend":
-                actionDeferred = self._unfriend(myKey, targetKey)
-            elif action == "follow":
+            if action == "follow":
                 actionDeferred = self._follow(myKey, targetKey)
             elif action == "unfollow":
                 actionDeferred = self._unfollow(myKey, targetKey)
@@ -582,42 +353,13 @@ class ProfileResource(base.BaseResource):
             relation = Relation(myKey, [targetKey])
             data = {"relations": relation}
             def fetchRelations(ign):
-                return defer.DeferredList([relation.initFriendsList(),
-                                           relation.initPendingList(),
-                                           relation.initSubscriptionsList()])
+                return relation.initSubscriptionsList()
 
             isProfile = (utils.getRequestArg(request, "_pg") == "/profile")
             isFeed =    (utils.getRequestArg(request, "_pg")  == "/feed")
             isPeople =  (utils.getRequestArg(request, "_pg")  == "/people")
             def renderActions(ign):
-                def renderLatestCounts(ign):
-                    return utils.render_LatestCounts(request, False)
-
-                if not isFeed:
-                    d = renderScriptBlock(request, "profile.mako", "user_actions",
-                                    False, "#user-actions-%s"%targetKey, "set",
-                                    args=[targetKey, True], **data)
-                    if isProfile:
-                        def renderSubactions(ign):
-                            return renderScriptBlock(request, "profile.mako",
-                                        "user_subactions", False,
-                                        "#user-subactions-%s"%targetKey, "set",
-                                        args=[targetKey, False], **data)
-                        d.addCallback(renderSubactions)
-                    if isPeople:
-                        def updatePendingRequestsCount(ign):
-                            def _update_count(counts):
-                                pendingRequestCount = counts['people'] if counts.get('people', 0)!= 0 else ''
-                                request.write("$('#pending-requests-count').html('%s');"%(pendingRequestCount))
-                            d02 = utils.getLatestCounts(request, False)
-                            d02.addCallback(_update_count)
-                            return d02
-                        d.addCallback(updatePendingRequestsCount)
-                    d.addCallback(renderLatestCounts)
-                    return d
-                else:
-                    # if action == "friend" it is possible that user has accepted
-                    # friend request through suggestions. so update the counts.
+                if isFeed:
                     d = people.get_suggestions(request, constants.SUGGESTION_PER_PAGE, mini=True)
                     def renderSuggestion(res):
                         suggestions, entities = res
@@ -627,8 +369,11 @@ class ProfileResource(base.BaseResource):
                                                  suggestions = suggestions,
                                                  entities=entities)
                     d.addCallback(renderSuggestion)
-                    if action == "friend":
-                        d.addCallback(renderLatestCounts)
+                    return d
+                else:
+                    d = renderScriptBlock(request, "profile.mako", "user_actions",
+                                    False, "#user-actions-%s"%targetKey, "set",
+                                    args=[targetKey, True], **data)
                     return d
 
             actionDeferred.addCallback(fetchRelations)
