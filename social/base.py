@@ -20,7 +20,7 @@ class BaseResource(resource.Resource):
     @defer.inlineCallbacks
     def _getBasicArgs(self, request):
         auth = yield defer.maybeDeferred(request.getSession, IAuthInfo)
-        myKey = auth.username
+        myId = auth.username
         orgKey = auth.organization
         isOrgAdmin = auth.isAdmin
 
@@ -29,20 +29,20 @@ class BaseResource(resource.Resource):
         appchange = True if request.args.has_key('_fp') and self._ajax or\
                             not self._ajax and script else False
 
-        cols = yield db.multiget_slice([myKey, orgKey], "entities", ["basic"])
+        cols = yield db.multiget_slice([myId, orgKey], "entities", ["basic"])
         cols = utils.multiSuperColumnsToDict(cols)
 
-        me = cols.get(myKey, None)
+        me = cols.get(myId, None)
         org = cols.get(orgKey, None)
-        args = {"myKey": myKey, "orgKey": orgKey, "me": me,
+        args = {"myKey": myId, "orgKey": orgKey, "me": me,
                 "isOrgAdmin": isOrgAdmin, "ajax": self._ajax,
-                "script": script, "org": org}
+                "script": script, "org": org, "myId": myId, "orgId": orgKey}
 
         if appchange:
             latest = yield utils.getLatestCounts(request, False)
             args["latest"] = latest
 
-        defer.returnValue((appchange, script, args, myKey))
+        defer.returnValue((appchange, script, args, myId))
 
     @defer.inlineCallbacks
     def _handleErrors(self, failure, request):

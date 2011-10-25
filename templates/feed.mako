@@ -129,6 +129,7 @@
 
 <%def name="share_block()">
   %if script:
+    <div id="sharebar-disabler" class="sharebar-disabler"></div>
     <div id="sharebar-tabs" class="busy-indicator">
       <ul id="sharebar-links" class="h-links">
         <li>${_("Share:")}</li>
@@ -253,9 +254,7 @@
               <div class="user-details-title">${entities[userId]["basic"].get("jobTitle", '')}</div>
               <div >
                 <ul id="user-actions-${userId}" class="middle user-actions h-links">
-                %if userId not in relations.subscriptions:
                   <li><button class="button" onclick="$.post('/ajax/profile/follow', 'id=${userId}')"><span class="button-text" style="font-size:11px;">${_("Follow")}</span></button></li>
-                %endif
                 </ul>
               </div>
             </div>
