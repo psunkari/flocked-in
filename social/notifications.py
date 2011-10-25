@@ -44,7 +44,7 @@ def notify(userIds, notifyId, value, timeUUID=None, **kwargs):
     deferreds = []
 
     # Delete existing notifications for the same item/activiy
-    if not notifyIdParts[0] and notifyIdParts[1] not in ["GR", "NM", "MR", "MA"]:
+    if notifyIdParts[0] or notifyIdParts[1] not in ["GR", "NM", "MR", "MA"]:
         d1 = db.multiget_slice(userIds, "notificationItems",
                                super_column=notifyId, count=3, reverse=True)
         def deleteOlderNotifications(results):
