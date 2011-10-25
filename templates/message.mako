@@ -324,7 +324,6 @@
   </div>
   <div id="threads-wrapper" class="paged-container">
     <form action="/messages/thread" method="post" class="ajax">
-      
       %if not mids:
         <div id="empty-message" >${_("No messages")}</div>
       %else:

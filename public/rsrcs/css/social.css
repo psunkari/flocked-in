@@ -1000,6 +1000,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     word-wrap: break-word;
 }
 
+#empty-message,
 #next-load-wrapper {
     padding: 10px 20px;
     border-top: 1px solid #E0D7CF;
@@ -1017,6 +1018,9 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
         color-stop(0, #FFFFFF),
         color-stop(1, #F2F1F0)
     );
+}
+#empty-message {
+    text-align: center;
 }
 
 .no-likes .likes-wrapper,
@@ -1181,6 +1185,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     padding: 10px 0 0;
     margin: 10px 0 0;
     border-top: 1px solid #EEE;
+    clear: both;
 }
 
 .users-row:first-child {
@@ -1198,6 +1203,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .users-user {
     float: left;
     width: 48%;
+    margin-bottom: 8px;
 }
 
 .users-avatar {
