@@ -61,7 +61,7 @@
             <tr><td style="border-top:1px solid #DDD; font-size: 14px;padding-top:10px;">
               ${brandName} is a social network exclusively for people within your company
               to help you collaborate better. It revolutionizes communication at
-              workplace with a much richer, easier and more effective form of communication
+              workplace with a richer, easier and more effective form of communication
               &ndash; <a href="${rootUrl}/about/features.html">View all features &#187;</a>
             </td></tr>
           </table>
@@ -93,7 +93,7 @@
             <tr><td style="border-top:1px solid #DDD; font-size: 14px;padding-top:10px;">
               ${brandName} is a social network exclusively for people within your company
               to help you collaborate better. It revolutionizes communication at
-              workplace with a much richer, easier and more effective form of communication
+              workplace with a richer, easier and more effective form of communication
               &ndash; <a href="${rootUrl}/about/features.html">View all features &#187;</a>
             </td></tr>
           </table>
