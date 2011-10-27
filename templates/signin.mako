@@ -14,11 +14,13 @@
 
       if (email.value == '') {
         errorMessage.innerHTML = 'Enter your company email';
+        errorMessage.className = 'form-header error-input';
         return false;
       }
 
       if (password.value == '') {
         errorMessage.innerHTML = 'Enter your password';
+        errorMessage.className = 'form-header error-input';
         return false;
       }
 
@@ -55,14 +57,14 @@
         <p id="error-message" class="form-header ${msgClass}">${reasonStr}</p>
         <ul>
           <li>
-            <label for="singin-email" class="styled-label required">
+            <label for="signin-email" class="styled-label required">
               ${_('Email')}
               <abbr title="Required">*</abbr>
             </label>
-            <input id="singin-email" type="email" class="textfield" name="u" required autofocus></input>
+            <input id="signin-email" type="email" class="textfield" name="u" required autofocus></input>
           </li>
           <li>
-            <label for="singin-password" class="styled-label required">
+            <label for="signin-password" class="styled-label required">
               ${_('Password')}
               <abbr title="Required">*</abbr>
             </label>
