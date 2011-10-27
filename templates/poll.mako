@@ -2,10 +2,11 @@
 <!DOCTYPE HTML>
 
 <%namespace name="widgets" file="widgets.mako"/>
+<%namespace name="item" file="item.mako"/>
 
 <%def name="share_poll()">
   <div class="input-wrap">
-    <textarea name="question" placeholder="${_('What would you like to know?')}" required title="${_('Question')}"/>
+    <textarea name="comment" placeholder="${_('What would you like to know?')}" required title="${_('Question')}"/>
   </div>
   <div id="share-poll-options">
     <div class="input-wrap">
@@ -26,12 +27,12 @@
 
 <%def name="poll_results(convId, voted=False)">
   <%
-    conv = items[convId]
-    question = conv["meta"]["question"]
-    options = conv["options"]
-    counts = conv.get("counts", {})
     if not voted:
       return
+
+    conv = items[convId]
+    options = conv["options"]
+    counts = conv.get("counts", {})
   %>
   <ul class="poll-results">
     <%
@@ -81,7 +82,6 @@
 <%def name="poll_options(convId, voted=False)">
   <%
     conv = items[convId]
-    question = conv["meta"]["question"]
     options = conv["options"]
     counts = conv.get("counts", {})
   %>
@@ -136,14 +136,12 @@
 <%def name="poll_root(convId, isQuoted=False)">
   <%
     conv = items[convId]
-    question = conv["meta"]["question"]
-    options = conv["options"]
-    userId = conv["meta"]["owner"]
-    counts = conv.get("counts", {})
-    voted = myVotes[convId] if (myVotes and myVotes.get(convId, False))\
-                            else False
+    meta = conv['meta']
+    userId = meta["owner"]
+    voted = myVotes[convId] if (myVotes and myVotes.get(convId, False)) else False
     normalize = utils.normalizeText
-    target = items[convId]["meta"].get('target', '')
+
+    target = meta.get('target', '')
     target = target.split(',') if target else ''
     if target:
       target = [x for x in target if x in relations.groups]
@@ -159,7 +157,14 @@
   %endif
   <div class="item-title has-icon">
     <span class="icon item-icon poll-icon"></span>
-    <div class="item-title-text">${question|normalize}</div>
+    <div class="item-title-text">
+      <%
+        # XXX: 'question' is a backward compatible way. can be removed after db upgrade.
+        comment = meta.get('comment', '') or meta.get('question', '')
+        snippet = meta.get('snippet', '')
+      %>
+      ${item._renderText(snippet, comment)}
+    </div>
   </div>
   <div id="poll-contents-${convId}" class="item-contents has-icon">
   <%

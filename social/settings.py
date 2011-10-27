@@ -133,6 +133,9 @@ _notifyNames = ['friendRequest', 'friendAccept', 'follower', 'newMember',
     'itemComment', 'mention', 'itemRequests',
     'messageConv', 'messageMessage', 'messageAccessChange']
 
+# List of notifications that currently must not be displayed to the user
+_hiddenNotifys = [notifyFR, notifyFA, notifyMention, notifyItemRequests]
+
 # Utility function to help parse the notification preference
 # In case of an exception returns true
 def getNotifyPref(val, typ, medium):
@@ -198,9 +201,6 @@ class SettingsResource(base.BaseResource):
         me = yield db.get_slice(myKey, 'entities')
         me = utils.supercolumnsToDict(me)
 
-        cols = yield db.get_slice(myKey, 'connections')
-        friends = [item.super_column.name for item in cols]
-
         # Check if any basic information is being updated.
         for cn in ("jobTitle", "location", "desc", "name", "firstname", "lastname", "timezone"):
             val = utils.getRequestArg(request, cn)
@@ -211,8 +211,8 @@ class SettingsResource(base.BaseResource):
             else:
                 basicUpdatedInfo[cn] = me['basic'].get(cn, "")
 
-        # Update name indicies of organization and friends.
-        nameIndexKeys = friends + [args["orgKey"]]
+        # Update name indicies of organization.
+        nameIndexKeys = [args["orgKey"]]
         nameIndicesDeferreds = []
         for field in ["name", "lastname", "firstname"]:
             if "basic" in userInfo and field in userInfo["basic"]:
@@ -598,12 +598,12 @@ class SettingsResource(base.BaseResource):
 
         elif detail == "personal":
             description = ["""Your personal information is only accessible to your
-                             friends.
+                             colleagues.
                           """]
 
         elif detail == "contact":
             description = ["""Your contact information can be used to get in
-                             touch with you by your friends or your followers.
+                             touch with you.
                              We recommend completing this section if your work
                              involves being in constant touch with your colleagues.
                           """]

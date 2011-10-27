@@ -82,7 +82,7 @@
     avatarURI = utils.userAvatar(senderId, people[senderId], size)
     avatarSize = "48" if size == "m" else "32"
     if avatarURI:
-      return '<img src="%s" height="%s" width="%s" style="display:inline-block"/>' \
+      return '<img src="%s" style="max-height:%spx; max-width:%spx; display:inline-block;"/>' \
         %(avatarURI, avatarSize, avatarSize)
     else:
       return ''
@@ -91,7 +91,7 @@
 <%!
   def getAvatarImg(avatarURI, size="m"):
     avatarSize = "48" if size == "m" else "32"
-    return '<img src="%s" height="%s" width="%s" style="display:inline-block"/>' \
+    return '<img src="%s" style="max-height=%spx; max-width=%spx; display:inline-block"/>' \
         %(avatarURI, avatarSize, avatarSize)
 %>
 
@@ -324,7 +324,6 @@
   </div>
   <div id="threads-wrapper" class="paged-container">
     <form action="/messages/thread" method="post" class="ajax">
-      
       %if not mids:
         <div id="empty-message" >${_("No messages")}</div>
       %else:

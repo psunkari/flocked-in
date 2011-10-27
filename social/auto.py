@@ -156,7 +156,7 @@ class AutoCompleteResource(BaseResource):
 
 
     @defer.inlineCallbacks
-    def _users(self, request, term, myFriendsOnly=False):
+    def _users(self, request, term):
         if len(term) < 2:
             request.write("[]")
             return
@@ -303,8 +303,6 @@ class AutoCompleteResource(BaseResource):
             d = self._tags(request, term)
         elif path == "users":
             d = self._users(request, term)
-        elif path == "friends":
-            d = self._users(request, term, True)
         elif path == "groups":
             d = self._groups(request, term)
         elif path == "mygroups":

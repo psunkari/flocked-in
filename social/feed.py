@@ -278,8 +278,7 @@ def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
 
     relation = Relation(myId, [])
     relationsFetched = False
-    yield defer.DeferredList([relation.initFriendsList(),
-                              relation.initGroupsList()])
+    yield relation.initGroupsList()
 
     # Fetch and process feed items
     reasonUserIds = {}
@@ -602,24 +601,22 @@ class FeedResource(base.BaseResource):
 
             entity = utils.supercolumnsToDict(entity)
             entityType = entity["basic"]['type']
+
+            orgId = entity['basic']["org"] if entity['basic']["type"] != "org" else entityId
+
+            if myOrgId != orgId:
+                raise errors.EntityAccessDenied("organization", entityId)
+
             if entityType == 'org':
                 menuId = "org"
-                orgId = entityId
                 feedTitle = _("Company Feed: %s") % entity["basic"]["name"]
             elif entityType == 'group':
                 log.info("group-feed should be handled by groups resource")
-                request.redirect("/groups/feed?id=%s"%(entityId))
+                request.redirect("/group?id=%s"%(entityId))
                 defer.returnValue(None)
             else:
                 if entityId != myId:
-                    raise errors.EntityAccessDenied("feed", entityId)
-                orgId = entity["basic"]["org"]
-
-            if myOrgId != orgId:
-                raise errors.EntityAccessDenied("Organization", entityId)
-
-        suggestions, entities = yield people.get_suggestions(request,
-                                                SUGGESTION_PER_PAGE, mini=True)
+                    raise errors.EntityAccessDenied("user", entityId)
 
         feedId = entityId or myId
         args["feedTitle"] = feedTitle
@@ -655,6 +652,9 @@ class FeedResource(base.BaseResource):
         args["feedId"] = feedId
         args["menuId"] = menuId
         args['itemType']=itemType
+
+        suggestions, entities = yield people.get_suggestions(request,
+                                                SUGGESTION_PER_PAGE, mini=True)
         args["suggestions"] = suggestions
 
         if "entities" not in args:
@@ -663,8 +663,7 @@ class FeedResource(base.BaseResource):
             for entity in entities:
                 if entity not in args["entities"]:
                     args["entities"][entity] = entities[entity]
-        yield args["relations"].initSubscriptionsList()
-
+        
         if script:
             onload = "(function(obj){$$.convs.load(obj);})(this);"
             yield renderScriptBlock(request, "feed.mako", "feed", landing,
@@ -688,11 +687,10 @@ class FeedResource(base.BaseResource):
         entityId = utils.getRequestArg(request, "id")
         start = utils.getRequestArg(request, "start") or ""
         itemType = utils.getRequestArg(request, 'type')
-
         entity = yield db.get_slice(entityId, "entities", ["basic"])
+        entity = utils.supercolumnsToDict(entity)
         if entity and entity["basic"].get("type", '') == "group":
-            request.redirect('/groups/feed/more?id=%s' %(entityId))
-            defer.returnValue(None)
+            errors.InvalidRequest("group feed will not be fetched.")
 
         if itemType and itemType in plugins and plugins[itemType].hasIndex:
             feedItems = yield _feedFilter(request, entityId, itemType, start)

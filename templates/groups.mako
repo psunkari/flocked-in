@@ -89,7 +89,7 @@
   <div class="users-avatar">
     <% avatarURI = utils.groupAvatar(groupId, entities[groupId], "medium") %>
     %if avatarURI:
-      <img src="${avatarURI}" height='48' width='48'></img>
+      <img src="${avatarURI}" style="max-height:48px; max-width:48px"></img>
     %endif
   </div>
   <div class="users-details">
@@ -115,7 +115,7 @@
 <%def name="viewOptions(selected)">
   <%
     options = [('myGroups', 'My Groups'), ('allGroups', 'All Groups'), ('adminGroups', 'Groups managed by Me')]
-    if showInvitaitonsTab:
+    if showInvitationsTab:
       options.append(('invitations', 'Group Invitations'))
     if showPendingRequestsTab:
         options.append(("pendingRequests", "Pending Requests"))
@@ -223,7 +223,7 @@
   %elif action == 'removed':
     <button class="button disabled"><span class="button-text">${_("Removed")}</span></button>
   %elif action == 'show_blocked':
-    <button class="button default" onclick="$.post('/ajax/groups/unblock', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Un-ban")}</span></button>
+    <button class="button default" onclick="$.post('/ajax/groups/unblock', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Unblock")}</span></button>
   %elif action == 'show_manage':
     <button class="button default" onclick="$.post('/ajax/groups/remove', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Remove")}</span></button>
     <button class="button default" onclick="$.post('/ajax/groups/block', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Block")}</span></button>
@@ -267,7 +267,7 @@
   <div class="users-avatar">
     <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
     %if avatarURI:
-        <img src="${avatarURI}" height='48' width='48'></img>
+      <img src="${avatarURI}" style="max-height:48px; max-width:48px"></img>
     %endif
   </div>
   <div class="users-details">

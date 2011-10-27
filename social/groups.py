@@ -49,19 +49,20 @@ class GroupsResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _follow(self, request):
-        appchange, script, args, myKey = yield self._getBasicArgs(request)
+        myId = request.getSession(IAuthInfo).username
         landing = not self._ajax
         groupId, group = yield utils.getValidEntityId(request, "id", "group")
 
         try:
             colname = "%s:%s" %(group["basic"]["name"].lower(), groupId)
-            cols = yield db.get(myKey, "entityGroupsMap", colname)
-            yield db.insert(groupId, "followers", "", myKey)
-            args["groupId"] = groupId
+            cols = yield db.get(myId, "entityGroupsMap", colname)
+            yield db.insert(groupId, "followers", "", myId)
+            args = {"groupId": groupId}
             args["myGroups"] = [groupId]
             args["pendingConnections"] = {}
-            args["groupFollowers"] = {groupId:[myKey]}
+            args["groupFollowers"] = {groupId:[myId]}
             args["entities"] = {groupId: group}
+            args['myId'] = myId
             yield renderScriptBlock(request, "group-feed.mako", "group_actions",
                                     landing, "#group-actions-%s" %(groupId),
                                     "set", **args)
@@ -73,19 +74,20 @@ class GroupsResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _unfollow(self, request):
-        appchange, script, args, myKey = yield self._getBasicArgs(request)
+        myId = request.getSession(IAuthInfo).username
         landing = not self._ajax
         groupId, group = yield utils.getValidEntityId(request, "id", "group")
         try:
             colname = "%s:%s" %(group["basic"]["name"].lower(), groupId)
-            cols = yield db.get(myKey, "entityGroupsMap", colname)
-            yield db.remove(groupId, "followers", myKey)
+            cols = yield db.get(myId, "entityGroupsMap", colname)
+            yield db.remove(groupId, "followers", myId)
 
-            args["groupId"] = groupId
+            args = {"groupId": groupId}
             args["myGroups"] = [groupId]
             args["pendingConnections"] = {}
             args["groupFollowers"] = {groupId:[]}
             args["entities"] = {groupId: group}
+            args['myId'] = myId
             yield renderScriptBlock(request, "group-feed.mako", "group_actions",
                                     landing, "#group-actions-%s" %(groupId),
                                     "set", **args)
@@ -104,7 +106,7 @@ class GroupsResource(base.BaseResource):
         userInfo = utils.supercolumnsToDict(cols)
 
         responseType = "I"
-        acl = {"accept":{"groups":[groupId], "followers":[], "friends":[]}}
+        acl = {"accept":{"groups":[groupId]}}
         _acl = pickle.dumps(acl)
 
         itemId = utils.getUniqueKey()
@@ -131,19 +133,19 @@ class GroupsResource(base.BaseResource):
 
 
     @defer.inlineCallbacks
-    def _cancelGroupInvitaiton(self, request):
-
-        appchange, script, args, myId = yield self._getBasicArgs(request)
+    def _cancelGroupInvitation(self, request):
+        myId = request.getSession(IAuthInfo).username
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                       columns=["admins"])
         cols = yield db.get_slice(myId, "pendingConnections", ["GI:%s"%(groupId)])
         if cols:
             yield self._removeFromPending(groupId, myId)
-            args["groupId"] = groupId
+            args = {"groupId": groupId}
             args["entities"] = {groupId: group}
             args["myGroups"] = []
             args["groupFollowers"] = {groupId:[]}
             args["pendingConnections"] = []
+            args['myId'] = myId
             yield renderScriptBlock(request, "group-feed.mako", "group_actions",
                                     False, "#group-actions-%s" %(groupId),
                                     "set", **args)
@@ -152,42 +154,44 @@ class GroupsResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _subscribe(self, request):
-        appchange, script, args, myKey = yield self._getBasicArgs(request)
+        appchange, script, args, myId = yield self._getBasicArgs(request)
+        orgId = args["orgId"]
         landing = not self._ajax
-        myOrgId = args["orgKey"]
         groupId, group = yield utils.getValidEntityId(request, "id", "group", ["admins"])
         access = group["basic"]["access"]
         myGroups = []
         pendingRequests = {}
         groupFollowers = {groupId:[]}
+        _pg = utils.getRequestArg(request, '_pg')
 
-        cols = yield db.get_slice(groupId, "blockedUsers", [myKey])
+        cols = yield db.get_slice(groupId, "blockedUsers", [myId])
         if cols:
             raise errors.PermissionDenied(_("You are banned from joining this group."))
 
+        args['entities'] = {groupId: group}
         colname = "%s:%s" %(group['basic']['name'].lower(), groupId)
         try:
-            cols = yield db.get(myKey, "entityGroupsMap", colname)
+            cols = yield db.get(myId, "entityGroupsMap", colname)
         except ttypes.NotFoundException:
             if access == "open":
-                yield self._addMember(request, groupId, myKey, myOrgId, group)
+                yield self._addMember(request, groupId, myId, orgId, group)
                 myGroups.append(groupId)
-                groupFollowers[groupId].append(myKey)
-                yield self._removeFromPending(groupId, myKey)
+                groupFollowers[groupId].append(myId)
+                yield self._removeFromPending(groupId, myId)
                 args["isMember"] = True
             else:
                 # Add to pending connections
-                yield db.insert(myKey, "pendingConnections", '', "GO:%s" %(groupId))
-                yield db.insert(groupId, "pendingConnections", '', "GI:%s"%(myKey))
+                yield db.insert(myId, "pendingConnections", '', "GO:%s" %(groupId))
+                yield db.insert(groupId, "pendingConnections", '', "GI:%s"%(myId))
 
-                yield self._notify(groupId, myKey)
-                pendingRequests["GO:%s"%(groupId)] = myKey
+                yield self._notify(groupId, myId)
+                pendingRequests["GO:%s"%(groupId)] = myId
 
                 entities = yield db.multiget_slice(group["admins"], "entities", ["basic"])
                 entities = utils.multiSuperColumnsToDict(entities)
-                entities.update({groupId: group, args["orgKey"]: args["org"], myKey: args["me"]})
+                entities.update({groupId: group, orgId: args["org"], myId: args["me"]})
                 data = {"entities": entities , "groupName": group['basic']['name']}
-                yield notifications.notify(group["admins"], ":GR", myKey, **data)
+                yield notifications.notify(group["admins"], ":GR", myId, **data)
 
             args["pendingConnections"] = pendingRequests
             args["groupFollowers"] = groupFollowers
@@ -196,16 +200,31 @@ class GroupsResource(base.BaseResource):
 
             if script:
                 handlers = {}
-                if access == 'open':
-                    onload = "$('#sharebar-attach-fileshare').removeAttr('disabled');"
-                    onload += "$('#sharebar-attach-file-input').removeAttr('disabled');"
-                    onload += "$('#sharebar-submit').removeAttr('disabled');"
+                if access == 'open' and _pg == '/group':
+                    onload = """
+                                 $('#group_add_invitee').autocomplete({
+                                    source: '/auto/users',
+                                   minLength: 2,
+                                   select: function( event, ui ) {
+                                       $('#group_invitee').attr('value', ui.item.uid)
+                                   }
+                                  });
+                                 """
+                    yield renderScriptBlock(request, "group-feed.mako", "groupLinks",
+                                            landing, "#group-links", "set",
+                                            handlers={"onload":onload}, **args)
+
+                    onload = "$('#sharebar-attach-fileshare,"\
+                                "#sharebar-attach-file-input,"\
+                                "#sharebar-submit').removeAttr('disabled');"
+                    onload += "$('#share-block').removeClass('disabled');"
+                    onload += "$('#group-links').show();"
                     handlers = {'onload': onload}
 
                 yield renderScriptBlock(request, "group-feed.mako", "group_actions",
                                         landing, "#group-actions-%s" %(groupId),
                                         "set", handlers = handlers, **args)
-                if access == 'open':
+                if access == 'open' and _pg == '/group':
                     feedItems = yield feed.getFeedItems(request, feedId=groupId)
                     args.update(feedItems)
                     onload = "(function(obj){$$.convs.load(obj);})(this);"
@@ -214,27 +233,22 @@ class GroupsResource(base.BaseResource):
                                             handlers={"onload": onload}, **args)
 
 
-
-            #yield renderScriptBlock(request, "groups.mako", "group_actions",
-            #                        landing, "#group-actions-%s" %(groupId),
-            #                        "set", **args)
-
-
     @profile
     @defer.inlineCallbacks
     @dump_args
     def _approve(self, request):
-        appchange, script, args, myKey = yield self._getBasicArgs(request)
-        myOrgId = args["orgKey"]
+        authInfo = request.getSession(IAuthInfo)
+        myId = authInfo.username
+        orgId = authInfo.organization
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                       columns=["admins"])
 
-        if myKey in group["admins"]:
+        if myId in group["admins"]:
             userId, user = yield utils.getValidEntityId(request, "uid", "user")
             try:
                 yield db.get(groupId, "pendingConnections", "GI:%s"%(userId))
                 d1 = self._removeFromPending(groupId, userId)
-                d2 = self._addMember(request, groupId, userId, myOrgId, group)
+                d2 = self._addMember(request, groupId, userId, orgId, group)
                 d3 = renderScriptBlock(request, "groups.mako",
                                        "groupRequestActions", False,
                                        '#group-request-actions-%s-%s' %(userId, groupId),
@@ -252,11 +266,11 @@ class GroupsResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _reject(self, request):
-        appchange, script, args, myKey = yield self._getBasicArgs(request)
+        myId = request.getSession(IAuthInfo).username
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                       columns=["admins"])
 
-        if myKey in group["admins"]:
+        if myId in group["admins"]:
             userId, user = yield utils.getValidEntityId(request, "uid", "user")
             try:
                 yield db.get(groupId, "pendingConnections", "GI:%s"%(userId))
@@ -273,13 +287,13 @@ class GroupsResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _block(self, request):
-        appchange, script, args, myKey = yield self._getBasicArgs(request)
+        myId = request.getSession(IAuthInfo).username
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                       columns=["admins"])
 
-        if myKey in group["admins"]:
+        if myId in group["admins"]:
             userId, user = yield utils.getValidEntityId(request, "uid", "user")
-            if myKey == userId and myKey in group["admins"]:
+            if myId == userId and myId in group["admins"]:
                 raise errors.InvalidRequest(_("An administrator cannot ban himself/herself from the group"))
             try:
                 yield db.get(groupId, "pendingConnections", "GI:%s"%(userId))
@@ -303,11 +317,11 @@ class GroupsResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _unblock(self, request):
-        appchange, script, args, myKey = yield self._getBasicArgs(request)
+        myId = request.getSession(IAuthInfo).username
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                       columns=["admins"])
 
-        if myKey in group["admins"]:
+        if myId in group["admins"]:
             userId, user = yield utils.getValidEntityId(request, "uid", "user")
             yield db.remove(groupId, "blockedUsers", userId)
             yield renderScriptBlock(request, "groups.mako",
@@ -319,9 +333,11 @@ class GroupsResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _unsubscribe(self, request):
-        appchange, script, args, myId = yield self._getBasicArgs(request)
+        authInfo = request.getSession(IAuthInfo)
+        myId = authInfo.username
+        orgId = authInfo.organization
         landing = not self._ajax
-        orgId = args["orgKey"]
+        _pg = utils.getRequestArg(request, '_pg')
 
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                       columns=["admins"])
@@ -335,14 +351,18 @@ class GroupsResource(base.BaseResource):
 
         itemType = "activity"
         responseType = "I"
-        args["groupId"] = groupId
+        args = {"groupId": groupId}
         args["entities"] = {groupId: group}
         args["myGroups"] = []
         args["groupFollowers"] = {groupId:[]}
         args["pendingConnections"] = []
+        me = yield db.get_slice(myId, "entities", ['basic'])
+        me = utils.supercolumnsToDict(me)
+        args["me"] = me
+        args['myId'] = myId
 
         itemId = utils.getUniqueKey()
-        acl = {"accept":{"groups":[groupId], "followers":[], "friends":[]}}
+        acl = {"accept":{"groups":[groupId]}}
         _acl = pickle.dumps(acl)
         item, attachments = yield utils.createNewItem(request, itemType, myId,
                                    acl, "groupLeave", orgId)
@@ -362,12 +382,13 @@ class GroupsResource(base.BaseResource):
         d7 = utils.updateDisplayNameIndex(myId, [groupId], None,
                                           args['me']['basic']['name'])
         deferreds = [d1, d2, d3, d4, d5, d6, d7]
-        if script:
-            onload = "(function(obj){$$.convs.load(obj);})(this);"
-            onload += "$('#sharebar-attach-fileshare').attr('disabled', 'disabled');"
-            onload += "$('#sharebar-attach-file-input').attr('disabled', 'disabled');"
-            onload += "$('#sharebar-submit').attr('disabled', 'disabled');"
-            args["isMember"] = False
+        onload = "(function(obj){$$.convs.load(obj);})(this);"
+        onload += "$('#sharebar-attach-fileshare, #sharebar-attach-file-input').attr('disabled', 'disabled');"
+        onload += "$('#sharebar-submit').attr('disabled', 'disabled');"
+        onload += "$('#share-block').addClass('disabled');"
+        onload += "$('#group-links').hide();"
+        args["isMember"] = False
+        if _pg == '/group':
             d8 = renderScriptBlock(request, "group-feed.mako", "feed", landing,
                                     "#user-feed", "set", True,
                                     handlers={"onload": onload}, **args)
@@ -382,9 +403,8 @@ class GroupsResource(base.BaseResource):
             Method to remove an user from a group.
             Note: only a group-administrator can remove a user from the group.
         """
-        appchange, script, args, myId = yield self._getBasicArgs(request)
+        myId = request.getSession(IAuthInfo).username
         landing = not self._ajax
-        orgId = args["orgKey"]
 
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
                                                         columns=['admins'])
@@ -413,7 +433,7 @@ class GroupsResource(base.BaseResource):
             #XXX: remove item from feed?
             yield defer.DeferredList([d1, d2, d3, d4, d5, d6])
 
-            request.write("$$.alerts.info('%s is invited to the %s');" %(user['basic']['name'], group['basic']['name']))
+            request.write("$$.alerts.info('%s is removed from %s');" %(user['basic']['name'], group['basic']['name']))
 
         except ttypes.NotFoundException:
             pass
@@ -423,8 +443,9 @@ class GroupsResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _create(self, request):
-        appchange, script, args, myKey = yield self._getBasicArgs(request)
-        orgKey = args["orgKey"]
+        authInfo = request.getSession(IAuthInfo)
+        myId = authInfo.username
+        orgId = authInfo.organization
 
         name = utils.getRequestArg(request, "name")
         description = utils.getRequestArg(request, "desc")
@@ -434,18 +455,18 @@ class GroupsResource(base.BaseResource):
         if not name:
             raise errors.MissingParams([_("Group name")])
 
-        cols = yield db.get_slice(orgKey, "entityGroupsMap", start=name.lower(), count=2)
+        cols = yield db.get_slice(orgId, "entityGroupsMap", start=name.lower(), count=2)
         for col in cols:
             if col.column.name.split(':')[0] == name.lower():
-                request.write("<script> parent.$$.alerts.error('group already exists'); </script>")
+                request.write("<script> parent.$$.alerts.error('Group already exists'); </script>")
                 raise errors.InvalidGroupName(name)
 
         groupId = utils.getUniqueKey()
         meta = {"name":name,
                 "type":"group",
                 "access":access,
-                "org":args["orgKey"]}
-        admins = {myKey:''}
+                "org":orgId}
+        admins = {myId:''}
         if description:
             meta["desc"] = description
 
@@ -456,9 +477,9 @@ class GroupsResource(base.BaseResource):
         yield db.batch_insert(groupId, "entities", {"basic": meta,
                                                     "admins": admins})
         colname = "%s:%s" %(meta['name'].lower(), groupId)
-        yield db.insert(myKey, "entities", name, groupId, 'adminOfGroups')
-        yield db.insert(orgKey, "entityGroupsMap", '', colname)
-        yield self._addMember(request, groupId, myKey, orgKey, {"basic":meta})
+        yield db.insert(myId, "entities", name, groupId, 'adminOfGroups')
+        yield db.insert(orgId, "entityGroupsMap", '', colname)
+        yield self._addMember(request, groupId, myId, orgId, {"basic":meta})
 
         response = """
                     <script>
@@ -475,9 +496,8 @@ class GroupsResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _renderCreate(self, request):
-        appchange, script, args, myKey = yield self._getBasicArgs(request)
+        appchange, script, args, myId = yield self._getBasicArgs(request)
         landing = not self._ajax
-        orgKey = args["orgKey"]
         args["menuId"] = "groups"
 
         if script and landing:
@@ -499,7 +519,7 @@ class GroupsResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _getPendingGroupRequests(self, request):
-        appchange, script, args, myId = yield self._getBasicArgs(request)
+        myId = request.getSession(IAuthInfo).username
         cols = yield db.get_slice(myId, "entities", super_column='adminOfGroups')
         managedGroupIds = [col.column.name for col in cols]
 
@@ -585,8 +605,9 @@ class GroupsResource(base.BaseResource):
         defer.returnValue((userIds, entities, prevPageStart, nextPageStart))
 
     @defer.inlineCallbacks
-    def _getGroupInviations(self, request):
-        appchange, script, args, myId = yield self._getBasicArgs(request)
+    def _getGroupInvitations(self, request):
+        myId = request.getSession(IAuthInfo).username
+
         start = utils.getRequestArg(request, 'start') or 'GI'
         start = utils.decodeKey(start)
         count = PEOPLE_PER_PAGE
@@ -623,7 +644,7 @@ class GroupsResource(base.BaseResource):
     def _listGroups(self, request):
         appchange, script, args, myId = yield self._getBasicArgs(request)
         landing = not self._ajax
-        orgId = args["orgKey"]
+        orgId = args["orgId"]
 
         viewType = utils.getRequestArg(request, 'type') or 'myGroups'
         start = utils.getRequestArg(request, 'start') or ''
@@ -651,9 +672,9 @@ class GroupsResource(base.BaseResource):
             args["viewType"] = viewType
 
         cols = yield db.get_slice(myId, "pendingConnections", start="GI:", count=1)
-        args["showInvitaitonsTab"] = bool(len([col for col in cols if col.column.name.startswith('GI:')]))
+        args["showInvitationsTab"] = bool(len([col for col in cols if col.column.name.startswith('GI:')]))
 
-        if viewType == 'invitations' and not args["showInvitaitonsTab"]:
+        if viewType == 'invitations' and not args["showInvitationsTab"]:
             viewType = 'myGroups'
             args['viewType'] = viewType
 
@@ -746,7 +767,7 @@ class GroupsResource(base.BaseResource):
             args["nextPageStart"] = nextPageStart
             args['tab'] = 'pending'
         elif viewType == 'invitations':
-            groupIds, entities, prevPageStart, nextPageStart, pendingConnections = yield self._getGroupInviations(request)
+            groupIds, entities, prevPageStart, nextPageStart, pendingConnections = yield self._getGroupInvitations(request)
             args["groupIds"] = groupIds
             args["entities"] = entities
             args["prevPageStart"] = prevPageStart
@@ -759,7 +780,7 @@ class GroupsResource(base.BaseResource):
             yield renderScriptBlock(request, "groups.mako", "viewOptions",
                                     landing, "#groups-view", "set", args=[viewType],
                                     showPendingRequestsTab=showPendingRequestsTab,
-                                    showInvitaitonsTab = args['showInvitaitonsTab'],
+                                    showInvitationsTab = args['showInvitationsTab'],
                                     groupRequestCount=groupRequestCount)
             if viewType == "pendingRequests":
                 yield renderScriptBlock(request, "groups.mako", "allPendingRequests",
@@ -803,14 +824,14 @@ class GroupsResource(base.BaseResource):
 
         users, relation, userIds, blockedUsers, nextPageStart,\
             prevPageStart = yield people.getPeople(myId, groupId,
-                                                   args['orgKey'], start=start)
+                                                   args['orgId'], start=start)
         args["relations"] = relation
         args["entities"] = users
         args["userIds"] = userIds
         args["blockedUsers"] = blockedUsers
         args["nextPageStart"] = nextPageStart
         args["prevPageStart"] = prevPageStart
-        args["heading"] = group['basic']['name'].capitalize()
+        args["heading"] = group['basic']['name']
         args["entities"].update({groupId: group})
 
         if script:
@@ -837,7 +858,7 @@ class GroupsResource(base.BaseResource):
         args["menuId"] = "banned"
         args["groupId"] = groupId
         args["entities"] = {groupId: group}
-        args["heading"] = group['basic']['name'].capitalize()
+        args["heading"] = group['basic']['name']
 
         if script and landing:
             yield render(request, "group-settings.mako", **args)
@@ -880,7 +901,7 @@ class GroupsResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _listPendingSubscriptions(self, request):
-        appchange, script, args, myKey = yield self._getBasicArgs(request)
+        appchange, script, args, myId = yield self._getBasicArgs(request)
         landing = not self._ajax
         start = utils.getRequestArg(request, 'start') or 'GI'
         count = PEOPLE_PER_PAGE
@@ -893,7 +914,7 @@ class GroupsResource(base.BaseResource):
         args["menuId"] = "pending"
         args["groupId"] = groupId
         args["entities"] = {groupId: group}
-        args["heading"] = group['basic']['name'].capitalize()
+        args["heading"] = group['basic']['name']
 
         if script and landing:
             yield render(request, "group-settings.mako", **args)
@@ -901,8 +922,8 @@ class GroupsResource(base.BaseResource):
             yield renderScriptBlock(request, "group-settings.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-        if myKey in group["admins"]:
-            #or myKey in moderators #if i am moderator
+        if myId in group["admins"]:
+            #or myId in moderators #if i am moderator
             cols = yield db.get_slice(groupId, "pendingConnections",
                                       start=start, count=toFetchCount)
             userIds = [x.column.name.split(':')[1] for x in cols if len(x.column.name.split(':'))==2]
@@ -942,7 +963,6 @@ class GroupsResource(base.BaseResource):
     @defer.inlineCallbacks
     def _invite(self, request):
         appchange, script, args, myId = yield self._getBasicArgs(request)
-        myOrgId = args["orgKey"]
         landing = not self._ajax
 
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
@@ -1033,7 +1053,7 @@ class GroupsResource(base.BaseResource):
             elif action == 'unsubscribe':
                 d = self._unsubscribe(request)
             elif action == 'cancel':
-                d = self._cancelGroupInvitaiton(request)
+                d = self._cancelGroupInvitation(request)
             elif action == 'create':
                 d = self._create(request)
             elif action == 'remove':
@@ -1063,17 +1083,10 @@ class GroupFeedResource(base.BaseResource):
 
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         itemType = utils.getRequestArg(request, 'type')
-        groupId = utils.getRequestArg(request, 'id')
+        groupId, group = yield utils.getValidEntityId(request, 'id', 'group', columns=["admins"])
         start = utils.getRequestArg(request, "start") or ''
 
         landing = not self._ajax
-        myOrgId = args["orgKey"]
-
-        if not groupId:
-            request.redirect('/feed')
-            defer.returnValue(None)
-
-        groupId, group = yield utils.getValidEntityId(request, 'id', 'group', columns=["admins"])
         #if user dont belong to this group show "Join Group" message
         isMember = yield db.get_count(groupId, "groupMembers", start=myId, finish=myId)
         isFollower = yield db.get_count(groupId, "followers", start=myId, finish=myId)
@@ -1086,12 +1099,8 @@ class GroupFeedResource(base.BaseResource):
         args["groupId"] = groupId
         args["isMember"] = isMember
         args['itemType'] = itemType
-        args["feedTitle"] = "Group Feed: %s" %(group['basic']['name'])
         args["group"] = group
         args["entities"]= {groupId:group}
-        admins = yield db.multiget_slice(group["admins"], 'entities', ["basic"])
-        admins = utils.multiSuperColumnsToDict(admins)
-        args["entities"].update(admins)
 
         ##XXX: following should not be static
         args["pendingConnections"] = pendingConnections
@@ -1113,6 +1122,8 @@ class GroupFeedResource(base.BaseResource):
                 onload += "$('#sharebar-attach-fileshare').attr('disabled', 'disabled');"
                 onload += "$('#sharebar-attach-file-input').attr('disabled', 'disabled');"
                 onload += "$('#sharebar-submit').attr('disabled', 'disabled');"
+                onload += "$('#share-block').addClass('disabled');"
+
             yield renderScriptBlock(request, "feed.mako", "share_block",
                                     landing,  "#share-block", "set",
                                     handlers={"onload": onload}, **args)
@@ -1126,13 +1137,14 @@ class GroupFeedResource(base.BaseResource):
                 feedItems = yield feed._feedFilter(request, groupId, itemType, start)
             else:
                 feedItems = yield feed.getFeedItems(request, feedId=groupId, start=start)
-
             args.update(feedItems)
-            for admin in admins:
-                if admin not in args["entities"]:
-                    args["entities"][admin] = admins[admin]
         else:
             args["conversations"]=[]
+        admins = yield db.multiget_slice(group["admins"], 'entities', ["basic"])
+        admins = utils.multiSuperColumnsToDict(admins)
+        for admin in admins:
+            if admin not in args["entities"]:
+                args["entities"][admin] = admins[admin]
         #update overrides the group-info also
         args["entities"][groupId]  = group
 
@@ -1141,21 +1153,22 @@ class GroupFeedResource(base.BaseResource):
             yield renderScriptBlock(request, "group-feed.mako", "feed", landing,
                                     "#user-feed", "set", True,
                                     handlers={"onload": onload}, **args)
-            onload = """
-                     $('#group_add_invitee').autocomplete({
-                           source: '/auto/users',
-                           minLength: 2,
-                           select: function( event, ui ) {
-                               $('#group_invitee').attr('value', ui.item.uid)
-                           }
-                      });
-                     """
-            yield renderScriptBlock(request, "group-feed.mako", "groupLinks",
-                                    landing, "#group-links", "set",
-                                    handlers={"onload":onload}, **args)
+            if isMember:
+                onload = """
+                         $('#group_add_invitee').autocomplete({
+                               source: '/auto/users',
+                               minLength: 2,
+                               select: function( event, ui ) {
+                                   $('#group_invitee').attr('value', ui.item.uid)
+                               }
+                          });
+                         """
+                yield renderScriptBlock(request, "group-feed.mako", "groupLinks",
+                                        landing, "#group-links", "set",
+                                        handlers={"onload":onload}, **args)
             yield renderScriptBlock(request, "group-feed.mako", "groupAdmins",
                                     landing, "#group-admins", "set", True, **args)
-        if not script:
+        else:
             yield render(request, "group-feed.mako", **args)
 
     @profile
@@ -1170,6 +1183,7 @@ class GroupFeedResource(base.BaseResource):
     @defer.inlineCallbacks
     def _renderMore(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        myId = request.getSession(IAuthInfo).username
 
         entityId = utils.getRequestArg(request, "id")
         start = utils.getRequestArg(request, "start") or ""
@@ -1208,13 +1222,12 @@ class GroupFeedResource(base.BaseResource):
 class GroupSettingsResource(base.BaseResource):
 
     isLeaf = True
+
     @profile
     @defer.inlineCallbacks
     @dump_args
     def _renderEditGroup(self, request):
-
         appchange, script, args, myId = yield self._getBasicArgs(request)
-        myOrgId = args["orgKey"]
         landing = not self._ajax
 
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
@@ -1243,9 +1256,10 @@ class GroupSettingsResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _edit(self, request):
+        authInfo = request.getSession(IAuthInfo)
+        myId = authInfo.username
+        orgId = authInfo.organization
 
-        appchange, script, args, myId = yield self._getBasicArgs(request)
-        myOrgId = args["orgKey"]
         landing = not self._ajax
 
         groupId, group = yield utils.getValidEntityId(request, "id", "group",
@@ -1254,14 +1268,15 @@ class GroupSettingsResource(base.BaseResource):
             raise errors.PermissionDenied('You should be an administrator to edit group meta data')
         name = utils.getRequestArg(request, 'name')
         desc = utils.getRequestArg(request, 'desc')
-        access = utils.getRequestArg(request, 'access')
+        access = utils.getRequestArg(request, 'access') or 'open'
         dp = utils.getRequestArg(request, "dp", sanitize=False) or ''
+
         meta = {'basic':{}}
         if name:
             meta['basic']['name'] = name
         if desc:
             meta['basic']['desc'] = desc
-        if access and access in ['closed', 'open']:
+        if access in ['closed', 'open']:
             meta['basic']['access'] = access
         if dp:
             avatar = yield saveAvatarItem(groupId, dp)
@@ -1270,7 +1285,7 @@ class GroupSettingsResource(base.BaseResource):
             if name and name!=group["basic"]["name"]:
                 members = yield db.get_slice(groupId, "groupMembers")
                 members = utils.columnsToDict(members).keys()
-                entities = members + [args["orgKey"]]
+                entities = members + [orgId]
                 oldColName = "%s:%s"%(group["basic"]["name"].lower(), groupId)
                 colname = '%s:%s' %(name.lower(), groupId)
                 mutations = {}
@@ -1280,8 +1295,7 @@ class GroupSettingsResource(base.BaseResource):
                 yield db.batch_mutate(mutations)
 
             yield db.batch_insert(groupId, 'entities', meta)
-            if script:
-                request.write("<script>parent.$$.alerts.info('updated successful');</script>")
+            request.write("<script>parent.$$.alerts.info('updated successful');</script>")
 
     def render_GET(self, request):
         segmentCount = len(request.postpath)
@@ -1289,10 +1303,8 @@ class GroupSettingsResource(base.BaseResource):
         d = None
         if segmentCount == 0:
             d = self._renderEditGroup(request)
-        if segmentCount == 1:
-            action = request.postpath[0]
-            if action == 'edit':
-                d = self._renderEditGroup(request)
+        elif segmentCount == 1 and request.postpath[0] == 'edit':
+            d = self._renderEditGroup(request)
 
         return self._epilogue(request, d)
 
@@ -1300,9 +1312,7 @@ class GroupSettingsResource(base.BaseResource):
     def render_POST(self, request):
         segmentCount = len(request.postpath)
         d = None
-        if segmentCount == 1:
-            action = request.postpath[0]
-            if action == 'edit':
-                d = self._edit(request)
+        if segmentCount == 1 and request.postpath[0] == 'edit':
+            d = self._edit(request)
         return self._epilogue(request, d)
 

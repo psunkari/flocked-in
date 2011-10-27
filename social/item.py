@@ -95,9 +95,8 @@ class ItemResource(base.BaseResource):
         owner = meta["owner"]
 
         relation = Relation(myKey, [])
-        yield defer.DeferredList([relation.initFriendsList(),
-                                  relation.initSubscriptionsList(),
-                                  relation.initGroupsList()])
+        yield defer.DeferredList([relation.initGroupsList(),
+                                  relation.initSubscriptionsList()])
         args["relations"] = relation
 
         if script and landing:
@@ -171,9 +170,9 @@ class ItemResource(base.BaseResource):
             toFetchEntities.add(userKey)
         responseKeys.reverse()
 
-        friends_subscriptions = relation.friends.keys() + list(relation.subscriptions)
-        likes = yield db.get_slice(convId, "itemLikes", friends_subscriptions) \
-                            if friends_subscriptions else defer.succeed([])
+        subscriptions = list(relation.subscriptions)
+        likes = yield db.get_slice(convId, "itemLikes", subscriptions) \
+                            if subscriptions else defer.succeed([])
         toFetchEntities.update([x.column.name for x in likes])
         d1 = db.multiget_slice(toFetchEntities, "entities", ["basic"])
         d2 = db.multiget_slice(responseKeys, "items", ["meta"])
@@ -349,8 +348,7 @@ class ItemResource(base.BaseResource):
             conv = utils.supercolumnsToDict([conv])
             commentText = item["meta"].get("comment")
             if commentText:
-                commentSnippet = utils.toSnippet(commentText.decode('utf-8', 'replace'), 35)
-                commentSnippet = commentSnippet.encode('utf-8')
+                commentSnippet = utils.toSnippet(commentText, 35)
         else:
             convId = itemId
             conv = item
@@ -387,7 +385,7 @@ class ItemResource(base.BaseResource):
                               convType, convOwnerId, myId,
                               entities=extraEntities, promote=False)
 
-        # 4. update feed, feedItems, feed_* of user's followers/friends
+        # 4. update feed, feedItems, feed_* of user's followers
         yield feed.pushToOthersFeed(myId, timeUUID, itemId, convId, convACL,
                                     responseType, convType, convOwnerId,
                                     entities=extraEntities, promoteActor=False)
@@ -409,11 +407,10 @@ class ItemResource(base.BaseResource):
                               convOwnerId=convOwnerId, myId=myId, me=args["me"])
 
             relation = Relation(myId, [])
-            yield defer.DeferredList([relation.initFriendsList(),
-                                  relation.initSubscriptionsList() ])
-            friends_subscriptions = relation.friends.keys() + list(relation.subscriptions)
-            if friends_subscriptions:
-                likes = yield db.get_slice(convId, "itemLikes", friends_subscriptions)
+            yield relation.initSubscriptionsList()
+            subscriptions = list(relation.subscriptions)
+            if subscriptions:
+                likes = yield db.get_slice(convId, "itemLikes", subscriptions)
                 likes = [x.column.name for x in likes]
             else:
                 likes = []
@@ -499,7 +496,7 @@ class ItemResource(base.BaseResource):
         yield feed.deleteFromFeed(myId, itemId, convId,
                                   convType, myId, responseType)
 
-        # 4. delete from feed, feedItems, feed_* of user's friends/followers
+        # 4. delete from feed, feedItems, feed_* of user's followers
         yield feed.deleteFromOthersFeed(myId, itemId, convId, convType,
                                         convACL, convOwnerId, responseType)
 
@@ -519,14 +516,13 @@ class ItemResource(base.BaseResource):
                                      args=[itemId], **args)
         else:
             relation = Relation(myId, [])
-            yield defer.DeferredList([relation.initFriendsList(),
-                                      relation.initSubscriptionsList()])
+            yield relation.initSubscriptionsList()
 
             toFetchEntities = set()
             likes = []
-            friends_subscriptions = relation.friends.keys() + list(relation.subscriptions)
-            if friends_subscriptions:
-                likes = yield db.get_slice(convId, "itemLikes", friends_subscriptions)
+            subscriptions = list(relation.subscriptions)
+            if subscriptions:
+                likes = yield db.get_slice(convId, "itemLikes", subscriptions)
                 likes = [x.column.name for x in likes]
                 toFetchEntities = set(likes)
 
@@ -566,7 +562,8 @@ class ItemResource(base.BaseResource):
     @dump_args
     def _comment(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        comment = utils.getRequestArg(request, "comment")
+        snippet, comment = utils.getTextWithSnippet(request, "comment",
+                                            constants.COMMENT_PREVIEW_LENGTH)
         if not comment:
             raise errors.MissingParams([_("Comment")])
 
@@ -580,11 +577,8 @@ class ItemResource(base.BaseResource):
                 "timestamp": str(int(time.time())), "uuid": timeUUID}
         followers = {myId: ''}
         itemId = utils.getUniqueKey()
-
-        unitext = comment.decode('utf-8', 'replace')
-        if len(unitext) > (constants.COMMENT_PREVIEW_LENGTH + 50):
-            commentPreview = utils.toSnippet(unitext, constants.COMMENT_PREVIEW_LENGTH)
-            meta['commentPreview'] = commentPreview.encode('utf-8')
+        if snippet:
+            meta['snippet'] = snippet
 
         yield db.batch_insert(itemId, "items", {'meta': meta,
                                                 'followers': followers})
@@ -607,7 +601,7 @@ class ItemResource(base.BaseResource):
 
         # 4. Update userItems and userItems_*
         responseType = "Q" if convType == "question" else 'C'
-        commentSnippet = utils.toSnippet(unitext, 35).encode('utf-8')
+        commentSnippet = utils.toSnippet(comment, 35)
         userItemValue = ":".join([responseType, itemId, convId, convType,
                                   convOwnerId, commentSnippet])
         yield db.insert(myId, "userItems", userItemValue, timeUUID)

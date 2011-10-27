@@ -83,16 +83,6 @@
 ##
 <%def name="user_me()">
   %if myKey != userKey:
-  %if len(commonFriends) > 0:
-  <div class="sidebar-chunk">
-    <div class="sidebar-title">${_("Common Friends")}</div>
-    <ul class="v-links">
-    %for user in commonFriends:
-      <li><a class="ajax" href="/profile?id=${user}">${rawUserData[user]['name']}</a></li>
-    %endfor
-    </ul>
-  </div>
-  %endif
   %endif
 </%def>
 
@@ -140,13 +130,6 @@
     %if renderWrapper:
       <div class="sidebar-chunk">
       <ul id="user-subactions-${userKey}" class="middle user-subactions v-links">
-    %endif
-    %if relations.pending.get(userKey) == 0:
-      <li><a href="/profile/friend?id=${userKey}&action=cancel"
-             onclick="$.post('/ajax/profile/friend', 'id=${userKey}&action=cancel'); $.event.fix(event).preventDefault();">
-            ${_("Cancel Friend Request")}
-          </a>
-      </li>
     %endif
     <li><a href="/profile/block?id=${userKey}"
            onclick="$.post('/ajax/profile/block', 'id=${userKey}'); $.event.fix(event).preventDefault();">
@@ -218,36 +201,13 @@
 
 <%def name="user_actions(userKey, showRemove=False, showEditProfile=False)">
   %if myKey != userKey:
-    %if userKey not in relations.friends:
-      %if not relations.pending or userKey not in relations.pending:
-        <li><button class="button default" onclick="$.post('/ajax/profile/friend', 'id=${userKey}&action=add')">
-          <span class="button-text">${_("Add as Friend")}</span>
-        </button></li>
-      %elif relations.pending.get(userKey) == 1:
-        <li><button class="acl-button button" onclick="$$.ui.showPopup(event)">${_("Respond to Friend Request")}</button>
-        <ul class="acl-menu" style="display:none;">
-            <li>
-              <a class="acl-item" data-acl="public" onclick="$.post('/ajax/profile/friend', 'id=${userKey}&action=accept')">${_("Accept")}</a>
-            </li>
-            <li>
-              <a class="acl-item" data-acl="friends" onclick="$.post('/ajax/profile/friend', 'id=${userKey}&action=reject')">${_("Reject")}</a>
-            </li>
-        </ul></li>
-      %else:
-        <li><button class="button disabled"><span class="button-text">${_("Friend request sent")}</span></button></li>
-      %endif
-      %if userKey not in relations.subscriptions and userKey not in relations.friends:
-        <li><button class="button" onclick="$.post('/ajax/profile/follow', 'id=${userKey}')">
-          <span class="button-text">${_("Follow User")}</span>
-        </button></li>
-      %elif showRemove:
-        <li><button class="button" onclick="$.post('/ajax/profile/unfollow', 'id=${userKey}')">
-          <span class="button-text">${_("Unfollow User")}</span>
-        </button></li>
-      %endif
+    %if userKey not in relations.subscriptions:
+      <li><button class="button" onclick="$.post('/ajax/profile/follow', 'id=${userKey}')">
+        <span class="button-text">${_("Follow User")}</span>
+      </button></li>
     %elif showRemove:
-      <li><button class="button" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}')">
-        <span class="button-text">${_("Unfriend User")}</span>
+      <li><button class="button" onclick="$.post('/ajax/profile/unfollow', 'id=${userKey}')">
+        <span class="button-text">${_("Unfollow User")}</span>
       </button></li>
     %endif
   %elif showEditProfile:

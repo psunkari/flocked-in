@@ -402,6 +402,8 @@
       <% emailTemplate = _('E-mail notification when: %s') %>
       %for x in range(settings._notificationsCount):
         <%
+          if x in settings._hiddenNotifys:
+            continue
           emailChecked = "checked='1'"\
             if settings.getNotifyPref(notify, x, settings.notifyByMail)\
             else '' %>

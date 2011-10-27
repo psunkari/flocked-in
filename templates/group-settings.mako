@@ -16,7 +16,7 @@
       cls = "sidemenu-selected" if id == menuId else ''
       return """<li>
                   <a href="%(link)s" class="ajax busy-indicator %(id)s-sideitem %(cls)s">
-                    <span class="sidemenu-icon icon %(id)s-icon"></span>
+                    <span class="sidemenu-icon %(id)s-icon"></span>
                     <span class="sidemenu-text">%(text)s</span>
                   </a>
                 </li>
@@ -47,15 +47,15 @@
       </div>
     </div>
     <div id="center-right">
+      <div class="center-header">
+        <div id="titlebar" class="titlebar">
+          ${self.titlebar()}
+        </div>
+        <div id="add-user-wrapper"></div>
+      </div>
       <div id="right">
       </div>
       <div id="center">
-        <div class="center-header">
-          <div id="titlebar" class="titlebar">
-            ${self.titlebar()}
-          </div>
-          <div id="add-user-wrapper"></div>
-        </div>
         <div class="center-contents" id="center-content">
           <div id="groups-wrapper" class="paged-container">
             %if not script:
@@ -69,6 +69,7 @@
           </div>
         </div>
       </div>
+      <div class="clear"></div>
     </div>
   </div>
 </%def>
@@ -126,13 +127,10 @@
             <label for="dp">${_("Group Logo")}</label>
             <input type="file" id="dp" name="dp" accept="image/jpx, image/png, image/gif"/>
       </ul>
-    <div class="styledform-buttons">
-        <input type="submit" name="userInfo_submit" value="${_("Save")}" class="button default"/>
-        <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">${_("Cancel")}</button>
+      <div class="styledform-buttons">
+        <input type="submit" name="groupEdit_submit" value="${_("Save")}" class="button default"/>
+      </div>
     </div>
-    </div>
-    % if groupId:
-      <input type="hidden" value = ${groupId} name="id" />
-    %endif
+    <input type="hidden" value = ${groupId} name="id" />
   </form>
 </%def>

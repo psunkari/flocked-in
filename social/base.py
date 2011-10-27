@@ -36,7 +36,7 @@ class BaseResource(resource.Resource):
         org = cols.get(orgKey, None)
         args = {"myKey": myId, "orgKey": orgKey, "me": me,
                 "isOrgAdmin": isOrgAdmin, "ajax": self._ajax,
-                "script": script, "org": org, "myId": myId}
+                "script": script, "org": org, "myId": myId, "orgId": orgKey}
 
         if appchange:
             latest = yield utils.getLatestCounts(request, False)

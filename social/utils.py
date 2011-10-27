@@ -68,12 +68,13 @@ def columnsToDict(columns, ordered = False):
         retval[item.column.name] = item.column.value
     return retval
 
-def _sanitize(text):
-    escape_entities = {':':"&#58;"}
-    text = text.decode('utf-8', 'replace').encode('utf-8')
-    return sanitizer.escape(text, escape_entities).strip()
 
 def getRequestArg(request, arg, sanitize=True, multiValued=False):
+    def _sanitize(text):
+        escape_entities = {':':"&#58;"}
+        text = text.decode('utf-8', 'replace').encode('utf-8')
+        return sanitizer.escape(text, escape_entities).strip()
+
     if request.args.has_key(arg):
         if not multiValued:
             if sanitize:
@@ -87,6 +88,22 @@ def getRequestArg(request, arg, sanitize=True, multiValued=False):
 
     else:
         return None
+
+
+def getTextWithSnippet(request, name, length):
+    escapeEntities = {':': '&#58;'}
+    if name in request.args:
+        text = request.args[name][0]
+        preview = None
+        unitext = text.decode('utf-8', 'replace')
+        if len(unitext) > length + 50:
+            preview = toSnippet(unitext, length)
+            preview = sanitizer.escape(preview, escapeEntities).strip()
+
+        text = unitext.encode('utf-8')
+        text = sanitizer.escape(text, escapeEntities).strip()
+        return (preview, text)
+    return None
 
 
 @defer.inlineCallbacks
@@ -152,8 +169,7 @@ def getValidItemId(request, arg, type=None, columns=None):
     myOrgId = authinfo.organization
     myId = authinfo.username
     relation = Relation(myId, [])
-    yield defer.DeferredList([relation.initFriendsList(),
-                              relation.initGroupsList()])
+    yield relation.initGroupsList()
     if not checkAcl(myId, acl, owner, relation, myOrgId):
         raise errors.ItemAccessDenied(itemType, itemId)
 
@@ -233,6 +249,7 @@ def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
         item["meta"]["subType"] = subType
     if groups:
         item["meta"]["target"] = ",".join(groups)
+
     tmpFileIds = getRequestArg(request, 'fId', False, True)
     attachments = {}
     if tmpFileIds:
@@ -274,13 +291,6 @@ def getFollowers(userKey, count=10):
 def getSubscriptions(userKey, count=10):
     cols = yield db.get_slice(userKey, "subscriptions", count=count)
     defer.returnValue(set(columnsToDict(cols).keys()))
-
-
-@defer.inlineCallbacks
-def getFriends(userKey, count=10):
-    cols = yield db.get_slice(userKey, "connections", count=count)
-    friends = set(supercolumnsToDict(cols).keys())
-    defer.returnValue(set(friends))
 
 
 @defer.inlineCallbacks
@@ -329,19 +339,6 @@ def expandAcl(userKey, acl, convId, convOwnerId=None):
                             if uid not in deniedUsers])
         keys.update(groups)
 
-    # See if friends have access to it.
-    if any([typ in ["friends", "orgs", "public"] for typ in accept]):
-        friends = yield getFriends(userKey, count=INFINITY)
-
-        # Only send to common friends if ACL is friends and actor
-        # is not the owner of the item.
-        if "friends" in accept and convOwnerId:
-            ownerFriends = yield getFriends(convOwnerId, count=INFINITY)
-            commonFriends = friends.intersection(ownerFriends)
-            keys.update([uid for uid in commonFriends if uid not in deniedUsers])
-        else:
-            keys.update([uid for uid in friends if uid not in deniedUsers])
-
     # See if followers and the company feed should get this update.
     if any([typ in ["orgs", "public"] for typ in accept]):
         followers = yield getFollowers(userKey, count=INFINITY)
@@ -366,7 +363,6 @@ def checkAcl(userId, acl, owner, relation, userOrgId=None):
 
     if userId in deny.get("users", []) or \
        userOrgId in deny.get("org", []) or \
-       (deny.get("friends", []) and owner in relation.friends) or \
        any([groupid in deny.get("groups", []) for groupid in relation.groups]):
         return False
 
@@ -377,8 +373,6 @@ def checkAcl(userId, acl, owner, relation, userOrgId=None):
         returnValue |= userOrgId in accept["orgs"]
     if "groups" in accept:
         returnValue |= any([groupid in accept["groups"] for groupid in relation.groups])
-    if "friends" in accept and accept["friends"]:
-        returnValue |= ((userId == owner) or (owner in relation.friends))
     if "followers" in accept and accept["followers"]:
         returnValue |= (userId == owner)
         if relation.subscriptions:
@@ -413,7 +407,7 @@ def getLatestCounts(request, asJSON=True):
     counts = dict([(key, len(latest[key])) for key in latest])
 
     # Default keys for which counts should be set
-    defaultKeys = ["notifications", "people", "messages", "groups", "tags"]
+    defaultKeys = ["notifications", "messages", "groups", "tags"]
     for key in defaultKeys:
         counts[key] = counts[key] if key in counts else 0
 
@@ -595,13 +589,18 @@ def simpleTimestamp(timestamp, timezone='Asia/Kolkata'):
 
 _snippetRE = re.compile(r'(.*)\s', re.L|re.U|re.S)
 def toSnippet(text, maxlen):
-    chopped = text[:maxlen]
+    unitext = text if type(text) == unicode or not text\
+                   else text.decode('utf-8', 'replace')
+    if len(unitext) <= maxlen:
+        return unitext.encode('utf-8')
+
+    chopped = unitext[:maxlen]
     match = _snippetRE.match(chopped)
     if match:
         chopped = match.group(1)
-    if len(chopped) < len(text):
+    if len(chopped) < len(unitext):
         chopped = chopped + unichr(0x2026)
-    return chopped
+    return chopped.encode('utf-8')
 
 
 def uuid1(node=None, clock_seq=None, timestamp=None):
@@ -671,11 +670,13 @@ def removeUser(userId, userInfo=None):
     yield db.remove(orgKey, "displayNameIndex", ":".join([displayName.lower(), userId]))
     yield db.remove(orgKey, "orgUsers", userId)
     yield db.remove(orgKey, "blockedUsers", userId)
-    #unfriend - remove all pending requests
-    #clear displayName index
-    #clear nameindex
-    #unfollow
-    #unsubscribe from all groups
+    #
+    # TODO:
+    #   unfriend - remove all pending requests
+    #   clear displayName index
+    #   clear nameindex
+    #   unfollow
+    #   unsubscribe from all groups
 
 
 @defer.inlineCallbacks

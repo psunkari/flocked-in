@@ -17,7 +17,7 @@ repo_revision='tip'
 # List of stylesheets and scripts that need bundling
 #
 social_css='rsrcs/css/social.css:rsrcs/css/messaging.css:'\
-'rsrcs/css/jquery.ui.css:rsrcs/css/widgets.css'
+'rsrcs/css/jquery.ui.css:rsrcs/css/widgets.css:rsrcs/css/screen-size.css'
 
 about_css='rsrcs/css/static.css'
 

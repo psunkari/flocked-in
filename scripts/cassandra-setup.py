@@ -72,17 +72,7 @@ def createColumnFamilies(client):
                             "UTF8Type", None, "Notify when public")
     yield client.system_add_column_family(notifyOnRelease)
 
-    # Connections between users
-    connections = CfDef(KEYSPACE, 'connections', 'Super', 'UTF8Type',
-                        'UTF8Type', 'Established user connections')
-    yield client.system_add_column_family(connections)
-
-    # Connections sorted by tags
-    connectionsByTag = CfDef(KEYSPACE, 'connectionsByTag', 'Super', 'UTF8Type',
-                             'UTF8Type', 'User connections by tag')
-    yield client.system_add_column_family(connectionsByTag)
-
-    # Connections that are yet to be accepted
+    # Group connections that are yet to be accepted
     pendingConnections = CfDef(KEYSPACE, "pendingConnections", "Standard",
                         "UTF8Type", None, "Pending connections")
     yield client.system_add_column_family(pendingConnections)
@@ -608,112 +598,9 @@ def addSampleData(client):
                                     'user': johnKey
                                 })
 
-    # Connections between users
-    kevinToAshokKey = utils.getUniqueKey()
-    ashokToKevinKey = utils.getUniqueKey()
-    williamToPaulKey = utils.getUniqueKey()
-    paulToWilliamKey = utils.getUniqueKey()
-    yield client.batch_insert(kevinKey, "connections", {
-                                    ashokKey: {
-                                        "__default__": kevinToAshokKey
-                                    }})
-    yield client.batch_insert(ashokKey, "connections", {
-                                    kevinKey: {
-                                        "__default__": ashokToKevinKey
-                                    }})
-    yield client.batch_insert(paulKey, "connections", {
-                                    williamKey: {
-                                        "__default__": paulToWilliamKey
-                                    }})
-    yield client.batch_insert(williamKey, "connections", {
-                                    paulKey: {
-                                        "__default__": williamToPaulKey
-                                    }})
-    yield client.insert(williamKey, "displayNameIndex", "", "paul:"+paulKey)
-    yield client.insert(paulKey, "displayNameIndex", "", "william:"+williamKey)
-    yield client.insert(kevinKey, "displayNameIndex", "", "ashok:"+ashokKey)
-    yield client.insert(ashokKey, "displayNameIndex", "", "kevin:"+kevinKey)
 
     # Create activity items and insert into feeds and userItems
-    acl_friends = pickle.dumps({"accept":{"friends":[]}})
     acl_company = pickle.dumps({"accept":{"orgs": [exampleKey]}})
-
-    timeUUID = uuid.uuid1().bytes
-    timestamp = str(int(time.time()))
-    yield client.batch_insert(kevinToAshokKey, "items", {
-                                    "meta": {
-                                        "acl": acl_company,
-                                        "owner": kevinKey,
-                                        "type": "activity",
-                                        "subType": "connection",
-                                        "timestamp": timestamp,
-                                        "uuid": timeUUID,
-                                        "target": ashokKey
-                                    }})
-    userItemValue = ":".join(["I", kevinToAshokKey, kevinToAshokKey, "activity", kevinKey, ""])
-    yield client.insert(kevinKey, "userItems", userItemValue, timeUUID)
-    yield client.insert(kevinKey, "feed", kevinToAshokKey, timeUUID)
-    yield client.insert(kevinKey, "feedItems",
-                        "I:%s:%s:%s:" % (kevinKey, kevinToAshokKey, ashokKey),
-                        timeUUID, kevinToAshokKey)
-
-    timeUUID = uuid.uuid1().bytes
-    yield client.batch_insert(ashokToKevinKey, "items", {
-                                    "meta": {
-                                        "acl": acl_friends,
-                                        "owner": ashokKey,
-                                        "type": "activity",
-                                        "subType": "connection",
-                                        "timestamp": timestamp,
-                                        "uuid": timeUUID,
-                                        "target": kevinKey
-                                    }})
-    userItemValue = ":".join(["I", ashokToKevinKey, ashokToKevinKey, "activity", ashokKey, ""])
-    yield client.insert(ashokKey, "userItems", userItemValue, timeUUID)
-    yield client.insert(ashokKey, "feed", ashokToKevinKey, timeUUID)
-    yield client.insert(ashokKey, "feedItems",
-                        "I:%s:%s:%s:" % (ashokKey, ashokToKevinKey, kevinKey),
-                        timeUUID, ashokToKevinKey)
-
-    timeUUID = uuid.uuid1().bytes
-    timestamp = str(int(time.time()))
-    yield client.batch_insert(williamToPaulKey, "items", {
-                                    "meta": {
-                                        "acl": acl_friends,
-                                        "owner": williamKey,
-                                        "type": "activity",
-                                        "subType": "connection",
-                                        "timestamp": timestamp,
-                                        "uuid": timeUUID,
-                                        "target": paulKey
-                                    }})
-    userItemValue = ":".join(["I", williamToPaulKey, williamToPaulKey, "activity", williamKey, ""])
-    yield client.insert(williamKey, "userItems", userItemValue, timeUUID)
-    yield client.insert(williamKey, "feed", williamToPaulKey, timeUUID)
-    yield client.insert(williamKey, "feedItems",
-                                "I:%s:%s:%s:" %(williamKey, williamToPaulKey, paulKey),
-                                timeUUID, williamToPaulKey)
-
-
-    timeUUID = uuid.uuid1().bytes
-    yield client.batch_insert(paulToWilliamKey, "items", {
-                                    "meta": {
-                                        "acl": acl_friends,
-                                        "owner": paulKey,
-                                        "type": "activity",
-                                        "subType": "connection",
-                                        "timestamp": timestamp,
-                                        "uuid": timeUUID,
-                                        "target": williamKey
-                                    }})
-    userItemValue = ":".join(["I", paulToWilliamKey, paulToWilliamKey, "activity", paulKey, ""])
-    yield client.insert(paulKey, "userItems", userItemValue, timeUUID)
-    yield client.insert(paulKey, "feed", paulToWilliamKey, timeUUID)
-    yield client.insert(paulKey, "feedItems",
-                                "I:%s:%s:%s:" %(paulKey, paulToWilliamKey, williamKey),
-                                timeUUID, paulToWilliamKey)
-
-
 
     # Subscriptions
     yield client.insert(williamKey, "subscriptions", "", kevinKey)
@@ -725,7 +612,7 @@ def addSampleData(client):
     timestamp = str(int(time.time()))
     yield client.batch_insert(williamFollowingKevinKey, "items", {
                                     "meta": {
-                                        "acl": acl_friends,
+                                        "acl": acl_company,
                                         "owner": williamKey,
                                         "type": "activity",
                                         "subType": "following",
@@ -744,8 +631,7 @@ def addSampleData(client):
 @defer.inlineCallbacks
 def truncateColumnFamilies(client):
     for cf in ["entities", "orgUsers", "userAuth",
-               "sessions", "invitations", "connections",
-               "connectionsByTag", "pendingConnections", "subscriptions",
+               "sessions", "invitations", "pendingConnections", "subscriptions",
                "followers", "enterpriseLinks", "entityGroupsMap", "groupMembers",
                "items", "itemLikes", "itemResponses", "userItems", "feed",
                "userItems_status", "userItems_link", "userItems_document",

@@ -50,7 +50,6 @@
 </%def>
 
 <%def name="group_actions(groupId)">
-
   %if entities and ('GI:%s'%(groupId) in pendingConnections and entities[groupId]["basic"]["access"]=="open"):
     <button class="acl-button button" onclick="$$.ui.showPopup(event)">${_("Respond to Group Invitation")}</button>
     <ul class="acl-menu" style="display:none;">
@@ -67,7 +66,7 @@
     <button class="button default" onclick="$.post('/ajax/groups/subscribe', 'id=${groupId}')"><span class="button-text">${('Join')}</span></button>
   %else:
     <button class="button" onclick="$.post('/ajax/groups/unsubscribe', 'id=${groupId}')"><span class="button-text">${('Leave')}</span></button>
-    %if myKey in groupFollowers[groupId]:
+    %if myId in groupFollowers[groupId]:
       <button class="button" onclick="$.post('/ajax/groups/unfollow', 'id=${groupId}')"><span class="button-text">${('Stop Following')}</span></button>
     %else:
       <button class="button default" onclick="$.post('/ajax/groups/follow', 'id=${groupId}')"><span class="button-text">${('Follow')}</span></button>
@@ -123,8 +122,10 @@
         %if myKey in entities[groupId].get("admins", {}):
           <li><a class="ajax" href="/groups/pending?id=${groupId}">${_('Pending Requests')}</a></li>
           <li><a class="ajax" href="/groupsettings?id=${groupId}">${_('Edit Group Settings')}</a></li>
-        %endif
+          <li><a class="ajax" href="/groups/members?id=${groupId}&managed=manage">${_('Manage Members')}</a></li>
+        %else:
           <li><a class="ajax" href="/groups/members?id=${groupId}">${_('Members')}</a></li>
+        %endif
       </ul>
     </div>
     <div class="sidebar-chunk">
@@ -147,10 +148,6 @@
 <%def name="feed()">
   %if not isMember:
     <span id="welcome-message">
-      ##${_("Welcome to ")} ${utils.groupName(groupId, entities[groupId])}</a>
-      <ul >
-        ##<li>${_("Join the group to post a message or view group-content")}</li>
-      </ul>
       <div id="next-load-wrapper">${_("Join the group to post a message or view content")}</div>
     </span>
   %elif conversations:
@@ -163,7 +160,7 @@
     %>
     %if nextPageStart:
       <% typ_filter = '&type=%s' %(itemType) if itemType else '' %>
-      <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" href="/groups/feed?start=${nextPageStart}&id=${groupId}${typ_filter}" _ref="/groups/feed/more?start=${nextPageStart}&id=${groupId}${typ_filter}">${_("Fetch older posts")}</a></div>
+      <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" data-ref="/group/more?start=${nextPageStart}&id=${groupId}${typ_filter}">${_("Fetch older posts")}</a></div>
     %else:
       <div id="next-load-wrapper">${_("No more posts to show")}</div>
     %endif

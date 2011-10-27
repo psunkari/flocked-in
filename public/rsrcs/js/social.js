@@ -552,24 +552,26 @@ var convs = {
             $('#comment-'+commentId).slideUp('fast', function(){$(this).remove();});
     },
 
-    expandComment: function(commentId) {
-        $('#comment-'+commentId+' .comment-text').css('display', 'inline');
-        $('#comment-'+commentId+' .comment-collapser').css('display', 'block');
-        $('#comment-'+commentId+' .comment-preview').css('display', 'none');
-        $('#comment-'+commentId+' .comment-expander').css('display', 'none');
+    expandText: function(event) {
+        var evt = $.event.fix(event),
+            $target = $(evt.target),
+            $container = $target.parent();
+
+        $container.find('.text-full').css('display', 'inline');
+        $container.find('.text-collapser').css('display', 'block');
+        $container.find('.text-preview').css('display', 'none');
+        $container.find('.text-expander').css('display', 'none');
     },
 
-    collapseComment: function(commentId) {
-        $('#comment-'+commentId+' .comment-preview').css('display', 'inline');
-        $('#comment-'+commentId+' .comment-expander').css('display', 'inline');
-        $('#comment-'+commentId+' .comment-text').css('display', 'none');
-        $('#comment-'+commentId+' .comment-collapser').css('display', 'none');
-    },
+    collapseText: function(event) {
+        var evt = $.event.fix(event),
+            $target = $(evt.target),
+            $container = $target.parent();
 
-    expandPost: function(convId) {
-    },
-
-    collapsePost: function(convId) {
+        $container.find('.text-preview').css('display', 'inline');
+        $container.find('.text-expander').css('display', 'inline');
+        $container.find('.text-full').css('display', 'none');
+        $container.find('.text-collapser').css('display', 'none');
     }
 };
 
@@ -676,8 +678,8 @@ var ui = {
 
     showPopup: function(event, right, above){
         var evt = $.event.fix(event),
-        $target = $(evt.target),
-        $menu = $target.next()
+            $target = $(evt.target),
+            $menu = $target.next();
 
         if (!$menu.hasClass("ui-menu")) {
             $menu.menu({
@@ -1107,9 +1109,6 @@ var acl = {
         if (type === "public") {
             aclObj.accept.pub = true;
         }
-        else if (type === "friends") {
-            aclObj.accept.friends = true;
-        }
         else if (type.match(/^org:/)) {
             aclObj.accept.orgs = type.substr(4).split(",");
         }
@@ -1135,9 +1134,9 @@ var acl = {
         $$.data.wait("/auto/mygroups", (function(groups) {
             items = [];
             $.each(groups || [], function(i, g) {
-                items.push('<li><a class="acl-item" data-acl="group:' + g.id + '">' + 
+                items.push('<li><a class="acl-item" data-acl="group:' + g.id + '">' +
                            '<span class="acl-title">' + g.name + '</span>' +
-                           '<div class="acltip" style="display:none;">' + g.name + '</div>' + 
+                           '<div class="acltip" style="display:none;">' + g.name + '</div>' +
                            '</a></li>');
             });
 

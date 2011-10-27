@@ -7,7 +7,7 @@ from twisted.plugin     import IPlugin
 from twisted.internet   import defer
 from twisted.web        import server
 
-from social             import db, utils, base, errors, _
+from social             import db, constants, utils, base, errors, _
 from social.template    import renderScriptBlock, render, getBlock
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
@@ -221,17 +221,16 @@ class Poll(object):
     @dump_args
     def create(self, request):
         authinfo = request.getSession(IAuthInfo)
-        myId = authinfo.username
         myOrgId = authinfo.organization
-
+        snippet, comment = utils.getTextWithSnippet(request, "comment",
+                                        constants.POST_PREVIEW_LENGTH)
         end = utils.getRequestArg(request, "end")
         start = utils.getRequestArg(request, "start")
         options = utils.getRequestArg(request, "options", multiValued=True)
-        question = utils.getRequestArg(request, "question")
         showResults = utils.getRequestArg(request, "show") or 'True'
         options = [option for option in options if option]
 
-        if not question:
+        if not comment:
             raise errors.MissingParams([_('Question')])
         if len(options) < 2 :
             raise errors.MissingParams([_('Add atleast two options to choose from')])
@@ -239,20 +238,22 @@ class Poll(object):
         convId = utils.getUniqueKey()
         item, attachments = yield utils.createNewItem(request, self.itemType)
 
-        options_str = " ".join(options)
+        meta = {"comment": comment, "showResults": showResults}
+        if snippet:
+            meta["snippet"] = snippet
 
-        options = OrderedDict([('%02d'%(x), options[x]) for x in range(len(options))])
-        meta = {"question": question, "showResults": showResults}
         if start:
-            meta["start"] = start
+            meta["poll_start"] = start
         if end:
-            meta["end"] = end
+            meta["poll_end"] = end
 
+        pollOptions = " ".join(options)
+        options = OrderedDict([('%02d'%(x), options[x]) for x in range(len(options))])
         item["options"] = options
         item["meta"].update(meta)
 
         yield db.batch_insert(convId, "items", item)
-        item["meta"]["options_str"] = options_str
+        item["meta"]["poll_options"] = pollOptions # Add options to index
 
         for attachmentId in attachments:
             timeuuid, fid, name, size, ftype  = attachments[attachmentId]
