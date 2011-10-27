@@ -663,7 +663,7 @@ class FeedResource(base.BaseResource):
             for entity in entities:
                 if entity not in args["entities"]:
                     args["entities"][entity] = entities[entity]
-        
+
         if script:
             onload = "(function(obj){$$.convs.load(obj);})(this);"
             yield renderScriptBlock(request, "feed.mako", "feed", landing,
