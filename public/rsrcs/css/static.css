@@ -91,6 +91,7 @@ a:link, a:visited {
 #home-caption {
     font-size: 25px;
     margin: 100px 0 0;
+    line-height: 1.2em;
 }
 #home-intro {
     padding: 40px 20px 20px;
