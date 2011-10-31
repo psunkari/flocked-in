@@ -82,20 +82,17 @@
 <%def name="signup()">
   ${header()}
               <td style="font-size: 14px;">
-                Welcome to ${brandName}.<br/>
-                Please click below to activate your account.
-                 <br/><br/>
-                 <a href="${activationUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">${'Join %s' % brandName}</div></a>
-                 <br/><br/>
-                 You can also visit <a href="${activationUrl}">${activationUrl}</a> to activate your account.
+                Thanks for signing up for ${brandName}.<br/>
+                Just one more step left to complete the registration. Click below:
+                <br/><br/>
+                <a href="${activationUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">${'Complete Registration'}</div></a>
+                <br/><br/>
+                Or visit <a href="${activationUrl}">${activationUrl}</a>.
+                <br/><br/>
+                Thank you,<br/>
+                Flocked-in team
               </td>
             </tr>
-            <tr><td style="border-top:1px solid #DDD; font-size: 14px;padding-top:10px;">
-              ${brandName} is a social network exclusively for people within your company
-              to help you collaborate better. It revolutionizes communication at
-              workplace with a richer, easier and more effective form of communication
-              &ndash; <a href="${rootUrl}/about/features.html">View all features &#187;</a>
-            </td></tr>
           </table>
         </td></tr>
         <tr><td style="color:gray;font-size:11px;padding:5px 0;">
