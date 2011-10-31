@@ -104,7 +104,7 @@ for img in `ls -1 $img_dir`; do
   filename=$checksum.${img##*.}
   cp $img_dir/$img $static/$filename
 
-  find $src/templates $src/social $public/rsrcs/js $public/rsrcs/css -type f \
+  find $src/templates $src/social $public/rsrcs/js $public/rsrcs/css $public/about $public/*.html -type f \
         | xargs sed -i "s=/rsrcs/img/$img=$cdn_host/static/$filename="
 done
 
@@ -132,7 +132,7 @@ function _bundle() {
     paths_escaped=`echo $outfile | sed -e 's/\\(\\.\\|\\/\\|\\*\\|\\[\\|\\]\\|\\\\\\)/\\\\&/g'`
     match_expr=`echo $paths_escaped | sed 's/:/\|/g'`
 
-    find $src/templates $src/social -type f | while read name; do
+    find $src/templates $src/social $public/about $public/*.html -type f | while read name; do
       awk_output=$tmp_dir/`basename $name`.awk
       awk "!/($match_expr)/ { print \$0 };
             /($match_expr)/ && !done {
