@@ -481,7 +481,14 @@ var convs = {
         if (!$input.hasClass('ui-autocomplete-input')) {
             $input.autocomplete({
                 source: '/auto/tags?itemId='+convId,
-                minLength: 2
+                minLength: 2,
+                select: function(event, ui) {
+                            if (ui && ui.item) {
+                                $input = $(this);
+                                $input.val(ui.item.value);
+                                $input.closest('form').submit();
+                            }
+                        }
             });
         }
 
