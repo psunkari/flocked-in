@@ -1113,7 +1113,7 @@ class GroupFeedResource(base.BaseResource):
                                     landing, "#mainbar", "set", **args)
         if script:
             name = group['basic']['name']
-            onload = "$$.acl.switchACL('sharebar-acl', 'group', '%s', '%s');" % (groupId, name)
+            onload = "$$.acl.switchACL('sharebar-acl', 'group', '%s', '%s');" % (groupId, name.replace("'", "\\'"))
             onload += "$$.files.init('sharebar-attach');"
             onload += "$$.menu.selectItem('%s');" %(menuId)
             onload += "$('#sharebar-acl-button').attr('disabled', 'disabled');"
