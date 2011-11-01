@@ -81,14 +81,14 @@ class SigninResource(resource.Resource):
         authinfo.isAdmin = True if data.has_key("isAdmin") else False
 
         yield request._saveSessionToDB()
-        redirectURL = utils.getRequestArg(request, "_r") or "/feed"
+        redirectURL = utils.getRequestArg(request, "_r", sanitize=False) or "/feed"
         util.redirectTo(urllib.unquote(redirectURL), request)
         request.finish()
 
     @defer.inlineCallbacks
     def _renderSigninForm(self, request, errcode=''):
         args = {}
-        redirect = utils.getRequestArg(request, '_r') or "/feed"
+        redirect = utils.getRequestArg(request, '_r', sanitize=False) or "/feed"
         args["redirect"] = urllib.quote(redirect,  '*@+/')
         args["reason"] = errcode
         yield render(request, "signin.mako", **args)
@@ -98,7 +98,7 @@ class SigninResource(resource.Resource):
         d = defer.maybeDeferred(request.getSession, IAuthInfo)
         def checkSession(authinfo):
             if authinfo.username:
-                redirectURL = utils.getRequestArg(request, "_r") or "/feed"
+                redirectURL = utils.getRequestArg(request, "_r", sanitize=False) or "/feed"
                 util.redirectTo(urllib.unquote(redirectURL), request)
                 request.finish()
             else:
