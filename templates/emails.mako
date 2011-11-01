@@ -368,3 +368,25 @@
   ${footer()}
 </%def>
 
+
+
+<%def name="html_stats()">
+  <table>
+  <tr><td> No.of new domains </td><td > ${stats[frm_to]["newDomainCount"]} </td></tr>
+  <tr> <td> New domains      </td><td  > ${stats[frm_to]["newDomains"]} </td> </tr>
+  <tr><td> New signups      </td><td  > ${stats[frm_to]["signups"]} </td></tr>
+  </table>
+  <br/> <br/>
+  <table>
+    <tr> <th> Domain-Name </th> <th> new users </th> <th> total users </th> <th> new items </th> <th> total items</tr>
+  % for domain in stats['domain']:
+    <tr>
+      <td> ${domain} </td>
+      <td> ${stats['domain'][domain]["newUsers"]} </td>
+      <td> ${stats['domain'][domain]["totalUsers"]} </td>
+      <td> ${stats['domain'][domain]["newItems"]} </td>
+      <td> ${stats['domain'][domain]["items"]} </td>
+    </tr>
+  %endfor
+  </table>
+</%def>
