@@ -1242,6 +1242,15 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 
 
+#group-share-block {
+    padding: 20px 10px 10px;
+    position: relative;
+    width: 570px;
+    float: left;
+    border-bottom: 1px solid #e0d7cf;
+    margin: 0 -10px 10px;
+}
+
 .group-details-title {
     color: #888;
     float:left;

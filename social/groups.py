@@ -217,7 +217,7 @@ class GroupsResource(base.BaseResource):
                     onload = "$('#sharebar-attach-fileshare,"\
                                 "#sharebar-attach-file-input,"\
                                 "#sharebar-submit').removeAttr('disabled');"
-                    onload += "$('#share-block').removeClass('disabled');"
+                    onload += "$('#group-share-block').removeClass('disabled');"
                     onload += "$('#group-links').show();"
                     handlers = {'onload': onload}
 
@@ -385,7 +385,7 @@ class GroupsResource(base.BaseResource):
         onload = "(function(obj){$$.convs.load(obj);})(this);"
         onload += "$('#sharebar-attach-fileshare, #sharebar-attach-file-input').attr('disabled', 'disabled');"
         onload += "$('#sharebar-submit').attr('disabled', 'disabled');"
-        onload += "$('#share-block').addClass('disabled');"
+        onload += "$('#group-share-block').addClass('disabled');"
         onload += "$('#group-links').hide();"
         args["isMember"] = False
         if _pg == '/group':
@@ -1080,7 +1080,6 @@ class GroupFeedResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _feed(self, request):
-
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         itemType = utils.getRequestArg(request, 'type')
         groupId, group = yield utils.getValidEntityId(request, 'id', 'group', columns=["admins"])
@@ -1114,7 +1113,7 @@ class GroupFeedResource(base.BaseResource):
                                     landing, "#mainbar", "set", **args)
         if script:
             name = group['basic']['name']
-            onload = "$$.acl.switchACL('sharebar-acl', 'group','%s', '%s');" % (groupId, name)
+            onload = "$$.acl.switchACL('sharebar-acl', 'group', '%s', '%s');" % (groupId, name)
             onload += "$$.files.init('sharebar-attach');"
             onload += "$$.menu.selectItem('%s');" %(menuId)
             onload += "$('#sharebar-acl-button').attr('disabled', 'disabled');"
@@ -1122,15 +1121,14 @@ class GroupFeedResource(base.BaseResource):
                 onload += "$('#sharebar-attach-fileshare').attr('disabled', 'disabled');"
                 onload += "$('#sharebar-attach-file-input').attr('disabled', 'disabled');"
                 onload += "$('#sharebar-submit').attr('disabled', 'disabled');"
-                onload += "$('#share-block').addClass('disabled');"
+                onload += "$('#group-share-block').addClass('disabled');"
 
-            yield renderScriptBlock(request, "feed.mako", "share_block",
-                                    landing,  "#share-block", "set",
-                                    handlers={"onload": onload}, **args)
-            yield self._renderShareBlock(request, "status")
             yield renderScriptBlock(request, "group-feed.mako", "summary",
                                     landing, "#group-summary", "set", **args)
-
+            yield renderScriptBlock(request, "feed.mako", "share_block",
+                                    landing,  "#group-share-block", "set",
+                                    handlers={"onload": onload}, **args)
+            yield self._renderShareBlock(request, "status")
 
         if isMember:
             if itemType and itemType in plugins and plugins[itemType].hasIndex:
@@ -1140,6 +1138,7 @@ class GroupFeedResource(base.BaseResource):
             args.update(feedItems)
         else:
             args["conversations"]=[]
+
         admins = yield db.multiget_slice(group["admins"], 'entities', ["basic"])
         admins = utils.multiSuperColumnsToDict(admins)
         for admin in admins:

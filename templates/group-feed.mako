@@ -29,18 +29,11 @@
           <div id ="group-events" ></div>
         </div>
         <div id="center">
-          <div class='center-contents' >
-            <div id="share-block" style="border-top:none; padding:none;">
-              %if script:
-                ${feed_mako.share_block()}
-              %endif
-            </div>
-            <div id="user-feed">
-              %if not script or tmp_files:
-                ${self.feed()}
-              %endif
-              <div id="foot-loader"></div>
-            </div>
+          <div class='center-contents' id="user-feed">
+            %if not script or tmp_files:
+              ${self.feed()}
+            %endif
+            <div id="foot-loader"></div>
           </div>
         </div>
       </div>
@@ -91,20 +84,13 @@
     <div class="summary-block">
       <div class='subtitle summary-line' >
         <span id="group-type">${_(entities[groupId]['basic']['access'].capitalize())} ${_("Group")}</span>
-        %if entities[groupId]['basic'].has_key('desc'):
-          <span class="summary-item" id="group-desc">${entities[groupId]['basic']['desc']}</span>
-        %endif
       </div>
+      %if entities[groupId]['basic'].has_key('desc'):
+        <span class="summary-item" id="group-desc">${entities[groupId]['basic']['desc']}</span>
+      %endif
+      <div id="group-share-block"></div>
     </div>
   </div>
-    ##<div>
-    ##  <% admins = ",".join([utils.userName(x, entities[x]) for x in entities[groupId]["admins"].keys()[:3]]) %>
-    ##  <div class="summary-item" id="admin-block">
-    ##    ${_("Admins:")} ${admins}
-    ##  </div>
-    ##  <div class="summary-item">
-    ##   ${_("Type:")} ${_(entities[groupId]["basic"]["access"])}
-    ##  </div>
 </%def>
 
 <%def name="groupFiles()">
