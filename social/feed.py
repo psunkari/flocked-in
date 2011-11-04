@@ -620,6 +620,8 @@ class FeedResource(base.BaseResource):
 
         feedId = entityId or myId
         args["feedTitle"] = feedTitle
+        args["menuId"] = menuId
+        args["feedId"] = feedId
 
         if script and landing:
             yield render(request, "feed.mako", **args)
@@ -648,10 +650,7 @@ class FeedResource(base.BaseResource):
             feedItems = yield getFeedItems(request, feedId=feedId, start=start)
 
         args.update(feedItems)
-
-        args["feedId"] = feedId
-        args["menuId"] = menuId
-        args['itemType']=itemType
+        args['itemType'] = itemType
 
         suggestions, entities = yield people.get_suggestions(request,
                                                 SUGGESTION_PER_PAGE, mini=True)

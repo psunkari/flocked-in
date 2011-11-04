@@ -1073,7 +1073,6 @@ class GroupsResource(base.BaseResource):
 
 
 class GroupFeedResource(base.BaseResource):
-
     isLeaf = True
 
     @profile
@@ -1093,8 +1092,7 @@ class GroupFeedResource(base.BaseResource):
         pendingConnections = yield db.get_slice(myId, "pendingConnections", ["GI:%s"%(groupId),"GO:%s"%(groupId)])
         pendingConnections = utils.columnsToDict(pendingConnections)
 
-        menuId = "group"
-        args["menuId"] = menuId
+        args["menuId"] = "groups"
         args["groupId"] = groupId
         args["isMember"] = isMember
         args['itemType'] = itemType
@@ -1115,7 +1113,6 @@ class GroupFeedResource(base.BaseResource):
             name = group['basic']['name']
             onload = "$$.acl.switchACL('sharebar-acl', 'group', '%s', '%s');" % (groupId, name.replace("'", "\\'"))
             onload += "$$.files.init('sharebar-attach');"
-            onload += "$$.menu.selectItem('%s');" %(menuId)
             onload += "$('#sharebar-acl-button').attr('disabled', 'disabled');"
             if not isMember:
                 onload += "$('#sharebar-attach-fileshare').attr('disabled', 'disabled');"
