@@ -18,8 +18,9 @@ def _sanitize(text, maxlen=0):
     unitext = text if type(text) == unicode or not text\
                    else text.decode('utf-8', 'replace')
     if maxlen and len(unitext) > maxlen:
-        unitext = utils.toSnippet(unitext, maxlen)
-    return unitext.encode('utf-8')
+        return utils.toSnippet(unitext, maxlen)
+    else:
+        return unitext.encode('utf-8')
 
 
 embedlyKey = config.get('Embedly', 'Key')
