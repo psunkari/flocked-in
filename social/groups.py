@@ -774,7 +774,7 @@ class GroupsResource(base.BaseResource):
             args["nextPageStart"] = nextPageStart
             args["pendingConnections"] = pendingConnections
             args["myGroups"] = []
-            args["groupFollowers"] = []
+            args["groupFollowers"] = dict([(groupId, []) for groupId in groups])
 
         if script:
             yield renderScriptBlock(request, "groups.mako", "viewOptions",
@@ -1102,7 +1102,7 @@ class GroupFeedResource(base.BaseResource):
         ##XXX: following should not be static
         args["pendingConnections"] = pendingConnections
         args["myGroups"] = [groupId] if isMember else []
-        args["groupFollowers"] = {groupId:[myId]} if isFollower else {}
+        args["groupFollowers"] = {groupId:[myId]} if isFollower else {groupId:[]}
 
         if script and landing:
             yield render(request, "group-feed.mako", **args)
