@@ -412,6 +412,9 @@ class GroupsResource(base.BaseResource):
             raise errors.InvalidRequest('Access Denied')
 
         userId, user = yield utils.getValidEntityId(request, 'uid', 'user')
+        if len(group.get('admins', [])) == 1 and myId == userId:
+            raise errors.InvalidRequest(_("You are currently the only administrator of this group"))
+
         try:
             cols = yield db.get(groupId, "groupMembers", userId)
             itemId = cols.column.value
@@ -432,6 +435,8 @@ class GroupsResource(base.BaseResource):
 
             #XXX: remove item from feed?
             yield defer.DeferredList([d1, d2, d3, d4, d5, d6])
+            ###XXX: if one of the admins is removed from the group,
+            ### remove the user from group["admins"]
 
             request.write("$$.alerts.info('%s is removed from %s');" %(user['basic']['name'], group['basic']['name']))
 
