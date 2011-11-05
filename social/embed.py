@@ -1,4 +1,4 @@
-
+import pprint
 from telephus.cassandra     import ttypes
 from twisted.internet       import defer
 from twisted.web            import resource, server, http
@@ -21,16 +21,15 @@ class EmbedResource(BaseResource):
     def _link(self, request):
         itemId, item = yield utils.getValidItemId(request, 'id', 'link')
         meta = item.get('meta', {})
-        embedType = meta.get('embedType', '')
-        embedSrc = meta.get('embedSrc', '')
+        embedType = meta.get('link_embedType', '') or meta.get('embedType', '')
+        embedSrc = meta.get('link_embedSrc', '') or meta.get('embedSrc', '')
         if embedSrc:
             if embedType == "photo":
                 src = '<img src="%s"></img>' % embedSrc
             elif embedType in ["video", "audio"]:
-                src = item.get('meta', {}).get('embedSrc', '')
+                src = embedSrc
             if src:
                 request.write(self._template % src)
-        request.finish()
 
     def render_GET(self, request):
         if len(request.postpath) == 0:

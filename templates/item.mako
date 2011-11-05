@@ -539,7 +539,7 @@
     ## can be removed after DB update
     meta = conv["meta"]
     url = meta.get("link_url", '') or meta.get("url", '')
-    title = meta.get("title", '') or meta.get("title", '')
+    title = meta.get("link_title", '') or meta.get("title", '')
     imgsrc = meta.get("link_imgSrc", '') or meta.get("imgSrc", '')
     summary = meta.get("link_summary", '') or meta.get("summary", '')
 
