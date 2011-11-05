@@ -270,12 +270,36 @@ a:link, a:visited {
   background-position: 0 -348px;
 }
 
+#sharing > .feature-icon {
+  background-position: 0 -696px;
+}
+
+#polls > .feature-icon {
+  background-position: 0 -580px;
+}
+
 #access-control > .feature-icon {
   background-position: 0 -230px;
 }
 
 #secure > .feature-icon {
   background-position: -151px -348px;
+}
+
+#directory-integration > .feature-icon {
+  background-position: -151px -696px;
+}
+
+#knowledge-discovery > .feature-icon {
+  background-position: -151px -580px;
+}
+
+#mobile-access > .feature-icon {
+  background-position: 0 -464px;
+}
+
+#admin-tools > .feature-icon {
+  background-position: -151px -464px;
 }
 
 
