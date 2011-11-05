@@ -1241,6 +1241,9 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     margin-top: 6px;
 }
 
+#group-desc {
+    display: block;
+}
 
 #group-share-block {
     padding: 20px 10px 10px;
