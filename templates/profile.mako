@@ -202,7 +202,7 @@
 <%def name="user_actions(userKey, showRemove=False, showEditProfile=False)">
   %if myKey != userKey:
     %if userKey not in relations.subscriptions:
-      <li><button class="button" onclick="$.post('/ajax/profile/follow', 'id=${userKey}')">
+      <li><button class="button default" onclick="$.post('/ajax/profile/follow', 'id=${userKey}')">
         <span class="button-text">${_("Follow User")}</span>
       </button></li>
     %elif showRemove:

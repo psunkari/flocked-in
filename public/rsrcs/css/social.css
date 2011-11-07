@@ -1237,6 +1237,10 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     color: #888;
 }
 
+.user-details-name {
+    font-size: 14px;
+}
+
 .user-details-actions {
     margin-top: 6px;
 }
