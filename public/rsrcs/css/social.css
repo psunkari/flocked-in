@@ -751,6 +751,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     font-size: inherit;
     font-family: inherit;
     color: #73563d;
+    cursor: pointer;
 }
 .acl-button > span {
     overflow: hidden;
@@ -807,6 +808,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     -moz-opacity: 0;
     filter: alpha(opacity:0);
     z-index: 2;
+    cursor: pointer;
 }
 
 .file-attach-wrapper {
