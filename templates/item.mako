@@ -684,7 +684,7 @@
         %if iamOwner:
           <li><a class="menu-item noicon" onclick="$.post('/ajax/item/delete', {id:'${convId}'});">${_("Delete")}</a></li>
         %else:
-          <li><a class="menu-item noicon" onclick="$.post('/ajax/item/remove', {id:'${convId}'});">${_("Remove")}</a></li>
+          <li><a class="menu-item noicon" onclick="$.post('/ajax/item/remove', {id:'${convId}'});">${_("Hide from my Feed")}</a></li>
           <li><a class="menu-item noicon" onclick="">${_("Report")}</a></li>
         %endif
     </ul>
