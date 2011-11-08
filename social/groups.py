@@ -1,4 +1,4 @@
-import uuid
+ uuid
 from twisted.internet   import defer
 from telephus.cassandra import ttypes
 try:
@@ -432,9 +432,14 @@ class GroupsResource(base.BaseResource):
                                     "groupRequestActions", False,
                                     '#group-request-actions-%s-%s' %(userId, groupId),
                                     "set", args=[groupId, userId, "removed"])
+            deferreds = [d1, d2, d3, d4, d5, d6]
+            if userId in group['admins']:
+                d7 = db.remove(groupId, 'entities', userId, 'admins')
+                d8 = db.remove(userId, 'entities', groupId, 'adminOfGroups')
+                deferreds.extend([d7, d8])
 
             #XXX: remove item from feed?
-            yield defer.DeferredList([d1, d2, d3, d4, d5, d6])
+            yield defer.DeferredList(deferreds)
             ###XXX: if one of the admins is removed from the group,
             ### remove the user from group["admins"]
 
@@ -442,6 +447,64 @@ class GroupsResource(base.BaseResource):
 
         except ttypes.NotFoundException:
             pass
+
+    @defer.inlineCallbacks
+    def _makeAdmin(self, request):
+        authInfo = request.getSession(IAuthInfo)
+        myId = authInfo.username
+        orgId = authInfo.organization
+
+        groupId, group = yield utils.getValidEntityId(request, "id", "group",
+                                                        columns=['admins'])
+        userId, user = yield utils.getValidEntityId(request, "uid", "user")
+        if myId not in group['admins']:
+            raise errors.InvalidRequest(_('You are not an administrator of the group'))
+
+        cols = yield db.get_slice(groupId, "groupMembers", [userId])
+        if not cols:
+            raise errors.InvalidRequest(_('Only group members can become adminstrators'))
+
+        if userId in group['admins']:
+            defer.returnValue(None)
+
+        yield db.insert(groupId, "entities", '', userId, 'admins')
+        yield db.insert(userId, "entities", group['basic']['name'], groupId, "adminOfGroups")
+        group['admins'] = {userId:''}
+        args = {'entities': {groupId: group}}
+
+        yield renderScriptBlock(request, "groups.mako", "groupRequestActions",
+                                False, '#group-request-actions-%s-%s' %(userId, groupId),
+                                "set", args=[groupId, userId, "show_manage"], **args)
+
+    @defer.inlineCallbacks
+    def _removeAdmin(self, request):
+        authInfo = request.getSession(IAuthInfo)
+        myId = authInfo.username
+        orgId = authInfo.organization
+
+        groupId, group = yield utils.getValidEntityId(request, "id", "group",
+                                                        columns=['admins'])
+        userId, user = yield utils.getValidEntityId(request, "uid", "user")
+        if myId not in group['admins']:
+            raise errors.InvalidRequest(_('You are not an administrator of the group'))
+        if myId == userId and len(group['admins']) == 1:
+            raise errors.InvalidRequest(_('You are currently the only administrator of this group'))
+
+        cols = yield db.get_slice(groupId, "groupMembers", [userId])
+        if not cols:
+            raise errors.InvalidRequest(_("User is not a member of the group"))
+
+        if userId not in group['admins']:
+            raise errors.InvalidRequest(_('User is not administrator of the group'))
+
+        yield db.remove(groupId, "entities", userId, "admins")
+        yield db.remove(userId, "entities", groupId, "adminOfGroups")
+
+        del group['admins'][userId]
+        args = {'entities': {groupId: group}}
+        yield renderScriptBlock(request, "groups.mako", "groupRequestActions",
+                                False, '#group-request-actions-%s-%s' %(userId, groupId),
+                                "set", args=[groupId, userId, "show_manage"], **args)
 
 
     @profile
@@ -1063,6 +1126,10 @@ class GroupsResource(base.BaseResource):
                 d = self._create(request)
             elif action == 'remove':
                 d = self._remove(request)
+            elif action == 'makeadmin':
+                d = self._makeAdmin(request)
+            elif action == 'removeadmin':
+                d = self._removeAdmin(request)
 
             def _updatePendingGroupRequestCount(ign):
                 def _update_count(counts):
