@@ -1340,30 +1340,34 @@ class GroupSettingsResource(base.BaseResource):
         dp = utils.getRequestArg(request, "dp", sanitize=False) or ''
 
         meta = {'basic':{}}
-        if name:
+        if name and name != group['basic']['name']:
             meta['basic']['name'] = name
-        if desc:
+        if desc and desc != group['basic'].get('desc', ''):
             meta['basic']['desc'] = desc
-        if access in ['closed', 'open']:
+        if access in ['closed', 'open'] and access != group['basic']['access']:
             meta['basic']['access'] = access
         if dp:
             avatar = yield saveAvatarItem(groupId, dp)
             meta['basic']['avatar'] = avatar
-        if meta['basic']:
-            if name and name!=group["basic"]["name"]:
-                members = yield db.get_slice(groupId, "groupMembers")
-                members = utils.columnsToDict(members).keys()
-                entities = members + [orgId]
-                oldColName = "%s:%s"%(group["basic"]["name"].lower(), groupId)
-                colname = '%s:%s' %(name.lower(), groupId)
-                mutations = {}
-                for entity in entities:
-                    mutations[entity] = {'entityGroupsMap':{colname:'', oldColName:None}}
-                #XXX:notify group-members about the change in name
-                yield db.batch_mutate(mutations)
+        if name and name!=group["basic"]["name"]:
+            members = yield db.get_slice(groupId, "groupMembers")
+            members = utils.columnsToDict(members).keys()
+            entities = members + [orgId]
+            oldColName = "%s:%s"%(group["basic"]["name"].lower(), groupId)
+            colname = '%s:%s' %(name.lower(), groupId)
+            mutations = {}
+            for entity in entities:
+                mutations[entity] = {'entityGroupsMap':{colname:'', oldColName:None}}
+            #XXX:notify group-members about the change in name
+            yield db.batch_mutate(mutations)
 
+        if meta['basic']:
             yield db.batch_insert(groupId, 'entities', meta)
+        if not desc and group['basic'].get('desc', ''):
+            yield db.remove(groupId, "entities", 'desc', 'basic')
+        if (not desc and group['basic'].get('desc', '')) or meta['basic']:
             request.write("<script>parent.$$.alerts.info('updated successful');</script>")
+
 
     def render_GET(self, request):
         segmentCount = len(request.postpath)

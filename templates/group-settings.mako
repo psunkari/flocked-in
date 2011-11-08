@@ -100,7 +100,7 @@
 <%def name="edit_group()">
   <%
     groupName = entities[groupId]["basic"].get("name", 'Group Name').replace('"', "&quot;")
-    desc = entities[groupId]["basic"].get("desc", 'Description')
+    desc = entities[groupId]["basic"].get("desc", '')
     access = entities[groupId]["basic"].get("access", '')
   %>
 
@@ -113,7 +113,7 @@
         </li>
         <li>
             <label for="desc">${_('Description')}</label>
-            <textarea class="input-wrap" id="desc" name="desc" value="${_(desc)}"></textarea>
+            <textarea class="input-wrap" id="desc" name="desc"> ${_(desc)}</textarea>
         </li>
         <li>
             <label>${_("Membership")}</label>
