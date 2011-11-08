@@ -99,7 +99,7 @@
 
 <%def name="edit_group()">
   <%
-    groupName = entities[groupId]["basic"].get("name", 'Group Name')
+    groupName = entities[groupId]["basic"].get("name", 'Group Name').replace('"', "&quot;")
     desc = entities[groupId]["basic"].get("desc", 'Description')
     access = entities[groupId]["basic"].get("access", '')
   %>

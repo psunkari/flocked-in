@@ -86,8 +86,8 @@
 <%def name="editBasicInfo()">
   <%
     name = me.get("basic", {}).get("name", '')
-    firstname = me.get("basic", {}).get("firstname", '')
-    lastname = me.get("basic", {}).get("lastname", '')
+    firstname = me.get("basic", {}).get("firstname", '').replace('"', '&quot;')
+    lastname = me.get("basic", {}).get("lastname", '').replace('"', '&quot;')
     jobTitle = me.get("basic", {}).get("jobTitle", '')
     myTimezone = me.get("basic", {}).get("timezone", '')
   %>
@@ -95,11 +95,14 @@
     <div class="styledform">
       <ul>
         <li>
-          <label for="displayname">${_('Display Name')}</label>
-          <input type="text" id="displayname" name="name" value="${name}" autofocus />
+          <label for="displayname">${_('Display Name')}
+              <abbr title="Required">*</abbr>
+          </label>
+          <input type="text" id="displayname" name="name" value="${name}" autofocus required/>
         </li>
         <li>
-          <label for="firstname">${_('First Name')}</label>
+          <label for="firstname">${_('First Name')}
+          </label>
           <input type="text" id="firstname" name="firstname" value="${firstname}"/>
         </li>
         <li>
@@ -107,8 +110,10 @@
           <input type="text" id="lastname" name="lastname" value="${lastname}"/>
         </li>
         <li>
-          <label for="jobTitle">${_('Job Title')}</label>
-          <input type="text" id="jobTitle" name="jobTitle" value="${jobTitle}"/>
+          <label for="jobTitle">${_('Job Title')}
+              <abbr title="Required">*</abbr>
+          </label>
+          <input type="text" id="jobTitle" name="jobTitle" value="${jobTitle}" required/>
         </li>
         <li>
           <label for="timezone">${_('Timezone')}</label>
@@ -218,7 +223,7 @@
 </%def>
 
 <%def name="editPersonal()">
-  <form class="ajax" id="settings-form" action="/settings" method="post"  enctype="multipart/form-data">
+  <form class="ajax" id="settings-form" action="/settings/personal" method="post"  enctype="multipart/form-data">
     <% personal = me.get('personal', {}) %>
     <div class="styledform">
       <div id="personal">
@@ -281,7 +286,7 @@
     contact = me.get('contact', {})
     emailId = me['basic']['emailId']
   %>
-  <form class="ajax" id="settings-form" action="/settings" method="post"  enctype="multipart/form-data">
+  <form class="ajax" id="settings-form" action="/settings/contact" method="post"  enctype="multipart/form-data">
     <div class="styledform">
       <div id="contacts">
         <ul>

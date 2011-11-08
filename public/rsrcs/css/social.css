@@ -1199,6 +1199,10 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     text-align: right;
 }
 
+.styledform abbr {
+    color: #a40000;
+    border-style: none;
+}
 
 /*
  * List of users - friends and people in organization
