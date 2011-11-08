@@ -71,6 +71,7 @@ def getNewUserCount(startDate, endDate, count=100, column_count=100, mail_to='')
     new_users = {}
     usersOrgMap = {}
     totalNewUsers = 0
+    totalUsers ={}
     while 1:
         users = yield db.get_range_slice('orgUsers',
                                         start=start,
@@ -78,6 +79,7 @@ def getNewUserCount(startDate, endDate, count=100, column_count=100, mail_to='')
                                         column_count=toFetchColumnCount)
         for row in users[:count]:
             orgId = row.key
+            totalUsers[orgId] = 0
             for col in row.columns[:column_count]:
                 userId  = col.column.name
                 usersOrgMap[userId] = orgId
@@ -87,6 +89,8 @@ def getNewUserCount(startDate, endDate, count=100, column_count=100, mail_to='')
                 if column_timestamp < endTime and column_timestamp >= startTime:
                     if col.column.name not in new_users.setdefault(orgId, []):
                         new_users[orgId].append(userId)
+                if column_timestamp < endTime:
+                    totalUsers[orgId] +=1
             if len(row.columns) == toFetchColumnCount:
                 column_start = row.columns[-1].column.name
                 while 1:
@@ -104,6 +108,8 @@ def getNewUserCount(startDate, endDate, count=100, column_count=100, mail_to='')
                         if column_timestamp < endTime and column_timestamp >= startTime:
                             if col.column.name not in new_users[orgId]:
                                 new_users[orgId].append(userId)
+                        if column_timestamp < endTime:
+                            totalUsers[orgId] +=1
                     if len(_users[0].columns) == toFetchColumnCount:
                         column_start = _users[0].columns[-1].column.name
                     else:
@@ -137,7 +143,8 @@ def getNewUserCount(startDate, endDate, count=100, column_count=100, mail_to='')
                 column_timestamp = col.column.timestamp/1000000.0
                 if column_timestamp < endTime and column_timestamp >= startTime:
                     data[orgId]['users'][userId]['newItems'] += 1
-                data[orgId]['users'][userId]['items'] += 1
+                if column_timestamp < endTime:
+                    data[orgId]['users'][userId]['items'] += 1
             if len(row.columns) == toFetchColumnCount:
                 cstart = row.columns[-1].column.name
                 while 1:
@@ -150,7 +157,8 @@ def getNewUserCount(startDate, endDate, count=100, column_count=100, mail_to='')
                         if column_timestamp < endTime and column_timestamp >= startTime:
                             data[orgId]['users'][userId]['newItems'] += 1
                         #if userId in data[orgId]['users'] :
-                        data[orgId]['users'][userId]['items'] += 1
+                        if column_timestamp < endTime:
+                            data[orgId]['users'][userId]['items'] += 1
                     if len(userItems[0].columns) == toFetchColumnCount:
                         cstart = userItems[0].columns[-1].column.name
                     else:
@@ -166,7 +174,7 @@ def getNewUserCount(startDate, endDate, count=100, column_count=100, mail_to='')
         domainName = ",".join(data[orgId]['domain'])
         stats["domain"][domainName] = {}
         stats["domain"][domainName]["newUsers"] = len(new_users.get(orgId, []))
-        stats["domain"][domainName]["totalUsers"] = len(data[orgId].get('users', {}).keys())
+        stats["domain"][domainName]["totalUsers"] = totalUsers.get(orgId, 0)
         stats["domain"][domainName]["newItems"] = sum([data[orgId]['users'][x]['newItems'] for x in data[orgId].get('users', {})])
         stats["domain"][domainName]["items"] =    sum([data[orgId]['users'][x]['items'] for x in data[orgId].get('users', {})])
 
