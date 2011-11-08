@@ -275,8 +275,9 @@ class MessagingResource(base.BaseResource):
         if not convId:
             raise errors.MissingParams([])
 
-        cols = yield db.get_slice(convId, "mConversations", ['participants'])
+        cols = yield db.get_slice(convId, "mConversations", ['meta', 'participants'])
         cols = utils.supercolumnsToDict(cols)
+        subject = cols['meta'].get('subject', None)
         participants = cols.get('participants', {}).keys()
         if not cols:
             raise errors.InvalidMessage(convId)
@@ -323,6 +324,8 @@ class MessagingResource(base.BaseResource):
         data["orgId"] = args["orgKey"]
         data["convId"] = convId
         data["message"] = body
+        data["subject"] = subject
+        data["_fromName"] = people[value]['basic']['name']
 
         users = participants - set([myId])
         if users:
@@ -423,6 +426,8 @@ class MessagingResource(base.BaseResource):
         data["orgId"] = args["orgKey"]
         data["convId"] = convId
         data["message"] = body
+        data["subject"] = subject
+        data["_fromName"] = people[value]['basic']['name']
         users = set(participants) - set([myId])
         if users:
             yield notifications.notify(users, ":NM", myId, timeUUID, **data)
@@ -577,6 +582,7 @@ class MessagingResource(base.BaseResource):
 
         conv = yield db.get_slice(convId, "mConversations")
         conv = utils.supercolumnsToDict(conv)
+        subject = conv['meta'].get('subject', None)
         participants =  set(conv.get('participants', {}).keys())
         if not conv:
             raise errors.InvalidMessage(convId)
@@ -594,6 +600,8 @@ class MessagingResource(base.BaseResource):
         data = {"entities": entities}
         data["orgId"] = orgId
         data["convId"] = convId
+        data["subject"] = subject
+        data["_fromName"] = entities[myId]['basic']['name']
         if newMembers:
             data["message"] = conv["meta"]["snippet"]
             newMembers = dict([(userId, '') for userId in newMembers])
@@ -617,6 +625,7 @@ class MessagingResource(base.BaseResource):
 
         conv = yield db.get_slice(convId, "mConversations")
         conv = utils.supercolumnsToDict(conv)
+        subject = conv['meta'].get('subject', None)
         participants = conv.get('participants', {}).keys()
         if not conv:
             raise errors.InvalidMessage(convId)
@@ -660,6 +669,8 @@ class MessagingResource(base.BaseResource):
             data["orgId"] = orgId
             data["convId"] = convId
             data["removedMembers"] = members
+            data["subject"] = subject
+            data["_fromName"] = entities[myId]['basic']['name']
             yield notifications.notify(mailNotificants, ":MA", myId, **data)
 
 

@@ -137,9 +137,9 @@ class NotificationByMail(object):
         "GA": "[%(brandName)s] Your request to join %(senderName)s was accepted",
         "GI": "[%(brandName)s] %(senderName)s invited you to join %(groupName)s",
         "GR": "[%(brandName)s] %(senderName)s wants to join %(groupName)s",
-        "NM": "[%(brandName)s] %(senderName)s sent a private message",
-        "MR": "[%(brandName)s] %(senderName)s sent a reply to private message",
-        "MA": "[%(brandName)s] %(senderName)s changed access controls of a message"
+        "NM": "[%(brandName)s] %(subject)s",
+        "MR": "[%(brandName)s] Re: %(subject)s",
+        "MA": "[%(brandName)s] Re: %(subject)s"
     }
 
     _otherNotifyBody = {
@@ -158,14 +158,14 @@ class NotificationByMail(object):
               "%(senderName)s wants to join %(groupName)s group\n"\
               "Visit %(rootUrl)s/groups?type=pendingRequests to accept the request",
         "NM": "Hi,\n\n"\
-              "%(senderName)s sent a message. \n"\
-              "Vist the url to check the message: %(convUrl)s",
-        "MR": "Hi, \n\n"\
-              "%(senderName)s replied to a message. \n"\
-              "Visit the url to check the message:  %(convUrl)s",
-        "MA": "Hi, \n\n"\
-              "%(senderName)s changed access controls of a message. \n"\
-              "Visit the url to check the message: %(convUrl)s",
+              "%(senderName)s said - %(message)s\n\n"\
+              "Visit %(convUrl)s to see the conversation",
+        "MR": "Hi,\n\n"\
+              "%(senderName)s said - %(message)s\n\n"\
+              "Visit %(convUrl)s to see the conversation",
+        "MA": "Hi,\n\n"\
+              "%(senderName)s changed access controls of a message.\n"\
+              "Visit %(convUrl)s to see the conversation"
     }
 
     _signature = "\n\n"\
@@ -280,7 +280,9 @@ class NotificationByMail(object):
             sendMail = settings.getNotifyPref(user.get("notify", ''),
                                               prefAttr, prefMedium)
             if sendMail and mailId:
-                deferreds.append(utils.sendmail(mailId, subject, body, html))
+                fromName = data.get('_fromName', None) or 'Flocked-in'
+                deferreds.append(utils.sendmail(mailId, subject,
+                                                body, html, fromName=fromName))
 
         yield defer.DeferredList(deferreds)
 

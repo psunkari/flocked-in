@@ -255,10 +255,7 @@
   ${footer()}
 </%def>
 
-##
-## Yet to be implemented
-##
-
+## Group Request
 <%def name="notifyGR()">
   ${header()}
   <td valign="top" align="right" style="width:48px;" rowspan="2">
@@ -274,6 +271,7 @@
   ${footer()}
 </%def>
 
+## Group Invite
 <%def name="notifyGI()">
   ${header()}
   <td valign="top" align="right" style="width:48px;" rowspan="2">
@@ -286,69 +284,35 @@
   ${footer()}
 </%def>
 
-<%def name="groupInvite()">
-  ${header()}
-  <td valign="top" align="right" style="width:48px;" rowspan="2">
-    <img src="${senderAvatarUrl}" alt="">
-  </td>
-  <td style="font-size: 14px;">
-    <b>${senderName}</b> added you to ${groupName}.
-    <br/><br/>
-    You can visit <a href="${rootUrl}/groups?start=${groupId}">${rootUrl}/groups?start=${groupId}</a> to manage your subscription.
-  </td>
-  ${footer()}
-</%def>
-
-<%def name="groupNewMember()">
-  ${header()}
-  <td valign="top" align="right" style="width:48px;" rowspan="2">
-    <img src="${senderAvatarUrl}" alt="">
-  </td>
-  <td style="font-size: 14px;">
-    <b>${senderName}</b> just joined ${groupName}.
-    <br/><br/>
-    You can visit <a href="${rootUrl}/groups">${rootUrl}/groups</a> to manage all your groups.
-  </td>
-  ${footer()}
-</%def>
-
-##notify new private conversation
+## New private conversation
 <%def name="notifyNM()">
   ${header()}
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
   <td style="font-size: 14px;">
-    <b>${senderName}</b> sent you a private message
+    <b>${senderName}</b>: ${message}
     <br/><br/>
-    <blockquote>
-      ${senderName}: ${message}
-    <br/><br/>
-      <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View Private Conversation</div></a>
-    </blockquote>
+    <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View Full Conversation</div></a>
   </td>
   ${footer()}
 </%def>
 
-##notify new reply
+## Conversation Reply
 <%def name="notifyMR()">
   ${header()}
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
   <td style="font-size: 14px;">
-    <b>${senderName}</b> replied to a private conversation
+    <b>${senderName}</b>: ${message}
     <br/><br/>
-    <blockquote>
-      ${senderName}: ${message}
-    <br/><br/>
-      <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View Reply</div></a>
-    </blockquote>
+    <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View Full Conversation</div></a>
   </td>
   ${footer()}
 </%def>
 
-##notify message access change
+## Message access change
 <%def name="notifyMA()">
   ${header()}
   <td valign="top" align="right" style="width:48px;" rowspan="2">
@@ -363,12 +327,10 @@
         <b>${senderName}</b> updated access premissions of the private conversation
     %endif
     <br/><br/>
-      <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View Private Message</div></a>
+      <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View Full Conversation</div></a>
   </td>
   ${footer()}
 </%def>
-
-
 
 <%def name="html_stats()">
   <table>
