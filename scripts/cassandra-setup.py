@@ -271,6 +271,39 @@ def createColumnFamilies(client):
                         None, "Friend/Follow suggestions")
     yield client.system_add_column_family(suggestions)
 
+    # API
+    oAuthClients = CfDef(KEYSPACE, "oAuthClients", "Super", "UTF8Type", "UTF8Type",
+                    "Details of Applications registered for API Access")
+
+    oUser2Clients = CfDef(KEYSPACE, "oUser2Clients", "Standard", "UTF8Type",
+                          None, "List of applications registered by a User")
+
+    oUserApps = CfDef(KEYSPACE, "oUserApps", "Standard", "UTF8Type",
+                          None, "List of applications the current user has \
+                          signed up for")
+
+    oAuthorizationCodes = CfDef(KEYSPACE, "oAuthorizationCodes", "Standard", "UTF8Type",
+                                None, "List of Authorization codes mapped to a\
+                                client--user pair")
+
+    oAuthCodes2User = CfDef(KEYSPACE, "oAuthCodes2User", "Standard", "UTF8Type",
+                          None, "List of auth codes allotted against a user")
+
+    #oAccessTokens = CfDef(KEYSPACE, "oAccessTokens", "Super", "BytesType", "UTF8Type",
+    #                "List of access tokens issued against a client")
+    #accessToken2Client = CfDef(KEYSPACE, "accessToken2Client", "Super", "BytesType", "UTF8Type",
+    #                "Reverse Map of access tokens assigned to clients")
+    #accessToken2User = CfDef(KEYSPACE, "accessToken2User", "Super", "BytesType", "UTF8Type",
+    #                "Reverse Map of access tokens used on behalf of f.In user")
+    #
+    #oAuthScopeMap = CfDef(KEYSPACE, "oAuthScopeMap", "Super", "BytesType", "UTF8Type",
+    #                "Reverse Map of scope designated to an access token")
+
+    yield client.system_add_column_family(oAuthClients)
+    yield client.system_add_column_family(oUser2Clients)
+    yield client.system_add_column_family(oUserApps)
+    yield client.system_add_column_family(oAuthorizationCodes)
+    yield client.system_add_column_family(oAuthCodes2User)
 
 @defer.inlineCallbacks
 def addSampleData(client):
@@ -646,7 +679,8 @@ def truncateColumnFamilies(client):
                "mArchivedConversations", "mDeletedConversations",
                "mConvMessages", "mConvFolders", "latest", "doNotSpam",
                "files", "tmp_files", "item_files", "invitationsSent",
-               "user_files", "suggestions"]:
+               "user_files", "suggestions", "oAuthClients", "oUser2Clients",
+               "oAuthorizationCodes", "oAuthCodes2User", "oUserApps"]:
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 

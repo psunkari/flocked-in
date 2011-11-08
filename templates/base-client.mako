@@ -26,7 +26,6 @@
       ${navMenuItem("/feed?id=%s" % orgKey, _("Company Feed"), "org")}
       ${navMenuItem("/groups", _("Groups"), "groups")}
       ${navMenuItem("/tags/list", _("Tags"), "tags")}
-      ${navMenuItem("/o/clients", _("Apps"), "apps")}
     </ul>
   </div>
 %if script:
@@ -53,12 +52,6 @@
     <meta http-equiv="refresh" content="0; URL=${noscriptUrl}"/>
   </noscript>
 %else:
-  <script>
-    var date = new Date(); date.setDate(date.getDate() - 2);
-    document.cookie = "_ns=0;path=/;expires=" + date.toUTCString();
-    url = window.location.href.replace(/_ns=1&?/, "");
-    window.location.href = url.replace(/(\?|&)$/, '');
-  </script>
 %endif
 </head>
 %if script:
@@ -68,13 +61,13 @@
 %endif
   <div id="topbar">
     <div id="top" class="contents">
-      <% avatarURI = utils.userAvatar(myKey, me) %>
+      <% avatarURI = None %>
       %if avatarURI:
         <div class="avatar" id="avatar" style="background-image:url('${avatarURI}')"></div>
       %endif
       <div id="sitelogo">
         %if org and org.has_key('basic'):
-          <% logoURI = utils.companyLogo(org) %>
+          <% logoURI = None %>
           %if logoURI:
             <img src="${logoURI}" alt="${org['basic']['name']}"/>
           %else:
@@ -94,10 +87,8 @@
   <div id="menubar">
     <div id="menu" class="contents">
       <%
-        name = me['basic']['name']
-        if me['basic'].has_key('jobTitle'):
-          title = me['basic']['jobTitle']
-          name = _('%(name)s, %(title)s') % locals()
+        name = "Third Party System"
+        title = "Mr. World"
       %>
       <div id="name">${name}</div>
       <div id="menubar-links-wrapper">
@@ -105,7 +96,7 @@
         %if isOrgAdmin:
           <a href="/admin" class="ajax">${_("Admin")}</a>
         %endif
-        <a href="/profile?id=${myKey}" class="ajax">${_("My Profile")}</a>
+        <a href="/profile?id=" class="ajax">${_("My Profile")}</a>
         <a href="/signout">${_("Sign out")}</a>
       </div>
     </div>
@@ -114,7 +105,6 @@
     ${self.layout()}
   </div>
   <div id="alertbar"></div>
-%if script:
   <script type="text/javascript" src="/rsrcs/js/jquery-1.6.4.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.menu.js"></script>
@@ -124,10 +114,9 @@
   <script type="text/javascript" src="/rsrcs/js/jquery.iframe-transport.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.html5form-1.3.js"></script>
   <script type="text/javascript" src="/rsrcs/js/social.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/client.js"></script>
   <script type="text/javascript">
     $().ready(function() {$$.ui.init()});
   </script>
-%else:
 </body>
 </html>
-%endif
