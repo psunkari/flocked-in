@@ -82,7 +82,7 @@ class MissingParams(BaseError):
         message = self.message
         params = ", ".join(self.params)
         return ("<p>%s</p><p><b>%s</b></p>"%(message, params), self.errcode,
-                "%(message)s: %(params)s" % locals())
+                "%(params)s cannot be empty" % locals())
 
 
 #

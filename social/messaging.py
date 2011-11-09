@@ -64,7 +64,6 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _getFileInfo(self, request):
-
         authinfo = request.getSession(IAuthInfo)
         myId = authinfo.username
         myOrgId = authinfo.organization
@@ -387,14 +386,17 @@ class MessagingResource(base.BaseResource):
         filterType = utils.getRequestArg(request, "filterType") or None
 
         if not parent and not recipients:
-            raise errors.MissingParams([])
+            raise errors.MissingParams(['Recipients'])
+
+        if not subject and not body:
+            raise errors.MissingParams(['Both subject and message'])
 
         cols = yield db.multiget_slice(recipients, "entities", ['basic'])
         recipients = utils.multiSuperColumnsToDict(cols)
         recipients = set([userId for userId in recipients if recipients[userId]])
-
         if not recipients:
-            raise errors.MissingParams([])
+            raise errors.MissingParams(['Recipients'])
+
         recipients.add(myId)
         participants = list(recipients)
 
