@@ -33,6 +33,8 @@ from social.files           import FilesResource
 from social.embed           import EmbedResource
 from social.contact         import ContactResource
 from social.logging         import log
+from social.oauth           import OAuthResource
+from social.oauth           import OAuthClientResource
 
 
 def getPluggedResources(ajax=False):
@@ -184,6 +186,8 @@ class RootResource(resource.Resource):
         self._pluginResources = getPluggedResources(self._isAjax)
         self._messages = MessagingResource(self._isAjax)
         self._files = FilesResource(self._isAjax)
+        self._oauth = OAuthResource(self._isAjax)
+        self._oauthClient = OAuthClientResource(self._isAjax)
         if not self._isAjax:
             self._home = HomeResource()
             self._ajax = RootResource(True)
@@ -280,6 +284,11 @@ class RootResource(resource.Resource):
             match = self._admin
         elif path == "file":
             match = self._files
+        elif path == "o":
+            match = self._oauth
+        elif path == "client":
+            match = self._oauthClient
+
         elif path in plugins and self._pluginResources.has_key(path):
             match = self._pluginResources[path]
 

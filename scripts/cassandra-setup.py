@@ -271,6 +271,37 @@ def createColumnFamilies(client):
                         None, "Friend/Follow suggestions")
     yield client.system_add_column_family(suggestions)
 
+    # API
+    oAuthClients = CfDef(KEYSPACE, "oAuthClients", "Super", "UTF8Type", "UTF8Type",
+                    "Details of Applications registered for API Access")
+
+    oUser2Clients = CfDef(KEYSPACE, "oUser2Clients", "Standard", "UTF8Type",
+                          None, "List of applications registered by a User")
+
+    oUserApps = CfDef(KEYSPACE, "oUserApps", "Standard", "UTF8Type",
+                          None, "List of applications the current user has \
+                          signed up for")
+
+    oAuthorizationCodes = CfDef(KEYSPACE, "oAuthorizationCodes", "Super",
+                                "UTF8Type", "UTF8Type",
+                                "Map of Authorization codes with client, user")
+
+    oAccessTokens = CfDef(KEYSPACE, "oAccessTokens", "Super", "UTF8Type",
+                          "UTF8Type", "List of access tokens issued.")
+
+    oAuthCode2Token = CfDef(KEYSPACE, "oAuthCode2Token", "Standard", "UTF8Type",
+                          None, "List of access tokens issued for an auth code")
+
+    #oAuthScopeMap = CfDef(KEYSPACE, "oAuthScopeMap", "Super", "BytesType", "UTF8Type",
+    #                "Reverse Map of scope designated to an access token")
+
+    yield client.system_add_column_family(oAuthClients)
+    yield client.system_add_column_family(oUser2Clients)
+    yield client.system_add_column_family(oUserApps)
+    yield client.system_add_column_family(oAuthorizationCodes)
+    yield client.system_add_column_family(oAccessTokens)
+    yield client.system_add_column_family(oAuthCode2Token)
+    #yield client.system_add_column_family(oAuthCodes2User)
 
 @defer.inlineCallbacks
 def addSampleData(client):
@@ -646,7 +677,9 @@ def truncateColumnFamilies(client):
                "mArchivedConversations", "mDeletedConversations",
                "mConvMessages", "mConvFolders", "latest", "doNotSpam",
                "files", "tmp_files", "item_files", "invitationsSent",
-               "user_files", "suggestions"]:
+               "user_files", "suggestions", "oAuthClients", "oUser2Clients",
+               "oAuthorizationCodes", "oUserApps", "oAccessTokens", "oAuthCode2Token"]:
+
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 
