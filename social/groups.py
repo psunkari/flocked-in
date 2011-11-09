@@ -1,4 +1,4 @@
- uuid
+import uuid
 from twisted.internet   import defer
 from telephus.cassandra import ttypes
 try:
