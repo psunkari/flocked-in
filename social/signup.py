@@ -135,6 +135,7 @@ class SignupResource(BaseResource):
     isLeaf = True
     requireAuth = False
     thanksPage = None
+    invalidEmailPage = None
 
     @defer.inlineCallbacks
     def _isValidToken(self, emailId, token):
@@ -205,16 +206,18 @@ class SignupResource(BaseResource):
     def _signup(self, request):
         if not self.thanksPage:
             self.thanksPage = static.File("public/thanks.html")
+        if not self.invalidEmailPage:
+            self.invalidEmailPage = static.File("public/invalid-email.html")
 
         emailId = utils.getRequestArg(request, "email")
 
         try:
             yield _sendSignupInvitation(emailId)
             self.thanksPage.render_GET(request)
-            defer.returnValue(None)
         except (InvalidEmailId, DomainBlacklisted), e:
-            request.redirect('/')
-            request.finish()
+            self.invalidEmailPage.render_GET(request)
+
+        defer.returnValue(None)
 
 
     @profile

@@ -5,14 +5,36 @@
   <title>Flocked-in &mdash; Private, Secure and Free Social Network for Enterprises</title>
   <link href="/rsrcs/css/static.css" media="all" rel="stylesheet" type="text/css">
   <link rel="shortcut icon" href="/rsrcs/img/favicon.ico" type="image/x-icon" />
+  <script type="text/javascript">
+    //<![CDATA[
+    function checkSigninPlaceholder() {
+      emailInput = document.getElementById('signup-email');
+      if ('placeholder' in emailInput) {
+          emailInput.placeholder = 'Enter your work e-mail';
+          placeholderDiv = document.getElementById('signup-placeholder');
+          placeholderDiv.style.display = 'none';
+      }
+    }
+    //]]>
+  </script>
 </head>
-<body>
+<body onload="checkSigninPlaceholder();">
   <div id="home-header" class="centered-wrapper">
     <a href='/'><img id="home-sitelogo" src="/rsrcs/img/flocked-in.png" alt="Flocked-in"/></a>
   </div>
   <div id="home-contents" class="centered-wrapper">
     <div id="home-intro">
-      <div id="home-caption">Thanks for signing up for Flocked-in.<br/>Please check your e-mail to complete the registration.</div>
+      <div id="home-caption">Please use a valid work email.</div>
+      <div id="signup">
+        <div>
+          <p>We currently do not accept signups from public email addresses like GMail or Yahoo!</p>
+        </div>
+        <form action="/signup/signup" id="signup-form" method="POST">
+          <input id="signup-email" type="email" name="email" required/>
+          <input id="signup-submit" type="submit" value="Sign Up"/>
+        </form>
+        <div id="signup-placeholder">&#8627; Enter your work e-mail</div>
+      </div>
     </div>
   </div>
   <div id="home-summary-wrapper" class="centered-wrapper">
