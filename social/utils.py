@@ -565,7 +565,7 @@ def simpleTimestamp(timestamp, timezone='Asia/Kolkata'):
     params = {'minutes': ts.minute, '24hour': ts.hour,
               '12hour': 12 if not (ts.hour % 12) else (ts.hour % 12),
               'month': _(monthName(ts.month, True)), 'year': ts.year,
-              'ampm': "am" if ts.hour < 11 else "pm",
+              'ampm': "am" if ts.hour <= 11 else "pm",
               'dow': _(weekName(ts.weekday(), True)), 'date': ts.day}
     tooltip = _("%(dow)s, %(month)s %(date)s, %(year)s at %(12hour)s:%(minutes)02d%(ampm)s") % params
 
