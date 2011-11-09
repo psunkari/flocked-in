@@ -279,7 +279,7 @@
   </td>
   <td style="font-size: 14px;">
     ${senderName} invited you to join <b>${groupName}</b> group.<br/>
-    Visit <a href="${rootUrl}/groups?type=invitaions">${rootUrl}/groups?type=invitations</a> to accept the invitation.
+    Visit <a href="${rootUrl}/groups?type=invitations">${rootUrl}/groups?type=invitations</a> to accept the invitation.
   </td>
   ${footer()}
 </%def>
