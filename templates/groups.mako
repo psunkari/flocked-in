@@ -184,8 +184,6 @@
   </form>
 </%def>
 
-
-
 <%def name="allPendingRequests()">
   <%
     counter = 0
@@ -244,6 +242,7 @@
   <%
     counter = 0
     firstRow = True
+    showUserActions = tab not in ['pending', 'banned', 'manage']
   %>
   %for userId in userIds:
     %if counter % 2 == 0:
@@ -254,8 +253,7 @@
         <div class="users-row">
       %endif
     %endif
-    <div class="users-user">${_displayUser(userId, groupId)}</div>
-
+    <div class="users-user">${_displayUser(userId, groupId, showUserActions=showUserActions)}</div>
     %if counter % 2 == 1:
       </div>
     %endif
@@ -266,9 +264,7 @@
   %endif
 </%def>
 
-
-
-<%def name="_displayUser(userId, groupId, showGroupName=False)">
+<%def name="_displayUser(userId, groupId, showGroupName=False, showUserActions=False)">
   <div class="users-avatar">
     <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
     %if avatarURI:
@@ -280,20 +276,23 @@
     <div class="user-details-title">${entities[userId]["basic"].get("jobTitle", '')}</div>
     % if groupId and showGroupName:
       <div class="user-details-name">${_("Group:")} ${utils.groupName(groupId, entities[groupId])}</div>
-
     %endif
     <div class="user-details-actions">
-      <ul id="group-request-actions-${userId}-${groupId}" class="middle user-actions h-links">
-        %if tab == 'pending':
-          ${self.groupRequestActions(groupId, userId)}
-        %elif tab == 'banned':
-          ${self.groupRequestActions(groupId, userId, action="show_blocked")}
-        % elif tab == 'manage members':
-          ${self.groupRequestActions(groupId, userId, action="show_manage")}
-        %else:
+      %if showUserActions:
+        <ul id="user-actions-${userId}" class="middle user-actions h-links">
           ${profile.user_actions(userId, True)}
-        %endif
-      </ul>
+        </ul>
+      %else:
+        <ul id="group-request-actions-${userId}-${groupId}" class="middle user-actions h-links">
+          %if tab == 'pending':
+            ${self.groupRequestActions(groupId, userId)}
+          %elif tab == 'banned':
+            ${self.groupRequestActions(groupId, userId, action="show_blocked")}
+          % elif tab == 'manage':
+            ${self.groupRequestActions(groupId, userId, action="show_manage")}
+          %endif
+        </ul>
+      %endif
     </div>
   </div>
 </%def>

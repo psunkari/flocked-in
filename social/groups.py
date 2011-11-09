@@ -882,7 +882,7 @@ class GroupsResource(base.BaseResource):
         args["menuId"] = "members"
         args["groupId"] = groupId
         args["entities"] = {groupId: group}
-        args["tab"]= 'manage members' if manage else ''
+        args["tab"]= 'manage' if manage else ''
 
         if script and landing:
             yield render(request, "group-settings.mako", **args)
