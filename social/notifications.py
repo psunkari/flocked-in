@@ -49,7 +49,7 @@ def notify(userIds, notifyId, value, timeUUID=None, **kwargs):
                                super_column=notifyId, count=3, reverse=True)
         def deleteOlderNotifications(results):
             mutations = {}
-            timestamp = int(time.time() * 10000000)
+            timestamp = int(time.time() * 1000000)
             for key, cols in results.iteritems():
                 names = [col.column.name for col in cols
                                          if col.column.name != timeUUID]
@@ -392,6 +392,7 @@ class NotificationsResource(base.BaseResource):
 
         notifyStrs = {}
         notifyClasses = {}
+        notifyUsers = {}
         brandName = config.get('Branding', 'Name')
 
         fetchStart = utils.getRequestArg(request, 'start') or ''
@@ -407,7 +408,7 @@ class NotificationsResource(base.BaseResource):
                 if value not in notifyIds:
                     fetchedNotifyIds.append(value)
                     keysFromStore.append(col.column.name)
-                    timestamps[value] = col.column.name
+                    timestamps[value] = col.column.timestamp/1000000
 
             if not keysFromStore:
                 break
@@ -472,6 +473,7 @@ class NotificationsResource(base.BaseResource):
             convId, convType, convOwnerId, notifyType = notifyId.split(':')
 
             userIds = utils.uniqify(notifyValues[notifyId])
+            notifyUsers[notifyId] = userIds
             noOfUsers = len(userIds)
 
             vals = dict([('user'+str(idx), utils.userName(uid, entities[uid]))\
@@ -504,6 +506,7 @@ class NotificationsResource(base.BaseResource):
             x = notifyId[1:]
             x = notifyId.split(':')[1]
             userIds = utils.uniqify(notifyValues[notifyId])
+            notifyUsers[notifyId] = userIds
             noOfUsers = len(userIds)
 
             pfx = 'group' if x == 'GA' else 'user'
@@ -550,7 +553,9 @@ class NotificationsResource(base.BaseResource):
         args = {"notifications": notifyIds,
                 "notifyStr": notifyStrs,
                 "notifyClasses": notifyClasses,
+                "notifyUsers": notifyUsers,
                 "entities": entities,
+                "timestamps": timestamps,
                 "nextPageStart": nextPageStart}
         defer.returnValue(args)
 
@@ -585,6 +590,7 @@ class NotificationsResource(base.BaseResource):
                 yield renderScriptBlock(request, "notifications.mako", "content",
                                     landing, "#notifications", "set", **args)
             yield utils.render_LatestCounts(request, landing)
+
 
     @profile
     @dump_args

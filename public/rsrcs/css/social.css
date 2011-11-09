@@ -1017,7 +1017,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     font-size: 9px;
     clear: both;
 }
-.conv-footer abbr, .comment-meta abbr {
+abbr.timestamp {
     border: none;
 }
 
@@ -1355,11 +1355,38 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     margin: 20px;
 }
 
-.snippet {
-    font-weight: lighter;
-    color: #999;
+.notification-item:first-child {
+    border-top: none;
 }
 
+.notification-item {
+    padding: 10px 0 16px 90px;
+    border-top: 1px dotted #CCC;
+    font-size: 14px;
+    min-height: 32px;
+    position: relative;
+}
+
+.notification-footer {
+    color: #999;
+    padding: 5px 0 0;
+    font-size: 10px;
+    clear: both;
+}
+
+.notification-avatars-wrapper {
+    position: absolute;
+    top: 10px;
+    left: 0px;
+    width: 74px;
+}
+
+.notification-avatar {
+    float: right;
+    width: 32px;
+    height: 32px;
+    padding: 0 2px;
+}
 
 
 /*

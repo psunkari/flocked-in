@@ -33,10 +33,32 @@
 </%def>
 
 <%def name="content()">
+  <%
+    userAvatar = utils.userAvatar
+    groupAvatar = utils.groupAvatar
+    simpleTimestamp = utils.simpleTimestamp
+    myTz = me['basic']['timezone']
+  %>
   %if notifications:
     %for notifyId in notifications:
-      <div class="conv-item" >
+      <div class="notification-item">
+        <div class="notification-avatars-wrapper">
+            %for entityId in reversed(notifyUsers[notifyId][-2:]):
+              <%
+                 entity = entities[entityId]
+                 entityType = entity["basic"]["type"]
+                 if entityType == "user":
+                    avatarURI = userAvatar(entityId, entity, "small")
+                 elif entityType == "group":
+                    avatarURI = groupAvatar(entityId, entity, "small")
+              %>
+              <div class="notification-avatar">
+                <img src="${avatarURI}" style="max-height: 32px; max-width: 32px;"/>
+              </div>
+            %endfor
+        </div>
         ${notifyStr[notifyId]}
+        <div class="notification-footer">${simpleTimestamp(timestamps[notifyId], myTz)}</div>
       </div>
     %endfor
     %if nextPageStart:
