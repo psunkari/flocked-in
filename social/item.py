@@ -1,6 +1,7 @@
 import json
 import uuid
 import time
+import re
 
 from telephus.cassandra import ttypes
 from twisted.internet   import defer
@@ -764,6 +765,12 @@ class ItemResource(base.BaseResource):
 
         if not tagName:
             raise errors.MissingParams([_("Tag")])
+
+        decoded = tagName.decode('utf-8', 'replace')
+        if len(decoded) > 50:
+            raise errors.InvalidRequest(_('Tag cannot be more than 50 characters long'))
+        if not re.match('^[\w-]*$', decoded):
+            raise errors.InvalidRequest(_('Tag can only include numerals, alphabet and hyphens (-)'))
 
         (itemId, item) = yield utils.getValidItemId(request, "id", columns=["tags"])
         if "parent" in item["meta"]:
