@@ -842,7 +842,7 @@ class GroupsResource(base.BaseResource):
             args["nextPageStart"] = nextPageStart
             args["pendingConnections"] = pendingConnections
             args["myGroups"] = []
-            args["groupFollowers"] = dict([(groupId, []) for groupId in groups])
+            args["groupFollowers"] = dict([(groupId, []) for groupId in groupIds])
 
         if script:
             yield renderScriptBlock(request, "groups.mako", "viewOptions",
