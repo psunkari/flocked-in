@@ -4,6 +4,7 @@ import gettext
 from ordereddict        import OrderedDict
 
 from telephus.pool      import CassandraClusterPool
+from telephus.cassandra.ttypes import ConsistencyLevel
 from twisted.internet   import reactor
 from twisted.plugin     import getPlugins
 
@@ -28,6 +29,7 @@ rootUrl = config.get("General", "URL")
 cassandraNodes = config.get("Cassandra", "Nodes").split(',')
 cassandraKeyspace = config.get("Cassandra", "Keyspace")
 db = CassandraClusterPool(cassandraNodes, cassandraKeyspace, pool_size=10)
+db.set_consistency(ConsistencyLevel.LOCAL_QUORUM)
 
 
 #
