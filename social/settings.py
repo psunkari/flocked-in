@@ -5,6 +5,7 @@ import uuid
 from random                 import sample
 import datetime
 import json
+import re
 
 from twisted.web            import resource, server, http
 from twisted.internet       import defer
@@ -203,14 +204,17 @@ class SettingsResource(base.BaseResource):
         dob_mon = utils.getRequestArg(request, "dob_mon") or None
         dob_year = utils.getRequestArg(request, "dob_year") or None
 
-        try:
-            dateStr = "%s/%s/%s" % (dob_day, dob_mon, dob_year)
-            date = time.strptime(dateStr, "%d/%m/%Y")
-            if date.tm_year < time.localtime().tm_year:
-                dob_day = "%02d" % date.tm_mday
-                dob_mon = "%02d" % date.tm_mon
-                data["birthday"] = "%s%s%s" % (dob_year, dob_mon, dob_day)
-        except ValueError:
+        if dob_day and dob_mon and dob_year:
+            try:
+                dateStr = "%s/%s/%s" % (dob_day, dob_mon, dob_year)
+                date = time.strptime(dateStr, "%d/%m/%Y")
+                if date.tm_year < time.localtime().tm_year:
+                    dob_day = "%02d" % date.tm_mday
+                    dob_mon = "%02d" % date.tm_mon
+                    data["birthday"] = "%s%s%s" % (dob_year, dob_mon, dob_day)
+            except ValueError:
+                raise errors.InvalidRequest(_('Please select a valid Date of Birth'))
+        else:
             to_remove.append('birthday')
 
         columnNames = ['email', 'phone', 'mobile', 'hometown', 'currentCity']
@@ -224,6 +228,12 @@ class SettingsResource(base.BaseResource):
             yield db.batch_insert(myId, "entities", {"personal": data})
         if to_remove:
             yield db.batch_remove({'entities':[myId]}, names=to_remove, supercolumn='personal')
+
+        if 'phone' in data and not re.match('^\+?[0-9x\- ]{5,20}$', data['phone']):
+            raise errors.InvalidRequest(_('Phone numbers can only have numerals, hyphens, spaces and a plus sign'))
+
+        if 'mobile' in data and not re.match('^\+?[0-9x\- ]{5,20}$', data['mobile']):
+            raise errors.InvalidRequest(_('Phone numbers can only have numerals, hyphens, spaces and a plus sign'))
 
         columnNames.append('birthday')
         personalInfo =  me.get('personal', {})
@@ -260,6 +270,13 @@ class SettingsResource(base.BaseResource):
                 data[field] = val
             else:
                 to_remove.append(field)
+
+        if 'phone' in data and not re.match('^\+?[0-9x\- ]{5,20}$', data['phone']):
+            raise errors.InvalidRequest(_('Phone numbers can only have numerals, hyphens, spaces and a plus sign'))
+
+        if 'mobile' in data and not re.match('^\+?[0-9x\- ]{5,20}$', data['mobile']):
+            raise errors.InvalidRequest(_('Phone numbers can only have numerals, hyphens, spaces and a plus sign'))
+
         if data:
             yield db.batch_insert(myId, "entities", {"contact": data})
         if to_remove:
