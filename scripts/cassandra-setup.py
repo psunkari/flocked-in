@@ -282,20 +282,16 @@ def createColumnFamilies(client):
                           None, "List of applications the current user has \
                           signed up for")
 
-    oAuthorizationCodes = CfDef(KEYSPACE, "oAuthorizationCodes", "Standard", "UTF8Type",
-                                None, "List of Authorization codes mapped to a\
-                                client--user pair")
+    oAuthorizationCodes = CfDef(KEYSPACE, "oAuthorizationCodes", "Super",
+                                "UTF8Type", "UTF8Type",
+                                "Map of Authorization codes with client, user")
 
-    oAuthCodes2User = CfDef(KEYSPACE, "oAuthCodes2User", "Standard", "UTF8Type",
-                          None, "List of auth codes allotted against a user")
+    oAccessTokens = CfDef(KEYSPACE, "oAccessTokens", "Super", "UTF8Type",
+                          "UTF8Type", "List of access tokens issued.")
 
-    #oAccessTokens = CfDef(KEYSPACE, "oAccessTokens", "Super", "BytesType", "UTF8Type",
-    #                "List of access tokens issued against a client")
-    #accessToken2Client = CfDef(KEYSPACE, "accessToken2Client", "Super", "BytesType", "UTF8Type",
-    #                "Reverse Map of access tokens assigned to clients")
-    #accessToken2User = CfDef(KEYSPACE, "accessToken2User", "Super", "BytesType", "UTF8Type",
-    #                "Reverse Map of access tokens used on behalf of f.In user")
-    #
+    oAuthCode2Token = CfDef(KEYSPACE, "oAuthCode2Token", "Standard", "UTF8Type",
+                          None, "List of access tokens issued for an auth code")
+
     #oAuthScopeMap = CfDef(KEYSPACE, "oAuthScopeMap", "Super", "BytesType", "UTF8Type",
     #                "Reverse Map of scope designated to an access token")
 
@@ -303,7 +299,9 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(oUser2Clients)
     yield client.system_add_column_family(oUserApps)
     yield client.system_add_column_family(oAuthorizationCodes)
-    yield client.system_add_column_family(oAuthCodes2User)
+    yield client.system_add_column_family(oAccessTokens)
+    yield client.system_add_column_family(oAuthCode2Token)
+    #yield client.system_add_column_family(oAuthCodes2User)
 
 @defer.inlineCallbacks
 def addSampleData(client):
@@ -680,7 +678,8 @@ def truncateColumnFamilies(client):
                "mConvMessages", "mConvFolders", "latest", "doNotSpam",
                "files", "tmp_files", "item_files", "invitationsSent",
                "user_files", "suggestions", "oAuthClients", "oUser2Clients",
-               "oAuthorizationCodes", "oAuthCodes2User", "oUserApps"]:
+               "oAuthorizationCodes", "oUserApps", "oAccessTokens", "oAuthCode2Token"]:
+
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 
