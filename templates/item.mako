@@ -196,9 +196,7 @@
   %endif
   &#183;
   ## Like this conversation
-  %if myKey == meta["owner"]:
-    <button class="button-link disabled">${_("Like")}</button>&#183;<button
-  %elif myLikes and myLikes.has_key(convId) and len(myLikes[convId]):
+  %if myLikes and myLikes.has_key(convId) and len(myLikes[convId]):
     <button class="button-link ajaxpost" data-ref="/item/unlike?id=${convId}">${_("Unlike")}</button>&#183;<button
   %else:
     <button class="button-link ajaxpost" data-ref="/item/like?id=${convId}">${_("Like")}</button>&#183;<button
@@ -224,9 +222,7 @@
     <button class="button-link" title="${likesCount} Likes" onclick="$$.convs.showItemLikes('${itemId}')"><div class="small-icon small-like"></div>${likesCount}</button>
   %endif
   &#183;
-  %if myKey == meta["owner"]:
-    <button class="button-link disabled">${_("Like")}</button>&#183;
-  %elif myLikes and myLikes.has_key(itemId) and len(myLikes[itemId]):
+  %if myLikes and myLikes.has_key(itemId) and len(myLikes[itemId]):
     <button class="button-link ajaxpost" data-ref="/item/unlike?id=${itemId}">${_("Unlike")}</button>
   %else:
     <button class="button-link ajaxpost" data-ref="/item/like?id=${itemId}">${_("Like")}</button>
