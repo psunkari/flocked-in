@@ -1355,6 +1355,11 @@ abbr.timestamp {
     margin: 20px;
 }
 
+.notification-item.unread {
+    background-color: #fdfddc;
+    border-left: 3px solid #FCDC5C;
+}
+
 .notification-item:first-child {
     border-top: none;
 }
@@ -1365,6 +1370,7 @@ abbr.timestamp {
     font-size: 14px;
     min-height: 32px;
     position: relative;
+    border-left: 3px solid transparent;
 }
 
 .notification-footer {

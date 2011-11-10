@@ -41,9 +41,12 @@
   %>
   %if notifications:
     %for notifyId in notifications:
-      <div class="notification-item">
+      <%
+        unreadClass = 'unread' if notifyId in latestNotifyIds else ''
+      %>
+      <div class="notification-item ${unreadClass}">
         <div class="notification-avatars-wrapper">
-            %for entityId in reversed(notifyUsers[notifyId][-2:]):
+            %for entityId in reversed(notifyUsers[notifyId][:2]):
               <%
                  entity = entities[entityId]
                  entityType = entity["basic"]["type"]

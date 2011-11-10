@@ -577,10 +577,16 @@ class NotificationsResource(base.BaseResource):
         start = utils.getRequestArg(request, "start") or ''
         fromFetchMore = ((not landing) and (not appchange) and start)
         data = yield self._getNotifications(request)
+
+        latest = yield db.get_slice(myId, "latest", super_column="notifications")
+        latest = utils.columnsToDict(latest)
+        latestNotifyIds = [x for x in latest.values()]
+
         if not start:
             yield db.remove(myId, "latest", super_column="notifications")
 
         args.update(data)
+        args['latestNotifyIds'] = latestNotifyIds
         if script:
             if fromFetchMore:
                 yield renderScriptBlock(request, "notifications.mako", "content",
