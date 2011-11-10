@@ -112,7 +112,7 @@ def get_suggestions(request, count, mini=False):
         FORCE_UPDATE = False
         cols = yield db.get_slice(myId, "suggestions", reverse=True)
         for col in cols:
-            if now - col.column.timestamp/1000000 > SUGGESTIONS_UPDATE_FREQUENCY:
+            if now - col.column.timestamp/1e6 > SUGGESTIONS_UPDATE_FREQUENCY:
                 FORCE_UPDATE = True
             for userId in col.column.value.split():
                 if isValidSuggestion(myId, userId, relation):

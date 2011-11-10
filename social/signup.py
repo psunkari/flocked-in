@@ -79,8 +79,8 @@ def _getResetPasswordTokens(email):
         if col.column.name.startswith('resetPasswdToken'):
             tokens.append(col.column.value)
             deleteTokens.append(col.column.name)
-            if col.column.timestamp/1000000 < leastTimestamp :
-                leastTimestamp = col.column.timestamp/1000000
+            if col.column.timestamp/1e6 < leastTimestamp :
+                leastTimestamp = col.column.timestamp/1e6
         else:
             validEmail = True
     defer.returnValue((validEmail, tokens, deleteTokens, leastTimestamp))

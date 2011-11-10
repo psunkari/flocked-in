@@ -49,7 +49,7 @@ def notify(userIds, notifyId, value, timeUUID=None, **kwargs):
                                super_column=notifyId, count=3, reverse=True)
         def deleteOlderNotifications(results):
             mutations = {}
-            timestamp = int(time.time() * 1000000)
+            timestamp = int(time.time() * 1e6)
             for key, cols in results.iteritems():
                 names = [col.column.name for col in cols
                                          if col.column.name != timeUUID]
@@ -408,7 +408,7 @@ class NotificationsResource(base.BaseResource):
                 if value not in notifyIds:
                     fetchedNotifyIds.append(value)
                     keysFromStore.append(col.column.name)
-                    timestamps[value] = col.column.timestamp/1000000
+                    timestamps[value] = col.column.timestamp/1e6
 
             if not keysFromStore:
                 break
