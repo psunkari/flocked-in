@@ -115,7 +115,7 @@ class ProfileResource(base.BaseResource):
                     toFetchItems.add(itemKey)
                     toFetchEntities.add(userKey_)
 
-        items = yield db.multiget_slice(toFetchItems, "items", ["meta", "tags"])
+        items = yield db.multiget_slice(toFetchItems, "items", ["meta", "tags", "attachments"])
         items = utils.multiSuperColumnsToDict(items)
         args["items"] = items
         extraDataDeferreds = []
