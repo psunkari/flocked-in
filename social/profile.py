@@ -47,6 +47,7 @@ class ProfileResource(base.BaseResource):
         userItemsRaw = []
         userItems = []
         reasonStr = {}
+        timestamps = {}
         items = {}
         nextPageStart = None
         args = {"myKey": myKey}
@@ -83,14 +84,14 @@ class ProfileResource(base.BaseResource):
         if nextPageStart:
             nextPageStart = utils.encodeKey(nextPageStart)
 
-
         for col in fetchedUserItem:
             value = tuple(col.column.value.split(":"))
+            timestamps[value] = col.column.timestamp/1e6
             rtype, itemId, convId, convType, convOwnerId, commentSnippet = value
-            commentSnippet = """<span class="snippet"> "%s" </span>""" %(_(commentSnippet))
+            commentSnippet = """<span class="snippet">"%s"</span>""" %(_(commentSnippet))
             toFetchEntities.add(convOwnerId)
-            toFetchItems.add(convId)
             if rtype == 'I':
+                toFetchItems.add(convId)
                 toFetchResponses.add(convId)
                 userItems.append(value)
             elif rtype == "L" and itemId == convId and convOwnerId != userKey:
@@ -121,6 +122,9 @@ class ProfileResource(base.BaseResource):
         extraDataDeferreds = []
 
         for convId in convs:
+            if convId not in items:
+                continue
+
             meta = items[convId]["meta"]
             itemType = meta["type"]
             toFetchEntities.add(meta["owner"])
@@ -153,7 +157,8 @@ class ProfileResource(base.BaseResource):
         del args['myKey']
         data = {"entities": entities, "reasonStr": reasonStr,
                 "tags": tags, "myLikes": myLikes, "userItems": userItems,
-                "responses": responses, "nextPageStart":nextPageStart}
+                "responses": responses, "nextPageStart": nextPageStart,
+                "timestamps": timestamps }
         args.update(data)
         defer.returnValue(args)
 
