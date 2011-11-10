@@ -1,4 +1,4 @@
-<%! from social import utils, config, _, __ %>
+<%! from social import utils, config, _, __, location_tz_map%>
 <%! from pytz import common_timezones %>
 <!DOCTYPE HTML>
 <html lang="en" dir="ltr" xml:lang="en" xmlns="http://www.w3.org/1999/xhtml">
@@ -171,14 +171,17 @@
           <input name="jobTitle" class="textfield" id="signup-jobTitle" type="text" required />
         </li>
         <li>
-          <label for="timezone" class="styled-label">${_('Timezone')}</label>
+          <label for="timezone" class="styled-label">${_('Country/Timezone')}</label>
           <select name="timezone" class="single-row">
             ## for paid users, get the list of timezones from the org-preferences.
             ## either admin has to update the list of timezones when a branch is
             ## opened in a location of new timezone or the user will be given an
             ## option to choose from generic list.
-            %for timezone in common_timezones:
-              <option value="${timezone}">${timezone}</option>
+            %for i, country_name in enumerate(location_tz_map):
+              %if i == 7:
+                <option value="" disabled="disabled">-----------------------------------------------</option>
+              %endif
+              <option value="${location_tz_map[country_name]}">${country_name}</option>
             %endfor
           </select>
         </li>

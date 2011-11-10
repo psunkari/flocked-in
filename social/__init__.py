@@ -1,3 +1,4 @@
+import pytz
 import os
 import ConfigParser
 import gettext
@@ -67,6 +68,32 @@ try:
 except IOError:
     pass
 
+tmp = {}
+for countryId in pytz.country_names:
+    try:
+        a = pytz.country_timezones(countryId)
+        if len(a) == 1:
+            tmp[pytz.country_names[countryId]] = a[0]
+        else:
+            for zone in a:
+                city = zone.split('/')[-1].replace('_', ' ')
+                tmp['%s - %s '%(pytz.country_names[countryId], city)] = zone
+    except:
+        pass
+location_tz_map =  OrderedDict()
+location_tz_map['Hawaii'] = 'US/Hawaii'
+location_tz_map['Alaska'] = 'US/Alaska'
+location_tz_map['Arizona'] = 'US/Arizona'
+location_tz_map['Pacific Time - (US & Canada)'] = 'US/Pacific'
+location_tz_map['Mountain Time - (US & Canada)'] = 'US/Mountain'
+location_tz_map['Central Time - (US & Canada)'] = 'US/Central'
+location_tz_map['Eastern Time - (US & Canada)'] = 'US/Eastern'
 
-__all__ = [config, db, plugins, whitelist,
+countries = tmp.keys()
+countries.sort()
+for countryId in countries:
+    location_tz_map[countryId] = tmp[countryId]
+
+
+__all__ = [config, db, plugins, whitelist, location_tz_map,
            blacklist, cdnHost, secureProxy, _, __]
