@@ -17,7 +17,7 @@
         <div class="titlebar">
           <span class="middle title">${_('FlockedIn Third Party Applications')}</span>
           <span class="button title-button">
-            <a class="ajax" href="/o/new" data-ref="/o/new">${_('New Client')}</a>
+            <a class="ajax" href="/apps/new" data-ref="/apps/new">${_('New Client')}</a>
           </span>
         </div>
         <div id="composer"></div>
@@ -80,7 +80,7 @@
 </%def>
 
 <%def name="registration_layout()">
-  <form style="display: inline;" class="ajax" method="POST" action="/o/clients">
+  <form style="display: inline;" class="ajax" method="POST" action="/apps">
     <div class="styledform">
     <ul>
       <li>
@@ -135,7 +135,7 @@
     %endif
     <div class="users-user">
       <div class="users-details">
-        <div class="user-details-name"><a href="/o/clients?id=${appId}">${apps[appId]["meta"]["client_name"]} -- ${apps[appId]["meta"]["client_category"]}</a></div>
+        <div class="user-details-name"><a href="/apps?id=${appId}">${apps[appId]["meta"]["client_name"]} -- ${apps[appId]["meta"]["client_category"]}</a></div>
         <div class="user-details-title">${appId}</div>
         <div class="user-details-title">${apps[appId]["meta"]["client_scope"]}</div>
       </div>

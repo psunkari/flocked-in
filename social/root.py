@@ -33,9 +33,11 @@ from social.files           import FilesResource
 from social.embed           import EmbedResource
 from social.contact         import ContactResource
 from social.logging         import log
-from social.oauth           import OAuthResource
+from social.oauth           import OAuthUserResource
+from social.oauth           import OAuthTokenResource
 from social.oauth           import OAuthClientResource
-
+from social.api             import APIResource
+from social.apps            import ApplicationResource
 
 def getPluggedResources(ajax=False):
     resources = {}
@@ -186,8 +188,12 @@ class RootResource(resource.Resource):
         self._pluginResources = getPluggedResources(self._isAjax)
         self._messages = MessagingResource(self._isAjax)
         self._files = FilesResource(self._isAjax)
-        self._oauth = OAuthResource(self._isAjax)
+        self._apps = ApplicationResource(self._isAjax)
+        self._oauth = OAuthUserResource(self._isAjax)
+        self._oauthToken = OAuthTokenResource(self._isAjax)
+        self._api = APIResource(self._isAjax)
         self._oauthClient = OAuthClientResource(self._isAjax)
+
         if not self._isAjax:
             self._home = HomeResource()
             self._ajax = RootResource(True)
@@ -284,10 +290,16 @@ class RootResource(resource.Resource):
             match = self._admin
         elif path == "file":
             match = self._files
+        elif path == "apps":
+            match = self._apps
+        elif path == "o/a":
+            match == self._oauthClient
         elif path == "o":
             match = self._oauth
         elif path == "client":
             match = self._oauthClient
+        elif path == "api":
+            match = self._api
 
         elif path in plugins and self._pluginResources.has_key(path):
             match = self._pluginResources[path]

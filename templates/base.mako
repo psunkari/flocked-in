@@ -26,7 +26,7 @@
       ${navMenuItem("/feed?id=%s" % orgKey, _("Company Feed"), "org")}
       ${navMenuItem("/groups", _("Groups"), "groups")}
       ${navMenuItem("/tags/list", _("Tags"), "tags")}
-      ${navMenuItem("/o/clients", _("Apps"), "apps")}
+      ${navMenuItem("/apps", _("Apps"), "apps")}
     </ul>
   </div>
 %if script:

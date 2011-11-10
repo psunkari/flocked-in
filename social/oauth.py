@@ -38,9 +38,196 @@ from social.logging     import profile, dump_args, log
     #    1 Authorization code
     #    2 client credentials
 
+class OAuthTokenResource(base.BaseResource):
+    isLeaf = True
+    requireAuth = False
+
+    @defer.inlineCallbacks
+    def _renderAccessDialog(self, request):
+        # This dialog shows the user the access dialog whether to confirm or
+        # deny a request started by a third party client
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        landing = not self._ajax
+        authinfo = request.getSession(IAuthInfo)
+        myOrgId = authinfo.organization
+
+        response_type = utils.getRequestArg(request, 'response_type')
+        client_id = utils.getRequestArg(request, 'client_id')
+        redirect_uri = utils.getRequestArg(request, 'redirect_uri', sanitize=False)
+        scope = utils.getRequestArg(request, 'scope', multiValued=True)
+
+        #If the request fails due to a missing, invalid, or mismatching
+        # redirection URI, or if the client identifier provided is invalid, the
+        # authorization server SHOULD inform the resource owner of the error,
+        # and MUST NOT automatically redirect the user-agent to the invalid
+        # redirection URI.
+
+        if not all([response_type, client_id, redirect_uri, scope]):
+            raise errors.MissingParams(["Client ID", "Response Type",
+                                        "Redirect URL", "scope"])
+
+        args.update({"view":"fIn"})
+        if script and landing:
+            yield render(request, "oauth-server.mako", **args)
+
+        if appchange and script:
+            yield renderScriptBlock(request, "oauth-server.mako", "layout",
+                                    landing, "#mainbar", "set", **args)
+
+        cols = yield db.get_slice(client_id, "oAuthClients")
+        cols = utils.supercolumnsToDict(cols)
+
+        if "meta" in cols :
+            #Check if the redirect_uri supplied matches one of the registered ones
+            registered_redirect_uris = cols["meta"]["client_redirects"].split(":")
+            if not urlsafe_b64encode(redirect_uri) in registered_redirect_uris:
+                raise errors.PermissionDenied("Redirect URL Does not match")
+
+            # We support only authentication profile 4.1. so check if response_type
+            # is set to "code" otherwise fail.
+            # Note profile 4.4 does not require authentication, hence not needed.
+            if response_type != "code":
+                error = "unsupported_response_type"
+                Location = redirect_uri + "?error_code=%s" %error
+                request.setResponseCode(307)
+                request.setHeader('Location', Location)
+            else:
+                args.update(**cols["meta"])
+                args.update({"client_id":client_id})
+                args.update({"redirect_uri":redirect_uri})
+
+                #Generate a crypto signature to make sure that no hidden values sent
+                # to the UI is being tampered with
+                signature_message = "%s:%s:%s" %(client_id, myId, urlsafe_b64encode(redirect_uri))
+                digest_maker = hmac.new(myOrgId, signature_message, hashlib.sha256)
+                signature = digest_maker.hexdigest()
+                args.update({"signature":signature})
+
+                if appchange and script:
+                    yield renderScriptBlock(request, "oauth-server.mako",
+                                            "access_layout", landing, "#center",
+                                            "set", **args)
+        else:
+            raise errors.InvalidItem("Application", client_id)
+
+    def render_GET(self, request):
+        segmentCount = len(request.postpath)
+        d = None
+
+        if segmentCount == 1 and request.postpath[0] == "a":
+            d = self._renderAccessDialog(request)
+
+        return self._epilogue(request, d)
+
+    def render_POST(self, request):
+        segmentCount = len(request.postpath)
+        d = None
+
+        if segmentCount == 1 and request.postpath[0] == "a":
+            d = self._receiveUserAccess(request)
+
+        return self._epilogue(request, d)
 
 
-class OAuthResource(base.BaseResource):
+    @defer.inlineCallbacks
+    def _receiveUserAccess(self, request):
+        # This handles the response received from the user from the above dialog.
+        # User either accepts or rejects a client app request and accordingly
+        # the cb is called with auth_code or error
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        landing = not self._ajax
+        authinfo = request.getSession(IAuthInfo)
+        myOrgId = authinfo.organization
+
+        client_id = utils.getRequestArg(request, 'client_id')
+        redirect_uri = utils.getRequestArg(request, 'redirect_uri', sanitize=False)
+        allow_access = utils.getRequestArg(request, 'allow_access')
+
+        if not all([client_id, redirect_uri, allow_access]):
+            raise errors.MissingParams(["Client ID", "Redirect URI", "User Permission"])
+
+        #XXX:Check if client id is valid
+
+        # Check if signature is valid and whether client_id + user id +
+        # redirect url match
+        recieved_signature = utils.getRequestArg(request, 'signature')
+        signature_message = "%s:%s:%s" %(client_id, myId, urlsafe_b64encode(redirect_uri))
+        digest_maker = hmac.new(myOrgId, signature_message, hashlib.sha256)
+        generated_signature = digest_maker.hexdigest()
+
+        if generated_signature != recieved_signature:
+            raise errors.PermissionDenied("Signature Does not match")
+
+        cols = yield db.get_slice(client_id, "oAuthClients")
+        cols = utils.supercolumnsToDict(cols)
+        client_redirects = cols['meta']['client_redirects'].split(":")
+
+        if allow_access == "true":
+            #The authorization code generated by the
+            # authorization server.  The authorization code MUST expire
+            # shortly after it is issued to mitigate the risk of leaks.  A
+            # maximum authorization code lifetime of 10 minutes is
+            # RECOMMENDED.  The client MUST NOT use the authorization code
+            # more than once.  If an authorization code is used more than
+            # once, the authorization server MUST deny the request and SHOULD
+            # attempt to revoke all tokens previously issued based on that
+            # authorization code.  The authorization code is bound to the
+            # client identifier and redirection URI.
+
+            #XXX: Check if user has signed up for this application
+            auth_code = utils.getRandomKey(myId)
+            if urlsafe_b64encode(redirect_uri) in client_redirects:
+                auth_map = {
+                            "user_id":myId,
+                            "client_id":client_id,
+                            "client_redirect_uri":urlsafe_b64encode(redirect_uri),
+                            "client_scope":cols['meta']['client_scope']
+                            }
+                yield db.batch_insert(auth_code, "oAuthorizationCodes",
+                                      {"meta":auth_map}, ttl=120)
+                Location = redirect_uri + "?code=%s" %auth_code
+            else:
+                raise errors.PermissionDenied("Redirect URI does not match")
+        elif allow_access == "false":
+            #error
+            #      REQUIRED.  A single error code from the following:
+            #      invalid_request
+            #            The request is missing a required parameter, includes an
+            #            unsupported parameter value, or is otherwise malformed.
+            #      unauthorized_client
+            #            The client is not authorized to request an authorization
+            #            code using this method.
+            #      access_denied
+            #            The resource owner or authorization server denied the
+            #            request.
+            #      unsupported_response_type
+            #            The authorization server does not support obtaining an
+            #            authorization code using this method.
+            #      invalid_scope
+            #            The requested scope is invalid, unknown, or malformed.
+            #      server_error
+            #            The authorization server encountered an unexpected
+            #            condition which prevented it from fulfilling the request.
+            #      temporarily_unavailable
+            #            The authorization server is currently unable to handle
+            #            the request due to a temporary overloading or maintenance
+            #            of the server.
+            error = "access_denied"
+            if urlsafe_b64encode(redirect_uri) in client_redirects:
+                Location = redirect_uri + "?error_code=%s" %error
+            else:
+                raise errors.PermissionDenied("Redirect URI does not match")
+
+        else:
+            raise errors.MissingParams([])
+
+        if script:
+            request.write("window.location.href = '%s'" %Location)
+        else:
+            request.setResponseCode(303)
+            request.setHeader('Location', Location)
+
+class OAuthUserResource(base.BaseResource):
     isLeaf = True
     requireAuth = True
 
@@ -306,7 +493,7 @@ class OAuthResource(base.BaseResource):
                     request.setHeader('Location', Location)
                     defer.returnValue(0)
                 else:
-                    client_password = auth_header.split("Basic", 1)[1]
+                    client_password = auth_header.split("Basic ", 1)[1]
                     if token_client_password != client_password:
                         error = "unauthorized_client"
                         request.setResponseCode(303)
@@ -378,7 +565,8 @@ class OAuthResource(base.BaseResource):
                     "auth_code":auth_code,
                     "scope":cols["meta"]["client_scope"]
                     }
-        print access_map
+        print access_token
+
         yield db.batch_insert(access_token, "oAccessTokens",
                               {"meta":access_map}, ttl=120)
         token_response = {"access_token":access_token,
@@ -424,177 +612,7 @@ class OAuthResource(base.BaseResource):
         #
         #   The authorization server MUST authenticate the client.
 
-        #Check if the auth code is valid
-        #Check if the auth code was issued against this client and for this user
-        cols = yield db.get_slice(auth_code, "oAuthorizationCodes")
-        cols = utils.supercolumnsToDict(cols)
-        if "meta" in cols:
-            #Generate an access Key, remove the auth code from oAuthorizationCodes
-            # Insert access key record into oAuthCode2Token for security reasons
-            # insert access key into oAccessTokens
-            client_id = cols["meta"]["client_id"]
-            stored_redirect_uri = cols["meta"]["client_redirect_uri"]
-            if stored_redirect_uri == redirect_uri:
-                access_key = utils.getRandomKey(myId)
-                yield db.remove(auth_code, "oAuthorizationCodes")
-                access_map = {
-                            "user_id":cols["meta"]["user_id"],
-                            "client_id":client_id,
-                            "auth_code":auth_code,
-                            "scope":cols["meta"]["client_scope"]
-                            }
-                yield db.batch_insert(auth_code, "oAccessTokens",
-                                      {"meta":access_map}, ttl=120)
-            else:
-                error = "invalid_grant"
-                request.setResponseCode(303)
-                Location = redirect_uri + "?error_code=%s" %error
-                request.setHeader('Location', Location)
-        else:
-            #TODO:Auth code was either used or invalid. So check if there is an
-            # entry of this auth code in oAuthCode2Token and if so
-            # then invalidate all access tokens listed under that auth code
-            # (from oAuthCode2Token) from oAccessTokens
-            error = "invalid_grant"
-            request.setResponseCode(303)
-            Location = redirect_uri + "?error_code=%s" %error
-            request.setHeader('Location', Location)
-
-    @defer.inlineCallbacks
-    def _verifyAccessKey(self, request):
-
-        access_token = utils.getRequestArg(request, 'access_token')
-        if not access_token:
-            bearer_header = request.getHeader("Authorization")
-            if bearer_header:
-                access_token = bearer_header.split("Bearer", 1)[1]
-            else:
-                request.setResponseCode(401)
-                request.setHeader("WWW-Authenticate", 'Bearer realm="flocked.in"')
-                defer.returnValue(0)
-
-        cols = yield db.get_slice(access_token, "oAccessTokens")
-        cols = utils.supercolumnsToDict(cols)
-        if "meta" not in cols:
-            request.setResponseCode(401)
-            request.setHeader("WWW-Authenticate", 'Bearer realm="flocked.in",\
-                                                        error="invalid_token",\
-                                                        error_description="The access token expired"'
-                            )
-            defer.returnValue(0)
-
-
-
-    @defer.inlineCallbacks
-    def _registerClient(self, request):
-        (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        landing = not self._ajax
-
-        #Enforce the scope that is set during the registration of an app at all
-         #times. Later a preference by the user can be set that will limit all
-         # future scopes by an app for this user to that list.
-        #The authorization server MAY fully or partially ignore the scope
-        #requested by the client based on the authorization server policy or
-        #the resource owner's instructions.  If the issued access token scope
-        #is different from the one requested by the client, the authorization
-        #server SHOULD include the "scope" response parameter to inform the
-        #client of the actual scope granted.
-
-        client_name = utils.getRequestArg(request, 'client_name')
-        client_category = utils.getRequestArg(request, 'client_category')
-        client_scope = utils.getRequestArg(request, 'client_scope',
-                                           multiValued=True)
-        client_id = utils.getRandomKey(myId)
-        client_redirects = utils.getRequestArg(request, 'client_redirect_url',
-                                               sanitize=False, multiValued=True)
-        client_desc = utils.getRequestArg(request, 'client_desc')
-
-        # 1. An auth code, access token is always mapped to the
-        # a. User who requested it.
-        # b. The app(app id) whom this user had invoked.
-        # XXX:c. The redirection_url that was mentioned in the request.
-        # 2. An auth code is revoked when it is used more than once.
-        # The access token is mapped to the auth code. So if an auth code
-        # is revoked(not expired), all access tokens need to be discarded.
-        # 3. Make sure only one access token is issued against the above
-        #  combination at all times. If a new auth code or access token is
-        # requested, make sure to discard all previous ones wrt 1.a ~ 1.c .
-        if not all([client_name, client_category, client_scope, client_redirects]):
-            raise errors.MissingParams(["Name or Redirect URLs"])
-
-        client_redirects = [urlsafe_b64encode(x) for x in client_redirects]
-
-        if client_category == "client":
-            client_password = utils.getUniqueKey()
-        else:
-            client_password = ""
-
-        client_meta = {
-                        "client_author":myId,
-                        "client_name":client_name,
-                        "client_password":client_password,
-                        "client_scope":":".join(list(client_scope)),
-                        "client_category":client_category,
-                        "client_redirects":":".join(list(client_redirects)),
-                        "client_desc":client_desc
-                     }
-        print "%s:%s:%s:%s:%s:%s" %(client_name, client_category, client_scope,
-                                 client_id, client_password,client_redirects)
-        yield db.batch_insert(client_id, "oAuthClients", {"meta":client_meta})
-        yield db.insert(myId, "oUser2Clients", client_name, client_id)
-
-        if script:
-            request.write("$('#composer').empty();$$.fetchUri('/o/clients');")
-
-    @defer.inlineCallbacks
-    def _renderClientRegistrationDialog(self, request):
-        (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        landing = not self._ajax
-
-        if script and landing:
-            yield render(request, "oauth-server.mako", **args)
-
-        yield renderScriptBlock(request, "oauth-server.mako",
-                                "registration_layout", landing, "#composer",
-                                "set", **args)
-
-    @defer.inlineCallbacks
-    def _renderClientDetailsDialog(self, request):
-        (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        landing = not self._ajax
-
-        if script and landing:
-            yield render(request, "oauth-server.mako", **args)
-
-        if appchange and script:
-            yield renderScriptBlock(request, "oauth-server.mako", "layout",
-                              landing, "#mainbar", "set", **args)
-
-        client_id = utils.getRequestArg(request, 'id')
-        if client_id:
-            cols = yield db.get_slice(client_id, "oAuthClients")
-            cols = utils.supercolumnsToDict(cols)
-            if "meta" in cols:
-                args.update(**cols["meta"])
-                args.update({"client_id":client_id})
-                yield renderScriptBlock(request, "oauth-server.mako",
-                                        "application_details_layout",
-                                        landing, "#center", "set", **args)
-            else:
-                raise errors.InvalidEntity("Application", client_id)
-        else:
-            start = utils.getRequestArg(request, "start") or ''
-            cols = yield db.get_slice(myId, "oUser2Clients", count=10,
-                                      start=start)
-            client_ids = [col.column.name for col in cols]
-            cols = yield db.multiget_slice(client_ids, 'oAuthClients', ['meta'])
-            client_details = utils.multiSuperColumnsToDict(cols)
-            print client_details
-            args.update({"apps":client_details})
-            yield renderScriptBlock(request, "oauth-server.mako",
-                                    "application_listing_layout",
-                                    landing, "#center", "set", **args)
-
+        #XXX:Implement me!
 
     def render_GET(self, request):
         segmentCount = len(request.postpath)
@@ -604,10 +622,6 @@ class OAuthResource(base.BaseResource):
             pass
         elif segmentCount == 1 and request.postpath[0] == "a":
             d = self._renderAccessDialog(request)
-        elif segmentCount == 1 and request.postpath[0] == "clients":
-            d = self._renderClientDetailsDialog(request)
-        elif segmentCount == 1 and request.postpath[0] == "new":
-            d = self._renderClientRegistrationDialog(request)
 
         return self._epilogue(request, d)
 
@@ -620,8 +634,6 @@ class OAuthResource(base.BaseResource):
             d = self._receiveUserAccess(request)
         elif segmentCount == 1 and request.postpath[0] == "t":
             d = self._generateAccessToken(request)
-        elif segmentCount == 1 and request.postpath[0] == "clients":
-            d = self._registerClient(request)
 
         return self._epilogue(request, d)
 
@@ -711,13 +723,3 @@ class OAuthClientResource(base.BaseResource):
             d = self._actions(request)
 
         return self._epilogue(request, d)
-
-class OAuthAPIResource(base.BaseResource):
-    isLeaf = True
-    requireAuth = False
-
-    def _feedResource(self, resource):
-        pass
-
-    def _profileResource(self, resource):
-        pass
