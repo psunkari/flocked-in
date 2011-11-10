@@ -323,15 +323,24 @@
   %endif
 </%def>
 
-<%def name="activity_block(grp)">
+<%def name="activity_block(grp, tzone)">
+  <%
+    rTypeClasses = {"C": "comment", "Q": "answer", "L": "like"}
+    simpleTimestamp = utils.simpleTimestamp
+  %>
   <div class="conv-item">
     %for key in grp:
       <%
         rtype, itemId, convId, convType, convOwner, commentSnippet = key
         activity = reasonStr[key] % (utils.userName(convOwner, entities[convOwner]), utils.itemLink(convId, convType))
+        rTypeClass = rTypeClasses.get(rtype, '')
       %>
-      <div class="conv-data">
-        ${activity}
+      <div class="activity-item ${rTypeClass}">
+        <div class="activity-icon icon"></div>
+        <div class="activity-content">
+          <span>${activity}</span>
+          <div class="activity-footer">${simpleTimestamp(timestamps[key], tzone)}</div>
+        </div>
       </div>
     %endfor
   </div>
@@ -340,12 +349,13 @@
 <%def name="content_activity()">
   <%
     block = []
+    tzone = me["basic"]["timezone"]
     for key in userItems:
       try:
         rtype, itemId, convId, convType, convOwnerId, commentSnippet = key
         if not reasonStr.has_key(key):
           if len(block) > 0:
-            self.activity_block(block)
+            self.activity_block(block, tzone)
             block = []
           item.item_layout(convId)
         elif convType in plugins:
@@ -354,7 +364,7 @@
         log.err("Error when displaying UserItem:", key)
         log.err(e)
     if block:
-      self.activity_block(block)
+      self.activity_block(block, tzone)
   %>
   %if nextPageStart:
     <div id="next-load-wrapper" class="busy-indicator">

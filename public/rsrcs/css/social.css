@@ -574,6 +574,33 @@ a:hover, a:active, a:focus {
     padding: 15px 0 0;
 }
 
+.activity-item {
+    padding-left: 60px;
+    position: relative;
+    min-height: 22px;
+    font-size: 13px;
+}
+
+.activity-icon {
+    position: absolute;
+    left: 35px;
+}
+
+.activity-footer {
+    clear: both;
+    font-size: 10px;
+    color: #999;
+    padding: 0 0 6px;
+}
+
+.like .activity-icon {
+    background-position: -16px -224px;
+}
+.answer .activity-icon,
+.comment .activity-icon {
+    background-position: 0 -224px;
+}
+
 
 /*
  * Simple TabView
@@ -1355,16 +1382,22 @@ abbr.timestamp {
     margin: 20px;
 }
 
+.notification-item.unread {
+    background-color: #fdfddc;
+    border-left: 3px solid #FCDC5C;
+}
+
 .notification-item:first-child {
     border-top: none;
 }
 
 .notification-item {
-    padding: 10px 0 16px 90px;
+    padding: 10px 0 10px 90px;
     border-top: 1px dotted #CCC;
     font-size: 14px;
     min-height: 32px;
     position: relative;
+    border-left: 3px solid transparent;
 }
 
 .notification-footer {

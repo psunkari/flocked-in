@@ -331,10 +331,6 @@ class ItemResource(base.BaseResource):
         (itemId, item) = yield utils.getValidItemId(request, "id")
         extraEntities = [item["meta"]["owner"]]
 
-        # Ignore if I am owner of the item
-        if myId == item["meta"]["owner"]:
-            defer.returnValue(None)
-
         # Check if I already liked the item
         try:
             cols = yield db.get(itemId, "itemLikes", myId)
@@ -366,46 +362,50 @@ class ItemResource(base.BaseResource):
 
         yield db.insert(itemId, "items", str(likesCount+1), "likesCount", "meta")
 
+        item["meta"]["likesCount"] = str(likesCount + 1)
+        args["items"] = {itemId: item}
+        args["myLikes"] = {itemId:[myId]}
         timeUUID = uuid.uuid1().bytes
-        responseType = "L"
 
         # 1. add user to Likes list
         yield db.insert(itemId, "itemLikes", timeUUID, myId)
 
-        # 2. add user to the followers list of parent item
-        yield db.insert(convId, "items", "", myId, "followers")
+        # Ignore adding to other's feeds if I am owner of the item
+        if myId != item["meta"]["owner"]:
+            responseType = "L"
 
-        # 3. update user's feed, feedItems, feed_*
-        userItemValue = ":".join([responseType, itemId, convId, convType,
-                                  convOwnerId, commentSnippet])
-        yield db.insert(myId, "userItems", userItemValue, timeUUID)
-        if plugins.has_key(convType) and plugins[convType].hasIndex:
-            yield db.insert(myId, "userItems_"+convType, userItemValue, timeUUID)
+            # 2. add user to the followers list of parent item
+            yield db.insert(convId, "items", "", myId, "followers")
 
-        yield feed.pushToFeed(myId, timeUUID, itemId, convId, responseType,
-                              convType, convOwnerId, myId,
-                              entities=extraEntities, promote=False)
+            # 3. update user's feed, feedItems, feed_*
+            userItemValue = ":".join([responseType, itemId, convId, convType,
+                                      convOwnerId, commentSnippet])
+            yield db.insert(myId, "userItems", userItemValue, timeUUID)
+            if plugins.has_key(convType) and plugins[convType].hasIndex:
+                yield db.insert(myId, "userItems_"+convType, userItemValue, timeUUID)
 
-        # 4. update feed, feedItems, feed_* of user's followers
-        yield feed.pushToOthersFeed(myId, timeUUID, itemId, convId, convACL,
-                                    responseType, convType, convOwnerId,
-                                    entities=extraEntities, promoteActor=False)
+            yield feed.pushToFeed(myId, timeUUID, itemId, convId, responseType,
+                                  convType, convOwnerId, myId,
+                                  entities=extraEntities, promote=False)
 
-        item["meta"]["likesCount"] = str(likesCount + 1)
-        args["items"] = {itemId: item}
-        args["myLikes"] = {itemId:[myId]}
+            # 4. update feed, feedItems, feed_* of user's followers
+            yield feed.pushToOthersFeed(myId, timeUUID, itemId, convId, convACL,
+                                        responseType, convType, convOwnerId,
+                                        entities=extraEntities, promoteActor=False)
 
         if itemId != convId:
             itemOwnerId = item["meta"]["owner"]
-            yield self.notify("LC", convId, timeUUID, convType=convType,
-                              convOwnerId=convOwnerId, myId=myId,
-                              itemOwnerId=itemOwnerId, me=args["me"])
+            if myId != itemOwnerId:
+                yield self.notify("LC", convId, timeUUID, convType=convType,
+                                  convOwnerId=convOwnerId, myId=myId,
+                                  itemOwnerId=itemOwnerId, me=args["me"])
             yield renderScriptBlock(request, "item.mako", "item_footer", False,
-                              "#item-footer-%s"%(itemId), "set",
-                              args=[itemId], **args)
+                                    "#item-footer-%s"%(itemId), "set",
+                                    args=[itemId], **args)
         else:
-            yield self.notify("L", convId, timeUUID, convType=convType,
-                              convOwnerId=convOwnerId, myId=myId, me=args["me"])
+            if myId != convOwnerId:
+                yield self.notify("L", convId, timeUUID, convType=convType,
+                                  convOwnerId=convOwnerId, myId=myId, me=args["me"])
 
             relation = Relation(myId, [])
             yield relation.initSubscriptionsList()
@@ -442,6 +442,7 @@ class ItemResource(base.BaseResource):
             yield renderScriptBlock(request, "item.mako", "conv_footer", False,
                                     "#item-footer-%s"%(itemId), "set",
                                     args=[itemId, hasComments, hasLikes], **args)
+
             yield renderScriptBlock(request, "item.mako", 'conv_likes', False,
                                     '#conv-likes-wrapper-%s' % convId, 'set', True,
                                     args=[itemId, likesCount+1, True, likes], handlers=handler, **args)
@@ -456,9 +457,6 @@ class ItemResource(base.BaseResource):
         # Get the item and the conversation
         (itemId, item) = yield utils.getValidItemId(request, "id")
 
-        #Ignore if i am owner of the item
-        if myId == item["meta"]["owner"]:
-            defer.returnValue(None)
         # Make sure that I liked this item
         try:
             cols = yield db.get(itemId, "itemLikes", myId)
@@ -493,19 +491,21 @@ class ItemResource(base.BaseResource):
         #    (use can also become follower by responding to item,
         #        so user can't be removed from followers list)
 
-        # 3. delete from user's feed, feedItems, feed_*
-        yield feed.deleteFromFeed(myId, itemId, convId,
-                                  convType, myId, responseType)
+        # Ignore if i am owner of the item
+        if myId == item["meta"]["owner"]:
+            # 3. delete from user's feed, feedItems, feed_*
+            yield feed.deleteFromFeed(myId, itemId, convId,
+                                      convType, myId, responseType)
 
-        # 4. delete from feed, feedItems, feed_* of user's followers
-        yield feed.deleteFromOthersFeed(myId, itemId, convId, convType,
-                                        convACL, convOwnerId, responseType)
+            # 4. delete from feed, feedItems, feed_* of user's followers
+            yield feed.deleteFromOthersFeed(myId, itemId, convId, convType,
+                                            convACL, convOwnerId, responseType)
 
-        # FIX: if user updates more than one item at exactly same time,
-        #      one of the updates will overwrite the other. Fix it.
-        yield db.remove(myId, "userItems", likeTimeUUID)
-        if plugins.has_key(convType) and plugins[convType].hasIndex:
-            yield db.remove(myId, "userItems_"+ convType, likeTimeUUID)
+            # FIX: if user updates more than one item at exactly same time,
+            #      one of the updates will overwrite the other. Fix it.
+            yield db.remove(myId, "userItems", likeTimeUUID)
+            if plugins.has_key(convType) and plugins[convType].hasIndex:
+                yield db.remove(myId, "userItems_"+ convType, likeTimeUUID)
 
         item["meta"]["likesCount"] = likesCount -1
         args["items"] = {itemId: item}
