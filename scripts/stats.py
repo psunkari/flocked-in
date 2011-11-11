@@ -9,6 +9,7 @@ import optparse
 import time
 import datetime
 import pprint
+from ordereddict import OrderedDict
 
 from twisted.internet import defer, reactor
 from twisted.python import log
@@ -50,7 +51,7 @@ def getNewUserCount(startDate, endDate, count=100, column_count=100, mail_to='')
             domain = row.key
             for col in row.columns[:count]:
                 if domain not in data.setdefault(col.column.name, {}).setdefault("domain", []):
-                    data[col.column.name]["domain"].append(domain)
+                    data[col.column.name]["domain"].append((domain, col.column.timestamp/1e6))
                 column_timestamp = col.column.timestamp/1000000.0
                 if column_timestamp < endTime and column_timestamp >= startTime:
                     if domain not in new_domains:
@@ -164,9 +165,10 @@ def getNewUserCount(startDate, endDate, count=100, column_count=100, mail_to='')
         else:
             start = rows[-1].key
 
-    stats["domain"] = {}
-    for orgId in data:
-        domainName = ",".join(data[orgId]['domain'])
+    stats["domain"] = OrderedDict()
+    sortedOrgIds = sorted(data, key=lambda x: data[x]["domain"][0][1])
+    for orgId in sortedOrgIds:
+        domainName = ",".join([x[0] for x in data[orgId]['domain']])
         stats["domain"][domainName] = {}
         stats["domain"][domainName]["newUsers"] = len(new_users.get(orgId, []))
         stats["domain"][domainName]["totalUsers"] = totalUsers.get(orgId, 0)
@@ -182,7 +184,6 @@ def getNewUserCount(startDate, endDate, count=100, column_count=100, mail_to='')
     htmlPart = getBlock("emails.mako", "html_stats",  **{"stats":stats, "frm_to": frm_to, 'rootUrl': rootUrl, 'brandName': brandName})
     for mailId in mail_to:
         yield utils.sendmail(mailId, subject, textPart, htmlPart)
-
 
 
 def main():
