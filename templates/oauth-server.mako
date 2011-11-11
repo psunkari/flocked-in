@@ -1,6 +1,6 @@
 <%! from social import utils, _, __, constants %>
 <%! from base64     import urlsafe_b64encode, urlsafe_b64decode %>
-
+<%! import pickle %>
 <!DOCTYPE HTML>
 
 <%inherit file="base.mako"/>
@@ -35,6 +35,11 @@
 
 
 <%def name="access_layout()">
+<%
+  client_scopes = supplied_scope.split(" ")
+  print supplied_scope
+%>
+
 <div id="third_party_info">
   <table id="brand_icons">
     <tbody>
@@ -48,21 +53,23 @@
     </tbody>
   </table>
   <div id="grant_heading" class="clear">
-    <strong>${client_name}</strong> is requesting permission to:</div><div id="scope_list">
-    <ul>
-      <li id="scope_summary_0" class="scope_summary" tabindex="0">Manage your ${client_scope}</li>
+    <strong>${client_name}</strong> is requesting permission to:
+    <div id="scope_list">
       <ul>
-        <li class="scope_detail_line">View and manage your FlockedIn ${client_scope}</li>
+        %for scope in client_scopes:
+          <li class="scope_summary" >Manage your ${scope}</li>
+            <ul>
+              <li class="scope_detail">View and manage your FlockedIn ${scope}</li>
+            </ul>
+          </li>
+        %endfor
       </ul>
-      </div>
-      </div>
-      </li>
-    </ul>
     </div>
   </div>
 
 <div class="modal-dialog-buttons" id="button_div">
   <form style="display: inline;" class="ajax" method="POST" action="/o/a">
+    <input type="hidden" value="${supplied_scope}" name="scope"/>
     <input type="hidden" value="true" name="allow_access"/>
     <input type="hidden" value="${client_id}" name="client_id"/>
     <input type="hidden" value="${redirect_uri}" name="redirect_uri"/>
@@ -137,7 +144,6 @@
       <div class="users-details">
         <div class="user-details-name"><a href="/apps?id=${appId}">${apps[appId]["meta"]["client_name"]} -- ${apps[appId]["meta"]["client_category"]}</a></div>
         <div class="user-details-title">${appId}</div>
-        <div class="user-details-title">${apps[appId]["meta"]["client_scope"]}</div>
       </div>
     </div>
     %if counter % 2 == 1:
@@ -153,14 +159,27 @@
 
 
 <%def name="application_details_layout()">
-
+<%
+  client_scope_dict = pickle.loads(client_scope)
+%>
 <h2>${client_name}</h2>
 <div><label>Client Identifier</label><span> ${client_id}</span></div>
   %if client_category == "client":
     <label>Client Password: </label>
     <span>${client_password}</span>
   % endif
-<div><label>Client Scope</label><span> ${client_scope.replace(":", ", ")}</span></div>
+<div>
+  <label>Client Scope</label>
+  %for scope in client_scope_dict.keys():
+    %if client_scope_dict[scope] != 0:
+      %if client_scope_dict[scope] == 1:
+        <span> ${scope} Read Only</span>
+      %elif client_scope_dict[scope] == 3:
+        <span> ${scope} Read + Write Access</span>
+      %endif
+    %endif
+  %endfor
+</div>
 <div><label>Application Category </label>
   %if client_category == "client":
     <span>Server Side Application/ Service</span>

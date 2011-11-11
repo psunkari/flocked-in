@@ -5,8 +5,8 @@
 var token_endpoint = "http://localhost:8000/o/t"
 var api_endpoint = "http://localhost:8000/api"
 var oclient = {
-    getAccessToken: function(auth_token, auth_redirect, client_id) {
-        console.log("Auth Token is" + auth_token)
+    getAccessToken41: function(auth_token, auth_redirect, client_id) {
+        console.log("Auth Token is " + auth_token)
         var d = $.post(token_endpoint, {
                                 "grant_type":"authorization_code",
                                 "code":auth_token,

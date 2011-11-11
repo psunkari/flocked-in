@@ -51,9 +51,11 @@ class APIResource(base.BaseResource):
         cols = utils.supercolumnsToDict(cols)
         if "meta" not in cols:
             request.setResponseCode(401)
+            error = "invalid_token"
+            error_description = "The access token expired"
             request.setHeader("WWW-Authenticate", 'Bearer realm="flocked.in",\
-                                                        error="invalid_token",\
-                                                        error_description="The access token expired"'
+                                                        error="%s",\
+                                                        error_description="%s"' %(error, error_description)
                             )
             defer.returnValue(0)
 
@@ -61,9 +63,12 @@ class APIResource(base.BaseResource):
         stored_scope = result["scope"]
         if not stored_scope.endswith("+w") and scope.endswith("+w"):
             request.setResponseCode(403)
+            error = "insufficient_scope"
+            error_description = "The scope is beyond granted scope"
             request.setHeader("WWW-Authenticate", 'Bearer realm="flocked.in",\
-                                                        error="insufficient_scope",\
-                                                        error_description="The scope is beyond granted scope"'
+                                                        error="%s",\
+                                                        scope="%s",\
+                                                        error_description="%s"' %(error, scope, error_description)
                             )
             defer.returnValue(0)
 
@@ -77,6 +82,7 @@ class APIResource(base.BaseResource):
         if segmentCount == 0:
             pass
         elif segmentCount == 1 and request.postpath[0] == "feed":
+            request.setHeader("Access-Control-Allow-Origin", "*")
             d = self._renderFeedResource(request)
 
         return self._epilogue(request, d)
@@ -87,6 +93,21 @@ class APIResource(base.BaseResource):
         if segmentCount == 0:
             pass
         elif segmentCount == 1 and request.postpath[0] == "feed":
+            request.setHeader("Access-Control-Allow-Origin", "*")
             d = self._renderFeedResource(request)
+
+        return self._epilogue(request, d)
+
+    def render_OPTIONS(self, request):
+        segmentCount = len(request.postpath)
+        d = None
+        if segmentCount == 0:
+            pass
+        elif segmentCount == 1 and request.postpath[0] == "feed":
+            print "In options!!!"
+            request.setHeader("Access-Control-Allow-Origin", "http://localhost:9000")
+            request.setHeader("Access-Control-Request-Method", "POST, GET, OPTIONS")
+            request.setHeader("Access-Control-Request-Headers", "authorization")
+            request.setHeader("Access-Control-Allow-Credentials", "true")
 
         return self._epilogue(request, d)

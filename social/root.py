@@ -189,7 +189,7 @@ class RootResource(resource.Resource):
         self._messages = MessagingResource(self._isAjax)
         self._files = FilesResource(self._isAjax)
         self._apps = ApplicationResource(self._isAjax)
-        self._oauth = OAuthUserResource(self._isAjax)
+        self._oauthUser = OAuthUserResource(self._isAjax)
         self._oauthToken = OAuthTokenResource(self._isAjax)
         self._api = APIResource(self._isAjax)
         self._oauthClient = OAuthClientResource(self._isAjax)
@@ -292,10 +292,8 @@ class RootResource(resource.Resource):
             match = self._files
         elif path == "apps":
             match = self._apps
-        elif path == "o/a":
-            match == self._oauthClient
         elif path == "o":
-            match = self._oauth
+            match = self._oauthToken
         elif path == "client":
             match = self._oauthClient
         elif path == "api":

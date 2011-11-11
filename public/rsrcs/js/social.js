@@ -263,9 +263,9 @@ _initTimestampUpdates: function _initTimestampUpdates() {
 
 
 _initUpdatesCheck: function _initUpdatesCheck() {
-    window.setInterval(function() {
-        $.get('/ajax/notifications/new');
-    }, 30000)
+    //window.setInterval(function() {
+    //    $.get('/ajax/notifications/new');
+    //}, 30000)
 },
 
 

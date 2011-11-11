@@ -5,6 +5,10 @@ import hashlib
 import json
 import re
 
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
 from twisted.internet   import defer
 from twisted.web        import static, server
@@ -62,11 +66,31 @@ class ApplicationResource(base.BaseResource):
         else:
             client_password = ""
 
+        #Assign weights to scope. 1 for read, 2 for modify. So feed will get 1
+        # if dev registers for read only or 3 if for full access
+        scope_weights = {"feed":0, "profile": 0, "people":0}
+        if "feed_w" in client_scope:
+            scope_weights["feed"] = 3
+        elif "feed" in client_scope:
+            scope_weights["feed"] = 1
+
+        if "profile_w" in client_scope:
+            scope_weights["profile"] = 3
+        elif "profile" in client_scope:
+            scope_weights["profile"] = 1
+
+        if "people_w" in client_scope:
+            scope_weights["people"] = 3
+        elif "people" in client_scope:
+            scope_weights["people"] = 1
+
+        client_scope = pickle.dumps(scope_weights)
+
         client_meta = {
                         "client_author":myId,
                         "client_name":client_name,
                         "client_password":client_password,
-                        "client_scope":":".join(list(client_scope)),
+                        "client_scope":client_scope,
                         "client_category":client_category,
                         "client_redirects":":".join(list(client_redirects)),
                         "client_desc":client_desc
