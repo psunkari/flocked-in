@@ -18,14 +18,12 @@ from social import config, db, utils
 from social.template import getBlock
 
 
-
 KEYSPACE = config.get("Cassandra", "Keyspace")
 dateFormat = '%Y-%m-%d'
 
 
 @defer.inlineCallbacks
 def getNewUserCount(startDate, endDate, count=100, column_count=100, mail_to=''):
-
     frm_to = startDate + ' ' + endDate
     startDate = datetime.datetime.strptime(startDate, dateFormat)
     endDate = datetime.datetime.strptime(endDate, dateFormat)
@@ -42,7 +40,6 @@ def getNewUserCount(startDate, endDate, count=100, column_count=100, mail_to='')
     start = ''
     stats = {}
     data = {}
-
 
     while 1:
         domains = yield db.get_range_slice('domainOrgMap',
@@ -64,8 +61,6 @@ def getNewUserCount(startDate, endDate, count=100, column_count=100, mail_to='')
         else:
             start = domains[-1].key
     stats = {frm_to: {"newDomains":new_domains, "newDomainCount": len(new_domains) }}
-
-
 
     start =  ''
     new_users = {}
@@ -191,7 +186,6 @@ def getNewUserCount(startDate, endDate, count=100, column_count=100, mail_to='')
 
 
 def main():
-
     today = datetime.datetime.now().date()
     yesterday = today - datetime.timedelta(days=1)
 
@@ -220,7 +214,7 @@ def main():
     parser.add_option('--mail-to',
                         dest='mail_to',
                         action='store',
-                        default='sivakrishna@synovel.com,praveen@synovel.com,prasad@synovel.com')
+                        default='flockedin-stats@synovel.com')
     options, args = parser.parse_args()
 
     log.startLogging(sys.stdout)
@@ -232,17 +226,13 @@ def main():
                         options.row_count, options.column_count, mail_to)
 
     def finish(x):
-        db.stopService()
         reactor.stop()
+        db.stopService()
     d.addErrback(log.err)
     d.addBoth(finish)
     reactor.run()
 
 
 
-
-
-
 if __name__ == '__main__':
-
     main()
