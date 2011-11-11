@@ -1040,11 +1040,15 @@ var data = {
 
     wait: function(url, method) {
         var self = this;
+        /*
+         * Always fetch the data till we have a proper
+         * way to cache and refresh our caches.
+         *
         if (self._data[url] !== undefined) {
             method(self._data[url]);
             return;
         }
-
+        */
         var deferred = $.get(url, null, null, "json"),
             success = function(data) {
                 self._data[url] = data;
