@@ -49,7 +49,7 @@ def createIndex():
             continue
 
         if item['meta'].get('type', '') == 'poll':
-            item['meta']['options_str'] = ' '.join(item['options'].values())
+            item['meta']['poll_options'] = ' '.join(item['options'].values())
         yield fts.solr.updateIndex(itemId, item, ownerOrgId)
 
 

@@ -160,7 +160,7 @@ class Poll(object):
     itemType = "poll"
     position = 5
     hasIndex = False
-    indexFields = [("meta", "question"), ("meta", "options_str"),
+    indexFields = [("meta", "comment"), ("meta", "poll_options"),
                    ("meta", "start"), ("meta", "end")]
 
     @defer.inlineCallbacks
