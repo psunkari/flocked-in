@@ -1,5 +1,5 @@
 
-html>/**/body {           /* IE7 */
+html>/**/body {           /* > IE7 */
     overflow-y: scroll;
 }
 
@@ -1127,6 +1127,11 @@ abbr.timestamp {
     background-position: -19px -67px;
 }
 
+.suggestions-user {
+    position: relative;
+    margin-top: 5px;
+}
+
 
 /*
  * Generic item display
@@ -1265,12 +1270,14 @@ abbr.timestamp {
     float: left;
     width: 48%;
     margin-bottom: 8px;
+    position: relative;
 }
 
 .users-avatar {
     width: 48px;
     height: 48px;
     position: absolute;
+    left: 0px;
 }
 
 .users-details {

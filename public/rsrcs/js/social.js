@@ -130,19 +130,21 @@ _initAjaxRequests: function _initAjaxRequests() {
 
     /* Async form submit */
     $('form.ajax').live("submit", function() {
-        if (this.hasAttribute("disabled"))
+        var $this = $(this),
+            validate, deferred, enabler, $inputs;
+
+        if ($this.attr("disabled"))
             return false;
 
-        var $this = $(this);
-        var validate = jQuery.Event('html5formvalidate');
+        validate = jQuery.Event('html5formvalidate');
         if ($this.data('html5form')) {
             $this.trigger(validate);
             if (validate.isDefaultPrevented())
                 return false;
         }
 
-        var deferred = $.post('/ajax' + $this.attr('action'),
-                                   $this.serialize());
+        deferred = $.post('/ajax' + $this.attr('action'),
+                          $this.serialize());
 
         self.setBusy(deferred, $this)
 
@@ -150,7 +152,7 @@ _initAjaxRequests: function _initAjaxRequests() {
         // form till we get a response from the server.
         $this.attr("disabled", true);
         $inputs = $this.find(":input").attr("disabled", true);
-        var enabler = function() {
+        enabler = function() {
             $inputs.removeAttr("disabled");
             $this.removeAttr("disabled");
         };
@@ -510,7 +512,7 @@ var convs = {
 
     showItemLikes: function(itemId) {
         var dialogOptions = {
-            id: 'likes-dlg-'+itemId,
+            id: 'likes-dlg-'+itemId
         };
         $$.dialog.create(dialogOptions);
         $.get('/ajax/item/likes?id='+itemId);

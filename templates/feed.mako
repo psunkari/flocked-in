@@ -242,7 +242,7 @@
       <div class="sidebar-chunk">
         <div class="sidebar-title">${_("People you may know")}</div>
         %for userId in suggestions:
-          <div style="margin-top: 5px">
+          <div class="suggestions-user">
             <div class="users-avatar">
               <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
               % if avatarURI:
