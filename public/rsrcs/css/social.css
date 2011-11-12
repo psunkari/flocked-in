@@ -1,7 +1,8 @@
 
-html>body {
+html>/**/body {           /* IE7 */
     overflow-y: scroll;
 }
+
 body {
     margin: 0;
     padding: 0;
@@ -12,6 +13,9 @@ body {
 }
 textarea, input {
     font-family: sans-serif;
+}
+form {
+    margin-bottom: 0;
 }
 
 

@@ -1,6 +1,12 @@
-html>body {
+
+html>/**/body {           /* > IE7 */
     overflow-y: scroll;
 }
+div {                     /* IE hasLayout Fix */
+    overflow: hidden;
+    display: inline-block;
+}
+div { display: block; }
 
 body {
     margin: 0;
@@ -10,6 +16,10 @@ body {
     font-size: 16px;
     line-height: 1.5em;
     background: white url(/rsrcs/img/static-bg.png) repeat-x;
+}
+
+form {
+    margin-bottom: 0;
 }
 
 a:link, a:visited {
@@ -233,7 +243,7 @@ a:link, a:visited {
 
 .feature {
   float: left;
-  width: 49%;
+  width: 50%;
   position: relative;
   height: 160px;
 }
@@ -243,11 +253,15 @@ a:link, a:visited {
   width: 137px;
   position: absolute;
   background: url(/rsrcs/img/features.png) no-repeat;
-  top: 23px;
+  top: 5px;
+  left: 0px;
 }
 
 .feature-contents {
   margin: 0 20px 0 150px;
+}
+.feature-contents h3 {
+  margin: 3px 0;
 }
 
 #profiles > .feature-icon {
@@ -647,6 +661,7 @@ a:link, a:visited {
 .copyright {
     font-size: 0.8em;
     line-height: 1.3em;
+    color: #AAA;
 }
 .sitemeta {
     color: #AAA;
