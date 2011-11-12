@@ -761,15 +761,16 @@ var files = {
         var _self = this;
 
         $("#"+id+" :file").change(function() {
-            var form = $(this.form), d, mime, filename;
+            var form = $(this.form), d, mimeType = null, filename = null;
 
             /* Get basic information about the files */
             if (this.files !== undefined) {
-                mimeType = this.files[0].type
-                filename = this.files[0].name
+                filename = this.files[0].name || this.files[0].fileName;
+                mimeType = this.files[0].type || '';
                 d = $.post('/file/form',
                            {"name":filename, "mimeType":mimeType}, "json");
-            } else {
+            }
+            if (!filename) {
                 filename = _self.getNameFromPath(this.value);
                 d = $.post('/file/form', {"name":filename}, "json");
             }
@@ -847,28 +848,30 @@ $$.files = files;
  * JSON stringify
  */
 (function($$, $) { if (!$$.json) {
-var json = JSON || {};
-json.stringify = JSON.stringify || function (obj) {
-    var t = typeof (obj);
-    if (t != "object" || obj === null) {
-        // simple data type
-        if (t == "string") obj = '"'+obj+'"';
-        return String(obj);
-    }
-    else {
-        // recurse array or object
-        var n, v, json = [], arr = (obj && obj.constructor == Array);
-        for (n in obj) {
-            v = obj[n]; t = typeof(v);
-            if (t == "string") v = '"'+v+'"';
-            else if (t == "object" && v !== null) v = JSON.stringify(v);
-            json.push((arr ? "" : '"' + n + '":') + String(v));
+var jsonObj = window.JSON || {};
+if (!jsonObj.stringify) {
+    jsonObj.stringify = function (obj) {
+        var t = typeof (obj);
+        if (t != "object" || obj === null) {
+            // simple data type
+            if (t == "string") obj = '"'+obj+'"';
+            return String(obj);
         }
-        return (arr ? "[" : "{") + String(json) + (arr ? "]" : "}");
+        else {
+            // recurse array or object
+            var n, v, json = [], arr = (obj && obj.constructor == Array);
+            for (n in obj) {
+                v = obj[n]; t = typeof(v);
+                if (t == "string") v = '"'+v+'"';
+                else if (t == "object" && v !== null) v = jsonObj.stringify(v);
+                json.push((arr ? "" : '"' + n + '":') + String(v));
+            }
+            return (arr ? "[" : "{") + String(json) + (arr ? "]" : "}");
+        }
     }
 };
 
-$$.json = json;
+$$.json = jsonObj;
 }})(social, jQuery);
 
 

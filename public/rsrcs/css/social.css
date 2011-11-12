@@ -884,6 +884,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 
 .uploaded-file-name,
 .attachment-name {
+    float: left;
     max-width: 350px;
     overflow: hidden;
 }

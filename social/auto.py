@@ -27,8 +27,8 @@ class AutoCompleteResource(BaseResource):
     _template = "<div><div class='ui-ac-icon'><img src='%(icon)s'/></div>" +\
                 "<div class='ui-ac-title'>%(title)s</div>" +\
                 "<div class='ui-ac-meta'>%(meta)s</div></div>"
-    _singleLineTemplate = "<div><span class='ui-ac-title'>%(title)s</span>" +\
-                          "<span class='ui-ac-meta'>%(meta)s</span></div>"
+    _singleLineTemplate = "<div><span class='ui-ac-title2'>%(title)s</span>" +\
+                          "<span class='ui-ac-meta2'>%(meta)s</span></div>"
     _dlgLinetemplate = """
       <div class="ui-listitem">
         <div class="ui-list-icon"><img src='%(icon)s'/></div>
