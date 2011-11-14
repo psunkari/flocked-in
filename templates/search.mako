@@ -31,11 +31,11 @@
             <div id="title">${self._title()}</div>
           </div>
         </div>
-        <% q = term if term else '' %>
+        <% q = term.replace('"', '&quot;') if term else '' %>
         <div style="float:left" >
           <div id="search-container">
             <form id="search" action="/search" method="GET" class="ajaxget">
-              <input type="text" id="searchbox" name="q" value=${q} />
+              <input type="text" id="searchbox" name="q" value="${q}" />
               <input type="submit" id="searchbutton" value="${_('Go!')}"/>
             </form>
           </div>
