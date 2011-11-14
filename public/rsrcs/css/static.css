@@ -675,3 +675,28 @@ a:link, a:visited {
     font-size: 0.8em;
     line-height: 1.3em;
 }
+
+
+/*****************************************************************************
+ * Unsupported Browser
+ */
+
+#unsupported-browser,
+#compatibility-mode,
+#javascript-missing {
+    text-align: center;
+    width: 100%;
+    font-size: 12px;
+    line-height: 1.5em;
+    margin: 20px 0;
+    display: none;
+}
+
+.unsupported-text {
+    background: #c50000;
+    padding: 3px 20px;
+    color: white;
+    border-radius: 6px;
+    display: inline-block;
+    box-shadow: 1px 1px 4px #888888;
+}

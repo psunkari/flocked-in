@@ -66,12 +66,22 @@
 <body class="noscript">
 %endif
   <noscript>
-    <div style="text-align: center; position: fixed; width: 100%; z-index: 100000;">
-      <span style="background: #c50000; padding: 3px 20px; color: white; font-weight: bold; display: inline-block; border-radius: 0 0 10px 10px;">
+    <div id='missing-javascript'>
+      <span class='unsupported-text'>
         Read only mode &mdash; Enable Javascript for complete functionality
       </span>
     </div>
   </noscript>
+  <div id='unsupported-browser'>
+    <span class='unsupported-text'>
+      Unsupported Browser &ndash; Please upgrade to a newer version
+    </span>
+  </div>
+  <div id='compatibility-mode'>
+    <span class='unsupported-text'>
+      Compatibility mode &ndash; Please switch your browser to normal mode
+    </span>
+  </div>
   <div id="topbar">
     <div id="top" class="contents">
       <% avatarURI = utils.userAvatar(myKey, me) %>
