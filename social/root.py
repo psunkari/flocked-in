@@ -220,7 +220,9 @@ class RootResource(resource.Resource):
         if authinfo.username != None:
             if request.method == "POST" or self._isAjax:
                 token = utils.getRequestArg(request, "_tk")
-                if authinfo.token and token != authinfo.token:
+                tokenFromCookie = request.getCookie('token')
+                #if authinfo.token and token != authinfo.token:
+                if token != tokenFromCookie:
                     defer.returnValue(resource.ErrorPage(400,
                             http.RESPONSES[400], "Invalid authorization token"))
             defer.returnValue(rsrc)

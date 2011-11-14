@@ -108,7 +108,7 @@
   <input type="hidden" id="${id}" name="acl" value='${defaultVal}'/>
   %if script:
     <div id="${id}-wrapper">
-      <button class="acl-button acl-text-button has-tooltip" id="${id}-button" onclick="$$.acl.showACL(event, '${id}');">
+      <button type="button" class="acl-button acl-text-button has-tooltip" id="${id}-button" onclick="$$.acl.showACL(event, '${id}');">
         <span>${_("With")}</span>
         <span class="acl-label" id="${id}-label">${defaultLabel}</span>
         <span class="acl-down-arrow">&#9660;</span>
@@ -242,7 +242,7 @@
       <div class="sidebar-chunk">
         <div class="sidebar-title">${_("People you may know")}</div>
         %for userId in suggestions:
-          <div style="margin-top: 5px">
+          <div class="suggestions-user">
             <div class="users-avatar">
               <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
               % if avatarURI:

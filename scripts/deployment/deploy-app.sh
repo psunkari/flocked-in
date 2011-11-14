@@ -9,8 +9,8 @@ set -e
 #
 # Repository settings
 #
-repo_url='ssh://one.synovel.pvt/social'
-repo_revision='tip'
+repo_url='ssh://hg@one.synovel.pvt/social'
+repo_revision='default'
 
 
 #
@@ -164,6 +164,11 @@ rm -rf $src/.hg
 cd $tmp_dir
 $src/scripts/deployment/encrypt-files.sh decrypt \
     $src/scripts/deployment/files.tbz.asc && mv files/production.cfg $src/etc/
+if [ ! -f $src/etc/production.cfg ]; then
+  echo "Config file not found.  Entered wrong password?"
+  exit -1
+fi
+
 tar -cvjf upload.tar.bz2 static src
 
 # Copy static files and the modified src to application servers

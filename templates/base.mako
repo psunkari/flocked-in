@@ -66,6 +66,23 @@
 %else:
 <body class="noscript">
 %endif
+  <noscript>
+    <div id='missing-javascript'>
+      <span class='unsupported-text'>
+        Read only mode &mdash; Enable Javascript for complete functionality
+      </span>
+    </div>
+  </noscript>
+  <div id='unsupported-browser'>
+    <span class='unsupported-text'>
+      Unsupported Browser &ndash; Please upgrade to a newer version
+    </span>
+  </div>
+  <div id='compatibility-mode'>
+    <span class='unsupported-text'>
+      Compatibility mode &ndash; Please switch your browser to normal mode
+    </span>
+  </div>
   <div id="topbar">
     <div id="top" class="contents">
       <% avatarURI = utils.userAvatar(myKey, me) %>

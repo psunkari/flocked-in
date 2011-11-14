@@ -31,7 +31,7 @@
 
 <body>
   <div id="header" class="centered-wrapper">
-    <a href='/'><img id='sitelogo' src="/rsrcs/img/flocked-in.png" alt="flocked-in"/></a>
+    <a class="header-logo" href='/'><img id='sitelogo' src="/rsrcs/img/flocked-in.png" alt="Flocked-in"/></a>
     <ul class="header-links">
       <li>
         <a title="What is flocked-in?" class="menuitem" href="/about/features.html" id="feature">What is flocked-in?</a>
@@ -55,6 +55,25 @@
           msgClass = 'error-input' if reason else ''
         %>
         <p id="error-message" class="form-header ${msgClass}">${reasonStr}</p>
+        <noscript>
+          <div id='javascript-missing'>
+            <span class='unsupported-text' style="font-weight: bold;">
+              You browser does not support scripting or Javascript is currently disabled.<br/>Please use a Javascript-enabled browser for complete functionality
+            </span>
+          </div>
+        </noscript>
+        <div id='unsupported-browser'>
+          <span class='unsupported-text'>
+            <b>Unsupported Browser &ndash;</b> Please use Chrome &gt;2.0, <br/>Firefox &gt;3.0,
+            Safari &gt;4.0, Opera &gt;10.10 or Internet Explorer &gt;8.0
+          </span>
+        </div>
+        <div id='compatibility-mode'>
+          <span class='unsupported-text'>
+            <b>Your browser is set to display this document in Compatibility Mode.</b><br />
+            Please set your browser to run in normal mode
+          </span>
+        </div>
         <ul>
           <li>
             <label for="signin-email" class="styled-label required">
@@ -102,6 +121,28 @@
       </div>
     </div>
   </div>
+
+  <script type="text/javascript" src="/rsrcs/js/jquery-1.6.4.js"></script>
+  <script type="text/javascript">
+    $().ready(function() {
+      var ua = $.browser,
+          c = 0,
+          ver = parseFloat(ua.version.replace(/\./g, function() {
+                            return (c++ == 1) ? '' : '.';
+                          }));
+      console.log(ua);
+      if (ua.msie && ver < 8 && document.documentMode) {
+        $('#compatibility-mode').css('display', 'block');
+      } else if (ua.msie && ver >= 8 ||
+                 ua.webkit && ver >= 530  ||
+                 ua.opera && ver >= 10.10 ||
+                 ua.mozilla && ver >= 1.9) {
+        // Supported Browsers
+      } else {
+        $('#unsupported-browser').css('display', 'block');
+      }
+    });
+  </script>
 
 </body>
 </html>

@@ -745,6 +745,8 @@ def updateNameIndex(userKey, targetKeys, newName, oldName):
 @dump_args
 def sendmail(toAddr, subject, textPart, htmlPart=None,
              fromAddr='noreply@flocked.in', fromName='Flocked-in'):
+    if textPart:
+        textPart = sanitizer.unescape(textPart, {'&#58;':':'})
     if htmlPart:
         msg = MIMEMultipart('alternative')
         msg.preamble = 'This is a multi-part message in MIME format.'
@@ -757,7 +759,7 @@ def sendmail(toAddr, subject, textPart, htmlPart=None,
     else:
         msg = MIMEText(textPart)
 
-    msg['Subject'] = subject
+    msg['Subject'] = sanitizer.unescape(subject, {'&#58;':':'})
     msg['From'] = "%s <%s>" % (fromName, fromAddr)
     msg['To'] = toAddr
     try:
