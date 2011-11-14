@@ -1,7 +1,8 @@
 
-html>body {
+html>/**/body {           /* > IE7 */
     overflow-y: scroll;
 }
+
 body {
     margin: 0;
     padding: 0;
@@ -12,6 +13,9 @@ body {
 }
 textarea, input {
     font-family: sans-serif;
+}
+form {
+    margin-bottom: 0;
 }
 
 
@@ -880,6 +884,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 
 .uploaded-file-name,
 .attachment-name {
+    float: left;
     max-width: 350px;
     overflow: hidden;
 }
@@ -1122,6 +1127,11 @@ abbr.timestamp {
     background-position: -19px -67px;
 }
 
+.suggestions-user {
+    position: relative;
+    margin-top: 5px;
+}
+
 
 /*
  * Generic item display
@@ -1260,12 +1270,14 @@ abbr.timestamp {
     float: left;
     width: 48%;
     margin-bottom: 8px;
+    position: relative;
 }
 
 .users-avatar {
     width: 48px;
     height: 48px;
     position: absolute;
+    left: 0px;
 }
 
 .users-details {

@@ -210,6 +210,10 @@ input::-moz-focus-inner {
   font-size: 0.9em;
   opacity: 0.5;
 }
+.ui-ac-meta2 {  /* Used in single line auto completes */
+  font-size: 0.9em;
+  opacity: 0.5;
+}
 
 
 /*

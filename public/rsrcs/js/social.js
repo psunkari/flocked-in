@@ -130,19 +130,21 @@ _initAjaxRequests: function _initAjaxRequests() {
 
     /* Async form submit */
     $('form.ajax').live("submit", function() {
-        if (this.hasAttribute("disabled"))
+        var $this = $(this),
+            validate, deferred, enabler, $inputs;
+
+        if ($this.attr("disabled"))
             return false;
 
-        var $this = $(this);
-        var validate = jQuery.Event('html5formvalidate');
+        validate = jQuery.Event('html5formvalidate');
         if ($this.data('html5form')) {
             $this.trigger(validate);
             if (validate.isDefaultPrevented())
                 return false;
         }
 
-        var deferred = $.post('/ajax' + $this.attr('action'),
-                                   $this.serialize());
+        deferred = $.post('/ajax' + $this.attr('action'),
+                          $this.serialize());
 
         self.setBusy(deferred, $this)
 
@@ -150,7 +152,7 @@ _initAjaxRequests: function _initAjaxRequests() {
         // form till we get a response from the server.
         $this.attr("disabled", true);
         $inputs = $this.find(":input").attr("disabled", true);
-        var enabler = function() {
+        enabler = function() {
             $inputs.removeAttr("disabled");
             $this.removeAttr("disabled");
         };
@@ -510,7 +512,7 @@ var convs = {
 
     showItemLikes: function(itemId) {
         var dialogOptions = {
-            id: 'likes-dlg-'+itemId,
+            id: 'likes-dlg-'+itemId
         };
         $$.dialog.create(dialogOptions);
         $.get('/ajax/item/likes?id='+itemId);
@@ -761,15 +763,16 @@ var files = {
         var _self = this;
 
         $("#"+id+" :file").change(function() {
-            var form = $(this.form), d, mime, filename;
+            var form = $(this.form), d, mimeType = null, filename = null;
 
             /* Get basic information about the files */
-            if (this.files !== undefined) {
-                mimeType = this.files[0].type
-                filename = this.files[0].name
+            if (this.files !== undefined && this.files[0] !== undefined) {
+                filename = this.files[0].name || this.files[0].fileName;
+                mimeType = this.files[0].type || '';
                 d = $.post('/file/form',
                            {"name":filename, "mimeType":mimeType}, "json");
-            } else {
+            }
+            if (!filename) {
                 filename = _self.getNameFromPath(this.value);
                 d = $.post('/file/form', {"name":filename}, "json");
             }
@@ -847,28 +850,30 @@ $$.files = files;
  * JSON stringify
  */
 (function($$, $) { if (!$$.json) {
-var json = JSON || {};
-json.stringify = JSON.stringify || function (obj) {
-    var t = typeof (obj);
-    if (t != "object" || obj === null) {
-        // simple data type
-        if (t == "string") obj = '"'+obj+'"';
-        return String(obj);
-    }
-    else {
-        // recurse array or object
-        var n, v, json = [], arr = (obj && obj.constructor == Array);
-        for (n in obj) {
-            v = obj[n]; t = typeof(v);
-            if (t == "string") v = '"'+v+'"';
-            else if (t == "object" && v !== null) v = JSON.stringify(v);
-            json.push((arr ? "" : '"' + n + '":') + String(v));
+var jsonObj = window.JSON || {};
+if (!jsonObj.stringify) {
+    jsonObj.stringify = function (obj) {
+        var t = typeof (obj);
+        if (t != "object" || obj === null) {
+            // simple data type
+            if (t == "string") obj = '"'+obj+'"';
+            return String(obj);
         }
-        return (arr ? "[" : "{") + String(json) + (arr ? "]" : "}");
+        else {
+            // recurse array or object
+            var n, v, json = [], arr = (obj && obj.constructor == Array);
+            for (n in obj) {
+                v = obj[n]; t = typeof(v);
+                if (t == "string") v = '"'+v+'"';
+                else if (t == "object" && v !== null) v = jsonObj.stringify(v);
+                json.push((arr ? "" : '"' + n + '":') + String(v));
+            }
+            return (arr ? "[" : "{") + String(json) + (arr ? "]" : "}");
+        }
     }
 };
 
-$$.json = json;
+$$.json = jsonObj;
 }})(social, jQuery);
 
 
@@ -1040,11 +1045,15 @@ var data = {
 
     wait: function(url, method) {
         var self = this;
+        /*
+         * Always fetch the data till we have a proper
+         * way to cache and refresh our caches.
+         *
         if (self._data[url] !== undefined) {
             method(self._data[url]);
             return;
         }
-
+        */
         var deferred = $.get(url, null, null, "json"),
             success = function(data) {
                 self._data[url] = data;

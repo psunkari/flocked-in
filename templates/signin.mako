@@ -31,7 +31,7 @@
 
 <body>
   <div id="header" class="centered-wrapper">
-    <a href='/'><img id='sitelogo' src="/rsrcs/img/flocked-in.png" alt="flocked-in"/></a>
+    <a class="header-logo" href='/'><img id='sitelogo' src="/rsrcs/img/flocked-in.png" alt="Flocked-in"/></a>
     <ul class="header-links">
       <li>
         <a title="What is flocked-in?" class="menuitem" href="/about/features.html" id="feature">What is flocked-in?</a>
