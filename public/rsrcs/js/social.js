@@ -648,6 +648,24 @@ $$.feedback = feedback;
 (function($$, $){ if (!$$.ui) {
 var ui = {
     init: function() {
+        /* Check if the browser is supported */
+        var ua = $.browser,
+            c = 0,
+            ver = parseFloat(ua.version.replace(/\./g, function() {
+                              return (c++ == 1) ? '' : '.';
+                            }));
+        console.log(ua);
+        if (ua.msie && ver < 8 && document.documentMode) {
+          $('#compatibility-mode').css('display', 'block');
+        } else if (ua.msie && ver >= 8 ||
+                   ua.webkit && ver >= 530  ||
+                   ua.opera && ver >= 10.10 ||
+                   ua.mozilla && ver >= 1.9) {
+          // Supported Browsers
+        } else {
+          $('#unsupported-browser').css('display', 'block');
+        }
+
         /* Add a scroll to bottom handler */
         $(window).scroll(function(){
             if ($(window).scrollTop() > $(document).height() - (50 + $(window).height())){

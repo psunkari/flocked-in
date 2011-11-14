@@ -108,7 +108,7 @@
   <input type="hidden" id="${id}" name="acl" value='${defaultVal}'/>
   %if script:
     <div id="${id}-wrapper">
-      <button class="acl-button acl-text-button has-tooltip" id="${id}-button" onclick="$$.acl.showACL(event, '${id}');">
+      <button type="button" class="acl-button acl-text-button has-tooltip" id="${id}-button" onclick="$$.acl.showACL(event, '${id}');">
         <span>${_("With")}</span>
         <span class="acl-label" id="${id}-label">${defaultLabel}</span>
         <span class="acl-down-arrow">&#9660;</span>
