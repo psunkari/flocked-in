@@ -766,7 +766,7 @@ var files = {
             var form = $(this.form), d, mimeType = null, filename = null;
 
             /* Get basic information about the files */
-            if (this.files !== undefined) {
+            if (this.files !== undefined && this.files[0] !== undefined) {
                 filename = this.files[0].name || this.files[0].fileName;
                 mimeType = this.files[0].type || '';
                 d = $.post('/file/form',
