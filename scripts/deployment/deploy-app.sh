@@ -10,7 +10,7 @@ set -e
 # Repository settings
 #
 repo_url='ssh://hg@one.synovel.pvt/social'
-repo_revision='tip'
+repo_revision='default'
 
 
 #
