@@ -1,5 +1,6 @@
-<%! from social import utils, _, __, constants, apps %>
-<%! from base64     import urlsafe_b64encode, urlsafe_b64decode %>
+<%! from social.apps import scopes %>
+<%! from social import utils, _, __, constants %>
+<%! from base64 import b64decode %>
 <%! import pickle %>
 <!DOCTYPE HTML>
 
@@ -107,7 +108,6 @@
       <li class="form-row">
         <label class="styled-label">${_('Permissions')}</label>
         <div class='styledform-inputwrap' style='max-height:9em; overflow: auto;'>
-          <% scopes = apps.scopes %>
           %for scope in scopes.keys():
             <div class="multiselect">
               <label><input type="checkbox" name="scope" value=${scope}>${scope}</label>
@@ -146,7 +146,7 @@
     %endif
     <div class="users-user">
       <div class="users-details">
-        <div class="user-details-name"><a href="/apps?id=${appId}">${apps[appId]["meta"]["name"]} -- ${apps[appId]["meta"]["category"]}</a></div>
+        <div class="user-details-name"><a href="/apps?id=${appId}">${apps[appId]["meta"]["name"]}</a></div>
         <div class="user-details-title">${appId}</div>
       </div>
     </div>
@@ -163,38 +163,19 @@
 
 
 <%def name="application_details_layout()">
-<%
-  scope_dict = pickle.loads(scope)
-%>
 <h2>${name}</h2>
-<div><label>Client Identifier</label><span> ${clientId}</span></div>
-  %if category == "client":
+<div><label>App Id</label><span>${id}</span></div>
     <label>Client Password: </label>
     <span>${password}</span>
-  % endif
 <div>
   <label>Client Scope</label>
-  %for scope in scope_dict.keys():
-    %if scope_dict[scope] != 0:
-      %if scope_dict[scope] == 1:
-        <span> ${scope} Read Only</span>
-      %elif scope_dict[scope] == 3:
-        <span> ${scope} Read + Write Access</span>
-      %endif
-    %endif
-  %endfor
+  <span>${scope}</span>
 </div>
 <div><label>Application Category </label>
-  %if category == "client":
-    <span>Server Side Application/ Service</span>
-  %elif category == "code":
-    <span>Desktop/Mobile/HTML5 Application</span>
-  % endif
+  <span>${category}</span>
 </div>
 <div>
-  %for url in redirects.split(":"):
-    <pre>${urlsafe_b64decode(url)}</pre>
-  %endfor
+  <pre>${b64decode(redirect)}</pre>
 </div>
 
 </%def>

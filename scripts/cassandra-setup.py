@@ -275,8 +275,8 @@ def createColumnFamilies(client):
     apps = CfDef(KEYSPACE, "apps", "Super", "UTF8Type", "UTF8Type",
                  "Details of Applications registered for API Access")
 
-    oUser2Clients = CfDef(KEYSPACE, "oUser2Clients", "Standard", "UTF8Type",
-                          None, "List of applications registered by a User")
+    appsByOwner = CfDef(KEYSPACE, "appsByOwner", "Standard", "TimeUUIDType",
+                        None, "List of applications registered by a User")
 
     oUserApps = CfDef(KEYSPACE, "oUserApps", "Standard", "UTF8Type",
                           None, "List of applications the current user has \
@@ -296,7 +296,7 @@ def createColumnFamilies(client):
     #                "Reverse Map of scope designated to an access token")
 
     yield client.system_add_column_family(apps)
-    yield client.system_add_column_family(oUser2Clients)
+    yield client.system_add_column_family(appsByOwner)
     yield client.system_add_column_family(oUserApps)
     yield client.system_add_column_family(oAuthorizationCodes)
     yield client.system_add_column_family(oAccessTokens)
@@ -677,7 +677,7 @@ def truncateColumnFamilies(client):
                "mArchivedConversations", "mDeletedConversations",
                "mConvMessages", "mConvFolders", "latest", "doNotSpam",
                "files", "tmp_files", "item_files", "invitationsSent",
-               "user_files", "suggestions", "apps", "oUser2Clients",
+               "user_files", "suggestions", "apps", "appsByOwner",
                "oAuthorizationCodes", "oUserApps", "oAccessTokens", "oAuthCode2Token"]:
 
         log.msg("Truncating: %s" % cf)

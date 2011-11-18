@@ -1,6 +1,6 @@
 
-from base64         import b64encode
-from ordereddict    import OrderedDict
+from base64             import b64encode
+from ordereddict        import OrderedDict
 
 from twisted.internet   import defer
 from twisted.web        import static, server
@@ -57,10 +57,10 @@ class ApplicationResource(base.BaseResource):
 
         meta = {"author": myId, "name": name, "password": password,
                 "scope": ','.join(scope), "category": category,
-                "desc": desc, "redirects": b64encode(redirect)}
+                "desc": desc, "redirect": b64encode(redirect)}
         yield db.batch_insert(clientId, "apps", {"meta":meta})
-        yield db.insert(myId, "entities", "", clientId, "apps")
-        yield db.insert(myOrgId, "entities", "", clientId, "apps")
+        yield db.insert(myId, "appsByOwner", "", clientId)
+        yield db.insert(myOrgId, "appsByOwner", "", clientId)
 
         if script:
             request.write("$('#composer').empty();$$.fetchUri('/apps');")
@@ -93,7 +93,7 @@ class ApplicationResource(base.BaseResource):
 
         clientId = utils.getRequestArg(request, 'id')
         if clientId:
-            cols = yield db.get_slice(clientId, "oAuthClients")
+            cols = yield db.get_slice(clientId, "apps")
             cols = utils.supercolumnsToDict(cols)
             if "meta" in cols:
                 args.update(**cols["meta"])
@@ -105,12 +105,10 @@ class ApplicationResource(base.BaseResource):
                 raise errors.InvalidEntity("Application", clientId)
         else:
             start = utils.getRequestArg(request, "start") or ''
-            cols = yield db.get_slice(myId, "oUser2Clients", count=10,
-                                      start=start)
+            cols = yield db.get_slice(myId, "appsByOwner", count=10, start=start)
             clientIds = [col.column.name for col in cols]
-            cols = yield db.multiget_slice(clientIds, 'oAuthClients', ['meta'])
+            cols = yield db.multiget_slice(clientIds, 'apps', ['meta'])
             details = utils.multiSuperColumnsToDict(cols)
-            print details
             args.update({"apps":details})
             yield renderScriptBlock(request, "oauth-server.mako",
                                     "application_listing_layout",

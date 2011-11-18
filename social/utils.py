@@ -204,6 +204,7 @@ def getUniqueKey():
     u = uuid.uuid1()
     return base64.urlsafe_b64encode(u.bytes)[:-2]
 
+
 @defer.inlineCallbacks
 def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
                   ownerOrgId=None, groupIds = None):
