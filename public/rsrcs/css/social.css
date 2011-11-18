@@ -1170,77 +1170,74 @@ abbr.timestamp {
  */
 
 .styledform {
-    width: 100%;
-    display: table;
-}
-
-.styledform ul {
     list-style-type: none;
     margin: 0px;
     padding-left: 15px;
 }
 
-.styledform li {
-    padding:5px 0px;
-    min-height:26px;
+.styledform > .form-row {
+    clear: both;
+    line-height: 30px;
+    padding: 5px 0px;
+    overflow: hidden;
 }
 
-.styledform label {
-    float:left;
-    font-size:11px;
-    width:15em;
-    display:inline-block;
-    line-height:2;
-    padding:2px;
-    margin-right:10px;
-    text-align:right;
+.styledform .styled-label {
+    float: left;
+    margin-right: 1%;
+    text-align: right;
+    width: 32%;
+    font-size: 12px;
 }
 
+.styledform-inputwrap,
 .styledform input[type=text],
 .styledform input[type=email],
 .styledform input[type=password],
 .styledform select,
-.ui-datepicker-title select,
 .styledform textarea {
-    width: 20em;
-    font-size: 12px;
+    width: 350px;
+    float: left;
     background-color: white;
     border-width: 1px;
-    border-color: #CCC #999 #999 #CCC;
     border-style: solid;
+    border-color: #CCC #999 #999 #CCC;
     box-shadow: 1px 1px 0 #CCC;
-    -webkit-box-shadow: 1px 1px 0 #CCC;
-    -mox-box-shadow: 1px 1px 0 #CCC;
-    padding: 3px;
+    padding: 2px;
+    margin-top: 3px;
+    font-size: 12px;
 }
-
-.styledform select.single-row {
-    width: 20.5em;
+.styledform-inputwrap {
+    background-color: transparent !important;
 }
-
+.styledform select {
+    width: 356px;
+}
+.styledform input[type=radio],
+.styledform input[type=checkbox] {
+    position: relative;
+    top: 3px;
+}
 .styledform .inline-select {
-    width:auto !important;
-}
-
-.styledform fieldset {
-    border: none
-}
-
-.styledform legend {
-    font-weight: 700;
-    margin: 20px 10px 10px;
-}
-
-.styledform-buttons {
-    border-top: 1px solid #e0d7cf;
-    padding-top: 4px;
-    margin: 20px 0;
-    text-align: right;
+    width: auto !important;
 }
 
 .styledform abbr {
     color: #a40000;
     border-style: none;
+}
+
+.styledform-buttons {
+    padding: 10px;
+    margin: 10px 0 10px 20%;
+    min-width: 500px;
+    width: 60%;
+    text-align: right;
+    border-top: 1px solid #E0D7CF;
+}
+
+.styledform .multiselect {
+    line-height: 1.3em !important;
 }
 
 /*

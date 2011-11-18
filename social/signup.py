@@ -121,7 +121,7 @@ def _sendSignupInvitation(emailId):
                "%(activationUrl)s\n\n"
         activationTmpl = "%(rootUrl)s/signup?email=%(emailId)s&token=%(token)s"
 
-        token = utils.getRandomKey('invite')
+        token = utils.getRandomKey()
         insert_d = db.insert(domain, "invitations", emailId, token, emailId)
         activationUrl = activationTmpl % locals()
         textBody = (body + signature) % locals()

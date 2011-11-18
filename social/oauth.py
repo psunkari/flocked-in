@@ -200,7 +200,7 @@ class OAuthUserResource(base.BaseResource):
             # client identifier and redirection URI.
 
             #XXX: Check if user has signed up for this application
-            auth_code = utils.getRandomKey(myId)
+            auth_code = utils.getRandomKey()
             print "Authorization Code is " + `auth_code`
             auth_map = {
                         "user_id":myId,
@@ -428,7 +428,7 @@ class OAuthTokenResource(base.BaseResource):
         # XXX:Insert access key record into oAuthCode2Token for security reasons
         # insert access key into oAccessTokens
 
-        access_token = utils.getRandomKey(cols["meta"]["user_id"])
+        access_token = utils.getRandomKey()
         yield db.remove(auth_code, "oAuthorizationCodes")
         access_map = {
                     "user_id":cols["meta"]["user_id"],

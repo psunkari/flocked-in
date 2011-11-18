@@ -191,11 +191,11 @@ def getValidTagId(request, arg):
     defer.returnValue((tagId, tag))
 
 
-def getRandomKey(prefix):
-    key = prefix + "/" + str(uuid.uuid1())
-    sha = hashlib.sha1()
-    sha.update(key)
-    return sha.hexdigest()
+# Not to be used for unique Id generation.
+# OK to be used for validation keys, passwords etc;
+def getRandomKey():
+    random = uuid.uuid4().bytes + uuid.uuid4().bytes
+    return base64.b64encode(random, 'oA')
 
 
 # XXX: We need something that can guarantee unique keys over trillion records

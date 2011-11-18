@@ -709,7 +709,6 @@ class SettingsResource(base.BaseResource):
         if not currentCity:
             suggestedSections["personal"].append("Which city are you residing in")
 
-
         # Check Work
         #suggestedSections["work"] = []
         #if "workInfo" not in args:

@@ -155,30 +155,28 @@
 
 <%def name="createGroup()">
   <form id="group_form" action="/ajax/groups/create" method="post" enctype="multipart/form-data">
-    <div class="styledform">
-      <ul>
-        <li>
-            <label for="name">${_('Group Name')}</label>
-            <input type="text" id="groupname" name="name" value= "" required title="${_('Group Name')}" placeholder="${_('Group Name')}"/>
-        </li>
-        <li>
-            <label for="desc">${_('Description')}</label>
-            <textarea class="input-wrap" id="desc" name="desc" placeholder="${_('Group Description')}"></textarea>
-        </li>
-        <li>
-            <label>${_("Membership")}</label>
-            <input type="checkbox" id="access" name="access" value="closed">${_("should be approved by group administrator")}</input>
-        </li>
-        <li>
-            <label for="dp">${_("Group Logo")}</label>
-            <input type="file" id="dp" name="dp" accept="image/jpx, image/png, image/gif"/>
-      </ul>
+    <ul class="styledform">
+      <li class="form-row">
+          <label class="styled-label" for="name">${_('Group Name')}</label>
+          <input type="text" id="groupname" name="name" value= "" required title="${_('Group Name')}" placeholder="${_('Group Name')}"/>
+      </li>
+      <li class="form-row">
+          <label class="styled-label" for="desc">${_('Description')}</label>
+          <textarea class="input-wrap" id="desc" name="desc" placeholder="${_('Group Description')}"></textarea>
+      </li>
+      <li class="form-row">
+          <label class="styled-label">&nbsp;</label>
+          <input type="checkbox" id="access" name="access" value="closed">${_("Membership requires administrator approval")}</input>
+      </li>
+      <li class="form-row">
+          <label class="styled-label" for="dp">${_("Group Logo")}</label>
+          <input type="file" id="dp" name="dp" accept="image/jpx, image/png, image/gif"/>
+    </ul>
     <div class="styledform-buttons">
         <input type="submit" name="userInfo_submit" value="${_("Save")}" class="button default"/>
         <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">${_("Cancel")}</button>
     </div>
-    </div>
-    % if myKey:
+    %if myKey:
     <input type="hidden" value = ${myKey} name="id" />
     %endif
   </form>

@@ -272,8 +272,8 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(suggestions)
 
     # API
-    oAuthClients = CfDef(KEYSPACE, "oAuthClients", "Super", "UTF8Type", "UTF8Type",
-                    "Details of Applications registered for API Access")
+    apps = CfDef(KEYSPACE, "apps", "Super", "UTF8Type", "UTF8Type",
+                 "Details of Applications registered for API Access")
 
     oUser2Clients = CfDef(KEYSPACE, "oUser2Clients", "Standard", "UTF8Type",
                           None, "List of applications registered by a User")
@@ -295,7 +295,7 @@ def createColumnFamilies(client):
     #oAuthScopeMap = CfDef(KEYSPACE, "oAuthScopeMap", "Super", "BytesType", "UTF8Type",
     #                "Reverse Map of scope designated to an access token")
 
-    yield client.system_add_column_family(oAuthClients)
+    yield client.system_add_column_family(apps)
     yield client.system_add_column_family(oUser2Clients)
     yield client.system_add_column_family(oUserApps)
     yield client.system_add_column_family(oAuthorizationCodes)
@@ -677,7 +677,7 @@ def truncateColumnFamilies(client):
                "mArchivedConversations", "mDeletedConversations",
                "mConvMessages", "mConvFolders", "latest", "doNotSpam",
                "files", "tmp_files", "item_files", "invitationsSent",
-               "user_files", "suggestions", "oAuthClients", "oUser2Clients",
+               "user_files", "suggestions", "apps", "oUser2Clients",
                "oAuthorizationCodes", "oUserApps", "oAccessTokens", "oAuthCode2Token"]:
 
         log.msg("Truncating: %s" % cf)

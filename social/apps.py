@@ -1,14 +1,6 @@
-import uuid
-from base64     import urlsafe_b64encode, urlsafe_b64decode
-import hmac
-import hashlib
-import json
-import re
 
-try:
-    import cPickle as pickle
-except:
-    import pickle
+from base64         import b64encode
+from ordereddict    import OrderedDict
 
 from twisted.internet   import defer
 from twisted.web        import static, server
@@ -21,6 +13,25 @@ from social.template    import render, renderScriptBlock
 from social.logging     import profile, dump_args, log
 
 
+scopes = OrderedDict([
+    ('user-feed', 'Access your feed'),
+    ('user-groups', 'List of your groups'),
+    ('user-subscriptions', 'List of your subscriptions'),
+    ('user-followers', 'List of your followers'),
+    ('user-profile', 'Information on your profile'),
+    ('user-notifications', 'Your notifications'),
+    ('user-messages', 'Your private messages'),
+    ('manage-profile', 'Manage your profile`'),
+    ('manage-subscriptions', 'Manage your subscriptions'),
+    ('manage-groups', 'Manage your groups'),
+    ('manage-notifications', 'Manage your notifications'),
+    ('post-item', 'Post items on your behalf'),
+    ('send-message', 'Send private messages on your behalf'),
+    ('org-groups', 'Access list of groups in your organization'),
+    ('org-users', 'Access list of users in your organization'),
+    ('other-profiles', 'Access profiles of other users')])
+
+
 class ApplicationResource(base.BaseResource):
     isLeaf = True
     requireAuth = True
@@ -30,78 +41,30 @@ class ApplicationResource(base.BaseResource):
     def _registerClient(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
+        myOrgId = args["orgId"]
 
-        #Enforce the scope that is set during the registration of an app at all
-         #times. User must be allowed to modify the scope of an app.
-        #The authorization server MAY fully or partially ignore the scope
-        #requested by the client based on the authorization server policy or
-        #the resource owner's instructions.  If the issued access token scope
-        #is different from the one requested by the client, the authorization
-        #server SHOULD include the "scope" response parameter to inform the
-        #client of the actual scope granted.
+        name = utils.getRequestArg(request, 'name')
+        desc = utils.getRequestArg(request, 'desc')
+        scope = utils.getRequestArg(request, 'scope', multiValued=True)
+        category = utils.getRequestArg(request, 'category')
+        redirect = utils.getRequestArg(request, 'redirect', sanitize=False)
 
-        client_name = utils.getRequestArg(request, 'client_name')
-        client_category = utils.getRequestArg(request, 'client_category')
-        client_scope = utils.getRequestArg(request, 'client_scope',
-                                           multiValued=True)
-        client_id = utils.getRandomKey(myId)
-        client_redirects = utils.getRequestArg(request, 'client_redirect_url',
-                                               sanitize=False, multiValued=True)
-        client_desc = utils.getRequestArg(request, 'client_desc')
+        if not all([name, redirect]):
+            raise errors.MissingParams(["Name, Redirect URL"])
 
-        # 1. An auth code, access token is always mapped to the
-        # a. User who requested it.
-        # b. The app(app id) whom this user had invoked.
-        # c. The redirection_url that was mentioned in the request.
-        # XXX2. An auth code is revoked when it is used more than once.
-        # The access token is mapped to the auth code. So if an auth code
-        # is revoked(not expired), all access tokens need to be discarded.
-        if not all([client_name, client_category, client_scope, client_redirects]):
-            raise errors.MissingParams(["Name or Redirect URLs"])
+        clientId = utils.getUniqueKey()
+        password = utils.getRandomKey()
 
-        client_redirects = [urlsafe_b64encode(x) for x in client_redirects]
-
-        if client_category == "client":
-            client_password = utils.getUniqueKey()
-        else:
-            client_password = ""
-
-        #Assign weights to scope. 1 for read, 2 for modify. So feed will get 1
-        # if dev registers for read only or 3 if for full access
-        scope_weights = {"feed":0, "profile": 0, "people":0}
-        if "feed_w" in client_scope:
-            scope_weights["feed"] = 3
-        elif "feed" in client_scope:
-            scope_weights["feed"] = 1
-
-        if "profile_w" in client_scope:
-            scope_weights["profile"] = 3
-        elif "profile" in client_scope:
-            scope_weights["profile"] = 1
-
-        if "people_w" in client_scope:
-            scope_weights["people"] = 3
-        elif "people" in client_scope:
-            scope_weights["people"] = 1
-
-        client_scope = pickle.dumps(scope_weights)
-
-        client_meta = {
-                        "client_author":myId,
-                        "client_name":client_name,
-                        "client_password":client_password,
-                        "client_scope":client_scope,
-                        "client_category":client_category,
-                        "client_redirects":":".join(list(client_redirects)),
-                        "client_desc":client_desc
-                     }
-        print "%s:%s:%s:%s:%s:%s" %(client_name, client_category, client_scope,
-                                 client_id, client_password,client_redirects)
-        yield db.batch_insert(client_id, "oAuthClients", {"meta":client_meta})
-        yield db.insert(myId, "oUser2Clients", client_name, client_id)
+        meta = {"author": myId, "name": name, "password": password,
+                "scope": ','.join(scope), "category": category,
+                "desc": desc, "redirects": b64encode(redirect)}
+        yield db.batch_insert(clientId, "apps", {"meta":meta})
+        yield db.insert(myId, "entities", "", clientId, "apps")
+        yield db.insert(myOrgId, "entities", "", clientId, "apps")
 
         if script:
             request.write("$('#composer').empty();$$.fetchUri('/apps');")
+
 
     @defer.inlineCallbacks
     def _renderClientRegistrationDialog(self, request):
@@ -115,6 +78,7 @@ class ApplicationResource(base.BaseResource):
                                 "registration_layout", landing, "#composer",
                                 "set", **args)
 
+
     @defer.inlineCallbacks
     def _renderClientDetailsDialog(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
@@ -127,30 +91,31 @@ class ApplicationResource(base.BaseResource):
             yield renderScriptBlock(request, "oauth-server.mako", "layout",
                               landing, "#mainbar", "set", **args)
 
-        client_id = utils.getRequestArg(request, 'id')
-        if client_id:
-            cols = yield db.get_slice(client_id, "oAuthClients")
+        clientId = utils.getRequestArg(request, 'id')
+        if clientId:
+            cols = yield db.get_slice(clientId, "oAuthClients")
             cols = utils.supercolumnsToDict(cols)
             if "meta" in cols:
                 args.update(**cols["meta"])
-                args.update({"client_id":client_id})
+                args.update({"id":clientId})
                 yield renderScriptBlock(request, "oauth-server.mako",
                                         "application_details_layout",
                                         landing, "#center", "set", **args)
             else:
-                raise errors.InvalidEntity("Application", client_id)
+                raise errors.InvalidEntity("Application", clientId)
         else:
             start = utils.getRequestArg(request, "start") or ''
             cols = yield db.get_slice(myId, "oUser2Clients", count=10,
                                       start=start)
-            client_ids = [col.column.name for col in cols]
-            cols = yield db.multiget_slice(client_ids, 'oAuthClients', ['meta'])
-            client_details = utils.multiSuperColumnsToDict(cols)
-            print client_details
-            args.update({"apps":client_details})
+            clientIds = [col.column.name for col in cols]
+            cols = yield db.multiget_slice(clientIds, 'oAuthClients', ['meta'])
+            details = utils.multiSuperColumnsToDict(cols)
+            print details
+            args.update({"apps":details})
             yield renderScriptBlock(request, "oauth-server.mako",
                                     "application_listing_layout",
                                     landing, "#center", "set", **args)
+
 
     def render_GET(self, request):
         segmentCount = len(request.postpath)
@@ -162,6 +127,7 @@ class ApplicationResource(base.BaseResource):
             d = self._renderClientRegistrationDialog(request)
 
         return self._epilogue(request, d)
+
 
     def render_POST(self, request):
         segmentCount = len(request.postpath)

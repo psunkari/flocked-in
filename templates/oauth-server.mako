@@ -1,4 +1,4 @@
-<%! from social import utils, _, __, constants %>
+<%! from social import utils, _, __, constants, apps %>
 <%! from base64     import urlsafe_b64encode, urlsafe_b64decode %>
 <%! import pickle %>
 <!DOCTYPE HTML>
@@ -15,7 +15,7 @@
     <div id="center-right">
       <div class="center-header">
         <div class="titlebar">
-          <span class="middle title">${_('FlockedIn Third Party Applications')}</span>
+          <span class="middle title">${_('Applications')}</span>
           <span class="button title-button">
             <a class="ajax" href="/apps/new" data-ref="/apps/new">${_('New Client')}</a>
           </span>
@@ -88,35 +88,39 @@
 
 <%def name="registration_layout()">
   <form style="display: inline;" class="ajax" method="POST" action="/apps">
-    <div class="styledform">
-    <ul>
-      <li>
-        <label>Application Name</label>
-        <input type="text" name="client_name"/>
+    <ul class="styledform">
+      <li class="form-row">
+        <label class="styled-label">${_('Name')}</label>
+        <input type="text" name="name"/>
       </li>
-      <li>
-        <label>Application Description</label>
-        <input type="text" name="client_desc"/>
+      <li class="form-row">
+        <label class="styled-label">${_('Description')}</label>
+        <textarea name="desc"/>
       </li>
-      <li>
-        <label>Application Category</label>
-        <select name="client_category">
-          <option value="code">Desktop/Web Application</option>
-          <option value="client">Server Side Application</option>
+      <li class="form-row">
+        <label class="styled-label">${_('Type')}</label>
+        <div class='styledform-inputwrap'>
+          <div><label><input type="radio" name="category" value="webapp"/>Web Application</label></div>
+          <div><label><input type="radio" name="category" value="native"/>Desktop/Mobile Application</label></div>
         </select>
       </li>
-      <li>
-        <label>Application Scope</label>
-         <input type="checkbox" name="client_scope" value="feed" id="scope_feed"/>
-         <label for="scope_feed">Feed</label>
+      <li class="form-row">
+        <label class="styled-label">${_('Permissions')}</label>
+        <div class='styledform-inputwrap' style='max-height:9em; overflow: auto;'>
+          <% scopes = apps.scopes %>
+          %for scope in scopes.keys():
+            <div class="multiselect">
+              <label><input type="checkbox" name="scope" value=${scope}>${scope}</label>
+            </div>
+          %endfor
+        </div>
       </li>
-      <li>
-        <label>Application Redirect Urls</label>
-        <input type="text" name="client_redirect_url"/>
-        <input type="text" name="client_redirect_url"/>
+      <li class="form-row">
+        <label class="styled-label">${_('Redirect URL')}</label>
+        <input type="text" name="redirect"/>
       </li>
       <div class="styledform-buttons">
-        <button class="default button" tabindex="1" type="submit" >Add Application</button>
+        <button class="default button" tabindex="1" type="submit" >${_('Create Application')}</button>
         <button type="button" class="button" onclick="$('#composer').empty()">
           ${_('Cancel')}
         </button>
@@ -142,7 +146,7 @@
     %endif
     <div class="users-user">
       <div class="users-details">
-        <div class="user-details-name"><a href="/apps?id=${appId}">${apps[appId]["meta"]["client_name"]} -- ${apps[appId]["meta"]["client_category"]}</a></div>
+        <div class="user-details-name"><a href="/apps?id=${appId}">${apps[appId]["meta"]["name"]} -- ${apps[appId]["meta"]["category"]}</a></div>
         <div class="user-details-title">${appId}</div>
       </div>
     </div>
@@ -160,35 +164,35 @@
 
 <%def name="application_details_layout()">
 <%
-  client_scope_dict = pickle.loads(client_scope)
+  scope_dict = pickle.loads(scope)
 %>
-<h2>${client_name}</h2>
-<div><label>Client Identifier</label><span> ${client_id}</span></div>
-  %if client_category == "client":
+<h2>${name}</h2>
+<div><label>Client Identifier</label><span> ${clientId}</span></div>
+  %if category == "client":
     <label>Client Password: </label>
-    <span>${client_password}</span>
+    <span>${password}</span>
   % endif
 <div>
   <label>Client Scope</label>
-  %for scope in client_scope_dict.keys():
-    %if client_scope_dict[scope] != 0:
-      %if client_scope_dict[scope] == 1:
+  %for scope in scope_dict.keys():
+    %if scope_dict[scope] != 0:
+      %if scope_dict[scope] == 1:
         <span> ${scope} Read Only</span>
-      %elif client_scope_dict[scope] == 3:
+      %elif scope_dict[scope] == 3:
         <span> ${scope} Read + Write Access</span>
       %endif
     %endif
   %endfor
 </div>
 <div><label>Application Category </label>
-  %if client_category == "client":
+  %if category == "client":
     <span>Server Side Application/ Service</span>
-  %elif client_category == "code":
+  %elif category == "code":
     <span>Desktop/Mobile/HTML5 Application</span>
   % endif
 </div>
 <div>
-  %for url in client_redirects.split(":"):
+  %for url in redirects.split(":"):
     <pre>${urlsafe_b64decode(url)}</pre>
   %endfor
 </div>
