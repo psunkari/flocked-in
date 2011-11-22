@@ -27,7 +27,7 @@ class XMLBodyProducer(object):
     implements (IBodyProducer)
 
     def __init__(self, domtree):
-        self._body = etree.tostring(domtree, xml_declaration=True, encoding='UTF-8')
+        self._body = etree.tostring(domtree)
         self.length = len(self._body)
 
     def startProducing(self, consumer):
@@ -123,8 +123,6 @@ class Solr(object):
             response.deliverBody(JsonBodyReceiver(finished))
             return finished
         rows = SEARCH_RESULTS_PER_PAGE
-        term = quote(term)
-        # the data indexed is already quoted. to search for a quoted term we have to quote the term again.
         term = quote(term)
         url = URL + "/select?q=%s&start=%s&rows=%s&fq=orgId:%s&sort=%s" % (term, start, rows, orgId, urllib.quote('timestamp desc'))
         d = self._request("GET", url)
