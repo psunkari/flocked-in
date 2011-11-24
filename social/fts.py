@@ -123,7 +123,7 @@ class Solr(object):
             response.deliverBody(JsonBodyReceiver(finished))
             return finished
         rows = SEARCH_RESULTS_PER_PAGE
-        term = urllib.quote(term)
+        term = quote(term)
         url = URL + "/select?q=%s&start=%s&rows=%s&fq=orgId:%s&sort=%s" % (term, start, rows, orgId, urllib.quote('timestamp desc'))
         d = self._request("GET", url)
         d.addCallback(callback)
