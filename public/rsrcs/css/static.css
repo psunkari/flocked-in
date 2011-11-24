@@ -98,6 +98,7 @@ a:link, a:visited {
 #caption {
     font-size: 25px;
     margin: 20px 0;
+    line-height: 1.5em;
 }
 #home-caption {
     font-size: 25px;
@@ -538,19 +539,10 @@ a:link, a:visited {
     border-width: 1px;
     border-style: solid;
     border-color: #CCC #888 #888 #CCC;
-    background: #dbdbdb url(/rsrcs/img/ui.png) no-repeat right -256px;
     cursor: pointer;
-    -moz-border-bottom-colors: none;
-    -moz-border-image: none;
-    -moz-border-left-colors: none;
-    -moz-border-right-colors: none;
-    -moz-border-top-colors: none;
-    background: -moz-linear-gradient(center top , #F9F9F9, #E3E3E3) repeat scroll 0 0 transparent;
-    background: -webkit-gradient(linear,0% 40%,0% 70%,from(#F9F9F9),to(#E3E3E3));
     border-color: #CCCCCC #BBBBBB #A0A0A0;
     border-left: 1px solid #BBBBBB;
     border-radius: 3px 3px 3px 3px;
-    -moz-border-radius: 3px 3px 3px 3px;
     border-right: 1px solid #BBBBBB;
     border-style: solid;
     border-width: 1px;
@@ -560,11 +552,23 @@ a:link, a:visited {
     vertical-align: middle;
     white-space: nowrap;
     text-shadow: 1px 1px white;
-    box-shadow: 1px 1px 2px #CCC;
-    padding-bottom:2px;
-    padding-top:2px;
+    box-shadow: -1px -2px rgba(0,0,0,0.1) inset;
     line-height:16px;
     font-size:12px;
+    padding: 2px 16px !important;
+    background: #dbdbdb url(/rsrcs/img/ui.png) no-repeat right -256px;
+    background: linear-gradient(top, #F9F9F9 0%, #E3E3E3 100%);
+    background: -o-linear-gradient(top, #F9F9F9 0%, #E3E3E3 100%);
+    background: -moz-linear-gradient(top, #F9F9F9 0%, #E3E3E3 100%);
+    background: -webkit-linear-gradient(top, #F9F9F9 0%, #E3E3E3 100%);
+    background: -ms-linear-gradient(top, #F9F9F9 0%, #E3E3E3 100%);
+    background: -webkit-gradient(
+            linear,
+            left top,
+            left bottom,
+            color-stop(0, #F9F9F9),
+            color-stop(1, #E3E3E3)
+    );
 }
 
 .button.disabled {
@@ -574,13 +578,34 @@ a:link, a:visited {
 }
 
 .button.default {
-    background: #3D85C6 url(/rsrcs/img/ui.png) no-repeat -1px -321px;
-    background: -moz-linear-gradient(center top , #3D85C6, #3366CC) repeat scroll 0 0 transparent;
-    background: -webkit-gradient(linear,0% 40%,0% 70%,from(#3D85C6),to(#3366CC));
-    border-color: #3366CC #3366CC #204573;
+    background: #dd4923 url(/rsrcs/img/ui.png) no-repeat -1px -321px;
+    border-color: #3366cc;
     color: white;
+    font-weight: bold;
     text-shadow: 1px 1px #204573;
-    box-shadow: 1px 1px 2px #888;
+    background: linear-gradient(top, #669BE1 0%, #3366CC 100%);
+    background: -o-linear-gradient(top, #669BE1 0%, #3366CC 100%);
+    background: -moz-linear-gradient(top, #669BE1 0%, #3366CC 100%);
+    background: -webkit-linear-gradient(top, #669BE1 0%, #3366CC 100%);
+    background: -ms-linear-gradient(top, #669BE1 0%, #3366CC 100%);
+    background: -webkit-gradient(
+            linear,
+            left top,
+            left bottom,
+            color-stop(0, #669BE1),
+            color-stop(1, #3366CC)
+    );
+}
+
+.button:hover, .button:focus {
+    -moz-transition: box-shadow 0.2s ease-in-out 0s;
+    -webkit-transition: box-shadow 0.2s ease-in-out 0s;
+    box-shadow: -1px -2px rgba(0,0,0,0.1) inset, 0 0 20px rgba(255,255,255,0.4) inset;
+}
+.button:active {
+    -moz-transition: none;
+    -webkit-transition: none;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3) inset;
 }
 
 

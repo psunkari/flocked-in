@@ -15,12 +15,12 @@ from social.logging     import profile, dump_args, log
 
 scopes = OrderedDict([
     ('user-feed', 'Access your feed'),
-    ('user-groups', 'List of your groups'),
-    ('user-subscriptions', 'List of your subscriptions'),
-    ('user-followers', 'List of your followers'),
-    ('user-profile', 'Information on your profile'),
-    ('user-notifications', 'Your notifications'),
-    ('user-messages', 'Your private messages'),
+    ('user-groups', 'Know which groups you are a member of'),
+    ('user-subscriptions', 'Know which users and tags you are subscribed to'),
+    ('user-followers', 'Know which users are following you'),
+    ('user-profile', 'Access information on your profile'),
+    ('user-notifications', 'Read your notifications'),
+    ('user-messages', 'Read your private messages'),
     ('manage-profile', 'Manage your profile`'),
     ('manage-subscriptions', 'Manage your subscriptions'),
     ('manage-groups', 'Manage your groups'),
@@ -53,10 +53,10 @@ class ApplicationResource(base.BaseResource):
             raise errors.MissingParams(["Name, Redirect URL"])
 
         clientId = utils.getUniqueKey()
-        password = utils.getRandomKey()
+        clientSecret = utils.getRandomKey()
 
-        meta = {"author": myId, "name": name, "password": password,
-                "scope": ','.join(scope), "category": category,
+        meta = {"author": myId, "name": name, "secret": clientSecret,
+                "scope": ' '.join(scope), "category": category,
                 "desc": desc, "redirect": b64encode(redirect)}
         yield db.batch_insert(clientId, "apps", {"meta":meta})
         yield db.insert(myId, "appsByOwner", "", clientId)

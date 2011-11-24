@@ -29,12 +29,6 @@
   </div>
 </%def>
 
-<%!
-  def newlinescape(text):
-    return utils.normalizeText(text)
-%>
-
-
 <%def name="access_layout()">
 <%
   client_scopes = supplied_scope.split(" ")
@@ -166,7 +160,7 @@
 <h2>${name}</h2>
 <div><label>App Id</label><span>${id}</span></div>
     <label>Client Password: </label>
-    <span>${password}</span>
+    <span>${secret}</span>
 <div>
   <label>Client Scope</label>
   <span>${scope}</span>
