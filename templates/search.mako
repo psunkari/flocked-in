@@ -15,6 +15,9 @@
       </div>
     </div>
     <div id="center-right">
+      <div class="titlebar center-header">
+        <div id="title">${self._title()}</div>
+      </div>
       <div id="right">
         <div id="home-notifications"></div>
         <div id="home-events"></div>
@@ -26,11 +29,6 @@
         </div>
       </div>
       <div id="center">
-        <div class="center-header">
-          <div class="titlebar">
-            <div id="title">${self._title()}</div>
-          </div>
-        </div>
         <% q = term if term else '' %>
         <div style="float:left" >
           <div id="search-container">
@@ -47,14 +45,10 @@
                 ${self.results()}
               %endif
             </div>
-            <div id="search-paging" class="pagingbar">
-              %if not script:
-                ${self.paging()}
-              %endif
-            </div>
           </div>
         </div>
       </div>
+        <div class="clear"></div>
     </div>
   </div>
 </%def>
@@ -64,27 +58,49 @@
   <span class="middle title">${_("Search Results")}</span>
 </%def>
 
-<%def name="paging()">
-  <ul class="h-links">
-    %if prevPageStart == 0 or prevPageStart:
-      <li class="button"><a class="ajax" href="/search?q=${term}&start=${prevPageStart}">${_("&#9666; Previous")}</a></li>
-    %else:
-      <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
-    %endif
-    %if nextPageStart:
-      <li class="button"><a class="ajax" href="/search?q=${term}&start=${nextPageStart}">${_("Next &#9656;")}</a></li>
-    %else:
-      <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
-    %endif
-  </ul>
-</%def>
-
 <%def name="results()">
-  % if not conversations:
-    <div id="next-load-wrapper">${_("No Matching Results")}</div>
-  % else:
-    %for convId in conversations:
-      ${item.item_layout(convId)}
+  <%
+    rTypeClasses = {"status": "comment", "question": "answer", "L": "like"}
+    simpleTimestamp = utils.simpleTimestamp
+    rTypeClass = "comment"
+    tzone = me['basic']['timezone']
+  %>
+  %if conversations:
+    %for itemId in conversations:
+      <%
+        convId = items[itemId]['meta'].get('parent', itemId)
+        convType = items[convId]['meta']['type']
+        rTypeClass = convType if convId == itemId else rTypeClasses.get(convType, 'comment')
+        icon_class = '%s-icon'%(convType) if convId == itemId else ''
+        convOwner = items[convId]['meta']['owner']
+        itemOwner = items[itemId]['meta']['owner']
+        convOwnerStr = _("%s's "%(utils.userName(convOwner, entities[convOwner])))
+        itemOwnerStr = _("%s's "%(utils.userName(itemOwner, entities[itemOwner])))
+
+      %>
+
+      <div class="activity-item ${rTypeClass}">
+        <div class="activity-icon icon ${rTypeClass}-icon"></div>
+        <div class="activity-content">
+          %if itemId == convId:
+            <span>${items[itemId]['meta']['comment']} - ${convOwnerStr}<a href="/item?id=${convId}">${convType}</a></span>
+          %else:
+            <span>${items[itemId]['meta']['comment']} ${itemOwnerStr} ${rTypeClass} ${_('on')} ${convOwnerStr}<a href="/item?id=${convId}">${convType}</a></span>
+          %endif
+          <div class="activity-footer">${simpleTimestamp(int(items[itemId]['meta']['timestamp'])*1.0, tzone)}</div>
+        </div>
+      </div>
     %endfor
+  %endif
+
+  %if nextPageStart:
+    <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" href="/search?start=${nextPageStart}&q=${term}" data-ref="/search?start=${nextPageStart}&q=${term}">${_("Fetch more results")}</a></div>
+  %else:
+    %if fromFetchMore:
+      <div id="next-load-wrapper">${_("No more posts to show")}</div>
+    %else:
+      <div id="next-load-wrapper">${_("No matching results")}</div>
+    %endif
+
   %endif
 </%def>

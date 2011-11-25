@@ -601,10 +601,14 @@ a:hover, a:active, a:focus {
     background-position: -16px -224px;
 }
 .answer .activity-icon,
-.comment .activity-icon {
+.comment .activity-icon,
+.status .activity-icon {
     background-position: 0 -224px;
 }
 
+.highlight {
+    background-color: yellow;
+}
 
 /*
  * Simple TabView
@@ -1057,7 +1061,6 @@ abbr.timestamp {
 .text-full, .text-preview {
     word-wrap: break-word;
 }
-
 #empty-message,
 #next-load-wrapper {
     padding: 10px 20px;
