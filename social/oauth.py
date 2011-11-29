@@ -166,6 +166,7 @@ class OAuthAuthorizeResource(base.BaseResource):
                        "redirect_uri": b64encode(redirectUri),
                        "scope": scopes, "type": "auth"}
             yield db.batch_insert(authCode, "oAuthData", authMap, ttl=120)
+            yield db.insert(myId, "entities", authCode, "apps", clientId, ttl=120)
             self._redirectOnSuccess(request, redirectUri, authCode, state)
         else:
             self._redirectOnError(request, redirectUri, "access_denied", state)
@@ -272,20 +273,23 @@ class OAuthTokenResource(base.BaseResource):
             self._error(request, "invalid_client")
             return
 
+        userId = grant["user_id"]
         accessToken = utils.getRandomKey()
-        accessTokenData = {"user_id": grant["user_id"], "type": "access",
-                           "client_id": grant["client_id"],
+        accessTokenData = {"user_id": userId, "type": "access",
+                           "client_id": clientId,
                            "auth_code": authCode, "scope": " ".join(scopes)}
         yield db.batch_insert(accessToken, "oAuthData",
                               accessTokenData, ttl=self._accessTokenExpiry)
 
         refreshToken = utils.getRandomKey()
-        refreshTokenData = {"user_id": grant["user_id"], "type": "refresh",
-                            "client_id": grant["client_id"],
+        refreshTokenData = {"user_id": userId, "type": "refresh",
+                            "client_id": clientId,
                             "redirect_uri": grant["redirect_uri"],
                             "auth_code": authCode, "scope": grant["scope"]}
         yield db.batch_insert(refreshToken, "oAuthData",
                               refreshTokenData, ttl=self._refreshTokenExpiry)
+        yield db.insert(userId, "entities", refreshToken, "apps",
+                        clientId, ttl=self._refreshTokenExpiry)
 
         yield db.remove(authCode, "oAuthData")
         self._success(request, accessToken, refreshToken)

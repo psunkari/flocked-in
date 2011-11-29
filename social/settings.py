@@ -147,9 +147,12 @@ def getNotifyPref(val, typ, medium):
     return True
 
 
+
+
 class SettingsResource(base.BaseResource):
     isLeaf = True
     resources = {}
+
 
     @defer.inlineCallbacks
     def _changePassword(self, request):
@@ -251,6 +254,7 @@ class SettingsResource(base.BaseResource):
         yield renderScriptBlock(request, "settings.mako", "right",
                                 landing, ".right-contents", "set", **args)
 
+
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -296,10 +300,11 @@ class SettingsResource(base.BaseResource):
         yield renderScriptBlock(request, "settings.mako", "right",
                                 landing, ".right-contents", "set", **args)
 
+
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _edit(self, request):
+    def _editBasicInfo(self, request):
         authInfo = request.getSession(IAuthInfo)
         myId = authInfo.username
         orgId = authInfo.organization
@@ -384,6 +389,7 @@ class SettingsResource(base.BaseResource):
         yield renderScriptBlock(request, "settings.mako", "right",
                                 landing, ".right-contents", "set", **args)
 
+
     @defer.inlineCallbacks
     def _updateNotifications(self, request):
         authinfo = request.getSession(IAuthInfo)
@@ -410,10 +416,10 @@ class SettingsResource(base.BaseResource):
 
         detail = utils.getRequestArg(request, "dt") or "basic"
         args["detail"] = detail
-        args["editProfile"] = True
 
         me = yield db.get_slice(myKey, "entities")
-        args["me"] = utils.supercolumnsToDict(me, ordered=True)
+        me = utils.supercolumnsToDict(me, ordered=True)
+        args['me'] = me
 
         if script and landing:
             yield render(request, "settings.mako", **args)
@@ -423,51 +429,44 @@ class SettingsResource(base.BaseResource):
                                     landing, "#mainbar", "set", **args)
 
         if script:
+            yield renderScriptBlock(request, "settings.mako", "settingsTitle",
+                                    landing, "#settings-title", "set", **args)
+
             handlers={"onload": "$$.menu.selectItem('%s');" % detail}
             if detail == "basic":
-                yield renderScriptBlock(request, "settings.mako", "settingsTitle",
-                                        landing, "#settings-title", "set", **args)
                 handlers["onload"] += """$$.ui.bindFormSubmit('#settings-form');"""
                 yield renderScriptBlock(request, "settings.mako", "editBasicInfo",
                                         landing, "#settings-content", "set", True,
                                         handlers = handlers, **args)
 
             elif detail == "work":
-                """
-                yield renderScriptBlock(request, "settings.mako", "settingsTitle",
-                                        landing, "#settings-title", "set", **args)
-                yield renderScriptBlock(request, "settings.mako", "editWork",
-                                        landing, "#settings-content", "set", True,
-                                        handlers=handlers, **args)
-                """
+                #yield renderScriptBlock(request, "settings.mako", "editWork",
+                #                        landing, "#settings-content", "set", True,
+                #                        handlers=handlers, **args)
+                pass
 
             elif detail == "personal":
-                yield renderScriptBlock(request, "settings.mako", "settingsTitle",
-                                        landing, "#settings-title", "set", **args)
                 yield renderScriptBlock(request, "settings.mako", "editPersonal",
                                         landing, "#settings-content", "set", True,
                                         handlers=handlers, **args)
 
             elif detail == "contact":
-                yield renderScriptBlock(request, "settings.mako", "settingsTitle",
-                                        landing, "#settings-title", "set", **args)
                 yield renderScriptBlock(request, "settings.mako", "editContact",
-                                        landing, "#settings-content", "set",True,
+                                        landing, "#settings-content", "set", True,
                                         handlers=handlers, **args)
 
             elif detail == "passwd":
-                yield renderScriptBlock(request, "settings.mako", "settingsTitle",
-                                        landing, "#settings-title", "set", **args)
                 yield renderScriptBlock(request, "settings.mako", "changePasswd",
-                                        landing, "#settings-content", "set",True,
+                                        landing, "#settings-content", "set", True,
                                         handlers=handlers, **args)
 
-            elif detail == 'notify':
-                yield renderScriptBlock(request, "settings.mako", "settingsTitle",
-                                        landing, "#settings-title", "set", **args)
+            elif detail == "notify":
                 yield renderScriptBlock(request, "settings.mako", "filterNotifications",
-                                        landing, "#settings-content", "set",True,
+                                        landing, "#settings-content", "set", True,
                                         handlers=handlers, **args)
+
+            else:
+                raise errors.InvalidRequest('')
 
         suggestedSections = yield self._checkProfileCompleteness(request, myKey, args)
         tmp_suggested_sections = {}
@@ -627,52 +626,7 @@ class SettingsResource(base.BaseResource):
     @defer.inlineCallbacks
     def _checkProfileCompleteness(self, request, myKey, args):
         landing = not self._ajax
-        description = [""]
         detail = args["detail"]
-
-        if detail == "basic":
-            description = ["""Your Basic details are the most discoverable
-                            fields in your profile. They are visible everytime
-                            someone searches for you. We recommend that you fill
-                            out all the fields in this section.
-                          """]
-
-        elif detail == "work":
-            description = ["""Your work details include your current and
-                             previous work experiences and also about your
-                             educational background. """,
-                           """A thorough work experience builds up a nice
-                             portfolio of your career."""]
-
-        elif detail == "personal":
-            description = ["""Your personal information is only accessible to your
-                             colleagues.
-                          """]
-
-        elif detail == "contact":
-            description = ["""Your contact information can be used to get in
-                             touch with you.
-                             We recommend completing this section if your work
-                             involves being in constant touch with your colleagues.
-                          """]
-
-        elif detail == "passwd":
-            description = ["""Change your password. Use a password consisting of
-                             atleast 8 characters including alphabets, numbers
-                             and special characters.
-                          """]
-
-        elif detail == 'notify':
-            description = ["""flockedIn can notify you of all the activities that
-                             were happening in your
-                             <i title="kol-eeg-o-sfeer">colleagosphere</i>
-                             while you were
-                             away.""",
-                           """ Here you can choose what kind of events
-                             you like to be notified of."""]
-
-        args["description"] = description
-
         suggestedSections = {}
 
         # Check Basic
@@ -745,22 +699,20 @@ class SettingsResource(base.BaseResource):
     def render_POST(self, request):
         segmentCount = len(request.postpath)
         d = None
-        if segmentCount == 0:
-            d = self._edit(request)
-        elif segmentCount == 1:
+        if segmentCount == 1:
             action = request.postpath[0]
-            if action == "passwd":
+            if action == "basic":
+                d = self._editBasicInfo(request)
+            elif action == 'contact':
+                d = self._editContactInfo(request)
+            elif action == 'personal':
+                d = self._editPersonalInfo(request)
+            elif action == "passwd":
                 d = self._changePassword(request)
             elif action == "notify":
                 d = self._updateNotifications(request)
-            elif action == 'personal':
-                d = self._editPersonalInfo(request)
-            elif action == 'contact':
-                d = self._editContactInfo(request)
-            """
             elif action == "work":
                 d = self._updateWork(request)
-            """
 
         return self._epilogue(request, d)
 
@@ -772,11 +724,5 @@ class SettingsResource(base.BaseResource):
         d = None
         if segmentCount == 0:
             d = self._render(request)
-        """
-        elif segmentCount == 1:
-            action = request.postpath[0]
-            if action == "work":
-                d = self._editWorkForm(request)
-        """
 
         return self._epilogue(request, d)

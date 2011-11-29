@@ -278,30 +278,13 @@ def createColumnFamilies(client):
     appsByOwner = CfDef(KEYSPACE, "appsByOwner", "Standard", "TimeUUIDType",
                         None, "List of applications registered by a User")
 
-    oUserApps = CfDef(KEYSPACE, "oUserApps", "Standard", "UTF8Type",
-                          None, "List of applications the current user has \
-                          signed up for")
-
-    oAuthorizationCodes = CfDef(KEYSPACE, "oAuthorizationCodes", "Super",
-                                "UTF8Type", "UTF8Type",
-                                "Map of Authorization codes with client, user")
-
-    oAccessTokens = CfDef(KEYSPACE, "oAccessTokens", "Super", "UTF8Type",
-                          "UTF8Type", "List of access tokens issued.")
-
-    oAuthCode2Token = CfDef(KEYSPACE, "oAuthCode2Token", "Standard", "UTF8Type",
-                          None, "List of access tokens issued for an auth code")
-
-    #oAuthScopeMap = CfDef(KEYSPACE, "oAuthScopeMap", "Super", "BytesType", "UTF8Type",
-    #                "Reverse Map of scope designated to an access token")
+    oAuthData = CfDef(KEYSPACE, "oAuthData", "Standard", "UTF8Type",
+                      None, "List of access, refresh tokens and auth codes")
 
     yield client.system_add_column_family(apps)
     yield client.system_add_column_family(appsByOwner)
-    yield client.system_add_column_family(oUserApps)
-    yield client.system_add_column_family(oAuthorizationCodes)
-    yield client.system_add_column_family(oAccessTokens)
-    yield client.system_add_column_family(oAuthCode2Token)
-    #yield client.system_add_column_family(oAuthCodes2User)
+    yield client.system_add_column_family(oAuthData)
+
 
 @defer.inlineCallbacks
 def addSampleData(client):
@@ -677,11 +660,10 @@ def truncateColumnFamilies(client):
                "mArchivedConversations", "mDeletedConversations",
                "mConvMessages", "mConvFolders", "latest", "doNotSpam",
                "files", "tmp_files", "item_files", "invitationsSent",
-               "user_files", "suggestions", "apps", "appsByOwner",
-               "oAuthorizationCodes", "oUserApps", "oAccessTokens", "oAuthCode2Token"]:
-
+               "user_files", "suggestions", "apps", "appsByOwner", "oAuthData"]
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
+
 
 if __name__ == '__main__':
     def usage():

@@ -491,8 +491,7 @@ a:hover, a:active, a:focus {
  */
 
 .title {
-    font-size: 20px;
-    font-weight: bold;
+    font-size: 25px;
     margin-right: 20px;
 }
 .subtitle {
@@ -518,6 +517,14 @@ a:hover, a:active, a:focus {
 }
 .header-form .header-form-buttons{
     text-align: right;
+}
+
+.center-title {
+    font-size: 18px;
+    line-height: 1.5em;
+    color: #888;
+    border-bottom: 1px solid #EFEFEF;
+    margin: 15px 0 10px;
 }
 
 
@@ -1241,8 +1248,43 @@ abbr.timestamp {
 }
 
 /*
+ * Tiled Listing
  * List of users - friends and people in organization
  */
+
+.tl-wrapper {
+    margin: 0px auto;
+}
+
+.tl-item {
+    float: left;
+    width: 20em;
+    height: 5em;
+    border: 1px solid #EFEFEF;
+    background-color: #FAFAFA;
+    position: relative;
+    padding: 6px;
+    border-radius: 6px;
+    margin: 0 10px 10px 0;
+}
+
+.tl-avatar {
+    width: 48px;
+    height: 48px;
+    position: absolute;
+    left: 5px;
+}
+
+.tl-details {
+    margin-left: 60px;
+}
+
+.tl-title, .tl-name {
+    color: #888;
+    white-space: pre;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 
 .users-row {
     width: 100%;

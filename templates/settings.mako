@@ -69,19 +69,23 @@
       ${navMenuItem("/settings?dt=passwd", _("Change Password"), "passwd")}
       ${navMenuItem("/settings?dt=notify", _("Notifications"), "notify")}
     </ul>
+    <ul class="v-links sidemenu">
+      ${navMenuItem("/apps", _("Applications"), "apps")}
+    </ul>
  </div>
 </%def>
+
 
 <%def name="settingsTitle()">
   <%
     detail_name_map = {'basic':_('Basic'), 'contact': _('Contact'),
                        'work':_('Work and Education'), 'personal':_('Personal'),
-                       'passwd':_('Change Password'),
-                       'notify': _('Notifications')}
+                       'passwd':_('Change Password'), 'notify': _('Notifications')}
     name = detail_name_map.get(detail, '')
   %>
   <span class="middle title"> ${_(name)} </span>
 </%def>
+
 
 <%def name="editBasicInfo()">
   <%
@@ -91,7 +95,7 @@
     jobTitle = me.get("basic", {}).get("jobTitle", '')
     myTimezone = me.get("basic", {}).get("timezone", '')
   %>
-  <form id="settings-form" action="/ajax/settings" method="post" enctype="multipart/form-data">
+  <form id="settings-form" action="/ajax/settings/basic" method="post" enctype="multipart/form-data">
     <ul class="styledform">
       <li class="form-row">
         <label class="styled-label" for="displayname">${_('Display Name')}
@@ -147,6 +151,7 @@
   </form>
 </%def>
 
+
 <%def name="changePasswd()">
   <form class="ajax" id="settings-form" action="/settings/passwd"
         method="post" enctype="multipart/form-data">
@@ -171,6 +176,7 @@
   </form>
 </%def>
 
+
 <%def name="workitem(start, end, title, desc, id)">
   <div class="workitem" id="work-${id}">
     <span class="workitem-delete">&nbsp;</span>
@@ -179,6 +185,7 @@
     <div class="workitem-desc">${desc}</div>
   </div>
 </%def>
+
 
 <%def name="editWork()">
   <div id="work">
@@ -220,6 +227,7 @@
     </div>
   </div>
 </%def>
+
 
 <%def name="editPersonal()">
   <form class="ajax" id="settings-form" action="/settings/personal" method="post"  enctype="multipart/form-data">
@@ -278,6 +286,7 @@
   </form>
 </%def>
 
+
 <%def name="editContact()">
   <%
     contact = me.get('contact', {})
@@ -315,6 +324,7 @@
     %endif
   </form>
 </%def>
+
 
 <%def name="selectMonth(name, label, dom=None)">
   <%
@@ -362,6 +372,7 @@
       %endfor
   </select>
 </%def>
+
 
 <%def name="filterNotifications()">
   <%
@@ -422,6 +433,7 @@
     </div>
   </form>
 </%def>
+
 
 <%def name="right()">
   %if len(suggested_sections.keys()) > 0:
