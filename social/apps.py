@@ -230,7 +230,7 @@ class ApplicationResource(base.BaseResource):
             raise errors.InvalidApp(clientId)
 
         me = yield db.get_slice(myId, "entities", ["apikeys", "apps"])
-        me = utils.supercolumnsToDict(client)
+        me = utils.supercolumnsToDict(me)
 
         # Remove the client in case of API Key
         if client['meta']['category'] == 'apikey':
