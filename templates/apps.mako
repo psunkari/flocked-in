@@ -56,7 +56,8 @@
               <div class="tl-name"><a href="/apps?id=${appId}" class="ajax">${client['name']}</a></div>
               <div class="tl-title">${utils.simpleTimestamp(apikeys[appId], me['basic']['timezone'])}</div>
               <div class="tl-toolbox"><button
-                  class="button-link" title="Revoke access to ${client['name']}" onclick="">Revoke</button></div>
+                  class="button-link ajaxpost" title="Revoke access to ${client['name']}"
+                  data-ref="/apps/revoke?id=${appId}">Revoke</button></div>
             </div>
           </div>
         %endif
@@ -100,7 +101,10 @@
               <div class="tl-avatar"></div>
               <div class="tl-details">
                 <div class="tl-name"><a href="/apps?id=${appId}" class="ajax">${client['name']}</a></div>
-                <div class="tl-title" style="white-space:pre-wrap;">&ndash; ${client['desc']}</div>
+                <div class="tl-title" style="white-space:pre-wrap;">${client['desc']}</div>
+              <div class="tl-toolbox"><button
+                  class="button-link ajaxpost" title="Delete ${client['name']}"
+                  data-ref="/apps/delete?id=${appId}">Delete</button></div>
               </div>
             </div>
           %endif
@@ -179,7 +183,15 @@
     apiKey = (meta['category'] == "apikey")
   %>
   <div style="text-align:center; margin: 30px; border-bottom: 1px solid #EEE;">
-    <span style="font-size: 18px;">Please note your Client Id and Secret.</span><br/>
+    %if not info:
+      %if apiKey:
+        <span style="font-size:18px;">API key created. Please note the Id and Secret.</span><br/>
+      %else:
+        <span style="font-size:18px;">Application registered. Please note the Id and Secret.</span><br/>
+      %endif
+    %else:
+      <span style="font-size:18px;">${info}</span><br/>
+    %endif
     <span style="color:#AAA;">The secret will not be displayed again. You may however generate a new client secret anytime later.</span>
   </div>
   <ul class="styledform">
@@ -210,7 +222,11 @@
       </li>
     %endif
     <div style="margin:20px 0 20px 33%;">
-      <button data-ref="/apps/revoke?id=${clientId}" class="button ajaxpost">Revoke Permissions</button>
+      %if apiKey:
+        <button data-ref="/apps/revoke?id=${clientId}" class="button ajaxpost">Revoke Access</button>
+      %else:
+        <button data-ref="/apps/delete?id=${clientId}" class="button ajaxpost">Delete Client</button>
+      %endif
     </div>
   </ul>
 </%def>
@@ -221,6 +237,7 @@
     meta = client['meta']
     clientScopes = meta['scope'].split(' ')
     apiKey = (meta['category'] == "apikey")
+    myApp = (meta['author'] == myId)
   %>
   <ul class="styledform">
     <li class="form-row">
@@ -246,9 +263,17 @@
       </li>
     %endif
     <div style="margin:20px 0 20px 33%;">
-      <button data-ref="/apps/revoke?id=${clientId}" class="button ajaxpost">Revoke Permissions</button>
-      &nbsp;&nbsp;
-      <button data-ref="/apps/secret?id=${clientId}" class="button ajaxpost">Generate new App Secret</button>
+      %if subscribed or apiKey:
+        <button data-ref="/apps/revoke?id=${clientId}" class="button ajaxpost">Revoke Access</button>
+        &nbsp;&nbsp;
+      %endif
+      %if myApp:
+        %if not apiKey:
+          <button data-ref="/apps/revoke?id=${clientId}" class="button ajaxpost">Delete</button>
+          &nbsp;&nbsp;
+        %endif
+        <button data-ref="/apps/secret?id=${clientId}" class="button ajaxpost">Generate new Secret</button>
+      %endif
     </div>
   </ul>
 </%def>

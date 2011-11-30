@@ -89,9 +89,8 @@ class ApplicationResource(base.BaseResource):
         args['clientId'] = clientId
         args['client']  = meta
         args['client']['secret'] = clientSecret
-        yield renderScriptBlock(request, "apps.mako",
-                                "registrationResults", landing, "#apps-contents",
-                                "set", **args)
+        yield renderScriptBlock(request, "apps.mako", "registrationResults",
+                                landing, "#apps-contents", "set", **args)
 
 
     @defer.inlineCallbacks
@@ -134,7 +133,7 @@ class ApplicationResource(base.BaseResource):
         client = yield db.get_slice(clientId, "apps")
         client = utils.supercolumnsToDict(client)
         if not client:
-            raise errors.InvalidEntity("application", clientId)
+            raise errors.InvalidApp(clientId)
 
         args.update({'client': client, 'clientId': clientId})
         if script:
@@ -197,6 +196,87 @@ class ApplicationResource(base.BaseResource):
             yield render(request, "apps.mako", **args)
 
 
+    # XXX: Confirm deletion of the application
+    @defer.inlineCallbacks
+    def _delete(self, request):
+        authinfo = request.getSession(IAuthInfo)
+        myId = authinfo.username
+        myOrgId = authinfo.organization
+        clientId = utils.getRequestArg(request, "id", sanitize=False)
+
+        client = yield db.get_slice(clientId, "apps")
+        client = utils.supercolumnsToDict(client)
+        if not client:
+            raise errors.InvalidApp(clientId)
+
+        if client['meta']['author'] != myId:
+            raise errors.AppAccessDenied(clientId)
+
+        yield db.remove(clientId, "apps")
+        yield db.remove(myId, "appsByOwner", clientId)
+        yield db.remove(myOrgId, "appsByOwner", clientId)
+
+
+    @defer.inlineCallbacks
+    def _revoke(self, request):
+        authinfo = request.getSession(IAuthInfo)
+        myId = authinfo.username
+        myOrgId = authinfo.organization
+        clientId = utils.getRequestArg(request, "id", sanitize=False)
+
+        client = yield db.get_slice(clientId, "apps")
+        client = utils.supercolumnsToDict(client)
+        if not client:
+            raise errors.InvalidApp(clientId)
+
+        me = yield db.get_slice(myId, "entities", ["apikeys", "apps"])
+        me = utils.supercolumnsToDict(client)
+
+        # Remove the client in case of API Key
+        if client['meta']['category'] == 'apikey':
+            if client['meta']['author'] != myId:
+                raise errors.AppAccessDenied(clientId)
+
+            d1 = db.remove(clientId, "apps")
+            d2 = db.remove(myId, "appsByOwner", clientId)
+            d3 = db.remove(myId, "entities", clientId, "apikeys")
+            d4 = db.remove(myOrgId, "appsByOwner", clientId)
+            yield defer.DeferredList([d1, d2, d3, d4])
+
+        # Remove the refresh token
+        # XXX: Valid access tokens could still exist
+        else:
+            authorization = me['apps'][clientId]
+            d1 = db.remove(myId, "entities", clientId, "apps")
+            d2 = db.remove(authorization, "oAuthData")
+            yield defer.DeferredList([d1, d2])
+
+
+    # XXX: Confirm generation of new secret
+    @defer.inlineCallbacks
+    def _secret(self, request):
+        myId = request.getSession(IAuthInfo).username
+        clientId = utils.getRequestArg(request, "id", sanitize=False)
+
+        client = yield db.get_slice(clientId, "apps")
+        client = utils.supercolumnsToDict(client)
+        if not client:
+            raise errors.InvalidApp(clientId)
+
+        if client['meta']['author'] != myId:
+            raise errors.AppAccessDenied(clientId)
+
+        clientSecret = utils.getRandomKey()
+        yield db.insert(clientId, "apps", utils.hashpass(clientSecret),
+                        "secret", "meta")
+
+        args = {'clientId': clientId, 'client': client['meta'],
+                'info': 'New application secret was generated'}
+        args['client']['secret'] = clientSecret
+        yield renderScriptBlock(request, "apps.mako", "registrationResults",
+                                False, "#apps-contents", "set", **args)
+
+
     def render_GET(self, request):
         segmentCount = len(request.postpath)
         d = None
@@ -217,7 +297,16 @@ class ApplicationResource(base.BaseResource):
         segmentCount = len(request.postpath)
         d = None
 
-        if segmentCount == 1 and request.postpath[0] == "register":
+        if segmentCount == 1:
+            action = request.postpath[0]
+            if action == "register":
                 d = self._registerClient(request)
+            elif action == "delete":
+                d = self._delete(request)
+            elif action == "revoke":
+                d = self._revoke(request)
+            elif action == "secret":
+                d = self._secret(request)
 
         return self._epilogue(request, d)
+
