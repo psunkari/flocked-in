@@ -123,7 +123,7 @@ class SigninResource(resource.Resource):
         d = db.get_slice(username, "userAuth")
         def callback(result):
             cols = utils.columnsToDict(result)
-            if cols.get("passwordHash", "XXX") != utils.md5(password):
+            if not utils.checkpass(password, cols.get("passwordHash", "XXX")):
                 return self._renderSigninForm(request, self.AUTHENTICATION_FAILED)
             if cols.has_key("isBlocked"):
                 return self._renderSigninForm(request, self.USER_BLOCKED)

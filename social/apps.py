@@ -56,8 +56,11 @@ class ApplicationResource(base.BaseResource):
         category = utils.getRequestArg(request, 'category')
         redirect = utils.getRequestArg(request, 'redirect', sanitize=False)
 
-        if not all([name, redirect]):
-            raise errors.MissingParams(["Name, Redirect URL"])
+        if not name:
+            raise errors.MissingParams(["Name"])
+
+        if category != "apikey" and not redirect:
+            raise errors.MissingParams(["Redirect URL"])
 
         knownScopes = globals().get('scopes')
         unknownScopes = [x for x in scope if x not in knownScopes.keys()]
@@ -67,15 +70,28 @@ class ApplicationResource(base.BaseResource):
         clientId = utils.getUniqueKey()
         clientSecret = utils.getRandomKey()
 
-        meta = {"author": myId, "name": name, "secret": clientSecret,
-                "scope": ' '.join(scope), "category": category,
-                "desc": desc, "redirect": b64encode(redirect)}
-        yield db.batch_insert(clientId, "apps", {"meta":meta})
-        yield db.insert(myId, "appsByOwner", "", clientId)
-        yield db.insert(myOrgId, "appsByOwner", "", clientId)
+        meta = {"author": myId, "name": name,
+                "secret": utils.hashpass(clientSecret),
+                "scope": ' '.join(scope), "category": category}
 
-        if script:
-            request.write("$('#composer').empty();$$.fetchUri('/apps');")
+        if category != "apikey":
+            meta["redirect"] = b64encode(redirect)
+            meta["desc"] = desc
+            yield db.batch_insert(clientId, "apps", {"meta":meta})
+            yield db.insert(myId, "appsByOwner", "", clientId)
+            yield db.insert(myOrgId, "appsByOwner", "", clientId)
+        else:
+            yield db.batch_insert(clientId, "apps", {"meta":meta})
+            yield db.insert(myId, "entities", "", clientId, "apikeys")
+
+        self.setTitle(request, name)
+
+        args['clientId'] = clientId
+        args['client']  = meta
+        args['client']['secret'] = clientSecret
+        yield renderScriptBlock(request, "apps.mako",
+                                "registrationResults", landing, "#apps-contents",
+                                "set", **args)
 
 
     @defer.inlineCallbacks
@@ -102,6 +118,40 @@ class ApplicationResource(base.BaseResource):
 
 
     @defer.inlineCallbacks
+    def _renderClientDetails(self, request, clientId):
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        landing = not self._ajax
+
+        args['detail'] = 'apps'
+
+        if script and landing:
+            yield render(request, "apps.mako", **args)
+
+        if appchange and script:
+            yield renderScriptBlock(request, "apps.mako", "layout",
+                                    landing, "#mainbar", "set", **args)
+
+        client = yield db.get_slice(clientId, "apps")
+        client = utils.supercolumnsToDict(client)
+        if not client:
+            raise errors.InvalidEntity("application", clientId)
+
+        args.update({'client': client, 'clientId': clientId})
+        if script:
+            self.setTitle(request, client['meta']['name'])
+
+        authorId = client['meta']['author']
+        author = db.get_slice(authorId, 'entities', ['basic'])
+        args['entities'] = {authorId: author}
+
+        if script:
+            yield renderScriptBlock(request, "apps.mako", "appDetails",
+                                    landing, "#apps-contents", "set", **args)
+        else:
+            yield render(request, "apps.mako", **args)
+
+
+    @defer.inlineCallbacks
     def _render(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
@@ -120,26 +170,10 @@ class ApplicationResource(base.BaseResource):
         if script:
             self.setTitle(request, title)
 
-        clientId = utils.getRequestArg(request, 'id')
-
-        if clientId:
-            # XXX: Check no script case
-            #      Fetch author information
-            cols = yield db.get_slice(clientId, "apps")
-            cols = utils.supercolumnsToDict(cols)
-            if "meta" in cols:
-                args.update(**cols["meta"])
-                args.update({"id":clientId})
-                yield renderScriptBlock(request, "apps.mako", "appDetails",
-                                        landing, "#apps-contents", "set", **args)
-            else:
-                raise errors.InvalidEntity("application", clientId)
-            return
-
         # XXX: Currently fetching all available apps under each category.
         #      In future implement pagination here.
         appIds = yield db.get_slice(myId, "entities", ["apikeys", "apps"], count=100)
-        appIds = utils.supercolumnsToDict(appIds)
+        appIds = utils.supercolumnsToDict(appIds, timestamps=True)
 
         appsByMe = yield db.get_slice(myId, "appsByOwner", count=100)
         appIds["my"] = utils.columnsToDict(appsByMe)
@@ -168,7 +202,11 @@ class ApplicationResource(base.BaseResource):
         d = None
 
         if segmentCount == 0:
-            d = self._render(request)
+            clientId = utils.getRequestArg(request, 'id')
+            if clientId:
+                d = self._renderClientDetails(request, clientId)
+            else:
+                d = self._render(request)
         elif segmentCount == 1 and request.postpath[0] == "register":
             d = self._clientRegistrationForm(request)
 

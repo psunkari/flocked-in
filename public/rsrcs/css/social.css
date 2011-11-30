@@ -524,7 +524,7 @@ a:hover, a:active, a:focus {
     line-height: 1.5em;
     color: #888;
     border-bottom: 1px solid #EFEFEF;
-    margin: 15px 0 10px;
+    margin: 0 0 10px;
 }
 
 
@@ -1197,6 +1197,19 @@ abbr.timestamp {
     font-size: 12px;
 }
 
+.styledform-text {
+    width: 350px;
+    float: left;
+    background-color: white;
+    border-width: 1px;
+    border-style: solid;
+    border-color: #EEE #DDD #DDD #EEE;
+    padding: 3px;
+    margin-top: 3px;
+    font-size: 12px;
+    line-height: normal !important;
+}
+
 .styledform-inputwrap,
 .styledform input[type=text],
 .styledform input[type=email],
@@ -1216,6 +1229,7 @@ abbr.timestamp {
 }
 .styledform-inputwrap {
     background-color: transparent !important;
+    line-height: normal !important;
 }
 .styledform select {
     width: 356px;
@@ -1258,14 +1272,14 @@ abbr.timestamp {
 
 .tl-item {
     float: left;
-    width: 20em;
-    height: 5em;
+    width: 230px;
+    height: 48px;
     border: 1px solid #EFEFEF;
     background-color: #FAFAFA;
     position: relative;
     padding: 6px;
     border-radius: 6px;
-    margin: 0 10px 10px 0;
+    margin: 0 0 10px 10px;
 }
 
 .tl-avatar {
@@ -1273,17 +1287,22 @@ abbr.timestamp {
     height: 48px;
     position: absolute;
     left: 5px;
+    background-color: #DDD;
 }
 
 .tl-details {
     margin-left: 60px;
 }
 
-.tl-title, .tl-name {
+.tl-title, .tl-name, .tl-toolbox {
     color: #888;
     white-space: pre;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+.tl-toolbox {
+    font-size: 90%;
+    margin-left: -4px;
 }
 
 .users-row {
@@ -1989,3 +2008,5 @@ abbr.timestamp {
     color: white;
     border-radius: 0 0 6px 6px;
 }
+
+

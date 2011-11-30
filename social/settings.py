@@ -158,35 +158,36 @@ class SettingsResource(base.BaseResource):
     def _changePassword(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
-        curr_passwd = utils.getRequestArg(request, "curr_passwd", sanitize=False)
-        passwd1 = utils.getRequestArg(request, "passwd1", sanitize=False)
-        passwd2 = utils.getRequestArg(request, "passwd2", sanitize=False)
 
-        if not curr_passwd:
+        currentPass = utils.getRequestArg(request, "curr_passwd", sanitize=False)
+        newPass = utils.getRequestArg(request, "passwd1", sanitize=False)
+        rptPass = utils.getRequestArg(request, "passwd2", sanitize=False)
+
+        if not currentPass:
             request.write('$$.alerts.error("%s");' % _("Enter your current password"))
             defer.returnValue(None)
-        if not passwd1:
+        if not newPass:
             request.write('$$.alerts.error("%s");' % _("Enter new password"))
             defer.returnValue(None)
-        if not passwd2:
+        if not rptPass:
             request.write('$$.alerts.error("%s");' % _("Confirm new password"))
             defer.returnValue(None)
-        if passwd1 != passwd2:
+        if newPass != rptPass:
             request.write('$$.alerts.error("%s");' % _("Passwords do not match"))
             defer.returnValue(None)
-        if curr_passwd == passwd1:
+        if currentPass == newPass:
             request.write('$$.alerts.error("%s");' % _("New password should be different from current password"))
             defer.returnValue(None)
 
-        cols = yield db.get(myKey, "entities", "emailId", "basic")
-        emailId = cols.column.value
+        emailId = args["me"]["basic"]["emailId"]
         col = yield db.get(emailId, "userAuth", "passwordHash")
-        passwdHash = col.column.value
-        if curr_passwd and passwdHash != utils.md5(curr_passwd):
+        storedPass= col.column.value
+
+        if not utils.checkpass(currentPass, storedPass):
             request.write('$$.alerts.error("%s");' % _("Incorrect Password"))
             defer.returnValue(None)
 
-        newPasswd = utils.md5(passwd1)
+        newPasswd = utils.hashpass(newPass)
         yield db.insert(emailId, "userAuth", newPasswd, "passwordHash")
         request.write('$$.alerts.info("%s");' % _('Password changed'))
 

@@ -40,35 +40,73 @@
 
 <%def name="appListing()">
   <%
-    apikeys = apps.get('apikeys', {}).keys()
-    enabled = apps.get('apps', {}).keys()
-    myapps = apps.get('my', {}).keys()
+    apikeys = apps.get('apikeys', {})
+    enabled = apps.get('apps', {})
+    myapps = apps.get('my', {})
   %>
   <div id="apikeys-wrapper" class="applist-wrapper">
     <div class="center-title">API Keys</div>
-    %if apikeys:
-      %for key in apikeys:
+    <div class="tl-wrapper">
+      %for appId in apikeys.keys():
+        %if appId in clients:
+          <% client = clients[appId]['meta'] %>
+          <div class="tl-item" id="app-${appId}">
+            <div class="tl-avatar"></div>
+            <div class="tl-details">
+              <div class="tl-name"><a href="/apps?id=${appId}" class="ajax">${client['name']}</a></div>
+              <div class="tl-title">${utils.simpleTimestamp(apikeys[appId], me['basic']['timezone'])}</div>
+              <div class="tl-toolbox"><button
+                  class="button-link" title="Revoke access to ${client['name']}" onclick="">Revoke</button></div>
+            </div>
+          </div>
+        %endif
       %endfor
-    %else:
-      You don't have any pre-authenticated API keys.
-      <a class="ajax" href="/apps/register?type=apikey">Create a key?</a>
-    %endif
+      <div class="tl-item" id="app-gen-apikey" style="line-height: 48px;">
+        <a href="/apps/register?type=apikey" class="ajax" style="display:block;text-align:center;">&laquo; Generate an API key &raquo;</a>
+      </div>
+    </div>
+    <div class="clear" style="margin-bottom: 10px;"/>
   </div>
   <div id="enabled-wrapper" class="applist-wrapper">
     <div class="center-title">Allowed Applications</div>
     %if enabled:
-      %for app in using:
-      %endfor
+      <div class="tl-wrapper">
+        %for appId in enabled.keys():
+          %if appId in clients:
+            <% client = clients[appId]['meta'] %>
+            <div class="tl-item" id="app-${appId}">
+              <div class="tl-avatar"></div>
+              <div class="tl-details">
+                <div class="tl-name"><a href="/apps?id=${appId}" class="ajax">${client['name']}</a></div>
+                <div class="tl-title" style="white-space:pre-wrap;">&ndash; ${client['desc']}</div>
+              </div>
+            </div>
+          %endif
+        %endfor
+      </div>
     %else:
-      You did not allow any external application to access your data.
+      You did not authorize any third-party application to access your data.
     %endif
+    <div class="clear" style="margin-bottom: 10px;"/>
   </div>
   %if myapps:
     <div id="myapps-wrapper" class="applist-wrapper">
       <div class="center-title">My Applications</div>
-        %for app in myapps:
-          ${app}
+      <div class="tl-wrapper">
+        %for appId in myapps.keys():
+          %if appId in clients:
+            <% client = clients[appId]['meta'] %>
+            <div class="tl-item" id="app-${appId}">
+              <div class="tl-avatar"></div>
+              <div class="tl-details">
+                <div class="tl-name"><a href="/apps?id=${appId}" class="ajax">${client['name']}</a></div>
+                <div class="tl-title" style="white-space:pre-wrap;">&ndash; ${client['desc']}</div>
+              </div>
+            </div>
+          %endif
         %endfor
+      </div>
+      <div class="clear" style="margin-bottom: 10px;"/>
     </div>
   %endif
 </%def>
@@ -99,11 +137,19 @@
       <li class="form-row">
         <label class="styled-label">${_('Permissions')}</label>
         <div class='styledform-inputwrap' style='max-height:9em; overflow: auto;'>
-          %for scope in scopes.keys():
-            <div class="multiselect">
-              <label><input type="checkbox" name="scope" value=${scope}>${scope}</label>
-            </div>
-          %endfor
+          %if apiKey:
+            %for scope, description in scopes.items():
+              <div class="multiselect">
+                <label><input type="checkbox" name="scope" value=${scope}>${description}</label>
+              </div>
+            %endfor
+          %else:
+            %for scope in scopes.keys():
+              <div class="multiselect">
+                <label><input type="checkbox" name="scope" value=${scope}>${scope}</label>
+              </div>
+            %endfor
+          %endif
         </div>
       </li>
       %if not apiKey:
@@ -126,53 +172,84 @@
 </%def>
 
 
-<%def name="application_listing_layout()">
+<%def name="registrationResults()">
   <%
-    counter = 0
-    firstRow = True
+    meta = client
+    clientScopes = meta['scope'].split(' ')
+    apiKey = (meta['category'] == "apikey")
   %>
-  %for appId in apps.keys():
-    %if counter % 2 == 0:
-      %if firstRow:
-        <div class="users-row users-row-first">
-        <% firstRow = False %>
-      %else:
-        <div class="users-row">
-      %endif
+  <div style="text-align:center; margin: 30px; border-bottom: 1px solid #EEE;">
+    <span style="font-size: 18px;">Please note your Client Id and Secret.</span><br/>
+    <span style="color:#AAA;">The secret will not be displayed again. You may however generate a new client secret anytime later.</span>
+  </div>
+  <ul class="styledform">
+    <li class="form-row">
+      <label class="styled-label">Client Id</label>
+      <span class="styledform-text" style="font-family: monospace;">${clientId}</span>
+    </li>
+    <li class="form-row">
+      <label class="styled-label">Client Secret</label>
+      <span class="styledform-text" style="font-family: monospace;">${meta['secret']}</span>
+    </li>
+    <li class="form-row">
+      <span class="styled-label">Permissions</span>
+      <span class="styledform-text" style="height: 9em;">
+        %for scope in clientScopes:
+          <div>${scopes[scope]}</div>
+        %endfor
+      </span>
+    </li>
+    %if not apiKey:
+      <li class="form-row">
+        <span class="styled-label">Application Type</span>
+        <span class="styledform-text">${meta['category']}</span>
+      </li>
+      <li class="form-row">
+        <span class="styled-label">Redirection URI</span>
+        <span class="styledform-text">${meta['redirect']}</span>
+      </li>
     %endif
-    <div class="users-user">
-      <div class="users-details">
-        <div class="user-details-name"><a href="/apps?id=${appId}">${apps[appId]["meta"]["name"]}</a></div>
-        <div class="user-details-title">${appId}</div>
-      </div>
+    <div style="margin:20px 0 20px 33%;">
+      <button data-ref="/apps/revoke?id=${clientId}" class="button ajaxpost">Revoke Permissions</button>
     </div>
-    %if counter % 2 == 1:
-      </div>
-    %endif
-    <% counter += 1 %>
-  %endfor
-  %if counter % 2 == 1:
-    </div>
-  %endif
-
+  </ul>
 </%def>
 
 
 <%def name="appDetails()">
-<h2>${name}</h2>
-<div><label>App Id</label><span>${id}</span></div>
-    <label>Client Password: </label>
-    <span>${secret}</span>
-<div>
-  <label>Client Scope</label>
-  <span>${scope}</span>
-</div>
-<div><label>Application Category </label>
-  <span>${category}</span>
-</div>
-<div>
-  <pre>${b64decode(redirect)}</pre>
-</div>
-
+  <%
+    meta = client['meta']
+    clientScopes = meta['scope'].split(' ')
+    apiKey = (meta['category'] == "apikey")
+  %>
+  <ul class="styledform">
+    <li class="form-row">
+      <label class="styled-label">Client Id</label>
+      <span class="styledform-text" style="font-family: monospace;">${clientId}</span>
+    </li>
+    <li class="form-row">
+      <span class="styled-label">Permissions</span>
+      <span class="styledform-text" style="height: 9em;">
+        %for scope in clientScopes:
+          <div>${scopes[scope]}</div>
+        %endfor
+      </span>
+    </li>
+    %if not apiKey:
+      <li class="form-row">
+        <span class="styled-label">Application Type</span>
+        <span class="styledform-text">${meta['category']}</span>
+      </li>
+      <li class="form-row">
+        <span class="styled-label">Redirection URI</span>
+        <span class="styledform-text">${meta['redirect']}</span>
+      </li>
+    %endif
+    <div style="margin:20px 0 20px 33%;">
+      <button data-ref="/apps/revoke?id=${clientId}" class="button ajaxpost">Revoke Permissions</button>
+      &nbsp;&nbsp;
+      <button data-ref="/apps/secret?id=${clientId}" class="button ajaxpost">Generate new App Secret</button>
+    </div>
+  </ul>
 </%def>
 

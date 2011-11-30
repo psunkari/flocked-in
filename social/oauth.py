@@ -194,7 +194,7 @@ class OAuthAuthorizeResource(base.BaseResource):
 
 
 
-class OAuthTokenResource(base.BaseResource):
+class OAccessTokenResource(base.BaseResource):
     isLeaf = True
     requireAuth = False
     _accessTokenExpiry = 1800       # 30 Minutes
@@ -206,7 +206,7 @@ class OAuthTokenResource(base.BaseResource):
         request.write(json.dumps({'error': errstr}))
 
 
-    def _success(self, request, accessToken, refreshToken):
+    def _success(self, request, accessToken, refreshToken=None):
         request.setHeader('Content-Type', 'application/json;charset=UTF-8')
         responseObj = {'access_token': accessToken,
                        'token_type': 'bearer',
@@ -269,7 +269,7 @@ class OAuthTokenResource(base.BaseResource):
 
         client = yield db.get_slice(clientId, "apps")
         client = utils.supercolumnsToDict(client)
-        if not client or client['meta']['secret'] != clientSecret:
+        if not client or not utils.checkpass(clientSecret, client['meta']['secret']):
             self._error(request, "invalid_client")
             return
 
@@ -296,7 +296,26 @@ class OAuthTokenResource(base.BaseResource):
 
 
     def _tokenForClientCredentials(self, request):
-        pass
+        clientId = utils.getRequestArg(request, 'client_id')
+        clientSecret = utils.getRequestArg(request, 'client_secret')
+
+        client = yield db.get_slice(clientId, "apps")
+        client = utils.supercolumnsToDict(client)
+        if not client or not utils.checkpass(clientSecret, client['meta']['secret']):
+            self._error(request, "invalid_client")
+            return
+
+        # The client is valid.  Issue auth token.
+        # We don't issue a refresh token and everytime the client will have
+        # to authenticate using it's credentials
+        scopes = client["meta"]["scope"].split(' ')
+        userId = client["meta"]["owner"]
+        accessToken = utils.getRandomKey()
+        accessTokenData = {"user_id": userId, "type": "access",
+                           "client_id": clientId, "scope": " ".join(scopes)}
+        yield db.batch_insert(accessToken, "oAuthData",
+                              accessTokenData, ttl=self._accessTokenExpiry)
+        self._success(request, accessToken)
 
 
     # XXX: For debugging only.
@@ -322,7 +341,7 @@ class OAuthResource(resource.Resource):
 
     def __init__(self):
         self._requestAuth = OAuthAuthorizeResource()
-        self._requestToken = OAuthTokenResource()
+        self._requestToken = OAccessTokenResource()
 
     def getChildWithDefault(self, name, request):
         if name == "authorize":
