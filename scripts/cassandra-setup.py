@@ -271,6 +271,20 @@ def createColumnFamilies(client):
                         None, "Friend/Follow suggestions")
     yield client.system_add_column_family(suggestions)
 
+    # API
+    apps = CfDef(KEYSPACE, "apps", "Super", "UTF8Type", "UTF8Type",
+                 "Details of Applications registered for API Access")
+
+    appsByOwner = CfDef(KEYSPACE, "appsByOwner", "Standard", "TimeUUIDType",
+                        None, "List of applications registered by a User")
+
+    oAuthData = CfDef(KEYSPACE, "oAuthData", "Standard", "UTF8Type",
+                      None, "List of access, refresh tokens and auth codes")
+
+    yield client.system_add_column_family(apps)
+    yield client.system_add_column_family(appsByOwner)
+    yield client.system_add_column_family(oAuthData)
+
 
 @defer.inlineCallbacks
 def addSampleData(client):
@@ -646,9 +660,10 @@ def truncateColumnFamilies(client):
                "mArchivedConversations", "mDeletedConversations",
                "mConvMessages", "mConvFolders", "latest", "doNotSpam",
                "files", "tmp_files", "item_files", "invitationsSent",
-               "user_files", "suggestions"]:
+               "user_files", "suggestions", "apps", "appsByOwner", "oAuthData"]
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
+
 
 if __name__ == '__main__':
     def usage():

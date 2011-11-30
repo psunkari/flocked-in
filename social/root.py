@@ -9,6 +9,7 @@ from twisted.internet       import defer
 from twisted.python         import components
 
 from social                 import db, utils, base, plugins
+from social.logging         import log
 from social.template        import render
 from social.profile         import ProfileResource
 from social.settings        import SettingsResource
@@ -32,7 +33,9 @@ from social.server          import SessionFactory
 from social.files           import FilesResource
 from social.embed           import EmbedResource
 from social.contact         import ContactResource
-from social.logging         import log
+from social.oauth           import OAuthResource
+from social.api             import APIResource
+from social.apps            import ApplicationResource
 
 
 def getPluggedResources(ajax=False):
@@ -120,7 +123,7 @@ class SigninResource(resource.Resource):
         d = db.get_slice(username, "userAuth")
         def callback(result):
             cols = utils.columnsToDict(result)
-            if cols.get("passwordHash", "XXX") != utils.md5(password):
+            if not utils.checkpass(password, cols.get("passwordHash", "XXX")):
                 return self._renderSigninForm(request, self.AUTHENTICATION_FAILED)
             if cols.has_key("isBlocked"):
                 return self._renderSigninForm(request, self.USER_BLOCKED)
@@ -184,6 +187,9 @@ class RootResource(resource.Resource):
         self._pluginResources = getPluggedResources(self._isAjax)
         self._messages = MessagingResource(self._isAjax)
         self._files = FilesResource(self._isAjax)
+        self._apps = ApplicationResource(self._isAjax)
+        self._api = APIResource(self._isAjax)
+
         if not self._isAjax:
             self._home = HomeResource()
             self._ajax = RootResource(True)
@@ -195,6 +201,7 @@ class RootResource(resource.Resource):
             self._signin = SigninResource()
             self._embed = EmbedResource()
             self._contact = ContactResource()
+            self._oauth = OAuthResource()
         else:
             self._feedback = FeedbackResource(True)
 
@@ -211,7 +218,6 @@ class RootResource(resource.Resource):
             if request.method == "POST" or self._isAjax:
                 token = utils.getRequestArg(request, "_tk")
                 tokenFromCookie = request.getCookie('token')
-                #if authinfo.token and token != authinfo.token:
                 if token != tokenFromCookie:
                     defer.returnValue(resource.ErrorPage(400,
                             http.RESPONSES[400], "Invalid authorization token"))
@@ -228,6 +234,8 @@ class RootResource(resource.Resource):
 
     def getChildWithDefault(self, path, request):
         match = None
+
+        # Resources that don't expose an AJAX interface
         if not self._isAjax:
             if path == "":
                 match = self._home
@@ -251,9 +259,16 @@ class RootResource(resource.Resource):
                 match = self._rsrcs
             elif path == 'password':
                 match = self._signup
+            elif path == 'oauth':
+                pathElement = request.postpath.pop(0)
+                request.prepath.append(pathElement)
+                match = self._oauth.getChildWithDefault(pathElement, request)
+
+        # Resources that exist only on the AJAX interface
         elif path == "feedback":
             match = self._feedback
 
+        # All other resources
         if path == "feed":
             match = self._feed
         elif path == "profile":
@@ -282,6 +297,12 @@ class RootResource(resource.Resource):
             match = self._admin
         elif path == "file":
             match = self._files
+        elif path == "apps":
+            match = self._apps
+        elif path == "api":
+            match = self._api
+
+        # Resources exposed by plugins
         elif path in plugins and self._pluginResources.has_key(path):
             match = self._pluginResources[path]
 

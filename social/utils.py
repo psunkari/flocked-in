@@ -30,42 +30,66 @@ from social.constants   import INFINITY
 from social.logging     import profile, dump_args, log
 
 
-def md5(text):
+def hashpass(text):
+    nounce = uuid.uuid4().hex
     m = hashlib.md5()
-    m.update(text)
-    return m.hexdigest()
+    m.update(nounce+text)
+    return nounce + m.hexdigest()
 
 
-def supercolumnsToDict(supercolumns, ordered=False):
+def checkpass(text, saved):
+    if len(saved) == 64:
+        nounce, hashed = nounce, hashed = saved[:32], saved[32:]
+        m = hashlib.md5()
+        m.update(nounce+text)
+        return m.hexdigest() == hashed
+    elif len(saved) == 32:  # Old, unsecure password storage.
+        m = hashlib.md5()
+        m.update(text)
+        return m.hexdigest() == saved
+    return False
+
+
+def supercolumnsToDict(supercolumns, ordered=False, timestamps=False):
     retval = OrderedDict() if ordered else {}
     for item in supercolumns:
         name = item.super_column.name
         retval[name] = OrderedDict() if ordered else {}
-        for col in item.super_column.columns:
-            retval[name][col.name] = col.value
+        if timestamps:
+            for col in item.super_column.columns:
+                retval[name][col.name] = col.timestamp/1e6
+        else:
+            for col in item.super_column.columns:
+                retval[name][col.name] = col.value
     return retval
 
 
-def multiSuperColumnsToDict(superColumnsMap, ordered=False):
+def multiSuperColumnsToDict(superColumnsMap, ordered=False, timestamps=False):
     retval = OrderedDict() if ordered else {}
     for key in superColumnsMap:
         columns =  superColumnsMap[key]
-        retval[key] = supercolumnsToDict(columns, ordered=ordered)
+        retval[key] = supercolumnsToDict(columns, ordered=ordered,
+                                         timestamps=timestamps)
     return retval
 
 
-def multiColumnsToDict(columnsMap, ordered=False):
+def multiColumnsToDict(columnsMap, ordered=False, timestamps=False):
     retval = OrderedDict() if ordered else {}
     for key in columnsMap:
         columns = columnsMap[key]
-        retval[key] = columnsToDict(columns, ordered=ordered)
+        retval[key] = columnsToDict(columns, ordered=ordered,
+                                    timestamps=timestamps)
     return retval
 
 
-def columnsToDict(columns, ordered = False):
+def columnsToDict(columns, ordered=False, timestamps=False):
     retval = OrderedDict() if ordered else {}
-    for item in columns:
-        retval[item.column.name] = item.column.value
+    if timestamps:
+        for item in columns:
+            retval[item.column.name] = item.column.timestamp/1e6
+    else:
+        for item in columns:
+            retval[item.column.name] = item.column.value
     return retval
 
 
@@ -191,11 +215,11 @@ def getValidTagId(request, arg):
     defer.returnValue((tagId, tag))
 
 
-def getRandomKey(prefix):
-    key = prefix + "/" + str(uuid.uuid1())
-    sha = hashlib.sha1()
-    sha.update(key)
-    return sha.hexdigest()
+# Not to be used for unique Id generation.
+# OK to be used for validation keys, passwords etc;
+def getRandomKey():
+    random = uuid.uuid4().bytes + uuid.uuid4().bytes
+    return base64.b64encode(random, 'oA')
 
 
 # XXX: We need something that can guarantee unique keys over trillion records
@@ -203,6 +227,7 @@ def getRandomKey(prefix):
 def getUniqueKey():
     u = uuid.uuid1()
     return base64.urlsafe_b64encode(u.bytes)[:-2]
+
 
 @defer.inlineCallbacks
 def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
@@ -641,7 +666,7 @@ def addUser(emailId, displayName, passwd, orgKey, jobTitle = None, timezone=None
 
     userInfo = {'basic': {'name': displayName, 'org':orgKey,
                           'type': 'user', 'emailId':emailId}}
-    userAuthInfo = {"passwordHash": md5(passwd), "org": orgKey, "user": userId}
+    userAuthInfo = {"passwordHash": hashpass(passwd), "org": orgKey, "user": userId}
 
     if jobTitle:
         userInfo["basic"]["jobTitle"] = jobTitle

@@ -143,6 +143,17 @@ class MessageAccessDenied(BaseError):
 
 
 #
+# Application access is denied
+#
+class AppAccessDenied(BaseError):
+    clientId = None
+    def __init__(self, clientId):
+        self.clientId = clientId
+        message = _("Access to the requested application is denied")
+        BaseError.__init__(self, message, 403)
+
+
+#
 # Invalid itemId was given
 #
 class InvalidItem(BaseError):
@@ -203,6 +214,22 @@ class InvalidAttachment(BaseError):
         message = _("The requested file does not exist")
         BaseError.__init__(self, message, 404)
 
+
+#
+# Invalid Application
+#
+class InvalidApp(BaseError):
+    clientId = None
+
+    def __init__(self, clientId):
+        self.clientId = clientId
+        message = _("The requested application does not exist")
+        BaseError.__init__(self, message, 404)
+
+
+#
+# Entity already exists
+#
 class InvalidGroupName(BaseError):
     name = None
     def __init__(self, name):
