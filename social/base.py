@@ -49,14 +49,14 @@ class BaseResource(resource.Resource):
         try:
             failure.raiseException()
         except errors.BaseError, e:
-            fullErrorStr, ajaxErrorCode, ajaxErrorStr = e.errorData()
+            errorCode, errorBrief, shortErrorStr, fullErrorStr = e.errorData()
             log.err(failure)
         except Exception, e:
             fullErrorStr = """<p>Something went wrong when processing your
                 request.  The incident got noted and we are working on it.</p>
                 <p>Please try again after sometime.</p>"""
-            ajaxErrorCode = 500
-            ajaxErrorStr = """Oops... Unable to process your request.
+            errorCode = 500
+            shortErrorStr = """Oops... Unable to process your request.
                 Please try after sometime"""
             log.err(failure)
 
@@ -69,8 +69,8 @@ class BaseResource(resource.Resource):
             args["referer"] = referer
 
             if ajax and not appchange:
-                request.setResponseCode(ajaxErrorCode)
-                request.write(ajaxErrorStr)
+                request.setResponseCode(errorCode)
+                request.write(shortErrorStr)
             elif ajax and appchange:
                 args["msg"] = fullErrorStr
                 yield renderScriptBlock(request, "errors.mako", "layout",
@@ -104,3 +104,43 @@ class BaseResource(resource.Resource):
                 request.finish()
         d.addBoth(closeConnection)
         return server.NOT_DONE_YET
+
+
+
+class APIBaseResource(resource.Resource):
+    isLeaf = True
+
+    @defer.inlineCallbacks
+    def _handleErrors(self, failure, request):
+        try:
+            failure.raiseException()
+        except BaseError, e:
+            errorCode, errorBrief, shortErrorStr, fullErrorStr = e.errorData()
+            params = e.params
+        else:
+            errorCode = 500
+            errorBrief = http.responses[500]
+            params = {}
+
+        log.info(failure)
+
+        request.setResponseCode(errorCode, errorBrief)
+        request.setHeader('content-type', 'application/json')
+        responseObj = {'error': errorBrief}
+        responseObj.update(params)
+        request.write(json.dumps(responseObj))
+
+
+    def _epilogue(self, request, deferred=None):
+        d = deferred if deferred else defer.fail(errors.NotFoundError())
+
+        # Check for errors.
+        d.addErrback(self._handleErrors, request)
+
+        # Finally, close the connection if not already closed.
+        def closeConnection(x):
+            if not request._disconnected:
+                request.finish()
+        d.addBoth(closeConnection)
+        return server.NOT_DONE_YET
+

@@ -34,7 +34,7 @@ from social.files           import FilesResource
 from social.embed           import EmbedResource
 from social.contact         import ContactResource
 from social.oauth           import OAuthResource
-from social.api             import APIResource
+from social.api             import APIRoot
 from social.apps            import ApplicationResource
 
 
@@ -165,7 +165,7 @@ class HomeResource(resource.Resource):
 # authorization, adding headers for cache busting and busting csrf.
 #
 class RootResource(resource.Resource):
-    _noCSRFReset = set(["avatar", "auto", "rsrcs", "about", "signup", "signin", "password"])
+    _noCSRFReset = set(["avatar", "auto", "rsrcs", "about", "signup", "signin", "password", "api"])
 
     def __init__(self, isAjax=False):
         self._isAjax = isAjax
@@ -188,7 +188,6 @@ class RootResource(resource.Resource):
         self._messages = MessagingResource(self._isAjax)
         self._files = FilesResource(self._isAjax)
         self._apps = ApplicationResource(self._isAjax)
-        self._api = APIResource(self._isAjax)
 
         if not self._isAjax:
             self._home = HomeResource()
@@ -202,6 +201,7 @@ class RootResource(resource.Resource):
             self._embed = EmbedResource()
             self._contact = ContactResource()
             self._oauth = OAuthResource()
+            self._api = APIRoot()
         else:
             self._feedback = FeedbackResource(True)
 
