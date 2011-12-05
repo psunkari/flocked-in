@@ -10,6 +10,7 @@ import re
 import string
 from email.mime.text     import MIMEText
 from email.MIMEMultipart import MIMEMultipart
+from functools           import wraps
 
 try:
     import cPickle as pickle
@@ -230,31 +231,24 @@ def getUniqueKey():
 
 
 @defer.inlineCallbacks
-def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
-                  ownerOrgId=None, groupIds = None):
-    authinfo = request.getSession(IAuthInfo)
-    owner = ownerId or authinfo.username
-    org = ownerOrgId or authinfo.organization
-
+def createNewItem(request, itemType, ownerId, ownerOrgId,
+                  acl=None, subType=None, groupIds = None):
     if not acl:
         acl = getRequestArg(request, "acl", sanitize=False)
-        try:
-            acl = json.loads(acl)
-            orgs = acl.get("accept", {}).get("orgs", [])
-            if len(orgs) > 1 :
-                raise errors.PermissionDenied(_('Cannot grant access to other orgs on this item'))
-            elif len(orgs) == 1 and orgs[0] != org:
-                raise errors.PermissionDenied(_('Cannot grant access to other orgs on this item'))
-        except:
-            if not org:
-                raise Exception("User does not belong to any company!")
-            acl = {"accept":{"orgs":[org]}}
+
+    try:
+        acl = json.loads(acl)
+        orgs = acl.get("accept", {}).get("orgs", [])
+        if len(orgs) > 1 or (len(orgs) == 1 and orgs[0] != ownerOrgId):
+            raise errors.PermissionDenied(_('Cannot grant access to other orgs on this item'))
+    except:
+        acl = {"accept":{"orgs":[ownerOrgId]}}
 
     accept_groups = acl.get('accept', {}).get('groups', [])
     deny_groups = acl.get('deny', {}).get('groups', [])
     groups = [x for x in accept_groups if x not in deny_groups]
     if groups:
-        relation = Relation(owner, [])
+        relation = Relation(ownerId, [])
         yield relation.initGroupsList()
         if not all([x in relation.groups for x in groups]):
             raise errors.PermissionDenied(_("Only group members can post to a group"))
@@ -265,10 +259,10 @@ def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
             "acl": acl,
             "type": itemType,
             "uuid": uuid.uuid1().bytes,
-            "owner": owner,
+            "owner": ownerId,
             "timestamp": str(int(time.time()))
         },
-        "followers": {owner: ''}
+        "followers": {ownerId: ''}
     }
     if subType:
         item["meta"]["subType"] = subType
@@ -278,7 +272,7 @@ def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
     tmpFileIds = getRequestArg(request, 'fId', False, True)
     attachments = {}
     if tmpFileIds:
-        attachments = yield _upload_files(owner, tmpFileIds)
+        attachments = yield _upload_files(ownerId, tmpFileIds)
         if attachments:
             item["attachments"] = {}
             for attachmentId in attachments:
@@ -827,3 +821,4 @@ def uniqify(lst):
         if x not in new_list:
             new_list.append(x)
     return new_list
+

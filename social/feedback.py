@@ -45,10 +45,9 @@ class FeedbackResource(base.BaseResource):
         # Anyone in synovel can receive feedback.
         acl = {'accept':{'orgs':[synovelOrgId]}}
 
-        item, attachments = yield utils.createNewItem(request, itemType='feedback',
-                                   ownerId=synovelOrgId, acl=acl,
-                                   subType=mood,
-                                   ownerOrgId=synovelOrgId)
+        item, attachments = yield utils.createNewItem(request, 'feedback',
+                                                      synovelOrgId, synovelOrgId,
+                                                      subType=mood)
         item['meta']['userId'] = myId
         item['meta']['userOrgId'] = args['orgKey']
         item['meta']['comment'] = comment

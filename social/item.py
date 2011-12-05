@@ -19,17 +19,16 @@ from social.logging     import profile, dump_args, log
 # Create a new conversation item.
 #
 @defer.inlineCallbacks
-def _createNewItem(request, myId):
+def _createNewItem(request, myId, myOrgId):
     convType = utils.getRequestArg(request, "type")
     if convType not in plugins:
         raise errors.BaseError('Unsupported item type', 400)
 
     plugin = plugins[convType]
-    convId, conv = yield plugin.create(request)
+    convId, conv = yield plugin.create(request, myId, myOrgId)
 
     timeUUID = conv["meta"]["uuid"]
     convACL = conv["meta"]["acl"]
-    target = conv["meta"].get("target", None)
 
     deferreds = []
     responseType = 'I'
@@ -295,7 +294,7 @@ class ItemResource(base.BaseResource):
     def _new(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
 
-        convId, conv = yield _createNewItem(request, myId)
+        convId, conv = yield _createNewItem(request, myId, myOrgId)
         entities = {myId: args['me']}
         target = conv['meta'].get('target', None)
         if target:
@@ -303,10 +302,6 @@ class ItemResource(base.BaseResource):
             entities = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
             entities = utils.multiSuperColumnsToDict(cols)
 
-        # This should move to _createNewItem where we should
-        # be checking if the ACL is valid.  X should only be able to share
-        # with X's own company and should only be able to post to the
-        # groups that he is a member of.
         relation = Relation(myId, [])
         yield relation.initGroupsList()
 
@@ -1024,14 +1019,26 @@ class ItemResource(base.BaseResource):
 
 
 
+
+#
 # RESTful API for managing items.
+#
 class APIItemResource(base.APIBaseResource):
+
+    @defer.inlineCallbacks
+    def _newItem(self, request):
+        token = self._ensureAccessScope(request, 'post-item')
+        convId, conv = yield _createNewItem(request, token.user, token.org)
+        self._success(request, 201, {'id': convId})
+
+
     def render_POST(self, request):
         apiAccessToken = request.apiAccessToken
         segmentCount = len(request.postpath)
         d = None
 
         if segmentCount == 0:
-            convId, conv = yield _createNewItem(request, apiAccessToken['userId'])
-            self._success(request, 201, {'id': convId})
+            d = self._newItem(request)
+
+        return self._epilogue(request, d)
 

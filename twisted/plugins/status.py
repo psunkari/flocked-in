@@ -46,17 +46,14 @@ class Status(object):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def create(self, request):
+    def create(self, request, myId, myOrgId):
         snippet, comment = utils.getTextWithSnippet(request, "comment",
                                     constants.POST_PREVIEW_LENGTH)
-        authinfo = request.getSession(IAuthInfo)
-        myOrgId = authinfo.organization
-
         if not comment:
             raise errors.MissingParams([_('Status')])
 
         convId = utils.getUniqueKey()
-        item, attachments = yield utils.createNewItem(request, self.itemType)
+        item, attachments = yield utils.createNewItem(request, self.itemType, myId, myOrgId)
         meta = {"comment": comment}
         if snippet:
             meta["snippet"] = snippet

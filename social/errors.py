@@ -1,7 +1,7 @@
 
 import json
 
-from twisted.web        import resource
+from twisted.web        import resource, http
 
 from social             import _
 from social.logging     import log

@@ -1,7 +1,9 @@
 
+import json
 import urlparse
+from functools              import wraps
 
-from twisted.web            import resource, server
+from twisted.web            import resource, server, http
 from twisted.internet       import defer
 
 from social.isocial         import IAuthInfo
@@ -110,24 +112,32 @@ class BaseResource(resource.Resource):
 class APIBaseResource(resource.Resource):
     isLeaf = True
 
+    def _ensureAccessScope(self, request, needed):
+        token = request.apiAccessToken
+        if not token:
+            raise errors.PermissionDenied()
+
+        if needed not in token.scope:
+            raise errors.PermissionDenied()
+
+        return token
+
+
     @defer.inlineCallbacks
     def _handleErrors(self, failure, request):
         try:
             failure.raiseException()
-        except BaseError, e:
+        except errors.BaseError, e:
             errorCode, errorBrief, shortErrorStr, fullErrorStr = e.errorData()
-            params = e.params
-        else:
+        except:
             errorCode = 500
-            errorBrief = http.responses[500]
-            params = {}
+            errorBrief = http.RESPONSES[500]
 
         log.info(failure)
 
         request.setResponseCode(errorCode, errorBrief)
         request.setHeader('content-type', 'application/json')
         responseObj = {'error': errorBrief}
-        responseObj.update(params)
         request.write(json.dumps(responseObj))
 
 
@@ -143,4 +153,11 @@ class APIBaseResource(resource.Resource):
                 request.finish()
         d.addBoth(closeConnection)
         return server.NOT_DONE_YET
+
+
+    def _success(self, request, httpCode, responseObj):
+        request.setResponseCode(httpCode, http.RESPONSES[httpCode])
+        request.setHeader('content-type', 'application/json')
+        request.write(json.dumps(responseObj))
+
 
