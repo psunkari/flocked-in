@@ -92,12 +92,11 @@ class Solr(object):
             sfk, columnName = key
             value = item[sfk].get(columnName, None)
             if value:
-                if type(value) in [str, unicode]:
-                    value = quote(value)
-                    fields.append(self.elementMaker.field((value),
-                              {"name":columnName}))
-                else:
-                    fields.append(self.elementMaker.field(str(value),
+                if type(value) = str:
+                    value = value.decode('utf-8', 'replace')
+                elif type(value) != unicode:
+                    value = str(value)
+                fields.append(self.elementMaker.field(value,
                               {"name":columnName}))
         file_info = []
         for attachmentId in attachments:

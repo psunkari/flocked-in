@@ -156,12 +156,8 @@ class MessagingResource(base.BaseResource):
         # all the input and fill with safe defaults wherever needed.
         #To, CC, Subject, Body,
         body = utils.getRequestArg(request, "body")
-        if body:
-            body = body.decode('utf-8').encode('utf-8', "replace")
         parent = utils.getRequestArg(request, "parent") #TODO
         subject = utils.getRequestArg(request, "subject") or ''
-        if subject: subject.decode('utf-8').encode('utf-8', "replace")
-
         recipients = utils.getRequestArg(request, "recipients", sanitize=False)
         if recipients:
             recipients = re.sub(',\s+', ',', recipients).split(",")
@@ -173,7 +169,7 @@ class MessagingResource(base.BaseResource):
         snippet = ""
         for line in lines:
             if not line.startswith(">") or not "wrote:" in line:
-                snippet = line[:120]
+                snippet = utils.toSnippet(line, 120)
                 break
             else:
                 continue
