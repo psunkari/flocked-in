@@ -1,7 +1,6 @@
 import PythonMagick
 import imghdr
 import time
-from hashlib            import md5, sha256
 from datetime           import datetime
 
 
@@ -121,7 +120,7 @@ def _sendSignupInvitation(emailId):
                "%(activationUrl)s\n\n"
         activationTmpl = "%(rootUrl)s/signup?email=%(emailId)s&token=%(token)s"
 
-        token = utils.getRandomKey('invite')
+        token = utils.getRandomKey()
         insert_d = db.insert(domain, "invitations", emailId, token, emailId)
         activationUrl = activationTmpl % locals()
         textBody = (body + signature) % locals()
@@ -320,10 +319,10 @@ class SignupResource(BaseResource):
         if validEmail:
             if token not in tokens:
                 raise PermissionDenied("Invalid token. <a href='/password/resend?email=%s'>Click here</a> to reset password"%(email))
-            yield db.insert(email, "userAuth", utils.md5(passwd), 'passwordHash')
+            yield db.insert(email, "userAuth", utils.hasspass(passwd), 'passwordHash')
             yield db.batch_remove({"userAuth": [email]}, names=deleteTokens)
         request.redirect('/signin')
-        #notify user
+        # XXX: notify user
 
     @defer.inlineCallbacks
     def request_resetPassword(self, request):
@@ -340,7 +339,7 @@ class SignupResource(BaseResource):
             raise PermissionDenied('We detected ususual activity from your account.<br/>  Click the link sent to your emailId to reset password or wait for %s hours before you retry'%(hours))
 
         if validEmail:
-            token = sha256(utils.getUniqueKey()).hexdigest()
+            token = utils.getRandomKey()
             yield db.insert(email, "userAuth", token, 'resetPasswdToken:%s'%(token), ttl=86400)
             yield _sendmailResetPassword(email, token)
 
@@ -361,8 +360,7 @@ class SignupResource(BaseResource):
             raise MissingParams([''])
 
         validEmail, tokens, deleteTokens, leastTimestamp = yield _getResetPasswordTokens(email)
-        #if not validEmail:
-        #send invite to the user
+        # XXX: If not validEmail, send invite to the user
         if not validEmail or token not in tokens:
             raise PermissionDenied("Invalid token. <a href='/password/resend?email=%s'>Click here</a> to reset password"%(email))
         args = {"view": "resetPassword", "email": email, "token": token}

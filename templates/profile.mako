@@ -167,7 +167,7 @@
         %if (user['basic'].has_key('firstname') and user['basic'].has_key('lastname')):
           <span>${user['basic']['firstname']} ${user['basic']['lastname']}</span>,
         %endif
-        <span>${user['basic']['jobTitle']}</div>
+        <span>${user['basic']['jobTitle']}</span>
       </div>
       <div id="summary-work-contact" class="summary-line">
         <span class="summary-item"><a href="${'mailto:' + user['basic']['emailId']}">${user['basic']['emailId']}</a></span>

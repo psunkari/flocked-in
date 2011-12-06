@@ -10,6 +10,7 @@ import re
 import string
 from email.mime.text     import MIMEText
 from email.MIMEMultipart import MIMEMultipart
+from functools           import wraps
 
 try:
     import cPickle as pickle
@@ -30,42 +31,66 @@ from social.constants   import INFINITY
 from social.logging     import profile, dump_args, log
 
 
-def md5(text):
+def hashpass(text):
+    nounce = uuid.uuid4().hex
     m = hashlib.md5()
-    m.update(text)
-    return m.hexdigest()
+    m.update(nounce+text)
+    return nounce + m.hexdigest()
 
 
-def supercolumnsToDict(supercolumns, ordered=False):
+def checkpass(text, saved):
+    if len(saved) == 64:
+        nounce, hashed = nounce, hashed = saved[:32], saved[32:]
+        m = hashlib.md5()
+        m.update(nounce+text)
+        return m.hexdigest() == hashed
+    elif len(saved) == 32:  # Old, unsecure password storage.
+        m = hashlib.md5()
+        m.update(text)
+        return m.hexdigest() == saved
+    return False
+
+
+def supercolumnsToDict(supercolumns, ordered=False, timestamps=False):
     retval = OrderedDict() if ordered else {}
     for item in supercolumns:
         name = item.super_column.name
         retval[name] = OrderedDict() if ordered else {}
-        for col in item.super_column.columns:
-            retval[name][col.name] = col.value
+        if timestamps:
+            for col in item.super_column.columns:
+                retval[name][col.name] = col.timestamp/1e6
+        else:
+            for col in item.super_column.columns:
+                retval[name][col.name] = col.value
     return retval
 
 
-def multiSuperColumnsToDict(superColumnsMap, ordered=False):
+def multiSuperColumnsToDict(superColumnsMap, ordered=False, timestamps=False):
     retval = OrderedDict() if ordered else {}
     for key in superColumnsMap:
         columns =  superColumnsMap[key]
-        retval[key] = supercolumnsToDict(columns, ordered=ordered)
+        retval[key] = supercolumnsToDict(columns, ordered=ordered,
+                                         timestamps=timestamps)
     return retval
 
 
-def multiColumnsToDict(columnsMap, ordered=False):
+def multiColumnsToDict(columnsMap, ordered=False, timestamps=False):
     retval = OrderedDict() if ordered else {}
     for key in columnsMap:
         columns = columnsMap[key]
-        retval[key] = columnsToDict(columns, ordered=ordered)
+        retval[key] = columnsToDict(columns, ordered=ordered,
+                                    timestamps=timestamps)
     return retval
 
 
-def columnsToDict(columns, ordered = False):
+def columnsToDict(columns, ordered=False, timestamps=False):
     retval = OrderedDict() if ordered else {}
-    for item in columns:
-        retval[item.column.name] = item.column.value
+    if timestamps:
+        for item in columns:
+            retval[item.column.name] = item.column.timestamp/1e6
+    else:
+        for item in columns:
+            retval[item.column.name] = item.column.value
     return retval
 
 
@@ -191,11 +216,11 @@ def getValidTagId(request, arg):
     defer.returnValue((tagId, tag))
 
 
-def getRandomKey(prefix):
-    key = prefix + "/" + str(uuid.uuid1())
-    sha = hashlib.sha1()
-    sha.update(key)
-    return sha.hexdigest()
+# Not to be used for unique Id generation.
+# OK to be used for validation keys, passwords etc;
+def getRandomKey():
+    random = uuid.uuid4().bytes + uuid.uuid4().bytes
+    return base64.b64encode(random, 'oA')
 
 
 # XXX: We need something that can guarantee unique keys over trillion records
@@ -204,32 +229,26 @@ def getUniqueKey():
     u = uuid.uuid1()
     return base64.urlsafe_b64encode(u.bytes)[:-2]
 
-@defer.inlineCallbacks
-def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
-                  ownerOrgId=None, groupIds = None):
-    authinfo = request.getSession(IAuthInfo)
-    owner = ownerId or authinfo.username
-    org = ownerOrgId or authinfo.organization
 
+@defer.inlineCallbacks
+def createNewItem(request, itemType, ownerId, ownerOrgId,
+                  acl=None, subType=None, groupIds = None):
     if not acl:
         acl = getRequestArg(request, "acl", sanitize=False)
-        try:
-            acl = json.loads(acl)
-            orgs = acl.get("accept", {}).get("orgs", [])
-            if len(orgs) > 1 :
-                raise errors.PermissionDenied(_('Cannot grant access to other orgs on this item'))
-            elif len(orgs) == 1 and orgs[0] != org:
-                raise errors.PermissionDenied(_('Cannot grant access to other orgs on this item'))
-        except:
-            if not org:
-                raise Exception("User does not belong to any company!")
-            acl = {"accept":{"orgs":[org]}}
+
+    try:
+        acl = json.loads(acl)
+        orgs = acl.get("accept", {}).get("orgs", [])
+        if len(orgs) > 1 or (len(orgs) == 1 and orgs[0] != ownerOrgId):
+            raise errors.PermissionDenied(_('Cannot grant access to other orgs on this item'))
+    except:
+        acl = {"accept":{"orgs":[ownerOrgId]}}
 
     accept_groups = acl.get('accept', {}).get('groups', [])
     deny_groups = acl.get('deny', {}).get('groups', [])
     groups = [x for x in accept_groups if x not in deny_groups]
     if groups:
-        relation = Relation(owner, [])
+        relation = Relation(ownerId, [])
         yield relation.initGroupsList()
         if not all([x in relation.groups for x in groups]):
             raise errors.PermissionDenied(_("Only group members can post to a group"))
@@ -240,10 +259,10 @@ def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
             "acl": acl,
             "type": itemType,
             "uuid": uuid.uuid1().bytes,
-            "owner": owner,
+            "owner": ownerId,
             "timestamp": str(int(time.time()))
         },
-        "followers": {owner: ''}
+        "followers": {ownerId: ''}
     }
     if subType:
         item["meta"]["subType"] = subType
@@ -253,7 +272,7 @@ def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
     tmpFileIds = getRequestArg(request, 'fId', False, True)
     attachments = {}
     if tmpFileIds:
-        attachments = yield _upload_files(owner, tmpFileIds)
+        attachments = yield _upload_files(ownerId, tmpFileIds)
         if attachments:
             item["attachments"] = {}
             for attachmentId in attachments:
@@ -641,7 +660,7 @@ def addUser(emailId, displayName, passwd, orgKey, jobTitle = None, timezone=None
 
     userInfo = {'basic': {'name': displayName, 'org':orgKey,
                           'type': 'user', 'emailId':emailId}}
-    userAuthInfo = {"passwordHash": md5(passwd), "org": orgKey, "user": userId}
+    userAuthInfo = {"passwordHash": hashpass(passwd), "org": orgKey, "user": userId}
 
     if jobTitle:
         userInfo["basic"]["jobTitle"] = jobTitle
@@ -802,3 +821,4 @@ def uniqify(lst):
         if x not in new_list:
             new_list.append(x)
     return new_list
+

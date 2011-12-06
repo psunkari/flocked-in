@@ -1,4 +1,3 @@
-import json
 import uuid
 import time
 import re
@@ -14,6 +13,46 @@ from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
 from social.logging     import profile, dump_args, log
+
+
+#
+# Create a new conversation item.
+#
+@defer.inlineCallbacks
+def _createNewItem(request, myId, myOrgId):
+    convType = utils.getRequestArg(request, "type")
+    if convType not in plugins:
+        raise errors.BaseError('Unsupported item type', 400)
+
+    plugin = plugins[convType]
+    convId, conv = yield plugin.create(request, myId, myOrgId)
+
+    timeUUID = conv["meta"]["uuid"]
+    convACL = conv["meta"]["acl"]
+
+    deferreds = []
+    responseType = 'I'
+
+    # Push to all the feeds.
+    d = feed.pushToFeed(myId, timeUUID, convId, None,
+                        responseType, convType, myId, myId)
+    deferreds.append(d)
+
+    d = feed.pushToOthersFeed(myId, timeUUID, convId, None, convACL,
+                              responseType, convType, myId)
+    deferreds.append(d)
+
+    # Save in user items.
+    userItemValue = ":".join([responseType, convId, convId, convType, myId, ''])
+    d = db.insert(myId, "userItems", userItemValue, timeUUID)
+    deferreds.append(d)
+
+    if plugins[convType].hasIndex:
+        d = db.insert(myId, "userItems_%s"%(convType), userItemValue, timeUUID)
+        deferreds.append(d)
+
+    yield defer.DeferredList(deferreds)
+    defer.returnValue((convId, conv))
 
 
 class ItemResource(base.BaseResource):
@@ -253,71 +292,31 @@ class ItemResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _new(self, request):
-        convType = utils.getRequestArg(request, "type")
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
 
-        parent = None
-        convOwner = myId
-        responseType = 'I'
+        convId, conv = yield _createNewItem(request, myId, myOrgId)
+        entities = {myId: args['me']}
+        target = conv['meta'].get('target', None)
+        if target:
+            toFetchEntities = set(target.split(','))
+            entities = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
+            entities = utils.multiSuperColumnsToDict(cols)
 
-        if convType in plugins:
-            plugin = plugins[convType]
-            convId, conv = yield plugin.create(request)
-            timeUUID = conv["meta"]["uuid"]
-            convACL = conv["meta"]["acl"]
-            target = conv["meta"].get("target", None)
-            toFetchEntities = set()
-            entities = {}
-            deferreds = []
-            relation = Relation(myId, [])
-            deferreds.append(relation.initGroupsList())
-            if target:
-                toFetchEntities.update(target.split(','))
-            if toFetchEntities:
-                d = db.multiget_slice(toFetchEntities, "entities", ["basic"])
-                def _getEntities(cols):
-                    entities.update(utils.multiSuperColumnsToDict(cols))
-                d.addCallback(_getEntities)
-                deferreds.append(d)
+        relation = Relation(myId, [])
+        yield relation.initGroupsList()
 
-            commentSnippet = ""
-            userItemValue = ":".join([responseType, convId, convId,
-                                      convType, myId, commentSnippet])
+        data = {"items":{convId:conv}, "relations": relation,
+                "entities":entities, "script": True}
+        args.update(data)
+        onload = "(function(obj){$$.convs.load(obj);$('#sharebar-attach-uploaded').empty();})(this);"
+        d1 = renderScriptBlock(request, "item.mako", "item_layout",
+                        False, "#user-feed", "prepend", args=[convId, 'conv-item-created'],
+                        handlers={"onload":onload}, **args)
 
-            d = feed.pushToFeed(myId, timeUUID, convId, parent,
-                                responseType, convType, convOwner, myId)
-            deferreds.append(d)
+        defaultType = plugins.keys()[0]
+        d2 = plugins[defaultType].renderShareBlock(request, True)
 
-            d = feed.pushToOthersFeed(myId, timeUUID, convId,
-                                      parent, convACL, responseType,
-                                      convType, convOwner)
-            deferreds.append(d)
-
-            d = db.insert(myId, "userItems", userItemValue, timeUUID)
-            deferreds.append(d)
-
-            if plugins[convType].hasIndex:
-                d = db.insert(myId, "userItems_%s"%(convType),
-                              userItemValue, timeUUID)
-                deferreds.append(d)
-
-
-            deferredList = defer.DeferredList(deferreds)
-            yield deferredList
-
-            entities[myId] = args["me"]
-            data = {"items":{convId:conv}, "relations": relation,
-                    "entities":entities, "script": True}
-            args.update(data)
-            onload = "(function(obj){$$.convs.load(obj);$('#sharebar-attach-uploaded').empty();})(this);"
-            d1 = renderScriptBlock(request, "item.mako", "item_layout",
-                            False, "#user-feed", "prepend", args=[convId, 'conv-item-created'],
-                            handlers={"onload":onload}, **args)
-
-            defaultType = plugins.keys()[0]
-            d2 = plugins[defaultType].renderShareBlock(request, True)
-
-            yield defer.DeferredList([d1, d2])
+        yield defer.DeferredList([d1, d2])
 
 
     @profile
@@ -1015,6 +1014,31 @@ class ItemResource(base.BaseResource):
                 d = getattr(self, "_" + request.postpath[0])(request)
             elif action == 'delete':
                 d = self._remove(request)
+
+        return self._epilogue(request, d)
+
+
+
+
+#
+# RESTful API for managing items.
+#
+class APIItemResource(base.APIBaseResource):
+
+    @defer.inlineCallbacks
+    def _newItem(self, request):
+        token = self._ensureAccessScope(request, 'post-item')
+        convId, conv = yield _createNewItem(request, token.user, token.org)
+        self._success(request, 201, {'id': convId})
+
+
+    def render_POST(self, request):
+        apiAccessToken = request.apiAccessToken
+        segmentCount = len(request.postpath)
+        d = None
+
+        if segmentCount == 0:
+            d = self._newItem(request)
 
         return self._epilogue(request, d)
 

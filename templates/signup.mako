@@ -3,6 +3,7 @@
 <!DOCTYPE HTML>
 <html lang="en" dir="ltr" xml:lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
   <title>Signup for Flocked-in</title>
   <link href="/rsrcs/css/static.css" media="all" rel="stylesheet" type="text/css">
   <link rel="shortcut icon" href="/rsrcs/img/favicon.ico" type="image/x-icon" />
@@ -158,7 +159,7 @@
 
 <%def name="userInfo()">
   <div class="styledform">
-    <form action="/signup/create" method="POST" class="styledform" onsubmit="return validate()" >
+    <form action="/signup/create" method="POST" class="styledform" onsubmit="return validate()" accept-charset='UTF-8'>
       <input id="email" type="hidden" name="email" value="${emailId}"/>
       <input id="token" type="hidden" name="token" value="${token}"/>
       <ul>

@@ -61,12 +61,10 @@ class Links(object):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def create(self, request):
+    def create(self, request, myId, myOrgId):
         snippet, comment = utils.getTextWithSnippet(request, "comment",
                                         constants.POST_PREVIEW_LENGTH)
         url = utils.getRequestArg(request, "url", sanitize=False)
-        authinfo = request.getSession(IAuthInfo)
-        myOrgId = authinfo.organization
 
         if not url:
             raise errors.MissingParams([_('URL to be shared')])
@@ -84,7 +82,7 @@ class Links(object):
         summary, title, image, embed = yield self._summary(url)
 
         convId = utils.getUniqueKey()
-        item, attachments = yield utils.createNewItem(request, self.itemType)
+        item, attachments = yield utils.createNewItem(request, self.itemType, myId, myOrgId)
         meta = {"comment": comment}
         if snippet:
             meta['snippet'] = snippet

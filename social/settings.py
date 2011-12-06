@@ -147,43 +147,47 @@ def getNotifyPref(val, typ, medium):
     return True
 
 
+
+
 class SettingsResource(base.BaseResource):
     isLeaf = True
     resources = {}
+
 
     @defer.inlineCallbacks
     def _changePassword(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
-        curr_passwd = utils.getRequestArg(request, "curr_passwd", sanitize=False)
-        passwd1 = utils.getRequestArg(request, "passwd1", sanitize=False)
-        passwd2 = utils.getRequestArg(request, "passwd2", sanitize=False)
 
-        if not curr_passwd:
+        currentPass = utils.getRequestArg(request, "curr_passwd", sanitize=False)
+        newPass = utils.getRequestArg(request, "passwd1", sanitize=False)
+        rptPass = utils.getRequestArg(request, "passwd2", sanitize=False)
+
+        if not currentPass:
             request.write('$$.alerts.error("%s");' % _("Enter your current password"))
             defer.returnValue(None)
-        if not passwd1:
+        if not newPass:
             request.write('$$.alerts.error("%s");' % _("Enter new password"))
             defer.returnValue(None)
-        if not passwd2:
+        if not rptPass:
             request.write('$$.alerts.error("%s");' % _("Confirm new password"))
             defer.returnValue(None)
-        if passwd1 != passwd2:
+        if newPass != rptPass:
             request.write('$$.alerts.error("%s");' % _("Passwords do not match"))
             defer.returnValue(None)
-        if curr_passwd == passwd1:
+        if currentPass == newPass:
             request.write('$$.alerts.error("%s");' % _("New password should be different from current password"))
             defer.returnValue(None)
 
-        cols = yield db.get(myKey, "entities", "emailId", "basic")
-        emailId = cols.column.value
+        emailId = args["me"]["basic"]["emailId"]
         col = yield db.get(emailId, "userAuth", "passwordHash")
-        passwdHash = col.column.value
-        if curr_passwd and passwdHash != utils.md5(curr_passwd):
+        storedPass= col.column.value
+
+        if not utils.checkpass(currentPass, storedPass):
             request.write('$$.alerts.error("%s");' % _("Incorrect Password"))
             defer.returnValue(None)
 
-        newPasswd = utils.md5(passwd1)
+        newPasswd = utils.hashpass(newPass)
         yield db.insert(emailId, "userAuth", newPasswd, "passwordHash")
         request.write('$$.alerts.info("%s");' % _('Password changed'))
 
@@ -251,6 +255,7 @@ class SettingsResource(base.BaseResource):
         yield renderScriptBlock(request, "settings.mako", "right",
                                 landing, ".right-contents", "set", **args)
 
+
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -296,10 +301,11 @@ class SettingsResource(base.BaseResource):
         yield renderScriptBlock(request, "settings.mako", "right",
                                 landing, ".right-contents", "set", **args)
 
+
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _edit(self, request):
+    def _editBasicInfo(self, request):
         authInfo = request.getSession(IAuthInfo)
         myId = authInfo.username
         orgId = authInfo.organization
@@ -384,6 +390,7 @@ class SettingsResource(base.BaseResource):
         yield renderScriptBlock(request, "settings.mako", "right",
                                 landing, ".right-contents", "set", **args)
 
+
     @defer.inlineCallbacks
     def _updateNotifications(self, request):
         authinfo = request.getSession(IAuthInfo)
@@ -410,10 +417,10 @@ class SettingsResource(base.BaseResource):
 
         detail = utils.getRequestArg(request, "dt") or "basic"
         args["detail"] = detail
-        args["editProfile"] = True
 
         me = yield db.get_slice(myKey, "entities")
-        args["me"] = utils.supercolumnsToDict(me, ordered=True)
+        me = utils.supercolumnsToDict(me, ordered=True)
+        args['me'] = me
 
         if script and landing:
             yield render(request, "settings.mako", **args)
@@ -423,51 +430,44 @@ class SettingsResource(base.BaseResource):
                                     landing, "#mainbar", "set", **args)
 
         if script:
+            yield renderScriptBlock(request, "settings.mako", "settingsTitle",
+                                    landing, "#settings-title", "set", **args)
+
             handlers={"onload": "$$.menu.selectItem('%s');" % detail}
             if detail == "basic":
-                yield renderScriptBlock(request, "settings.mako", "settingsTitle",
-                                        landing, "#settings-title", "set", **args)
                 handlers["onload"] += """$$.ui.bindFormSubmit('#settings-form');"""
                 yield renderScriptBlock(request, "settings.mako", "editBasicInfo",
                                         landing, "#settings-content", "set", True,
                                         handlers = handlers, **args)
 
             elif detail == "work":
-                """
-                yield renderScriptBlock(request, "settings.mako", "settingsTitle",
-                                        landing, "#settings-title", "set", **args)
-                yield renderScriptBlock(request, "settings.mako", "editWork",
-                                        landing, "#settings-content", "set", True,
-                                        handlers=handlers, **args)
-                """
+                #yield renderScriptBlock(request, "settings.mako", "editWork",
+                #                        landing, "#settings-content", "set", True,
+                #                        handlers=handlers, **args)
+                pass
 
             elif detail == "personal":
-                yield renderScriptBlock(request, "settings.mako", "settingsTitle",
-                                        landing, "#settings-title", "set", **args)
                 yield renderScriptBlock(request, "settings.mako", "editPersonal",
                                         landing, "#settings-content", "set", True,
                                         handlers=handlers, **args)
 
             elif detail == "contact":
-                yield renderScriptBlock(request, "settings.mako", "settingsTitle",
-                                        landing, "#settings-title", "set", **args)
                 yield renderScriptBlock(request, "settings.mako", "editContact",
-                                        landing, "#settings-content", "set",True,
+                                        landing, "#settings-content", "set", True,
                                         handlers=handlers, **args)
 
             elif detail == "passwd":
-                yield renderScriptBlock(request, "settings.mako", "settingsTitle",
-                                        landing, "#settings-title", "set", **args)
                 yield renderScriptBlock(request, "settings.mako", "changePasswd",
-                                        landing, "#settings-content", "set",True,
+                                        landing, "#settings-content", "set", True,
                                         handlers=handlers, **args)
 
-            elif detail == 'notify':
-                yield renderScriptBlock(request, "settings.mako", "settingsTitle",
-                                        landing, "#settings-title", "set", **args)
+            elif detail == "notify":
                 yield renderScriptBlock(request, "settings.mako", "filterNotifications",
-                                        landing, "#settings-content", "set",True,
+                                        landing, "#settings-content", "set", True,
                                         handlers=handlers, **args)
+
+            else:
+                raise errors.InvalidRequest('')
 
         suggestedSections = yield self._checkProfileCompleteness(request, myKey, args)
         tmp_suggested_sections = {}
@@ -627,52 +627,7 @@ class SettingsResource(base.BaseResource):
     @defer.inlineCallbacks
     def _checkProfileCompleteness(self, request, myKey, args):
         landing = not self._ajax
-        description = [""]
         detail = args["detail"]
-
-        if detail == "basic":
-            description = ["""Your Basic details are the most discoverable
-                            fields in your profile. They are visible everytime
-                            someone searches for you. We recommend that you fill
-                            out all the fields in this section.
-                          """]
-
-        elif detail == "work":
-            description = ["""Your work details include your current and
-                             previous work experiences and also about your
-                             educational background. """,
-                           """A thorough work experience builds up a nice
-                             portfolio of your career."""]
-
-        elif detail == "personal":
-            description = ["""Your personal information is only accessible to your
-                             colleagues.
-                          """]
-
-        elif detail == "contact":
-            description = ["""Your contact information can be used to get in
-                             touch with you.
-                             We recommend completing this section if your work
-                             involves being in constant touch with your colleagues.
-                          """]
-
-        elif detail == "passwd":
-            description = ["""Change your password. Use a password consisting of
-                             atleast 8 characters including alphabets, numbers
-                             and special characters.
-                          """]
-
-        elif detail == 'notify':
-            description = ["""flockedIn can notify you of all the activities that
-                             were happening in your
-                             <i title="kol-eeg-o-sfeer">colleagosphere</i>
-                             while you were
-                             away.""",
-                           """ Here you can choose what kind of events
-                             you like to be notified of."""]
-
-        args["description"] = description
-
         suggestedSections = {}
 
         # Check Basic
@@ -708,7 +663,6 @@ class SettingsResource(base.BaseResource):
         currentCity = personalInfo.get('currentCity', None)
         if not currentCity:
             suggestedSections["personal"].append("Which city are you residing in")
-
 
         # Check Work
         #suggestedSections["work"] = []
@@ -746,22 +700,20 @@ class SettingsResource(base.BaseResource):
     def render_POST(self, request):
         segmentCount = len(request.postpath)
         d = None
-        if segmentCount == 0:
-            d = self._edit(request)
-        elif segmentCount == 1:
+        if segmentCount == 1:
             action = request.postpath[0]
-            if action == "passwd":
+            if action == "basic":
+                d = self._editBasicInfo(request)
+            elif action == 'contact':
+                d = self._editContactInfo(request)
+            elif action == 'personal':
+                d = self._editPersonalInfo(request)
+            elif action == "passwd":
                 d = self._changePassword(request)
             elif action == "notify":
                 d = self._updateNotifications(request)
-            elif action == 'personal':
-                d = self._editPersonalInfo(request)
-            elif action == 'contact':
-                d = self._editContactInfo(request)
-            """
             elif action == "work":
                 d = self._updateWork(request)
-            """
 
         return self._epilogue(request, d)
 
@@ -773,11 +725,5 @@ class SettingsResource(base.BaseResource):
         d = None
         if segmentCount == 0:
             d = self._render(request)
-        """
-        elif segmentCount == 1:
-            action = request.postpath[0]
-            if action == "work":
-                d = self._editWorkForm(request)
-        """
 
         return self._epilogue(request, d)

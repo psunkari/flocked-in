@@ -219,9 +219,7 @@ class Poll(object):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def create(self, request):
-        authinfo = request.getSession(IAuthInfo)
-        myOrgId = authinfo.organization
+    def create(self, request, myId, myOrgId):
         snippet, comment = utils.getTextWithSnippet(request, "comment",
                                         constants.POST_PREVIEW_LENGTH)
         end = utils.getRequestArg(request, "end")
@@ -236,7 +234,7 @@ class Poll(object):
             raise errors.MissingParams([_('Add atleast two options to choose from')])
 
         convId = utils.getUniqueKey()
-        item, attachments = yield utils.createNewItem(request, self.itemType)
+        item, attachments = yield utils.createNewItem(request, self.itemType. myId, myOrgId)
 
         meta = {"comment": comment, "showResults": showResults}
         if snippet:

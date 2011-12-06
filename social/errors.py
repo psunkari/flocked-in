@@ -1,17 +1,27 @@
 
+import json
+
+from twisted.web        import resource, http
+
 from social             import _
 from social.logging     import log
 
 #
 # Base for all exceptions in social
+# The httpCode and httpBrief are used in API and Ajax requests.
 #
 class BaseError(Exception):
     _message = None
-    _errcode = 500
+    _httpCode = 500
+    _httpBrief = None
+    _shortMessage = None
 
-    def __init__(self, message='', errcode=500):
+    def __init__(self, message='', httpCode=500,
+                 httpBrief=None, shortMessage=None):
         self._message = message
-        self._errcode = errcode
+        self._httpCode = httpCode
+        self._httpBrief = httpBrief or http.RESPONSES[httpCode]
+        self._shortMessage = shortMessage or message
 
     def __str__(self):
         return self._message
@@ -20,15 +30,24 @@ class BaseError(Exception):
         return self._message
     message = property(_get_message)
 
-    def _get_errcode(self):
-        return self._errcode
-    errcode = property(_get_errcode)
+    def _get_httpCode(self):
+        return self._httpCode
+    httpCode = property(_get_httpCode)
+
+    def _get_httpBrief(self):
+        return self._httpBrief
+    httpBrief = property(_get_httpBrief)
+
+    def _get_shortMessage(self):
+        return self._shortMessage
+    httpBrief = property(_get_httpBrief)
 
     def errorData(self):
-        return ("<p>%s<p>"%self.message, self.errcode, self.message)
+        return (self._httpCode, self._httpBrief,
+                self._shortMessage, self._message)
 
     def logError(self):
-        log.err(self.message)
+        log.err(self._message)
 
 
 #
@@ -81,8 +100,9 @@ class MissingParams(BaseError):
     def errorData(self):
         message = self.message
         params = ", ".join(self.params)
-        return ("<p>%s</p><p><b>%s</b></p>"%(message, params), self.errcode,
-                "%(params)s cannot be empty" % locals())
+        return (self.errcode, "Missing Params",
+                "%(params)s cannot be empty" % locals(),
+                "<p>%s</p><p><b>%s</b></p>"%(message, params))
 
 
 #
@@ -140,6 +160,17 @@ class MessageAccessDenied(BaseError):
         self.convId = convId
         message = _("The requested message does not exist")
         BaseError.__init__(self, message, 404)
+
+
+#
+# Application access is denied
+#
+class AppAccessDenied(BaseError):
+    clientId = None
+    def __init__(self, clientId):
+        self.clientId = clientId
+        message = _("Access to the requested application is denied")
+        BaseError.__init__(self, message, 403)
 
 
 #
@@ -203,9 +234,49 @@ class InvalidAttachment(BaseError):
         message = _("The requested file does not exist")
         BaseError.__init__(self, message, 404)
 
+
+#
+# Invalid Application
+#
+class InvalidApp(BaseError):
+    clientId = None
+
+    def __init__(self, clientId):
+        self.clientId = clientId
+        message = _("The requested application does not exist")
+        BaseError.__init__(self, message, 404)
+
+
+#
+# Entity already exists
+#
 class InvalidGroupName(BaseError):
     name = None
     def __init__(self, name):
         self.name = name
         message = _("Group '%s' already exists")%(name)
-        BaseError.__init__(self, message, 418)
+        BaseError.__init__(self, message, 409)
+
+
+
+
+
+
+#
+# ErrorPage for API
+# Spits out a JSON response with proper error code.
+#
+class APIErrorPage(resource.Resource):
+    def __init__(self, status, brief):
+        resource.Resource.__init__(self)
+        self.code = status
+        self.brief = brief
+
+    def render(self, request):
+        request.setResponseCode(self.code, self.brief)
+        request.setHeader('content-type', 'application/json')
+        return json.dumps({'error': self.brief})
+
+    def getChild(self, path, request):
+        return self
+

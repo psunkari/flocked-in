@@ -114,8 +114,8 @@ class GroupsResource(base.BaseResource):
         yield db.insert(userId, "entityGroupsMap", "", colname)
         yield db.insert(groupId, "groupMembers", itemId, userId)
         item, attachments = yield utils.createNewItem(request, "activity",
-                                                      userId, acl,
-                                                      "groupJoin", orgId)
+                                                      userId, orgId, acl,
+                                                      "groupJoin")
         item["meta"]["target"] = groupId
 
         d1 = db.insert(groupId, "followers", "", userId)
@@ -365,7 +365,7 @@ class GroupsResource(base.BaseResource):
         acl = {"accept":{"groups":[groupId]}}
         _acl = pickle.dumps(acl)
         item, attachments = yield utils.createNewItem(request, itemType, myId,
-                                   acl, "groupLeave", orgId)
+                                                      orgId, acl, "groupLeave")
         item["meta"]["target"] = groupId
 
         d1 = db.remove(groupId, "followers", myId)

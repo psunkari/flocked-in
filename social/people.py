@@ -191,7 +191,7 @@ def _sendInvitations(myOrgUsers, otherOrgUsers, me, myId, myOrg):
             existingUsers.append(emailId)
             continue
 
-        token = utils.getRandomKey('invite')
+        token = utils.getRandomKey()
 
         # Add invitation to the database
         localpart, domainpart = emailId.split('@')

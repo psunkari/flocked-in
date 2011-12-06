@@ -105,31 +105,29 @@
   %>
 
   <form id="group-form" action="/ajax/groupsettings/edit" method="post" enctype="multipart/form-data">
-    <div class="styledform">
-      <ul>
-        <li>
-            <label for="name">${_('Group Name')}</label>
-            <input type="text" id="groupname" name="name" required title="${_('Group Name')}" value="${_(groupName)}"/>
-        </li>
-        <li>
-            <label for="desc">${_('Description')}</label>
-            <textarea class="input-wrap" id="desc" name="desc"> ${_(desc)}</textarea>
-        </li>
-        <li>
-            <label>${_("Membership")}</label>
-            %if access == 'open':
-              <input type="checkbox" id="access" name="access" value="closed" >${_("should be approved by group administrator")}</input>
-            %else:
-              <input type="checkbox" id="access" name="access" value="closed" checked="checked" >${_("should be approved by group administrator")}</input>
-            %endif
-        </li>
-        <li>
-            <label for="dp">${_("Group Logo")}</label>
-            <input type="file" id="dp" name="dp" accept="image/jpx, image/png, image/gif"/>
-      </ul>
-      <div class="styledform-buttons">
-        <input type="submit" name="groupEdit_submit" value="${_("Save")}" class="button default"/>
-      </div>
+    <ul class="styledform">
+      <li class="form-row">
+          <label class="styled-label" for="name">${_('Group Name')}</label>
+          <input type="text" id="groupname" name="name" required title="${_('Group Name')}" value="${_(groupName)}"/>
+      </li>
+      <li class="form-row">
+          <label class="styled-label" for="desc">${_('Description')}</label>
+          <textarea class="input-wrap" id="desc" name="desc"> ${_(desc)}</textarea>
+      </li>
+      <li class="form-row">
+          <label class="styled-label">&nbsp;</label>
+          %if access == 'open':
+            <label><input type="checkbox" id="access" name="access" value="closed"/>${_("Membership requires administrator approval")}</label>
+          %else:
+            <label><input type="checkbox" id="access" name="access" value="closed" checked="checked"/>${_("Membership requires administrator approval")}</label>
+          %endif
+      </li>
+      <li class="form-row">
+          <label class="styled-label" for="dp">${_("Group Logo")}</label>
+          <input type="file" id="dp" name="dp" accept="image/jpx, image/png, image/gif"/>
+    </ul>
+    <div class="styledform-buttons">
+      <input type="submit" name="groupEdit_submit" value="${_("Save")}" class="button default"/>
     </div>
     <input type="hidden" value = ${groupId} name="id" />
   </form>
