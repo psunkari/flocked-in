@@ -16,7 +16,8 @@ class ContactResource(BaseResource):
                  "I found a bug",
                  "I have a feature suggestion",
                  "I would like to introduce flocked-in at work...",
-                 "I'm looking for a partnership..."]
+                 "I'm looking for a partnership...",
+                 "I would like to join Flocked-in team"]
 
 
     @defer.inlineCallbacks
@@ -28,6 +29,9 @@ class ContactResource(BaseResource):
 
         if not name or not email or not subject or not message:
             raise errors.MissingParams(["Please fill-in all the fields"])
+
+        if not 0 < int(subject) < len(self._subjects):
+            return
 
         subject = "[flocked-in contact] %s" % self._subjects[int(subject)]
         toAddr = config.get('General', 'ContactId')
