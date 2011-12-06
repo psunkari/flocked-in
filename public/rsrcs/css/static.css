@@ -230,6 +230,9 @@ a:link, a:visited {
 #were-hiring {
     float: left;
 }
+#were-hiring-img {
+    width: 90px;
+}
 #home-summary-misc {
     width: 325px;
     float: right;
