@@ -92,7 +92,7 @@ class Solr(object):
             sfk, columnName = key
             value = item[sfk].get(columnName, None)
             if value:
-                if type(value) = str:
+                if type(value) == str:
                     value = value.decode('utf-8', 'replace')
                 elif type(value) != unicode:
                     value = str(value)
