@@ -122,7 +122,7 @@ class GroupsResource(base.BaseResource):
         d2 = db.batch_insert(itemId, 'items', item)
         d3 = feed.pushToFeed(groupId, item["meta"]["uuid"], itemId,
                              itemId, responseType, itemType, userId)
-        d4 = feed.pushToOthersFeed(userId, item["meta"]["uuid"], itemId, itemId,
+        d4 = feed.pushToOthersFeed(userId, orgId, item["meta"]["uuid"], itemId, itemId,
                     _acl, responseType, itemType, userId, promoteActor=False)
 
         d5 = utils.updateDisplayNameIndex(userId, [groupId],
@@ -373,7 +373,7 @@ class GroupsResource(base.BaseResource):
         d3 = db.batch_insert(itemId, 'items', item)
         d4 = db.remove(groupId, "groupMembers", myId)
 
-        d5 = feed.pushToOthersFeed(myId, item["meta"]["uuid"], itemId, itemId,
+        d5 = feed.pushToOthersFeed(myId, orgId, item["meta"]["uuid"], itemId, itemId,
                         _acl, responseType, itemType, myId, promoteActor=False)
         d6 = renderScriptBlock(request, "group-feed.mako", "group_actions",
                                landing, "#group-actions-%s" %(groupId),

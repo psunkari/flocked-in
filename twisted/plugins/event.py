@@ -30,12 +30,12 @@ class EventResource(base.BaseResource):
     def _inviteUsers(self, request, convId=None):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
+        orgId = args['orgId']
 
         if not convId:
             convId = utils.getRequestArg(request, 'id')
         acl = utils.getRequestArg(request, 'acl', False)
-        import pickle, json
-        invitees = yield utils.expandAcl(myKey, pickle.dumps(json.loads(acl)), convId)
+        invitees = yield utils.expandAcl(myKey, orgId, pickle.dumps(json.loads(acl)), convId)
         #invitees = utils.getRequestArg(request, 'invitees')
         #invitees = invitees.split(',') if invitees else None
         #myKey = request.getSession(IAuthInfo).username
@@ -277,10 +277,10 @@ class Event(object):
         conv = utils.supercolumnsToDict(conv)
 
         title = conv["meta"].get("title", None)
-        titleSnippet = utils.toSnippet(title)
+        titleSnippet = utils.toSnippet(title, 80)
         if not title:
             desc = conv["meta"]["desc"]
-            titleSnippet = utils.toSnippet(desc)
+            titleSnippet = utils.toSnippet(desc, 80)
         noOfRequesters = len(set(requesters))
         reasons = { 1: "%s invited you to the event: %s ",
                     2: "%s and %s invited you to the event: %s ",
@@ -410,7 +410,7 @@ class Event(object):
             meta["event_allDay"] = '0'
 
         item["meta"].update(meta)
-        item["rsvps"] = rspvs
+        item["rsvps"] = rsvps
 
         yield db.batch_insert(convId, "items", item)
         event = self.getResource(False)

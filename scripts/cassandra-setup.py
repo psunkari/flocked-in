@@ -128,9 +128,14 @@ def createColumnFamilies(client):
                       'files and its version')
     yield client.system_add_column_family(item_files)
 
-    user_files = CfDef(KEYSPACE, 'user_files', 'Standard', 'UTF8Type', None,
+    user_files = CfDef(KEYSPACE, 'user_files', 'Standard', 'TimeUUIDType', None,
                   "List of files owned by the user")
     yield client.system_add_column_family(user_files)
+
+
+    entityFeed_files = CfDef(KEYSPACE, 'entityFeed_files', 'Standard', 'TimeUUIDType', None,
+                             "List of files that appeared in entity's feed")
+    yield client.system_add_column_family(entityFeed_files)
 
     itemLikes = CfDef(KEYSPACE, 'itemLikes', 'Standard', 'UTF8Type', None,
                       'List of likes per item')
