@@ -294,7 +294,7 @@ class ItemResource(base.BaseResource):
     def _new(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
 
-        convId, conv = yield _createNewItem(request, myId, myOrgId)
+        convId, conv = yield _createNewItem(request, myId, args['orgId'])
         entities = {myId: args['me']}
         target = conv['meta'].get('target', None)
         if target:
