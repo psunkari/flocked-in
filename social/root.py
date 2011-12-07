@@ -129,6 +129,7 @@ class SigninResource(resource.Resource):
                 return self._renderSigninForm(request, self.USER_BLOCKED)
             self._saveSessionAndRedirect(request, cols, remember)
         def errback(error):
+            log.info(error)
             return self._renderSigninForm(request, self.UNKNOWN_ERROR)
         d.addCallback(callback)
         d.addErrback(errback)

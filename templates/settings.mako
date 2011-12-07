@@ -253,16 +253,16 @@
           ${self.selectYear("dob_year", "Year", doy)}
         </li>
         <li class="form-row">
-          <label class="styled-label" for="p_email">${_('Email')}</label>
-          <input type="email" id="p_email" name="p_email" value="${personal.get('email', '')}"/>
+          <label class="styled-label" for="email">${_('Email')}</label>
+          <input type="email" id="email" name="email" value="${personal.get('email', '')}"/>
         </li>
         <li class="form-row">
-          <label class="styled-label" for="p_phone">${_('Phone')}</label>
-          <input type="text" id="p_phone" name="p_phone" value="${personal.get('phone', '')}"/>
+          <label class="styled-label" for="phone">${_('Phone')}</label>
+          <input type="text" id="phone" name="phone" value="${personal.get('phone', '')}"/>
         </li>
         <li class="form-row">
-          <label class="styled-label" for="p_mobile">${_('Mobile')}</label>
-          <input type="text" id="p_mobile" name="p_mobile" value="${personal.get('mobile', '')}"/>
+          <label class="styled-label" for="mobile">${_('Mobile')}</label>
+          <input type="text" id="mobile" name="mobile" value="${personal.get('mobile', '')}"/>
         </li>
         <li class="form-row">
           <label class="styled-label" for="hometown">${_('Hometown')}</label>
@@ -280,6 +280,7 @@
     %if myKey:
       <input type="hidden" value = ${myKey} name="id" />
     %endif
+
     <div class="styledform-buttons">
         <input type="submit" class="button default" name="userInfo_submit" value="${_('Save')}"/>
     </div>
@@ -296,20 +297,20 @@
     <div id="contacts">
       <ul class="styledform">
           <li class="form-row">
-              <label class="styled-label" for="c_email">${_('Email')}</label>
-              <input type="email" id="c_email" name="c_email" value="${emailId}" readonly='true' />
+              <label class="styled-label" for="email">${_('Email')}</label>
+              <input type="email" id="email" name="email" value="${emailId}" readonly='true' />
           </li>
           <li class="form-row">
-              <label class="styled-label" for="c_im">${_('Chat Id')}</label>
-              <input type="text" id="c_im" name="c_im" value="${contact.get('im', '')}" autofocus />
+              <label class="styled-label" for="im">${_('Chat Id')}</label>
+              <input type="text" id="im" name="im" value="${contact.get('im', '')}" autofocus />
           </li>
           <li class="form-row">
-              <label class="styled-label" for="c_phone">${_('Work Phone')}</label>
-              <input type="text" id="c_phone" name="c_phone" value="${contact.get('phone', '')}"/>
+              <label class="styled-label" for="phone">${_('Work Phone')}</label>
+              <input type="text" id="phone" name="phone" value="${contact.get('phone', '')}"/>
           </li>
           <li class="form-row">
-              <label class="styled-label" for="c_mobile">${_('Work Mobile')}</label>
-              <input type="text" id="c_mobile" name="c_mobile" value="${contact.get('mobile', '')}"/>
+              <label class="styled-label" for="mobile">${_('Work Mobile')}</label>
+              <input type="text" id="mobile" name="mobile" value="${contact.get('mobile', '')}"/>
           </li>
       </ul>
     </div>

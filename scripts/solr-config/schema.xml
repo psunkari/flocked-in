@@ -225,8 +225,20 @@
        <field name="desc" type = "text" indexed="true" stored="true" />
        <field name="acl" type="text" stored="true"   />
        <field name="ownerName" type="text" indexed="true" stored="true" />
-       <field name="targetName" type="text" indexed="true" stored="true" /> 
+       <field name="targetName" type="text" indexed="true" stored="true" />
        <field name="text" type="text" indexed="true" stored="false" multiValued="true"/>
+       <field name="im" type="text" indexed="true" stored="false" multiValued="true"/>
+       <field name="phone" type="text" indexed="true" stored="false" multiValued="true"/>
+       <field name="mail" type="text" indexed="true" stored="false" multiValued="true"/>
+       <field name="firstname" type="text" indexed="true" stored="false"/>
+       <field name="lastname" type="text" indexed="true" stored="false"/>
+       <field name="name" type="text" indexed="true" stored="false"/>
+       <field name="hometown" type="text" indexed="true" stored="false"/>
+       <field name="currentCity" type="text" indexed="true" stored="false"/>
+       <field name="expertise" type="text" indexed="true" stored="false"/>
+       <field name="interests" type="text" indexed="true" stored="false"/>
+       <field name="languages" type="text" indexed="true" stored="false"/>
+       <dynamicField name="*" type="text" indexed="true" stored="false" multiValued="true"/>
     </fields>
     <uniqueKey>id</uniqueKey>
     <defaultSearchField>text</defaultSearchField>
