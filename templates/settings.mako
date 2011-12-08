@@ -2,6 +2,7 @@
 
 <%! from social import utils, _, __, plugins, settings , location_tz_map %>
 <%! from social import relations as r %>
+<%! from base64 import b64encode, b64decode %>
 <%! from pytz import common_timezones %>
 <%! import re, datetime %>
 
@@ -61,9 +62,8 @@
     </ul>
     <ul class="v-links sidemenu">
       ${navMenuItem("/settings?dt=basic", _("Basic"), "basic")}
-      ${navMenuItem("/settings?dt=contact", _("Contact"), "contact")}
-      ${navMenuItem("/settings?dt=personal", _("Personal Info"), "personal")}
-##      ${navMenuItem("/settings?dt=work", _("Work &amp; Education"), "work")}
+      ${navMenuItem("/settings?dt=work", _("Work Information"), "work")}
+      ${navMenuItem("/settings?dt=personal", _("Personal Information"), "personal")}
     </ul>
     <ul class="v-links sidemenu">
       ${navMenuItem("/settings?dt=passwd", _("Change Password"), "passwd")}
@@ -78,8 +78,8 @@
 
 <%def name="settingsTitle()">
   <%
-    detail_name_map = {'basic':_('Basic'), 'contact': _('Contact'),
-                       'work':_('Work and Education'), 'personal':_('Personal'),
+    detail_name_map = {'basic':_('Basic'), 'work':_('Work Information'),
+                       'personal':_('Personal Information'),
                        'passwd':_('Change Password'), 'notify': _('Notifications')}
     name = detail_name_map.get(detail, '')
   %>
@@ -177,58 +177,6 @@
 </%def>
 
 
-<%def name="workitem(start, end, title, desc, id)">
-  <div class="workitem" id="work-${id}">
-    <span class="workitem-delete">&nbsp;</span>
-    <div class="workitem-title">${title}</div>
-    <div class="workitem-duration">${_('%(start)s &mdash; %(end)s') % locals()}</div>
-    <div class="workitem-desc">${desc}</div>
-  </div>
-</%def>
-
-
-<%def name="editWork()">
-  <div id="work">
-    <% orgName = org["basic"]["name"] %>
-    <legend>${_("Work at %s")%orgName}</legend>
-    <div id="worklist">
-      <%
-        work = me.get('work', {})
-        for key, value in work.items():
-          end, start, title = key.split(':')
-          workitem(start, end, title, value, utils.encodeKey(key))
-      %>
-    </div>
-    <div id="workadd">
-      <button class="button-link ajax" data-ref="/settings/work">${_("+ Add Work")}</button>
-    </div>
-    <div id="workform" style="display:none;">
-      <form id='settings-form' action='/settings/work' method='post' class='ajax'>
-        <ul class="styledform">
-          <li class="form-row">
-            <label class="styled-label" for="worktitle">${_('Title')}</label>
-            <input type="text" id="worktitle" name="title"/>
-          </li>
-          <li class="form-row">
-            <label class="styled-label" for="workdesc">${_('Description')}</label>
-            <input type="text" id="workdesc" name="desc"/>
-          </li>
-          <li class="form-row">
-            <label class="styled-label" for="workstart">${_('Duration')}</label>
-            ${self.selectYear("startY", "Start year", id="workstart")}
-            ${self.selectYear("endY", "End year", id="workstart")}
-          </li>
-          <li class="form-row">
-            <label/>
-            <input type="submit" class="button default" name="submit" value="${_('Save')}"/>
-          </li>
-        </ul>
-      </form>
-    </div>
-  </div>
-</%def>
-
-
 <%def name="editPersonal()">
   <form class="ajax" id="settings-form" action="/settings/personal" method="post"  enctype="multipart/form-data">
     <% personal = me.get('personal', {}) %>
@@ -288,13 +236,60 @@
 </%def>
 
 
-<%def name="editContact()">
+<%def name="companyItem(companyId, companyVal, highlight=False)">
+  <%
+    end, start, name = companyId.split(':', 2)
+    title = companyVal
+    companyId = utils.encodeKey(companyId)
+
+    if end == '9999':
+      end = 'Present'
+
+    if title and start:
+      title = "%s, %s&ndash;%s" % (title, start, end)
+    else:
+      title = "%s&ndash;%s" % (start, end)
+  %>
+  <div class="tl-item" id="${companyId}">
+    <div class="tl-avatar org-default"/>
+    <div class="tl-details">
+      <div class="tl-name"><a href="javascript:" onclick="$$.settings.editEmp('${companyId}');">${name}</a></div>
+      <div class="tl-title">${title}</div>
+      <div class="tl-toolbox"><button
+           class="button-link ajaxpost" title="Delete ${name}"
+           data-ref="/settings/company?id=${companyId}&action=d">Delete</button></div>
+    </div>
+  </div>
+</%def>
+
+
+<%def name="schoolItem(schoolId, schoolVal, highlight=False)">
+  <%
+    year, name = schoolId.split(':', 1)
+    degree = schoolVal
+    schoolId = utils.encodeKey(schoolId)
+  %>
+  <div class="tl-item" id="${schoolId}">
+    <div class="tl-avatar school-default"/>
+    <div class="tl-details">
+      <div class="tl-name"><a href="javascript:" onclick="$$.settings.editEdu('${schoolId}');">${name}</a></div>
+      <div class="tl-title">${degree}, ${year}</div>
+      <div class="tl-toolbox"><button
+           class="button-link ajaxpost" title="Delete ${name}"
+           data-ref="/settings/school?id=${schoolId}&action=d">Delete</button></div>
+    </div>
+  </div>
+</%def>
+
+
+<%def name="editWork()">
   <%
     contact = me.get('contact', {})
     emailId = me['basic']['emailId']
   %>
-  <form class="ajax" id="settings-form" action="/settings/contact" method="post"  enctype="multipart/form-data">
+  <form class="ajax" id="settings-form" action="/settings/work" method="post"  enctype="multipart/form-data">
     <div id="contacts">
+      <div class="center-title">Work Contacts</div>
       <ul class="styledform">
           <li class="form-row">
               <label class="styled-label" for="email">${_('Email')}</label>
@@ -313,9 +308,9 @@
               <input type="text" id="mobile" name="mobile" value="${contact.get('mobile', '')}"/>
           </li>
       </ul>
-    </div>
-    <div class="styledform-buttons">
-        <input type="submit" class="button default" name="userInfo_submit" value="${_('Save')}"/>
+      <div class="styledform-buttons">
+        <input type="submit" class="button default" value="${_('Save')}"/>
+      </div>
     </div>
     %if emailId and emailId[0]:
       <input type="hidden" value = ${emailId[0]} name="emailId" />
@@ -324,6 +319,36 @@
       <input type="hidden" value = ${myKey} name="id" />
     %endif
   </form>
+  <div id="expertise">
+    <div class="center-title">Expertise</div>
+  </div>
+  <div id="prevorgs">
+    <div class="center-title">Past Employers and Education
+      <span class="title-toolbox">
+        <a href="javascript:" onclick="$$.settings.editEmp();">Add Company</a>
+        or
+        <a href="javascript:" onclick="$$.settings.editEdu();">Add School</a>
+      </span>
+    </div>
+    <div class="tl-wrapper" id="company-school-wrapper">
+      <%
+        companies = me.get('companies', {})
+        schools = me.get('schools', {})
+
+        for companyId in companies.keys():
+          companyItem(companyId, companies[companyId])
+
+        for schoolId in schools.keys():
+          schoolItem(schoolId, schools[schoolId])
+      %>
+      %if not (schools and companies):
+        <div class="tl-empty-msg">
+          Nothing found here!<br/>Please click the links above to add information.
+        </div>
+      %endif
+    </div>
+    <div class="clear" style="margin-bottom: 25px;"/>
+  </div>
 </%def>
 
 
@@ -360,17 +385,22 @@
   </select>
 </%def>
 
-<%def name="selectYear(name, label, doy=None, id=None)">
-  <select name="${name}" class="inline-select">
+<%def name="selectYear(name, label, doy=None, id=None, map=None)">
+  <select name="${name}" class="inline-select" id="${id}">
     <option value="">${label}</option>
-      %for d in reversed(range(1901, datetime.date.today().year)):
-        <% value = "%d" %d %>
-        %if doy and int(doy) == d:
-          <option selected value="${value}">${d}</option>
-        %else:
-          <option value="${value}">${d}</option>
-        %endif
+    %if vals:
+      %for x in vals.keys():
+        <option value="${x}">${vals[x]}</option>
       %endfor
+    %endif
+    %for d in reversed(range(1901, datetime.date.today().year)):
+      <% value = "%d"%d %>
+      %if doy and int(doy) == d:
+        <option selected value="${value}">${d}</option>
+      %else:
+        <option value="${value}">${d}</option>
+      %endif
+    %endfor
   </select>
 </%def>
 
@@ -457,3 +487,67 @@
     </div>
   %endif
 </%def>
+
+
+<%def name="schoolForm(schoolId=None, schoolVal=None)">
+  <%
+    year, name = schoolId.split(':', 1) if schoolId else ('', '')
+    degree = schoolVal if schoolVal else ''
+    dlgTitle = 'Add School' if not schoolId else 'Edit School'
+  %>
+  <div id="addedu-dlg">
+    <div class='ui-dlg-title' id='addedu-dlg-title'>${dlgTitle}</div>
+    <div class='ui-dlg-center' id='addedu-dlg-center'>
+      <ul class="dlgform">
+          <li class="form-row">
+              <label class="dlgform-label" for="school">${_('School')}</label>
+              <input type="text" id="c_im" name="school" autofocus value="${name}"/>
+          </li>
+          <li class="form-row">
+              <label class="dlgform-label" for="degree">${_('Degree')}</label>
+              <input type="text" id="c_phone" name="degree" value="${degree}"/>
+          </li>
+          <li class="form-row">
+              <label class="dlgform-label" for="year">${_('Graduating Year')}</label>
+              ${self.selectYear("year", "Year", year)}
+          </li>
+          %if schoolId:
+            <input type="hidden" name="id" value="${utils.encodeKey(schoolId)}"/>
+          %endif
+      </ul>
+    </div>
+  </div>
+</%def>
+
+<%def name="companyForm(companyId=None, companyVal=None)">
+  <%
+    end, start, name = companyId.split(':', 2) if companyId else ('', '', '')
+    jobTitle = companyVal if companyVal else ''
+    dlgTitle = 'Add Company' if not companyId else 'Edit Company'
+  %>
+  <div id="addemp-dlg">
+    <div class='ui-dlg-title' id='addemp-dlg-title'>${dlgTitle}</div>
+    <div class='ui-dlg-center' id='addemp-dlg-center'>
+      <ul class="dlgform">
+          <li class="form-row">
+              <label class="dlgform-label" for="company">${_('Company')}</label>
+              <input type="text" id="c_im" name="company" autofocus value="${name}"/>
+          </li>
+          <li class="form-row">
+              <label class="dlgform-label" for="title">${_('Job Title')}</label>
+              <input type="text" id="c_phone" name="title" value="${jobTitle}"/>
+          </li>
+          <li class="form-row">
+              <label class="dlgform-label">${_('Duration')}</label>
+              <% present = {"9999": "Present"} %>
+              ${self.selectYear("startyear", "Start Year", start)}
+              ${self.selectYear("endyear", "End Year", end, None, present)}
+          </li>
+          %if companyId:
+            <input type="hidden" name="id" value="${utils.encodeKey(companyId)}"/>
+          %endif
+      </ul>
+    </div>
+  </div>
+</%def>
+

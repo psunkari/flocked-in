@@ -6,6 +6,7 @@ from random                 import sample
 import datetime
 import json
 import re
+from base64                 import b64encode, b64decode
 
 from twisted.web            import resource, server, http
 from twisted.internet       import defer
@@ -263,7 +264,7 @@ class SettingsResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _editContactInfo(self, request):
+    def _editWorkInfo(self, request):
         # Contact information at work.
         myId = request.getSession(IAuthInfo).username
         orgId = request.getSession(IAuthInfo).organization
@@ -455,18 +456,12 @@ class SettingsResource(base.BaseResource):
                                         handlers = handlers, **args)
 
             elif detail == "work":
-                #yield renderScriptBlock(request, "settings.mako", "editWork",
-                #                        landing, "#settings-content", "set", True,
-                #                        handlers=handlers, **args)
-                pass
-
-            elif detail == "personal":
-                yield renderScriptBlock(request, "settings.mako", "editPersonal",
+                yield renderScriptBlock(request, "settings.mako", "editWork",
                                         landing, "#settings-content", "set", True,
                                         handlers=handlers, **args)
 
-            elif detail == "contact":
-                yield renderScriptBlock(request, "settings.mako", "editContact",
+            elif detail == "personal":
+                yield renderScriptBlock(request, "settings.mako", "editPersonal",
                                         landing, "#settings-content", "set", True,
                                         handlers=handlers, **args)
 
@@ -709,6 +704,145 @@ class SettingsResource(base.BaseResource):
         defer.returnValue(suggestedSections)
 
 
+    @defer.inlineCallbacks
+    def _editCompanyForm(self, request):
+        encodedCompanyId = utils.getRequestArg(request, 'id')
+        companyId = utils.decodeKey(encodedCompanyId) if encodedCompanyId else None
+
+        if companyId:
+            try:
+                myId = request.getSession(IAuthInfo).username
+                companyVal = yield db.get(myId, 'entities', companyId, "companies")
+                companyVal = companyVal.column.value
+                yield renderScriptBlock(request, "settings.mako", "companyForm",
+                                        False, "#addemp-dlg", "set",
+                                        args=[companyId, companyVal])
+                return
+            except: pass
+
+        yield renderScriptBlock(request, "settings.mako", "companyForm",
+                                False, "#addemp-dlg", "set")
+
+
+    @defer.inlineCallbacks
+    def _editCompany(self, request):
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        remove = utils.getRequestArg(request, 'action') == 'd'
+        encodedCompanyId = utils.getRequestArg(request, 'id', sanitize=False)
+        companyId = utils.decodeKey(encodedCompanyId) if encodedCompanyId else None
+
+        if companyId and remove:
+            db.remove(myId, "entities", companyId, "companies")
+            request.write('$("#%s").remove();' % encodedCompanyId)
+            return
+
+        curYear = datetime.date.today().year
+        try:
+            startYear = int(utils.getRequestArg(request, 'startyear'))
+            if not 1900 < startYear <= curYear:
+                raise TypeError
+        except TypeError:
+            raise errors.InvalidRequest('Invalid start year')
+
+        try:
+            endYear = utils.getRequestArg(request, 'endyear')
+            if endYear == "present":
+                endYear = 9999
+            else:
+                endYear = int(endYear)
+                if not startYear <= endYear <= curYear:
+                    raise TypeError
+        except TypeError:
+            raise errors.InvalidRequest('Invalid end year')
+
+        name = utils.getRequestArg(request, 'company')
+        title = utils.getRequestArg(request, 'title')
+
+        if not remove and not name:
+            errors.MissingParams(['Name'])
+
+        if companyId:
+            db.remove(myId, "entities", companyId, "companies")
+
+        newCompanyId = "%s:%s:%s" % (endYear, startYear, name)
+        newCompanyVal = title
+        db.insert(myId, "entities", newCompanyVal, newCompanyId, "companies")
+
+        request.write('$$.dialog.close("addemp-dlg");')
+        if companyId:
+            yield renderScriptBlock(request, "settings.mako", "companyItem",
+                                    False, "#"+encodedCompanyId, "replace",
+                                    args=[newCompanyId, newCompanyVal, True])
+        else:
+            yield renderScriptBlock(request, "settings.mako", "companyItem",
+                                    False, "#company-school-wrapper", "prepend",
+                                    args=[newCompanyId, newCompanyVal, True])
+
+
+    @defer.inlineCallbacks
+    def _editSchoolForm(self, request):
+        encodedSchoolId = utils.getRequestArg(request, 'id')
+        schoolId = utils.decodeKey(encodedSchoolId) if encodedSchoolId else None
+
+        if schoolId:
+            try:
+                myId = request.getSession(IAuthInfo).username
+                schoolVal = yield db.get(myId, 'entities', schoolId, "schools")
+                schoolVal = schoolVal.column.value
+                yield renderScriptBlock(request, "settings.mako", "schoolForm",
+                                        False, "#addedu-dlg", "set",
+                                        args=[schoolId, schoolVal])
+                return
+            except: pass
+
+        yield renderScriptBlock(request, "settings.mako", "schoolForm",
+                                False, "#addedu-dlg", "set")
+
+
+    @defer.inlineCallbacks
+    def _editSchool(self, request):
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        remove = utils.getRequestArg(request, 'action') == 'd'
+        encodedSchoolId = utils.getRequestArg(request, 'id', sanitize=False)
+        schoolId = utils.decodeKey(encodedSchoolId) if encodedSchoolId else None
+
+        if schoolId and remove:
+            db.remove(myId, "entities", schoolId, "schools")
+            request.write('$("#%s").remove();' % encodedSchoolId)
+            return
+
+        curYear = datetime.date.today().year
+        try:
+            year = int(utils.getRequestArg(request, 'year'))
+            if not 1920 < year <= curYear:
+                raise TypeError
+        except TypeError:
+            raise errors.InvalidRequest('Invalid graduation year')
+
+        name = utils.getRequestArg(request, 'school')
+        degree = utils.getRequestArg(request, 'degree')
+
+        if not remove and not name:
+            errors.MissingParams(['Name'])
+
+        if schoolId:
+            db.remove(myId, "entities", schoolId, "schools")
+
+        newSchoolId = "%s:%s" % (year, name)
+        newSchoolVal = degree
+        db.insert(myId, "entities", newSchoolVal, newSchoolId, "schools")
+
+        request.write('$$.dialog.close("addedu-dlg");')
+        if schoolId:
+            yield renderScriptBlock(request, "settings.mako", "schoolItem",
+                                    False, "#"+encodedSchoolId, "replace",
+                                    args=[newSchoolId, newSchoolVal, True])
+        else:
+            yield renderScriptBlock(request, "settings.mako", "schoolItem",
+                                    False, "#company-school-wrapper", "append",
+                                    args=[newSchoolId, newSchoolVal, True])
+
+
     @profile
     @dump_args
     def render_POST(self, request):
@@ -716,18 +850,20 @@ class SettingsResource(base.BaseResource):
         d = None
         if segmentCount == 1:
             action = request.postpath[0]
-            if action == "basic":
+            if action == 'basic':
                 d = self._editBasicInfo(request)
-            elif action == 'contact':
-                d = self._editContactInfo(request)
+            elif action == 'work':
+                d = self._editWorkInfo(request)
+            elif action == 'company':
+                d = self._editCompany(request)
+            elif action == 'school':
+                d = self._editSchool(request)
             elif action == 'personal':
                 d = self._editPersonalInfo(request)
             elif action == "passwd":
                 d = self._changePassword(request)
             elif action == "notify":
                 d = self._updateNotifications(request)
-            elif action == "work":
-                d = self._updateWork(request)
 
         return self._epilogue(request, d)
 
@@ -739,5 +875,11 @@ class SettingsResource(base.BaseResource):
         d = None
         if segmentCount == 0:
             d = self._render(request)
+        elif segmentCount == 1:
+            segment = request.postpath[0]
+            if segment == "company":
+                d = self._editCompanyForm(request)
+            elif segment == "school":
+                d = self._editSchoolForm(request)
 
         return self._epilogue(request, d)

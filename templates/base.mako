@@ -82,6 +82,7 @@
       Compatibility mode &ndash; Please switch your browser to normal mode
     </span>
   </div>
+  <div id='bigwrap'>
   <div id="topbar">
     <div id="top" class="contents">
       <% avatarURI = utils.userAvatar(myKey, me) %>
@@ -131,6 +132,7 @@
   <div id="mainbar">
     ${self.layout()}
   </div>
+  </div><!-- bigwrap -->
   <div id="alertbar"></div>
 %if script:
   <script type="text/javascript" src="/rsrcs/js/jquery-1.6.4.js"></script>
