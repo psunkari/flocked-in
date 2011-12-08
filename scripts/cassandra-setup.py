@@ -128,14 +128,9 @@ def createColumnFamilies(client):
                       'files and its version')
     yield client.system_add_column_family(item_files)
 
-    user_files = CfDef(KEYSPACE, 'user_files', 'Standard', 'TimeUUIDType', None,
+    user_files = CfDef(KEYSPACE, 'user_files', 'Standard', 'UTF8Type', None,
                   "List of files owned by the user")
     yield client.system_add_column_family(user_files)
-
-
-    entityFeed_files = CfDef(KEYSPACE, 'entityFeed_files', 'Standard', 'TimeUUIDType', None,
-                             "List of files that appeared in entity's feed")
-    yield client.system_add_column_family(entityFeed_files)
 
     itemLikes = CfDef(KEYSPACE, 'itemLikes', 'Standard', 'UTF8Type', None,
                       'List of likes per item')
@@ -665,7 +660,7 @@ def truncateColumnFamilies(client):
                "mArchivedConversations", "mDeletedConversations",
                "mConvMessages", "mConvFolders", "latest", "doNotSpam",
                "files", "tmp_files", "item_files", "invitationsSent",
-               "user_files", "suggestions", "apps", "appsByOwner", "oAuthData"]:
+               "user_files", "suggestions", "apps", "appsByOwner", "oAuthData"]
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 

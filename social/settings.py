@@ -13,7 +13,7 @@ from telephus.cassandra     import ttypes
 
 from social.template        import render, renderDef, renderScriptBlock
 from social.relations       import Relation
-from social                 import db, utils, base, plugins, _, __, fts
+from social                 import db, utils, base, plugins, _, __
 from social                 import constants, feed, errors
 from social.logging         import dump_args, profile, log
 from social.isocial         import IAuthInfo
@@ -156,7 +156,7 @@ class SettingsResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _changePassword(self, request):
-        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
 
         currentPass = utils.getRequestArg(request, "curr_passwd", sanitize=False)
@@ -198,7 +198,6 @@ class SettingsResource(base.BaseResource):
     def _editPersonalInfo(self, request):
         # Personal information about the user
         myId = request.getSession(IAuthInfo).username
-        orgId = request.getSession(IAuthInfo).organization
         landing = False
         data = {}
         to_remove = []
@@ -224,8 +223,7 @@ class SettingsResource(base.BaseResource):
 
         columnNames = ['email', 'phone', 'mobile', 'hometown', 'currentCity']
         for name in columnNames:
-            val = utils.getRequestArg(request, name)
-
+            val = utils.getRequestArg(request, 'p_%s' %(name))
             if val:
                 data[name] = val
             else:
@@ -256,8 +254,6 @@ class SettingsResource(base.BaseResource):
 
         yield renderScriptBlock(request, "settings.mako", "right",
                                 landing, ".right-contents", "set", **args)
-        me.update({'personal':data})
-        yield fts.solr.updatePeopleIndex(myId, me, orgId)
 
 
     @profile
@@ -266,7 +262,6 @@ class SettingsResource(base.BaseResource):
     def _editContactInfo(self, request):
         # Contact information at work.
         myId = request.getSession(IAuthInfo).username
-        orgId = request.getSession(IAuthInfo).organization
         landing = not self._ajax
 
         me = yield db.get_slice(myId, 'entities')
@@ -275,7 +270,7 @@ class SettingsResource(base.BaseResource):
         to_remove = []
 
         for field in ["im", "phone", "mobile"]:
-            val = utils.getRequestArg(request, field)
+            val = utils.getRequestArg(request, "c_%s"%(field))
             if val:
                 data[field] = val
             else:
@@ -305,8 +300,6 @@ class SettingsResource(base.BaseResource):
 
         yield renderScriptBlock(request, "settings.mako", "right",
                                 landing, ".right-contents", "set", **args)
-        me.update({'contact':data})
-        yield fts.solr.updatePeopleIndex(myId, me, orgId)
 
 
     @profile
@@ -343,21 +336,17 @@ class SettingsResource(base.BaseResource):
         # Update name indicies of organization.
         nameIndexKeys = [orgId]
         nameIndicesDeferreds = []
-        oldNameParts = []
-        newNameParts = []
         for field in ["name", "lastname", "firstname"]:
             if field in basicUpdatedInfo:
-                newNameParts.extend(basicUpdatedInfo[field].split())
-                oldNameParts.extend(me['basic'].get(field, '').split())
+                d = utils.updateNameIndex(myId, nameIndexKeys,
+                                          basicUpdatedInfo[field],
+                                          me["basic"].get(field, None))
                 if field == 'name':
                     d1 = utils.updateDisplayNameIndex(myId, nameIndexKeys,
                                                       basicUpdatedInfo[field],
                                                       me["basic"].get(field, None))
                     nameIndicesDeferreds.append(d1)
-        d = utils.updateNameIndex(myId, nameIndexKeys,
-                                  " ".join(newNameParts),
-                                  " ".join(oldNameParts))
-        nameIndicesDeferreds.append(d)
+                nameIndicesDeferreds.append(d)
 
         # Avatar (display picture)
         dp = utils.getRequestArg(request, "dp", sanitize=False)
@@ -369,9 +358,6 @@ class SettingsResource(base.BaseResource):
             basicUpdated = True
         if userInfo["basic"]:
             yield db.batch_insert(myId, "entities", userInfo)
-            me.update(userInfo)
-            yield fts.solr.updatePeopleIndex(myId, me, orgId)
-
         if to_remove:
             yield db.batch_remove({'entities':[myId]}, names=to_remove, supercolumn='basic')
 
@@ -426,13 +412,13 @@ class SettingsResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _render(self, request):
-        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
 
         detail = utils.getRequestArg(request, "dt") or "basic"
         args["detail"] = detail
 
-        me = yield db.get_slice(myId, "entities")
+        me = yield db.get_slice(myKey, "entities")
         me = utils.supercolumnsToDict(me, ordered=True)
         args['me'] = me
 
@@ -483,7 +469,7 @@ class SettingsResource(base.BaseResource):
             else:
                 raise errors.InvalidRequest('')
 
-        suggestedSections = yield self._checkProfileCompleteness(request, myId, args)
+        suggestedSections = yield self._checkProfileCompleteness(request, myKey, args)
         tmp_suggested_sections = {}
         for section, items in suggestedSections.iteritems():
             if len(suggestedSections[section]) > 0:
@@ -639,7 +625,7 @@ class SettingsResource(base.BaseResource):
     """
 
     @defer.inlineCallbacks
-    def _checkProfileCompleteness(self, request, myId, args):
+    def _checkProfileCompleteness(self, request, myKey, args):
         landing = not self._ajax
         detail = args["detail"]
         suggestedSections = {}
@@ -657,7 +643,7 @@ class SettingsResource(base.BaseResource):
         # Check Contact
         suggestedSections["contact"] = []
         if "contactInfo" not in args:
-            res = yield db.get_slice(myId, "entities", ['contact'])
+            res = yield db.get_slice(myKey, "entities", ['contact'])
             contactInfo = utils.supercolumnsToDict(res).get("contact", {})
         else:
             contactInfo = args["contactInfo"]
@@ -669,7 +655,7 @@ class SettingsResource(base.BaseResource):
         # Check Personal Info
         suggestedSections["personal"] = []
         if "personalInfo" not in args:
-            res = yield db.get_slice(myId, "entities", ['personal'])
+            res = yield db.get_slice(myKey, "entities", ['personal'])
             personalInfo = utils.supercolumnsToDict(res).get("personal", {})
         else:
             personalInfo = args["personalInfo"]
@@ -681,7 +667,7 @@ class SettingsResource(base.BaseResource):
         # Check Work
         #suggestedSections["work"] = []
         #if "workInfo" not in args:
-        #    res = yield db.get_slice(myId, "entities", ['work', 'employers', 'education'])
+        #    res = yield db.get_slice(myKey, "entities", ['work', 'employers', 'education'])
         #    currentWorkInfo = utils.supercolumnsToDict(res).get("work", {})
         #    previousWorkInfo = utils.supercolumnsToDict(res).get("employers", {})
         #    educationInfo = utils.supercolumnsToDict(res).get("education", {})

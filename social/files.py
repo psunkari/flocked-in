@@ -5,12 +5,8 @@ import json
 import cgi
 import traceback
 import mimetypes
-from base64         import urlsafe_b64encode, urlsafe_b64decode
-from email.header   import Header
-try:
-    import cPickle as pickle
-except:
-    import pickle
+from base64     import urlsafe_b64encode, urlsafe_b64decode
+from email.header import Header
 
 import boto
 from telephus.cassandra import ttypes
@@ -29,85 +25,7 @@ from social.relations   import Relation
 from social             import constants
 from social.isocial     import IItemType, IAuthInfo
 from social.template    import render, renderScriptBlock, getBlock
-from social.logging     import log, profile, dump_args
-
-
-@defer.inlineCallbacks
-def pushfileinfo(myId, orgId, convId, conv):
-    acl = pickle.loads(conv['meta']['acl'])
-
-    accept_groups = acl.get('accept', {}).get('groups', [])
-    deny_groups = acl.get('deny', {}).get('groups', [])
-    groups = [x for x in accept_groups if x not in deny_groups]
-    accept_orgs = acl.get('accept', {}).get('orgs', [])
-    ownerId = conv['meta']['owner']
-
-    entities = [myId]
-    entities.extend(groups)
-    entities.extend(accept_orgs)
-    e = yield utils.expandAcl(myId, orgId, conv['meta']['acl'], convId, ownerId, True)
-    entities.extend(e)
-
-    for attachmentId in conv.get('attachments', {}):
-        tuuid, name, size, ftype =conv['attachments'][attachmentId].split(':')
-        tuuid = utils.decodeKey(tuuid)
-        value = '%s:%s:%s:%s' %(attachmentId, name, convId, ownerId)
-        yield db.insert(myId, "user_files", value, tuuid)
-        for entityId in entities:
-            yield db.insert(entityId, "entityFeed_files", value, tuuid)
-
-
-@profile
-@defer.inlineCallbacks
-@dump_args
-def userFiles(myId, entityId, myOrgId, start='', myFiles=False):
-    allItems = {}
-    nextPageStart = ''
-    accessible_files = []
-    accessible_items = []
-    toFetchEntities = set()
-    count = constants.FILES_PER_PAGE
-    toFetchCount = count +1
-    start = utils.decodeKey(start)
-    relation = Relation(myId, [])
-    yield defer.DeferredList([relation.initGroupsList(),
-                             relation.initSubscriptionsList(),
-                             relation.initFollowersList()])
-
-    column_family = 'user_files' if myFiles else 'entityFeed_files'
-    while 1:
-        files = yield db.get_slice(entityId, column_family, count=toFetchCount, start=start, reverse=True)
-        files = utils.columnsToDict(files, True)
-        toFetchItems = []
-        for tuuid in files:
-            if len(files[tuuid].split(':')) == 4:
-                fid, name, itemId, attachmentId = files[tuuid].split(':')
-                toFetchItems.append(itemId)
-        toFetchItems = [itemId for itemId in toFetchItems if itemId not in accessible_items]
-        if toFetchItems:
-            items = yield db.multiget_slice(toFetchItems, "items", ["meta"])
-            items = utils.multiSuperColumnsToDict(items)
-            for itemId in items:
-                acl = items[itemId]['meta']['acl']
-                if utils.checkAcl(myId, acl, entityId, relation, myOrgId):
-                    accessible_items.append(itemId)
-            allItems.update(items)
-        for tuuid in files:
-            if len(files[tuuid].split(':')) == 4:
-                fid, name, itemId, ownerId = files[tuuid].split(':')
-                if itemId in accessible_items:
-                    accessible_files.append((utils.encodeKey(tuuid), (fid, urlsafe_b64decode(name), itemId, ownerId, allItems[itemId]['meta']['type'])))
-                    toFetchEntities.add(ownerId)
-
-        if len(files) < toFetchCount:
-            if len(accessible_files) > count:
-                nextPageStart = accessible_files[count+1][0]
-                accessible_files = accessible_files[:count]
-            break
-        else:
-            start = files.keys()[-1]
-    defer.returnValue([accessible_files, nextPageStart, toFetchEntities])
-
+from social.logging     import log
 
 
 class FilesResource(base.BaseResource):
@@ -128,8 +46,7 @@ class FilesResource(base.BaseResource):
 
         # Check if the attachmentId belong to item
         if attachmentId not in item.get('attachments', {}).keys():
-            version = None
-            raise errors.AttachmentAccessDenied(itemId, attachmentId, version)
+            raise errors.AccessDenied()
 
         #get the latest file
         files = []
@@ -371,52 +288,7 @@ class FilesResource(base.BaseResource):
 
 
     @defer.inlineCallbacks
-    def _renderFileList(self, request):
-        appchange, script, args, myId = yield self._getBasicArgs(request)
-        landing = not self._ajax
-        viewType = utils.getRequestArg(request, "type")
-        start = utils.getRequestArg(request, "start") or ''
-        fromFetchMore = ((not landing) and (not appchange) and start)
-        viewType = viewType if viewType in ['myFiles', 'companyFiles', 'myFeedFiles'] else 'myFiles'
-        args['viewType'] = viewType
-        if viewType in ['myFiles', 'myFeedFiles']:
-            entityId = myId
-        else:
-            entityId = args['orgId']
-        myFiles = viewType == 'myFiles'
-        log.info("start: %s, myFiles: %s, viewType: %s" %(start, myFiles, viewType))
-
-        if landing and script:
-            yield render(request, "files.mako", **args)
-        if script and appchange:
-            yield renderScriptBlock(request, "files.mako", 'layout',
-                                    landing, "#mainbar", "set", **args)
-
-        if script:
-            yield renderScriptBlock(request, "files.mako", "viewOptions",
-                                    landing, "#file-view", "set", args=[viewType])
-
-        files = yield userFiles(myId, entityId, args['orgId'], start, myFiles)
-        toFetchEntities = files[2]
-        entities = yield db.multiget_slice(toFetchEntities, "entities", ['basic'])
-        entities = utils.multiSuperColumnsToDict(entities)
-        args['entities'] = entities
-        args['userfiles'] = files
-        args['fromFetchMore'] = fromFetchMore
-
-        if script:
-            if not fromFetchMore:
-                yield renderScriptBlock(request, "files.mako", "listFiles",
-                                        landing, "#files-content", "set", **args)
-            else:
-                yield renderScriptBlock(request, "files.mako", "listFiles",
-                                        landing, "#next-load-wrapper", "replace", **args)
-
-
-
-
-    @defer.inlineCallbacks
-    def _deleteFile(self, request):
+    def _deleteFile(request):
         pass
 
     def render_GET(self, request):
@@ -426,8 +298,6 @@ class FilesResource(base.BaseResource):
             d = self._renderFile(request)
         elif  segmentCount == 1 and request.postpath[0]=="update":
             d = self._uploadDone(request)
-        elif segmentCount ==1 and request.postpath[0] == 'list':
-            d = self._renderFileList(request)
 
         return self._epilogue(request, d)
 

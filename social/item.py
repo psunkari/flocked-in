@@ -8,7 +8,7 @@ from twisted.web        import server
 
 from social             import base, db, utils, feed, config
 from social             import plugins, constants, tags, fts
-from social             import notifications, _, errors, files
+from social             import notifications, _, errors
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
@@ -26,7 +26,6 @@ def _createNewItem(request, myId, myOrgId):
 
     plugin = plugins[convType]
     convId, conv = yield plugin.create(request, myId, myOrgId)
-    yield files.pushfileinfo(myId, myOrgId, convId, conv)
 
     timeUUID = conv["meta"]["uuid"]
     convACL = conv["meta"]["acl"]
@@ -39,7 +38,7 @@ def _createNewItem(request, myId, myOrgId):
                         responseType, convType, myId, myId)
     deferreds.append(d)
 
-    d = feed.pushToOthersFeed(myId, myOrgId, timeUUID, convId, None, convACL,
+    d = feed.pushToOthersFeed(myId, timeUUID, convId, None, convACL,
                               responseType, convType, myId)
     deferreds.append(d)
 
@@ -295,13 +294,14 @@ class ItemResource(base.BaseResource):
     def _new(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
 
-        convId, conv = yield _createNewItem(request, myId, args['orgId'])
+        convId, conv = yield _createNewItem(request, myId, myOrgId)
         entities = {myId: args['me']}
         target = conv['meta'].get('target', None)
         if target:
             toFetchEntities = set(target.split(','))
-            cols = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
-            entities.update(utils.multiSuperColumnsToDict(cols))
+            entities = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
+            entities = utils.multiSuperColumnsToDict(cols)
+
         relation = Relation(myId, [])
         yield relation.initGroupsList()
 
@@ -325,7 +325,6 @@ class ItemResource(base.BaseResource):
     def _like(self, request):
         myId = request.getSession(IAuthInfo).username
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        orgId = args['orgId']
 
         # Get the item and the conversation
         (itemId, item) = yield utils.getValidItemId(request, "id")
@@ -389,7 +388,7 @@ class ItemResource(base.BaseResource):
                                   entities=extraEntities, promote=False)
 
             # 4. update feed, feedItems, feed_* of user's followers
-            yield feed.pushToOthersFeed(myId, orgId, timeUUID, itemId, convId, convACL,
+            yield feed.pushToOthersFeed(myId, timeUUID, itemId, convId, convACL,
                                         responseType, convType, convOwnerId,
                                         entities=extraEntities, promoteActor=False)
 
@@ -453,7 +452,6 @@ class ItemResource(base.BaseResource):
     @dump_args
     def _unlike(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        orgId = args['orgId']
 
         # Get the item and the conversation
         (itemId, item) = yield utils.getValidItemId(request, "id")
@@ -499,7 +497,7 @@ class ItemResource(base.BaseResource):
                                       convType, myId, responseType)
 
             # 4. delete from feed, feedItems, feed_* of user's followers
-            yield feed.deleteFromOthersFeed(myId, orgId, itemId, convId, convType,
+            yield feed.deleteFromOthersFeed(myId, itemId, convId, convType,
                                             convACL, convOwnerId, responseType)
 
             # FIX: if user updates more than one item at exactly same time,
@@ -566,7 +564,6 @@ class ItemResource(base.BaseResource):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         snippet, comment = utils.getTextWithSnippet(request, "comment",
                                             constants.COMMENT_PREVIEW_LENGTH)
-        orgId = args['orgId']
         if not comment:
             raise errors.MissingParams([_("Comment")])
 
@@ -617,7 +614,7 @@ class ItemResource(base.BaseResource):
 
         # 6. Push to other's feeds
         convACL = conv["meta"].get("acl", "company")
-        yield feed.pushToOthersFeed(myId, orgId, timeUUID, itemId, convId, convACL,
+        yield feed.pushToOthersFeed(myId, timeUUID, itemId, convId, convACL,
                                     responseType, convType, convOwnerId,
                                     promoteActor=False)
 
@@ -805,7 +802,7 @@ class ItemResource(base.BaseResource):
         convOwnerId = item["meta"]["owner"]
         responseType = "T"
         if followers:
-            yield feed.pushToOthersFeed(myId, orgId, timeUUID, itemId, itemId,
+            yield feed.pushToOthersFeed(myId, timeUUID, itemId, itemId,
                                 convACL, responseType, convType, convOwnerId,
                                 others=followers, tagId=tagId, promoteActor=False)
 
@@ -853,7 +850,7 @@ class ItemResource(base.BaseResource):
                                   myId, responseType, tagId=tagId)
 
         if followers:
-            yield feed.deleteFromOthersFeed(myId, orgId, itemId, convId, convType,
+            yield feed.deleteFromOthersFeed(myId, itemId, convId, convType,
                                             convACL, convOwnerId, responseType,
                                             others=followers, tagId=tagId)
         request.write("$('#conv-tags-%s').children('[tag-id=\"%s\"]').remove();" % (convId, tagId));
@@ -865,7 +862,6 @@ class ItemResource(base.BaseResource):
         convId = item["meta"].get("parent", itemId)
         itemOwnerId = item["meta"]["owner"]
         myId = request.getSession(IAuthInfo).username
-        orgId = request.getSession(IAuthInfo).organization
 
         comment = True
         if itemId == convId:
@@ -945,7 +941,7 @@ class ItemResource(base.BaseResource):
                     removeLikeDeferreds = []
                     for actorId, likeUUID in likes.items():
                         d1 = feed.deleteUserFeed(actorId, convType, likeUUID)
-                        d2 = feed.deleteFeed(actorId, orgId, itemId, convId, convType,
+                        d2 = feed.deleteFeed(actorId, itemId, convId, convType,
                                     convACL, convOwnerId, 'L', deleteAll=True)
                         removeLikeDeferreds.extend([d1, d2])
                     return defer.DeferredList(removeLikeDeferreds)
@@ -958,7 +954,7 @@ class ItemResource(base.BaseResource):
 
                 # Rollback updates done to comment owner's follower's feeds.
                 responseType = "Q" if convType == "question" else 'C'
-                d = feed.deleteFeed(itemOwnerId, orgId, itemId, convId, convType,
+                d = feed.deleteFeed(itemOwnerId, itemId, convId, convType,
                                     convACL, convOwnerId, responseType, deleteAll=True)
                 deferreds.append(d)
 

@@ -1,4 +1,3 @@
-import time
 import re
 from base64                     import urlsafe_b64decode
 from lxml                       import etree
@@ -76,43 +75,6 @@ class Solr(object):
         d = agent.request(method, url, Headers(allHeaders), producer)
         return d
 
-    def updatePeopleIndex(self, myId, me, orgId):
-        def toUnicodeOrText(text):
-            if isinstance(text, str):
-                return text.decode('utf8', 'replace')
-            elif isinstance(text, unicode):
-                return text
-            else:
-                return str(text)
-
-        fields = [self.elementMaker.field(str(myId), {"name":"id"}),
-                  self.elementMaker.field(str(orgId), {"name":"orgId"}),
-                  self.elementMaker.field('people', {"name":"itemType"})]
-        for field in ['name', 'lastname', 'firstname', 'jobTitle']:
-            if field in me['basic']:
-                fields.append(self.elementMaker.field(toUnicodeOrText(me['basic'][field]), {'name': field}))
-        for field in ['mail', 'phone', 'im']:
-            if field in me.get('contact', {}):
-                fields.append(self.elementMaker.field(toUnicodeOrText(me['contact'][field]), {'name': field}))
-        for field in ['mail', 'phone', 'im', 'hometown', 'currentCity']:
-            if field in me.get('personal', {}):
-                fields.append(self.elementMaker.field(toUnicodeOrText(me['personal'][field]), {'name': field}))
-
-        skills = ','.join(me.get('expertise', {}).keys())
-        interests = ','.join(me.get('interests', {}).keys())
-        languages = ','.join(me.get('languages', {}).keys())
-        if skills:
-            fields.append(self.elementMaker.field(toUnicodeOrText(skills), {'name': 'expertise'}))
-        if interests:
-            fields.append(self.elementMaker.field(toUnicodeOrText(interests), {'name': 'interests'}))
-        if languages:
-            fields.append(self.elementMaker.field(toUnicodeOrText(languages), {'name': 'languages'}))
-        fields.append(self.elementMaker.field(str(int(time.time())), {'name': 'timestamp'}))
-        root = self.elementMaker.add(self.elementMaker.doc(*fields))
-        url = URL +  "/update?commit=true"
-        return self._request("POST", url, {}, XMLBodyProducer(root))
-
-
     def updateIndex(self, itemId, item, orgId, attachments={}):
         fields = [self.elementMaker.field(str(itemId), {"name":"id"}),
                   self.elementMaker.field(str(orgId), {"name":"orgId"}),]
@@ -130,11 +92,12 @@ class Solr(object):
             sfk, columnName = key
             value = item[sfk].get(columnName, None)
             if value:
-                if type(value) == str:
-                    value = value.decode('utf-8', 'replace')
-                elif type(value) != unicode:
-                    value = str(value)
-                fields.append(self.elementMaker.field(value,
+                if type(value) in [str, unicode]:
+                    value = quote(value)
+                    fields.append(self.elementMaker.field((value),
+                              {"name":columnName}))
+                else:
+                    fields.append(self.elementMaker.field(str(value),
                               {"name":columnName}))
         file_info = []
         for attachmentId in attachments:
@@ -155,16 +118,13 @@ class Solr(object):
         url = URL +  "/update?commit=true"
         return self._request("POST", url, {}, XMLBodyProducer(root))
 
-    def search(self, term, orgId, count, start=0, filters=None):
+    def search(self, term, orgId, count, start=0):
         def callback(response):
             finished = defer.Deferred()
             response.deliverBody(JsonBodyReceiver(finished))
             return finished
         term = quote(term)
         url = URL + "/select?q=%s&start=%s&rows=%s&fq=orgId:%s&sort=%s&hl=true&hl.fl=comment" % (term, start, count, orgId, quote('timestamp desc'))
-        if filters:
-            for x in filters:
-                url += '&fq=%s:%s' %(x, filters[x])
         d = self._request("GET", url)
         d.addCallback(callback)
         return d
@@ -180,12 +140,9 @@ class FTSResource(base.BaseResource):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
         myOrgId = args['orgId']
-        filter_map = {'people':'itemType'}
 
         term = utils.getRequestArg(request, "q")
         start = utils.getRequestArg(request, "start") or 0
-        filters = utils.getRequestArg(request, 'filter', multiValued=True) or []
-        filters = dict([(filter_map[x], x) for x in filters if x in filter_map])
         args["term"] = term
         prevPageStart = ''
         nextPageStart = ''
@@ -213,20 +170,11 @@ class FTSResource(base.BaseResource):
         toFetchItems = []
         toFetchStart = start
         toFetchEntities = set()
-        people = []
         relation = Relation(myId, [])
         yield defer.DeferredList([relation.initGroupsList(),
                                   relation.initSubscriptionsList(),
                                   relation.initFollowersList()])
         regex = re.compile("(.*?)([^\s]*\s*[^\s]*\s*[^\s]*\s*)(<em class='highlight'>.*<\/em>)(\s*[^\s]*\s*[^\s]*\s*[^\s]*)(.*)")
-
-        res = yield solr.search(term, args['orgKey'], count, toFetchStart, filters={'itemType': 'people'})
-        docs = res.data.get('response', {}).get('docs', [])
-        for item in docs:
-            entityId = item['id']
-            people.append(entityId)
-            toFetchEntities.add(entityId)
-
         while 1:
             res = yield solr.search(term, args['orgKey'], count, toFetchStart)
             messages = []
@@ -241,11 +189,6 @@ class FTSResource(base.BaseResource):
                 if item.get('itemType', '') == "message":
                     if (item.get('id'), parent) not in messages:
                         messages.append((item.get('id'), parent))
-                elif item.get('itemType', '') == 'people':
-                    entityId = item.get('id')
-                    if entityId not in people:
-                        people.append(entityId)
-                        toFetchEntities.add(entityId)
                 elif parent:
                     convItems.append((itemId, parent, position))
                     convs.add(parent)
@@ -279,22 +222,20 @@ class FTSResource(base.BaseResource):
                 match = re.match(regex, unquote(highlighting[itemId]['comment'][0]))
                 if match:
                     comment = "".join(match.groups()[1:4])
-                    comment = comment + " &hellip;" if match.group(5) else comment
+                    comment = comment + " ..." if match.group(5) else comment
                     items[itemId]['meta']['comment'] = comment
 
         entities = yield db.multiget_slice(toFetchEntities, "entities", ['basic'])
         entities = utils.multiSuperColumnsToDict(entities)
-        fromFetchMore = True if start else False
 
         args['term'] = term
         args['items'] = items
-        args['people'] = people
         args['entities'] = entities
         args['relations'] = relation
         args["conversations"] = toFetchItems
         args["nextPageStart"] = nextPageStart
+        fromFetchMore = True if start else False
         args['fromFetchMore'] = fromFetchMore
-        args['fromSidebar'] = 'people' in filters.values()
 
         if script:
             onload = "(function(obj){$$.convs.load(obj);})(this);"
@@ -306,9 +247,6 @@ class FTSResource(base.BaseResource):
                 yield renderScriptBlock(request, "search.mako", "results",
                                         landing, "#user-feed", "set", True,
                                         handlers={"onload": onload}, **args)
-            if 'people' not in filters.values() and people:
-              yield renderScriptBlock(request, "search.mako", "_displayUsersMini",
-                                      landing, "#people-block", "set", True, **args)
 
         if script and landing:
             request.write("</body></html>")

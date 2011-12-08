@@ -53,7 +53,7 @@
           </div>
           <div id="user-subactions">
             %if not script:
-              ${self.user_subactions(userId)}
+              ${self.user_subactions(userKey)}
             %endif
           </div>
         </div>
@@ -82,7 +82,7 @@
 ## Functions for rendering content
 ##
 <%def name="user_me()">
-  %if myId != userId:
+  %if myKey != userKey:
   %endif
 </%def>
 
@@ -125,19 +125,19 @@
   %endif
 </%def>
 
-<%def name="user_subactions(userId, renderWrapper=True)">
-  %if myId != userId:
+<%def name="user_subactions(userKey, renderWrapper=True)">
+  %if myKey != userKey:
     ##%if renderWrapper:
     ##  <div class="sidebar-chunk">
-    ##  <ul id="user-subactions-${userId}" class="middle user-subactions v-links">
+    ##  <ul id="user-subactions-${userKey}" class="middle user-subactions v-links">
     ##%endif
-    ##<li><a href="/profile/block?id=${userId}"
-    ##       onclick="$.post('/ajax/profile/block', 'id=${userId}'); $.event.fix(event).preventDefault();">
+    ##<li><a href="/profile/block?id=${userKey}"
+    ##       onclick="$.post('/ajax/profile/block', 'id=${userKey}'); $.event.fix(event).preventDefault();">
     ##      ${_("Block User")}
     ##    </a>
     ##</li>
-    ##<li><a href="/profile/review?id=${userId}"
-    ##       onclick="$.post('/ajax/profile/review', 'id=${userId}'); $.event.fix(event).preventDefault();">
+    ##<li><a href="/profile/review?id=${userKey}"
+    ##       onclick="$.post('/ajax/profile/review', 'id=${userKey}'); $.event.fix(event).preventDefault();">
     ##      ${_("Request Admin Review")}
     ##    </a>
     ##</li>
@@ -149,15 +149,15 @@
 </%def>
 
 <%def name="summary()">
-  <% avatarURI = utils.userAvatar(userId, user, "large") %>
+  <% avatarURI = utils.userAvatar(userKey, user, "large") %>
   <div class="titlebar center-header">
     %if avatarURI:
       <div id="useravatar" class="avatar" style="background-image:url('${avatarURI}')"></div>
     %endif
     <div id="title">
       <span class="middle title">${user['basic']['name']}</span>
-      <ul id="user-actions-${userId}" class="middle user-actions h-links">
-        ${user_actions(userId, True, True)}
+      <ul id="user-actions-${userKey}" class="middle user-actions h-links">
+        ${user_actions(userKey, True, True)}
       </ul>
     </div>
   </div>
@@ -187,9 +187,9 @@
 <%def name="tabs()">
   <ul id="profile-tablinks" class="tablinks h-links">
     <%
-      path = "/profile?id=%s&" % userId
+      path = "/profile?id=%s&" % userKey
     %>
-    %for item, name in [('activity', 'Activity'), ('info', 'More Info'), ('files', 'Files')]:
+    %for item, name in [('activity', 'Activity'), ('info', 'More Info')]:
       %if detail == item:
         <li><a href="${path}dt=${item}" id="profile-tab-${item}" class="ajax selected">${_(name)}</a></li>
       %else:
@@ -199,14 +199,14 @@
   </ul>
 </%def>
 
-<%def name="user_actions(userId, showRemove=False, showEditProfile=False)">
-  %if myId != userId:
-    %if userId not in relations.subscriptions:
-      <li><button class="button default" onclick="$.post('/ajax/profile/follow', 'id=${userId}')">
+<%def name="user_actions(userKey, showRemove=False, showEditProfile=False)">
+  %if myKey != userKey:
+    %if userKey not in relations.subscriptions:
+      <li><button class="button default" onclick="$.post('/ajax/profile/follow', 'id=${userKey}')">
         <span class="button-text">${_("Follow User")}</span>
       </button></li>
     %elif showRemove:
-      <li><button class="button" onclick="$.post('/ajax/profile/unfollow', 'id=${userId}')">
+      <li><button class="button" onclick="$.post('/ajax/profile/unfollow', 'id=${userKey}')">
         <span class="button-text">${_("Unfollow User")}</span>
       </button></li>
     %endif
@@ -248,7 +248,6 @@
           <span class="summary-item">${ _('Currently residing in ' + user['personal']['currentCity']) }</span>
         </div>
       %endif
-
   </div>
   %if user.has_key('work'):
     <%
@@ -369,7 +368,7 @@
   %>
   %if nextPageStart:
     <div id="next-load-wrapper" class="busy-indicator">
-      <a id="next-page-load" class="ajax" data-ref="/profile?id=${userId}&start=${nextPageStart}">${_("Fetch older posts")}</a>
+      <a id="next-page-load" class="ajax" data-ref="/profile?id=${userKey}&start=${nextPageStart}">${_("Fetch older posts")}</a>
     </div>
   %else:
     <div id="next-load-wrapper">${_("No more posts to show")}</div>
@@ -379,8 +378,9 @@
 <%def name="content()">
   %if detail == 'info':
     ${content_info()}
-  % elif detail == 'activity':
+  %endif
+  % if detail == 'activity':
     ${content_activity()}
   %endif
-
 </%def>
+

@@ -20,7 +20,7 @@ def deleteUserFeed(userId, itemType, tuuid):
 
 
 @defer.inlineCallbacks
-def deleteFeed(userId, orgId, itemId, convId, itemType, acl, convOwner,
+def deleteFeed(userId, itemId, convId, itemType, acl, convOwner,
                responseType, others=None, tagId='', deleteAll=False):
     #
     # Wrapper around deleteFromFeed and deleteFromOthersFeed
@@ -28,7 +28,7 @@ def deleteFeed(userId, orgId, itemId, convId, itemType, acl, convOwner,
     yield deleteFromFeed(userId, itemId, convId, itemType,
                          userId, responseType, tagId )
     if deleteAll:
-        yield deleteFromOthersFeed(userId, orgId, itemId, convId, itemType, acl,
+        yield deleteFromOthersFeed(userId, itemId, convId, itemType, acl,
                                    convOwner, responseType, others, tagId)
 
 
@@ -85,10 +85,10 @@ def deleteFromFeed(userId, itemId, convId, itemType,
 @profile
 @defer.inlineCallbacks
 @dump_args
-def deleteFromOthersFeed(userId, orgId, itemId, convId, itemType, acl,
+def deleteFromOthersFeed(userId, itemId, convId, itemType, acl,
                          convOwner, responseType, others=None, tagId=''):
     if not others:
-        others = yield utils.expandAcl(userId, orgId, acl, convId, convOwner)
+        others = yield utils.expandAcl(userId, acl, convId, convOwner)
 
     for key in others:
         yield deleteFromFeed(key, itemId, convId, itemType,
@@ -98,11 +98,11 @@ def deleteFromOthersFeed(userId, orgId, itemId, convId, itemType, acl,
 @profile
 @defer.inlineCallbacks
 @dump_args
-def pushToOthersFeed(userKey, orgId, timeuuid, itemKey, parentKey, acl,
+def pushToOthersFeed(userKey, timeuuid, itemKey, parentKey, acl,
                      responseType, itemType, convOwner, others=None,
                      tagId='', entities=None, promoteActor=True):
     if not others:
-        others = yield utils.expandAcl(userKey, orgId, acl, parentKey, convOwner)
+        others = yield utils.expandAcl(userKey, acl, parentKey, convOwner)
 
     for key in others:
         promote = (userKey != key) or (promoteActor)

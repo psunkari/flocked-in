@@ -27,7 +27,7 @@ from twisted.mail       import smtp
 from social             import db, _, __, config, errors, cdnHost, rootUrl
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
-from social.constants   import INFINITY, FILES_PER_PAGE
+from social.constants   import INFINITY
 from social.logging     import profile, dump_args, log
 
 
@@ -295,6 +295,7 @@ def _upload_files(owner, tmp_fileIds):
             meta = {"meta": {"uri": location, "name":name, "fileType":ftype}}
             yield db.batch_insert(tmpFileId, "files", meta)
             yield db.remove(tmpFileId, "tmp_files")
+            yield db.insert(owner, "user_files", name, tmpFileId)
             attachments[attachmentId] = (timeuuid, tmpFileId, name, size, ftype)
     defer.returnValue(attachments)
 
@@ -326,16 +327,15 @@ def getCompanyGroups(orgId):
 
 
 @defer.inlineCallbacks
-def expandAcl(userId, orgId, acl, convId, convOwnerId=None, allItemFollowers=False):
+def expandAcl(userKey, acl, convId, convOwnerId=None):
     keys = set()
     acl = pickle.loads(acl)
     accept = acl.get("accept", {})
     deny = acl.get('deny', {})
     deniedUsers = deny.get("users", [])
 
-    if not allItemFollowers:
-        unfollowed_d = db.get_slice(convId, 'items',
-                                    super_column='unfollowed', count=INFINITY)\
+    unfollowed_d = db.get_slice(convId, 'items',
+                                super_column='unfollowed', count=INFINITY)\
                    if convId else defer.succeed([])
 
     # When users are explicitly selected, they always
@@ -360,21 +360,16 @@ def expandAcl(userId, orgId, acl, convId, convOwnerId=None, allItemFollowers=Fal
 
     # See if followers and the company feed should get this update.
     if any([typ in ["orgs", "public"] for typ in accept]):
-        followers = yield getFollowers(userId, count=INFINITY)
-        #XXX: can do away with db fetch if orgId is passed. entities[userId]['basic']['orgId']
-        # or  request.get_session(IAuthInfo).organizations can be used
-        companyKey = yield getCompanyKey(userId)
+        followers = yield getFollowers(userKey, count=INFINITY)
+        companyKey = yield getCompanyKey(userKey)
         keys.update([uid for uid in followers if uid not in deniedUsers])
         keys.add(companyKey)
 
     # Remove keys of people who unfollowed the item.
-    if not allItemFollowers:
-        unfollowed = yield unfollowed_d
-        unfollowed = set(columnsToDict(unfollowed).keys())
+    unfollowed = yield unfollowed_d
+    unfollowed = set(columnsToDict(unfollowed).keys())
 
-        defer.returnValue(keys.difference(unfollowed))
-    else:
-        defer.returnValue(keys)
+    defer.returnValue(keys.difference(unfollowed))
 
 
 def checkAcl(userId, acl, owner, relation, userOrgId=None):
@@ -660,24 +655,23 @@ def existingUser(emailId):
 
 
 @defer.inlineCallbacks
-def addUser(emailId, displayName, passwd, orgId, jobTitle = None, timezone=None):
+def addUser(emailId, displayName, passwd, orgKey, jobTitle = None, timezone=None):
     userId = getUniqueKey()
 
-    userInfo = {'basic': {'name': displayName, 'org':orgId,
+    userInfo = {'basic': {'name': displayName, 'org':orgKey,
                           'type': 'user', 'emailId':emailId}}
-    userAuthInfo = {"passwordHash": hashpass(passwd), "org": orgId, "user": userId}
+    userAuthInfo = {"passwordHash": hashpass(passwd), "org": orgKey, "user": userId}
 
     if jobTitle:
         userInfo["basic"]["jobTitle"] = jobTitle
     if timezone:
         userInfo["basic"]["timezone"] = timezone
 
-    yield db.insert(orgId, "orgUsers", '', userId)
+    yield db.insert(orgKey, "orgUsers", '', userId)
     yield db.batch_insert(userId, "entities", userInfo)
     yield db.batch_insert(emailId, "userAuth", userAuthInfo)
-    yield updateDisplayNameIndex(userId, [orgId], displayName, None)
-    yield updateNameIndex(userId, [orgId], displayName, None)
-    yield updateNameIndex(userId, [orgId], emailId, None)
+    yield db.insert(orgKey, "displayNameIndex", "", displayName.lower()+ ":" + userId)
+    yield db.insert(orgKey, "nameIndex", "", displayName.lower()+ ":" + userId)
 
     defer.returnValue(userId)
 
@@ -722,19 +716,27 @@ def isAdmin(userId, entityId):
 @profile
 @defer.inlineCallbacks
 @dump_args
-def updateDisplayNameIndex(userId, targetIds, newName, oldName):
+def deleteNameIndex(userKey, name, targetKey):
+    if name:
+        yield db.remove(userKey, "nameIndex", ":".join([name.lower(), targetKey]))
+
+
+@profile
+@defer.inlineCallbacks
+@dump_args
+def updateDisplayNameIndex(userKey, targetKeys, newName, oldName):
     calls = []
     muts = {}
 
-    for targetId in targetIds:
+    for targetKey in targetKeys:
         if oldName or newName:
-            muts[targetId] = {'displayNameIndex':{}}
+            muts[targetKey] = {'displayNameIndex':{}}
         if oldName:
-            colName = oldName.lower() + ":" + userId
-            muts[targetId]['displayNameIndex'][colName] = None
+            colName = oldName.lower() + ":" + userKey
+            muts[targetKey]['displayNameIndex'][colName] = None
         if newName:
-            colName = newName.lower() + ':' + userId
-            muts[targetId]['displayNameIndex'][colName] = ''
+            colName = newName.lower() + ':' + userKey
+            muts[targetKey]['displayNameIndex'][colName] = ''
     if muts:
         yield db.batch_mutate(muts)
 
@@ -742,19 +744,17 @@ def updateDisplayNameIndex(userId, targetIds, newName, oldName):
 @profile
 @defer.inlineCallbacks
 @dump_args
-def updateNameIndex(userId, targetIds, newName, oldName):
+def updateNameIndex(userKey, targetKeys, newName, oldName):
     muts = {}
-    for targetId in targetIds:
+    for targetKey in targetKeys:
         if oldName or newName:
-            muts[targetId] = {'nameIndex':{}}
+            muts[targetKey] = {'nameIndex':{}}
         if oldName :
-            for part in oldName.split():
-                colName = part.lower() + ":" + userId
-                muts[targetId]['nameIndex'][colName] = None
+            colName = oldName.lower() + ":" + userKey
+            muts[targetKey]['nameIndex'][colName] = None
         if newName:
-            for part in newName.split():
-                colName = part.lower() + ":" + userId
-                muts[targetId]['nameIndex'][colName] = ''
+            colName = newName.lower() + ":" + userKey
+            muts[targetKey]['nameIndex'][colName] = ''
     if muts:
         yield db.batch_mutate(muts)
 

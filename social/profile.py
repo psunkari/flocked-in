@@ -7,7 +7,7 @@ from telephus.cassandra     import ttypes
 
 from social                 import db, utils, base, plugins, _, __
 from social                 import constants, feed, errors, people
-from social                 import notifications, files
+from social                 import notifications
 from social.template        import render, renderDef, renderScriptBlock
 from social.relations       import Relation
 from social.logging         import dump_args, profile, log
@@ -30,9 +30,9 @@ class ProfileResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _getUserItems(self, request, userId, start='', count=10):
+    def _getUserItems(self, request, userKey, start='', count=10):
         authinfo = request.getSession(IAuthInfo)
-        myId = authinfo.username
+        myKey = authinfo.username
         myOrgId = authinfo.organization
 
         toFetchItems = set()
@@ -50,15 +50,15 @@ class ProfileResource(base.BaseResource):
         timestamps = {}
         items = {}
         nextPageStart = None
-        args = {'myKey': myId}
+        args = {"myKey": myKey}
 
-        relation = Relation(myId, [])
+        relation = Relation(myKey, [])
         yield relation.initGroupsList()
 
-        toFetchEntities.add(userId)
+        toFetchEntities.add(userKey)
 
         while len(convs) < toFetchCount:
-            cols = yield db.get_slice(userId, "userItems", start=toFetchStart,
+            cols = yield db.get_slice(userKey, "userItems", start=toFetchStart,
                                       reverse=True, count=toFetchCount)
             tmpIds = []
             for col in cols:
@@ -66,7 +66,7 @@ class ProfileResource(base.BaseResource):
                 if convId not in tmpIds and convId not in convs:
                     tmpIds.append(convId)
             (filteredConvs, deletedConvs) = yield feed.fetchAndFilterConvs\
-                        (tmpIds, toFetchCount, relation, items, myId, myOrgId)
+                        (tmpIds, toFetchCount, relation, items, myKey, myOrgId)
             for col in cols[0:count]:
                 convId = col.column.value.split(":")[2]
                 if len(convs) == count or len(fetchedUserItem) == count*2:
@@ -94,14 +94,14 @@ class ProfileResource(base.BaseResource):
                 toFetchItems.add(convId)
                 toFetchResponses.add(convId)
                 userItems.append(value)
-            elif rtype == "L" and itemId == convId and convOwnerId != userId:
+            elif rtype == "L" and itemId == convId and convOwnerId != userKey:
                 reasonStr[value] = _("liked %s's %s")
                 userItems.append(value)
-            elif rtype == "L"  and convOwnerId != userId:
+            elif rtype == "L"  and convOwnerId != userKey:
                 r = "answer" if convType == 'question' else 'comment'
                 reasonStr[value] = _("liked") + "%s" %(commentSnippet) + _("%s "%r) + _("on %s's %s")
                 userItems.append(value)
-            elif rtype in ["C", 'Q'] and convOwnerId != userId:
+            elif rtype in ["C", 'Q'] and convOwnerId != userKey:
                 reasonStr[value] = "%s"%(commentSnippet) + _(" on %s's %s")
                 userItems.append(value)
 
@@ -110,11 +110,11 @@ class ProfileResource(base.BaseResource):
         for convId, comments in itemResponses.items():
             responses[convId] = []
             for comment in comments:
-                userId_, itemKey = comment.column.value.split(':')
+                userKey_, itemKey = comment.column.value.split(':')
                 if itemKey not in toFetchItems:
                     responses[convId].insert(0,itemKey)
                     toFetchItems.add(itemKey)
-                    toFetchEntities.add(userId_)
+                    toFetchEntities.add(userKey_)
 
         items = yield db.multiget_slice(toFetchItems, "items", ["meta", "tags", "attachments"])
         items = utils.multiSuperColumnsToDict(items)
@@ -147,18 +147,18 @@ class ProfileResource(base.BaseResource):
 
         tags = {}
         if toFetchTags:
-            userOrgId = entities[userId]["basic"]["org"]
+            userOrgId = entities[userKey]["basic"]["org"]
             fetchedTags = yield db.get_slice(userOrgId, "orgTags", toFetchTags)
             tags = utils.supercolumnsToDict(fetchedTags)
 
-        fetchedLikes = yield db.multiget(toFetchItems, "itemLikes", myId)
+        fetchedLikes = yield db.multiget(toFetchItems, "itemLikes", myKey)
         myLikes = utils.multiColumnsToDict(fetchedLikes)
 
+        del args['myKey']
         data = {"entities": entities, "reasonStr": reasonStr,
                 "tags": tags, "myLikes": myLikes, "userItems": userItems,
                 "responses": responses, "nextPageStart": nextPageStart,
                 "timestamps": timestamps }
-        del args['myKey']
         args.update(data)
         defer.returnValue(args)
 
@@ -166,15 +166,15 @@ class ProfileResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _follow(self, myId, targetId):
-        d1 = db.insert(myId, "subscriptions", "", targetId)
-        d2 = db.insert(targetId, "followers", "", myId)
+    def _follow(self, myKey, targetKey):
+        d1 = db.insert(myKey, "subscriptions", "", targetKey)
+        d2 = db.insert(targetKey, "followers", "", myKey)
 
-        d3 = db.multiget_slice([myId, targetId], "entities", ["basic"])
+        d3 = db.multiget_slice([myKey, targetKey], "entities", ["basic"])
         def notifyFollow(cols):
             users = utils.multiSuperColumnsToDict(cols)
             data = {'entities': users}
-            return notifications.notify([targetId], ":NF", myId, **data)
+            return notifications.notify([targetKey], ":NF", myKey, **data)
         d3.addCallback(notifyFollow)
 
         yield defer.DeferredList([d1, d2, d3])
@@ -183,10 +183,9 @@ class ProfileResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _unfollow(self, myId, targetId):
-        d1 = db.remove(myId, "subscriptions", targetId)
-        d2 = db.remove(targetId, "followers", myId)
-        log.info(targetId, myId)
+    def _unfollow(self, myKey, targetKey):
+        d1 = db.remove(myKey, "subscriptions", targetKey)
+        d2 = db.remove(targetKey, "followers", myKey)
         yield defer.DeferredList([d1, d2])
 
 
@@ -194,7 +193,7 @@ class ProfileResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _render(self, request):
-        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
 
         # We are setting an empty value to 'cu' here just to make sure that
         # any errors when looking validating the entity should not leave us
@@ -202,23 +201,22 @@ class ProfileResource(base.BaseResource):
 
         request.addCookie('cu', '', path="/ajax/profile")
         if request.args.get("id", None):
-            userId, ign = yield utils.getValidEntityId(request, "id", "user")
+            userKey, ign = yield utils.getValidEntityId(request, "id", "user")
         else:
-            userId = myId
+            userKey = myKey
 
         # XXX: We should use getValidEntityId to fetch the entire user
         # info instead of another call to the database.
-        request.addCookie('cu', userId, path="/ajax/profile")
-        cols = yield db.get_slice(userId, "entities")
+        request.addCookie('cu', userKey, path="/ajax/profile")
+        cols = yield db.get_slice(userKey, "entities")
         if cols:
             user = utils.supercolumnsToDict(cols)
             args["user"] = user
 
         detail = utils.getRequestArg(request, "dt") or "activity"
         args["detail"] = detail
-        args["userId"] = userId
+        args["userKey"] = userKey
         args["menuId"] = "people"
-        args['entities'] = {myId: args['me'], userId: user}
 
         # When scripts are enabled, updates are sent to the page as
         # and when we get the required data from the database.
@@ -240,7 +238,7 @@ class ProfileResource(base.BaseResource):
         # Prefetch some data about how I am related to the user.
         # This is required in order to reliably filter our profile details
         # that I don't have access to.
-        relation = Relation(myId, [userId])
+        relation = Relation(myKey, [userKey])
         args["relations"] = relation
         yield defer.DeferredList([relation.initSubscriptionsList(),
                                   relation.initGroupsList()])
@@ -257,13 +255,8 @@ class ProfileResource(base.BaseResource):
         start = utils.getRequestArg(request, "start") or ''
         fromFetchMore = ((not landing) and (not appchange) and start)
         if detail == "activity":
-            userItems = yield self._getUserItems(request, userId, start=start)
+            userItems = yield self._getUserItems(request, userKey, start=start)
             args.update(userItems)
-        elif detail == 'files':
-            userFiles = yield files.userFiles(myId, userId, args['orgId'], start, myFiles=True)
-            args['userfiles'] = userFiles
-            args['fromFetchMore'] = fromFetchMore
-            args['fromProfile'] = True
 
         if script:
             yield renderScriptBlock(request, "profile.mako", "tabs", landing,
@@ -275,27 +268,18 @@ class ProfileResource(base.BaseResource):
                 yield renderScriptBlock(request, "profile.mako", "content", landing,
                                             "#next-load-wrapper", "replace", True,
                                             handlers=handlers, **args)
-            elif fromFetchMore and detail == 'files':
-                yield renderScriptBlock(request, "files.mako", "listFiles", landing,
-                                        "#next-load-wrapper", "replace", True,
-                                        handlers=handlers, **args)
-            elif detail == 'files':
-                yield renderScriptBlock(request, "files.mako", "listFiles", landing,
-                                        "#profile-content", "set", True,
-                                        handlers=handlers, **args)
-
             else:
                 yield renderScriptBlock(request, "profile.mako", "content", landing,
                                         "#profile-content", "set", True,
                                         handlers=handlers, **args)
 
         # List the user's subscriptions
-        cols = yield db.get_slice(userId, "subscriptions", count=11)
+        cols = yield db.get_slice(userKey, "subscriptions", count=11)
         subscriptions = set(utils.columnsToDict(cols).keys())
         args["subscriptions"] = subscriptions
 
         # List the user's followers
-        cols = yield db.get_slice(userId, "followers", count=11)
+        cols = yield db.get_slice(userKey, "followers", count=11)
         followers = set(utils.columnsToDict(cols).keys())
         args["followers"] = followers
 
@@ -312,9 +296,9 @@ class ProfileResource(base.BaseResource):
         args["rawUserData"] = rawUserData
 
         # List the user's groups (and look for groups common with me)
-        cols = yield db.multiget_slice([myId, userId], "entityGroupsMap")
-        myGroups = set([x.column.name.split(':', 1)[1] for x in cols[myId]])
-        userGroups = set([x.column.name.split(':', 1)[1] for x in cols[userId]])
+        cols = yield db.multiget_slice([myKey, userKey], "entityGroupsMap")
+        myGroups = set([x.column.name.split(':', 1)[1] for x in cols[myKey]])
+        userGroups = set([x.column.name.split(':', 1)[1] for x in cols[userKey]])
         commonGroups = myGroups.intersection(userGroups)
         if len(userGroups) > 10:
             userGroups = sample(userGroups, 10)
@@ -346,6 +330,8 @@ class ProfileResource(base.BaseResource):
         if not script:
             yield render(request, "profile.mako", **args)
 
+        request.finish()
+
 
     @profile
     @dump_args
@@ -356,18 +342,18 @@ class ProfileResource(base.BaseResource):
 
         action = request.postpath[0]
         requestDeferred = utils.getValidEntityId(request, "id", "user")
-        myId = request.getSession(IAuthInfo).username
+        myKey = request.getSession(IAuthInfo).username
 
-        def callback((targetId, target)):
+        def callback((targetKey, target)):
             actionDeferred = None
             if action == "follow":
-                actionDeferred = self._follow(myId, targetId)
+                actionDeferred = self._follow(myKey, targetKey)
             elif action == "unfollow":
-                actionDeferred = self._unfollow(myId, targetId)
+                actionDeferred = self._unfollow(myKey, targetKey)
             else:
                 raise errors.NotFoundError()
 
-            relation = Relation(myId, [targetId])
+            relation = Relation(myKey, [targetKey])
             data = {"relations": relation}
             def fetchRelations(ign):
                 return relation.initSubscriptionsList()
@@ -389,8 +375,8 @@ class ProfileResource(base.BaseResource):
                     return d
                 else:
                     d = renderScriptBlock(request, "profile.mako", "user_actions",
-                                    False, "#user-actions-%s"%targetId, "set",
-                                    args=[targetId, True], **data)
+                                    False, "#user-actions-%s"%targetKey, "set",
+                                    args=[targetKey, True], **data)
                     return d
 
             actionDeferred.addCallback(fetchRelations)
