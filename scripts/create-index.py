@@ -2,7 +2,7 @@
 
 import os
 import sys
-import getopt
+import optparse
 import getpass
 import uuid
 import time
@@ -19,11 +19,23 @@ from social import config, db, utils, fts
 
 
 KEYSPACE = config.get("Cassandra", "Keyspace")
+@defer.inlineCallbacks
+def reindexProfileContent():
+    rows = yield db.get_range_slice('entities', count=1000)
+    for row in rows:
+        entityId = row.key
+        log.msg(entityId)
+        entity = utils.supercolumnsToDict(row.columns)
+        if entity.get('basic', {}).get('type', '') == 'user':
+            orgId = entity['basic'].get('org', '')
+            if orgId:
+                fts.solr.updatePeopleIndex(entityId, entity, orgId)
+
 
 
 
 @defer.inlineCallbacks
-def createIndex():
+def reindexItems():
     """
         re index all items
     """
@@ -55,14 +67,24 @@ def createIndex():
 
 
 if __name__ == '__main__':
-    log.startLogging(sys.stdout)
-    db.startService()
-    d = createIndex()
 
-    def finish(x):
-        db.stopService()
-        reactor.stop();
-    d.addErrback(log.err)
-    d.addBoth(finish)
+    parser = optparse.OptionParser()
+    parser.add_option('-i', '--index-items', dest="items", action="store_true")
+    parser.add_option('-p', '--index-people', dest='people', action="store_true")
+    options, args = parser.parse_args()
 
-    reactor.run()
+    if options.items or options.people:
+        log.startLogging(sys.stdout)
+        db.startService()
+        if options.items:
+            d = reindexItems()
+        if options.people:
+            d = reindexProfileContent()
+
+
+        def finish(x):
+            db.stopService()
+            reactor.stop();
+        d.addErrback(log.err)
+        d.addBoth(finish)
+        reactor.run()
