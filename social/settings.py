@@ -450,12 +450,16 @@ class SettingsResource(base.BaseResource):
 
             handlers={"onload": "$$.menu.selectItem('%s');" % detail}
             if detail == "basic":
-                handlers["onload"] += """$$.ui.bindFormSubmit('#settings-form');"""
+                handlers["onload"] += "$$.ui.bindFormSubmit('#settings-form');"
                 yield renderScriptBlock(request, "settings.mako", "editBasicInfo",
                                         landing, "#settings-content", "set", True,
                                         handlers = handlers, **args)
 
             elif detail == "work":
+                handlers["onload"] += """$('.expertise-input').tagedit({
+                                            additionalListClass: 'styledform',
+                                            breakKeyCodes: [13,44,32]
+                                         });"""
                 yield renderScriptBlock(request, "settings.mako", "editWork",
                                         landing, "#settings-content", "set", True,
                                         handlers=handlers, **args)
@@ -740,8 +744,8 @@ class SettingsResource(base.BaseResource):
         try:
             startYear = int(utils.getRequestArg(request, 'startyear'))
             if not 1900 < startYear <= curYear:
-                raise TypeError
-        except TypeError:
+                raise ValueError
+        except (ValueError,TypeError):
             raise errors.InvalidRequest('Invalid start year')
 
         try:
@@ -751,8 +755,8 @@ class SettingsResource(base.BaseResource):
             else:
                 endYear = int(endYear)
                 if not startYear <= endYear <= curYear:
-                    raise TypeError
-        except TypeError:
+                    raise ValueError
+        except (ValueError,TypeError):
             raise errors.InvalidRequest('Invalid end year')
 
         name = utils.getRequestArg(request, 'company')
@@ -815,8 +819,8 @@ class SettingsResource(base.BaseResource):
         try:
             year = int(utils.getRequestArg(request, 'year'))
             if not 1920 < year <= curYear:
-                raise TypeError
-        except TypeError:
+                raise ValueError
+        except (ValueError,TypeError):
             raise errors.InvalidRequest('Invalid graduation year')
 
         name = utils.getRequestArg(request, 'school')
@@ -843,6 +847,20 @@ class SettingsResource(base.BaseResource):
                                     args=[newSchoolId, newSchoolVal, True])
 
 
+    @defer.inlineCallbacks
+    def _updateExpertise(self, request):
+        myId = request.getSession(IAuthInfo).username
+        expertise = utils.getRequestArg(request, 'expertise[]', False, True)
+        valid = []
+        for x in expertise:
+            decoded = x.decode('utf-8', 'replace')
+            if len(decoded) > 50 or not re.match('^[\w-]*$', decoded):
+                raise errors.InvalidRequest('Expertise can only be upto 50 characters long and can include numerals, alphabet and hyphens (-) only.')
+
+        yield db.insert(myId, "entities", ','.join(expertise), "expertise", "expertise")
+        request.write('$$.alerts.info("%s");' % _('Expertise information updated successfully!'))
+
+
     @profile
     @dump_args
     def render_POST(self, request):
@@ -864,6 +882,8 @@ class SettingsResource(base.BaseResource):
                 d = self._changePassword(request)
             elif action == "notify":
                 d = self._updateNotifications(request)
+            elif action == "expertise":
+                d = self._updateExpertise(request)
 
         return self._epilogue(request, d)
 

@@ -1240,6 +1240,13 @@ abbr.timestamp {
     font-size: 12px;
 }
 
+.styledform-helpwrap {
+    width: 350px;
+    float: left;
+    line-height: 1.3em;
+    color: #888;
+}
+
 .styledform-text {
     width: 350px;
     float: left;
@@ -1253,6 +1260,7 @@ abbr.timestamp {
     line-height: normal !important;
 }
 
+.styledform.tagedit-list,
 .styledform-inputwrap,
 .styledform input[type=text],
 .styledform input[type=email],
@@ -1284,6 +1292,14 @@ abbr.timestamp {
 }
 .inline-select {
     width: auto !important;
+}
+
+.tagedit-listelement > input {
+    border-style: none !important;
+    box-shadow: none !important;
+    background-color: transparent !important;
+    border-width: 0 !important;
+    padding: 0 !important;
 }
 
 .styledform abbr {

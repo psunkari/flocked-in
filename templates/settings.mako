@@ -62,8 +62,8 @@
     </ul>
     <ul class="v-links sidemenu">
       ${navMenuItem("/settings?dt=basic", _("Basic"), "basic")}
-      ${navMenuItem("/settings?dt=work", _("Work Information"), "work")}
-      ${navMenuItem("/settings?dt=personal", _("Personal Information"), "personal")}
+      ${navMenuItem("/settings?dt=work", _("Work Profile"), "work")}
+      ${navMenuItem("/settings?dt=personal", _("Personal Profile"), "personal")}
     </ul>
     <ul class="v-links sidemenu">
       ${navMenuItem("/settings?dt=passwd", _("Change Password"), "passwd")}
@@ -287,8 +287,8 @@
     contact = me.get('contact', {})
     emailId = me['basic']['emailId']
   %>
-  <form class="ajax" id="settings-form" action="/settings/work" method="post"  enctype="multipart/form-data">
-    <div id="contacts">
+  <div id="contacts">
+    <form class="ajax" id="settings-form" action="/settings/work" method="post" enctype="multipart/form-data">
       <div class="center-title">Work Contacts</div>
       <ul class="styledform">
           <li class="form-row">
@@ -311,37 +311,74 @@
       <div class="styledform-buttons">
         <input type="submit" class="button default" value="${_('Save')}"/>
       </div>
-    </div>
-    %if emailId and emailId[0]:
-      <input type="hidden" value = ${emailId[0]} name="emailId" />
-    %endif
-    %if myKey:
-      <input type="hidden" value = ${myKey} name="id" />
-    %endif
-  </form>
+      %if emailId and emailId[0]:
+        <input type="hidden" value=${emailId[0]} name="emailId" />
+      %endif
+      %if myKey:
+        <input type="hidden" value=${myKey} name="id" />
+      %endif
+    </form>
+  </div>
   <div id="expertise">
     <div class="center-title">Expertise</div>
+    <form class="ajax" id="expertise-form" action="/settings/expertise" method="post" enctype="multipart/form-data">
+      <ul class="styledform">
+        <li class="form-row">
+          <label class="styled-label">&nbsp;</label>
+          <div class="styledform-helpwrap">
+            <span>
+              Expertise is a list of tags that best describe your professional
+              abilities.  Each tag can be upto fifty alphabet or numbers and can
+              include a hyphen (-) to separate words.<br/><br/>
+            </span>
+            <% expertise = me.get('expertise', {}).get('expertise', '').split(',') %>
+            %for item in expertise:
+              <input type="text" name="expertise[]" class="expertise-input" value="${item}"/>
+            %endfor
+            <span>
+              Example: cloud-computing, java, python, robotics
+            </span>
+          </div>
+        </li>
+      </ul>
+      <div class="styledform-buttons">
+        <input type="submit" class="button default" value="${_('Save')}"/>
+      </div>
+    </form>
   </div>
   <div id="prevorgs">
-    <div class="center-title">Past Employers and Education
+    <div class="center-title">Past Employers
       <span class="title-toolbox">
         <a href="javascript:" onclick="$$.settings.editEmp();">Add Company</a>
-        or
-        <a href="javascript:" onclick="$$.settings.editEdu();">Add School</a>
       </span>
     </div>
     <div class="tl-wrapper" id="company-school-wrapper">
       <%
         companies = me.get('companies', {})
-        schools = me.get('schools', {})
-
         for companyId in companies.keys():
           companyItem(companyId, companies[companyId])
-
+      %>
+      %if not companies:
+        <div class="tl-empty-msg">
+          Nothing found here!<br/>Please click the links above to add information.
+        </div>
+      %endif
+    </div>
+    <div class="clear" style="margin-bottom: 25px;"/>
+  </div>
+  <div id="education">
+    <div class="center-title">Education
+      <span class="title-toolbox">
+        <a href="javascript:" onclick="$$.settings.editEdu();">Add School</a>
+      </span>
+    </div>
+    <div class="tl-wrapper" id="schools-wrapper">
+      <%
+        schools = me.get('schools', {})
         for schoolId in schools.keys():
           schoolItem(schoolId, schools[schoolId])
       %>
-      %if not (schools and companies):
+      %if not schools:
         <div class="tl-empty-msg">
           Nothing found here!<br/>Please click the links above to add information.
         </div>
