@@ -1,4 +1,4 @@
-import urllib
+import re
 from base64                     import urlsafe_b64decode
 from lxml                       import etree
 from lxml.builder               import ElementMaker
@@ -12,10 +12,11 @@ from twisted.web.http           import PotentialDataLoss
 from twisted.web.http_headers   import Headers
 
 from social                     import base, utils, config, feed
-from social                     import errors, plugins, _
+from social                     import errors, plugins, _, db
 from social.constants           import SEARCH_RESULTS_PER_PAGE
 from social.template            import render, renderScriptBlock
 from social.logging             import dump_args, profile, log
+from social.relations           import Relation
 
 
 URL = config.get('SOLR', 'HOST')
@@ -117,14 +118,13 @@ class Solr(object):
         url = URL +  "/update?commit=true"
         return self._request("POST", url, {}, XMLBodyProducer(root))
 
-    def search(self, term, orgId, start=0):
+    def search(self, term, orgId, count, start=0):
         def callback(response):
             finished = defer.Deferred()
             response.deliverBody(JsonBodyReceiver(finished))
             return finished
-        rows = SEARCH_RESULTS_PER_PAGE
-        term = urllib.quote(term)
-        url = URL + "/select?q=%s&start=%s&rows=%s&fq=orgId:%s&sort=%s" % (term, start, rows, orgId, urllib.quote('timestamp desc'))
+        term = quote(term)
+        url = URL + "/select?q=%s&start=%s&rows=%s&fq=orgId:%s&sort=%s&hl=true&hl.fl=comment" % (term, start, count, orgId, quote('timestamp desc'))
         d = self._request("GET", url)
         d.addCallback(callback)
         return d
@@ -137,8 +137,9 @@ class FTSResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def search(self, request):
-        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
+        myOrgId = args['orgId']
 
         term = utils.getRequestArg(request, "q")
         start = utils.getRequestArg(request, "start") or 0
@@ -162,43 +163,90 @@ class FTSResource(base.BaseResource):
         if script and appchange:
             yield renderScriptBlock(request, "search.mako", "layout",
                                     landing, "#mainbar", "set", **args)
+        count = SEARCH_RESULTS_PER_PAGE
+        items = {}
+        convs = set()
+        highlighting = {}
+        toFetchItems = []
+        toFetchStart = start
+        toFetchEntities = set()
+        relation = Relation(myId, [])
+        yield defer.DeferredList([relation.initGroupsList(),
+                                  relation.initSubscriptionsList(),
+                                  relation.initFollowersList()])
+        regex = re.compile("(.*?)([^\s]*\s*[^\s]*\s*[^\s]*\s*)(<em class='highlight'>.*<\/em>)(\s*[^\s]*\s*[^\s]*\s*[^\s]*)(.*)")
+        while 1:
+            res = yield solr.search(term, args['orgKey'], count, toFetchStart)
+            messages = []
+            convItems = []
+            numMatched = res.data.get('response', {}).get('numFound', 0)
+            docs = res.data.get('response', {}).get('docs', [])
+            highlighting.update(res.data.get('highlighting', {}))
+            for index, item in enumerate(docs):
+                itemId = item['id']
+                parent = item.get('parent', None)
+                position = toFetchStart + index
+                if item.get('itemType', '') == "message":
+                    if (item.get('id'), parent) not in messages:
+                        messages.append((item.get('id'), parent))
+                elif parent:
+                    convItems.append((itemId, parent, position))
+                    convs.add(parent)
+                else:
+                    convItems.append((itemId, itemId, position))
+                    convs.add(item.get('id'))
+            if convs:
+                filteredConvs, deleted  = yield feed.fetchAndFilterConvs(convs, count, relation, items, myId, myOrgId)
+                for itemId, convId, position in convItems:
+                    if convId in filteredConvs and itemId not in toFetchItems:
+                        toFetchItems.append(itemId)
+                    if len(toFetchItems) == count:
+                        if position +1 < numMatched:
+                            nextPageStart = position + 1
+                        break
+            if len(toFetchItems) == count or len(docs) < count:
+                break
+            toFetchStart = toFetchStart + count
 
-        res = yield solr.search(term, args['orgKey'], start)
-        data = res.data
-        convs = []
-        messages = []
-        numMatched = data.get('response', {}).get('numFound', 0)
-        for item in data.get('response', {}).get('docs', []):
-            parent = item.get('parent', None)
-            if item.get('itemType', '') == "message":
-                if (item.get('id'), parent) not in messages:
-                   messages.append((item.get('id'), parent))
-            elif parent:
-                if parent not in convs:
-                    convs.append(parent)
-            else:
-                convs.append(item.get('id'))
-        if convs:
-            feedItems = yield feed.getFeedItems(request, convIds=convs, count=len(convs))
-            args.update(feedItems)
-        else:
-            args["conversations"] = convs
-
-        if start + SEARCH_RESULTS_PER_PAGE < numMatched:
-            nextPageStart = start + SEARCH_RESULTS_PER_PAGE
         if start - SEARCH_RESULTS_PER_PAGE >= 0:
             prevPageStart = start - SEARCH_RESULTS_PER_PAGE
 
+        _items = yield db.multiget_slice(toFetchItems, "items",
+                                           ['meta', 'attachments', 'tags'])
+        items.update(utils.multiSuperColumnsToDict(_items))
+        for itemId, item in items.iteritems():
+            toFetchEntities.add(item['meta']['owner'])
+            if 'target' in item['meta']:
+                toFetchEntities.update(item['meta']['target'].split(','))
+            if itemId in highlighting and 'comment' in highlighting[itemId]:
+                match = re.match(regex, unquote(highlighting[itemId]['comment'][0]))
+                if match:
+                    comment = "".join(match.groups()[1:4])
+                    comment = comment + " ..." if match.group(5) else comment
+                    items[itemId]['meta']['comment'] = comment
+
+        entities = yield db.multiget_slice(toFetchEntities, "entities", ['basic'])
+        entities = utils.multiSuperColumnsToDict(entities)
+
+        args['term'] = term
+        args['items'] = items
+        args['entities'] = entities
+        args['relations'] = relation
+        args["conversations"] = toFetchItems
         args["nextPageStart"] = nextPageStart
-        args["prevPageStart"] = prevPageStart
+        fromFetchMore = True if start else False
+        args['fromFetchMore'] = fromFetchMore
 
         if script:
             onload = "(function(obj){$$.convs.load(obj);})(this);"
-            yield renderScriptBlock(request, "search.mako", "results", landing,
-                                    "#user-feed", "set", True,
-                                    handlers={"onload": onload}, **args)
-            yield renderScriptBlock(request, "search.mako", "paging", landing,
-                                    "#search-paging", "set", **args)
+            if fromFetchMore:
+                yield renderScriptBlock(request, "search.mako", "results",
+                                        landing, "#next-load-wrapper", "replace",
+                                        True, handlers={"onload": onload}, **args)
+            else:
+                yield renderScriptBlock(request, "search.mako", "results",
+                                        landing, "#user-feed", "set", True,
+                                        handlers={"onload": onload}, **args)
 
         if script and landing:
             request.write("</body></html>")

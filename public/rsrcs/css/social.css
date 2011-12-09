@@ -1,6 +1,6 @@
 
-html>/**/body {           /* > IE7 */
-    overflow-y: scroll;
+html, body {
+    overflow: hidden;
 }
 
 body {
@@ -16,6 +16,16 @@ textarea, input {
 }
 form {
     margin-bottom: 0;
+}
+
+#bigwrap {
+    position: fixed;
+    height: 100%;
+    width: 100%;
+    top: 0;
+    left: 0;
+    overflow-x: auto;
+    overflow-y: scroll;
 }
 
 
@@ -520,11 +530,19 @@ a:hover, a:active, a:focus {
 }
 
 .center-title {
-    font-size: 18px;
+    font-size: 16px;
     line-height: 1.5em;
     color: #888;
     border-bottom: 1px solid #EFEFEF;
-    margin: 0 0 10px;
+    margin: 20px 10px;
+}
+.title-toolbox {
+    text-align: right;
+    font-size: 12px;
+    line-height: 2em;
+    margin-left: 20px;
+    padding-left: 20px;
+    border-left: 1px solid #DDD;
 }
 
 
@@ -608,10 +626,14 @@ a:hover, a:active, a:focus {
     background-position: -16px -224px;
 }
 .answer .activity-icon,
-.comment .activity-icon {
+.comment .activity-icon,
+.status .activity-icon {
     background-position: 0 -224px;
 }
 
+.highlight {
+    background-color: yellow;
+}
 
 /*
  * Simple TabView
@@ -1064,7 +1086,6 @@ abbr.timestamp {
 .text-full, .text-preview {
     word-wrap: break-word;
 }
-
 #empty-message,
 #next-load-wrapper {
     padding: 10px 20px;
@@ -1176,25 +1197,54 @@ abbr.timestamp {
  *       then consider using a "input-wrap" approach (above)
  */
 
-.styledform {
+.styledform, .dlgform {
     list-style-type: none;
     margin: 0px;
     padding-left: 15px;
 }
+.dlgform {
+    padding: 10px;
+}
 
-.styledform > .form-row {
+.styledform > .form-row,
+.dlgform > .form-row {
     clear: both;
     line-height: 30px;
     padding: 5px 0px;
     overflow: hidden;
 }
 
-.styledform .styled-label {
+.styled-label, .dlgform-label {
     float: left;
     margin-right: 1%;
     text-align: right;
     width: 32%;
     font-size: 12px;
+}
+
+.dlgform-text,
+.dlgform input[type=text],
+.dlgform input[type=email],
+.dlgform input[type=password],
+.dlgform select,
+.dlgform textarea {
+    width: 50%;
+    float: left;
+    background-color: white;
+    border-width: 1px;
+    border-style: solid;
+    border-color: #CCC #999 #999 #CCC;
+    box-shadow: 1px 1px 0 #CCC;
+    padding: 2px;
+    margin-top: 3px;
+    font-size: 12px;
+}
+
+.styledform-helpwrap {
+    width: 350px;
+    float: left;
+    line-height: 1.3em;
+    color: #888;
 }
 
 .styledform-text {
@@ -1210,6 +1260,7 @@ abbr.timestamp {
     line-height: normal !important;
 }
 
+.styledform.tagedit-list,
 .styledform-inputwrap,
 .styledform input[type=text],
 .styledform input[type=email],
@@ -1239,8 +1290,16 @@ abbr.timestamp {
     position: relative;
     top: 3px;
 }
-.styledform .inline-select {
+.inline-select {
     width: auto !important;
+}
+
+.tagedit-listelement > input {
+    border-style: none !important;
+    box-shadow: none !important;
+    background-color: transparent !important;
+    border-width: 0 !important;
+    padding: 0 !important;
 }
 
 .styledform abbr {
@@ -1280,6 +1339,15 @@ abbr.timestamp {
     padding: 6px;
     border-radius: 6px;
     margin: 0 0 10px 10px;
+}
+
+.tl-empty-msg {
+    float: left;
+    font-size: 14px;
+    margin: 0 0 10px 10px;
+}
+.tl-item + .tl-empty-msg {
+    display: none;
 }
 
 .tl-avatar {
@@ -1776,6 +1844,7 @@ abbr.timestamp {
     border-width: 0;
     margin: 0;
     top: 0;
+    z-index: 20000;
 }
 #alertbar > .alert {
     width: 980px;

@@ -100,6 +100,7 @@ a:link, a:visited {
     margin: 20px 0;
     line-height: 1.5em;
 }
+
 #home-caption {
     font-size: 25px;
     margin: 100px 0 0;
@@ -218,7 +219,7 @@ a:link, a:visited {
     border-top: 1px dotted #3d85c6;
 }
 #home-summary {
-    width: 525px;
+    width: 500px;
     font-size: 1.1em;
     color: #888;
     padding: 0 20px;
@@ -227,11 +228,17 @@ a:link, a:visited {
 #home-summary > p {
     margin: 0;
 }
+#were-hiring {
+    float: left;
+}
+#were-hiring-img {
+    width: 90px;
+}
 #home-summary-misc {
     width: 325px;
     float: right;
     text-align: right;
-    padding: 0 20px;
+    padding: 0 20px 0 0;
 }
 #home-menu {
     margin-right: -10px;

@@ -41,10 +41,11 @@
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
   <title>${self.title()}</title>
+  <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/jquery.ui.css"/>
+  <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/jquery.tagedit.css"/>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/social.css"/>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/screen-size.css"/>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/widgets.css"/>
-  <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/jquery.ui.css"/>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/messaging.css"/>
   <link rel="shortcut icon" href="/rsrcs/img/favicon.ico" type="image/x-icon" />
 %if script:
@@ -82,6 +83,7 @@
       Compatibility mode &ndash; Please switch your browser to normal mode
     </span>
   </div>
+  <div id='bigwrap'>
   <div id="topbar">
     <div id="top" class="contents">
       <% avatarURI = utils.userAvatar(myKey, me) %>
@@ -131,6 +133,7 @@
   <div id="mainbar">
     ${self.layout()}
   </div>
+  </div><!-- bigwrap -->
   <div id="alertbar"></div>
 %if script:
   <script type="text/javascript" src="/rsrcs/js/jquery-1.6.4.js"></script>
@@ -141,6 +144,8 @@
   <script type="text/javascript" src="/rsrcs/js/jquery.autogrow-textarea.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.iframe-transport.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.html5form-1.3.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/jquery.autoGrowInput.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/jquery.tagedit.js"></script>
   <script type="text/javascript" src="/rsrcs/js/social.js"></script>
   <script type="text/javascript">
     $().ready(function() {$$.ui.init()});

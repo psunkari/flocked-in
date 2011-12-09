@@ -70,7 +70,7 @@ class ApplicationResource(base.BaseResource):
         clientId = utils.getUniqueKey()
         clientSecret = utils.getRandomKey()
 
-        meta = {"author": myId, "name": name,
+        meta = {"author": myId, "name": name, "org": myOrgId,
                 "secret": utils.hashpass(clientSecret),
                 "scope": ' '.join(scope), "category": category}
 

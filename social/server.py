@@ -20,6 +20,7 @@ class RequestFactory(server.Request):
     cookiename = 'session'
     session = None
     session_saved = False
+    apiAccessToken = None
 
     @defer.inlineCallbacks
     def _saveSessionToDB(self, ignored=None):
@@ -124,3 +125,4 @@ class SiteFactory(server.Site):
     @defer.inlineCallbacks
     def clearSession(self, uid):
         yield db.remove(uid, "sessions", "auth")
+

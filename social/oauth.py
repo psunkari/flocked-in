@@ -162,7 +162,8 @@ class OAuthAuthorizeResource(base.BaseResource):
             # Authcode must expire shortly after it is issued
             # We expire the authcode in 5 minutes?
             authCode = utils.getRandomKey()
-            authMap = {"user_id": myId, "client_id": clientId,
+            authMap = {"user_id": myId, "org_id": myOrgId,
+                       "client_id": clientId,
                        "redirect_uri": b64encode(redirectUri),
                        "scope": scopes, "type": "auth"}
             yield db.batch_insert(authCode, "oAuthData", authMap, ttl=120)
@@ -224,7 +225,7 @@ class OAccessTokenResource(base.BaseResource):
             return
 
         if grantType == "client_credentials":
-            yield self._tokenForClientCred(request)
+            yield self._tokenForClientCredentials(request)
         elif grantType == "authorization_code":
             yield self._tokenForAuthCode(request)
         elif grantType == "refresh_token":
@@ -274,16 +275,17 @@ class OAccessTokenResource(base.BaseResource):
             return
 
         userId = grant["user_id"]
+        orgId  = grant["org_id"]
         accessToken = utils.getRandomKey()
-        accessTokenData = {"user_id": userId, "type": "access",
-                           "client_id": clientId,
+        accessTokenData = {"user_id": userId, "org_id": orgId,
+                           "type": "access", "client_id": clientId,
                            "auth_code": authCode, "scope": " ".join(scopes)}
         yield db.batch_insert(accessToken, "oAuthData",
                               accessTokenData, ttl=self._accessTokenExpiry)
 
         refreshToken = utils.getRandomKey()
-        refreshTokenData = {"user_id": userId, "type": "refresh",
-                            "client_id": clientId,
+        refreshTokenData = {"user_id": userId, "org_id": orgId,
+                            "type": "refresh", "client_id": clientId,
                             "redirect_uri": grant["redirect_uri"],
                             "auth_code": authCode, "scope": grant["scope"]}
         yield db.batch_insert(refreshToken, "oAuthData",
@@ -295,6 +297,7 @@ class OAccessTokenResource(base.BaseResource):
         self._success(request, accessToken, refreshToken)
 
 
+    @defer.inlineCallbacks
     def _tokenForClientCredentials(self, request):
         clientId = utils.getRequestArg(request, 'client_id')
         clientSecret = utils.getRequestArg(request, 'client_secret')
@@ -309,9 +312,10 @@ class OAccessTokenResource(base.BaseResource):
         # We don't issue a refresh token and everytime the client will have
         # to authenticate using it's credentials
         scopes = client["meta"]["scope"].split(' ')
-        userId = client["meta"]["owner"]
+        userId = client["meta"]["author"]
+        orgId  = client["meta"]["org"]
         accessToken = utils.getRandomKey()
-        accessTokenData = {"user_id": userId, "type": "access",
+        accessTokenData = {"user_id": userId, "type": "access", "org_id": orgId,
                            "client_id": clientId, "scope": " ".join(scopes)}
         yield db.batch_insert(accessToken, "oAuthData",
                               accessTokenData, ttl=self._accessTokenExpiry)

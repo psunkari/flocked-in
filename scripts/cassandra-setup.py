@@ -397,15 +397,11 @@ def addSampleData(client):
                                     'Spanish': 'srw',
                                     'Hindi': 'rw'
                                 },
-                                'education': {
+                                'schools': {
                                     '1996:Hraward Business School': 'Graduation',
                                 },
-                                'work': {
-                                    ':201012:Chief Executive Officer': '',
-                                    '201012:200912:Chief Financial Officer': '',
-                                },
-                                'employers': {
-                                    '2007:2003:Example Technology Services': 'Chief Financial Officer',
+                                'companies': {
+                                    '2007:2003:Example Technology Services': "%s:%s" % (b64encode('Chief Financial Officer'), b64encode('Lots of work'))
                                 },
                                 'contact': {
                                     'mail': 'kevin@example.com',
@@ -443,12 +439,9 @@ def addSampleData(client):
                                     'Hindi': 'srw',
                                     'English': 'srw'
                                 },
-                                'education': {
+                                'schools': {
                                     '2003:Acpak School of Management': 'Post Graduation',
                                     '1998:Acpak Institute of Technology': 'Graduation'
-                                },
-                                'work': {
-                                    ':200706:Recruitment': 'Instrumental in company growth from 50 to 6000 employees'
                                 },
                                 'contact': {
                                     'mail': 'ashok@example.com',
@@ -479,11 +472,11 @@ def addSampleData(client):
                                     'English': 'srw',
                                     'German': 'srw'
                                 },
-                                'education': {
+                                'schools': {
                                     '2008:Mocha Frappe Institute of Technology': 'Graduation'
                                 },
-                                'employers': {
-                                    '2010:2008:JohnDoe Corp': 'Lots of exciting work there!',
+                                'companies': {
+                                    '2010:2008:JohnDoe Corp': "%s:%s"%(b64encode('CEO'),b64encode('Lots of exciting work there!')),
                                 },
                                 'contact': {
                                     'mail': 'william@example.com',
@@ -523,11 +516,8 @@ def addSampleData(client):
                                     'English': 'srw',
                                     'Hindi': 'rw'
                                 },
-                                'education': {
+                                'schools': {
                                     '2004:Green Tea Institute of Technology': 'Graduation'
-                                },
-                                'work': {
-                                    ':201012:Social Network': 'Next generation enterprise social software',
                                 },
                                 'contact': {
                                     'mail': 'paul@example.com',
@@ -562,12 +552,8 @@ def addSampleData(client):
                                     'French': 'srw',
                                     'English': 'srw'
                                 },
-                                'education': {
+                                'schools': {
                                     '2008:Diced Onion Technology University': 'Graduation'
-                                },
-                                'work': {
-                                    ':201012:HiPhone Applications': 'Development lead for HiPhone applications',
-                                    '201012:200912:HiPhone': 'The next generation fake iPhone',
                                 },
                                 'contact': {
                                     'mail': 'john@example.com',

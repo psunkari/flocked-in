@@ -905,10 +905,10 @@ var dialog = {
 
     _options: {
         position: {
-            my: 'right top',
+            my: 'center top',
             at: 'center top',
             of: window,
-            offset: '210px 200px'
+            offset: '0 200px'
         },
         buttons: [
             {
@@ -972,7 +972,7 @@ var dialog = {
         }
 
         $template.css('z-index', 1000+dialog._counter)
-        $template.position(options.position);
+        $('#'+dlgId+'-inner').position(options.position);
 
         dialog._counter += 1;
     },
@@ -1352,3 +1352,46 @@ $.address.change(function(event) {
 
 $$.alerts = alerts;
 }})(social, jQuery);
+
+
+/*
+ * Settings/Edit Profile
+ */
+(function($$, $) { if (!$$.settings) {
+var settings = {
+    _openFormDialog: function(id, url) {
+        var dialogOptions = {
+            id: id,
+            buttons: [
+                {
+                    text:'Submit',
+                    click : function() {
+                        query = $(':input', '#'+id+'-center').serialize();
+                        $.post(url, query);
+                    }
+                },
+                {
+                    text: 'Cancel',
+                    click: function() {
+                        $$.dialog.close(this, true);
+                    }
+                }
+            ]
+        };
+        $$.dialog.create(dialogOptions);
+        $.get(url);
+    },
+    editEmp: function(companyId) {
+        if (!companyId)
+            companyId = '';
+        settings._openFormDialog('addemp-dlg', '/ajax/settings/company?id='+companyId);
+    },
+    editEdu: function(schoolId) {
+        if (!schoolId)
+            schoolId = '';
+        settings._openFormDialog('addedu-dlg', '/ajax/settings/school?id='+schoolId);
+    }
+}
+$$.settings = settings;
+}})(social, jQuery);
+

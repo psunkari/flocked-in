@@ -1,113 +1,72 @@
-import uuid
-from base64     import urlsafe_b64encode, urlsafe_b64decode
-import hmac
-import hashlib
-import json
-import re
 
+import json
 
 from twisted.internet   import defer
-from twisted.web        import static, server
+from twisted.web        import resource, http, util
 
-from social             import db, utils, base, errors, config, _, fts
-from social             import notifications
-from social.relations   import Relation
-from social.isocial     import IAuthInfo
-from social.template    import render, renderScriptBlock
-from social.logging     import profile, dump_args, log
+from social             import db, utils, base, errors
+from social.item        import APIItemResource
 
 
-class APIResource(base.BaseResource):
-    isLeaf = True
+class _APIAccessToken():
+    _user = None
+    _org = None
+    _scope = None
+
+    def __init__(self, apiTokenData):
+        self._user = apiTokenData["user_id"]
+        self._org = apiTokenData["org_id"]
+        self._scope = apiTokenData["scope"].split(' ')
+
+    def _get_user(self):
+        return self._user
+    user = property(_get_user)
+
+    def _get_org(self):
+        return self._org
+    org = property(_get_org)
+
+    def _get_scope(self):
+        return self._scope
+    scope = property(_get_scope)
+
+
+class APIRoot(base.BaseResource):
     requireAuth = False
 
-    @defer.inlineCallbacks
-    def _renderFeedResource(self, request):
-        valid = yield self._verifyAccessKey(request, "feed")
-        if valid == 1:
-            request.write(json.dumps({}))
-        else:
-            request.write(json.dumps({"fail":True}))
-
-    def _profileResource(self, request):
-        pass
+    def __init__(self):
+        self._item = APIItemResource()
 
     @defer.inlineCallbacks
-    def _verifyAccessKey(self, request, scope):
-
-        #XXX:If request came through GET, "read" scope, for POST, "write" scope
-        access_token = utils.getRequestArg(request, 'access_token')
-        if not access_token:
-            bearer_header = request.getHeader("Authorization")
-            if bearer_header and bearer_header.startswith("Bearer"):
-                access_token = bearer_header.split("Bearer ", 1)[1]
+    def _ensureAuth(self, request, rsrc):
+        accessToken = utils.getRequestArg(request, 'access_token')
+        if not accessToken:
+            authHeader = request.getHeader("Authorization")
+            if authHeader and authHeader.startswith("Bearer"):
+                accessToken = authHeader.split("Bearer ", 1)[1]
             else:
-                request.setResponseCode(401)
-                request.setHeader("WWW-Authenticate", 'Bearer realm="flocked.in"')
-                defer.returnValue(0)
+                request.setHeader("WWW-Authenticate", 'Bearer realm="Flocked-in API"')
+                defer.returnValue(errors.APIErrorPage(401, http.RESPONSES[401]))
 
-        print access_token
-        cols = yield db.get_slice(access_token, "oAccessTokens")
-        cols = utils.supercolumnsToDict(cols)
-        if "meta" not in cols:
-            request.setResponseCode(401)
-            error = "invalid_token"
-            error_description = "The access token expired"
-            request.setHeader("WWW-Authenticate", 'Bearer realm="flocked.in",\
-                                                        error="%s",\
-                                                        error_description="%s"' %(error, error_description)
-                            )
-            defer.returnValue(0)
+        accessTokenData = yield db.get_slice(accessToken, "oAuthData")
+        accessTokenData = utils.columnsToDict(accessTokenData)
+        if not accessTokenData:
+            request.setHeader("WWW-Authenticate",
+                              'Bearer realm="Flocked-in API", error="invalid_token"')
+            defer.returnValue(errors.APIErrorPage(401, 'Invalid Access Token'))
+        else:
+            request.apiAccessToken = _APIAccessToken(accessTokenData)
 
-        result = cols["meta"]
-        stored_scope = result["scope"]
-        if not stored_scope.endswith("+w") and scope.endswith("+w"):
-            request.setResponseCode(403)
-            error = "insufficient_scope"
-            error_description = "The scope is beyond granted scope"
-            request.setHeader("WWW-Authenticate", 'Bearer realm="flocked.in",\
-                                                        error="%s",\
-                                                        scope="%s",\
-                                                        error_description="%s"' %(error, scope, error_description)
-                            )
-            defer.returnValue(0)
+        defer.returnValue(rsrc)
 
-        print "Access Token Results %s" %(result)
-        defer.returnValue(1)
+    def getChildWithDefault(self, path, request):
+        match = None
 
-    def render_GET(self, request):
-        segmentCount = len(request.postpath)
-        d = None
+        if path == "items":
+            match = self._item
 
-        if segmentCount == 0:
-            pass
-        elif segmentCount == 1 and request.postpath[0] == "feed":
-            request.setHeader("Access-Control-Allow-Origin", "*")
-            d = self._renderFeedResource(request)
+        if not match:
+            return errors.APIErrorPage(404, http.RESPONSES[404])
 
-        return self._epilogue(request, d)
-
-    def render_POST(self, request):
-        segmentCount = len(request.postpath)
-        d = None
-        if segmentCount == 0:
-            pass
-        elif segmentCount == 1 and request.postpath[0] == "feed":
-            request.setHeader("Access-Control-Allow-Origin", "*")
-            d = self._renderFeedResource(request)
-
-        return self._epilogue(request, d)
-
-    def render_OPTIONS(self, request):
-        segmentCount = len(request.postpath)
-        d = None
-        if segmentCount == 0:
-            pass
-        elif segmentCount == 1 and request.postpath[0] == "feed":
-            print "In options!!!"
-            request.setHeader("Access-Control-Allow-Origin", "http://localhost:9000")
-            request.setHeader("Access-Control-Request-Method", "POST, GET, OPTIONS")
-            request.setHeader("Access-Control-Request-Headers", "authorization")
-            request.setHeader("Access-Control-Allow-Credentials", "true")
-
-        return self._epilogue(request, d)
+        d = self._ensureAuth(request, match)
+        return util.DeferredResource(d)
