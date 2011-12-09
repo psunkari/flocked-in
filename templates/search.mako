@@ -19,14 +19,10 @@
         <div id="title">${self._title()}</div>
       </div>
       <div id="right">
-        <div id="home-notifications"></div>
-        <div id="home-events"></div>
-        <div id="home-todo"></div>
-        <div id="invite-people-block">
-          ${feed.invitePeopleBlock()}
-        </div>
-        <div id ="group-links" >
-        </div>
+        <div id="events-block"></div>
+        <div id="todo-block"></div>
+        <div id="people-block"></div>
+        <div id="groups-block"></div>
       </div>
       <div id="center">
         <% q = term if term else '' %>
@@ -65,6 +61,9 @@
     rTypeClass = "comment"
     tzone = me['basic']['timezone']
   %>
+  %if people and fromSidebar :
+    ${listUsers()}
+  %endif
   %if conversations:
     %for itemId in conversations:
       <%
@@ -99,8 +98,65 @@
     %if fromFetchMore:
       <div id="next-load-wrapper">${_("No more posts to show")}</div>
     %else:
-      <div id="next-load-wrapper">${_("No matching results")}</div>
+      <div id="next-load-wrapper">${_("No matching posts")}</div>
     %endif
 
   %endif
+</%def>
+
+<%def name="listUsers()">
+  <%
+    counter = 0
+    firstRow = True
+  %>
+  %for userId in people:
+    %if counter % 2 == 0:
+      %if firstRow:
+        <div class="users-row users-row-first">
+        <% firstRow = False %>
+      %else:
+        <div class="users-row">
+      %endif
+    %endif
+    <div class="users-user">${_displayUser(userId)}</div>
+    %if counter % 2 == 1:
+      </div>
+    %endif
+    <% counter += 1 %>
+  %endfor
+  %if counter % 2 == 1:
+    </div>
+  %endif
+</%def>
+
+
+<%def name="_displayUser(userId, smallAvatar=False)">
+
+  <%
+    max_height = '32px' if smallAvatar else '48px'
+    max_width =  '32px' if smallAvatar else '48px'
+  %>
+
+  <div class="users-avatar">
+    <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
+    %if avatarURI:
+      <img src="${avatarURI}" style="max-height:${max_height}; max-width:${max_width}"></img>
+    %endif
+  </div>
+  <div class="users-details">
+    <div class="user-details-name">${utils.userName(userId, entities[userId])}</div>
+    <div class="user-details-title">${entities[userId]["basic"].get("jobTitle", '')}</div>
+  </div>
+</%def>
+
+<%def name="_displayUsersMini()" >
+  <div class='sidebar-chunk'>
+    <div class="sidebar-title">${_("People")}</div>
+    %for userId in people[:2]:
+      <div class="suggestions-user" > ${_displayUser(userId, True)}</div>
+    %endfor
+    %if len(people) > 2:
+      <div style="float:right"><a href='/search?q=${term}&filter=people'>more</a></div>
+    %endif
+  </div>
 </%def>
