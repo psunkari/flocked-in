@@ -1,7 +1,6 @@
 <%! from social import utils, _, __, plugins %>
 <%! from pytz import common_timezones %>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-                    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE HTML>
 
 <%namespace name="widgets" file="widgets.mako"/>
 <%namespace name="people" file="people.mako"/>
@@ -39,25 +38,25 @@
       </div>
     </div>
     <div id="center-right">
+      <div class="center-header">
+        <div class="titlebar">
+          %if title:
+            <span class="middle title">${_(title)}</span>
+          %else:
+            <span class="middle title">${_("Admin Console")}</span>
+          %endif
+          <span class="button title-button">
+            <a class="ajax" href="/admin/add" data-ref="/admin/add">${_('Add Users')}</a>
+          </span>
+        </div>
+        <div id="add-user-wrapper"></div>
+      </div>
       <div id="right">
         <div id="home-notifications"></div>
         <div id="home-events"></div>
         <div id="home-todo"></div>
       </div>
       <div id="center">
-        <div class="center-header">
-          <div class="titlebar">
-            %if title:
-              <span class="middle title">${_(title)}</span>
-            %else:
-              <span class="middle title">${_("Admin Console")}</span>
-            %endif
-            <span class="button title-button">
-              <a class="ajax" href="/admin/add" data-ref="/admin/add">${_('Add Users')}</a>
-            </span>
-          </div>
-          <div id="add-user-wrapper"></div>
-        </div>
         <div class="center-contents">
           <div id="users-view" class="viewbar">
             %if not script:
@@ -71,6 +70,7 @@
           </div>
         </div>
       </div>
+      <div class="clear"></div>
     </div>
   </div>
 </%def>
@@ -80,7 +80,7 @@
   <div class="users-avatar">
     <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
     %if avatarURI:
-      <img src="${avatarURI}" height='48' width='48'></img>
+      <img src="${avatarURI}" style="max-height:48px; max-width:48px"></img>
     %endif
   </div>
   <div class="users-details">
@@ -185,76 +185,74 @@
           </a>
       </li>
   </div>
-  <div class="styledform">
-    <div id="add-user-block">
-      <form action="/admin/add" method="POST" enctype="multipart/form-data" autocomplete="off">
-        <ul>
-          <li>
-            <label for="name">${_("Display Name")}</label>
-            <input type="text" name="name" />
-          </li>
-          <li>
-            <label for="email">${_("Email Address")}</label>
-            <input type="text" name="email" />
-          </li>
-          <li>
-            <label for="jobTitle">${_("Job Title")}</label>
-            <input type="text" name="jobTitle" />
-          </li>
-          <li>
-            <label for="timezone">${_("Timezone")}</label>
-            <select name="timezone" class="single-row">
-              %for timezone in common_timezones:
-                %if timezone == myTimezone:
-                  <option value = "${timezone}" selected="">${timezone}</option>
-                %else:
-                  <option value = "${timezone}" >${timezone}</option>
-                %endif
-              %endfor
-            </select>
-          </li>
-          <li>
-            <label for="passwd">${_("Password")}</label>
-            <input type="password" name="passwd" />
-          </li>
-        </ul>
-        <div class="styledform-buttons">
-          <button type="submit" class="button default">${_("Add")}</button>
-          <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">${_("Cancel")}</button>
-        </div>
-      </form>
-    </div>
-    <div id="add-users-block" style="display:none">
-      <form action="/admin/add" method="POST" enctype="multipart/form-data" autocomplete="off">
-        <!-- fileupload doesn't work with ajax request.
-             TODO: find workaround to submit file in ajax request-->
-        <div class="alert alert-info">
-          ${_("Please upload a comma or tab separated file containing list of users in the following fields")}
-          <div><b>
-            <span>Name</span>&nbsp;&nbsp;
-            <span>Email Address</span>&nbsp;&nbsp;
-            <span>Job Title</span>&nbsp;&nbsp;
-            <span>Timezone</span>&nbsp;&nbsp;
-            <span>Password</span>
-          </b></div>
-        </div>
-        <ul>
-          <li>
-            <label for="format">${_("File Type")}</label>
-            <input type="radio" name="format" value="csv" checked=True/>CSV
-            <input type="radio" name="format" value="tsv"/>TSV
-          </li>
-          <li>
-            <label for="data">${_("Upload File")}</label>
-            <input type="file" name="data" accept="csv" />
-          </li>
-        </ul>
-        <div class="styledform-buttons">
-          <button type="submit" class="button default">${_("Add")}</button>
-          <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">${_("Cancel")}</button>
-        </div>
-      </form>
-    </div>
+  <div id="add-user-block">
+    <form action="/admin/add" method="POST" enctype="multipart/form-data" autocomplete="off">
+      <ul class="styledform">
+        <li class="form-row">
+          <label class="styled-label" for="name">${_("Display Name")}</label>
+          <input type="text" name="name" />
+        </li>
+        <li class="form-row">
+          <label class="styled-label" for="email">${_("Email Address")}</label>
+          <input type="text" name="email" />
+        </li>
+        <li class="form-row">
+          <label class="styled-label" for="jobTitle">${_("Job Title")}</label>
+          <input type="text" name="jobTitle" />
+        </li>
+        <li class="form-row">
+          <label class="styled-label" for="timezone">${_("Timezone")}</label>
+          <select name="timezone" class="single-row">
+            %for timezone in common_timezones:
+              %if timezone == myTimezone:
+                <option value = "${timezone}" selected="">${timezone}</option>
+              %else:
+                <option value = "${timezone}" >${timezone}</option>
+              %endif
+            %endfor
+          </select>
+        </li>
+        <li class="form-row">
+          <label class="styled-label" for="passwd">${_("Password")}</label>
+          <input type="password" name="passwd" />
+        </li>
+      </ul>
+      <div class="styledform-buttons">
+        <button type="submit" class="button default">${_("Add")}</button>
+        <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">${_("Cancel")}</button>
+      </div>
+    </form>
+  </div>
+  <div id="add-users-block" style="display:none">
+    <form action="/admin/add" method="POST" enctype="multipart/form-data" autocomplete="off">
+      <!-- fileupload doesn't work with ajax request.
+           TODO: find workaround to submit file in ajax request-->
+      <div class="alert alert-info">
+        ${_("Please upload a comma or tab separated file containing list of users in the following fields")}
+        <div><b>
+          <span>Name</span>&nbsp;&nbsp;
+          <span>Email Address</span>&nbsp;&nbsp;
+          <span>Job Title</span>&nbsp;&nbsp;
+          <span>Timezone</span>&nbsp;&nbsp;
+          <span>Password</span>
+        </b></div>
+      </div>
+      <ul class="styledform">
+        <li class="form-row">
+          <label class="styled-label" for="format">${_("File Type")}</label>
+          <input type="radio" name="format" value="csv" checked=True/>CSV
+          <input type="radio" name="format" value="tsv"/>TSV
+        </li>
+        <li class="form-row">
+          <label class="styled-label" for="data">${_("Upload File")}</label>
+          <input type="file" name="data" accept="csv" />
+        </li>
+      </ul>
+      <div class="styledform-buttons">
+        <button type="submit" class="button default">${_("Add")}</button>
+        <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">${_("Cancel")}</button>
+      </div>
+    </form>
   </div>
 </%def>
 
@@ -263,23 +261,21 @@
   <%
     name = org.get("basic", {}).get("name", '')
   %>
-  <div class="styledform">
-    <form action="/admin/org" method="POST" enctype="multipart/form-data">
-    <!-- fileupload doesn't work with ajax request.
-        TODO: find workaround to submit file in ajax request-->
-      <ul>
-        <li>
-          <label for="name">${_("Name")}</label>
-          <input type="text" name="name"  value="${name}"/>
-        </li>
-        <li>
-          <label for="dp">${_("Logo")}</label>
-          <input type="file" name="dp" />
-        </li>
-      </ul>
-      <div class="styledform-buttons">
-          <button type="submit" class="button default">${_("Save")}</button>
-      </div>
-    </form>
-  </div>
+  <form action="/admin/org" method="POST" enctype="multipart/form-data">
+  <!-- fileupload doesn't work with ajax request.
+      TODO: find workaround to submit file in ajax request-->
+    <ul class="styledform">
+      <li class="form-row">
+        <label class="styled-label" for="name">${_("Name")}</label>
+        <input type="text" name="name"  value="${name}"/>
+      </li>
+      <li class="form-row">
+        <label class="styled-label" for="dp">${_("Logo")}</label>
+        <input type="file" name="dp" />
+      </li>
+    </ul>
+    <div class="styledform-buttons">
+        <button type="submit" class="button default">${_("Save")}</button>
+    </div>
+  </form>
 </%def>

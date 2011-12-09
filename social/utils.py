@@ -10,6 +10,7 @@ import re
 import string
 from email.mime.text     import MIMEText
 from email.MIMEMultipart import MIMEMultipart
+from functools           import wraps
 
 try:
     import cPickle as pickle
@@ -30,50 +31,75 @@ from social.constants   import INFINITY
 from social.logging     import profile, dump_args, log
 
 
-def md5(text):
+def hashpass(text):
+    nounce = uuid.uuid4().hex
     m = hashlib.md5()
-    m.update(text)
-    return m.hexdigest()
+    m.update(nounce+text)
+    return nounce + m.hexdigest()
 
 
-def supercolumnsToDict(supercolumns, ordered=False):
+def checkpass(text, saved):
+    if len(saved) == 64:
+        nounce, hashed = nounce, hashed = saved[:32], saved[32:]
+        m = hashlib.md5()
+        m.update(nounce+text)
+        return m.hexdigest() == hashed
+    elif len(saved) == 32:  # Old, unsecure password storage.
+        m = hashlib.md5()
+        m.update(text)
+        return m.hexdigest() == saved
+    return False
+
+
+def supercolumnsToDict(supercolumns, ordered=False, timestamps=False):
     retval = OrderedDict() if ordered else {}
     for item in supercolumns:
         name = item.super_column.name
         retval[name] = OrderedDict() if ordered else {}
-        for col in item.super_column.columns:
-            retval[name][col.name] = col.value
+        if timestamps:
+            for col in item.super_column.columns:
+                retval[name][col.name] = col.timestamp/1e6
+        else:
+            for col in item.super_column.columns:
+                retval[name][col.name] = col.value
     return retval
 
 
-def multiSuperColumnsToDict(superColumnsMap, ordered=False):
+def multiSuperColumnsToDict(superColumnsMap, ordered=False, timestamps=False):
     retval = OrderedDict() if ordered else {}
     for key in superColumnsMap:
         columns =  superColumnsMap[key]
-        retval[key] = supercolumnsToDict(columns, ordered=ordered)
+        retval[key] = supercolumnsToDict(columns, ordered=ordered,
+                                         timestamps=timestamps)
     return retval
 
 
-def multiColumnsToDict(columnsMap, ordered=False):
+def multiColumnsToDict(columnsMap, ordered=False, timestamps=False):
     retval = OrderedDict() if ordered else {}
     for key in columnsMap:
         columns = columnsMap[key]
-        retval[key] = columnsToDict(columns, ordered=ordered)
+        retval[key] = columnsToDict(columns, ordered=ordered,
+                                    timestamps=timestamps)
     return retval
 
 
-def columnsToDict(columns, ordered = False):
+def columnsToDict(columns, ordered=False, timestamps=False):
     retval = OrderedDict() if ordered else {}
-    for item in columns:
-        retval[item.column.name] = item.column.value
+    if timestamps:
+        for item in columns:
+            retval[item.column.name] = item.column.timestamp/1e6
+    else:
+        for item in columns:
+            retval[item.column.name] = item.column.value
     return retval
 
-def _sanitize(text):
-    escape_entities = {':':"&#58;"}
-    text = text.decode('utf-8', 'replace').encode('utf-8')
-    return sanitizer.escape(text, escape_entities).strip()
 
 def getRequestArg(request, arg, sanitize=True, multiValued=False):
+    def _sanitize(text):
+        escape_entities = {':':"&#58;"}
+        text = text.decode('utf-8', 'replace').encode('utf-8')
+        return sanitizer.escape(text, escape_entities).strip()
+
     if request.args.has_key(arg):
         if not multiValued:
             if sanitize:
@@ -87,6 +113,22 @@ def getRequestArg(request, arg, sanitize=True, multiValued=False):
 
     else:
         return None
+
+
+def getTextWithSnippet(request, name, length):
+    escapeEntities = {':': '&#58;'}
+    if name in request.args:
+        text = request.args[name][0]
+        preview = None
+        unitext = text.decode('utf-8', 'replace')
+        if len(unitext) > length + 50:
+            preview = toSnippet(unitext, length)
+            preview = sanitizer.escape(preview, escapeEntities).strip()
+
+        text = unitext.encode('utf-8')
+        text = sanitizer.escape(text, escapeEntities).strip()
+        return (preview, text)
+    return None
 
 
 @defer.inlineCallbacks
@@ -152,8 +194,7 @@ def getValidItemId(request, arg, type=None, columns=None):
     myOrgId = authinfo.organization
     myId = authinfo.username
     relation = Relation(myId, [])
-    yield defer.DeferredList([relation.initFriendsList(),
-                              relation.initGroupsList()])
+    yield relation.initGroupsList()
     if not checkAcl(myId, acl, owner, relation, myOrgId):
         raise errors.ItemAccessDenied(itemType, itemId)
 
@@ -175,11 +216,11 @@ def getValidTagId(request, arg):
     defer.returnValue((tagId, tag))
 
 
-def getRandomKey(prefix):
-    key = prefix + "/" + str(uuid.uuid1())
-    sha = hashlib.sha1()
-    sha.update(key)
-    return sha.hexdigest()
+# Not to be used for unique Id generation.
+# OK to be used for validation keys, passwords etc;
+def getRandomKey():
+    random = uuid.uuid4().bytes + uuid.uuid4().bytes
+    return base64.b64encode(random, 'oA')
 
 
 # XXX: We need something that can guarantee unique keys over trillion records
@@ -188,32 +229,26 @@ def getUniqueKey():
     u = uuid.uuid1()
     return base64.urlsafe_b64encode(u.bytes)[:-2]
 
-@defer.inlineCallbacks
-def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
-                  ownerOrgId=None, groupIds = None):
-    authinfo = request.getSession(IAuthInfo)
-    owner = ownerId or authinfo.username
-    org = ownerOrgId or authinfo.organization
 
+@defer.inlineCallbacks
+def createNewItem(request, itemType, ownerId, ownerOrgId,
+                  acl=None, subType=None, groupIds = None):
     if not acl:
         acl = getRequestArg(request, "acl", sanitize=False)
-        try:
-            acl = json.loads(acl)
-            orgs = acl.get("accept", {}).get("orgs", [])
-            if len(orgs) > 1 :
-                raise errors.PermissionDenied(_('Cannot grant access to other orgs on this item'))
-            elif len(orgs) == 1 and orgs[0] != org:
-                raise errors.PermissionDenied(_('Cannot grant access to other orgs on this item'))
-        except:
-            if not org:
-                raise Exception("User does not belong to any company!")
-            acl = {"accept":{"orgs":[org]}}
+
+    try:
+        acl = json.loads(acl)
+        orgs = acl.get("accept", {}).get("orgs", [])
+        if len(orgs) > 1 or (len(orgs) == 1 and orgs[0] != ownerOrgId):
+            raise errors.PermissionDenied(_('Cannot grant access to other orgs on this item'))
+    except:
+        acl = {"accept":{"orgs":[ownerOrgId]}}
 
     accept_groups = acl.get('accept', {}).get('groups', [])
     deny_groups = acl.get('deny', {}).get('groups', [])
     groups = [x for x in accept_groups if x not in deny_groups]
     if groups:
-        relation = Relation(owner, [])
+        relation = Relation(ownerId, [])
         yield relation.initGroupsList()
         if not all([x in relation.groups for x in groups]):
             raise errors.PermissionDenied(_("Only group members can post to a group"))
@@ -224,19 +259,20 @@ def createNewItem(request, itemType, ownerId=None, acl=None, subType=None,
             "acl": acl,
             "type": itemType,
             "uuid": uuid.uuid1().bytes,
-            "owner": owner,
+            "owner": ownerId,
             "timestamp": str(int(time.time()))
         },
-        "followers": {owner: ''}
+        "followers": {ownerId: ''}
     }
     if subType:
         item["meta"]["subType"] = subType
     if groups:
         item["meta"]["target"] = ",".join(groups)
+
     tmpFileIds = getRequestArg(request, 'fId', False, True)
     attachments = {}
     if tmpFileIds:
-        attachments = yield _upload_files(owner, tmpFileIds)
+        attachments = yield _upload_files(ownerId, tmpFileIds)
         if attachments:
             item["attachments"] = {}
             for attachmentId in attachments:
@@ -274,13 +310,6 @@ def getFollowers(userKey, count=10):
 def getSubscriptions(userKey, count=10):
     cols = yield db.get_slice(userKey, "subscriptions", count=count)
     defer.returnValue(set(columnsToDict(cols).keys()))
-
-
-@defer.inlineCallbacks
-def getFriends(userKey, count=10):
-    cols = yield db.get_slice(userKey, "connections", count=count)
-    friends = set(supercolumnsToDict(cols).keys())
-    defer.returnValue(set(friends))
 
 
 @defer.inlineCallbacks
@@ -329,19 +358,6 @@ def expandAcl(userKey, acl, convId, convOwnerId=None):
                             if uid not in deniedUsers])
         keys.update(groups)
 
-    # See if friends have access to it.
-    if any([typ in ["friends", "orgs", "public"] for typ in accept]):
-        friends = yield getFriends(userKey, count=INFINITY)
-
-        # Only send to common friends if ACL is friends and actor
-        # is not the owner of the item.
-        if "friends" in accept and convOwnerId:
-            ownerFriends = yield getFriends(convOwnerId, count=INFINITY)
-            commonFriends = friends.intersection(ownerFriends)
-            keys.update([uid for uid in commonFriends if uid not in deniedUsers])
-        else:
-            keys.update([uid for uid in friends if uid not in deniedUsers])
-
     # See if followers and the company feed should get this update.
     if any([typ in ["orgs", "public"] for typ in accept]):
         followers = yield getFollowers(userKey, count=INFINITY)
@@ -366,7 +382,6 @@ def checkAcl(userId, acl, owner, relation, userOrgId=None):
 
     if userId in deny.get("users", []) or \
        userOrgId in deny.get("org", []) or \
-       (deny.get("friends", []) and owner in relation.friends) or \
        any([groupid in deny.get("groups", []) for groupid in relation.groups]):
         return False
 
@@ -377,8 +392,6 @@ def checkAcl(userId, acl, owner, relation, userOrgId=None):
         returnValue |= userOrgId in accept["orgs"]
     if "groups" in accept:
         returnValue |= any([groupid in accept["groups"] for groupid in relation.groups])
-    if "friends" in accept and accept["friends"]:
-        returnValue |= ((userId == owner) or (owner in relation.friends))
     if "followers" in accept and accept["followers"]:
         returnValue |= (userId == owner)
         if relation.subscriptions:
@@ -413,7 +426,7 @@ def getLatestCounts(request, asJSON=True):
     counts = dict([(key, len(latest[key])) for key in latest])
 
     # Default keys for which counts should be set
-    defaultKeys = ["notifications", "people", "messages", "groups", "tags"]
+    defaultKeys = ["notifications", "messages", "groups", "tags"]
     for key in defaultKeys:
         counts[key] = counts[key] if key in counts else 0
 
@@ -476,8 +489,13 @@ def userName(id, user, classes=None):
            % (id, user["basic"]["name"])
 
 
-def groupName(id, user, classes=None):
-    return "<span><a class='ajax' href='/feed?id=%s'>%s</a></span>"\
+def groupName(id, user, classes=None, element='span'):
+    if element == 'div':
+        classes= classes if classes else ''
+        return "<div class='%s'><a class='ajax' href='/group?id=%s'>%s</a></div>"\
+               % (classes, id, user["basic"]["name"])
+    else:
+        return "<span><a class='ajax' href='/group?id=%s'>%s</a></span>"\
            % (id, user["basic"]["name"])
 
 
@@ -566,7 +584,7 @@ def simpleTimestamp(timestamp, timezone='Asia/Kolkata'):
     params = {'minutes': ts.minute, '24hour': ts.hour,
               '12hour': 12 if not (ts.hour % 12) else (ts.hour % 12),
               'month': _(monthName(ts.month, True)), 'year': ts.year,
-              'ampm': "am" if ts.hour < 11 else "pm",
+              'ampm': "am" if ts.hour <= 11 else "pm",
               'dow': _(weekName(ts.weekday(), True)), 'date': ts.day}
     tooltip = _("%(dow)s, %(month)s %(date)s, %(year)s at %(12hour)s:%(minutes)02d%(ampm)s") % params
 
@@ -588,27 +606,20 @@ def simpleTimestamp(timestamp, timezone='Asia/Kolkata'):
     return "<abbr class='timestamp' title='%s' data-ts='%s'>%s</abbr>" %(tooltip, timestamp, formatted)
 
 
-def toSnippet(comment):
-    commentSnippet = []
-    length = 0
-    words = comment.split()
+_snippetRE = re.compile(r'(.*)\s', re.L|re.U|re.S)
+def toSnippet(text, maxlen):
+    unitext = text if type(text) == unicode or not text\
+                   else text.decode('utf-8', 'replace')
+    if len(unitext) <= maxlen:
+        return unitext.encode('utf-8')
 
-    # If it's a single word (eg:link) only make sure that
-    # the word isn't too long.
-    if len(words) == 1:
-        if len(words[0]) > 35:
-            return words[0][0:30] + "&hellip;"
-        else:
-            return words[0]
-
-    # More than one words. Break only at spaces.
-    for word in words:
-        if length+len(word) > 35:
-            commentSnippet.append("&hellip;")
-            break
-        commentSnippet.append(word)
-        length += len(word)
-    return " ".join(commentSnippet)
+    chopped = unitext[:maxlen]
+    match = _snippetRE.match(chopped)
+    if match:
+        chopped = match.group(1)
+    if len(chopped) < len(unitext):
+        chopped = chopped + unichr(0x2026)
+    return chopped.encode('utf-8')
 
 
 def uuid1(node=None, clock_seq=None, timestamp=None):
@@ -649,7 +660,7 @@ def addUser(emailId, displayName, passwd, orgKey, jobTitle = None, timezone=None
 
     userInfo = {'basic': {'name': displayName, 'org':orgKey,
                           'type': 'user', 'emailId':emailId}}
-    userAuthInfo = {"passwordHash": md5(passwd), "org": orgKey, "user": userId}
+    userAuthInfo = {"passwordHash": hashpass(passwd), "org": orgKey, "user": userId}
 
     if jobTitle:
         userInfo["basic"]["jobTitle"] = jobTitle
@@ -678,11 +689,13 @@ def removeUser(userId, userInfo=None):
     yield db.remove(orgKey, "displayNameIndex", ":".join([displayName.lower(), userId]))
     yield db.remove(orgKey, "orgUsers", userId)
     yield db.remove(orgKey, "blockedUsers", userId)
-    #unfriend - remove all pending requests
-    #clear displayName index
-    #clear nameindex
-    #unfollow
-    #unsubscribe from all groups
+    #
+    # TODO:
+    #   unfriend - remove all pending requests
+    #   clear displayName index
+    #   clear nameindex
+    #   unfollow
+    #   unsubscribe from all groups
 
 
 @defer.inlineCallbacks
@@ -751,6 +764,8 @@ def updateNameIndex(userKey, targetKeys, newName, oldName):
 @dump_args
 def sendmail(toAddr, subject, textPart, htmlPart=None,
              fromAddr='noreply@flocked.in', fromName='Flocked-in'):
+    if textPart:
+        textPart = sanitizer.unescape(textPart, {'&#58;':':'})
     if htmlPart:
         msg = MIMEMultipart('alternative')
         msg.preamble = 'This is a multi-part message in MIME format.'
@@ -763,7 +778,7 @@ def sendmail(toAddr, subject, textPart, htmlPart=None,
     else:
         msg = MIMEText(textPart)
 
-    msg['Subject'] = subject
+    msg['Subject'] = sanitizer.unescape(subject, {'&#58;':':'})
     msg['From'] = "%s <%s>" % (fromName, fromAddr)
     msg['To'] = toAddr
     try:
@@ -806,3 +821,4 @@ def uniqify(lst):
         if x not in new_list:
             new_list.append(x)
     return new_list
+

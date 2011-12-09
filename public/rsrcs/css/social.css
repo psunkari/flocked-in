@@ -1,20 +1,27 @@
 
-html>body {
+html>/**/body {           /* > IE7 */
     overflow-y: scroll;
 }
+
 body {
     margin: 0;
     padding: 0;
     font-family: "lucida grande",tahoma,verdana,arial,sans-serif;
     color: #333;
     font-size: 11px;
+    min-width: 980px;
 }
 textarea, input {
     font-family: sans-serif;
 }
+form {
+    margin-bottom: 0;
+}
 
 
 .contents {
+    -moz-transition: width 0.2s ease-in-out 0s;
+    -webkit-transition: width 0.2s ease-in-out 0s;
     width: 980px;
     margin: 0 auto;
     background-color: transparent;
@@ -52,11 +59,11 @@ textarea, input {
 
 
 a:link, a:visited {
-    color: #3366CC;
+    color: #3366cc;
     text-decoration: none;
 }
 a.ajax {
-    color: #3366CC;
+    color: #3366cc;
     cursor: pointer;
 }
 a:hover, a:active, a:focus {
@@ -66,7 +73,7 @@ a:hover, a:active, a:focus {
     color: inherit;
 }
 .invisible:hover, .invisible:active, .invisible:focus {
-    color: #3366CC;
+    color: #3366cc;
     text-decoration: none;
 }
 
@@ -137,7 +144,7 @@ a:hover, a:active, a:focus {
 
 .input-wrap {
     background-color: white;
-    border: 1px solid #C3D9FF;
+    border: 1px solid #e0d7cf;
 }
 .input-wrap input, .input-wrap textarea {
     -moz-box-sizing: border-box;
@@ -158,7 +165,11 @@ a:hover, a:active, a:focus {
 }
 
 /* Extra styles for sharebar and comment input */
-#sharebar textarea, .comment-input {
+#sharebar textarea {
+    height: 31px;
+    padding: 8px;
+}
+.comment-input {
     height: 23px;
 }
 
@@ -185,6 +196,12 @@ a:hover, a:active, a:focus {
     float: left;
     margin: 4px 0;
 }
+#sitelogo-link {
+    border: none;
+    outline: none;
+    text-decoration: none;
+    padding: 2px 2px 2px;
+}
 #sitelogo {
     height: 35px;
     width: 300px;
@@ -198,7 +215,8 @@ a:hover, a:active, a:focus {
     line-height: 35px;
     font-size: 16px;
     font-weight: bold;
-    color: #3D85C6;
+    color: #3e3d39;
+    text-decoration: none;
 }
 #search-container {
     padding: 1px;
@@ -223,7 +241,7 @@ a:hover, a:active, a:focus {
     font-size:12px;
 }
 /* Sometimes error pages are getting rendered in quirks mode.
-   In quirks more browsers add 1em margin-bottom to the forms */
+   In quirks mode browsers add 1em margin-bottom to the forms */
 #search {
     margin-bottom: 0 !important;
 }
@@ -234,7 +252,7 @@ a:hover, a:active, a:focus {
  */
 
 #menubar {
-    background-color: #3d85c6;
+    background-color: #3e3d39;
     height: 25px;
     line-height: 25px;
     font-weight: bold;
@@ -259,9 +277,10 @@ a:hover, a:active, a:focus {
     color: white;
     text-decoration: none;
 }
-#name:hover, #name:focus, #name:active,
 #menubar a:hover, #menubar a:active, #menubar a:focus {
-    background-color: #4d95d6;
+    -moz-transition: background-color 0.2s ease-in-out 0s;
+    -webkit-transition: background-color 0.2s ease-in-out 0s;
+    background-color: #73563d;
 }
 
 
@@ -284,18 +303,20 @@ a:hover, a:active, a:focus {
 }
 #center-right {
     display: block;
+    border-style: solid;
+    border-color: #e0d7cf;
+    border-width: 0 1px 1px;
+    margin-bottom: 20px;
 }
 
 #center {
+    -moz-transition: width 0.2s ease-in-out 0s;
+    -webkit-transition: width 0.2s ease-in-out 0s;
     min-height: 250px;
     float: left;
-    border-style: solid;
-    border-color: #C3D9FF;
-    border-width: 0 1px 1px;
     width: 980px;
-    margin-bottom: 20px;
 }
-.has-left.has-right #center { width: 575px !important; }
+.has-left.has-right #center { width: 570px !important; }
 .has-left #center, .has-right #center { width: 800px !important; }
 
 #right {
@@ -328,11 +349,13 @@ a:hover, a:active, a:focus {
 }
 
 .sidemenu a:hover, .sidemenu a:active, .sidemenu a:focus {
-    background-color: #E8EEFA;
+    -moz-transition: background-color 0.2s ease-in-out 0s;
+    -webkit-transition: background-color 0.2s ease-in-out 0s;
+    background-color: #f2f1f0;
 }
 
 .sidemenu-selected {
-    background-color: #C3D9FF !important;
+    background-color: #e0d7cf !important;
     font-weight:bold;
 }
 
@@ -467,28 +490,26 @@ a:hover, a:active, a:focus {
  * Content title area
  */
 
-.titlebar {
-    margin: 0 0 5px 0;
-}
 .title {
-    font-size: 20px;
-    font-weight: bold;
+    font-size: 25px;
     margin-right: 20px;
 }
 .subtitle {
     color: gray;
     font-size: 16px;
+    margin-top: 6px;
 }
 
 .center-header {
-    background-color: #E8EEFA;
+    background-color: #f2f1f0;
     padding: 15px;
-    border-bottom: 1px solid #C3D9FF;
+    border-bottom: 1px solid #e0d7cf;
 }
 
 .center-contents {
     padding: 10px;
     font-size: 12px;
+    line-height: 1.3em;
 }
 
 .header-form {
@@ -498,27 +519,34 @@ a:hover, a:active, a:focus {
     text-align: right;
 }
 
+.center-title {
+    font-size: 18px;
+    line-height: 1.5em;
+    color: #888;
+    border-bottom: 1px solid #EFEFEF;
+    margin: 0 0 10px;
+}
+
 
 
 #useravatar {
     height: 128px;
     width: 128px;
     padding: 4px;
-    border: 1px solid #C3D9FF;
+    border: 1px solid #e0d7cf;
     background-color: transparent;
     float: right;
+    margin-left: 15px;
 }
-#profile-summary {
-    margin-bottom: -21px;
+
+#userprofile {
+    padding-left: 15px;
 }
+
 .summary-item {
     color: gray;
     padding: 0 8px 0 0;
     vertical-align: middle;
-}
-
-.summary-line {
-    padding: 8px 0 0 0;
 }
 
 .attach-file-icon {
@@ -543,31 +571,65 @@ a:hover, a:active, a:focus {
     background-image: url(/rsrcs/img/phone-mobile.png);
 }
 
-.user-actions {
-    /*font-size: 11px;*/
-}
 .user-actions > .button {
     margin-right: 6px;
     font-size:100%;
 }
 
-#profile-content {
-    padding: 15px 0 0 20px;
+#profile-center-right {
+  width: 100%;
+  float: left;
 }
 
+#profile-content {
+    padding: 15px 0 0;
+}
+
+.activity-item {
+    padding-left: 60px;
+    position: relative;
+    min-height: 22px;
+    font-size: 13px;
+}
+
+.activity-icon {
+    position: absolute;
+    left: 35px;
+}
+
+.activity-footer {
+    clear: both;
+    font-size: 10px;
+    color: #999;
+    padding: 0 0 6px;
+}
+
+.like .activity-icon {
+    background-position: -16px -224px;
+}
+.answer .activity-icon,
+.comment .activity-icon,
+.status .activity-icon {
+    background-position: 0 -224px;
+}
+
+.highlight {
+    background-color: yellow;
+}
 
 /*
  * Simple TabView
  */
 
 .tabs {
-    background-color: #E8EEFA;
-    border-bottom: 1px solid #C3D9FF;
+    background-color: #f2f1f0;
+    border-bottom: 1px solid #e0d7cf;
+    border-top: 1px solid #e0d7cf;
     height: 20px;
     line-height: 20px;
     font-weight: bold;
-    margin: -10px -10px 0;
-    padding: 0 15px;
+    margin: 0 -10px;
+    padding: 5px 15px 0;
 }
 .tablinks {
 }
@@ -575,7 +637,7 @@ a:hover, a:active, a:focus {
     padding: 0 10px;
     margin: 0 2px;
     height: 20px;
-    color: #3D85C6;
+    color: #3e3d39;
     text-decoration: none;
     border-width: 1px 1px 0;
     border-style: solid;
@@ -585,11 +647,11 @@ a:hover, a:active, a:focus {
 }
 .tablinks a:hover,
 .tablinks a:active, .tablinks a:focus {
-    border-color: #C3D9FF #C3D9FF transparent;
+    border-color: #e0d7cf #e0d7cf transparent;
 }
 .tablinks .selected {
     margin-bottom: -1px;
-    border-color: #C3D9FF #C3D9FF transparent !important;
+    border-color: #e0d7cf #e0d7cf transparent !important;
     background-color: white;
 }
 
@@ -599,8 +661,10 @@ a:hover, a:active, a:focus {
  */
 
 #share-block {
-    border-top: 1px solid #C3D9FF;
-    padding-top: 5px;
+    padding: 10px;
+    border-bottom: 1px solid #e0d7cf;
+    margin-bottom: 10px;
+    position: relative;
 }
 #sharebar-links li {
     padding: 5px 5px 5px 0;
@@ -611,12 +675,11 @@ a:hover, a:active, a:focus {
     display: inline-block;
     padding: 5px 0px 5px 5px;
     margin: -5px 10px -5px 0;
-    color: #3366CC;
+    color: #73563d;
     position: relative;
 }
 #sharebar-links a:hover,
 #sharebar-links a:active, #sharebar-links a:focus {
-    color: #4d95d6;
     text-decoration: none;
 }
 a:hover > .sharebar-text,
@@ -656,6 +719,9 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 
 #sharebar .input-wrap {
     margin-bottom: 5px;
+    border-color: #E0D7CF #AAA #AAA #E0D7CF;
+    box-shadow: 1px 1px 0 #AAA;
+    clear: both;
 }
 #sharebar-actions {
     float: right;
@@ -667,6 +733,19 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     display: inline-block;
 }
 
+.sharebar-disabler {
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          width: 100%;
+          height: 100%;
+          z-index: 100;
+          background-color: rgba(255,255,255,0.75);
+          display: none;
+      }
+.disabled > .sharebar-disabler {
+          display: block;
+      }
 
 /*
  * ACL
@@ -720,7 +799,8 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     border: none;
     font-size: inherit;
     font-family: inherit;
-    color: #36C;
+    color: #73563d;
+    cursor: pointer;
 }
 .acl-button > span {
     overflow: hidden;
@@ -760,7 +840,13 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     color: gray !important;
 }
 .file-attach-button {
-    padding-left: 0;
+    border: 0px;
+    padding: 2px 4px 2px 0;
+    margin: 0px;
+    color: #73563d;
+    font-size: inherit;
+    font-family: inherit;
+    background: transparent;
 }
 
 .file-attach-input {
@@ -771,6 +857,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     -moz-opacity: 0;
     filter: alpha(opacity:0);
     z-index: 2;
+    cursor: pointer;
 }
 
 .file-attach-wrapper {
@@ -793,7 +880,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 .uploaded-file {
     padding: 4px 6px;
-    border-bottom: 1px solid #C3D9FF;
+    border-bottom: 1px solid #e0d7cf;
     font-size: 110%;
 }
 
@@ -809,6 +896,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 
 .uploaded-file-name,
 .attachment-name {
+    float: left;
     max-width: 350px;
     overflow: hidden;
 }
@@ -834,6 +922,10 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 #welcome-message ul {
     padding-left: 20px;
     margin: 5px;
+}
+
+#user-feed {
+    padding: 10px 10px 20px 20px;
 }
 
 .conv-item {
@@ -914,6 +1006,24 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     min-height: 32px;
 }
 
+.text-expander, .text-collapser {
+    border: 0px;
+    margin: 0px;
+    padding: 0px;
+    color: #3366cc;
+    font-size: inherit;
+    font-family: inherit;
+    background: transparent;
+    cursor: pointer;
+}
+.text-collapser {
+    display: block;
+}
+.text-expander:focus, .text-collapser:focus {
+    text-decoration: underline;
+    outline: 1px dotted #3366cc;
+}
+
 .conv-quote {
     border-left: 1px solid #DDD;
     padding: 0 8px;
@@ -951,19 +1061,34 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     font-size: 9px;
     clear: both;
 }
-.conv-footer abbr, .comment-meta abbr {
+abbr.timestamp {
     border: none;
 }
 
-.comment-text {
-    word-wrap:break-word;
+.text-full, .text-preview {
+    word-wrap: break-word;
 }
-
+#empty-message,
 #next-load-wrapper {
     padding: 10px 20px;
-    border: 1px solid #3D85C6;
-    background-color: #E8EEFA;
+    border-top: 1px solid #E0D7CF;
+    background-color: #f2f1f0;
     margin-top: 25px;
+    background-image: linear-gradient(bottom, #FFFFFF 0%, #F2F1F0 100%);
+    background-image: -o-linear-gradient(bottom, #FFFFFF 0%, #F2F1F0 100%);
+    background-image: -moz-linear-gradient(bottom, #FFFFFF 0%, #F2F1F0 100%);
+    background-image: -webkit-linear-gradient(bottom, #FFFFFF 0%, #F2F1F0 100%);
+    background-image: -ms-linear-gradient(bottom, #FFFFFF 0%, #F2F1F0 100%);
+    background-image: -webkit-gradient(
+        linear,
+        left bottom,
+        left top,
+        color-stop(0, #FFFFFF),
+        color-stop(1, #F2F1F0)
+    );
+}
+#empty-message {
+    text-align: center;
 }
 
 .no-likes .likes-wrapper,
@@ -1013,6 +1138,12 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     background-position: -19px -67px;
 }
 
+.suggestions-user {
+    position: relative;
+    margin-top: 5px;
+    clear: both;
+}
+
 
 /*
  * Generic item display
@@ -1049,78 +1180,133 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
  */
 
 .styledform {
-    width: 100%;
-    display: table;
-}
-
-.styledform ul {
     list-style-type: none;
     margin: 0px;
     padding-left: 15px;
 }
 
-.styledform li {
-    padding:5px 0px;
-    min-height:26px;
+.styledform > .form-row {
+    clear: both;
+    line-height: 30px;
+    padding: 5px 0px;
+    overflow: hidden;
 }
 
-.styledform label {
-    float:left;
-    font-size:11px;
-    width:15em;
-    display:inline-block;
-    line-height:2;
-    padding:2px;
-    margin-right:10px;
-    text-align:right;
+.styledform .styled-label {
+    float: left;
+    margin-right: 1%;
+    text-align: right;
+    width: 32%;
+    font-size: 12px;
 }
 
+.styledform-text {
+    width: 350px;
+    float: left;
+    background-color: white;
+    border-width: 1px;
+    border-style: solid;
+    border-color: #EEE #DDD #DDD #EEE;
+    padding: 3px;
+    margin-top: 3px;
+    font-size: 12px;
+    line-height: normal !important;
+}
+
+.styledform-inputwrap,
 .styledform input[type=text],
 .styledform input[type=email],
 .styledform input[type=password],
 .styledform select,
-.ui-datepicker-title select,
 .styledform textarea {
-    width: 20em;
-    font-size: 12px;
+    width: 350px;
+    float: left;
     background-color: white;
     border-width: 1px;
-    border-color: #CCC #999 #999 #CCC;
     border-style: solid;
+    border-color: #CCC #999 #999 #CCC;
     box-shadow: 1px 1px 0 #CCC;
-    -webkit-box-shadow: 1px 1px 0 #CCC;
-    -mox-box-shadow: 1px 1px 0 #CCC;
-    padding: 3px;
+    padding: 2px;
+    margin-top: 3px;
+    font-size: 12px;
 }
-
-.styledform select.single-row {
-    width: 20.5em;
+.styledform-inputwrap {
+    background-color: transparent !important;
+    line-height: normal !important;
 }
-
+.styledform select {
+    width: 356px;
+}
+.styledform input[type=radio],
+.styledform input[type=checkbox] {
+    position: relative;
+    top: 3px;
+}
 .styledform .inline-select {
-    width:auto !important;
+    width: auto !important;
 }
 
-.styledform fieldset {
-    border: none
-}
-
-.styledform legend {
-    font-weight: 700;
-    margin: 20px 10px 10px;
+.styledform abbr {
+    color: #a40000;
+    border-style: none;
 }
 
 .styledform-buttons {
-    border-top: 1px solid #C3D9FF;
-    padding-top: 4px;
-    margin: 20px 0;
+    padding: 10px;
+    margin: 10px 0 10px 20%;
+    min-width: 500px;
+    width: 60%;
     text-align: right;
+    border-top: 1px solid #E0D7CF;
 }
 
+.styledform .multiselect {
+    line-height: 1.3em !important;
+}
 
 /*
+ * Tiled Listing
  * List of users - friends and people in organization
  */
+
+.tl-wrapper {
+    margin: 0px auto;
+}
+
+.tl-item {
+    float: left;
+    width: 230px;
+    height: 48px;
+    border: 1px solid #EFEFEF;
+    background-color: #FAFAFA;
+    position: relative;
+    padding: 6px;
+    border-radius: 6px;
+    margin: 0 0 10px 10px;
+}
+
+.tl-avatar {
+    width: 48px;
+    height: 48px;
+    position: absolute;
+    left: 5px;
+    background-color: #DDD;
+}
+
+.tl-details {
+    margin-left: 60px;
+}
+
+.tl-title, .tl-name, .tl-toolbox {
+    color: #888;
+    white-space: pre;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.tl-toolbox {
+    font-size: 90%;
+    margin-left: -4px;
+}
 
 .users-row {
     width: 100%;
@@ -1128,6 +1314,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     padding: 10px 0 0;
     margin: 10px 0 0;
     border-top: 1px solid #EEE;
+    clear: both;
 }
 
 .users-row:first-child {
@@ -1145,12 +1332,15 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .users-user {
     float: left;
     width: 48%;
+    margin-bottom: 8px;
+    position: relative;
 }
 
 .users-avatar {
     width: 48px;
     height: 48px;
     position: absolute;
+    left: 0px;
 }
 
 .users-details {
@@ -1161,10 +1351,26 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     color: #888;
 }
 
+.user-details-name {
+    font-size: 14px;
+}
+
 .user-details-actions {
     margin-top: 6px;
 }
 
+#group-desc {
+    display: block;
+}
+
+#group-share-block {
+    padding: 20px 10px 10px;
+    position: relative;
+    width: 570px;
+    float: left;
+    border-bottom: 1px solid #e0d7cf;
+    margin: 0 -10px 10px;
+}
 
 .group-details-title {
     color: #888;
@@ -1185,7 +1391,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .viewbar {
     margin: 0;
     padding: 0 0 10px;
-    border-bottom: 1px solid #C3D9FF;
+    border-bottom: 1px solid #e0d7cf;
 }
 
 .paged-container {
@@ -1196,7 +1402,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 .pagingbar {
     margin: 10px 0 5px;
     padding: 10px 0;
-    border-top: 1px solid #C3D9FF;
+    border-top: 1px solid #e0d7cf;
     text-align: right;
 }
 
@@ -1211,8 +1417,8 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 
 .view-options .selected {
     color: black !important;
-    border: 1px solid #C3D9FF;
-    background-color: #E8EEFA;
+    border: 1px solid #e0d7cf;
+    background-color: #f2f1f0;
     border-radius: 4px;
     -moz-border-radius: 4px;
     padding: 2px 3px;
@@ -1251,11 +1457,44 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     margin: 20px;
 }
 
-.snippet {
-    font-weight: lighter;
-    color: #999;
+.notification-item.unread {
+    background-color: #fdfddc;
+    border-left: 3px solid #FCDC5C;
 }
 
+.notification-item:first-child {
+    border-top: none;
+}
+
+.notification-item {
+    padding: 10px 0 10px 90px;
+    border-top: 1px dotted #CCC;
+    font-size: 14px;
+    min-height: 32px;
+    position: relative;
+    border-left: 3px solid transparent;
+}
+
+.notification-footer {
+    color: #999;
+    padding: 5px 0 0;
+    font-size: 10px;
+    clear: both;
+}
+
+.notification-avatars-wrapper {
+    position: absolute;
+    top: 10px;
+    left: 0px;
+    width: 74px;
+}
+
+.notification-avatar {
+    float: right;
+    width: 32px;
+    height: 32px;
+    padding: 0 2px;
+}
 
 
 /*
@@ -1283,12 +1522,12 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
         left bottom,
         left top,
         color-stop(0.26, #97BFE1),
-        color-stop(0.63, #C3D9FF)
+        color-stop(0.63, #e0d7cf)
     );
     background-image: -moz-linear-gradient(
         center bottom,
         #97BFE1 26%,
-        #C3D9FF 63%
+        #e0d7cf 63%
     );
     border-radius: 0 4px 4px 0;
     -moz-border-radius: 0 4px 4px 0;
@@ -1360,8 +1599,8 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     display: inline-block;
     border-width: 1px;
     border-style: solid;
-    border-color: #FFF #FFF #C3D9FF #C3D9FF;
-    background-color: #E8EEFA;
+    border-color: #FFF #FFF #e0d7cf #e0d7cf;
+    background-color: #f2f1f0;
     padding: 1px 6px 1px 4px;
     margin: 1px;
     border-radius: 3px;
@@ -1406,6 +1645,9 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     margin-top: 4px !important;
 }
 
+.link-item {
+    margin-top: 6px;
+}
 .link-details {
     display: table-cell;
 }
@@ -1472,7 +1714,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     background-color: #F0F0F0;
 }
 .feedback-mood-selected {
-    background-color: #E8EEFA !important;
+    background-color: #f2f1f0 !important;
     box-shadow: inset 2px 2px 5px #888;
 }
 .feedback-mood-icon {
@@ -1503,7 +1745,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     resize: none;
     height: 60px;
     width: 100%;
-    border: 1px solid #C3D9FF;
+    border: 1px solid #e0d7cf;
     font-size: inherit;
 }
 
@@ -1589,9 +1831,9 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 
 #add-user-wrapper .styledform {
-    border-bottom: 1px solid #C3D9FF;
-    border-left: 1px solid #C3D9FF;
-    border-right: 1px solid #C3D9FF;
+    border-bottom: 1px solid #e0d7cf;
+    border-left: 1px solid #e0d7cf;
+    border-right: 1px solid #e0d7cf;
 }
 
 #add-user-wrapper #next-load-wrapper {
@@ -1746,4 +1988,28 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     width: 80%;
     text-align: right;
 }
+
+
+/* Browser compatibility errors */
+#unsupported-browser,
+#compatibility-mode,
+#javascript-missing {
+    text-align: center;
+    position: fixed;
+    width: 100%;
+    z-index: 100000;
+    left: 0;
+    font-size: 12px;
+    font-weight: bold;
+    line-height: 1.5em;
+    display: none;
+}
+
+.unsupported-text {
+    background: #c50000;
+    padding: 3px 20px;
+    color: white;
+    border-radius: 0 0 6px 6px;
+}
+
 

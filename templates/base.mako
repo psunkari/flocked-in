@@ -42,6 +42,7 @@
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
   <title>${self.title()}</title>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/social.css"/>
+  <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/screen-size.css"/>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/widgets.css"/>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/jquery.ui.css"/>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/messaging.css"/>
@@ -64,6 +65,23 @@
 %else:
 <body class="noscript">
 %endif
+  <noscript>
+    <div id='missing-javascript'>
+      <span class='unsupported-text'>
+        Read only mode &mdash; Enable Javascript for complete functionality
+      </span>
+    </div>
+  </noscript>
+  <div id='unsupported-browser'>
+    <span class='unsupported-text'>
+      Unsupported Browser &ndash; Please upgrade to a newer version
+    </span>
+  </div>
+  <div id='compatibility-mode'>
+    <span class='unsupported-text'>
+      Compatibility mode &ndash; Please switch your browser to normal mode
+    </span>
+  </div>
   <div id="topbar">
     <div id="top" class="contents">
       <% avatarURI = utils.userAvatar(myKey, me) %>
@@ -71,14 +89,16 @@
         <div class="avatar" id="avatar" style="background-image:url('${avatarURI}')"></div>
       %endif
       <div id="sitelogo">
-        %if org and org.has_key('basic'):
-          <% logoURI = utils.companyLogo(org) %>
-          %if logoURI:
-            <img src="${logoURI}" alt="${org['basic']['name']}"/>
-          %else:
-            <span id="sitename">${org['basic']['name']}</span>
+        <a id="sitelogo-link" href="/">
+          %if org and org.has_key('basic'):
+            <% logoURI = utils.companyLogo(org) %>
+            %if logoURI:
+              <img id="sitelogo" src="${logoURI}" alt="${org['basic']['name']}"/>
+            %else:
+              <span id="sitename">${org['basic']['name']}</span>
+            %endif
           %endif
-        %endif
+        </a>
       </div>
       <div id="search-container">
         <form id="search" action="/search" method="GET" class="ajaxget">

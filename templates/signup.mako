@@ -1,79 +1,65 @@
-<%! from social import utils, config, _, __ %>
+<%! from social import utils, config, _, __, location_tz_map%>
 <%! from pytz import common_timezones %>
 <!DOCTYPE HTML>
 <html lang="en" dir="ltr" xml:lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
   <title>Signup for Flocked-in</title>
   <link href="/rsrcs/css/static.css" media="all" rel="stylesheet" type="text/css">
   <link rel="shortcut icon" href="/rsrcs/img/favicon.ico" type="image/x-icon" />
   <script type = "text/javascript">
     %if view == 'userinfo':
       function validate() {
-        var password = document.querySelector('input[name="password"]').value
-        var pwdrepeat = document.querySelector('input[name="pwdrepeat"]').value
+        var password = document.getElementById('signup-password').value;
+        var pwdrepeat = document.getElementById('signup-pwdrepeat').value;
         message_wrapper = document.getElementById('messages-wrapper')
-        if (document.querySelector('input[name="name"]').value == ""){
+
+        if (document.getElementById('signup-name').value == "") {
           message_wrapper.style.display = 'block';
           message_wrapper.innerHTML = 'Name cannot be empty';
-          setTimeout(function(){
-            message_wrapper.style.display = 'none';
-            message_wrapper.innerHTML = '';
-          }, 3000)
-          return false
+          return false;
         }
-        else if (document.querySelector('input[name="jobTitle"]').value == ""){
+        else if (document.getElementById('signup-jobTitle').value == "") {
           message_wrapper.style.display = 'block';
-          message_wrapper.innerHTML = 'Job-Title cannot be empty';
-          setTimeout(function(){
-            message_wrapper.style.display = 'none';
-            message_wrapper.innerHTML = '';
-          }, 3000)
-          return false
+          message_wrapper.innerHTML = 'Job Title cannot be empty';
+          return false;
         }
-        else if (password == ''){
+        else if (password == '') {
           message_wrapper.style.display = 'block';
           message_wrapper.innerHTML = 'Password cannot be empty';
-          setTimeout(function(){
-            message_wrapper.style.display = 'none';
-            message_wrapper.innerHTML = '';
-          }, 3000)
-          return false
+          return false;
         }
-        else if (password != pwdrepeat){
+        else if (password != pwdrepeat) {
           message_wrapper.style.display = 'block';
           message_wrapper.innerHTML = 'Passwords do not match.';
-          setTimeout(function(){
-            message_wrapper.style.display = 'none';
-            message_wrapper.innerHTML = '';
-          }, 3000)
-        return false
+          return false;
         }
-        else{
-          return true
+        else {
+          return true;
         }
       }
     %elif view == 'forgotPassword':
-      function validate(){
-        var email = document.querySelector('input[name="email"]').value
-        if (email == null || email == ""){
+      function validate() {
+        var email = document.getElementById('forgotpass-email').value;
+        if (email == null || email == "") {
           document.getElementById('messages-wrapper').style.display = 'block';
           document.getElementById('messages-wrapper').innerHTML = 'Enter your Email.';
-          return false
+          return false;
         }
-        return true
+        return true;
       }
     %elif view == 'resetPassword':
-      function validate(){
-        var password = document.querySelector('input[name="password"]')
-        var pwdrepeat = document.querySelector('input[name="pwdrepeat"]')
-        if (password.value != pwdrepeat.value){
+      function validate() {
+        var password = document.getElementById('resetpass-password');
+        var pwdrepeat = document.getElementById('resetpass-pwdrepeat');
+        if (password.value != pwdrepeat.value) {
           document.getElementById('messages-wrapper').style.display = 'block';
           document.getElementById('messages-wrapper').innerHTML = 'Passwords do not match.';
-          password.value ='';
-          pwdrepeat.value ='';
-          return false
+          password.value = '';
+          pwdrepeat.value = '';
+          return false;
         }
-        return true
+        return true;
       }
     %endif
   </script>
@@ -173,44 +159,47 @@
 
 <%def name="userInfo()">
   <div class="styledform">
-    <form action="/signup/create" method="POST" class="styledform" onsubmit="return validate()" >
+    <form action="/signup/create" method="POST" class="styledform" onsubmit="return validate()" accept-charset='UTF-8'>
       <input id="email" type="hidden" name="email" value="${emailId}"/>
       <input id="token" type="hidden" name="token" value="${token}"/>
       <ul>
         <li>
           <label for="name" class="styled-label">${_('Name')}</label>
-          <input type="text" class="textfield" name="name" autofocus required />
+          <input type="text" class="textfield" id="signup-name" name="name" autofocus required />
         </li>
         <li>
           <label for="jobTitle" class="styled-label">${_('Job Title')}</label>
-          <input name="jobTitle" id="jobTitle" type="text"  required />
+          <input name="jobTitle" class="textfield" id="signup-jobTitle" type="text" required />
         </li>
         <li>
-          <label for="timezone" class="styled-label">${_('Timezone')}</label>
+          <label for="timezone" class="styled-label">${_('Country/Timezone')}</label>
           <select name="timezone" class="single-row">
             ## for paid users, get the list of timezones from the org-preferences.
             ## either admin has to update the list of timezones when a branch is
             ## opened in a location of new timezone or the user will be given an
             ## option to choose from generic list.
-            %for timezone in common_timezones:
-              <option value="${timezone}">${timezone}</option>
+            %for i, country_name in enumerate(location_tz_map):
+              %if i == 7:
+                <option value="" disabled="disabled">-----------------------------------------------</option>
+              %endif
+              <option value="${location_tz_map[country_name]}">${country_name}</option>
             %endfor
           </select>
         </li>
         <li>
           <label for="password" class="styled-label">${_('Password')}</label>
-          <input type="password" class="textfield" name="password" autocomplete="off" required />
+          <input type="password" class="textfield" id="signup-password" name="password" autocomplete="off" required />
         </li>
         <li>
           <label for="pwdrepeat" class="styled-label">${_('Confirm Password')}</label>
-          <input type="password" class="textfield" name="pwdrepeat" autocomplete="off" required/>
+          <input type="password" class="textfield" id="signup-pwdrepeat" name="pwdrepeat" autocomplete="off" required/>
         </li>
         <li>
         </li>
         <div id="messages-wrapper" class="error-input"></div>
       </ul>
       <div class="buttons-wrapper">
-        <span id="accept-tos">By clicking on "Create Account" below you agreeing with the Flocked-in <a href="/about/tos.html" target="new">Terms of Service</a> and the <a href="/about/privacy.html" target="new">Privacy Policy</a></span>
+        <span id="accept-tos">By clicking on "Create Account" below you agree with the Flocked-in <a href="/about/tos.html" target="new">Terms of Service</a> and the <a href="/about/privacy.html" target="new">Privacy Policy</a></span>
         <button type="submit" class="default button" id="submit">${_('Create Account')}</button>
       </div>
     </form>
@@ -260,7 +249,7 @@
       <ul>
           <li>
             <label for="email" class="styled-label">Email:</label>
-            <input type="email" name="email" required autofocus/>
+            <input type="email" id="forgotpass-email" name="email" required autofocus/>
           </li>
           <div id="messages-wrapper" class="error-input"></div>
       </ul>
@@ -278,12 +267,12 @@
       <ul>
           <li>
             <label for="password" class="styled-label">Password:</label>
-            <input type="password" name="password" required autofocus />
+            <input type="password" id="resetpass-password" name="password" required autofocus />
           </li>
 
           <li>
             <label for="pwdrepeat" class="styled-label">Confirm Password:</label>
-            <input type="password" name="pwdrepeat" required />
+            <input type="password" id="resetpass-pwdrepeat" name="pwdrepeat" required />
           </li>
           <div id="messages-wrapper" class="error-input"></div>
       </ul>

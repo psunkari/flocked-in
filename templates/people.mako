@@ -1,5 +1,5 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-                    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE HTML>
+
 <%! from social import utils, _, __, plugins %>
 <%! from social import relations as r %>
 
@@ -17,19 +17,18 @@
       </div>
     </div>
     <div id="center-right">
-      <div id="right">
-      </div>
-      <div id="center">
-        <div class="center-header">
-          <div class="titlebar">
-            <span class="middle title">${_('People')}</span>
-            <span class="button title-button">
-              <a class="ajax" href="/people/invite" data-ref="/people/invite">${_('Invite more people')}</a>
-            </span>
-          </div>
-          <div id="invite-people-wrapper">
-          </div>
+      <div class="center-header">
+        <div class="titlebar">
+          <span class="middle title">${_('People')}</span>
+          <span class="button title-button">
+            <a class="ajax" href="/people/invite" data-ref="/people/invite">${_('Invite more people')}</a>
+          </span>
         </div>
+        <div id="invite-people-wrapper">
+        </div>
+      </div>
+      <div id="right"></div>
+      <div id="center">
         <div class="center-contents">
           <div id="people-view" class="viewbar">
             %if not script:
@@ -48,26 +47,20 @@
           </div>
         </div>
       </div>
+      <div class="clear"></div>
     </div>
   </div>
 </%def>
 
 <%def name="viewOptions(selected)">
  <%
-    tabs = [('friends', _('My friends')), ('all', _('All users')), ('pendingRequests', _('Friend Requests'))]
+    tabs = [('all', _('All users'))]
     if showInvitationsTab:
         tabs.append(('invitations', _('Invitations')))
-    people_count = pendingRequestsCount if pendingRequestsCount else ''
  %>
   <ul class="h-links view-options">
     %for item, display in tabs:
-      %if item == "pendingRequests":
-        %if selected == item:
-          <li class="selected">${_(display)}<span id="pending-requests-count" class="view-options-count" >${people_count}</span></li>
-        %else:
-          <li><a href="/people?type=${item}" class="ajax">${_(display)}</a><span id="pending-requests-count" class="view-options-count">${people_count}</span></li>
-        %endif
-      %elif selected == item:
+      %if selected == item:
         <li class="selected">${_(display)}</li>
       %else:
         <li><a href="/people?type=${item}" class="ajax">${_(display)}</a></li>
@@ -96,7 +89,7 @@
   <div class="users-avatar">
     <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
     %if avatarURI:
-      <img src="${avatarURI}" height='48' width='48'></img>
+      <img src="${avatarURI}" style="max-height:48px; max-width:48px"></img>
     %endif
   </div>
   <div class="users-details">
@@ -158,7 +151,7 @@
       <div id="invite-people">
         <div class="input-wrap">
           <span class="icon invite-people-entry">&nbsp;</span>
-          <input type="text" name="email" placeholder="${_("Enter your colleague&#39;s email address")}" autofocus required title="${_("Colleague's email address")}"/>
+          <input type="text" name="email" placeholder="${_("Enter your colleague&#39;s email address")}" autofocus required title="${_("Colleague&#39;s email address")}"/>
         </div>
         <div class="input-wrap">
           <span class="icon invite-people-entry">&nbsp;</span>
@@ -205,7 +198,7 @@
 <%def name="_displayInvitation(emailId)">
   <% button_class = 'default' %>
   <div class="users-avatar">
-      <img width="48" height="48" src="/rsrcs/img/avatar_m_m.png">
+      <img style="max-width:48px; max-height:48px" src="/rsrcs/img/avatar_m_m.png">
   </div>
   <div class="users-details">
     <div class="user-details-name">${emailId}</div>

@@ -10,23 +10,17 @@ from twisted.web        import client
 
 from social.template    import renderScriptBlock, getBlock
 from social.isocial     import IItemType, IAuthInfo
-from social             import db, utils, errors, _, config
+from social             import db, utils, errors, _, config, constants
 from social.logging     import profile, dump_args, log
 
 
-def _sanitize(text, strip=False):
+def _sanitize(text, maxlen=0):
     unitext = text if type(text) == unicode or not text\
                    else text.decode('utf-8', 'replace')
-    if strip and len(unitext) > 250:
-        chopped = unitext[:250]
-        match = re.match(r'(.*)\s', chopped, re.L|re.U)
-        if match:
-            chopped = match.group(1)
-        if len(chopped) < len(unitext):
-            chopped = chopped + unichr(0x2026)
-        unitext = chopped
-
-    return unitext.encode('utf-8')
+    if maxlen and len(unitext) > maxlen:
+        return utils.toSnippet(unitext, maxlen)
+    else:
+        return unitext.encode('utf-8')
 
 
 embedlyKey = config.get('Embedly', 'Key')
@@ -67,12 +61,10 @@ class Links(object):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def create(self, request):
-        target = utils.getRequestArg(request, "target")
-        comment = utils.getRequestArg(request, "comment")
+    def create(self, request, myId, myOrgId):
+        snippet, comment = utils.getTextWithSnippet(request, "comment",
+                                        constants.POST_PREVIEW_LENGTH)
         url = utils.getRequestArg(request, "url", sanitize=False)
-        authinfo = request.getSession(IAuthInfo)
-        myOrgId = authinfo.organization
 
         if not url:
             raise errors.MissingParams([_('URL to be shared')])
@@ -90,33 +82,30 @@ class Links(object):
         summary, title, image, embed = yield self._summary(url)
 
         convId = utils.getUniqueKey()
-        item, attachments = yield utils.createNewItem(request, self.itemType)
+        item, attachments = yield utils.createNewItem(request, self.itemType, myId, myOrgId)
         meta = {"comment": comment}
-        if target and  "target" in item["meta"]:
-            item['meta']['target'] = ",".join(item['meta']['target'].split(',') + [target])
-        elif target:
-            item["meta"]["target"] =  target
+        if snippet:
+            meta['snippet'] = snippet
 
+        meta["link_url"] = url
         if summary:
-            summary = _sanitize(summary, True)
-            meta["summary"] = summary
+            summary = _sanitize(summary, 200)
+            meta["link_summary"] = summary
         if title:
-            title = _sanitize(title)
-            meta["title"] = title
+            title = _sanitize(title, 75)
+            meta["link_title"] = title
         if image:
-            meta['imgSrc'] = image
+            meta['link_imgSrc'] = image
         if embed:
             embedType = embed.get("type")
             embedSrc = embed.get("url") if embedType == "photo" else embed.get("html")
             embedWidth = embed.get("width")
             embedHeight = embed.get("height")
             if embedHeight and embedWidth and embedSrc:
-                meta["embedType"] = embedType
-                meta["embedSrc"] = embedSrc
-                meta["embedHeight"] = str(embedHeight)
-                meta["embedWidth"] = str(embedWidth)
-
-        meta["url"] = url
+                meta["link_embedType"] = embedType
+                meta["link_embedSrc"] = embedSrc
+                meta["link_embedHeight"] = str(embedHeight)
+                meta["link_embedWidth"] = str(embedWidth)
         item["meta"].update(meta)
 
         yield db.batch_insert(convId, "items", item)

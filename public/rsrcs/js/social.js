@@ -130,19 +130,21 @@ _initAjaxRequests: function _initAjaxRequests() {
 
     /* Async form submit */
     $('form.ajax').live("submit", function() {
-        if (this.hasAttribute("disabled"))
+        var $this = $(this),
+            validate, deferred, enabler, $inputs;
+
+        if ($this.attr("disabled"))
             return false;
 
-        var $this = $(this);
-        var validate = jQuery.Event('html5formvalidate');
+        validate = jQuery.Event('html5formvalidate');
         if ($this.data('html5form')) {
             $this.trigger(validate);
             if (validate.isDefaultPrevented())
                 return false;
         }
 
-        var deferred = $.post('/ajax' + $this.attr('action'),
-                                   $this.serialize());
+        deferred = $.post('/ajax' + $this.attr('action'),
+                          $this.serialize());
 
         self.setBusy(deferred, $this)
 
@@ -150,7 +152,7 @@ _initAjaxRequests: function _initAjaxRequests() {
         // form till we get a response from the server.
         $this.attr("disabled", true);
         $inputs = $this.find(":input").attr("disabled", true);
-        var enabler = function() {
+        enabler = function() {
             $inputs.removeAttr("disabled");
             $this.removeAttr("disabled");
         };
@@ -263,9 +265,9 @@ _initTimestampUpdates: function _initTimestampUpdates() {
 
 
 _initUpdatesCheck: function _initUpdatesCheck() {
-    window.setInterval(function() {
-        $.get('/ajax/notifications/new');
-    }, 30000)
+    //window.setInterval(function() {
+    //    $.get('/ajax/notifications/new');
+    //}, 30000)
 },
 
 
@@ -481,7 +483,14 @@ var convs = {
         if (!$input.hasClass('ui-autocomplete-input')) {
             $input.autocomplete({
                 source: '/auto/tags?itemId='+convId,
-                minLength: 2
+                minLength: 2,
+                select: function(event, ui) {
+                            if (ui && ui.item) {
+                                $input = $(this);
+                                $input.val(ui.item.value);
+                                $input.closest('form').submit();
+                            }
+                        }
             });
         }
 
@@ -503,7 +512,7 @@ var convs = {
 
     showItemLikes: function(itemId) {
         var dialogOptions = {
-            id: 'likes-dlg-'+itemId,
+            id: 'likes-dlg-'+itemId
         };
         $$.dialog.create(dialogOptions);
         $.get('/ajax/item/likes?id='+itemId);
@@ -550,6 +559,28 @@ var convs = {
             $('#conv-'+convId).slideUp('fast', function(){$(this).remove();});
         else
             $('#comment-'+commentId).slideUp('fast', function(){$(this).remove();});
+    },
+
+    expandText: function(event) {
+        var evt = $.event.fix(event),
+            $target = $(evt.target),
+            $container = $target.parent();
+
+        $container.find('.text-full').css('display', 'inline');
+        $container.find('.text-collapser').css('display', 'block');
+        $container.find('.text-preview').css('display', 'none');
+        $container.find('.text-expander').css('display', 'none');
+    },
+
+    collapseText: function(event) {
+        var evt = $.event.fix(event),
+            $target = $(evt.target),
+            $container = $target.parent();
+
+        $container.find('.text-preview').css('display', 'inline');
+        $container.find('.text-expander').css('display', 'inline');
+        $container.find('.text-full').css('display', 'none');
+        $container.find('.text-collapser').css('display', 'none');
     }
 };
 
@@ -617,6 +648,24 @@ $$.feedback = feedback;
 (function($$, $){ if (!$$.ui) {
 var ui = {
     init: function() {
+        /* Check if the browser is supported */
+        var ua = $.browser,
+            c = 0,
+            ver = parseFloat(ua.version.replace(/\./g, function() {
+                              return (c++ == 1) ? '' : '.';
+                            }));
+        console.log(ua);
+        if (ua.msie && ver < 8 && document.documentMode) {
+          $('#compatibility-mode').css('display', 'block');
+        } else if (ua.msie && ver >= 8 ||
+                   ua.webkit && ver >= 530  ||
+                   ua.opera && ver >= 10.10 ||
+                   ua.mozilla && ver >= 1.9) {
+          // Supported Browsers
+        } else {
+          $('#unsupported-browser').css('display', 'block');
+        }
+
         /* Add a scroll to bottom handler */
         $(window).scroll(function(){
             if ($(window).scrollTop() > $(document).height() - (50 + $(window).height())){
@@ -656,8 +705,8 @@ var ui = {
 
     showPopup: function(event, right, above){
         var evt = $.event.fix(event),
-        $target = $(evt.target),
-        $menu = $target.next()
+            $target = $(evt.target),
+            $menu = $target.next();
 
         if (!$menu.hasClass("ui-menu")) {
             $menu.menu({
@@ -732,15 +781,16 @@ var files = {
         var _self = this;
 
         $("#"+id+" :file").change(function() {
-            var form = $(this.form), d, mime, filename;
+            var form = $(this.form), d, mimeType = null, filename = null;
 
             /* Get basic information about the files */
-            if (this.files !== undefined) {
-                mimeType = this.files[0].type
-                filename = this.files[0].name
+            if (this.files !== undefined && this.files[0] !== undefined) {
+                filename = this.files[0].name || this.files[0].fileName;
+                mimeType = this.files[0].type || '';
                 d = $.post('/file/form',
                            {"name":filename, "mimeType":mimeType}, "json");
-            } else {
+            }
+            if (!filename) {
                 filename = _self.getNameFromPath(this.value);
                 d = $.post('/file/form', {"name":filename}, "json");
             }
@@ -818,28 +868,30 @@ $$.files = files;
  * JSON stringify
  */
 (function($$, $) { if (!$$.json) {
-var json = JSON || {};
-json.stringify = JSON.stringify || function (obj) {
-    var t = typeof (obj);
-    if (t != "object" || obj === null) {
-        // simple data type
-        if (t == "string") obj = '"'+obj+'"';
-        return String(obj);
-    }
-    else {
-        // recurse array or object
-        var n, v, json = [], arr = (obj && obj.constructor == Array);
-        for (n in obj) {
-            v = obj[n]; t = typeof(v);
-            if (t == "string") v = '"'+v+'"';
-            else if (t == "object" && v !== null) v = JSON.stringify(v);
-            json.push((arr ? "" : '"' + n + '":') + String(v));
+var jsonObj = window.JSON || {};
+if (!jsonObj.stringify) {
+    jsonObj.stringify = function (obj) {
+        var t = typeof (obj);
+        if (t != "object" || obj === null) {
+            // simple data type
+            if (t == "string") obj = '"'+obj+'"';
+            return String(obj);
         }
-        return (arr ? "[" : "{") + String(json) + (arr ? "]" : "}");
+        else {
+            // recurse array or object
+            var n, v, json = [], arr = (obj && obj.constructor == Array);
+            for (n in obj) {
+                v = obj[n]; t = typeof(v);
+                if (t == "string") v = '"'+v+'"';
+                else if (t == "object" && v !== null) v = jsonObj.stringify(v);
+                json.push((arr ? "" : '"' + n + '":') + String(v));
+            }
+            return (arr ? "[" : "{") + String(json) + (arr ? "]" : "}");
+        }
     }
 };
 
-$$.json = json;
+$$.json = jsonObj;
 }})(social, jQuery);
 
 
@@ -1011,11 +1063,15 @@ var data = {
 
     wait: function(url, method) {
         var self = this;
+        /*
+         * Always fetch the data till we have a proper
+         * way to cache and refresh our caches.
+         *
         if (self._data[url] !== undefined) {
             method(self._data[url]);
             return;
         }
-
+        */
         var deferred = $.get(url, null, null, "json"),
             success = function(data) {
                 self._data[url] = data;
@@ -1087,9 +1143,6 @@ var acl = {
         if (type === "public") {
             aclObj.accept.pub = true;
         }
-        else if (type === "friends") {
-            aclObj.accept.friends = true;
-        }
         else if (type.match(/^org:/)) {
             aclObj.accept.orgs = type.substr(4).split(",");
         }
@@ -1115,9 +1168,9 @@ var acl = {
         $$.data.wait("/auto/mygroups", (function(groups) {
             items = [];
             $.each(groups || [], function(i, g) {
-                items.push('<li><a class="acl-item" data-acl="group:' + g.id + '">' + 
+                items.push('<li><a class="acl-item" data-acl="group:' + g.id + '">' +
                            '<span class="acl-title">' + g.name + '</span>' +
-                           '<div class="acltip" style="display:none;">' + g.name + '</div>' + 
+                           '<div class="acltip" style="display:none;">' + g.name + '</div>' +
                            '</a></li>');
             });
 

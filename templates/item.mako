@@ -2,8 +2,8 @@
 <%! from twisted.web.static import formatFileSize %>
 <%! from base64 import b64encode, urlsafe_b64decode %>
 <%! from urlparse import urlsplit %>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-                    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<!DOCTYPE HTML>
 
 <%namespace name="widgets" file="widgets.mako"/>
 <%inherit file="base.mako"/>
@@ -43,6 +43,7 @@
           %endif
         </div>
       </div>
+      <div class="clear"></div>
     </div>
   </div>
 </%def>
@@ -141,7 +142,7 @@
 <%def name="conv_owner(ownerId)">
   <% avatarURI = utils.userAvatar(ownerId, entities[ownerId]) %>
   %if avatarURI:
-    <img src="${avatarURI}" height="48" width="48"/>
+    <img src="${avatarURI}" style="max-height: 48px; max-width: 48px;"/>
   %endif
 </%def>
 
@@ -182,22 +183,20 @@
     myTimezone = me['basic'].get("timezone", None)
   %>
   ${utils.simpleTimestamp(timestamp, myTimezone)}\
-  ## If none of my friends liked it, show the count of likes (onclick show the likes)
+  ## If none of my subscriptions liked it, show the count of likes (onclick show the likes)
   %if (not hasLikes and likesCount) or (not hasComments and commentsCount):
     &#183;
   %endif
   %if not hasLikes and likesCount > 0:
     <button class="button-link" title="${likesCount} Likes" onclick="$$.convs.showItemLikes('${convId}')"><div class="small-icon small-like"></div>${likesCount}</button>
   %endif
-  ## Number of comments when none of my friends commented on it
+  ## Number of comments when none of my subscriptions commented on it
   %if not hasComments and commentsCount > 0:
     <button class="button-link ajax" title="${commentsCount} Comments" href="/item?id=${convId}" data-ref="/item/responses?id=${convId}"><div class="small-icon small-comment"></div>${commentsCount}</button>
   %endif
   &#183;
   ## Like this conversation
-  %if myKey == meta["owner"]:
-    <button class="button-link disabled">${_("Like")}</button>&#183;<button
-  %elif myLikes and myLikes.has_key(convId) and len(myLikes[convId]):
+  %if myLikes and myLikes.has_key(convId) and len(myLikes[convId]):
     <button class="button-link ajaxpost" data-ref="/item/unlike?id=${convId}">${_("Unlike")}</button>&#183;<button
   %else:
     <button class="button-link ajaxpost" data-ref="/item/like?id=${convId}">${_("Like")}</button>&#183;<button
@@ -223,9 +222,7 @@
     <button class="button-link" title="${likesCount} Likes" onclick="$$.convs.showItemLikes('${itemId}')"><div class="small-icon small-like"></div>${likesCount}</button>
   %endif
   &#183;
-  %if myKey == meta["owner"]:
-    <button class="button-link disabled">${_("Like")}</button>&#183;
-  %elif myLikes and myLikes.has_key(itemId) and len(myLikes[itemId]):
+  %if myLikes and myLikes.has_key(itemId) and len(myLikes[itemId]):
     <button class="button-link ajaxpost" data-ref="/item/unlike?id=${itemId}">${_("Unlike")}</button>
   %else:
     <button class="button-link ajaxpost" data-ref="/item/like?id=${itemId}">${_("Like")}</button>
@@ -357,25 +354,26 @@
 
 <%def name="conv_comment(convId, commentId)">
   <%
-    if not items.get(commentId, {}).get("meta", {}):
+    meta = items.get(commentId, {}).get("meta", {})
+    if not meta:
         return ''
 
-    item = items[commentId]
-    userId = item["meta"]["owner"]
-    comment = item["meta"]["comment"]
+    userId = meta["owner"]
+    comment = meta["comment"]
+    snippet = meta.get('snippet', None)
     normalize = utils.normalizeText
   %>
   <div class="conv-comment" id="comment-${commentId}">
     <div class="comment-avatar">
       <% avatarURI = utils.userAvatar(userId, entities[userId], "small") %>
       %if avatarURI:
-        <img src="${avatarURI}" height='32' width='32'/>
+        <img src="${avatarURI}" style="max-height: 32px; max-width: 32px;"/>
       %endif
     </div>
     <div class="comment-container">
       <span class="conv-other-actions" onclick="$.post('/ajax/item/delete', {id:'${commentId}'});">&nbsp;</span>
       <span class="comment-user">${utils.userName(userId, entities[userId])}</span>
-      <span class="comment-text">${comment|normalize}</span>
+      ${_renderText(snippet, comment, _('Expand this comment &#187;'), _('Collapse this comment'))}
     </div>
     <div class="comment-meta" id = "item-footer-${commentId}">
       ${self.item_footer(commentId)}
@@ -435,16 +433,30 @@
 <%def name="item_subactions()">
 </%def>
 
+<%def name="_renderText(snippet, text, expandStr=None, collapseStr=None)">
+  <%
+    normalize = utils.normalizeText
+  %>
+  %if snippet:
+    <span class="text-preview">${snippet|normalize}</span>
+    <span class="text-full" style="display:none;">${text|normalize}</span>
+    &nbsp;&nbsp;
+    <button class="text-expander" onclick="$$.convs.expandText(event);">${expandStr or _('Expand this post &#187;')}</button>
+    <button class="text-collapser" style="display:none;" onclick="$$.convs.collapseText(event);">${collapseStr or _('Collapse this post')}</button>
+  %else:
+    <span class="text-full">${text|normalize}</span>
+  %endif
+</%def>
 
 <%def name="render_status(convId, isQuoted=False)">
   <%
     conv = items[convId]
-    convType = conv["meta"]["type"]
-    userId = conv["meta"]["owner"]
-    normalize = utils.normalizeText
+    meta = conv["meta"]
+    convType = meta["type"]
+    userId = meta["owner"]
     has_icon = "has-icon" if convType in ["question"] else ''
     itemTitleText = "item-title-text" if has_icon else ''
-    target = items[convId]["meta"].get('target', '')
+    target = meta.get('target', '')
     target = target.split(',') if target else ''
     if target:
       target = [x for x in target if x in relations.groups]
@@ -465,9 +477,11 @@
       %if isQuoted and not has_icon:
         ${utils.userName(userId, entities[userId])}
       %endif
-      %if conv["meta"].has_key("comment"):
-        ${conv["meta"]["comment"]|normalize}
-      %endif
+      <%
+        comment = meta.get('comment', '')
+        snippet = meta.get('snippet', '')
+      %>
+      ${_renderText(snippet, comment)}
     </div>
   </div>
 </%def>
@@ -481,7 +495,6 @@
 <%def name="render_feedback(convId, isQuoted=False)">
   <%
     conv = items[convId]
-    normalize = utils.normalizeText
     meta = conv["meta"]
     mood = meta["subType"]
     user = entities[meta['userId']]
@@ -501,9 +514,11 @@
         </span>
         (${userOrg["basic"]["name"]})<br/>
       %endif
-      %if conv["meta"].has_key("comment"):
-        ${conv["meta"]["comment"]|normalize}
-      %endif
+      <%
+        comment = meta.get('comment', '')
+        snippet = meta.get('snippet', '')
+      %>
+      ${_renderText(snippet, comment)}
     </div>
   </div>
 </%def>
@@ -514,19 +529,21 @@
     conv = items[convId]
     convType = conv["meta"]["type"]
     userId = conv["meta"]["owner"]
-    normalize = utils.normalizeText
 
+    ## "url" is replaced by "link_url" in the new schema.
+    ## the older column names are here for backward compatibility
+    ## can be removed after DB update
     meta = conv["meta"]
-    url = meta.get("url", "")
-    title = meta.get("title", '')
-    imgsrc = meta.get("imgSrc", '')
-    summary = meta.get("summary", '')
+    url = meta.get("link_url", '') or meta.get("url", '')
+    title = meta.get("link_title", '') or meta.get("title", '')
+    imgsrc = meta.get("link_imgSrc", '') or meta.get("imgSrc", '')
+    summary = meta.get("link_summary", '') or meta.get("summary", '')
 
     hasEmbed = False
-    embedType = meta.get("embedType", '')
-    embedSrc = meta.get("embedSrc", '')
-    embedWidth = meta.get("embedWidth", 0)
-    embedHeight = meta.get("embedHeight", 0)
+    embedType = meta.get("link_embedType", '') or meta.get("embedType", '')
+    embedSrc = meta.get("link_embedSrc", '') or meta.get("embedSrc", '')
+    embedWidth = meta.get("link_embedWidth", '') or meta.get("embedWidth", 0)
+    embedHeight = meta.get("link_embedHeight", '') or meta.get("embedHeight", 0)
     if embedType and embedSrc and embedWidth and embedHeight:
         hasEmbed = True
 
@@ -548,9 +565,11 @@
   <div class="item-title has-icon">
     <span class="icon item-icon link-icon"></span>
     <div class="item-title-text">
-      %if conv["meta"].has_key("comment"):
-        ${conv["meta"]["comment"]|normalize}
-      %endif
+      <%
+        comment = meta.get('comment', '')
+        snippet = meta.get('snippet', '')
+      %>
+      ${_renderText(snippet, comment)}
       <div class="link-item">
         %if imgsrc and hasEmbed:
           <div onclick="$$.convs.embed('${convId}');" class="embed-wrapper">
@@ -586,16 +605,17 @@
     target = conv["meta"]["target"]
     fmtUser = utils.userName
     fmtGroup = utils.groupName
-    if subtype == "connection":
-      activity = _("%s and %s are now friends.") % (fmtUser(userId, entities[userId]), fmtUser(target, entities[target]))
-    elif subtype == "following":
+    activity = None
+    if subtype == "following":
       activity = _("%s started following %s.") % (fmtUser(userId, entities[userId]), fmtUser(target, entities[target]))
     elif subtype == "groupJoin":
       activity = _("%s joined %s.") % (fmtUser(userId, entities[userId]), fmtGroup(target, entities[target]))
     elif subtype == "groupLeave":
       activity = _("%s left %s.") % (fmtUser(userId, entities[userId]), fmtGroup(target, entities[target]))
   %>
-  ${activity}
+  %if activity:
+    ${activity}
+  %endif
 </%def>
 
 
@@ -660,7 +680,7 @@
         %if iamOwner:
           <li><a class="menu-item noicon" onclick="$.post('/ajax/item/delete', {id:'${convId}'});">${_("Delete")}</a></li>
         %else:
-          <li><a class="menu-item noicon" onclick="$.post('/ajax/item/remove', {id:'${convId}'});">${_("Remove")}</a></li>
+          <li><a class="menu-item noicon" onclick="$.post('/ajax/item/remove', {id:'${convId}'});">${_("Hide from my Feed")}</a></li>
           <li><a class="menu-item noicon" onclick="">${_("Report")}</a></li>
         %endif
     </ul>

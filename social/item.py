@@ -1,6 +1,6 @@
-import json
 import uuid
 import time
+import re
 
 from telephus.cassandra import ttypes
 from twisted.internet   import defer
@@ -13,6 +13,46 @@ from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.template    import render, renderScriptBlock
 from social.logging     import profile, dump_args, log
+
+
+#
+# Create a new conversation item.
+#
+@defer.inlineCallbacks
+def _createNewItem(request, myId, myOrgId):
+    convType = utils.getRequestArg(request, "type")
+    if convType not in plugins:
+        raise errors.BaseError('Unsupported item type', 400)
+
+    plugin = plugins[convType]
+    convId, conv = yield plugin.create(request, myId, myOrgId)
+
+    timeUUID = conv["meta"]["uuid"]
+    convACL = conv["meta"]["acl"]
+
+    deferreds = []
+    responseType = 'I'
+
+    # Push to all the feeds.
+    d = feed.pushToFeed(myId, timeUUID, convId, None,
+                        responseType, convType, myId, myId)
+    deferreds.append(d)
+
+    d = feed.pushToOthersFeed(myId, timeUUID, convId, None, convACL,
+                              responseType, convType, myId)
+    deferreds.append(d)
+
+    # Save in user items.
+    userItemValue = ":".join([responseType, convId, convId, convType, myId, ''])
+    d = db.insert(myId, "userItems", userItemValue, timeUUID)
+    deferreds.append(d)
+
+    if plugins[convType].hasIndex:
+        d = db.insert(myId, "userItems_%s"%(convType), userItemValue, timeUUID)
+        deferreds.append(d)
+
+    yield defer.DeferredList(deferreds)
+    defer.returnValue((convId, conv))
 
 
 class ItemResource(base.BaseResource):
@@ -95,9 +135,8 @@ class ItemResource(base.BaseResource):
         owner = meta["owner"]
 
         relation = Relation(myKey, [])
-        yield defer.DeferredList([relation.initFriendsList(),
-                                  relation.initSubscriptionsList(),
-                                  relation.initGroupsList()])
+        yield defer.DeferredList([relation.initGroupsList(),
+                                  relation.initSubscriptionsList()])
         args["relations"] = relation
 
         if script and landing:
@@ -171,9 +210,9 @@ class ItemResource(base.BaseResource):
             toFetchEntities.add(userKey)
         responseKeys.reverse()
 
-        friends_subscriptions = relation.friends.keys() + list(relation.subscriptions)
-        likes = yield db.get_slice(convId, "itemLikes", friends_subscriptions) \
-                            if friends_subscriptions else defer.succeed([])
+        subscriptions = list(relation.subscriptions)
+        likes = yield db.get_slice(convId, "itemLikes", subscriptions) \
+                            if subscriptions else defer.succeed([])
         toFetchEntities.update([x.column.name for x in likes])
         d1 = db.multiget_slice(toFetchEntities, "entities", ["basic"])
         d2 = db.multiget_slice(responseKeys, "items", ["meta"])
@@ -253,71 +292,31 @@ class ItemResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _new(self, request):
-        convType = utils.getRequestArg(request, "type")
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
 
-        parent = None
-        convOwner = myId
-        responseType = 'I'
+        convId, conv = yield _createNewItem(request, myId, myOrgId)
+        entities = {myId: args['me']}
+        target = conv['meta'].get('target', None)
+        if target:
+            toFetchEntities = set(target.split(','))
+            entities = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
+            entities = utils.multiSuperColumnsToDict(cols)
 
-        if convType in plugins:
-            plugin = plugins[convType]
-            convId, conv = yield plugin.create(request)
-            timeUUID = conv["meta"]["uuid"]
-            convACL = conv["meta"]["acl"]
-            target = conv["meta"].get("target", None)
-            toFetchEntities = set()
-            entities = {}
-            deferreds = []
-            relation = Relation(myId, [])
-            deferreds.append(relation.initGroupsList())
-            if target:
-                toFetchEntities.update(target.split(','))
-            if toFetchEntities:
-                d = db.multiget_slice(toFetchEntities, "entities", ["basic"])
-                def _getEntities(cols):
-                    entities.update(utils.multiSuperColumnsToDict(cols))
-                d.addCallback(_getEntities)
-                deferreds.append(d)
+        relation = Relation(myId, [])
+        yield relation.initGroupsList()
 
-            commentSnippet = ""
-            userItemValue = ":".join([responseType, convId, convId,
-                                      convType, myId, commentSnippet])
+        data = {"items":{convId:conv}, "relations": relation,
+                "entities":entities, "script": True}
+        args.update(data)
+        onload = "(function(obj){$$.convs.load(obj);$('#sharebar-attach-uploaded').empty();})(this);"
+        d1 = renderScriptBlock(request, "item.mako", "item_layout",
+                        False, "#user-feed", "prepend", args=[convId, 'conv-item-created'],
+                        handlers={"onload":onload}, **args)
 
-            d = feed.pushToFeed(myId, timeUUID, convId, parent,
-                                responseType, convType, convOwner, myId)
-            deferreds.append(d)
+        defaultType = plugins.keys()[0]
+        d2 = plugins[defaultType].renderShareBlock(request, True)
 
-            d = feed.pushToOthersFeed(myId, timeUUID, convId,
-                                      parent, convACL, responseType,
-                                      convType, convOwner)
-            deferreds.append(d)
-
-            d = db.insert(myId, "userItems", userItemValue, timeUUID)
-            deferreds.append(d)
-
-            if plugins[convType].hasIndex:
-                d = db.insert(myId, "userItems_%s"%(convType),
-                              userItemValue, timeUUID)
-                deferreds.append(d)
-
-
-            deferredList = defer.DeferredList(deferreds)
-            yield deferredList
-
-            entities[myId] = args["me"]
-            data = {"items":{convId:conv}, "relations": relation,
-                    "entities":entities, "script": True}
-            args.update(data)
-            onload = "(function(obj){$$.convs.load(obj);$('#sharebar-attach-uploaded').empty();})(this);"
-            d1 = renderScriptBlock(request, "item.mako", "item_layout",
-                            False, "#user-feed", "prepend", args=[convId, 'conv-item-created'],
-                            handlers={"onload":onload}, **args)
-
-            defaultType = plugins.keys()[0]
-            d2 = plugins[defaultType].renderShareBlock(request, True)
-
-            yield defer.DeferredList([d1, d2])
+        yield defer.DeferredList([d1, d2])
 
 
     @profile
@@ -331,10 +330,6 @@ class ItemResource(base.BaseResource):
         (itemId, item) = yield utils.getValidItemId(request, "id")
         extraEntities = [item["meta"]["owner"]]
 
-        # Ignore if I am owner of the item
-        if myId == item["meta"]["owner"]:
-            defer.returnValue(None)
-
         # Check if I already liked the item
         try:
             cols = yield db.get(itemId, "itemLikes", myId)
@@ -347,7 +342,9 @@ class ItemResource(base.BaseResource):
         if convId:
             conv = yield db.get(convId, "items", super_column="meta")
             conv = utils.supercolumnsToDict([conv])
-            commentSnippet = utils.toSnippet(item["meta"].get("comment"))
+            commentText = item["meta"].get("comment")
+            if commentText:
+                commentSnippet = utils.toSnippet(commentText, 35)
         else:
             convId = itemId
             conv = item
@@ -364,53 +361,56 @@ class ItemResource(base.BaseResource):
 
         yield db.insert(itemId, "items", str(likesCount+1), "likesCount", "meta")
 
+        item["meta"]["likesCount"] = str(likesCount + 1)
+        args["items"] = {itemId: item}
+        args["myLikes"] = {itemId:[myId]}
         timeUUID = uuid.uuid1().bytes
-        responseType = "L"
 
         # 1. add user to Likes list
         yield db.insert(itemId, "itemLikes", timeUUID, myId)
 
-        # 2. add user to the followers list of parent item
-        yield db.insert(convId, "items", "", myId, "followers")
+        # Ignore adding to other's feeds if I am owner of the item
+        if myId != item["meta"]["owner"]:
+            responseType = "L"
 
-        # 3. update user's feed, feedItems, feed_*
-        userItemValue = ":".join([responseType, itemId, convId, convType,
-                                  convOwnerId, commentSnippet])
-        yield db.insert(myId, "userItems", userItemValue, timeUUID)
-        if plugins.has_key(convType) and plugins[convType].hasIndex:
-            yield db.insert(myId, "userItems_"+convType, userItemValue, timeUUID)
+            # 2. add user to the followers list of parent item
+            yield db.insert(convId, "items", "", myId, "followers")
 
-        yield feed.pushToFeed(myId, timeUUID, itemId, convId, responseType,
-                              convType, convOwnerId, myId,
-                              entities=extraEntities, promote=False)
+            # 3. update user's feed, feedItems, feed_*
+            userItemValue = ":".join([responseType, itemId, convId, convType,
+                                      convOwnerId, commentSnippet])
+            yield db.insert(myId, "userItems", userItemValue, timeUUID)
+            if plugins.has_key(convType) and plugins[convType].hasIndex:
+                yield db.insert(myId, "userItems_"+convType, userItemValue, timeUUID)
 
-        # 4. update feed, feedItems, feed_* of user's followers/friends
-        yield feed.pushToOthersFeed(myId, timeUUID, itemId, convId, convACL,
-                                    responseType, convType, convOwnerId,
-                                    entities=extraEntities, promoteActor=False)
+            yield feed.pushToFeed(myId, timeUUID, itemId, convId, responseType,
+                                  convType, convOwnerId, myId,
+                                  entities=extraEntities, promote=False)
 
-        item["meta"]["likesCount"] = str(likesCount + 1)
-        args["items"] = {itemId: item}
-        args["myLikes"] = {itemId:[myId]}
+            # 4. update feed, feedItems, feed_* of user's followers
+            yield feed.pushToOthersFeed(myId, timeUUID, itemId, convId, convACL,
+                                        responseType, convType, convOwnerId,
+                                        entities=extraEntities, promoteActor=False)
 
         if itemId != convId:
             itemOwnerId = item["meta"]["owner"]
-            yield self.notify("LC", convId, timeUUID, convType=convType,
-                              convOwnerId=convOwnerId, myId=myId,
-                              itemOwnerId=itemOwnerId, me=args["me"])
+            if myId != itemOwnerId:
+                yield self.notify("LC", convId, timeUUID, convType=convType,
+                                  convOwnerId=convOwnerId, myId=myId,
+                                  itemOwnerId=itemOwnerId, me=args["me"])
             yield renderScriptBlock(request, "item.mako", "item_footer", False,
-                              "#item-footer-%s"%(itemId), "set",
-                              args=[itemId], **args)
+                                    "#item-footer-%s"%(itemId), "set",
+                                    args=[itemId], **args)
         else:
-            yield self.notify("L", convId, timeUUID, convType=convType,
-                              convOwnerId=convOwnerId, myId=myId, me=args["me"])
+            if myId != convOwnerId:
+                yield self.notify("L", convId, timeUUID, convType=convType,
+                                  convOwnerId=convOwnerId, myId=myId, me=args["me"])
 
             relation = Relation(myId, [])
-            yield defer.DeferredList([relation.initFriendsList(),
-                                  relation.initSubscriptionsList() ])
-            friends_subscriptions = relation.friends.keys() + list(relation.subscriptions)
-            if friends_subscriptions:
-                likes = yield db.get_slice(convId, "itemLikes", friends_subscriptions)
+            yield relation.initSubscriptionsList()
+            subscriptions = list(relation.subscriptions)
+            if subscriptions:
+                likes = yield db.get_slice(convId, "itemLikes", subscriptions)
                 likes = [x.column.name for x in likes]
             else:
                 likes = []
@@ -441,6 +441,7 @@ class ItemResource(base.BaseResource):
             yield renderScriptBlock(request, "item.mako", "conv_footer", False,
                                     "#item-footer-%s"%(itemId), "set",
                                     args=[itemId, hasComments, hasLikes], **args)
+
             yield renderScriptBlock(request, "item.mako", 'conv_likes', False,
                                     '#conv-likes-wrapper-%s' % convId, 'set', True,
                                     args=[itemId, likesCount+1, True, likes], handlers=handler, **args)
@@ -455,9 +456,6 @@ class ItemResource(base.BaseResource):
         # Get the item and the conversation
         (itemId, item) = yield utils.getValidItemId(request, "id")
 
-        #Ignore if i am owner of the item
-        if myId == item["meta"]["owner"]:
-            defer.returnValue(None)
         # Make sure that I liked this item
         try:
             cols = yield db.get(itemId, "itemLikes", myId)
@@ -492,19 +490,21 @@ class ItemResource(base.BaseResource):
         #    (use can also become follower by responding to item,
         #        so user can't be removed from followers list)
 
-        # 3. delete from user's feed, feedItems, feed_*
-        yield feed.deleteFromFeed(myId, itemId, convId,
-                                  convType, myId, responseType)
+        # Ignore if i am owner of the item
+        if myId == item["meta"]["owner"]:
+            # 3. delete from user's feed, feedItems, feed_*
+            yield feed.deleteFromFeed(myId, itemId, convId,
+                                      convType, myId, responseType)
 
-        # 4. delete from feed, feedItems, feed_* of user's friends/followers
-        yield feed.deleteFromOthersFeed(myId, itemId, convId, convType,
-                                        convACL, convOwnerId, responseType)
+            # 4. delete from feed, feedItems, feed_* of user's followers
+            yield feed.deleteFromOthersFeed(myId, itemId, convId, convType,
+                                            convACL, convOwnerId, responseType)
 
-        # FIX: if user updates more than one item at exactly same time,
-        #      one of the updates will overwrite the other. Fix it.
-        yield db.remove(myId, "userItems", likeTimeUUID)
-        if plugins.has_key(convType) and plugins[convType].hasIndex:
-            yield db.remove(myId, "userItems_"+ convType, likeTimeUUID)
+            # FIX: if user updates more than one item at exactly same time,
+            #      one of the updates will overwrite the other. Fix it.
+            yield db.remove(myId, "userItems", likeTimeUUID)
+            if plugins.has_key(convType) and plugins[convType].hasIndex:
+                yield db.remove(myId, "userItems_"+ convType, likeTimeUUID)
 
         item["meta"]["likesCount"] = likesCount -1
         args["items"] = {itemId: item}
@@ -516,14 +516,13 @@ class ItemResource(base.BaseResource):
                                      args=[itemId], **args)
         else:
             relation = Relation(myId, [])
-            yield defer.DeferredList([relation.initFriendsList(),
-                                      relation.initSubscriptionsList()])
+            yield relation.initSubscriptionsList()
 
             toFetchEntities = set()
             likes = []
-            friends_subscriptions = relation.friends.keys() + list(relation.subscriptions)
-            if friends_subscriptions:
-                likes = yield db.get_slice(convId, "itemLikes", friends_subscriptions)
+            subscriptions = list(relation.subscriptions)
+            if subscriptions:
+                likes = yield db.get_slice(convId, "itemLikes", subscriptions)
                 likes = [x.column.name for x in likes]
                 toFetchEntities = set(likes)
 
@@ -563,7 +562,8 @@ class ItemResource(base.BaseResource):
     @dump_args
     def _comment(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        comment = utils.getRequestArg(request, "comment")
+        snippet, comment = utils.getTextWithSnippet(request, "comment",
+                                            constants.COMMENT_PREVIEW_LENGTH)
         if not comment:
             raise errors.MissingParams([_("Comment")])
 
@@ -577,6 +577,9 @@ class ItemResource(base.BaseResource):
                 "timestamp": str(int(time.time())), "uuid": timeUUID}
         followers = {myId: ''}
         itemId = utils.getUniqueKey()
+        if snippet:
+            meta['snippet'] = snippet
+
         yield db.batch_insert(itemId, "items", {'meta': meta,
                                                 'followers': followers})
 
@@ -598,7 +601,7 @@ class ItemResource(base.BaseResource):
 
         # 4. Update userItems and userItems_*
         responseType = "Q" if convType == "question" else 'C'
-        commentSnippet = utils.toSnippet(comment)
+        commentSnippet = utils.toSnippet(comment, 35)
         userItemValue = ":".join([responseType, itemId, convId, convType,
                                   convOwnerId, commentSnippet])
         yield db.insert(myId, "userItems", userItemValue, timeUUID)
@@ -761,6 +764,12 @@ class ItemResource(base.BaseResource):
 
         if not tagName:
             raise errors.MissingParams([_("Tag")])
+
+        decoded = tagName.decode('utf-8', 'replace')
+        if len(decoded) > 50:
+            raise errors.InvalidRequest(_('Tag cannot be more than 50 characters long'))
+        if not re.match('^[\w-]*$', decoded):
+            raise errors.InvalidRequest(_('Tag can only include numerals, alphabet and hyphens (-)'))
 
         (itemId, item) = yield utils.getValidItemId(request, "id", columns=["tags"])
         if "parent" in item["meta"]:
@@ -1005,6 +1014,31 @@ class ItemResource(base.BaseResource):
                 d = getattr(self, "_" + request.postpath[0])(request)
             elif action == 'delete':
                 d = self._remove(request)
+
+        return self._epilogue(request, d)
+
+
+
+
+#
+# RESTful API for managing items.
+#
+class APIItemResource(base.APIBaseResource):
+
+    @defer.inlineCallbacks
+    def _newItem(self, request):
+        token = self._ensureAccessScope(request, 'post-item')
+        convId, conv = yield _createNewItem(request, token.user, token.org)
+        self._success(request, 201, {'id': convId})
+
+
+    def render_POST(self, request):
+        apiAccessToken = request.apiAccessToken
+        segmentCount = len(request.postpath)
+        d = None
+
+        if segmentCount == 0:
+            d = self._newItem(request)
 
         return self._epilogue(request, d)
 

@@ -27,8 +27,8 @@ class AutoCompleteResource(BaseResource):
     _template = "<div><div class='ui-ac-icon'><img src='%(icon)s'/></div>" +\
                 "<div class='ui-ac-title'>%(title)s</div>" +\
                 "<div class='ui-ac-meta'>%(meta)s</div></div>"
-    _singleLineTemplate = "<div><span class='ui-ac-title'>%(title)s</span>" +\
-                          "<span class='ui-ac-meta'>%(meta)s</span></div>"
+    _singleLineTemplate = "<div><span class='ui-ac-title2'>%(title)s</span>" +\
+                          "<span class='ui-ac-meta2'>%(meta)s</span></div>"
     _dlgLinetemplate = """
       <div class="ui-listitem">
         <div class="ui-list-icon"><img src='%(icon)s'/></div>
@@ -59,9 +59,12 @@ class AutoCompleteResource(BaseResource):
                           start=term, finish=finish, count=10)
         d2 = db.get_slice(orgId, "nameIndex",
                           start=term, finish=finish, count=10)
+        d3 = db.get_slice(orgId, "entityGroupsMap",
+                          start=term, finish=finish, count=10)
 
         toFetchEntities = set()
         users = []
+        groups = []
 
         # List of users that match the given term
         matchedUsers = yield d2
@@ -70,6 +73,14 @@ class AutoCompleteResource(BaseResource):
             if uid not in toFetchEntities:
                 users.append(uid)
                 toFetchEntities.add(uid)
+
+        matchedGroup = yield d3
+        for group in matchedGroup:
+            name, groupId = group.column.name.split(':')
+            if groupId not in toFetchEntities:
+                groups.append(groupId)
+                toFetchEntities.add(groupId)
+
 
         # List of tags that match the given term
         tags = []
@@ -92,6 +103,7 @@ class AutoCompleteResource(BaseResource):
         output = []
         template = self._template
         avatar = utils.userAvatar
+        groupAvatar = utils.groupAvatar
 
         for uid in users:
             if uid in entities:
@@ -101,6 +113,15 @@ class AutoCompleteResource(BaseResource):
                 output.append({"value": name,
                                "label": template%data,
                                "href": "/profile?id=%s"%uid})
+
+        for groupId in groups:
+            if groupId in entities:
+                name = entities[groupId]['basic']['name']
+                data = {"icon": groupAvatar(groupId, entities[groupId], "s"),
+                        "title": name, 'meta':''}
+                output.append({"value": name,
+                               "label": template%data,
+                               "href": "/group?id=%s"%groupId})
 
         for tag in tags:
             title = tag["title"]
@@ -156,7 +177,7 @@ class AutoCompleteResource(BaseResource):
 
 
     @defer.inlineCallbacks
-    def _users(self, request, term, myFriendsOnly=False):
+    def _users(self, request, term):
         if len(term) < 2:
             request.write("[]")
             return
@@ -303,8 +324,6 @@ class AutoCompleteResource(BaseResource):
             d = self._tags(request, term)
         elif path == "users":
             d = self._users(request, term)
-        elif path == "friends":
-            d = self._users(request, term, True)
         elif path == "groups":
             d = self._groups(request, term)
         elif path == "mygroups":

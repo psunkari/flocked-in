@@ -1,7 +1,6 @@
 import PythonMagick
 import imghdr
 import time
-from hashlib            import md5, sha256
 from datetime           import datetime
 
 
@@ -79,8 +78,8 @@ def _getResetPasswordTokens(email):
         if col.column.name.startswith('resetPasswdToken'):
             tokens.append(col.column.value)
             deleteTokens.append(col.column.name)
-            if col.column.timestamp/1000000 < leastTimestamp :
-                leastTimestamp = col.column.timestamp/1000000
+            if col.column.timestamp/1e6 < leastTimestamp :
+                leastTimestamp = col.column.timestamp/1e6
         else:
             validEmail = True
     defer.returnValue((validEmail, tokens, deleteTokens, leastTimestamp))
@@ -121,7 +120,7 @@ def _sendSignupInvitation(emailId):
                "%(activationUrl)s\n\n"
         activationTmpl = "%(rootUrl)s/signup?email=%(emailId)s&token=%(token)s"
 
-        token = utils.getRandomKey('invite')
+        token = utils.getRandomKey()
         insert_d = db.insert(domain, "invitations", emailId, token, emailId)
         activationUrl = activationTmpl % locals()
         textBody = (body + signature) % locals()
@@ -135,6 +134,7 @@ class SignupResource(BaseResource):
     isLeaf = True
     requireAuth = False
     thanksPage = None
+    invalidEmailPage = None
 
     @defer.inlineCallbacks
     def _isValidToken(self, emailId, token):
@@ -205,16 +205,18 @@ class SignupResource(BaseResource):
     def _signup(self, request):
         if not self.thanksPage:
             self.thanksPage = static.File("public/thanks.html")
+        if not self.invalidEmailPage:
+            self.invalidEmailPage = static.File("public/invalid-email.html")
 
         emailId = utils.getRequestArg(request, "email")
 
         try:
             yield _sendSignupInvitation(emailId)
             self.thanksPage.render_GET(request)
-            defer.returnValue(None)
         except (InvalidEmailId, DomainBlacklisted), e:
-            request.redirect('/')
-            request.finish()
+            self.invalidEmailPage.render_GET(request)
+
+        defer.returnValue(None)
 
 
     @profile
@@ -317,10 +319,10 @@ class SignupResource(BaseResource):
         if validEmail:
             if token not in tokens:
                 raise PermissionDenied("Invalid token. <a href='/password/resend?email=%s'>Click here</a> to reset password"%(email))
-            yield db.insert(email, "userAuth", utils.md5(passwd), 'passwordHash')
+            yield db.insert(email, "userAuth", utils.hasspass(passwd), 'passwordHash')
             yield db.batch_remove({"userAuth": [email]}, names=deleteTokens)
         request.redirect('/signin')
-        #notify user
+        # XXX: notify user
 
     @defer.inlineCallbacks
     def request_resetPassword(self, request):
@@ -337,7 +339,7 @@ class SignupResource(BaseResource):
             raise PermissionDenied('We detected ususual activity from your account.<br/>  Click the link sent to your emailId to reset password or wait for %s hours before you retry'%(hours))
 
         if validEmail:
-            token = sha256(utils.getUniqueKey()).hexdigest()
+            token = utils.getRandomKey()
             yield db.insert(email, "userAuth", token, 'resetPasswdToken:%s'%(token), ttl=86400)
             yield _sendmailResetPassword(email, token)
 
@@ -358,8 +360,7 @@ class SignupResource(BaseResource):
             raise MissingParams([''])
 
         validEmail, tokens, deleteTokens, leastTimestamp = yield _getResetPasswordTokens(email)
-        #if not validEmail:
-        #send invite to the user
+        # XXX: If not validEmail, send invite to the user
         if not validEmail or token not in tokens:
             raise PermissionDenied("Invalid token. <a href='/password/resend?email=%s'>Click here</a> to reset password"%(email))
         args = {"view": "resetPassword", "email": email, "token": token}

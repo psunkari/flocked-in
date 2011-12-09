@@ -1,5 +1,5 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-                    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE HTML>
+
 <%! from social import utils, _, __, plugins %>
 <%! from social import relations as r %>
 <%! from social.logging import log %>
@@ -24,52 +24,55 @@
       </div>
     </div>
     <div id="center-right">
-      <div id="right">
-        <div id="user-me">
-          %if not script:
-            ${self.user_me()}
-          %endif
-        </div>
-        <div id="user-groups">
-          %if not script:
-            ${self.user_groups()}
-          %endif
-        </div>
-        <div id="user-subscriptions">
-          %if not script:
-            ${self.user_subscriptions()}
-          %endif
-        </div>
-        <div id="user-followers">
-          %if not script:
-            ${self.user_followers()}
-          %endif
-        </div>
-        <div id="user-subactions">
-          %if not script:
-            ${self.user_subactions(userKey)}
-          %endif
-        </div>
+      <div id="profile-summary">
+        %if not script:
+          ${self.summary()}
+        %endif
       </div>
-      <div id="center">
-        <div id="profile-summary" class="center-header">
-          %if not script:
-            ${self.summary()}
-          %endif
-        </div>
-        <div class="center-contents">
-          <div id="profile-tabs" class="tabs busy-indicator">
-          %if not script:
-            ${self.tabs()}
-          %endif
+      <div id="profile-center-right">
+        <div id="right">
+          <div id="user-me">
+            %if not script:
+              ${self.user_me()}
+            %endif
           </div>
-          <div id="profile-content">
-          %if not script:
-            ${self.content()}
-          %endif
+          <div id="user-groups">
+            %if not script:
+              ${self.user_groups()}
+            %endif
+          </div>
+          <div id="user-subscriptions">
+            %if not script:
+              ${self.user_subscriptions()}
+            %endif
+          </div>
+          <div id="user-followers">
+            %if not script:
+              ${self.user_followers()}
+            %endif
+          </div>
+          <div id="user-subactions">
+            %if not script:
+              ${self.user_subactions(userKey)}
+            %endif
           </div>
         </div>
+        <div id="center">
+          <div class="center-contents">
+            <div id="profile-tabs" class="tabs busy-indicator">
+            %if not script:
+              ${self.tabs()}
+            %endif
+            </div>
+            <div id="profile-content">
+            %if not script:
+              ${self.content()}
+            %endif
+            </div>
+          </div>
+        </div>
       </div>
+      <div class="clear"></div>
     </div>
   </div>
 </%def>
@@ -80,16 +83,6 @@
 ##
 <%def name="user_me()">
   %if myKey != userKey:
-  %if len(commonFriends) > 0:
-  <div class="sidebar-chunk">
-    <div class="sidebar-title">${_("Common Friends")}</div>
-    <ul class="v-links">
-    %for user in commonFriends:
-      <li><a class="ajax" href="/profile?id=${user}">${rawUserData[user]['name']}</a></li>
-    %endfor
-    </ul>
-  </div>
-  %endif
   %endif
 </%def>
 
@@ -125,7 +118,7 @@
     <div class="sidebar-title">${_("Groups")}</div>
     <ul class="v-links">
     %for group in userGroups:
-      <li><a class="ajax" href="/feed?id=${group}">${rawGroupData[group]['name']}</a></li>
+      <li><a class="ajax" href="/group?id=${group}">${rawGroupData[group]['name']}</a></li>
     %endfor
     </ul>
   </div>
@@ -134,59 +127,48 @@
 
 <%def name="user_subactions(userKey, renderWrapper=True)">
   %if myKey != userKey:
-    %if renderWrapper:
-      <div class="sidebar-chunk">
-      <ul id="user-subactions-${userKey}" class="middle user-subactions v-links">
-    %endif
-    %if relations.pending.get(userKey) == 0:
-      <li><a href="/profile/friend?id=${userKey}&action=cancel"
-             onclick="$.post('/ajax/profile/friend', 'id=${userKey}&action=cancel'); $.event.fix(event).preventDefault();">
-            ${_("Cancel Friend Request")}
-          </a>
-      </li>
-    %endif
-    <li><a href="/profile/block?id=${userKey}"
-           onclick="$.post('/ajax/profile/block', 'id=${userKey}'); $.event.fix(event).preventDefault();">
-          ${_("Block User")}
-        </a>
-    </li>
-    <li><a href="/profile/review?id=${userKey}"
-           onclick="$.post('/ajax/profile/review', 'id=${userKey}'); $.event.fix(event).preventDefault();">
-          ${_("Request Admin Review")}
-        </a>
-    </li>
-    %if renderWrapper:
-      </ul>
-      </div>
-    %endif
+    ##%if renderWrapper:
+    ##  <div class="sidebar-chunk">
+    ##  <ul id="user-subactions-${userKey}" class="middle user-subactions v-links">
+    ##%endif
+    ##<li><a href="/profile/block?id=${userKey}"
+    ##       onclick="$.post('/ajax/profile/block', 'id=${userKey}'); $.event.fix(event).preventDefault();">
+    ##      ${_("Block User")}
+    ##    </a>
+    ##</li>
+    ##<li><a href="/profile/review?id=${userKey}"
+    ##       onclick="$.post('/ajax/profile/review', 'id=${userKey}'); $.event.fix(event).preventDefault();">
+    ##      ${_("Request Admin Review")}
+    ##    </a>
+    ##</li>
+    ##%if renderWrapper:
+    ##  </ul>
+    ##  </div>
+    ##%endif
   %endif
 </%def>
 
 <%def name="summary()">
   <% avatarURI = utils.userAvatar(userKey, user, "large") %>
-  %if avatarURI:
-     <div id="useravatar" class="avatar" style="background-image:url('${avatarURI}')"></div>
-  %endif
-  <div id="userprofile">
-    <div class="titlebar">
-      <div>
-        <span class="middle title">${user['basic']['name']}</span>
-        <ul id="user-actions-${userKey}" class="middle user-actions h-links">
-          ${user_actions(userKey, True, True)}
-        </ul>
-      </div>
-
-      <div class="subtitle" class="summary-line">
-      %if (user['basic'].has_key('firstname') and user['basic'].has_key('lastname')):
-        <span class="summary-item">${user['basic']['firstname']} ${user['basic']['lastname']}</span>
-      %endif
-      </div>
-
-      %if user['basic'].has_key('jobTitle'):
-        <div class="subtitle">${user['basic']['jobTitle']}</div>
-      %endif
+  <div class="titlebar center-header">
+    %if avatarURI:
+      <div id="useravatar" class="avatar" style="background-image:url('${avatarURI}')"></div>
+    %endif
+    <div id="title">
+      <span class="middle title">${user['basic']['name']}</span>
+      <ul id="user-actions-${userKey}" class="middle user-actions h-links">
+        ${user_actions(userKey, True, True)}
+      </ul>
     </div>
+  </div>
+  <div id="userprofile">
     <div id="summary-block">
+      <div class="subtitle" class="summary-line">
+        %if (user['basic'].has_key('firstname') and user['basic'].has_key('lastname')):
+          <span>${user['basic']['firstname']} ${user['basic']['lastname']}</span>,
+        %endif
+        <span>${user['basic']['jobTitle']}</span>
+      </div>
       <div id="summary-work-contact" class="summary-line">
         <span class="summary-item"><a href="${'mailto:' + user['basic']['emailId']}">${user['basic']['emailId']}</a></span>
         %if user.get('contact', {}).has_key('phone'):
@@ -200,7 +182,6 @@
       </div>
     </div>
   </div>
-  <div class="clear"></div>
 </%def>
 
 <%def name="tabs()">
@@ -220,36 +201,13 @@
 
 <%def name="user_actions(userKey, showRemove=False, showEditProfile=False)">
   %if myKey != userKey:
-    %if userKey not in relations.friends:
-      %if not relations.pending or userKey not in relations.pending:
-        <li><button class="button default" onclick="$.post('/ajax/profile/friend', 'id=${userKey}&action=add')">
-          <span class="button-text">${_("Add as Friend")}</span>
-        </button></li>
-      %elif relations.pending.get(userKey) == 1:
-        <li><button class="acl-button button" onclick="$$.ui.showPopup(event)">${_("Respond to Friend Request")}</button>
-        <ul class="acl-menu" style="display:none;">
-            <li>
-              <a class="acl-item" data-acl="public" onclick="$.post('/ajax/profile/friend', 'id=${userKey}&action=accept')">${_("Accept")}</a>
-            </li>
-            <li>
-              <a class="acl-item" data-acl="friends" onclick="$.post('/ajax/profile/friend', 'id=${userKey}&action=reject')">${_("Reject")}</a>
-            </li>
-        </ul></li>
-      %else:
-        <li><button class="button disabled"><span class="button-text">${_("Friend request sent")}</span></button></li>
-      %endif
-      %if userKey not in relations.subscriptions and userKey not in relations.friends:
-        <li><button class="button" onclick="$.post('/ajax/profile/follow', 'id=${userKey}')">
-          <span class="button-text">${_("Follow User")}</span>
-        </button></li>
-      %elif showRemove:
-        <li><button class="button" onclick="$.post('/ajax/profile/unfollow', 'id=${userKey}')">
-          <span class="button-text">${_("Unfollow User")}</span>
-        </button></li>
-      %endif
+    %if userKey not in relations.subscriptions:
+      <li><button class="button default" onclick="$.post('/ajax/profile/follow', 'id=${userKey}')">
+        <span class="button-text">${_("Follow User")}</span>
+      </button></li>
     %elif showRemove:
-      <li><button class="button" onclick="$.post('/ajax/profile/unfriend', 'id=${userKey}')">
-        <span class="button-text">${_("Unfriend User")}</span>
+      <li><button class="button" onclick="$.post('/ajax/profile/unfollow', 'id=${userKey}')">
+        <span class="button-text">${_("Unfollow User")}</span>
       </button></li>
     %endif
   %elif showEditProfile:
@@ -365,15 +323,24 @@
   %endif
 </%def>
 
-<%def name="activity_block(grp)">
+<%def name="activity_block(grp, tzone)">
+  <%
+    rTypeClasses = {"C": "comment", "Q": "answer", "L": "like"}
+    simpleTimestamp = utils.simpleTimestamp
+  %>
   <div class="conv-item">
     %for key in grp:
       <%
         rtype, itemId, convId, convType, convOwner, commentSnippet = key
         activity = reasonStr[key] % (utils.userName(convOwner, entities[convOwner]), utils.itemLink(convId, convType))
+        rTypeClass = rTypeClasses.get(rtype, '')
       %>
-      <div class="conv-data">
-        ${activity}
+      <div class="activity-item ${rTypeClass}">
+        <div class="activity-icon icon"></div>
+        <div class="activity-content">
+          <span>${activity}</span>
+          <div class="activity-footer">${simpleTimestamp(timestamps[key], tzone)}</div>
+        </div>
       </div>
     %endfor
   </div>
@@ -382,12 +349,13 @@
 <%def name="content_activity()">
   <%
     block = []
+    tzone = me["basic"]["timezone"]
     for key in userItems:
       try:
         rtype, itemId, convId, convType, convOwnerId, commentSnippet = key
         if not reasonStr.has_key(key):
           if len(block) > 0:
-            self.activity_block(block)
+            self.activity_block(block, tzone)
             block = []
           item.item_layout(convId)
         elif convType in plugins:
@@ -396,7 +364,7 @@
         log.err("Error when displaying UserItem:", key)
         log.err(e)
     if block:
-      self.activity_block(block)
+      self.activity_block(block, tzone)
   %>
   %if nextPageStart:
     <div id="next-load-wrapper" class="busy-indicator">

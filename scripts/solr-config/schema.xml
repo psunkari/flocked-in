@@ -216,7 +216,7 @@
        <field name="summary" type = "text" indexed="true" stored="true" />
        <field name="title" type = "text" indexed="true" stored="true" />
        <field name="location" type = "text" indexed="true" stored="true" />
-       <field name="options_str" type = "text" indexed="true" stored="true" />
+       <field name="poll_options" type = "text" indexed="true" stored="true" />
        <field name="filename" type = "text" indexed="true" stored="true" />
        <field name="subject" type = "text" indexed="true" stored="true" />
        <field name="body" type = "text" indexed="true" stored="true" />

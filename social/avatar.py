@@ -37,7 +37,7 @@ class AvatarResource(resource.Resource):
             request.setHeader('Expires', expires)
             try:
                 timestamp = cols[0].column.timestamp
-                request.setHeader('Last-Modified', formatdate(timestamp/1000000))
+                request.setHeader('Last-Modified', formatdate(timestamp/1e6))
             except Exception, e: pass
             request.write(data)
             request.finish()

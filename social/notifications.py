@@ -21,7 +21,7 @@ from social.logging     import dump_args, profile, log
 #       Column Value: NotifyId
 #           (ConvId:ConvType:ConvOwner:X, :Y)
 #               X => Type of action (Like/Comment/Like a comment)
-#               Y => Type of action (Friend/Group/Following)
+#               Y => Type of action (Group/Following)
 #
 #     notificationItems (Super CF):
 #       Key: UserId
@@ -44,12 +44,12 @@ def notify(userIds, notifyId, value, timeUUID=None, **kwargs):
     deferreds = []
 
     # Delete existing notifications for the same item/activiy
-    if not notifyIdParts[0] and notifyIdParts[1] not in ["FR", "GR", "NM", "MR", "MA"]:
+    if notifyIdParts[0] or notifyIdParts[1] not in ["GR", "NM", "MR", "MA"]:
         d1 = db.multiget_slice(userIds, "notificationItems",
                                super_column=notifyId, count=3, reverse=True)
         def deleteOlderNotifications(results):
             mutations = {}
-            timestamp = int(time.time() * 10000000)
+            timestamp = int(time.time() * 1e6)
             for key, cols in results.iteritems():
                 names = [col.column.name for col in cols
                                          if col.column.name != timeUUID]
@@ -134,14 +134,12 @@ class NotificationByMail(object):
         "IA": "[%(brandName)s] %(senderName)s accepted your invitation to join %(brandName)s",
         "NU": "[%(brandName)s] %(senderName)s joined the %(networkName)s network",
         "NF": "[%(brandName)s] %(senderName)s started following you",
-        "FA": "[%(brandName)s] %(senderName)s accepted your friend request",
         "GA": "[%(brandName)s] Your request to join %(senderName)s was accepted",
         "GI": "[%(brandName)s] %(senderName)s invited you to join %(groupName)s",
-        "FR": "[%(brandName)s] %(senderName)s wants to be your friend on %(networkName)s network",
         "GR": "[%(brandName)s] %(senderName)s wants to join %(groupName)s",
-        "NM": "[%(brandName)s] %(senderName)s sent a private message",
-        "MR": "[%(brandName)s] %(senderName)s sent a reply to private message",
-        "MA": "[%(brandName)s] %(senderName)s changed access controls of a message"
+        "NM": "[%(brandName)s] %(subject)s",
+        "MR": "[%(brandName)s] Re: %(subject)s",
+        "MA": "[%(brandName)s] Re: %(subject)s"
     }
 
     _otherNotifyBody = {
@@ -151,28 +149,23 @@ class NotificationByMail(object):
               "%(senderName)s joined the %(networkName)s network",
         "NF": "Hi,\n\n"\
               "%(senderName)s started following you",
-        "FA": "Hi,\n\n"\
-              "%(senderName)s accepted your friend request",
         "GA": "Hi,\n\n"\
               "Your request to join %(senderName)s was accepted by an admistrator",
         "GI": "Hi,\n\n"\
               "%(senderName)s invited you to join %(groupName)s group.\n"\
               "Visit %(rootUrl)s/groups?type=invitations to accept the invitation.",
-        "FR": "Hi,\n\n"\
-              "%(senderName)s requested to be your friend on %(networkName)s network.\n"\
-              "To accept the request visit %(senderName)s's profile at %(rootUrl)s/profile?id=%(senderId)s.",
         "GR": "Hi.\n\n"\
               "%(senderName)s wants to join %(groupName)s group\n"\
               "Visit %(rootUrl)s/groups?type=pendingRequests to accept the request",
         "NM": "Hi,\n\n"\
-              "%(senderName)s sent a message. \n"\
-              "Vist the url to check the message: %(convUrl)s",
-        "MR": "Hi, \n\n"\
-              "%(senderName)s replied to a message. \n"\
-              "Visit the url to check the message:  %(convUrl)s",
-        "MA": "Hi, \n\n"\
-              "%(senderName)s changed access controls of a message. \n"\
-              "Visit the url to check the message: %(convUrl)s",
+              "%(senderName)s said - %(message)s\n\n"\
+              "Visit %(convUrl)s to see the conversation",
+        "MR": "Hi,\n\n"\
+              "%(senderName)s said - %(message)s\n\n"\
+              "Visit %(convUrl)s to see the conversation",
+        "MA": "Hi,\n\n"\
+              "%(senderName)s changed access controls of a message.\n"\
+              "Visit %(convUrl)s to see the conversation"
     }
 
     _signature = "\n\n"\
@@ -287,7 +280,9 @@ class NotificationByMail(object):
             sendMail = settings.getNotifyPref(user.get("notify", ''),
                                               prefAttr, prefMedium)
             if sendMail and mailId:
-                deferreds.append(utils.sendmail(mailId, subject, body, html))
+                fromName = data.get('_fromName', None) or 'Flocked-in'
+                deferreds.append(utils.sendmail(mailId, subject,
+                                                body, html, fromName=fromName))
 
         yield defer.DeferredList(deferreds)
 
@@ -364,11 +359,6 @@ class NotificationsResource(base.BaseResource):
                      3: "%(user0)s, %(user1)s and 1 other started following you",
                      4: "%(user0)s, %(user1)s and %(count)s others started following you"}
 
-    _friendRequestAccepted = {1: "%(user0)s accepted your friend request",
-                              2: "%(user0)s and %(user1)s accepted your friend request",
-                              3: "%(user0)s, %(user1)s and 1 other accepted your friend request",
-                              4: "%(user0)s, %(user1)s and %(count)s others accepted your friend request"}
-
     _groupRequestAccepted = {1: "Your request to join %(group0)s was accepted",
                              2: "Your requests to join %(group0)s and %(group1)s were accepted",
                              3: "Your requests to join %(group0)s, %(group1)s and one other were accepted",
@@ -402,6 +392,7 @@ class NotificationsResource(base.BaseResource):
 
         notifyStrs = {}
         notifyClasses = {}
+        notifyUsers = {}
         brandName = config.get('Branding', 'Name')
 
         fetchStart = utils.getRequestArg(request, 'start') or ''
@@ -417,7 +408,7 @@ class NotificationsResource(base.BaseResource):
                 if value not in notifyIds:
                     fetchedNotifyIds.append(value)
                     keysFromStore.append(col.column.name)
-                    timestamps[value] = col.column.name
+                    timestamps[value] = col.column.timestamp/1e6
 
             if not keysFromStore:
                 break
@@ -482,6 +473,7 @@ class NotificationsResource(base.BaseResource):
             convId, convType, convOwnerId, notifyType = notifyId.split(':')
 
             userIds = utils.uniqify(notifyValues[notifyId])
+            notifyUsers[notifyId] = userIds
             noOfUsers = len(userIds)
 
             vals = dict([('user'+str(idx), utils.userName(uid, entities[uid]))\
@@ -514,6 +506,7 @@ class NotificationsResource(base.BaseResource):
             x = notifyId[1:]
             x = notifyId.split(':')[1]
             userIds = utils.uniqify(notifyValues[notifyId])
+            notifyUsers[notifyId] = userIds
             noOfUsers = len(userIds)
 
             pfx = 'group' if x == 'GA' else 'user'
@@ -538,14 +531,14 @@ class NotificationsResource(base.BaseResource):
                 tmpl = self._newFollowers[noOfUsers]
             elif x == "GA":
                 tmpl = self._groupRequestAccepted[noOfUsers]
-            elif x == "FA":
-                tmpl = self._friendRequestAccepted[noOfUsers]
             elif x == "NU":
                 tmpl = self._orgNewMember[noOfUsers]
             elif x == "IA":
                 tmpl = self._inviteAccepted[noOfUsers]
             elif x == "GI":
                 tmpl = self._groupInvitation[noOfUsers]
+            else:
+                return ''
 
             return tmpl % vals
 
@@ -560,7 +553,9 @@ class NotificationsResource(base.BaseResource):
         args = {"notifications": notifyIds,
                 "notifyStr": notifyStrs,
                 "notifyClasses": notifyClasses,
+                "notifyUsers": notifyUsers,
                 "entities": entities,
+                "timestamps": timestamps,
                 "nextPageStart": nextPageStart}
         defer.returnValue(args)
 
@@ -582,10 +577,16 @@ class NotificationsResource(base.BaseResource):
         start = utils.getRequestArg(request, "start") or ''
         fromFetchMore = ((not landing) and (not appchange) and start)
         data = yield self._getNotifications(request)
+
+        latest = yield db.get_slice(myId, "latest", super_column="notifications")
+        latest = utils.columnsToDict(latest)
+        latestNotifyIds = [x for x in latest.values()]
+
         if not start:
             yield db.remove(myId, "latest", super_column="notifications")
 
         args.update(data)
+        args['latestNotifyIds'] = latestNotifyIds
         if script:
             if fromFetchMore:
                 yield renderScriptBlock(request, "notifications.mako", "content",
@@ -595,6 +596,7 @@ class NotificationsResource(base.BaseResource):
                 yield renderScriptBlock(request, "notifications.mako", "content",
                                     landing, "#notifications", "set", **args)
             yield utils.render_LatestCounts(request, landing)
+
 
     @profile
     @dump_args

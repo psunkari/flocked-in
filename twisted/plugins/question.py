@@ -5,7 +5,7 @@ from zope.interface     import implements
 from twisted.internet   import defer
 from twisted.plugin     import IPlugin
 
-from social             import db, base, utils, errors, _
+from social             import db, base, utils, errors, _, constants
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
 from social.template    import render, renderScriptBlock, getBlock
@@ -44,25 +44,20 @@ class Question(object):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def create(self, request):
-        target = utils.getRequestArg(request, "target")
-        comment = utils.getRequestArg(request, "comment")
-        authinfo = request.getSession(IAuthInfo)
-        myOrgId = authinfo.organization
+    def create(self, request, myId, myOrgId):
+        snippet, comment = utils.getTextWithSnippet(request, "comment",
+                                        constants.POST_PREVIEW_LENGTH)
 
         if not comment:
             raise errors.MissingParams([_('Question')])
 
         convId = utils.getUniqueKey()
-        item, attachments = yield utils.createNewItem(request, self.itemType)
+        item, attachments = yield utils.createNewItem(request, self.itemType, myId, myOrgId)
         meta = {"comment": comment}
-        if target and "target" in item["meta"]:
-            item['meta']['target'] = ",".join(item['meta']['target'].split(',') + [target])
-        elif target:
-            item["meta"]["target"] =  target
+        if snippet:
+            meta['snippet'] = snippet
 
         item["meta"].update(meta)
-
         yield db.batch_insert(convId, "items", item)
 
         for attachmentId in attachments:

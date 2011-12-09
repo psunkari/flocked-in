@@ -5,6 +5,7 @@ import uuid
 from random                 import sample
 import datetime
 import json
+import re
 
 from twisted.web            import resource, server, http
 from twisted.internet       import defer
@@ -133,6 +134,9 @@ _notifyNames = ['friendRequest', 'friendAccept', 'follower', 'newMember',
     'itemComment', 'mention', 'itemRequests',
     'messageConv', 'messageMessage', 'messageAccessChange']
 
+# List of notifications that currently must not be displayed to the user
+_hiddenNotifys = [notifyFR, notifyFA, notifyMention, notifyItemRequests]
+
 # Utility function to help parse the notification preference
 # In case of an exception returns true
 def getNotifyPref(val, typ, medium):
@@ -143,43 +147,47 @@ def getNotifyPref(val, typ, medium):
     return True
 
 
+
+
 class SettingsResource(base.BaseResource):
     isLeaf = True
     resources = {}
+
 
     @defer.inlineCallbacks
     def _changePassword(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
-        curr_passwd = utils.getRequestArg(request, "curr_passwd", sanitize=False)
-        passwd1 = utils.getRequestArg(request, "passwd1", sanitize=False)
-        passwd2 = utils.getRequestArg(request, "passwd2", sanitize=False)
 
-        if not curr_passwd:
+        currentPass = utils.getRequestArg(request, "curr_passwd", sanitize=False)
+        newPass = utils.getRequestArg(request, "passwd1", sanitize=False)
+        rptPass = utils.getRequestArg(request, "passwd2", sanitize=False)
+
+        if not currentPass:
             request.write('$$.alerts.error("%s");' % _("Enter your current password"))
             defer.returnValue(None)
-        if not passwd1:
+        if not newPass:
             request.write('$$.alerts.error("%s");' % _("Enter new password"))
             defer.returnValue(None)
-        if not passwd2:
+        if not rptPass:
             request.write('$$.alerts.error("%s");' % _("Confirm new password"))
             defer.returnValue(None)
-        if passwd1 != passwd2:
+        if newPass != rptPass:
             request.write('$$.alerts.error("%s");' % _("Passwords do not match"))
             defer.returnValue(None)
-        if curr_passwd == passwd1:
+        if currentPass == newPass:
             request.write('$$.alerts.error("%s");' % _("New password should be different from current password"))
             defer.returnValue(None)
 
-        cols = yield db.get(myKey, "entities", "emailId", "basic")
-        emailId = cols.column.value
+        emailId = args["me"]["basic"]["emailId"]
         col = yield db.get(emailId, "userAuth", "passwordHash")
-        passwdHash = col.column.value
-        if curr_passwd and passwdHash != utils.md5(curr_passwd):
+        storedPass= col.column.value
+
+        if not utils.checkpass(currentPass, storedPass):
             request.write('$$.alerts.error("%s");' % _("Incorrect Password"))
             defer.returnValue(None)
 
-        newPasswd = utils.md5(passwd1)
+        newPasswd = utils.hashpass(newPass)
         yield db.insert(emailId, "userAuth", newPasswd, "passwordHash")
         request.write('$$.alerts.info("%s");' % _('Password changed'))
 
@@ -187,146 +195,57 @@ class SettingsResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _edit(self, request):
-        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        landing = not self._ajax
-
-        userInfo = {}
-        calls = []
-        basicUpdatedInfo, basicUpdated = {}, False
-
-        me = yield db.get_slice(myKey, 'entities')
-        me = utils.supercolumnsToDict(me)
-
-        cols = yield db.get_slice(myKey, 'connections')
-        friends = [item.super_column.name for item in cols]
-
-        # Check if any basic information is being updated.
-        for cn in ("jobTitle", "location", "desc", "name", "firstname", "lastname", "timezone"):
-            val = utils.getRequestArg(request, cn)
-            if val:
-                userInfo.setdefault("basic", {})[cn] = val
-                basicUpdatedInfo[cn] = val
-                basicUpdated = True
-            else:
-                basicUpdatedInfo[cn] = me['basic'].get(cn, "")
-
-        # Update name indicies of organization and friends.
-        nameIndexKeys = friends + [args["orgKey"]]
-        nameIndicesDeferreds = []
-        for field in ["name", "lastname", "firstname"]:
-            if "basic" in userInfo and field in userInfo["basic"]:
-                d = utils.updateNameIndex(myKey, nameIndexKeys,
-                                          userInfo["basic"][field],
-                                          me["basic"].get(field, None))
-                if field == 'name':
-                    d1 = utils.updateDisplayNameIndex(myKey, nameIndexKeys,
-                                                userInfo["basic"][field],
-                                                me["basic"].get(field, None))
-                    nameIndicesDeferreds.append(d1)
-                nameIndicesDeferreds.append(d)
-
-        # ACL on basic information
-        basicACL = utils.getRequestArg(request, "basicACL") or\
-                                            me['basic'].get('acl', 'public')
-        userInfo.setdefault("basic", {})["acl"] = basicACL
-
-        # Avatar (display picture)
-        dp = utils.getRequestArg(request, "dp", sanitize=False)
-        if dp:
-            avatar = yield saveAvatarItem(myKey, dp)
-            if not userInfo.has_key("basic"):
-                userInfo["basic"] = {}
-            userInfo["basic"]["avatar"] = avatar
-            avatarURI = utils.userAvatar(myKey, userInfo)
-            basicUpdatedInfo["avatar"] = avatarURI
-            basicUpdated = True
-
-        # Contact information at work.
-        c_im = utils.getRequestArg(request, "c_im")
-        c_phone = utils.getRequestArg(request, "c_phone")
-        c_mobile = utils.getRequestArg(request, "c_mobile")
-
-        if any([c_mobile, c_im, c_phone]):
-            contactsACL = utils.getRequestArg(request, "contactsACL") or\
-                                me.get('contact', {}).get('acl', 'public')
-            userInfo["contact"] = {}
-            userInfo["contact"]["acl"] = contactsACL
-        if c_im:
-            userInfo["contact"]["im"] = c_im
-        if c_phone:
-            userInfo["contact"]["phone"] = c_phone
-        if c_mobile:
-            userInfo["contact"]["mobile"] = c_mobile
-
+    def _editPersonalInfo(self, request):
         # Personal information about the user
-        p_email = utils.getRequestArg(request, "p_email")
-        p_phone = utils.getRequestArg(request, "p_phone")
-        p_mobile = utils.getRequestArg(request, "p_mobile")
-        currentCity = utils.getRequestArg(request, "currentCity")
+        myId = request.getSession(IAuthInfo).username
+        landing = False
+        data = {}
+        to_remove = []
+
+        me = yield db.get_slice(myId, 'entities')
+        me = utils.supercolumnsToDict(me)
         dob_day = utils.getRequestArg(request, "dob_day") or None
         dob_mon = utils.getRequestArg(request, "dob_mon") or None
         dob_year = utils.getRequestArg(request, "dob_year") or None
-        hometown = utils.getRequestArg(request, "hometown")
 
-        validDate = False
-        try:
-            dateStr = "%s/%s/%s" % (dob_day, dob_mon, dob_year)
-            date = time.strptime(dateStr, "%d/%m/%Y")
-            if date.tm_year < time.localtime().tm_year:
-                dob_day = "%02d" % date.tm_mday
-                dob_mon = "%02d" % date.tm_mon
-                validDate = True
-        except ValueError:
-            pass
-
-        if any([p_email, p_phone, hometown, currentCity, validDate]):
-            personalACL = utils.getRequestArg(request, "personalACL") or\
-                                    me.get('personal', {}).get('acl', 'public')
-            userInfo["personal"]={"acl": personalACL}
-
-        if p_email:
-            userInfo["personal"]["email"] = p_email
-        if p_phone:
-            userInfo["personal"]["phone"] = p_phone
-        if p_mobile:
-            userInfo["personal"]["mobile"] = p_mobile
-        if hometown:
-            userInfo["personal"]["hometown"] = hometown
-        if currentCity:
-            userInfo["personal"]["currentCity"] = currentCity
-        if validDate:
-            userInfo["personal"]["birthday"] = "%s%s%s" % (dob_year, dob_mon, dob_day)
-
-        # If anything was modified save it.
-        if userInfo:
-            yield db.batch_insert(myKey, "entities", userInfo)
-
-        if not self._ajax:
-            request.redirect("/settings")
+        if dob_day and dob_mon and dob_year:
+            try:
+                dateStr = "%s/%s/%s" % (dob_day, dob_mon, dob_year)
+                date = time.strptime(dateStr, "%d/%m/%Y")
+                if date.tm_year < time.localtime().tm_year:
+                    dob_day = "%02d" % date.tm_mday
+                    dob_mon = "%02d" % date.tm_mon
+                    data["birthday"] = "%s%s%s" % (dob_year, dob_mon, dob_day)
+            except ValueError:
+                raise errors.InvalidRequest(_('Please select a valid Date of Birth'))
         else:
-            if basicUpdated:
-                response = """
-                            <script>
-                                var data = %s;
-                                if (data.avatar){
-                                  var imageUrl = data.avatar;
-                                  parent.$('#avatar').css('background-image', 'url(' + imageUrl + ')');
-                                }
-                                parent.$('#name').html(data.name + ', ' + data.jobTitle);
-                                parent.$$.alerts.info("%s");
-                            </script>
-                           """ % (json.dumps(basicUpdatedInfo),  _("Profile updated"))
-                request.write(response)
+            to_remove.append('birthday')
+
+        columnNames = ['email', 'phone', 'mobile', 'hometown', 'currentCity']
+        for name in columnNames:
+            val = utils.getRequestArg(request, 'p_%s' %(name))
+            if val:
+                data[name] = val
             else:
-                request.write('$$.alerts.info("%s");' % _('Profile updated'))
+                to_remove.append(name)
+        if data:
+            yield db.batch_insert(myId, "entities", {"personal": data})
+        if to_remove:
+            yield db.batch_remove({'entities':[myId]}, names=to_remove, supercolumn='personal')
 
-        # Wait for name indices to be updated.
-        if nameIndicesDeferreds:
-            yield defer.DeferredList(nameIndicesDeferreds)
+        if 'phone' in data and not re.match('^\+?[0-9x\- ]{5,20}$', data['phone']):
+            raise errors.InvalidRequest(_('Phone numbers can only have numerals, hyphens, spaces and a plus sign'))
 
-        args["detail"] = ""
-        suggestedSections = yield self._checkProfileCompleteness(request, myKey, args)
+        if 'mobile' in data and not re.match('^\+?[0-9x\- ]{5,20}$', data['mobile']):
+            raise errors.InvalidRequest(_('Phone numbers can only have numerals, hyphens, spaces and a plus sign'))
+
+        columnNames.append('birthday')
+        personalInfo =  me.get('personal', {})
+        if any([personalInfo.get(x, None) != data.get(x, None) for x in columnNames]):
+            request.write('$$.alerts.info("%s");' % _('Profile updated'))
+
+        args = {"detail": "", "me": me}
+        suggestedSections = yield self._checkProfileCompleteness(request, myId, args)
         tmp_suggested_sections = {}
         for section, items in suggestedSections.iteritems():
             if len(suggestedSections[section]) > 0:
@@ -335,6 +254,142 @@ class SettingsResource(base.BaseResource):
 
         yield renderScriptBlock(request, "settings.mako", "right",
                                 landing, ".right-contents", "set", **args)
+
+
+    @profile
+    @defer.inlineCallbacks
+    @dump_args
+    def _editContactInfo(self, request):
+        # Contact information at work.
+        myId = request.getSession(IAuthInfo).username
+        landing = not self._ajax
+
+        me = yield db.get_slice(myId, 'entities')
+        me = utils.supercolumnsToDict(me)
+        data = {}
+        to_remove = []
+
+        for field in ["im", "phone", "mobile"]:
+            val = utils.getRequestArg(request, "c_%s"%(field))
+            if val:
+                data[field] = val
+            else:
+                to_remove.append(field)
+
+        if 'phone' in data and not re.match('^\+?[0-9x\- ]{5,20}$', data['phone']):
+            raise errors.InvalidRequest(_('Phone numbers can only have numerals, hyphens, spaces and a plus sign'))
+
+        if 'mobile' in data and not re.match('^\+?[0-9x\- ]{5,20}$', data['mobile']):
+            raise errors.InvalidRequest(_('Phone numbers can only have numerals, hyphens, spaces and a plus sign'))
+
+        if data:
+            yield db.batch_insert(myId, "entities", {"contact": data})
+        if to_remove:
+            yield db.batch_remove({"entities":[myId]}, names= to_remove, supercolumn='contact')
+        contactInfo = me.get('contact', {})
+        if any([contactInfo.get(x, None) != data.get(x, None) for x in ["im", "phone", "mobile"]]):
+            request.write('$$.alerts.info("%s");' % _('Profile updated'))
+
+        args = {"detail": "", "me": me}
+        suggestedSections = yield self._checkProfileCompleteness(request, myId, args)
+        tmp_suggested_sections = {}
+        for section, items in suggestedSections.iteritems():
+            if len(suggestedSections[section]) > 0:
+                tmp_suggested_sections[section] = items
+        args.update({'suggested_sections':tmp_suggested_sections})
+
+        yield renderScriptBlock(request, "settings.mako", "right",
+                                landing, ".right-contents", "set", **args)
+
+
+    @profile
+    @defer.inlineCallbacks
+    @dump_args
+    def _editBasicInfo(self, request):
+        authInfo = request.getSession(IAuthInfo)
+        myId = authInfo.username
+        orgId = authInfo.organization
+        landing = not self._ajax
+
+        userInfo = {"basic":{}}
+        to_remove = []
+        basicUpdatedInfo, basicUpdated = {}, False
+
+        me = yield db.get_slice(myId, 'entities')
+        me = utils.supercolumnsToDict(me)
+
+        # Check if any basic information is being updated.
+        for cn in ("jobTitle", "name", "firstname", "lastname", "timezone"):
+            val = utils.getRequestArg(request, cn)
+            if not val and cn in ['name', 'jobTitle', 'timezone']:
+                request.write("<script>parent.$$.alerts.error('One or more required parameters are missing')</script>")
+                raise errors.MissingParams(_([cn]))
+            if val:
+                userInfo["basic"][cn] = val
+                basicUpdatedInfo[cn] = val
+            elif cn in ["firstname", "lastname"]:
+                to_remove.append(cn)
+                basicUpdatedInfo[cn] = ""
+            if me['basic'].get(cn, None) != userInfo['basic'].get(cn, None):
+                basicUpdated = True
+
+        # Update name indicies of organization.
+        nameIndexKeys = [orgId]
+        nameIndicesDeferreds = []
+        for field in ["name", "lastname", "firstname"]:
+            if field in basicUpdatedInfo:
+                d = utils.updateNameIndex(myId, nameIndexKeys,
+                                          basicUpdatedInfo[field],
+                                          me["basic"].get(field, None))
+                if field == 'name':
+                    d1 = utils.updateDisplayNameIndex(myId, nameIndexKeys,
+                                                      basicUpdatedInfo[field],
+                                                      me["basic"].get(field, None))
+                    nameIndicesDeferreds.append(d1)
+                nameIndicesDeferreds.append(d)
+
+        # Avatar (display picture)
+        dp = utils.getRequestArg(request, "dp", sanitize=False)
+        if dp:
+            avatar = yield saveAvatarItem(myId, dp)
+            userInfo["basic"]["avatar"] = avatar
+            avatarURI = utils.userAvatar(myId, userInfo)
+            basicUpdatedInfo["avatar"] = avatarURI
+            basicUpdated = True
+        if userInfo["basic"]:
+            yield db.batch_insert(myId, "entities", userInfo)
+        if to_remove:
+            yield db.batch_remove({'entities':[myId]}, names=to_remove, supercolumn='basic')
+
+        if basicUpdated:
+            response = """
+                        <script>
+                            var data = %s;
+                            if (data.avatar){
+                              var imageUrl = data.avatar;
+                              parent.$('#avatar').css('background-image', 'url(' + imageUrl + ')');
+                            }
+                            parent.$('#name').html(data.name + ', ' + data.jobTitle);
+                            parent.$$.alerts.info("%s");
+                        </script>
+                        """ % (json.dumps(basicUpdatedInfo),  _("Profile updated"))
+            request.write(response)
+
+        # Wait for name indices to be updated.
+        if nameIndicesDeferreds:
+            yield defer.DeferredList(nameIndicesDeferreds)
+
+        args = {"detail": "", "me": me}
+        suggestedSections = yield self._checkProfileCompleteness(request, myId, args)
+        tmp_suggested_sections = {}
+        for section, items in suggestedSections.iteritems():
+            if len(suggestedSections[section]) > 0:
+                tmp_suggested_sections[section] = items
+        args.update({'suggested_sections':tmp_suggested_sections})
+
+        yield renderScriptBlock(request, "settings.mako", "right",
+                                landing, ".right-contents", "set", **args)
+
 
     @defer.inlineCallbacks
     def _updateNotifications(self, request):
@@ -362,10 +417,10 @@ class SettingsResource(base.BaseResource):
 
         detail = utils.getRequestArg(request, "dt") or "basic"
         args["detail"] = detail
-        args["editProfile"] = True
 
         me = yield db.get_slice(myKey, "entities")
-        args["me"] = utils.supercolumnsToDict(me, ordered=True)
+        me = utils.supercolumnsToDict(me, ordered=True)
+        args['me'] = me
 
         if script and landing:
             yield render(request, "settings.mako", **args)
@@ -375,51 +430,44 @@ class SettingsResource(base.BaseResource):
                                     landing, "#mainbar", "set", **args)
 
         if script:
+            yield renderScriptBlock(request, "settings.mako", "settingsTitle",
+                                    landing, "#settings-title", "set", **args)
+
             handlers={"onload": "$$.menu.selectItem('%s');" % detail}
             if detail == "basic":
-                yield renderScriptBlock(request, "settings.mako", "settingsTitle",
-                                        landing, "#settings-title", "set", **args)
                 handlers["onload"] += """$$.ui.bindFormSubmit('#settings-form');"""
                 yield renderScriptBlock(request, "settings.mako", "editBasicInfo",
                                         landing, "#settings-content", "set", True,
                                         handlers = handlers, **args)
 
             elif detail == "work":
-                """
-                yield renderScriptBlock(request, "settings.mako", "settingsTitle",
-                                        landing, "#settings-title", "set", **args)
-                yield renderScriptBlock(request, "settings.mako", "editWork",
-                                        landing, "#settings-content", "set", True,
-                                        handlers=handlers, **args)
-                """
+                #yield renderScriptBlock(request, "settings.mako", "editWork",
+                #                        landing, "#settings-content", "set", True,
+                #                        handlers=handlers, **args)
+                pass
 
             elif detail == "personal":
-                yield renderScriptBlock(request, "settings.mako", "settingsTitle",
-                                        landing, "#settings-title", "set", **args)
                 yield renderScriptBlock(request, "settings.mako", "editPersonal",
                                         landing, "#settings-content", "set", True,
                                         handlers=handlers, **args)
 
             elif detail == "contact":
-                yield renderScriptBlock(request, "settings.mako", "settingsTitle",
-                                        landing, "#settings-title", "set", **args)
                 yield renderScriptBlock(request, "settings.mako", "editContact",
-                                        landing, "#settings-content", "set",True,
+                                        landing, "#settings-content", "set", True,
                                         handlers=handlers, **args)
 
             elif detail == "passwd":
-                yield renderScriptBlock(request, "settings.mako", "settingsTitle",
-                                        landing, "#settings-title", "set", **args)
                 yield renderScriptBlock(request, "settings.mako", "changePasswd",
-                                        landing, "#settings-content", "set",True,
+                                        landing, "#settings-content", "set", True,
                                         handlers=handlers, **args)
 
-            elif detail == 'notify':
-                yield renderScriptBlock(request, "settings.mako", "settingsTitle",
-                                        landing, "#settings-title", "set", **args)
+            elif detail == "notify":
                 yield renderScriptBlock(request, "settings.mako", "filterNotifications",
-                                        landing, "#settings-content", "set",True,
+                                        landing, "#settings-content", "set", True,
                                         handlers=handlers, **args)
+
+            else:
+                raise errors.InvalidRequest('')
 
         suggestedSections = yield self._checkProfileCompleteness(request, myKey, args)
         tmp_suggested_sections = {}
@@ -579,52 +627,7 @@ class SettingsResource(base.BaseResource):
     @defer.inlineCallbacks
     def _checkProfileCompleteness(self, request, myKey, args):
         landing = not self._ajax
-        description = [""]
         detail = args["detail"]
-
-        if detail == "basic":
-            description = ["""Your Basic details are the most discoverable
-                            fields in your profile. They are visible everytime
-                            someone searches for you. We recommend that you fill
-                            out all the fields in this section.
-                          """]
-
-        elif detail == "work":
-            description = ["""Your work details include your current and
-                             previous work experiences and also about your
-                             educational background. """,
-                           """A thorough work experience builds up a nice
-                             portfolio of your career."""]
-
-        elif detail == "personal":
-            description = ["""Your personal information is only accessible to your
-                             friends.
-                          """]
-
-        elif detail == "contact":
-            description = ["""Your contact information can be used to get in
-                             touch with you by your friends or your followers.
-                             We recommend completing this section if your work
-                             involves being in constant touch with your colleagues.
-                          """]
-
-        elif detail == "passwd":
-            description = ["""Change your password. Use a password consisting of
-                             atleast 8 characters including alphabets, numbers
-                             and special characters.
-                          """]
-
-        elif detail == 'notify':
-            description = ["""flockedIn can notify you of all the activities that
-                             were happening in your
-                             <i title="kol-eeg-o-sfeer">colleagosphere</i>
-                             while you were
-                             away.""",
-                           """ Here you can choose what kind of events
-                             you like to be notified of."""]
-
-        args["description"] = description
-
         suggestedSections = {}
 
         # Check Basic
@@ -697,18 +700,20 @@ class SettingsResource(base.BaseResource):
     def render_POST(self, request):
         segmentCount = len(request.postpath)
         d = None
-        if segmentCount == 0:
-            d = self._edit(request)
-        elif segmentCount == 1:
+        if segmentCount == 1:
             action = request.postpath[0]
-            if action == "passwd":
+            if action == "basic":
+                d = self._editBasicInfo(request)
+            elif action == 'contact':
+                d = self._editContactInfo(request)
+            elif action == 'personal':
+                d = self._editPersonalInfo(request)
+            elif action == "passwd":
                 d = self._changePassword(request)
             elif action == "notify":
                 d = self._updateNotifications(request)
-            """
             elif action == "work":
                 d = self._updateWork(request)
-            """
 
         return self._epilogue(request, d)
 
@@ -720,11 +725,5 @@ class SettingsResource(base.BaseResource):
         d = None
         if segmentCount == 0:
             d = self._render(request)
-        """
-        elif segmentCount == 1:
-            action = request.postpath[0]
-            if action == "work":
-                d = self._editWorkForm(request)
-        """
 
         return self._epilogue(request, d)

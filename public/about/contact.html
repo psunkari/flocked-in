@@ -4,13 +4,44 @@
   <title>Contact Us</title>
   <link href="/rsrcs/css/static.css" media="all" rel="stylesheet" type="text/css">
   <link rel="shortcut icon" href="/rsrcs/img/favicon.ico" type="image/x-icon" />
+  <script type="text/javascript">
+    function validate() {
+      return true;
+      var ids = ['contact-name', 'contact-email', 'contact-message'];
+      var strs = ['Please enter your Name',
+                  'Please enter your E-Mail',
+                  'Please enter your Message'];
+      var errorMessage = document.getElementById('error-message')
+
+      for (var i=0, len=ids.length; i<len; i++) {
+        input = document.getElementById(ids[i]);
+        if (input.value == '') {
+          errorMessage.innerHTML = strs[i];
+          return false;
+        }
+      }
+
+      return true;
+    }
+  </script>
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-2921978-5']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
 </head>
 <body>
   <div id="header" class="centered-wrapper">
-    <a href='/'><img id='sitelogo' src="/rsrcs/img/flocked-in.png" alt="flocked-in"/></a>
+    <a class="header-logo" href='/'><img id='sitelogo' src="/rsrcs/img/flocked-in.png" alt="Flocked-in"/></a>
     <ul class="header-links">
       <li>
-        <a title="What is flocked-in?" class="menuitem" href="/about/features.html" id="feature">What is flocked-in?</a>
+        <a title="What is flocked-in?" class="menuitem" href="/about/features.html" id="feature">What is Flocked-in?</a>
       </li>
       <li>
         <a title="What can I use it for?" class="menuitem" href="/about/tour.html" id="feature">Tour</a>
@@ -27,21 +58,22 @@
       <div id="caption">Contact Us</div>
 
 <form action="/contact" class="styledform" method="post"
-      enctype="multipart/form-data" accept-charset="utf-8">
+      enctype="multipart/form-data" accept-charset="utf-8"
+      onsubmit="return validate();">
   <p class="form-header">Fill the form below and we'll get back to you as soon as possible.</p>
   <ul>
     <li>
       <label for="contact-name" class="styled-label required">
         Your name <abbr title="Required">*</abbr>
       </label>
-      <input type="text" name="name" id="contact-name" />
+      <input type="text" name="name" id="contact-name" required/>
     </li>
     <li>
       <label for="contact-email" class="styled-label required">
         Your e-mail address
         <abbr title="Required">*</abbr>
       </label>
-      <input type="text" name="email" id="contact-email" />
+      <input type="email" name="email" id="contact-email" required/>
     </li>
     <li>
       <label for="contact-subject" class="styled-label required">
@@ -52,8 +84,9 @@
         <option value="1">I have a question...</option>
         <option value="2">I found a bug...</option>
         <option value="3">I have a feature suggestion</option>
-        <option value="4">I would like to introduce flocked-in at work...</option>
+        <option value="4">I would like to introduce Flocked-in at work...</option>
         <option value="5">I&#39;m looking for a partnership...</option>
+        <option value="6">I would like to join Flocked-in team</option>
       </select>
     </li>
     <li>
@@ -61,8 +94,9 @@
         Your message
         <abbr title="Required">*</abbr>
       </label>
-      <textarea id="contact-message" rows="10" name="message"></textarea>
+      <textarea id="contact-message" rows="10" name="message" required></textarea>
     </li>
+    <div id="error-message" class="error-input"></div>
   </ul>
   <div class="buttons-wrapper">
     <button type="submit" class="default button">Send Message</button>

@@ -9,15 +9,15 @@ set -e
 #
 # Repository settings
 #
-repo_url='ssh://one.synovel.pvt/social'
-repo_revision='tip'
+repo_url='ssh://hg@one.synovel.pvt/social'
+repo_revision='default'
 
 
 #
 # List of stylesheets and scripts that need bundling
 #
 social_css='rsrcs/css/social.css:rsrcs/css/messaging.css:'\
-'rsrcs/css/jquery.ui.css:rsrcs/css/widgets.css'
+'rsrcs/css/jquery.ui.css:rsrcs/css/widgets.css:rsrcs/css/screen-size.css'
 
 about_css='rsrcs/css/static.css'
 
@@ -104,7 +104,7 @@ for img in `ls -1 $img_dir`; do
   filename=$checksum.${img##*.}
   cp $img_dir/$img $static/$filename
 
-  find $src/templates $src/social $public/rsrcs/js $public/rsrcs/css -type f \
+  find $src/templates $src/social $public/rsrcs/js $public/rsrcs/css $public/about $public/*.html -type f \
         | xargs sed -i "s=/rsrcs/img/$img=$cdn_host/static/$filename="
 done
 
@@ -132,7 +132,7 @@ function _bundle() {
     paths_escaped=`echo $outfile | sed -e 's/\\(\\.\\|\\/\\|\\*\\|\\[\\|\\]\\|\\\\\\)/\\\\&/g'`
     match_expr=`echo $paths_escaped | sed 's/:/\|/g'`
 
-    find $src/templates $src/social -type f | while read name; do
+    find $src/templates $src/social $public/about $public/*.html -type f | while read name; do
       awk_output=$tmp_dir/`basename $name`.awk
       awk "!/($match_expr)/ { print \$0 };
             /($match_expr)/ && !done {
@@ -164,6 +164,11 @@ rm -rf $src/.hg
 cd $tmp_dir
 $src/scripts/deployment/encrypt-files.sh decrypt \
     $src/scripts/deployment/files.tbz.asc && mv files/production.cfg $src/etc/
+if [ ! -f $src/etc/production.cfg ]; then
+  echo "Config file not found.  Entered wrong password?"
+  exit -1
+fi
+
 tar -cvjf upload.tar.bz2 static src
 
 # Copy static files and the modified src to application servers

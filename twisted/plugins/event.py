@@ -364,12 +364,7 @@ class Event(object):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def create(self, request):
-        authinfo = request.getSession(IAuthInfo)
-        myKey = authinfo.username
-        myOrgId = authinfo.organization
-
-
+    def create(self, request, myId, myOrgId):
         startDate = utils.getRequestArg(request, 'startDate')
         startTime = utils.getRequestArg(request, 'startTime')
         endDate = utils.getRequestArg(request, 'endDate') or startDate
@@ -397,25 +392,25 @@ class Event(object):
                                           endTime.minute, endTime.second).replace(tzinfo=utc)
 
         convId = utils.getUniqueKey()
-        item, attachments = yield utils.createNewItem(request, self.itemType)
+        item, attachments = yield utils.createNewItem(request, self.itemType, myId, myOrgId)
 
-        options = dict([('yes', '0'), ('maybe', '0'), ('no', '0')])
-        meta = {"startTime": str(calendar.timegm(startDateTime.utctimetuple()))}
+        rsvps = dict([('yes', '0'), ('maybe', '0'), ('no', '0')])
+        meta = {"event_startTime": str(calendar.timegm(startDateTime.utctimetuple()))}
         if title:
-            meta["title"] = title
+            meta["event_title"] = title
         if desc:
-            meta["desc"] = desc
+            meta["event_desc"] = desc
         if endTime:
-            meta["endTime"] = str(calendar.timegm(endDateTime.utctimetuple()))
+            meta["event_endTime"] = str(calendar.timegm(endDateTime.utctimetuple()))
         if location:
-            meta["location"] = location
+            meta["event_location"] = location
         if allDay:
-            meta["allDay"] = '1'
+            meta["event_allDay"] = '1'
         else:
-            meta["allDay"] = '0'
+            meta["event_allDay"] = '0'
 
         item["meta"].update(meta)
-        item["options"] = options
+        item["rsvps"] = rspvs
 
         yield db.batch_insert(convId, "items", item)
         event = self.getResource(False)

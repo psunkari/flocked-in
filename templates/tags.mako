@@ -1,7 +1,7 @@
 <%! from social import utils, _, __, plugins %>
 <%! from social.logging import log %>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-                    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<!DOCTYPE HTML>
 
 <%namespace name="widgets" file="widgets.mako"/>
 <%namespace name="item" file="item.mako"/>
@@ -19,17 +19,17 @@
       </div>
     </div>
     <div id="center-right">
+      <div class="center-header" id="tags-header">
+        %if not script:
+          ${self.header(tagId)}
+        %endif
+      </div>
       <div id="right">
         <div id="tag-me"></div>
         <div id="tag-followers"></div>
         <div id="tag-stats"></div>
       </div>
       <div id="center">
-        <div class="center-header" id="tags-header">
-          %if not script:
-            ${self.header(tagId)}
-          %endif
-        </div>
         <div id="content" class="center-contents">
           %if not script:
             %if tagId:
@@ -40,6 +40,7 @@
           %endif
         </div>
       </div>
+      <div class="clear"></div>
     </div>
   </div>
 </%def>

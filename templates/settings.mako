@@ -1,6 +1,6 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-                    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<%! from social import utils, _, __, plugins, settings %>
+<!DOCTYPE HTML>
+
+<%! from social import utils, _, __, plugins, settings , location_tz_map %>
 <%! from social import relations as r %>
 <%! from pytz import common_timezones %>
 <%! import re, datetime %>
@@ -19,6 +19,11 @@
       </div>
     </div>
     <div id="center-right">
+      <div id="settings-title" class="center-header">
+        %if not script:
+          ${self.settingsTitle()}
+        %endif
+      </div>
       <div id="right">
         <div class="right-contents">
           %if not script:
@@ -27,13 +32,9 @@
         </div>
       </div>
       <div id="center">
-        <div id="settings-title" class="center-header">
-          %if not script:
-            ${self.settingsTitle()}
-          %endif
-        </div>
         <div class="center-contents" id="settings-content"></div>
       </div>
+      <div class="clear"></div>
     </div>
   </div>
 </%def>
@@ -68,103 +69,113 @@
       ${navMenuItem("/settings?dt=passwd", _("Change Password"), "passwd")}
       ${navMenuItem("/settings?dt=notify", _("Notifications"), "notify")}
     </ul>
+    <ul class="v-links sidemenu">
+      ${navMenuItem("/apps", _("Applications"), "apps")}
+    </ul>
  </div>
 </%def>
+
 
 <%def name="settingsTitle()">
   <%
     detail_name_map = {'basic':_('Basic'), 'contact': _('Contact'),
                        'work':_('Work and Education'), 'personal':_('Personal'),
-                       'passwd':_('Change Password'),
-                       'notify': _('Notifications')}
+                       'passwd':_('Change Password'), 'notify': _('Notifications')}
     name = detail_name_map.get(detail, '')
   %>
   <span class="middle title"> ${_(name)} </span>
 </%def>
 
+
 <%def name="editBasicInfo()">
   <%
     name = me.get("basic", {}).get("name", '')
-    firstname = me.get("basic", {}).get("firstname", '')
-    lastname = me.get("basic", {}).get("lastname", '')
+    firstname = me.get("basic", {}).get("firstname", '').replace('"', '&quot;')
+    lastname = me.get("basic", {}).get("lastname", '').replace('"', '&quot;')
     jobTitle = me.get("basic", {}).get("jobTitle", '')
     myTimezone = me.get("basic", {}).get("timezone", '')
   %>
-  <form id="settings-form" action="/ajax/settings" method="post" enctype="multipart/form-data">
-    <div class="styledform">
-      <ul>
-        <li>
-          <label for="displayname">${_('Display Name')}</label>
-          <input type="text" id="displayname" name="name" value="${name}" autofocus />
-        </li>
-        <li>
-          <label for="firstname">${_('First Name')}</label>
-          <input type="text" id="firstname" name="firstname" value="${firstname}"/>
-        </li>
-        <li>
-          <label for="lastname">${_('Last Name')}</label>
-          <input type="text" id="lastname" name="lastname" value="${lastname}"/>
-        </li>
-        <li>
-          <label for="jobTitle">${_('Job Title')}</label>
-          <input type="text" id="jobTitle" name="jobTitle" value="${jobTitle}"/>
-        </li>
-        <li>
-          <label for="timezone">${_('Timezone')}</label>
-          <select name="timezone" class="single-row">
-            %for timezone in common_timezones:
-              %if timezone == myTimezone:
-                <option value="${timezone}" selected="">${timezone}</option>
-              %else:
-                <option value="${timezone}">${timezone}</option>
-              %endif
-            %endfor
-          </select>
-        </li>
-        <li>
-          <label for="dp">${_('Photo')}</label>
-          <input type="file" id="dp" name="dp" accept="image/jpeg,image/png,image/gif"/>
-        </li>
+  <form id="settings-form" action="/ajax/settings/basic" method="post" enctype="multipart/form-data">
+    <ul class="styledform">
+      <li class="form-row">
+        <label class="styled-label" for="displayname">${_('Display Name')}
+            <abbr title="Required">*</abbr>
+        </label>
+        <input type="text" id="displayname" name="name" value="${name}" autofocus required/>
+      </li>
+      <li class="form-row">
+        <label class="styled-label" for="firstname">${_('First Name')}
+        </label>
+        <input type="text" id="firstname" name="firstname" value="${firstname}"/>
+      </li>
+      <li class="form-row">
+        <label class="styled-label" for="lastname">${_('Last Name')}</label>
+        <input type="text" id="lastname" name="lastname" value="${lastname}"/>
+      </li>
+      <li class="form-row">
+        <label class="styled-label" for="jobTitle">${_('Job Title')}
+            <abbr title="Required">*</abbr>
+        </label>
+        <input type="text" id="jobTitle" name="jobTitle" value="${jobTitle}" required/>
+      </li>
+      <li class="form-row">
+        <label class="styled-label" for="timezone">${_('Country/Timezone')}</label>
+        <select name="timezone" class="single-row">
+          %for i, country_name in enumerate(location_tz_map):
+            % if i == 7:
+              <option value="" disabled="disabled">-----------------------------------------------</option>
+            %endif
+            %if location_tz_map[country_name] == myTimezone:
+              <option value="${location_tz_map[country_name]}" selected="">${country_name}</option>
+             %else:
+              <option value="${location_tz_map[country_name]}">${country_name}</option>
+            %endif
+          %endfor
+        </select>
+      </li>
+      <li class="form-row">
+        <label class="styled-label" for="dp">${_('Photo')}</label>
+        <input type="file" id="dp" name="dp" accept="image/jpeg,image/png,image/gif"/>
+      </li>
 
-        %if emailId and emailId[0]:
-          <input type="hidden" value=${emailId[0]} name="emailId"/>
-        %endif
-        % if myKey:
-          <input type="hidden" value=${myKey} name="id"/>
-        %endif
-      </ul>
-    </div>
+      %if emailId and emailId[0]:
+        <input type="hidden" value=${emailId[0]} name="emailId"/>
+      %endif
+      % if myKey:
+        <input type="hidden" value=${myKey} name="id"/>
+      %endif
+    </ul>
     <div class="styledform-buttons">
       <input type="submit" class="button default" name="userInfo_submit" value="${_('Save')}"/>
     </div>
   </form>
 </%def>
+
 
 <%def name="changePasswd()">
   <form class="ajax" id="settings-form" action="/settings/passwd"
         method="post" enctype="multipart/form-data">
-    <div class="styledform">
-      <ul>
-        <li>
-          <label for="curr_passwd">${_('Current Password')}</label>
-          <input type="password" name="curr_passwd" id="curr_passwd" required autofocus />
-        </li>
-        <li>
-          <label for="passwd1">${_('New Password')}</label>
-          <input type="password" name="passwd1" id="passwd1" required />
-        </li>
-        <li>
-          <label for="passwd2">${_('Confirm Password')}</label>
-          <input type="password" name="passwd2" id="passwd2" required />
-        </li>
-      </ul>
-      <input type="hidden" id = 'dt' name="dt" value="passwd"/>
-    </div>
+    <ul class="styledform">
+      <li class="form-row">
+        <label class="styled-label" for="curr_passwd">${_('Current Password')}</label>
+        <input type="password" name="curr_passwd" id="curr_passwd" required autofocus />
+      </li>
+      <li class="form-row">
+        <label class="styled-label" for="passwd1">${_('New Password')}</label>
+        <input type="password" name="passwd1" id="passwd1" required />
+      </li>
+      <li class="form-row">
+        <label class="styled-label" for="passwd2">${_('Confirm Password')}</label>
+        <input type="password" name="passwd2" id="passwd2" required />
+      </li>
+    </ul>
+    <input type="hidden" id = 'dt' name="dt" value="passwd"/>
     <div class="styledform-buttons">
       <input type="submit" class="button default" name="userInfo_submit" value="${_('Save')}"/>
     </div>
   </form>
 </%def>
+
 
 <%def name="workitem(start, end, title, desc, id)">
   <div class="workitem" id="work-${id}">
@@ -175,8 +186,9 @@
   </div>
 </%def>
 
+
 <%def name="editWork()">
-  <div id="work" class="styledform">
+  <div id="work">
     <% orgName = org["basic"]["name"] %>
     <legend>${_("Work at %s")%orgName}</legend>
     <div id="worklist">
@@ -190,23 +202,23 @@
     <div id="workadd">
       <button class="button-link ajax" data-ref="/settings/work">${_("+ Add Work")}</button>
     </div>
-    <div class="styledform" id="workform" style="display:none;">
+    <div id="workform" style="display:none;">
       <form id='settings-form' action='/settings/work' method='post' class='ajax'>
-        <ul>
-          <li>
-            <label for="worktitle">${_('Title')}</label>
+        <ul class="styledform">
+          <li class="form-row">
+            <label class="styled-label" for="worktitle">${_('Title')}</label>
             <input type="text" id="worktitle" name="title"/>
           </li>
-          <li>
-            <label for="workdesc">${_('Description')}</label>
+          <li class="form-row">
+            <label class="styled-label" for="workdesc">${_('Description')}</label>
             <input type="text" id="workdesc" name="desc"/>
           </li>
-          <li>
-            <label for="workstart">${_('Duration')}</label>
+          <li class="form-row">
+            <label class="styled-label" for="workstart">${_('Duration')}</label>
             ${self.selectYear("startY", "Start year", id="workstart")}
             ${self.selectYear("endY", "End year", id="workstart")}
           </li>
-          <li>
+          <li class="form-row">
             <label/>
             <input type="submit" class="button default" name="submit" value="${_('Save')}"/>
           </li>
@@ -216,95 +228,93 @@
   </div>
 </%def>
 
+
 <%def name="editPersonal()">
-  <form class="ajax" id="settings-form" action="/settings" method="post"  enctype="multipart/form-data">
+  <form class="ajax" id="settings-form" action="/settings/personal" method="post"  enctype="multipart/form-data">
     <% personal = me.get('personal', {}) %>
-    <div class="styledform">
-      <div id="personal">
-        <ul>
-          <li>
-            <%
-              rawstr = r"""(?P<doy>\d{4})(?P<dom>\d{2})(?P<dod>\d{1,2})"""
-              matchstr = personal.get('birthday', '')
-              compile_obj = re.compile(rawstr)
-              match_obj = compile_obj.search(matchstr)
-              if match_obj:
-                doy = match_obj.group('doy')
-                dom = match_obj.group('dom')
-                dod = match_obj.group('dod')
-              else:
-                doy = dom = dod = None
-            %>
-            <label for ="bday">${_('Date of Birth')}</label>
-            ${self.selectDay("dob_day", "Day", dod)}
-            ${self.selectMonth("dob_mon", "Month", dom)}
-            ${self.selectYear("dob_year", "Year", doy)}
-          </li>
-          <li>
-            <label for="p_email">${_('Email')}</label>
-            <input type="email" id="p_email" name="p_email" value="${personal.get('email', '')}"/>
-          </li>
-          <li>
-            <label for="p_phone">${_('Phone')}</label>
-            <input type="text" id="p_phone" name="p_phone" value="${personal.get('phone', '')}"/>
-          </li>
-          <li>
-            <label for="p_mobile">${_('Mobile')}</label>
-            <input type="text" id="p_mobile" name="p_mobile" value="${personal.get('mobile', '')}"/>
-          </li>
-          <li>
-            <label for="hometown">${_('Hometown')}</label>
-            <input type="text" id="hometown" name="hometown" value="${personal.get('hometown', '')}"/>
-          </li>
-          <li>
-            <label for="currentCity">${_('Current City')}</label>
-            <input type="text" id="currentCity" name="currentCity" value="${personal.get('currentCity', '')}"/>
-          </li>
-        </ul>
-      </div>
-        %if emailId and emailId[0]:
-          <input type="hidden" value = ${emailId[0]} name="emailId" />
-        %endif
-        %if myKey:
-          <input type="hidden" value = ${myKey} name="id" />
-        %endif
+    <div id="personal">
+      <ul class="styledform">
+        <li class="form-row">
+          <%
+            rawstr = r"""(?P<doy>\d{4})(?P<dom>\d{2})(?P<dod>\d{1,2})"""
+            matchstr = personal.get('birthday', '')
+            compile_obj = re.compile(rawstr)
+            match_obj = compile_obj.search(matchstr)
+            if match_obj:
+              doy = match_obj.group('doy')
+              dom = match_obj.group('dom')
+              dod = match_obj.group('dod')
+            else:
+              doy = dom = dod = None
+          %>
+          <label class="styled-label" for ="bday">${_('Date of Birth')}</label>
+          ${self.selectDay("dob_day", "Day", dod)}
+          ${self.selectMonth("dob_mon", "Month", dom)}
+          ${self.selectYear("dob_year", "Year", doy)}
+        </li>
+        <li class="form-row">
+          <label class="styled-label" for="p_email">${_('Email')}</label>
+          <input type="email" id="p_email" name="p_email" value="${personal.get('email', '')}"/>
+        </li>
+        <li class="form-row">
+          <label class="styled-label" for="p_phone">${_('Phone')}</label>
+          <input type="text" id="p_phone" name="p_phone" value="${personal.get('phone', '')}"/>
+        </li>
+        <li class="form-row">
+          <label class="styled-label" for="p_mobile">${_('Mobile')}</label>
+          <input type="text" id="p_mobile" name="p_mobile" value="${personal.get('mobile', '')}"/>
+        </li>
+        <li class="form-row">
+          <label class="styled-label" for="hometown">${_('Hometown')}</label>
+          <input type="text" id="hometown" name="hometown" value="${personal.get('hometown', '')}"/>
+        </li>
+        <li class="form-row">
+          <label class="styled-label" for="currentCity">${_('Current City')}</label>
+          <input type="text" id="currentCity" name="currentCity" value="${personal.get('currentCity', '')}"/>
+        </li>
+      </ul>
     </div>
+    %if emailId and emailId[0]:
+      <input type="hidden" value = ${emailId[0]} name="emailId" />
+    %endif
+    %if myKey:
+      <input type="hidden" value = ${myKey} name="id" />
+    %endif
     <div class="styledform-buttons">
         <input type="submit" class="button default" name="userInfo_submit" value="${_('Save')}"/>
     </div>
   </form>
 </%def>
 
+
 <%def name="editContact()">
   <%
     contact = me.get('contact', {})
     emailId = me['basic']['emailId']
   %>
-  <form class="ajax" id="settings-form" action="/settings" method="post"  enctype="multipart/form-data">
-    <div class="styledform">
-      <div id="contacts">
-        <ul>
-            <li>
-                <label for="c_email">${_('Email')}</label>
-                <input type="email" id="c_email" name="c_email" value="${emailId}" readonly='true' />
-            </li>
-            <li>
-                <label for="c_im">${_('Chat Id')}</label>
-                <input type="text" id="c_im" name="c_im" value="${contact.get('im', '')}" autofocus />
-            </li>
-            <li>
-                <label for="c_phone">${_('Work Phone')}</label>
-                <input type="text" id="c_phone" name="c_phone" value="${contact.get('phone', '')}"/>
-            </li>
-            <li>
-                <label for="c_mobile">${_('Work Mobile')}</label>
-                <input type="text" id="c_mobile" name="c_mobile" value="${contact.get('mobile', '')}"/>
-            </li>
-        </ul>
-      </div>
-      <div class="styledform-buttons">
-          <input type="submit" class="button default" name="userInfo_submit" value="${_('Save')}"/>
-      </div>
+  <form class="ajax" id="settings-form" action="/settings/contact" method="post"  enctype="multipart/form-data">
+    <div id="contacts">
+      <ul class="styledform">
+          <li class="form-row">
+              <label class="styled-label" for="c_email">${_('Email')}</label>
+              <input type="email" id="c_email" name="c_email" value="${emailId}" readonly='true' />
+          </li>
+          <li class="form-row">
+              <label class="styled-label" for="c_im">${_('Chat Id')}</label>
+              <input type="text" id="c_im" name="c_im" value="${contact.get('im', '')}" autofocus />
+          </li>
+          <li class="form-row">
+              <label class="styled-label" for="c_phone">${_('Work Phone')}</label>
+              <input type="text" id="c_phone" name="c_phone" value="${contact.get('phone', '')}"/>
+          </li>
+          <li class="form-row">
+              <label class="styled-label" for="c_mobile">${_('Work Mobile')}</label>
+              <input type="text" id="c_mobile" name="c_mobile" value="${contact.get('mobile', '')}"/>
+          </li>
+      </ul>
+    </div>
+    <div class="styledform-buttons">
+        <input type="submit" class="button default" name="userInfo_submit" value="${_('Save')}"/>
     </div>
     %if emailId and emailId[0]:
       <input type="hidden" value = ${emailId[0]} name="emailId" />
@@ -314,6 +324,7 @@
     %endif
   </form>
 </%def>
+
 
 <%def name="selectMonth(name, label, dom=None)">
   <%
@@ -362,6 +373,7 @@
   </select>
 </%def>
 
+
 <%def name="filterNotifications()">
   <%
     notify = me['basic'].get('notify', '')
@@ -401,6 +413,8 @@
       <% emailTemplate = _('E-mail notification when: %s') %>
       %for x in range(settings._notificationsCount):
         <%
+          if x in settings._hiddenNotifys:
+            continue
           emailChecked = "checked='1'"\
             if settings.getNotifyPref(notify, x, settings.notifyByMail)\
             else '' %>
@@ -419,6 +433,7 @@
     </div>
   </form>
 </%def>
+
 
 <%def name="right()">
   %if len(suggested_sections.keys()) > 0:

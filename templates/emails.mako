@@ -61,7 +61,7 @@
             <tr><td style="border-top:1px solid #DDD; font-size: 14px;padding-top:10px;">
               ${brandName} is a social network exclusively for people within your company
               to help you collaborate better. It revolutionizes communication at
-              workplace with a much richer, easier and more effective form of communication
+              workplace with a richer, easier and more effective form of communication
               &ndash; <a href="${rootUrl}/about/features.html">View all features &#187;</a>
             </td></tr>
           </table>
@@ -82,20 +82,17 @@
 <%def name="signup()">
   ${header()}
               <td style="font-size: 14px;">
-                Welcome to ${brandName}.<br/>
-                Please click below to activate your account.
-                 <br/><br/>
-                 <a href="${activationUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">${'Join %s' % brandName}</div></a>
-                 <br/><br/>
-                 You can also visit <a href="${activationUrl}">${activationUrl}</a> to activate your account.
+                Thanks for signing up for ${brandName}.<br/>
+                Just one more step left to complete the registration. Click below:
+                <br/><br/>
+                <a href="${activationUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">${'Complete Registration'}</div></a>
+                <br/><br/>
+                Or visit <a href="${activationUrl}">${activationUrl}</a>.
+                <br/><br/>
+                Thank you,<br/>
+                Flocked-in team
               </td>
             </tr>
-            <tr><td style="border-top:1px solid #DDD; font-size: 14px;padding-top:10px;">
-              ${brandName} is a social network exclusively for people within your company
-              to help you collaborate better. It revolutionizes communication at
-              workplace with a much richer, easier and more effective form of communication
-              &ndash; <a href="${rootUrl}/about/features.html">View all features &#187;</a>
-            </td></tr>
           </table>
         </td></tr>
         <tr><td style="color:gray;font-size:11px;padding:5px 0;">
@@ -210,18 +207,6 @@
   ${footer()}
 </%def>
 
-<%def name="notifyFA()">
-  ${header()}
-  <td valign="top" align="right" style="width:48px;" rowspan="2">
-    <img src="${senderAvatarUrl}" alt="">
-  </td>
-  <td style="font-size: 14px;">
-    <b>${senderName}</b> accepted your friend request.<br/>
-    You can visit <a href="${rootUrl}/people">${rootUrl}/people</a> to see the list of all your friends.
-  </td>
-  ${footer()}
-</%def>
-
 <%def name="notifyNF()">
   ${header()}
   <td valign="top" align="right" style="width:48px;" rowspan="2">
@@ -241,7 +226,7 @@
   </td>
   <td style="font-size: 14px;">
     <b>${senderName}</b> accepted your invitation to join ${brandName}.<br/>
-    Visit <a href="${rootUrl}/profile?id=${senderId}">${senderName}'s profile</a> to follow or to add ${senderName} as your friend.
+    Visit <a href="${rootUrl}/profile?id=${senderId}">${senderName}'s profile</a> to follow ${senderName}.
   </td>
   ${footer()}
 </%def>
@@ -253,7 +238,7 @@
   </td>
   <td style="font-size: 14px;">
     <b>${senderName}</b> just joined ${brandName}.<br/>
-    Visit <a href="${rootUrl}/profile?id=${senderId}">${senderName}'s profile</a> to follow or to add ${senderName} as your friend.
+    Visit <a href="${rootUrl}/profile?id=${senderId}">${senderName}'s profile</a> to follow ${senderName}.
   </td>
   ${footer()}
 </%def>
@@ -270,26 +255,7 @@
   ${footer()}
 </%def>
 
-##
-## Yet to be implemented
-##
-
-<%def name="notifyFR()">
-  ${header()}
-  <td valign="top" align="right" style="width:48px;" rowspan="2">
-    <img src="${senderAvatarUrl}" alt="">
-  </td>
-  <td style="font-size: 14px;">
-    <b>${senderName}</b> requested to be your friend on ${brandName}.
-    <br/>
-    <a href="${rootUrl}/profile?id=${senderId}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">Add as Friend</div></a>
-    <br/><br/>
-    You can also visit <a href="${rootUrl}/people">${rootUrl}/people</a> to view friends and subscriptions.
-    <br/><br/>
-  </td>
-  ${footer()}
-</%def>
-
+## Group Request
 <%def name="notifyGR()">
   ${header()}
   <td valign="top" align="right" style="width:48px;" rowspan="2">
@@ -305,6 +271,7 @@
   ${footer()}
 </%def>
 
+## Group Invite
 <%def name="notifyGI()">
   ${header()}
   <td valign="top" align="right" style="width:48px;" rowspan="2">
@@ -312,74 +279,40 @@
   </td>
   <td style="font-size: 14px;">
     ${senderName} invited you to join <b>${groupName}</b> group.<br/>
-    Visit <a href="${rootUrl}/groups?type=invitaions">${rootUrl}/groups?type=invitations</a> to accept the invitation.
+    Visit <a href="${rootUrl}/groups?type=invitations">${rootUrl}/groups?type=invitations</a> to accept the invitation.
   </td>
   ${footer()}
 </%def>
 
-<%def name="groupInvite()">
-  ${header()}
-  <td valign="top" align="right" style="width:48px;" rowspan="2">
-    <img src="${senderAvatarUrl}" alt="">
-  </td>
-  <td style="font-size: 14px;">
-    <b>${senderName}</b> added you to ${groupName}.
-    <br/><br/>
-    You can visit <a href="${rootUrl}/groups?start=${groupId}">${rootUrl}/groups?start=${groupId}</a> to manage your subscription.
-  </td>
-  ${footer()}
-</%def>
-
-<%def name="groupNewMember()">
-  ${header()}
-  <td valign="top" align="right" style="width:48px;" rowspan="2">
-    <img src="${senderAvatarUrl}" alt="">
-  </td>
-  <td style="font-size: 14px;">
-    <b>${senderName}</b> just joined ${groupName}.
-    <br/><br/>
-    You can visit <a href="${rootUrl}/groups">${rootUrl}/groups</a> to manage all your groups.
-  </td>
-  ${footer()}
-</%def>
-
-##notify new private conversation
+## New private conversation
 <%def name="notifyNM()">
   ${header()}
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
   <td style="font-size: 14px;">
-    <b>${senderName}</b> sent you a private message
+    <b>${senderName}</b>: ${message}
     <br/><br/>
-    <blockquote>
-      ${senderName}: ${message}
-    <br/><br/>
-      <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View Private Conversation</div></a>
-    </blockquote>
+    <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View Full Conversation</div></a>
   </td>
   ${footer()}
 </%def>
 
-##notify new reply
+## Conversation Reply
 <%def name="notifyMR()">
   ${header()}
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
   <td style="font-size: 14px;">
-    <b>${senderName}</b> replied to a private conversation
+    <b>${senderName}</b>: ${message}
     <br/><br/>
-    <blockquote>
-      ${senderName}: ${message}
-    <br/><br/>
-      <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View Reply</div></a>
-    </blockquote>
+    <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View Full Conversation</div></a>
   </td>
   ${footer()}
 </%def>
 
-##notify message access change
+## Message access change
 <%def name="notifyMA()">
   ${header()}
   <td valign="top" align="right" style="width:48px;" rowspan="2">
@@ -394,8 +327,28 @@
         <b>${senderName}</b> updated access premissions of the private conversation
     %endif
     <br/><br/>
-      <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View Private Message</div></a>
+      <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View Full Conversation</div></a>
   </td>
   ${footer()}
 </%def>
 
+<%def name="html_stats()">
+  <table>
+  <tr><td> No.of new domains </td><td > ${stats[frm_to]["newDomainCount"]} </td></tr>
+  <tr> <td> New domains      </td><td  > ${stats[frm_to]["newDomains"]} </td> </tr>
+  <tr><td> New signups      </td><td  > ${stats[frm_to]["signups"]} </td></tr>
+  </table>
+  <br/> <br/>
+  <table>
+    <tr> <th> Domain-Name </th> <th> new users </th> <th> total users </th> <th> new items </th> <th> total items</tr>
+  % for domain in stats['domain']:
+    <tr>
+      <td> ${domain} </td>
+      <td> ${stats['domain'][domain]["newUsers"]} </td>
+      <td> ${stats['domain'][domain]["totalUsers"]} </td>
+      <td> ${stats['domain'][domain]["newItems"]} </td>
+      <td> ${stats['domain'][domain]["items"]} </td>
+    </tr>
+  %endfor
+  </table>
+</%def>

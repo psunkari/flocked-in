@@ -18,7 +18,7 @@ class IItemType(Interface):
         """
         """
 
-    def create(request):
+    def create(request, myId, myOrgId):
         """
         """
 

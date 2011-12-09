@@ -9,6 +9,7 @@ from twisted.internet       import defer
 from twisted.python         import components
 
 from social                 import db, utils, base, plugins
+from social.logging         import log
 from social.template        import render
 from social.profile         import ProfileResource
 from social.settings        import SettingsResource
@@ -20,6 +21,8 @@ from social.people          import PeopleResource
 from social.avatar          import AvatarResource
 from social.notifications   import NotificationsResource
 from social.groups          import GroupsResource
+from social.groups          import GroupFeedResource
+from social.groups          import GroupSettingsResource
 from social.fts             import FTSResource
 from social.tags            import TagsResource
 from social.auto            import AutoCompleteResource
@@ -30,7 +33,9 @@ from social.server          import SessionFactory
 from social.files           import FilesResource
 from social.embed           import EmbedResource
 from social.contact         import ContactResource
-from social.logging         import log
+from social.oauth           import OAuthResource
+from social.api             import APIRoot
+from social.apps            import ApplicationResource
 
 
 def getPluggedResources(ajax=False):
@@ -79,14 +84,14 @@ class SigninResource(resource.Resource):
         authinfo.isAdmin = True if data.has_key("isAdmin") else False
 
         yield request._saveSessionToDB()
-        redirectURL = utils.getRequestArg(request, "_r") or "/feed"
+        redirectURL = utils.getRequestArg(request, "_r", sanitize=False) or "/feed"
         util.redirectTo(urllib.unquote(redirectURL), request)
         request.finish()
 
     @defer.inlineCallbacks
     def _renderSigninForm(self, request, errcode=''):
         args = {}
-        redirect = utils.getRequestArg(request, '_r') or "/feed"
+        redirect = utils.getRequestArg(request, '_r', sanitize=False) or "/feed"
         args["redirect"] = urllib.quote(redirect,  '*@+/')
         args["reason"] = errcode
         yield render(request, "signin.mako", **args)
@@ -96,7 +101,7 @@ class SigninResource(resource.Resource):
         d = defer.maybeDeferred(request.getSession, IAuthInfo)
         def checkSession(authinfo):
             if authinfo.username:
-                redirectURL = utils.getRequestArg(request, "_r") or "/feed"
+                redirectURL = utils.getRequestArg(request, "_r", sanitize=False) or "/feed"
                 util.redirectTo(urllib.unquote(redirectURL), request)
                 request.finish()
             else:
@@ -118,7 +123,7 @@ class SigninResource(resource.Resource):
         d = db.get_slice(username, "userAuth")
         def callback(result):
             cols = utils.columnsToDict(result)
-            if cols.get("passwordHash", "XXX") != utils.md5(password):
+            if not utils.checkpass(password, cols.get("passwordHash", "XXX")):
                 return self._renderSigninForm(request, self.AUTHENTICATION_FAILED)
             if cols.has_key("isBlocked"):
                 return self._renderSigninForm(request, self.USER_BLOCKED)
@@ -160,7 +165,7 @@ class HomeResource(resource.Resource):
 # authorization, adding headers for cache busting and busting csrf.
 #
 class RootResource(resource.Resource):
-    _noCSRFReset = set(["avatar", "auto", "rsrcs", "about", "signup", "signin", "password"])
+    _noCSRFReset = set(["avatar", "auto", "rsrcs", "about", "signup", "signin", "password", "api"])
 
     def __init__(self, isAjax=False):
         self._isAjax = isAjax
@@ -175,11 +180,15 @@ class RootResource(resource.Resource):
         self._people = PeopleResource(self._isAjax)
         self._notifications = NotificationsResource(self._isAjax)
         self._groups = GroupsResource(self._isAjax)
+        self._groupFeed = GroupFeedResource(self._isAjax)
+        self._groupSetting = GroupSettingsResource(self._isAjax)
         self._search = FTSResource(self._isAjax)
         self._admin = Admin(self._isAjax)
         self._pluginResources = getPluggedResources(self._isAjax)
         self._messages = MessagingResource(self._isAjax)
         self._files = FilesResource(self._isAjax)
+        self._apps = ApplicationResource(self._isAjax)
+
         if not self._isAjax:
             self._home = HomeResource()
             self._ajax = RootResource(True)
@@ -191,6 +200,8 @@ class RootResource(resource.Resource):
             self._signin = SigninResource()
             self._embed = EmbedResource()
             self._contact = ContactResource()
+            self._oauth = OAuthResource()
+            self._api = APIRoot()
         else:
             self._feedback = FeedbackResource(True)
 
@@ -206,7 +217,8 @@ class RootResource(resource.Resource):
         if authinfo.username != None:
             if request.method == "POST" or self._isAjax:
                 token = utils.getRequestArg(request, "_tk")
-                if authinfo.token and token != authinfo.token:
+                tokenFromCookie = request.getCookie('token')
+                if token != tokenFromCookie:
                     defer.returnValue(resource.ErrorPage(400,
                             http.RESPONSES[400], "Invalid authorization token"))
             defer.returnValue(rsrc)
@@ -222,6 +234,8 @@ class RootResource(resource.Resource):
 
     def getChildWithDefault(self, path, request):
         match = None
+
+        # Resources that don't expose an AJAX interface
         if not self._isAjax:
             if path == "":
                 match = self._home
@@ -245,9 +259,16 @@ class RootResource(resource.Resource):
                 match = self._rsrcs
             elif path == 'password':
                 match = self._signup
+            elif path == 'oauth':
+                pathElement = request.postpath.pop(0)
+                request.prepath.append(pathElement)
+                match = self._oauth.getChildWithDefault(pathElement, request)
+
+        # Resources that exist only on the AJAX interface
         elif path == "feedback":
             match = self._feedback
 
+        # All other resources
         if path == "feed":
             match = self._feed
         elif path == "profile":
@@ -264,6 +285,10 @@ class RootResource(resource.Resource):
             match = self._notifications
         elif path == "groups":
             match = self._groups
+        elif path == 'group':
+            match = self._groupFeed
+        elif path == 'groupsettings':
+            match = self._groupSetting
         elif path == "search":
             match = self._search
         elif path == "messages":
@@ -272,6 +297,12 @@ class RootResource(resource.Resource):
             match = self._admin
         elif path == "file":
             match = self._files
+        elif path == "apps":
+            match = self._apps
+        elif path == "api":
+            match = self._api
+
+        # Resources exposed by plugins
         elif path in plugins and self._pluginResources.has_key(path):
             match = self._pluginResources[path]
 

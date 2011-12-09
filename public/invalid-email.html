@@ -1,0 +1,68 @@
+<!DOCTYPE HTML>
+<html lang="en" dir="ltr" xml:lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>Flocked-in &mdash; Private, Secure and Free Social Network for Enterprises</title>
+  <link href="/rsrcs/css/static.css" media="all" rel="stylesheet" type="text/css">
+  <link rel="shortcut icon" href="/rsrcs/img/favicon.ico" type="image/x-icon" />
+  <script type="text/javascript">
+    //<![CDATA[
+    function checkSigninPlaceholder() {
+      emailInput = document.getElementById('signup-email');
+      if ('placeholder' in emailInput) {
+          emailInput.placeholder = 'Enter your work e-mail';
+          placeholderDiv = document.getElementById('signup-placeholder');
+          placeholderDiv.style.display = 'none';
+      }
+    }
+    //]]>
+  </script>
+</head>
+<body onload="checkSigninPlaceholder();">
+  <div id="home-header" class="centered-wrapper">
+    <a href='/'><img id="home-sitelogo" src="/rsrcs/img/flocked-in.png" alt="Flocked-in"/></a>
+  </div>
+  <div id="home-contents" class="centered-wrapper">
+    <div id="home-intro">
+      <div id="home-caption">Please use a valid work email.</div>
+      <div id="signup">
+        <div>
+          <p>We currently do not accept signups from public email addresses like GMail or Yahoo!</p>
+        </div>
+        <form action="/signup/signup" id="signup-form" method="POST">
+          <input id="signup-email" type="email" name="email" required/>
+          <input id="signup-submit" type="submit" value="Sign Up"/>
+        </form>
+        <div id="signup-placeholder">&#8627; Enter your work e-mail</div>
+      </div>
+    </div>
+  </div>
+  <div id="home-summary-wrapper" class="centered-wrapper">
+    <div id="home-summary">
+      <p>Flocked-in is a social network exclusively for people within your company.
+      Built to be highly secure & scalable, it offers the features necessary to foster a productive community at work.<br/>
+      <a href="/about/features.html">Know more&#187;</a></p>
+    </div>
+    <div id="home-summary-misc">
+      <div id="home-menu-wrapper">
+        <ul id="home-menu" class="header-links">
+          <li><a href="/about/tour.html">Tour</a></li>
+          <li><a href="/about/pricing.html">Pricing</a></li>
+          <li id="header-signin"><a href="/signin">Sign In</a></li>
+        </ul>
+      </div>
+      <div class="copyright" style="float:none;">
+        &copy;2011 Synovel
+      </div>
+      <div class="sitemeta">
+        <a href="/about/tos.html">Terms of Service</a>
+        &nbsp;|&nbsp;
+        <a href="/about/privacy.html">Privacy Policy</a>
+        &nbsp;|&nbsp;
+        <a href="/about/contact.html">Contact Us</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+

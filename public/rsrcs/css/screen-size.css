@@ -1,0 +1,36 @@
+
+
+@media screen and (min-width: 1281px) {
+    .contents {
+        width: 1130px;
+    }
+
+    #center {
+        width: 1130px;
+    }
+    .has-left.has-right #center { width: 720px !important; }
+    .has-left #center, .has-right #center { width: 950px !important; }
+
+    #group-share-block {
+        width: 700px;
+    }
+}
+
+
+@media screen and (min-width: 1441px) {
+    .contents {
+        width: 1280px;
+    }
+
+    #center {
+        width: 1280px;
+    }
+    .has-left.has-right #center { width: 870px !important; }
+    .has-left #center, .has-right #center { width: 1100px !important; }
+
+    #group-share-block {
+        width: 850px;
+    }
+}
+
+
