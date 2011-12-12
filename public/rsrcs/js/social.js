@@ -752,7 +752,7 @@ var ui = {
                      $(selector).find(":file").val("");
                  }).success(function(data) {});
             $this.trigger('restorePlaceHolders');
-            return false
+            return false;
         });
     }
 }

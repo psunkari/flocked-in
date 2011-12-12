@@ -28,13 +28,6 @@
       ${navMenuItem("/tags/list", _("Tags"), "tags")}
     </ul>
   </div>
-%if script:
-  <div id="feedbackmenu-container" class="sidemenu-container">
-    <ul id="feedbackmenu" class="v-links sidemenu">
-      <li><a title=${_('Feedback')} onclick="$$.feedback.showFeedback()"><span class="sidemenu-icon icon feedback-icon"></span><span class="sidemenu-text">${_('Feedback')}</span></a></li>
-    </ul>
-  </div>
-%endif
 </%def>
 
 <html>
@@ -133,6 +126,11 @@
   <div id="mainbar">
     ${self.layout()}
   </div>
+%if script:
+  <div id="feedback-linkwrap">
+    <a href="javascript:" title=${_('Feedback')} onclick="$$.feedback.showFeedback()"><span class="icon feedback-icon"></span><span>${_('Feedback')}</span></a></li>
+  </div>
+%endif
   </div><!-- bigwrap -->
   <div id="alertbar"></div>
 %if script:

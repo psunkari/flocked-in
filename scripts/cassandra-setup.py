@@ -275,7 +275,7 @@ def createColumnFamilies(client):
     apps = CfDef(KEYSPACE, "apps", "Super", "UTF8Type", "UTF8Type",
                  "Details of Applications registered for API Access")
 
-    appsByOwner = CfDef(KEYSPACE, "appsByOwner", "Standard", "TimeUUIDType",
+    appsByOwner = CfDef(KEYSPACE, "appsByOwner", "Standard", "UTF8Type",
                         None, "List of applications registered by a User")
 
     oAuthData = CfDef(KEYSPACE, "oAuthData", "Standard", "UTF8Type",
@@ -398,10 +398,10 @@ def addSampleData(client):
                                     'Hindi': 'rw'
                                 },
                                 'schools': {
-                                    '1996:Hraward Business School': 'Graduation',
+                                    '1996:Hraward Business School': 'Graduation'
                                 },
                                 'companies': {
-                                    '2007:2003:Example Technology Services': "%s:%s" % (b64encode('Chief Financial Officer'), b64encode('Lots of work'))
+                                    '2007:2003:Example Technology Services': 'Chief Financial Officer'
                                 },
                                 'contact': {
                                     'mail': 'kevin@example.com',
@@ -431,8 +431,7 @@ def addSampleData(client):
                                     "emailId": "ashok@example.com"
                                 },
                                 'expertise': {
-                                    'Recruiting': '',
-                                    'HR Policy Making': ''
+                                    'expertise': 'recruiting,hr-policies'
                                 },
                                 'languages': {
                                     'Telugu': 'srw',
@@ -463,11 +462,6 @@ def addSampleData(client):
                                     'type': "user",
                                     "emailId": "william@example.com"
                                 },
-                                'expertise': {
-                                    'Linux Adminstration': '',
-                                    'Email Servers': '',
-                                    'Synovel Social': ''
-                                },
                                 'languages': {
                                     'English': 'srw',
                                     'German': 'srw'
@@ -476,7 +470,7 @@ def addSampleData(client):
                                     '2008:Mocha Frappe Institute of Technology': 'Graduation'
                                 },
                                 'companies': {
-                                    '2010:2008:JohnDoe Corp': "%s:%s"%(b64encode('CEO'),b64encode('Lots of exciting work there!')),
+                                    '2010:2008:JohnDoe Corp': 'Chief Executive Officer'
                                 },
                                 'contact': {
                                     'mail': 'william@example.com',
@@ -506,11 +500,6 @@ def addSampleData(client):
                                     'timezone': 'America/Los_Angeles',
                                     'type': "user",
                                     "emailId": "paul@example.com"
-                                },
-                                'expertise': {
-                                    'Open Source': '',
-                                    'High Scalability': '',
-                                    'Twisted Python': ''
                                 },
                                 'languages': {
                                     'English': 'srw',
@@ -543,10 +532,6 @@ def addSampleData(client):
                                     'timezone': 'America/Los_Angeles',
                                     'type': "user",
                                     "emailId": "john@example.com"
-                                },
-                                'expertise': {
-                                    'Open Source': '',
-                                    'Twisted Python': ''
                                 },
                                 'languages': {
                                     'French': 'srw',

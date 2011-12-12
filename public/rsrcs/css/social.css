@@ -437,7 +437,7 @@ a:hover, a:active, a:focus {
     background-position: 0 -144px;
 }
 .feedback-icon {
-    background-position: 0 -384px;
+    background-position: 0 -224px;
 }
 
 
@@ -1759,6 +1759,22 @@ abbr.timestamp {
 /*
  * Feedback dialog
  */
+
+#feedback-linkwrap {
+    position: fixed;
+    right: 25px;
+    bottom: 0;
+    padding: 5px 20px;
+    background-color: #3E3D39;
+    border-radius: 4px 4px 0 0;
+}
+#feedback-linkwrap > a:link {
+    color: white;
+    font-weight: bold;
+}
+#feedback-linkwrap .feedback-icon {
+    margin-right: 5px;
+}
 
 #feedback-center {
     padding: 10px;
