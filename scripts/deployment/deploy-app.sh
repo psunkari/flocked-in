@@ -17,14 +17,16 @@ repo_revision='default'
 # List of stylesheets and scripts that need bundling
 #
 social_css='rsrcs/css/social.css:rsrcs/css/messaging.css:'\
-'rsrcs/css/jquery.ui.css:rsrcs/css/widgets.css:rsrcs/css/screen-size.css'
+'rsrcs/css/jquery.ui.css:rsrcs/css/widgets.css:rsrcs/css/screen-size.css:'\
+'rsrcs/css/jquery.tagedit.css'
 
 about_css='rsrcs/css/static.css'
 
 jquery_js='rsrcs/js/jquery-1.6.4.js:rsrcs/js/jquery.address-1.4.js:'\
 'rsrcs/js/jquery.autogrow-textarea.js:rsrcs/js/jquery.html5form-1.3.js:'\
 'rsrcs/js/jquery.iframe-transport.js:rsrcs/js/jquery.ui.js:'\
-'rsrcs/js/jquery.ui.menu.js:rsrcs/js/jquery.ui.autocomplete.js'
+'rsrcs/js/jquery.ui.menu.js:rsrcs/js/jquery.ui.autocomplete.js:'\
+'rsrcs/js/jquery.autoGrowInput.js:rsrcs/js/jquery.tagedit.js'
 
 social_js='rsrcs/js/social.js'
 
@@ -155,6 +157,10 @@ done
 for outfile in ${out_scripts[*]}; do
   _bundle $outfile "js"
 done
+
+# Create a version file.
+cd $src
+hg identify -r $repo_revision > $src/VERSION
 
 # Remove mercurial data from src folder
 rm -rf $src/.hg
