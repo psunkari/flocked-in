@@ -2095,3 +2095,19 @@ abbr.timestamp {
 }
 
 
+.row-odd {
+    background-color:#F2F1F0;
+    border: 0px;
+}
+.row-even {
+    border: 0px;
+}
+.files {
+    width: 75%
+}
+.files tr > td {
+    text-align: center;
+}
+.files tr> th {
+    background-color:#E9E9E9;
+}

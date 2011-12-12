@@ -27,7 +27,7 @@ from twisted.mail       import smtp
 from social             import db, _, __, config, errors, cdnHost, rootUrl
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
-from social.constants   import INFINITY
+from social.constants   import INFINITY, FILES_PER_PAGE
 from social.logging     import profile, dump_args, log
 
 
@@ -295,7 +295,6 @@ def _upload_files(owner, tmp_fileIds):
             meta = {"meta": {"uri": location, "name":name, "fileType":ftype}}
             yield db.batch_insert(tmpFileId, "files", meta)
             yield db.remove(tmpFileId, "tmp_files")
-            yield db.insert(owner, "user_files", name, tmpFileId)
             attachments[attachmentId] = (timeuuid, tmpFileId, name, size, ftype)
     defer.returnValue(attachments)
 
@@ -327,15 +326,16 @@ def getCompanyGroups(orgId):
 
 
 @defer.inlineCallbacks
-def expandAcl(userKey, acl, convId, convOwnerId=None):
+def expandAcl(userId, orgId, acl, convId, convOwnerId=None, allItemFollowers=False):
     keys = set()
     acl = pickle.loads(acl)
     accept = acl.get("accept", {})
     deny = acl.get('deny', {})
     deniedUsers = deny.get("users", [])
 
-    unfollowed_d = db.get_slice(convId, 'items',
-                                super_column='unfollowed', count=INFINITY)\
+    if not allItemFollowers:
+        unfollowed_d = db.get_slice(convId, 'items',
+                                    super_column='unfollowed', count=INFINITY)\
                    if convId else defer.succeed([])
 
     # When users are explicitly selected, they always
@@ -360,16 +360,21 @@ def expandAcl(userKey, acl, convId, convOwnerId=None):
 
     # See if followers and the company feed should get this update.
     if any([typ in ["orgs", "public"] for typ in accept]):
-        followers = yield getFollowers(userKey, count=INFINITY)
-        companyKey = yield getCompanyKey(userKey)
+        followers = yield getFollowers(userId, count=INFINITY)
+        #XXX: can do away with db fetch if orgId is passed. entities[userId]['basic']['orgId']
+        # or  request.get_session(IAuthInfo).organizations can be used
+        companyKey = yield getCompanyKey(userId)
         keys.update([uid for uid in followers if uid not in deniedUsers])
         keys.add(companyKey)
 
     # Remove keys of people who unfollowed the item.
-    unfollowed = yield unfollowed_d
-    unfollowed = set(columnsToDict(unfollowed).keys())
+    if not allItemFollowers:
+        unfollowed = yield unfollowed_d
+        unfollowed = set(columnsToDict(unfollowed).keys())
 
-    defer.returnValue(keys.difference(unfollowed))
+        defer.returnValue(keys.difference(unfollowed))
+    else:
+        defer.returnValue(keys)
 
 
 def checkAcl(userId, acl, owner, relation, userOrgId=None):
