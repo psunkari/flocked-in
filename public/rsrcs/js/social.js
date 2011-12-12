@@ -917,10 +917,11 @@ var dialog = {
                     $$.dialog.close(this, true);
                 }
             }
-        ]
+        ],
+        destroyOnEscape: true
     },
 
-    _template: '<div class="ui-dlg-outer">' +
+    _template: '<div class="ui-dlg-outer" tabindex="0">' +
                  '<div class="ui-dlg-inner">' +
                    '<div class="ui-dlg-contents"/>' +
                  '</div>' +
@@ -956,19 +957,27 @@ var dialog = {
     create: function(obj) {
         var $template = $(dialog._template),
             options = $.extend({}, dialog._options, obj)
-            dlgId = options.id || "dialog-" + dialog._counter
+            dlgId = options.id || "dialog-" + dialog._counter,
+            self = this;
 
         if (dialog._dialogs[dlgId]) {
             $template = dialog._dialogs[dlgId];
-            $template.show();
+            $template.focus().show();
         } else {
             $template.attr('id', dlgId + '-outer').attr('dlgId', dlgId);
             $('.ui-dlg-inner', $template).attr('id', dlgId + '-inner');
             $('.ui-dlg-contents', $template).attr('id', dlgId);
 
+            if (options.destroyOnEscape) {
+                $template.keydown(function(event) {
+                    if (event.which == 27)
+                        self.close($template, true);
+                });
+            }
+
             dialog._dialogs[dlgId] = $template;
             dialog.createButtons($template, dlgId, options);
-            $('body').append($template);
+            $template.appendTo(document.body).focus();
         }
 
         $template.css('z-index', 1000+dialog._counter)

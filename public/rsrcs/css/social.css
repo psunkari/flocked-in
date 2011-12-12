@@ -1764,13 +1764,15 @@ abbr.timestamp {
     position: fixed;
     right: 25px;
     bottom: 0;
+    background: transparent;
+}
+#feedback-linkwrap > a:link {
+    display: block;
+    color: white;
+    font-weight: bold;
     padding: 5px 20px;
     background-color: #3E3D39;
     border-radius: 4px 4px 0 0;
-}
-#feedback-linkwrap > a:link {
-    color: white;
-    font-weight: bold;
 }
 #feedback-linkwrap .feedback-icon {
     margin-right: 5px;
