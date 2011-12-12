@@ -6,7 +6,6 @@ from random                 import sample
 import datetime
 import json
 import re
-from base64                 import b64encode, b64decode
 
 from twisted.web            import resource, server, http
 from twisted.internet       import defer
