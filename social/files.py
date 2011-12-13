@@ -273,7 +273,7 @@ class FilesResource(base.BaseResource):
         max_content_length = constants.MAX_FILE_SIZE
         x_conds.append('["content-length-range", 0, %i]' % max_content_length)
 
-        redirect_url = config.get('General', 'URL') + "/file/update"
+        redirect_url = config.get('General', 'URL') + "/files/update"
         form_data = conn.build_post_form_args(bucket,
                                   key,
                                   http_method="https",

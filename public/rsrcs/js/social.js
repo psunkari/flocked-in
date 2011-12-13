@@ -787,12 +787,12 @@ var files = {
             if (this.files !== undefined && this.files[0] !== undefined) {
                 filename = this.files[0].name || this.files[0].fileName;
                 mimeType = this.files[0].type || '';
-                d = $.post('/file/form',
+                d = $.post('/files/form',
                            {"name":filename, "mimeType":mimeType}, "json");
             }
             if (!filename) {
                 filename = _self.getNameFromPath(this.value);
-                d = $.post('/file/form', {"name":filename}, "json");
+                d = $.post('/files/form', {"name":filename}, "json");
             }
 
             d.then(function(data) {

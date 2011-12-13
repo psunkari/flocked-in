@@ -27,7 +27,7 @@
 </%def>
 
 <%def name="fileUploadButton(formId)">
-  <form id="${formId}" action="/file" method="post" enctype="multipart/form-data">
+  <form id="${formId}" action="/files" method="post" enctype="multipart/form-data">
     <div id="${formId}-wrapper" class="file-attach-outer busy-indicator">
       <input type="file" name="file" id="${formId}-file-input" class="file-attach-input"/>
       <button id="${formId}-fileshare" class="file-attach-button">

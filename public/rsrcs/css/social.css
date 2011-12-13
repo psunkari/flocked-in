@@ -439,6 +439,9 @@ a:hover, a:active, a:focus {
 .feedback-icon {
     background-position: 0 -224px;
 }
+.files-icon {
+    background-position: 0 -432px;
+}
 
 
 /*

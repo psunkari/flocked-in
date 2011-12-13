@@ -50,7 +50,7 @@
       %if selected == item:
         <li class="selected">${_(display)}</li>
       %else:
-        <li><a href="/file/list?type=${item}" class="ajax">${_(display)}</a></li>
+        <li><a href="/files/list?type=${item}" class="ajax">${_(display)}</a></li>
       %endif
     %endfor
   </ul>
@@ -77,7 +77,7 @@
   %endif
   %for tuuid, (fid, name, itemId, ownerId, convType) in _files:
     <tr class="row-${tr_class}">
-      <td> <a href='/file?id=${itemId}&fid=${fid}&ver=${tuuid}'>${name}</a> </td>
+      <td> <a href='/files?id=${itemId}&fid=${fid}&ver=${tuuid}'>${name}</a> </td>
       <td > <a href='/item?id=${itemId}'>${_(convType)}</a></td>
       %if ownerId != fid:
         <td > ${utils.userName(ownerId, entities[ownerId])}</td>
@@ -96,7 +96,7 @@
         %if fromProfile:
           <a id="next-page-load" class="ajax" data-ref="/profile?id=${userKey}&start=${nextPageStart}&dt=${detail}">${_("Fetch older files")}</a>
         %else:
-          <a id="next-page-load" class="ajax" data-ref="/file/list?start=${nextPageStart}&type=${viewType}">${_("Fetch older files")}</a>
+          <a id="next-page-load" class="ajax" data-ref="/files/list?start=${nextPageStart}&type=${viewType}">${_("Fetch older files")}</a>
         %endif
         </td>
         <td></td>

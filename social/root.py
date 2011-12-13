@@ -295,7 +295,7 @@ class RootResource(resource.Resource):
             match = self._messages
         elif path == "admin":
             match = self._admin
-        elif path == "file":
+        elif path == "files":
             match = self._files
         elif path == "apps":
             match = self._apps

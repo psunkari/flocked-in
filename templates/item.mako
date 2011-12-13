@@ -160,7 +160,7 @@
           tuuid, name, size, ftype = attachments[attachmentId].split(':')
           name = urlsafe_b64decode(name)
           size = formatFileSize(int(size))
-          location = '/file?id=%s&fid=%s&ver=%s'%(convId, attachmentId, tuuid)
+          location = '/files?id=%s&fid=%s&ver=%s'%(convId, attachmentId, tuuid)
         %>
         <div class="attachment-item">
           <span class="icon attach-file-icon"></span>
