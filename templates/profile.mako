@@ -280,7 +280,7 @@
       %endfor
     </dl>
   %endif
-  %if user.has_key('employers'):
+  %if user.has_key('companies'):
     <%
       keys = sorted(user['companies'].keys(), reverse=True)
     %>
