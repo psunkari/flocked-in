@@ -161,8 +161,9 @@ def getValidEntityId(request, arg, type="user", columns=None):
 
 
 @defer.inlineCallbacks
-def getValidItemId(request, arg, type=None, columns=None):
-    itemId = getRequestArg(request, arg, sanitize=False)
+def getValidItemId(request, arg, type=None, columns=None, itemId=None, myOrgId=None, myId=None):
+    if not itemId:
+        itemId = getRequestArg(request, arg, sanitize=False)
     itemType = type if type else "item"
     if not itemId:
         raise errors.MissingParams([_('%s id') % _(itemType).capitalize()])
@@ -190,9 +191,10 @@ def getValidItemId(request, arg, type=None, columns=None):
         acl = meta["acl"]
         owner = meta["owner"]
 
-    authinfo = request.getSession(IAuthInfo)
-    myOrgId = authinfo.organization
-    myId = authinfo.username
+    if not myOrgId:
+        myOrgId = request.getSession(IAuthInfo).organization
+    if not myId:
+        myId = request.getSession(IAuthInfo).username
     relation = Relation(myId, [])
     yield relation.initGroupsList()
     if not checkAcl(myId, acl, owner, relation, myOrgId):

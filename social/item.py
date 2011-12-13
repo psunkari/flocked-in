@@ -56,50 +56,119 @@ def _createNewItem(request, myId, myOrgId):
     defer.returnValue((convId, conv))
 
 
+@defer.inlineCallbacks
+def _comment(request, myId, orgId, convId=None):
+    snippet, comment = utils.getTextWithSnippet(request, "comment",
+                                        constants.COMMENT_PREVIEW_LENGTH)
+    if not comment:
+        raise errors.MissingParams([_("Comment")])
+
+    # 0. Fetch conversation and see if I have access to it.
+    (convId, conv) = yield utils.getValidItemId(request, "parent", myOrgId=orgId, myId=myId, itemId=convId)
+    convType = conv["meta"].get("type", "status")
+    me = yield db.get_slice(myId, "entities", ['basic'])
+    me = utils.supercolumnsToDict(me)
+
+    # 1. Create and add new item
+    timeUUID = uuid.uuid1().bytes
+    meta = {"owner": myId, "parent": convId, "comment": comment,
+            "timestamp": str(int(time.time())), "uuid": timeUUID}
+    followers = {myId: ''}
+    itemId = utils.getUniqueKey()
+    if snippet:
+        meta['snippet'] = snippet
+
+    yield db.batch_insert(itemId, "items", {'meta': meta,
+                                            'followers': followers})
+
+    # 2. Update response count and add myself to the followers of conv
+    convOwnerId = conv["meta"]["owner"]
+    convType = conv["meta"]["type"]
+    responseCount = int(conv["meta"].get("responseCount", "0"))
+    if responseCount % 5 == 3:
+        responseCount = yield db.get_count(convId, "itemResponses")
+
+    responseCount += 1
+    conv['meta']['responseCount'] = responseCount
+    convUpdates = {"responseCount": str(responseCount)}
+    yield db.batch_insert(convId, "items", {"meta": convUpdates,
+                                            "followers": followers})
+
+    # 3. Add item as response to parent
+    yield db.insert(convId, "itemResponses",
+                    "%s:%s" % (myId, itemId), timeUUID)
+
+    # 4. Update userItems and userItems_*
+    responseType = "Q" if convType == "question" else 'C'
+    commentSnippet = utils.toSnippet(comment, 35)
+    userItemValue = ":".join([responseType, itemId, convId, convType,
+                              convOwnerId, commentSnippet])
+    yield db.insert(myId, "userItems", userItemValue, timeUUID)
+    if plugins.has_key(convType) and plugins[convType].hasIndex:
+        yield db.insert(myId, "userItems_"+convType, userItemValue, timeUUID)
+
+    # 5. Update my feed.
+    yield feed.pushToFeed(myId, timeUUID, itemId, convId, responseType,
+                          convType, convOwnerId, myId, promote=False)
+
+    # 6. Push to other's feeds
+    convACL = conv["meta"].get("acl", "company")
+    yield feed.pushToOthersFeed(myId, orgId, timeUUID, itemId, convId, convACL,
+                                responseType, convType, convOwnerId,
+                                promoteActor=False)
+
+    yield _notify("C", convId, timeUUID, convType=convType,
+                      convOwnerId=convOwnerId, myId=myId, me=me,
+                      comment=comment)
+    fts.solr.updateIndex(itemId, {'meta':meta}, orgId)
+    items = {itemId: {'meta':meta}, convId: conv}
+    defer.returnValue((itemId, convId, items))
+
+
+# Expects all the basic arguments as well as some information
+# about the comments and likes to be available in kwargs.
+@defer.inlineCallbacks
+def _notify(notifyType, convId, timeUUID, **kwargs):
+    deferreds = []
+    convOwnerId = kwargs["convOwnerId"]
+    convType = kwargs["convType"]
+    myId = kwargs["myId"]
+    notifyId = ":".join([convId, convType, convOwnerId, notifyType])
+
+    # List of people who will get the notification about current action
+    if notifyType == "C":
+        followers = yield db.get_slice(convId, "items", super_column="followers")
+        toFetchEntities = recipients = [x.column.name for x in followers]
+    elif notifyType == "LC":
+        recipients = [kwargs["itemOwnerId"]]
+        toFetchEntities = recipients + [convOwnerId]
+    else:
+        toFetchEntities = recipients = [convOwnerId]
+
+    # The actor must not be sent a notification
+    recipients = [userId for userId in recipients if userId != myId]
+
+    # Get all data that is required to send offline notifications
+    # XXX: Entities generally contains a map of userId => {Basic: Data}
+    #      In this case it will contain userId => data directly.
+    notify_d = db.multiget_slice(toFetchEntities, "entities",
+                        ["name", "emailId", "notify"], super_column="basic") \
+                        if recipients else defer.succeed([])
+    def _gotEntities(cols):
+        entities = utils.multiColumnsToDict(cols)
+        kwargs.setdefault('entities', {}).update(entities)
+    def _sendNotifications(ignored):
+        return notifications.notify(recipients, notifyId,
+                                    myId, timeUUID, **kwargs)
+    notify_d.addCallback(_gotEntities)
+    notify_d.addCallback(_sendNotifications)
+
+    deferreds.append(notify_d)
+    yield defer.DeferredList(deferreds)
+
+
 class ItemResource(base.BaseResource):
     isLeaf = True
-
-    # Expects all the basic arguments as well as some information
-    # about the comments and likes to be available in kwargs.
-    @defer.inlineCallbacks
-    def notify(self, notifyType, convId, timeUUID, **kwargs):
-        deferreds = []
-        convOwnerId = kwargs["convOwnerId"]
-        convType = kwargs["convType"]
-        myId = kwargs["myId"]
-        notifyId = ":".join([convId, convType, convOwnerId, notifyType])
-
-        # List of people who will get the notification about current action
-        if notifyType == "C":
-            followers = yield db.get_slice(convId, "items", super_column="followers")
-            toFetchEntities = recipients = [x.column.name for x in followers]
-        elif notifyType == "LC":
-            recipients = [kwargs["itemOwnerId"]]
-            toFetchEntities = recipients + [convOwnerId]
-        else:
-            toFetchEntities = recipients = [convOwnerId]
-
-        # The actor must not be sent a notification
-        recipients = [userId for userId in recipients if userId != myId]
-
-        # Get all data that is required to send offline notifications
-        # XXX: Entities generally contains a map of userId => {Basic: Data}
-        #      In this case it will contain userId => data directly.
-        notify_d = db.multiget_slice(toFetchEntities, "entities",
-                            ["name", "emailId", "notify"], super_column="basic") \
-                            if recipients else defer.succeed([])
-        def _gotEntities(cols):
-            entities = utils.multiColumnsToDict(cols)
-            kwargs.setdefault('entities', {}).update(entities)
-        def _sendNotifications(ignored):
-            return notifications.notify(recipients, notifyId,
-                                        myId, timeUUID, **kwargs)
-        notify_d.addCallback(_gotEntities)
-        notify_d.addCallback(_sendNotifications)
-
-        deferreds.append(notify_d)
-        yield defer.DeferredList(deferreds)
-
 
     def _cleanupMissingComments(self, convId, missingIds, itemResponses):
         missingKeys = []
@@ -397,7 +466,7 @@ class ItemResource(base.BaseResource):
         if itemId != convId:
             itemOwnerId = item["meta"]["owner"]
             if myId != itemOwnerId:
-                yield self.notify("LC", convId, timeUUID, convType=convType,
+                yield _notify("LC", convId, timeUUID, convType=convType,
                                   convOwnerId=convOwnerId, myId=myId,
                                   itemOwnerId=itemOwnerId, me=args["me"])
             yield renderScriptBlock(request, "item.mako", "item_footer", False,
@@ -405,7 +474,7 @@ class ItemResource(base.BaseResource):
                                     args=[itemId], **args)
         else:
             if myId != convOwnerId:
-                yield self.notify("L", convId, timeUUID, convType=convType,
+                yield _notify("L", convId, timeUUID, convType=convType,
                                   convOwnerId=convOwnerId, myId=myId, me=args["me"])
 
             relation = Relation(myId, [])
@@ -564,76 +633,19 @@ class ItemResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _comment(self, request):
-        (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        snippet, comment = utils.getTextWithSnippet(request, "comment",
-                                            constants.COMMENT_PREVIEW_LENGTH)
-        orgId = args['orgId']
-        if not comment:
-            raise errors.MissingParams([_("Comment")])
-
-        # 0. Fetch conversation and see if I have access to it.
-        (convId, conv) = yield utils.getValidItemId(request, "parent")
-        convType = conv["meta"].get("type", "status")
-
-        # 1. Create and add new item
-        timeUUID = uuid.uuid1().bytes
-        meta = {"owner": myId, "parent": convId, "comment": comment,
-                "timestamp": str(int(time.time())), "uuid": timeUUID}
-        followers = {myId: ''}
-        itemId = utils.getUniqueKey()
-        if snippet:
-            meta['snippet'] = snippet
-
-        yield db.batch_insert(itemId, "items", {'meta': meta,
-                                                'followers': followers})
-
-        # 2. Update response count and add myself to the followers of conv
-        convOwnerId = conv["meta"]["owner"]
-        convType = conv["meta"]["type"]
-        responseCount = int(conv["meta"].get("responseCount", "0"))
-        if responseCount % 5 == 3:
-            responseCount = yield db.get_count(convId, "itemResponses")
-
-        responseCount += 1
-        convUpdates = {"responseCount": str(responseCount)}
-        yield db.batch_insert(convId, "items", {"meta": convUpdates,
-                                                "followers": followers})
-
-        # 3. Add item as response to parent
-        yield db.insert(convId, "itemResponses",
-                        "%s:%s" % (myId, itemId), timeUUID)
-
-        # 4. Update userItems and userItems_*
-        responseType = "Q" if convType == "question" else 'C'
-        commentSnippet = utils.toSnippet(comment, 35)
-        userItemValue = ":".join([responseType, itemId, convId, convType,
-                                  convOwnerId, commentSnippet])
-        yield db.insert(myId, "userItems", userItemValue, timeUUID)
-        if plugins.has_key(convType) and plugins[convType].hasIndex:
-            yield db.insert(myId, "userItems_"+convType, userItemValue, timeUUID)
-
-        # 5. Update my feed.
-        yield feed.pushToFeed(myId, timeUUID, itemId, convId, responseType,
-                              convType, convOwnerId, myId, promote=False)
-
-        # 6. Push to other's feeds
-        convACL = conv["meta"].get("acl", "company")
-        yield feed.pushToOthersFeed(myId, orgId, timeUUID, itemId, convId, convACL,
-                                    responseType, convType, convOwnerId,
-                                    promoteActor=False)
-
-        yield self.notify("C", convId, timeUUID, convType=convType,
-                          convOwnerId=convOwnerId, myId=myId, me=args["me"],
-                          comment=comment)
+        authInfo = request.getSession(IAuthInfo)
+        myId = authInfo.username
+        orgId = authInfo.organization
+        itemId, convId, items = yield _comment(request, myId, orgId)
 
         # Finally, update the UI
         entities = yield db.get(myId, "entities", super_column="basic")
         entities = {myId: utils.supercolumnsToDict([entities])}
-        items = {itemId: {"meta": meta}, convId:conv}
-        args.update({"entities": entities, "items": items})
+        args = {"entities": entities, "items": items, "me": entities[myId]}
 
         numShowing = utils.getRequestArg(request, "nc") or "0"
         numShowing = int(numShowing) + 1
+        responseCount = items[convId]['meta']['responseCount']
         isItemView = (utils.getRequestArg(request, "_pg") == "/item")
         yield renderScriptBlock(request, 'item.mako', 'conv_comments_head',
                         False, '#comments-header-%s' % (convId), 'set',
@@ -643,7 +655,7 @@ class ItemResource(base.BaseResource):
                                 '#comments-%s' % convId, 'append', True,
                                 handlers={"onload": "(function(){$('.comment-input', '#comment-form-%s').val(''); $('[name=\"nc\"]', '#comment-form-%s').val('%s');})();" % (convId, convId, numShowing)},
                                 args=[convId, itemId], **args)
-        fts.solr.updateIndex(itemId, {'meta':meta}, args["orgKey"])
+        #fts.solr.updateIndex(itemId, {'meta':meta}, args["orgKey"])
 
 
     @profile
@@ -1037,13 +1049,24 @@ class APIItemResource(base.APIBaseResource):
         self._success(request, 201, {'id': convId})
 
 
+    @defer.inlineCallbacks
+    def _newComment(self, request):
+        token = self._ensureAccessScope(request, 'post-item')
+        convId = request.postpath[0]
+        itemId, convId, items = yield _comment(request, token.user, token.org, convId= convId)
+        self._success(request, 201, {'id': itemId})
+
+
     def render_POST(self, request):
         apiAccessToken = request.apiAccessToken
         segmentCount = len(request.postpath)
         d = None
+        log.info(request.postpath)
 
         if segmentCount == 0:
             d = self._newItem(request)
+        if segmentCount == 3 and request.postpath[1] == 'comments' and not request.postpath[2]:
+            d = self._newComment(request)
 
         return self._epilogue(request, d)
 
