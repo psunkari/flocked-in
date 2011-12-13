@@ -211,7 +211,7 @@
       </button></li>
     %endif
   %elif showEditProfile:
-    <li><button class="button" onclick="location.href = '/settings'">
+    <li><button class="button ajax" data-href='/settings'>
       <span class="button-text">${_("Edit Profile")}</span>
     </button></li>
   %endif

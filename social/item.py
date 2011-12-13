@@ -370,7 +370,7 @@ class ItemResource(base.BaseResource):
         if target:
             toFetchEntities = set(target.split(','))
             cols = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
-            entities = utils.multiSuperColumnsToDict(cols)
+            entities.update(utils.multiSuperColumnsToDict(cols))
 
         relation = Relation(myId, [])
         yield relation.initGroupsList()

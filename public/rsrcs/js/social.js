@@ -109,7 +109,7 @@ _initAjaxRequests: function _initAjaxRequests() {
 
         if (url = node.attr('data-ref'))
             deferred = $.get('/ajax' + url);
-        else if (url = node.attr('href'))
+        else if ((url = node.attr('href')) || (url = node.attr('data-href')))
             deferred = self.fetchUri(url);
 
         self.setBusy(deferred, node);

@@ -421,7 +421,7 @@ a:hover, a:active, a:focus {
 .messages-icon {
     background-position: 0 -64px;
 }
-.notifications-icon {
+.notifications-icon, .notify-icon {
     background-position: 0 -80px;
 }
 .events-icon {
@@ -441,6 +441,28 @@ a:hover, a:active, a:focus {
 }
 .files-icon {
     background-position: 0 -432px;
+}
+
+/*
+ * Settings icons
+ */
+.home-icon {
+    background-position: 0 -208px;
+}
+.passwd-icon {
+    background-position: 0 -448px;
+}
+.basic-icon {
+    background-position: 0 -464px;
+}
+.work-icon {
+    background-position: 0 -480px;
+}
+.personal-icon {
+    background-position: 0 -496px;
+}
+.apps-icon {
+    background-position: 0 -512px;
 }
 
 
