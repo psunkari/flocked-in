@@ -71,9 +71,9 @@ def updateUserFiles():
             val = '%s:%s:%s:%s' % (attachmentId, name, itemId, ownerId)
             yield db.insert(ownerId, "user_files", val, timeuuid)
             if 'parent' not in item['meta'] and item['meta'].get('acl', ''):
-                entities = yield utils.expandAcl(ownerId, item['meta']['acl'],
+                _entities = yield utils.expandAcl(ownerId, orgId, item['meta']['acl'],
                                                  itemId, ownerId, True)
-                for entityId in entities:
+                for entityId in _entities:
                     yield db.insert(entityId, "entityFeed_files", val, timeuuid)
 
 
