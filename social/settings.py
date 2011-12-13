@@ -493,144 +493,6 @@ class SettingsResource(base.BaseResource):
             yield render(request, "settings.mako", **args)
 
 
-    """
-    def _validateYear(self, year, name):
-        try:
-            curr = time.localtime()
-            if not 1900 < int(year) <= curr.tm_year:
-                return None
-        except ValueError:
-            return None
-        return year
-
-    @defer.inlineCallbacks
-    def _deleteEmployer(self, request):
-        encodedId = utils.getRequestArg(request, 'id')
-        empId = utils.decodeKey(encodedId)
-        yield db.remove(myId, "entities", empId, "employers")
-        request.write('$("#emp-%s").remove();' % empId)
-
-
-    @defer.inlineCallbacks
-    def _updateEmployer(self, request):
-        encodedId = utils.getRequestArg(request, 'id') or None
-        if encodedId:
-            empId = utils.decodeKey(encodedId)
-            yield db.remove(myId, "entities", empId, "employers")
-
-        company = utils.getRequestArg(request, 'company')
-        desc = utils.getRequestArg(request, 'desc') or ''
-        start = utils.getRequestArg(request, 'start') or ''
-        end = utils.getRequestArg(request, 'end') or ''
-
-        start = self._validateYear(start, "Start")
-        end = self._validateYear(end, "End")
-
-        if not (start or company):
-            raise errors.MissingParams(_(['Start Year', 'Company Name']))
-
-        newEmpId = "%s:%s:%s" % (end, start, company)
-        yield db.insert(myId, "entities", desc, newEmpId, "employers")
-
-        yield renderScriptBlock(request, "settings.mako", "employer",
-                                landing, "#emplist", "append",
-                                args=[start, end, company, desc])
-
-
-    @defer.inlineCallbacks
-    def _deleteWork(self, request):
-        encodedId = utils.getRequestArg(request, 'id')
-        workId = utils.decodeKey(encodedId)
-        yield db.remove(myId, "entities", workId, "work")
-        request.write('$("#work-%s").remove();' % workId)
-
-
-    @defer.inlineCallbacks
-    def _editWorkForm(self, request):
-        encodedId = utils.getRequestArg(request, 'id')
-        end, start, title, desc = None, None, None, None
-        if encodedId:
-            workId = utils.decodeKey(encodedId)
-            try:
-                col = yield db.get(myId, "entities", workId, "work")
-                end, start, title = workId.split(':')
-                desc = col.column.value
-            except ttypes.NotFoundException:
-                workId = None
-
-            yield renderScriptBlock(request, "settings.mako", "workForm",
-                                    False, "#"+workId, "replace",
-                                    args=[start, end, company, desc, encodedId])
-        else:
-            yield renderScriptBlock(request, "settings.mako", "workForm",
-                                    False, "#workadd", "replace")
-
-
-    @defer.inlineCallbacks
-    def _updateWork(self, request):
-        myId = request.getSession(IAuthInfo).username
-        encodedId = utils.getRequestArg(request, 'id') or None
-        if encodedId:
-            workId = utils.decodeKey(encodedId)
-            yield db.remove(myId, "entities", workId, "work")
-
-        title = utils.getRequestArg(request, 'title')
-        desc = utils.getRequestArg(request, 'desc') or ''
-        start = utils.getRequestArg(request, 'start') or ''
-        end = utils.getRequestArg(request, 'end') or ''
-
-        start = self._validateYear(start, "Start")
-        end = self._validateYear(end, "End")
-
-        if not (start or title):
-            raise errors.MissingParams(_(['Start Year', 'Title']))
-
-        newWorkId = "%s:%s:%s" % (end, start, title)
-        yield db.insert(myId, "entities", desc, newWorkId, "work")
-
-        if not encodedId:
-            yield renderScriptBlock(request, "settings.mako", "workitem",
-                                    False, "#worklist", "append",
-                                    args=[start, end, title, desc])
-            yield renderScriptBlock(request, "settings.mako", "workAddButton",
-                                    False, "#workform", "replace")
-        else:
-            yield renderScriptBlock(request, "settings.mako", "workitem",
-                                    False, "#work-"+workId, "replace",
-                                    args=[start, end, title, desc])
-
-
-    @defer.inlineCallbacks
-    def _deleteEducation(self, request):
-        encodedId = utils.getRequestArg(request, 'id')
-        eduId = utils.decodeKey(encodedId)
-        yield db.remove(myId, "entities", eduId, "education")
-        request.write('$("#edu-%s").remove();' % eduId)
-
-
-    @defer.inlineCallbacks
-    def _updateEducation(self, request):
-        encodedId = utils.getRequestArg(request, 'id') or None
-        if encodedId:
-            eduId = utils.decodeKey(encodedId)
-            yield db.remove(myId, "entities", eduId, "education")
-
-        college = utils.getRequestArg(request, 'college')
-        course = utils.getRequestArg(request, 'course')
-        year = utils.getRequestArg(request, 'year') or ''
-        year = self._validateYear(year, "Graduation Year")
-
-        if not (year or college or course):
-            raise errors.MissingParams(_(['Year of graduation', 'College', 'Course']))
-
-        newEduId = "%s:%s:%s" % (year, college, course)
-        yield db.insert(myId, "entities", "", newEduId, "education")
-
-        yield renderScriptBlock(request, "settings.mako", "education",
-                                landing, "#edulist", "append",
-                                args=[year, college, course])
-    """
-
     @defer.inlineCallbacks
     def _checkProfileCompleteness(self, request, myId, args):
         landing = not self._ajax
@@ -773,7 +635,7 @@ class SettingsResource(base.BaseResource):
                                     args=[newCompanyId, newCompanyVal, True])
         else:
             yield renderScriptBlock(request, "settings.mako", "companyItem",
-                                    False, "#company-school-wrapper", "prepend",
+                                    False, "#companies-wrapper", "prepend",
                                     args=[newCompanyId, newCompanyVal, True])
 
 
@@ -837,7 +699,7 @@ class SettingsResource(base.BaseResource):
                                     args=[newSchoolId, newSchoolVal, True])
         else:
             yield renderScriptBlock(request, "settings.mako", "schoolItem",
-                                    False, "#company-school-wrapper", "append",
+                                    False, "#schools-wrapper", "append",
                                     args=[newSchoolId, newSchoolVal, True])
 
 

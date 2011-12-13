@@ -282,7 +282,7 @@
   %endif
   %if user.has_key('employers'):
     <%
-      keys = sorted(user['employers'].keys(), reverse=True)
+      keys = sorted(user['companies'].keys(), reverse=True)
     %>
     <div class="content-title"><h4>${_('Past Employment')}</h4></div>
     <dl id="content-workex">
@@ -295,31 +295,36 @@
         <dd>
           <ul>
             <li class="light">${duration}</li>
-            <li>${user['employers'][key]}</li>
+            <li>${user['companies'][key]}</li>
           </ul>
         </dd>
       %endfor
     </dl>
   %endif
-  %if user.has_key('education'):
+  %if user.has_key('schools'):
     <%
-      keys = sorted(user['education'].keys(), reverse=True)
+      keys = sorted(user['schools'].keys(), reverse=True)
     %>
     <div class="content-title"><h4>${_('Education')}</h4></div>
     <dl id="content-education">
       %for key in keys:
         <%
-          end, org = key.split(':')
+          end, school = key.split(':')
           duration = _('%(ey)s') % {'ey': end}
         %>
-        <dt>${org}</dt>
+        <dt>${school}</dt>
         <dd>
           <ul>
-            <li class="light">${duration}</li>
-            <li>${user['education'][key]}</li>
+            <li class="light">${user['schools'][key]} - ${duration}</li>
           </ul>
         </dd>
       %endfor
+    </dl>
+  %endif
+  %if user.has_key('expertise'):
+    <div class="content-title"><h4>${_('Expertise')}</h4></div>
+    <dl id="content-expertise">
+      <dd><ul> <li> ${user['expertise']['expertise']}</li></ul></dd>
     </dl>
   %endif
 </%def>

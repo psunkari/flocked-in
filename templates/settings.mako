@@ -351,7 +351,7 @@
         <a href="javascript:" onclick="$$.settings.editEmp();">Add Company</a>
       </span>
     </div>
-    <div class="tl-wrapper" id="company-school-wrapper">
+    <div class="tl-wrapper" id="companies-wrapper">
       <%
         companies = me.get('companies', {})
         for companyId in companies.keys():
