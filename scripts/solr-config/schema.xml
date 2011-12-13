@@ -238,6 +238,8 @@
        <field name="expertise" type="text" indexed="true" stored="false"/>
        <field name="interests" type="text" indexed="true" stored="false"/>
        <field name="languages" type="text" indexed="true" stored="false"/>
+       <field name="schools" type="text" indexed="true" stored="false" multiValued="true"/>
+       <field name="companies" type="text" indexed="true" stored="false" multiValued="true"/>
        <dynamicField name="*" type="text" indexed="true" stored="false" multiValued="true"/>
     </fields>
     <uniqueKey>id</uniqueKey>

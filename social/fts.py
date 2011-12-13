@@ -84,10 +84,12 @@ class Solr(object):
                 return text
             else:
                 return str(text)
+        mailId = me['basic']['emailId'].split('@')[0]
 
         fields = [self.elementMaker.field(str(myId), {"name":"id"}),
                   self.elementMaker.field(str(orgId), {"name":"orgId"}),
-                  self.elementMaker.field('people', {"name":"itemType"})]
+                  self.elementMaker.field('people', {"name":"itemType"}),
+                  self.elementMaker.field(mailId, {'name':'mail'}) ]
         for field in ['name', 'lastname', 'firstname', 'jobTitle']:
             if field in me['basic']:
                 fields.append(self.elementMaker.field(toUnicodeOrText(me['basic'][field]), {'name': field}))
@@ -97,6 +99,13 @@ class Solr(object):
         for field in ['email', 'phone', 'im', 'hometown', 'currentCity']:
             if field in me.get('personal', {}):
                 fields.append(self.elementMaker.field(toUnicodeOrText(me['personal'][field]), {'name': field}))
+        for school in me.get('schools', {}):
+            value = "%s:%s" %(school, me['schools'][school])
+            fields.append(self.elementMaker.field(toUnicodeOrText(value), {'name': "schools"}))
+        for employer in me.get('companies', {}):
+            value = "%s:%s" %(employer, me['companies'][employer])
+            fields.append(self.elementMaker.field(toUnicodeOrText(value), {'name': "companies"}))
+
 
         skills = me.get('expertise', {}).get('expertise', '')
         interests = ','.join(me.get('interests', {}).keys())
