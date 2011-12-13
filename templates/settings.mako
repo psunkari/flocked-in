@@ -50,7 +50,7 @@
       cls = "sidemenu-selected" if id == detail else ''
       return """<li>
                   <a href="%(link)s" id="%(id)s-sideitem" class="ajax busy-indicator %(cls)s">
-                    <span class="sidemenu-icon %(id)s-icon"></span>
+                    <span class="sidemenu-icon %(id)s-icon icon"></span>
                     <span class="sidemenu-text">%(text)s</span>
                   </a>
                 </li>
@@ -58,7 +58,7 @@
   %>
   <div id="mymenu-container" class="sidemenu-container">
     <ul class="v-links sidemenu">
-       ${navMenuItem("/feed", _("Back to Home"), "back")}
+      <li><button class="button ajax" data-href="/feed"><span class="sidemenu-icon icon home-icon" style="position: relative; top: -1px;"></span>${_('Back to Home')}</button></li>
     </ul>
     <ul class="v-links sidemenu">
       ${navMenuItem("/settings?dt=basic", _("Basic"), "basic")}
