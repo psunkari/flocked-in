@@ -29,7 +29,7 @@ def reindexProfileContent():
         if entity.get('basic', {}).get('type', '') == 'user':
             orgId = entity['basic'].get('org', '')
             if orgId:
-                fts.solr.updatePeopleIndex(entityId, entity, orgId)
+                yield fts.solr.updatePeopleIndex(entityId, entity, orgId)
 
 
 
