@@ -777,13 +777,13 @@ def sendmail(toAddr, subject, textPart, htmlPart=None,
         msg = MIMEMultipart('alternative')
         msg.preamble = 'This is a multi-part message in MIME format.'
 
-        msgText = MIMEText(textPart)
+        msgText = MIMEText(textPart, _charset='utf8')
         msg.attach(msgText)
 
-        msgText = MIMEText(htmlPart, 'html')
+        msgText = MIMEText(htmlPart, 'html', _charset='utf8')
         msg.attach(msgText)
     else:
-        msg = MIMEText(textPart)
+        msg = MIMEText(textPart, _charset='utf8')
 
     msg['Subject'] = sanitizer.unescape(subject, {'&#58;':':'})
     msg['From'] = "%s <%s>" % (fromName, fromAddr)
