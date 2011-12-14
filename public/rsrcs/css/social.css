@@ -446,8 +446,8 @@ a:hover, a:active, a:focus {
 /*
  * Settings icons
  */
-.home-icon {
-    background-position: 0 -208px;
+.back-icon {
+    background-position: 0 -528px;
 }
 .passwd-icon {
     background-position: 0 -448px;
