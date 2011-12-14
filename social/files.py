@@ -60,53 +60,89 @@ def pushfileinfo(myId, orgId, convId, conv):
 @profile
 @defer.inlineCallbacks
 @dump_args
-def userFiles(myId, entityId, myOrgId, start='', myFiles=False):
+def userFiles(myId, entityId, myOrgId, start='', end='', fromFeed=True):
     allItems = {}
-    nextPageStart = ''
-    accessible_files = []
-    accessible_items = []
+    hasPrevPage = False     # Do we have another page before the current one.
+    nextPageStart = ''      # Start item for the next page
+    accessibleFiles = []
+    accessibleItems = []
     toFetchEntities = set()
-    count = constants.FILES_PER_PAGE
-    toFetchCount = count +1
-    start = utils.decodeKey(start)
-    relation = Relation(myId, [])
-    yield defer.DeferredList([relation.initGroupsList(),
-                             relation.initSubscriptionsList(),
-                             relation.initFollowersList()])
 
-    column_family = 'user_files' if myFiles else 'entityFeed_files'
+    count = constants.FILES_PER_PAGE
+    toFetchCount = count + 1
+
+    relation = Relation(myId, [])
+    yield relation.initGroupsList()
+
+    # Fetching files owned by entityId or files that were part of entityId's feed.
+    cf = 'entityFeed_files' if fromFeed else 'user_files'
+
+    # End is actually the start item of next page.
+    # If @end is set, we have to display @count items before @end.  For that
+    # we fetch @count + 2 items before (and including) @end. Of the extra items
+    # fetched, one item helps us determine if there is another page before this
+    # and the other one is the start of next page.
+    if end:
+        start = end
+        reverse = False
+        toFetchCount += 1
+    else:
+        reverse = True
+
     while 1:
-        files = yield db.get_slice(entityId, column_family, count=toFetchCount, start=start, reverse=True)
+        files = yield db.get_slice(entityId, cf, count=toFetchCount, start=start, reverse=reverse)
         files = utils.columnsToDict(files, True)
         toFetchItems = []
         for tuuid in files:
             if len(files[tuuid].split(':')) == 4:
                 fid, name, itemId, attachmentId = files[tuuid].split(':')
                 toFetchItems.append(itemId)
-        toFetchItems = [itemId for itemId in toFetchItems if itemId not in accessible_items]
+
+        toFetchItems = [itemId for itemId in toFetchItems if itemId not in accessibleItems]
         if toFetchItems:
             items = yield db.multiget_slice(toFetchItems, "items", ["meta"])
             items = utils.multiSuperColumnsToDict(items)
             for itemId in items:
                 acl = items[itemId]['meta']['acl']
                 if utils.checkAcl(myId, acl, entityId, relation, myOrgId):
-                    accessible_items.append(itemId)
+                    accessibleItems.append(itemId)
             allItems.update(items)
+
         for tuuid in files:
             if len(files[tuuid].split(':')) == 4:
                 fid, name, itemId, ownerId = files[tuuid].split(':')
-                if itemId in accessible_items:
-                    accessible_files.append((utils.encodeKey(tuuid), (fid, urlsafe_b64decode(name), itemId, ownerId, allItems[itemId]['meta']['type'])))
+                if itemId in accessibleItems:
+                    accessibleFiles.append((tuuid,
+                                            (fid, urlsafe_b64decode(name),
+                                             itemId, ownerId, allItems[itemId])))
                     toFetchEntities.add(ownerId)
 
-        if len(files) < toFetchCount:
-            if len(accessible_files) > count:
-                nextPageStart = accessible_files[count+1][0]
-                accessible_files = accessible_files[:count]
+        if len(files) < toFetchCount or len(accessibleFiles) > count:
             break
         else:
             start = files.keys()[-1]
-    defer.returnValue([accessible_files, nextPageStart, toFetchEntities])
+
+    if end:
+        # We have enough items to have another page before this.
+        if len(accessibleFiles) > count+1:
+            hasPrevPage = True
+            accessibleFiles = accessibleFiles[:count+1]
+
+        # Revert the list to get most recent items first.
+        accessibleFiles.reverse()
+
+        # The last item is actually the first item of next page.
+        nextPageStart = accessibleFiles[-1][0]
+        accessibleFiles = accessibleFiles[:-1]
+
+    elif start:
+        hasPrevPage = True  # XXX: may not always be true, but the edge case is OK
+
+    if len(accessibleFiles) > count:
+        nextPageStart = accessibleFiles[count][0]
+        accessibleFiles = accessibleFiles[:count]
+
+    defer.returnValue((accessibleFiles, hasPrevPage, nextPageStart, toFetchEntities))
 
 
 
@@ -374,70 +410,67 @@ class FilesResource(base.BaseResource):
     def _renderFileList(self, request):
         appchange, script, args, myId = yield self._getBasicArgs(request)
         landing = not self._ajax
-        viewType = utils.getRequestArg(request, "type")
-        start = utils.getRequestArg(request, "start") or ''
-        fromFetchMore = ((not landing) and (not appchange) and start)
-        viewType = viewType if viewType in ['myFiles', 'companyFiles', 'myFeedFiles'] else 'myFiles'
-        args['viewType'] = viewType
-        if viewType in ['myFiles', 'myFeedFiles']:
-            entityId = myId
-        else:
-            entityId = args['orgId']
-        myFiles = viewType == 'myFiles'
-        log.info("start: %s, myFiles: %s, viewType: %s" %(start, myFiles, viewType))
+        myOrgId = args["orgKey"]
 
-        if landing and script:
+        start = utils.getRequestArg(request, "start") or ''
+        start = utils.decodeKey(start)
+        end = utils.getRequestArg(request, "end") or ''
+        end = utils.decodeKey(end)
+
+        viewType = utils.getRequestArg(request, "type")
+        viewType = viewType if viewType in ['myFiles', 'companyFiles', 'myFeedFiles'] else 'myFiles'
+
+        args['menuId'] = 'files'
+        if script and landing:
             yield render(request, "files.mako", **args)
+
         if script and appchange:
             yield renderScriptBlock(request, "files.mako", 'layout',
                                     landing, "#mainbar", "set", **args)
+
+
+        args['viewType'] = viewType
+        entityId = myId if viewType in ['myFiles', 'myFeedFiles'] else myOrgId
+        fromFeed = viewType != 'myFiles'
 
         if script:
             yield renderScriptBlock(request, "files.mako", "viewOptions",
                                     landing, "#file-view", "set", args=[viewType])
 
-        files = yield userFiles(myId, entityId, args['orgId'], start, myFiles)
-        toFetchEntities = files[2]
+        files = yield userFiles(myId, entityId, args['orgId'], start, end, fromFeed)
+
+        toFetchEntities = files[3]
         entities = yield db.multiget_slice(toFetchEntities, "entities", ['basic'])
         entities = utils.multiSuperColumnsToDict(entities)
         args['entities'] = entities
         args['userfiles'] = files
-        args['fromFetchMore'] = fromFetchMore
 
         if script:
-            if not fromFetchMore:
-                yield renderScriptBlock(request, "files.mako", "listFiles",
-                                        landing, "#files-content", "set", **args)
-            else:
-                yield renderScriptBlock(request, "files.mako", "listFiles",
-                                        landing, "#next-load-wrapper", "replace", **args)
+            yield renderScriptBlock(request, "files.mako", "listFiles",
+                                    landing, "#files-content", "set", **args)
+            yield renderScriptBlock(request, "files.mako", "pagingBar",
+                                    landing, "#files-paging", "set", **args)
 
-
-
-
-    @defer.inlineCallbacks
-    def _deleteFile(self, request):
-        pass
 
     def render_GET(self, request):
         d = None
         segmentCount = len(request.postpath)
         if segmentCount == 0:
             d = self._renderFile(request)
-        elif  segmentCount == 1 and request.postpath[0]=="update":
+        elif  segmentCount == 1 and request.postpath[0] == "update":
             d = self._uploadDone(request)
         elif segmentCount ==1 and request.postpath[0] == 'list':
             d = self._renderFileList(request)
 
         return self._epilogue(request, d)
 
+
     def render_POST(self, request):
         d = None
         segmentCount = len(request.postpath)
-        if  segmentCount == 1 and request.postpath[0]=="form":
+        if  segmentCount == 1 and request.postpath[0] == "form":
             d = self._S3FormData(request)
-        elif  segmentCount == 1 and request.postpath[0]=="remove":
+        elif  segmentCount == 1 and request.postpath[0] == "remove":
             d = self._removeTempFile(request)
-        #elif  segmentCount == 1 and request.postpath[0]=="delete":
-        #    d = self._deleteFile(request)
+
         return self._epilogue(request, d)

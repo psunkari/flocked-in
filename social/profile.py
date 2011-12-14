@@ -260,9 +260,11 @@ class ProfileResource(base.BaseResource):
             userItems = yield self._getUserItems(request, userId, start=start)
             args.update(userItems)
         elif detail == 'files':
-            userFiles = yield files.userFiles(myId, userId, args['orgId'], start, myFiles=True)
+            end = utils.getRequestArg(request, "end") or ''
+            end = utils.decodeKey(end)
+            start = utils.decodeKey(start)
+            userFiles = yield files.userFiles(myId, userId, args['orgId'], start, end, fromFeed=False)
             args['userfiles'] = userFiles
-            args['fromFetchMore'] = fromFetchMore
             args['fromProfile'] = True
 
         if script:
@@ -275,15 +277,6 @@ class ProfileResource(base.BaseResource):
                 yield renderScriptBlock(request, "profile.mako", "content", landing,
                                             "#next-load-wrapper", "replace", True,
                                             handlers=handlers, **args)
-            elif fromFetchMore and detail == 'files':
-                yield renderScriptBlock(request, "files.mako", "listFiles", landing,
-                                        "#next-load-wrapper", "replace", True,
-                                        handlers=handlers, **args)
-            elif detail == 'files':
-                yield renderScriptBlock(request, "files.mako", "listFiles", landing,
-                                        "#profile-content", "set", True,
-                                        handlers=handlers, **args)
-
             else:
                 yield renderScriptBlock(request, "profile.mako", "content", landing,
                                         "#profile-content", "set", True,

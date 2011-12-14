@@ -27,7 +27,7 @@ from twisted.mail       import smtp
 from social             import db, _, __, config, errors, cdnHost, rootUrl
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
-from social.constants   import INFINITY, FILES_PER_PAGE
+from social.constants   import INFINITY
 from social.logging     import profile, dump_args, log
 
 

@@ -34,6 +34,11 @@
               ${listFiles()}
             %endif
           </div>
+          <div id="files-paging" class="pagingbar">
+            %if not script:
+              ${pagingBar()}
+            %endif
+          </div>
         </div>
       </div>
       <div class="clear"></div>
@@ -43,7 +48,7 @@
 
 <%def name="viewOptions(selected)">
  <%
-    tabs = [('myFiles', _("My Files")),(_('myFeedFiles'), 'Files in Feed'), ( 'companyFiles', _('Company Files'))]
+    tabs = [('myFiles', _("My Files")),(_('myFeedFiles'), 'My Feed'), ( 'companyFiles', _('All Company'))]
  %>
   <ul class="h-links view-options">
     %for item, display in tabs:
@@ -56,61 +61,65 @@
   </ul>
 </%def>
 
+
 <%def name="listFiles()">
-
-
   <%
     def getTimestamp(tuuid):
-      return (uuid.UUID(bytes=tuuid).time - 0x01b21dd213814000)/1e7
-    _files, nextPageStart, toFetchEntities= userfiles if userfiles else ('', '', '')
-    user = {'basic': {'name': 'name'}}
-    tr_class = 'even'
+      timestamp = (uuid.UUID(bytes=tuuid).time - 0x01b21dd213814000)/1e7
+      return utils.simpleTimestamp(timestamp, me['basic']['timezone'])
+
+    files, hasPrevPage, nextPageStart, toFetchEntities = userfiles if userfiles else ('', '', '', '')
   %>
-  %if not fromFetchMore:
-    <table class="files">
-      <tr>
-        <th>${_("File")}</th>
-        <th>${_("Conv-type")}</th>
-        <th>${_("Uploaded By")}</th>
-        <th>${_('Uploaded On ')}</th>
-      </tr>
-  %endif
-  %for tuuid, (fid, name, itemId, ownerId, convType) in _files:
-    <tr class="row-${tr_class}">
-      <td> <a href='/files?id=${itemId}&fid=${fid}&ver=${tuuid}'>${name}</a> </td>
-      <td > <a href='/item?id=${itemId}'>${_(convType)}</a></td>
-      %if ownerId != fid:
-        <td > ${utils.userName(ownerId, entities[ownerId])}</td>
-      %else:
-        <td > ${utils.userName(ownerId, user)}</td>
-      %endif
-      <td > ${utils.simpleTimestamp(getTimestamp(utils.decodeKey(tuuid)))} </td>
+  <table cellspacing="0" cellpadding="0" class="files-table" style="width:100%;">
+    <colgroup>
+      <col style="width:auto;"></col>
+      <col style="width:65%;"></col>
+      <col style="width:20px;"></col>
+    </colgroup>
+    <tr>
+      <th class="file-info toolbar">${_("File")}</th>
+      <th class="file-context toolbar">${_("Context")}</th>
+      <th class="file-actions toolbar">&hellip;</th>
     </tr>
-    <% tr_class = "odd" if tr_class == 'even' else 'even' %>
-  %endfor
-
-  %if nextPageStart:
-      <tr></tr>
-      <tr id="next-load-wrapper" class="busy-indicator">
-        <td class="button">
-        %if fromProfile:
-          <a id="next-page-load" class="ajax" data-ref="/profile?id=${userKey}&start=${nextPageStart}&dt=${detail}">${_("Fetch older files")}</a>
-        %else:
-          <a id="next-page-load" class="ajax" data-ref="/files/list?start=${nextPageStart}&type=${viewType}">${_("Fetch older files")}</a>
-        %endif
+    <tbody>
+    %for tuuid, (fId, name, itemId, ownerId, item) in files:
+      <tr>
+        <td class="file-info">
+          <div class="file-wrapper">
+            <div class="file-icon"></div>
+            <div class="file-details">
+              <div class="file-name"><a href='/files?id=${itemId}&fid=${fId}&ver=${utils.encodeKey(tuuid)}'>${name}</a></div>
+              <div class="file-meta">${getTimestamp(tuuid)}</div>
+            </div>
+          </div>
         </td>
-        <td></td>
-        <td></td>
-        <td></td>
+        <td class="file-context">
+          <div class="file-name">${utils.userName(ownerId, entities[ownerId])}: ${utils.toSnippet(item['meta']['comment'], 200)}</div>
+          <div class="file-meta"><a href='/item?id=${itemId}'>View full ${_(item['meta']['type'])}</a></div>
+        </td>
+        <td class="file-actions"></td>
       </tr>
-  %else:
-      <tr id="next-load-wrapper">
-        <td class="button disabled">${_("No more files to show")}</td>
-      </tr>
-  %endif
-
-  %if not fromFetchMore:
-    </table>
-  %endif
-
+    %endfor
+    </tbody>
+  </table>
 </%def>
+
+<%def name="pagingBar()">
+  <%
+    files, hasPrevPage, nextPageStart, toFetchEntities = userfiles if userfiles else ('', '', '', '')
+    thisPageStart = files[0][0] if files else ''
+  %>
+  <ul class="h-links">
+    %if hasPrevPage:
+      <li class="button"><a class="ajax" href="/files/list?end=${utils.encodeKey(thisPageStart)}&type=${viewType}">${_("&#9666; Previous")}</a></li>
+    %else:
+      <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
+    %endif
+    %if nextPageStart:
+      <li class="button"><a class="ajax" href="/files/list?start=${utils.encodeKey(nextPageStart)}&type=${viewType}">${_("Next &#9656;")}</a></li>
+    %else:
+      <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
+    %endif
+  </ul>
+</%def>
+

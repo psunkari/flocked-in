@@ -8,6 +8,7 @@
 
 <%inherit file="base.mako"/>
 <%namespace name="item" file="item.mako"/>
+<%namespace name="files" file="files.mako"/>
 
 ##
 ## Profile is displayed in a 3-column layout.
@@ -381,11 +382,40 @@
   %endif
 </%def>
 
+<%def name="content_files()">
+  <div id="files-wrapper" class="paged-container" style="padding:0;">
+    ${files.listFiles()}
+  </div>
+  <div id="files-paging" class="pagingbar">
+    ${_filesPagingBar()}
+  </div>
+</%def>
+
+<%def name="_filesPagingBar()">
+  <%
+    files, hasPrevPage, nextPageStart, toFetchEntities = userfiles if userfiles else ('', '', '', '')
+    thisPageStart = files[0][0] if files else ''
+  %>
+  <ul class="h-links">
+    %if hasPrevPage:
+      <li class="button"><a class="ajax" href="/profile?dt=files&end=${utils.encodeKey(thisPageStart)}">${_("&#9666; Previous")}</a></li>
+    %else:
+      <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
+    %endif
+    %if nextPageStart:
+      <li class="button"><a class="ajax" href="/profile?dt=files&start=${utils.encodeKey(nextPageStart)}">${_("Next &#9656;")}</a></li>
+    %else:
+      <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
+    %endif
+  </ul>
+</%def>
+
 <%def name="content()">
   %if detail == 'info':
     ${content_info()}
-  % elif detail == 'activity':
+  %elif detail == 'activity':
     ${content_activity()}
+  %elif detail == 'files':
+    ${content_files()}
   %endif
-
 </%def>
