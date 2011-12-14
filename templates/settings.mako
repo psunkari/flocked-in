@@ -58,7 +58,7 @@
   %>
   <div id="mymenu-container" class="sidemenu-container">
     <ul class="v-links sidemenu">
-      <li><button class="button ajax" data-href="/feed"><span class="sidemenu-icon icon home-icon" style="position: relative; top: -1px;"></span>${_('Back to Home')}</button></li>
+      <li><button class="button ajax" data-href="/profile?id=${myId}"><span class="sidemenu-icon icon back-icon" style="position: relative; top: -1px;"></span>${_('Back to Profile')}</button></li>
     </ul>
     <ul class="v-links sidemenu">
       ${navMenuItem("/settings?dt=basic", _("Basic"), "basic")}
