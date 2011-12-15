@@ -315,7 +315,6 @@ class SettingsResource(base.BaseResource):
         authInfo = request.getSession(IAuthInfo)
         myId = authInfo.username
         orgId = authInfo.organization
-        landing = not self._ajax
 
         userInfo = {"basic":{}}
         to_remove = []
@@ -450,10 +449,6 @@ class SettingsResource(base.BaseResource):
                                         handlers = handlers, **args)
 
             elif detail == "work":
-                handlers["onload"] += """$('.expertise-input').tagedit({
-                                            additionalListClass: 'styledform',
-                                            breakKeyCodes: [13,44,32]
-                                         });"""
                 yield renderScriptBlock(request, "settings.mako", "editWork",
                                         landing, "#settings-content", "set", True,
                                         handlers=handlers, **args)
@@ -575,13 +570,13 @@ class SettingsResource(base.BaseResource):
                 companyVal = yield db.get(myId, 'entities', companyId, "companies")
                 companyVal = companyVal.column.value
                 yield renderScriptBlock(request, "settings.mako", "companyForm",
-                                        False, "#addemp-dlg", "set",
+                                        False, "#"+encodedCompanyId, "replace",
                                         args=[companyId, companyVal])
                 return
             except: pass
 
         yield renderScriptBlock(request, "settings.mako", "companyForm",
-                                False, "#addemp-dlg", "set")
+                                False, "#addemp-wrap", "set")
 
 
     @defer.inlineCallbacks
@@ -596,24 +591,28 @@ class SettingsResource(base.BaseResource):
             request.write('$("#%s").remove();' % encodedCompanyId)
             return
 
-        curYear = datetime.date.today().year
+        today = datetime.date.today()
         try:
             startYear = int(utils.getRequestArg(request, 'startyear'))
-            if not 1900 < startYear <= curYear:
-                raise ValueError
-        except (ValueError,TypeError):
-            raise errors.InvalidRequest('Invalid start year')
+            startMonth = int(utils.getRequestArg(request, 'startmonth'))
+            startDay = datetime.date(startYear, startMonth, 1)
+        except (ValueError, TypeError):
+            raise errors.InvalidRequest('Please give a valid start month and year')
 
         try:
             endYear = utils.getRequestArg(request, 'endyear')
-            if endYear == "present":
+            if not endYear:
                 endYear = 9999
+                endMonth = 12
             else:
                 endYear = int(endYear)
-                if not startYear <= endYear <= curYear:
-                    raise ValueError
-        except (ValueError,TypeError):
-            raise errors.InvalidRequest('Invalid end year')
+                endMonth = int(utils.getRequestArg(request, 'endmonth'))
+            endDay = datetime.date(endYear, endMonth, 1)
+        except (ValueError, TypeError):
+            raise errors.InvalidRequest('Please give a valid end month and year')
+
+        if startDay > today or startDay > endDay or (endDay > today and endYear != 9999):
+            raise errors.InvalidRequest('The start month/year and end month/year are invalid!')
 
         name = utils.getRequestArg(request, 'company')
         title = utils.getRequestArg(request, 'title')
@@ -624,18 +623,20 @@ class SettingsResource(base.BaseResource):
         if companyId:
             db.remove(myId, "entities", companyId, "companies")
 
-        newCompanyId = "%s:%s:%s" % (endYear, startYear, name)
+        newCompanyId = "%s%s:%s%s:%s" % (endYear, endMonth, startYear, startMonth, name)
         newCompanyVal = title
         db.insert(myId, "entities", newCompanyVal, newCompanyId, "companies")
 
-        request.write('$$.dialog.close("addemp-dlg");')
         if companyId:
             yield renderScriptBlock(request, "settings.mako", "companyItem",
                                     False, "#"+encodedCompanyId, "replace",
                                     args=[newCompanyId, newCompanyVal, True])
         else:
+            onload = """$('#company-empty-msg').remove();"""+\
+                     """$('#addemp-wrap').replaceWith('<div id="addemp-wrap"><button class="button ajax" id="addedu-button" data-ref="/settings/company">Add Company</button></div>');"""
             yield renderScriptBlock(request, "settings.mako", "companyItem",
-                                    False, "#companies-wrapper", "prepend",
+                                    False, "#companies-wrapper", "append", True,
+                                    handlers={'onload': onload},
                                     args=[newCompanyId, newCompanyVal, True])
 
 
@@ -650,13 +651,13 @@ class SettingsResource(base.BaseResource):
                 schoolVal = yield db.get(myId, 'entities', schoolId, "schools")
                 schoolVal = schoolVal.column.value
                 yield renderScriptBlock(request, "settings.mako", "schoolForm",
-                                        False, "#addedu-dlg", "set",
+                                        False, "#"+encodedSchoolId, "replace",
                                         args=[schoolId, schoolVal])
                 return
             except: pass
 
         yield renderScriptBlock(request, "settings.mako", "schoolForm",
-                                False, "#addedu-dlg", "set")
+                                False, "#addedu-wrap", "set")
 
 
     @defer.inlineCallbacks
@@ -692,32 +693,44 @@ class SettingsResource(base.BaseResource):
         newSchoolVal = degree
         db.insert(myId, "entities", newSchoolVal, newSchoolId, "schools")
 
-        request.write('$$.dialog.close("addedu-dlg");')
         if schoolId:
             yield renderScriptBlock(request, "settings.mako", "schoolItem",
                                     False, "#"+encodedSchoolId, "replace",
                                     args=[newSchoolId, newSchoolVal, True])
         else:
+            onload = """$('#school-empty-msg').remove();"""+\
+                     """$('#addedu-wrap').replaceWith('<div id="addedu-wrap"><button class="button ajax" id="addedu-button" data-ref="/settings/school">Add School</button></div>');"""
             yield renderScriptBlock(request, "settings.mako", "schoolItem",
-                                    False, "#schools-wrapper", "append",
+                                    False, "#schools-wrapper", "append", True,
+                                    handlers={'onload': onload},
                                     args=[newSchoolId, newSchoolVal, True])
 
 
     @defer.inlineCallbacks
-    def _updateExpertise(self, request):
+    def _updateExpertise(self, request, remove=False):
         myId = request.getSession(IAuthInfo).username
         orgId = request.getSession(IAuthInfo).organization
-        expertise = utils.getRequestArg(request, 'expertise[]', False, True)
-        valid = []
-        for x in expertise:
-            decoded = x.decode('utf-8', 'replace')
+        expertise = utils.getRequestArg(request, 'expertise', False)
+
+        if not remove:
+            decoded = expertise.decode('utf-8', 'replace')
             if len(decoded) > 50 or not re.match('^[\w-]*$', decoded):
                 raise errors.InvalidRequest('Expertise can only be upto 50 characters long and can include numerals, alphabet and hyphens (-) only.')
 
-        yield db.insert(myId, "entities", ','.join(expertise), "expertise", "expertise")
-        request.write('$$.alerts.info("%s");' % _('Expertise information updated successfully!'))
+            yield db.insert(myId, "entities", '', expertise, "expertise")
+
+        else:
+            yield db.remove(myId, "entities", utils.decodeKey(expertise), "expertise")
+
         me = yield db.get_slice(myId, "entities")
-        me = utils.supercolumnsToDict(me)
+        me = utils.supercolumnsToDict(me, True)
+        expertise = me.get('expertise')
+
+        onload = "$('#expertise-textbox').val('');"
+        yield renderScriptBlock(request, "settings.mako", "_expertise",
+                                False, "#expertise-container", "set", True,
+                                handlers={"onload": onload}, args=[expertise])
+
         yield fts.solr.updatePeopleIndex(myId, me, orgId)
 
 
@@ -745,6 +758,8 @@ class SettingsResource(base.BaseResource):
                 d = self._updateNotifications(request)
             elif action == "expertise":
                 d = self._updateExpertise(request)
+            elif action == "unexpertise":
+                d = self._updateExpertise(request, True)
 
         return self._epilogue(request, d)
 

@@ -365,6 +365,7 @@ _initChunkLoader: function _initChunkLoader(resources) {
                         break;
                     case "set":
                     default:
+                        console.log(rsrc.content);
                         $(rsrc.node).html(rsrc.content);
                 }
             }

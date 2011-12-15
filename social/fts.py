@@ -69,12 +69,15 @@ class Solr(object):
         self.elementMaker = ElementMaker()
 
     def _request(self, method, url, headers=None, producer=None):
-        allHeaders = self._headers
-        if headers:
-            allHeaders.update(headers)
-        agent = client.Agent(reactor)
-        d = agent.request(method, url, Headers(allHeaders), producer)
-        return d
+        if self.url:
+            allHeaders = self._headers
+            if headers:
+                allHeaders.update(headers)
+            agent = client.Agent(reactor)
+            return agent.request(method, url, Headers(allHeaders), producer)
+        else:
+            return defer.succeed(None)
+
 
     def updatePeopleIndex(self, myId, me, orgId):
         def toUnicodeOrText(text):
@@ -106,8 +109,7 @@ class Solr(object):
             value = "%s:%s" %(employer, me['companies'][employer])
             fields.append(self.elementMaker.field(toUnicodeOrText(value), {'name': "companies"}))
 
-
-        skills = me.get('expertise', {}).get('expertise', '')
+        skills = ','.join(me.get('expertise', {}).keys())
         interests = ','.join(me.get('interests', {}).keys())
         languages = ','.join(me.get('languages', {}).keys())
         if skills:
@@ -133,7 +135,6 @@ class Solr(object):
             indices = getattr(plugins[itemType], "indexFields", defaultIndex)
         elif itemType == "message":
             indices = [('meta', 'subject'), ('meta', 'body'), ('meta', 'parent')]
-
 
         for key in indices:
             sfk, columnName = key

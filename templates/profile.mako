@@ -325,7 +325,11 @@
   %if user.has_key('expertise'):
     <div class="content-title"><h4>${_('Expertise')}</h4></div>
     <dl id="content-expertise">
-      <dd><ul> <li> ${user['expertise']['expertise']}</li></ul></dd>
+      <dd><ul>
+        %for item in user['expertise'].keys():
+          <li>${item}</li>
+        %endfor
+      </ul></dd>
     </dl>
   %endif
 </%def>

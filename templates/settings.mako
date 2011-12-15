@@ -241,22 +241,40 @@
     title = companyVal
     companyId = utils.encodeKey(companyId)
 
-    if end == '9999':
-      end = 'Present'
-
-    if title and start:
-      title = "%s, %s&ndash;%s" % (title, start, end)
+    if len(start) > 4:
+      startYear = start[:4]
+      startMonth = utils.monthName(int(start[4:]))
+      endYear = end[:4]
+      endMonth = utils.monthName(int(end[4:]))
     else:
-      title = "%s&ndash;%s" % (start, end)
+      startYear = start
+      startMonth = None
+      endYear = end
+      endMonth = None
+
+    if endYear != '9999':
+      if startMonth and endMonth:
+        duration = "%(startMonth)s, %(startYear)s &ndash; %(endMonth)s, %(endYear)s"
+      else:
+        duration = "%(startYear)s &ndash; %(endYear)s"
+    else:
+      if startMonth and endMonth:
+        duration = "%(startMonth)s, %(startYear)s &ndash; present"
+      else:
+        duration = "%(startYear)s &ndash; present"
+
+    duration = duration % locals()
   %>
-  <div class="tl-item" id="${companyId}">
-    <div class="tl-avatar org-default"/>
-    <div class="tl-details">
-      <div class="tl-name"><a href="javascript:" onclick="$$.settings.editEmp('${companyId}');">${name}</a></div>
-      <div class="tl-title">${title}</div>
-      <div class="tl-toolbox"><button
-           class="button-link ajaxpost" title="Delete ${name}"
-           data-ref="/settings/company?id=${companyId}&action=d">Delete</button></div>
+  <div class="company-item" id="${companyId}">
+    <div class="company-avatar"/>
+    <div class="company-details">
+      <div class="company-name"><button data-ref="/settings/company?id=${companyId}" class="button-plain ajax" style="font-weight:bold;">${name}</button></div>
+      %if title:
+        <div class="company-title">${title}</div>
+      %endif
+      <div class="company-title">${duration}</div>
+      <button class="company-remove ajaxpost" title="Delete ${name}"
+              data-ref="/settings/company?id=${companyId}&action=d">&nbsp;</button>
     </div>
   </div>
 </%def>
@@ -268,18 +286,33 @@
     degree = schoolVal
     schoolId = utils.encodeKey(schoolId)
   %>
-  <div class="tl-item" id="${schoolId}">
-    <div class="tl-avatar school-default"/>
-    <div class="tl-details">
-      <div class="tl-name"><a href="javascript:" onclick="$$.settings.editEdu('${schoolId}');">${name}</a></div>
-      <div class="tl-title">${degree}, ${year}</div>
-      <div class="tl-toolbox"><button
-           class="button-link ajaxpost" title="Delete ${name}"
-           data-ref="/settings/school?id=${schoolId}&action=d">Delete</button></div>
+  <div class="company-item" id="${schoolId}">
+    <div class="company-avatar school-default"/>
+    <div class="company-details">
+      <div class="company-name"><button data-ref="/settings/school?id=${schoolId}" class="button-plain ajax" style="font-weight:bold;">${name}</button></div>
+      <div class="company-title">${degree}, ${year}</div>
+      <button class="company-remove ajaxpost" title="Delete ${name}"
+           data-ref="/settings/school?id=${schoolId}&action=d">&nbsp;</button>
     </div>
   </div>
 </%def>
 
+
+<%def name="_expertise(expertise)">
+  <%
+    if not expertise:
+        return
+  %>
+  %for item in expertise.keys():
+    <span class="tag" id="expertise-${utils.encodeKey(item)}">
+      ${item}
+      <form class="ajax delete-tags" method="post" action="/settings/unexpertise">
+        <input type="hidden" name="expertise" value="${utils.encodeKey(item)}"/>
+        <button type="submit" class="button-link">x</button>
+      </form>
+    </span>
+  %endfor
+</%def>
 
 <%def name="editWork()">
   <%
@@ -318,120 +351,117 @@
       %endif
     </form>
   </div>
-  <div id="expertise">
-    <div class="center-title">Expertise</div>
-    <form class="ajax" id="expertise-form" action="/settings/expertise" method="post" enctype="multipart/form-data">
-      <ul class="styledform">
-        <li class="form-row">
-          <label class="styled-label">&nbsp;</label>
-          <div class="styledform-helpwrap">
-            <span>
-              Expertise is a list of tags that best describe your professional
-              abilities.  Each tag can be upto fifty alphabet or numbers and can
-              include a hyphen (-) to separate words.<br/><br/>
-            </span>
-            <% expertise = me.get('expertise', {}).get('expertise', '').split(',') %>
-            %for item in expertise:
-              <input type="text" name="expertise[]" class="expertise-input" value="${item}"/>
-            %endfor
-            <span>
-              Example: cloud-computing, java, python, robotics
-            </span>
+  <div id="pro-summary" style="margin-bottom: 25px;">
+    <div class="center-title">Professional Summary</div>
+    <ul class="styledform">
+      <li class="form-row">
+        <label class="styled-label">Expertise</label>
+        <div class="styledform-helpwrap">
+          <div id="expertise-container" class="editing-tags" style="line-height: 1.3em;">
+            <% _expertise(me.get('expertise', {})) %>
           </div>
-        </li>
-      </ul>
-      <div class="styledform-buttons">
-        <input type="submit" class="button default" value="${_('Save')}"/>
-      </div>
-    </form>
-  </div>
-  <div id="prevorgs">
-    <div class="center-title">Past Employers
-      <span class="title-toolbox">
-        <a href="javascript:" onclick="$$.settings.editEmp();">Add Company</a>
-      </span>
-    </div>
-    <div class="tl-wrapper" id="companies-wrapper">
-      <%
-        companies = me.get('companies', {})
-        for companyId in companies.keys():
-          companyItem(companyId, companies[companyId])
-      %>
-      %if not companies:
-        <div class="tl-empty-msg">
-          Nothing found here!<br/>Please click the links above to add information.
+          <form method="post" action="/settings/expertise" class="ajax" autocomplete="off">
+            <div class="styledform-inputwrap" id="expertise-input">
+              <input type="text" name="expertise" id="expertise-textbox" value="" required title="Add expertise" />
+              <input type="submit" id="expertise-add" class="button" value="Add" style="margin:0px;"/>
+            </div>
+          </form>
         </div>
-      %endif
-    </div>
-    <div class="clear" style="margin-bottom: 25px;"/>
-  </div>
-  <div id="education">
-    <div class="center-title">Education
-      <span class="title-toolbox">
-        <a href="javascript:" onclick="$$.settings.editEdu();">Add School</a>
-      </span>
-    </div>
-    <div class="tl-wrapper" id="schools-wrapper">
-      <%
-        schools = me.get('schools', {})
-        for schoolId in schools.keys():
-          schoolItem(schoolId, schools[schoolId])
-      %>
-      %if not schools:
-        <div class="tl-empty-msg">
-          Nothing found here!<br/>Please click the links above to add information.
+      </li>
+      <li class="form-row" style="margin-top: 35px;">
+        <label class="styled-label">Past Employers</label>
+        <div class="styledform-helpwrap">
+          <div id="companies-wrapper">
+            <%
+              companies = me.get('companies', {})
+              for companyId in companies.keys():
+                companyItem(companyId, companies[companyId])
+            %>
+            %if not companies:
+              <div id="company-empty-msg" class="company-empty-msg">
+                Nothing found here!<br/>Please click the button below to add information.
+              </div>
+            %endif
+          </div>
+          <div id="addemp-wrap">
+            <button class="button ajax" id="addemp-button" data-ref="/settings/company">Add Company</button>
+          </div>
         </div>
-      %endif
-    </div>
-    <div class="clear" style="margin-bottom: 25px;"/>
+      </li>
+      <li class="form-row" style="margin-top: 35px;">
+        <label class="styled-label">Education</label>
+        <div class="styledform-helpwrap">
+          <div class="tl-wrapper" id="schools-wrapper">
+            <%
+              schools = me.get('schools', {})
+              for schoolId in schools.keys():
+                schoolItem(schoolId, schools[schoolId])
+            %>
+            %if not schools:
+              <div id="school-empty-msg" class="company-empty-msg">
+                Nothing found here!<br/>Please click the button below to add information.
+              </div>
+            %endif
+          </div>
+          <div id="addedu-wrap">
+            <button class="button ajax" id="addedu-button" data-ref="/settings/school">Add School</button>
+          </div>
+        </div>
+      </li>
+    </ul>
   </div>
 </%def>
 
 
-<%def name="selectMonth(name, label, dom=None)">
+<%def name="selectMonth(name, label=None, selected=None)">
   <%
     months = [_("January"), _("February"), _("March"), _("April"),
                 _("May"), _("June"), _("July"), _("August"),
                 _("September"), _("October"), _("November"), _("December")]
   %>
   <select name="${name}" class="inline-select">
-    <option value="">${label}</option>
+    %if label:
+      <option value="">${label}</option>
+    %endif
     %for m in range(1, 13):
       <% value = "%02d" %m %>
-      %if dom and int(dom) == m:
+      %if selected and int(selected) == m:
         <option selected value="${value}">${months[m-1]}</option>
       %else:
         <option value="${value}">${months[m-1]}</option>
       %endif
     %endfor
-    </select>
-</%def>
-
-<%def name="selectDay(name, label, dod=None)">
-  <select name="${name}" class="inline-select">
-    <option value="">${label}</option>
-      %for d in range(1, 32):
-        <% value = "%d" %d %>
-        %if dod and int(dod) == d:
-          <option selected value="${value}">${d}</option>
-        %else:
-          <option value="${value}">${d}</option>
-        %endif
-      %endfor
   </select>
 </%def>
 
-<%def name="selectYear(name, label, doy=None, id=None, map=None)">
-  <select name="${name}" class="inline-select" id="${id}">
-    <option value="">${label}</option>
-    %if vals:
-      %for x in vals.keys():
-        <option value="${x}">${vals[x]}</option>
-      %endfor
+<%def name="selectDay(name, label=None, selected=None)">
+  <select name="${name}" class="inline-select">
+    %if label:
+      <option value="">${label}</option>
     %endif
-    %for d in reversed(range(1901, datetime.date.today().year)):
-      <% value = "%d"%d %>
-      %if doy and int(doy) == d:
+    %for d in range(1, 32):
+      <% value = "%d" %d %>
+      %if selected and int(selected) == d:
+        <option selected value="${value}">${d}</option>
+      %else:
+        <option value="${value}">${d}</option>
+      %endif
+    %endfor
+  </select>
+</%def>
+
+<%def name="selectYear(name, label=None, selected=None, years=None, id=None)">
+  <select name="${name}" class="inline-select" id="${id}">
+    %if label:
+      <option value="">${label}</option>
+    %endif
+    <%
+      if not years:
+        years = reversed(range(1901, datetime.date.today().year + 1))
+    %>
+    %for d in years:
+      <% value = "%d" % d %>
+      %if selected and int(selected) == d:
         <option selected value="${value}">${d}</option>
       %else:
         <option value="${value}">${d}</option>
@@ -531,29 +561,45 @@
     degree = schoolVal if schoolVal else ''
     dlgTitle = 'Add School' if not schoolId else 'Edit School'
   %>
-  <div id="addedu-dlg">
-    <div class='ui-dlg-title' id='addedu-dlg-title'>${dlgTitle}</div>
-    <div class='ui-dlg-center' id='addedu-dlg-center'>
+  %if schoolId:
+    <div id="${utils.encodeKey(schoolId)}">
+  %else:
+    <div>
+  %endif
+    <div class='ui-dlg-title addedu-title'>${dlgTitle}</div>
+    <div class='addedu-center'>
+      <form action="/settings/school" class="ajax">
       <ul class="dlgform">
           <li class="form-row">
               <label class="dlgform-label" for="school">${_('School')}</label>
-              <input type="text" id="c_im" name="school" autofocus value="${name}"/>
+              <input type="text" name="school" autofocus value="${name}" required/>
           </li>
           <li class="form-row">
               <label class="dlgform-label" for="degree">${_('Degree')}</label>
-              <input type="text" id="c_phone" name="degree" value="${degree}"/>
+              <input type="text" name="degree" value="${degree}" required/>
           </li>
           <li class="form-row">
               <label class="dlgform-label" for="year">${_('Graduating Year')}</label>
-              ${self.selectYear("year", "Year", year)}
+              ${self.selectYear("year", selected=year)}
           </li>
           %if schoolId:
             <input type="hidden" name="id" value="${utils.encodeKey(schoolId)}"/>
           %endif
       </ul>
+      <div class="addedu-buttons">
+        %if not schoolId:
+          <button type="button" class="button-plain" style="margin-right: 6px;"
+                  onclick="$('#addedu-wrap').html('<button class=\'button ajax\' id=\'addedu-button\' data-ref=\'/settings/school\'>Add School</button>');">${_('Cancel')}</button>
+          <input type="submit" class="button" value="${_('Add School')}"/>
+        %else:
+          <input type="submit" class="button" value="${_('Update School')}"/>
+        %endif
+      </div>
+      </form>
     </div>
   </div>
 </%def>
+
 
 <%def name="companyForm(companyId=None, companyVal=None)">
   <%
@@ -561,28 +607,47 @@
     jobTitle = companyVal if companyVal else ''
     dlgTitle = 'Add Company' if not companyId else 'Edit Company'
   %>
-  <div id="addemp-dlg">
-    <div class='ui-dlg-title' id='addemp-dlg-title'>${dlgTitle}</div>
-    <div class='ui-dlg-center' id='addemp-dlg-center'>
+  %if companyId:
+    <div id="${utils.encodeKey(companyId)}">
+  %else:
+    <div>
+  %endif
+    <div class='ui-dlg-title addemp-title'>${dlgTitle}</div>
+    <div class='addemp-center'>
+      <form action="/settings/company" class="ajax">
       <ul class="dlgform">
           <li class="form-row">
               <label class="dlgform-label" for="company">${_('Company')}</label>
-              <input type="text" id="c_im" name="company" autofocus value="${name}"/>
+              <input type="text" name="company" autofocus value="${name}" required/>
           </li>
           <li class="form-row">
               <label class="dlgform-label" for="title">${_('Job Title')}</label>
-              <input type="text" id="c_phone" name="title" value="${jobTitle}"/>
+              <input type="text" name="title" value="${jobTitle}" required/>
           </li>
           <li class="form-row">
-              <label class="dlgform-label">${_('Duration')}</label>
-              <% present = {"9999": "Present"} %>
-              ${self.selectYear("startyear", "Start Year", start)}
-              ${self.selectYear("endyear", "End Year", end, None, present)}
+              <label class="dlgform-label">${_('Starting from')}</label>
+              ${self.selectMonth("startmonth", selected=startMonth)}
+              ${self.selectYear("startyear", selected=start)}
+          </li>
+          <li class="form-row">
+              <label class="dlgform-label">${_('Till')}</label>
+              ${self.selectMonth("endmonth", '-', selected=endMonth)}
+              ${self.selectYear("endyear", '--', selected=end)}
           </li>
           %if companyId:
             <input type="hidden" name="id" value="${utils.encodeKey(companyId)}"/>
           %endif
       </ul>
+      <div class="addemp-buttons">
+        %if not companyId:
+          <button type="button" class="button-plain" style="margin-right: 6px;"
+                  onclick="$('#addemp-wrap').html('<button class=\'button ajax\' id=\'addemp-button\' data-ref=\'/settings/company\'>Add Company</button>');">${_('Cancel')}</button>
+          <input type="submit" class="button" value="${_('Add Company')}"/>
+        %else:
+          <input type="submit" class="button" value="${_('Update Company')}"/>
+        %endif
+      </div>
+      </form>
     </div>
   </div>
 </%def>

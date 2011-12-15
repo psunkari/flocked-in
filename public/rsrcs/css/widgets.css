@@ -8,14 +8,15 @@ input::-moz-focus-inner {
     padding:0;
 }
 
-.button-link {
-    border: 0px;
+.button-plain, .button-link {
+    border: 1px solid transparent;
     padding: 2px 4px;
     margin: 0px;
     color: #3366cc;
     font-size: inherit;
     font-family: inherit;
     background: transparent;
+    cursor: pointer;
 }
 .button-link:hover, .button-link:active, .button-link:focus {
     outline: none;
@@ -23,8 +24,11 @@ input::-moz-focus-inner {
     background-color: #3366cc;
 }
 .button-link.disabled {
-  color: gray;
-  background-color: transparent;
+    color: gray;
+    background-color: transparent;
+}
+.button-plain {
+    padding: 2px 0;
 }
 
 .button {

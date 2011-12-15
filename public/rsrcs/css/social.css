@@ -561,14 +561,6 @@ a:hover, a:active, a:focus {
     border-bottom: 1px solid #EFEFEF;
     margin: 20px 10px;
 }
-.title-toolbox {
-    text-align: right;
-    font-size: 12px;
-    line-height: 2em;
-    margin-left: 20px;
-    padding-left: 20px;
-    border-left: 1px solid #DDD;
-}
 
 
 
@@ -1253,6 +1245,7 @@ abbr.timestamp {
 .dlgform select,
 .dlgform textarea {
     width: 50%;
+    max-width: 350px;
     float: left;
     background-color: white;
     border-width: 1px;
@@ -1265,14 +1258,16 @@ abbr.timestamp {
 }
 
 .styledform-helpwrap {
-    width: 350px;
+    width: 50%;
+    max-width: 350px;
     float: left;
     line-height: 1.3em;
     color: #888;
 }
 
 .styledform-text {
-    width: 350px;
+    width: 50%;
+    max-width: 350px;
     float: left;
     background-color: white;
     border-width: 1px;
@@ -1291,7 +1286,8 @@ abbr.timestamp {
 .styledform input[type=password],
 .styledform select,
 .styledform textarea {
-    width: 350px;
+    width: 50%;
+    max-width: 350px;
     float: left;
     background-color: white;
     border-width: 1px;
@@ -1307,7 +1303,8 @@ abbr.timestamp {
     line-height: normal !important;
 }
 .styledform select {
-    width: 356px;
+    width: 51%;
+    max-width: 354px;
 }
 .styledform input[type=radio],
 .styledform input[type=checkbox] {
@@ -1333,9 +1330,10 @@ abbr.timestamp {
 
 .styledform-buttons {
     padding: 10px;
-    margin: 10px 0 10px 20%;
-    min-width: 500px;
-    width: 60%;
+    margin: 10px auto;
+    min-width: 400px;
+    width: 80%;
+    max-width: 600px;
     text-align: right;
     border-top: 1px solid #E0D7CF;
 }
@@ -2168,3 +2166,97 @@ td.file-info, td.file-context, td.file-actions {
     position: absolute;
     top: 1px;
 }
+
+
+/*
+ * Settings
+ */
+#expertise-input {
+    padding: 1px;
+    width: 98%;
+    position: relative;
+}
+#expertise-textbox {
+    border-style: none;
+    box-shadow: none;
+    outline: none;
+    margin: 0;
+    width: 75%;
+}
+#expertise-add {
+    width: 23%;
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    border-radius: 0;
+    border-width: 0 0 0 1px;
+}
+
+.company-item {
+    border: 1px solid #EFEFEF;
+    background-color: #FAFAFA;
+    position: relative;
+    padding: 6px;
+    border-radius: 0 6px 6px 6px;
+    margin: 0 0 10px;
+    line-height: 1.6em;
+    min-height: 48px;
+}
+
+.company-avatar {
+    width: 48px;
+    height: 48px;
+    position: absolute;
+    left: 5px;
+    background-color: #DDD;
+}
+
+.company-details {
+    margin-left: 60px;
+}
+
+.company-title, .company-name, .company-toolbox {
+    color: #888;
+}
+
+.company-remove {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    height: 16px;
+    width: 16px;
+    cursor: pointer;
+    font-size: 10px;
+    background-color: transparent;
+    background-image: url("/rsrcs/img/sprite.png");
+    background-position: -19px -47px;
+    background-repeat: no-repeat;
+    border-width: 0px;
+}
+
+.company-remove:hover, .company-remove:active {
+    box-shadow: 0 0 2px #888;
+    background-position: -19px -67px;
+}
+
+.company-empty-msg {
+    font-size: 14px;
+    margin: 0 0 10px;
+}
+
+.addedu-center, .addemp-center {
+    border-width: 0 1px 1px 1px;
+    border-style: solid;
+    border-color: #EEE;
+    margin-bottom: 10px;
+}
+
+.addedu-buttons, .addemp-buttons {
+    padding: 10px 0;
+    margin: 10px auto;
+    width: 90%;
+    text-align: right;
+    border-top: 1px solid #E0D7CF;
+}
+
