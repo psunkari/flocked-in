@@ -19,13 +19,13 @@ from social.logging     import profile, dump_args, log
 # Create a new conversation item.
 #
 @defer.inlineCallbacks
-def _createNewItem(request, myId, myOrgId):
+def _createNewItem(request, myId, myOrgId, richText=False):
     convType = utils.getRequestArg(request, "type")
     if convType not in plugins:
         raise errors.BaseError('Unsupported item type', 400)
 
     plugin = plugins[convType]
-    convId, conv = yield plugin.create(request, myId, myOrgId)
+    convId, conv = yield plugin.create(request, myId, myOrgId, richText)
     yield files.pushfileinfo(myId, myOrgId, convId, conv)
 
     timeUUID = conv["meta"]["uuid"]
@@ -57,9 +57,9 @@ def _createNewItem(request, myId, myOrgId):
 
 
 @defer.inlineCallbacks
-def _comment(request, myId, orgId, convId=None):
+def _comment(request, myId, orgId, convId=None, richText=False):
     snippet, comment = utils.getTextWithSnippet(request, "comment",
-                                        constants.COMMENT_PREVIEW_LENGTH)
+                                        constants.COMMENT_PREVIEW_LENGTH, richText=richText)
     if not comment:
         raise errors.MissingParams([_("Comment")])
 
@@ -72,7 +72,8 @@ def _comment(request, myId, orgId, convId=None):
     # 1. Create and add new item
     timeUUID = uuid.uuid1().bytes
     meta = {"owner": myId, "parent": convId, "comment": comment,
-            "timestamp": str(int(time.time())), "uuid": timeUUID}
+            "timestamp": str(int(time.time())),
+            "uuid": timeUUID, "richText": str(richText)}
     followers = {myId: ''}
     itemId = utils.getUniqueKey()
     if snippet:
@@ -100,7 +101,7 @@ def _comment(request, myId, orgId, convId=None):
 
     # 4. Update userItems and userItems_*
     responseType = "Q" if convType == "question" else 'C'
-    commentSnippet = utils.toSnippet(comment, 35)
+    commentSnippet = utils.toSnippet(comment, 35, richText)
     userItemValue = ":".join([responseType, itemId, convId, convType,
                               convOwnerId, commentSnippet])
     yield db.insert(myId, "userItems", userItemValue, timeUUID)
@@ -119,7 +120,7 @@ def _comment(request, myId, orgId, convId=None):
 
     yield _notify("C", convId, timeUUID, convType=convType,
                       convOwnerId=convOwnerId, myId=myId, me=me,
-                      comment=comment)
+                      comment=comment, richText=richText)
     fts.solr.updateIndex(itemId, {'meta':meta}, orgId)
     items = {itemId: {'meta':meta}, convId: conv}
     defer.returnValue((itemId, convId, items))
@@ -408,6 +409,7 @@ class ItemResource(base.BaseResource):
         except ttypes.NotFoundException:
             pass
 
+        richText = item['meta'].get('richText', 'False')== 'True'
         convId = item["meta"].get("parent", None)
         conv = None
         if convId:
@@ -415,7 +417,7 @@ class ItemResource(base.BaseResource):
             conv = utils.supercolumnsToDict([conv])
             commentText = item["meta"].get("comment")
             if commentText:
-                commentSnippet = utils.toSnippet(commentText, 35)
+                commentSnippet = utils.toSnippet(commentText, 35, richText)
         else:
             convId = itemId
             conv = item
@@ -1045,7 +1047,8 @@ class APIItemResource(base.APIBaseResource):
     @defer.inlineCallbacks
     def _newItem(self, request):
         token = self._ensureAccessScope(request, 'post-item')
-        convId, conv = yield _createNewItem(request, token.user, token.org)
+        convId, conv = yield _createNewItem(request, token.user,
+                                            token.org, richText=True)
         self._success(request, 201, {'id': convId})
 
 
@@ -1053,7 +1056,8 @@ class APIItemResource(base.APIBaseResource):
     def _newComment(self, request):
         token = self._ensureAccessScope(request, 'post-item')
         convId = request.postpath[0]
-        itemId, convId, items = yield _comment(request, token.user, token.org, convId= convId)
+        itemId, convId, items = yield _comment(request, token.user, token.org,
+                                               convId=convId, richText=True)
         self._success(request, 201, {'id': itemId})
 
 
@@ -1061,7 +1065,6 @@ class APIItemResource(base.APIBaseResource):
         apiAccessToken = request.apiAccessToken
         segmentCount = len(request.postpath)
         d = None
-        log.info(request.postpath)
 
         if segmentCount == 0:
             d = self._newItem(request)

@@ -5,6 +5,7 @@ from lxml                       import etree
 from lxml.builder               import ElementMaker
 from zope.interface             import implements
 from urllib                     import quote, unquote
+from markdown                   import markdown
 
 from twisted.web                import client
 from twisted.web.iweb           import IBodyProducer
@@ -129,6 +130,7 @@ class Solr(object):
                   self.elementMaker.field(str(orgId), {"name":"orgId"}),]
         itemType = item["meta"].get("type", "status")
         defaultIndex = [("meta", "comment"), ("meta", "parent")]
+        richText = item['meta'].get('richText', 'False') == 'True'
         indices = defaultIndex
         if itemType in plugins and \
             getattr(plugins[itemType], "indexFields", defaultIndex):
@@ -139,6 +141,8 @@ class Solr(object):
         for key in indices:
             sfk, columnName = key
             value = item[sfk].get(columnName, None)
+            if columnName == 'comment' and richText:
+                value = utils.richTextToText(value)
             if value:
                 if isinstance(value, str):
                     value = value.decode('utf-8', 'replace')

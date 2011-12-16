@@ -61,9 +61,9 @@ class Links(object):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def create(self, request, myId, myOrgId):
+    def create(self, request, myId, myOrgId, richText=False):
         snippet, comment = utils.getTextWithSnippet(request, "comment",
-                                        constants.POST_PREVIEW_LENGTH)
+                                        constants.POST_PREVIEW_LENGTH, richText=richText)
         url = utils.getRequestArg(request, "url", sanitize=False)
 
         if not url:
@@ -82,7 +82,7 @@ class Links(object):
         summary, title, image, embed = yield self._summary(url)
 
         convId = utils.getUniqueKey()
-        item, attachments = yield utils.createNewItem(request, self.itemType, myId, myOrgId)
+        item, attachments = yield utils.createNewItem(request, self.itemType, myId, myOrgId, richText=richText)
         meta = {"comment": comment}
         if snippet:
             meta['snippet'] = snippet

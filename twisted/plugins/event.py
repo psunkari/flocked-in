@@ -364,7 +364,7 @@ class Event(object):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def create(self, request, myId, myOrgId):
+    def create(self, request, myId, myOrgId, richText=False):
         startDate = utils.getRequestArg(request, 'startDate')
         startTime = utils.getRequestArg(request, 'startTime')
         endDate = utils.getRequestArg(request, 'endDate') or startDate
@@ -392,7 +392,7 @@ class Event(object):
                                           endTime.minute, endTime.second).replace(tzinfo=utc)
 
         convId = utils.getUniqueKey()
-        item, attachments = yield utils.createNewItem(request, self.itemType, myId, myOrgId)
+        item, attachments = yield utils.createNewItem(request, self.itemType, myId, myOrgId, richText=richText)
 
         rsvps = dict([('yes', '0'), ('maybe', '0'), ('no', '0')])
         meta = {"event_startTime": str(calendar.timegm(startDateTime.utctimetuple()))}

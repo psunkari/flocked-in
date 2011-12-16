@@ -8,6 +8,8 @@ import base64
 import json
 import re
 import string
+import markdown
+from lxml                import etree
 from email.mime.text     import MIMEText
 from email.MIMEMultipart import MIMEMultipart
 from functools           import wraps
@@ -115,14 +117,14 @@ def getRequestArg(request, arg, sanitize=True, multiValued=False):
         return None
 
 
-def getTextWithSnippet(request, name, length):
+def getTextWithSnippet(request, name, length, richText=False):
     escapeEntities = {':': '&#58;'}
     if name in request.args:
         text = request.args[name][0]
         preview = None
         unitext = text.decode('utf-8', 'replace')
         if len(unitext) > length + 50:
-            preview = toSnippet(unitext, length)
+            preview = toSnippet(unitext, length, richText)
             preview = sanitizer.escape(preview, escapeEntities).strip()
 
         text = unitext.encode('utf-8')
@@ -234,7 +236,7 @@ def getUniqueKey():
 
 @defer.inlineCallbacks
 def createNewItem(request, itemType, ownerId, ownerOrgId,
-                  acl=None, subType=None, groupIds = None):
+                  acl=None, subType=None, groupIds = None, richText=False):
     if not acl:
         acl = getRequestArg(request, "acl", sanitize=False)
 
@@ -262,7 +264,8 @@ def createNewItem(request, itemType, ownerId, ownerOrgId,
             "type": itemType,
             "uuid": uuid.uuid1().bytes,
             "owner": ownerId,
-            "timestamp": str(int(time.time()))
+            "timestamp": str(int(time.time())),
+            "richText": str(richText)
         },
         "followers": {ownerId: ''}
     }
@@ -564,7 +567,12 @@ _urlRegEx = _urlRegEx % re.sub(r'([-\\\]])', r'\\\1', string.punctuation)
 _urlRegEx = re.compile(_urlRegEx)
 _newLineRegEx = r'\r\n|\n'
 _newLineRegEx = re.compile(_newLineRegEx)
-def normalizeText(text):
+def normalizeText(text, richText=False):
+    if not text:
+        return text
+    if richText:
+        text = sanitizer.unescape(text, {'&#58;':':'})
+        return markdown.markdown(text.decode('utf-8', 'replace'), safe_mode='escape')
     global _urlRegEx
     def addAnchor(m):
         if (m.group(2) == "www."):
@@ -576,6 +584,15 @@ def normalizeText(text):
 
     urlReplaced = _urlRegEx.sub(addAnchor, text)
     return _newLineRegEx.sub('<br/>', urlReplaced).strip().lstrip().replace("\r\n", "<br/>")
+
+def richTextToHtml(text):
+    text = sanitizer.unescape(text, {'&#58;':':'})
+    return markdown.markdown(text.decode('utf8', 'replace'), safe_mode='escape').encode('utf8', 'replace')
+
+def richTextToText(text):
+    text = sanitizer.unescape(text, {'&#58;':':'})
+    tree = etree.fromstring(markdown.markdown(text.decode('utf8', 'replace'), safe_mode='escape').encode('utf8', 'replace'))
+    return etree.tostring(tree, method='text', encoding='utf8')
 
 
 def simpleTimestamp(timestamp, timezone='Asia/Kolkata'):
@@ -613,10 +630,15 @@ def simpleTimestamp(timestamp, timezone='Asia/Kolkata'):
     return "<abbr class='timestamp' title='%s' data-ts='%s'>%s</abbr>" %(tooltip, timestamp, formatted)
 
 
-_snippetRE = re.compile(r'(.*)\s', re.L|re.U|re.S)
-def toSnippet(text, maxlen):
+_snippetRE = re.compile(r'(.*)\s', re.L|re.U|re.S|re.M)
+def toSnippet(text, maxlen, richText=False):
+
     unitext = text if type(text) == unicode or not text\
                    else text.decode('utf-8', 'replace')
+    if richText:
+        tree = etree.fromstring(markdown.markdown(unitext, safe_mode='escape').encode('utf8', 'replace'))
+        unitext = etree.tostring(tree, method='text', encoding='utf-8').decode('utf-8', 'replace')
+
     if len(unitext) <= maxlen:
         return unitext.encode('utf-8')
 
