@@ -366,6 +366,7 @@
               <input type="submit" id="expertise-add" class="button" value="Add" style="margin:0px;"/>
             </div>
           </form>
+          <span>Example: cpp, accounting, green-buildings, patent-law</span>
         </div>
       </li>
       <li class="form-row" style="margin-top: 35px;">
