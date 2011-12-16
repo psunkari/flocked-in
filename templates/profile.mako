@@ -164,7 +164,7 @@
   </div>
   <div id="userprofile">
     <div id="summary-block">
-      <div class="subtitle" class="summary-line">
+      <div class="subtitle">
         %if (user['basic'].has_key('firstname') and user['basic'].has_key('lastname')):
           <span>${user['basic']['firstname']} ${user['basic']['lastname']}</span>,
         %endif
@@ -218,19 +218,128 @@
   %endif
 </%def>
 
+
+##
+## DUPLICATE CODE: Similar code exists in settings.mako
+##
+<%def name="companyItem(companyId, companyVal)">
+  <%
+    end, start, name = companyId.split(':', 2)
+    title = companyVal
+    companyId = utils.encodeKey(companyId)
+
+    startYear = start[:4]
+    startMonth = utils.monthName(int(start[4:]))
+    endYear = end[:4]
+    endMonth = utils.monthName(int(end[4:]))
+
+    if endYear != '9999':
+      duration = "%(startMonth)s, %(startYear)s &ndash; %(endMonth)s, %(endYear)s"
+    else:
+      duration = "%(startMonth)s, %(startYear)s &ndash; present"
+
+    duration = duration % locals()
+  %>
+  <div class="company-item" id="${companyId}">
+    <div class="company-avatar"/>
+    <div class="company-details">
+      <div class="company-name">${name}</div>
+      %if title:
+        <div class="company-title">${title}</div>
+      %endif
+      <div class="company-title">${duration}</div>
+    </div>
+  </div>
+</%def>
+
+
+##
+## DUPLICATE CODE: Similar code exists in settings.mako
+##
+<%def name="schoolItem(schoolId, schoolVal)">
+  <%
+    year, name = schoolId.split(':', 1)
+    degree = schoolVal
+    schoolId = utils.encodeKey(schoolId)
+  %>
+  <div class="company-item" id="${schoolId}">
+    <div class="company-avatar school-default"/>
+    <div class="company-details">
+      <div class="company-name">${name}</div>
+      <div class="company-title">${degree}</div>
+      <div class="company-title">${year}</div>
+    </div>
+  </div>
+</%def>
+
+
 <%def name="content_info()">
-  <div id="summary-personal">
+  <%
+    canEdit = True if myId == userId else False
+  %>
+  %if user.has_key('expertise'):
+    <div class="center-title">${_('Expertise')}
+    %if canEdit:
+      <span class="title-toolbox">
+        <a href="/settings?dt=work" class="ajax">Edit</a>
+      </span>
+    %endif
+    </div>
+    <div class="pinfo-contents">
+        %for item in user['expertise'].keys():
+          <span class="tag">${item}</span>
+        %endfor
+    </div>
+  %endif
+
+  %if user.has_key('companies') or user.has_key('schools'):
+    <div class="center-title">${_('Work and Education')}
+    %if canEdit:
+      <span class="title-toolbox">
+        <a href="/settings?dt=work" class="ajax">Edit</a>
+      </span>
+    %endif
+    </div>
+    <div class="pinfo-contents">
+    <%
+      timeline = {}
+      TYPE_SCHOOL, TYPE_COMPANY = (0, 1)
+      companies = user.get('companies', {})
+      schools = user.get('schools', {})
+
+      for company in companies.keys():
+        timeline[company] = {'value':companies[company], 'type':TYPE_COMPANY}
+      for school in schools.keys():
+        timeline[school] = {'value':schools[school], 'type':TYPE_SCHOOL}
+
+      sortedByTime = sorted(timeline.keys(), reverse=True)
+      for key in sortedByTime:
+        schoolItem(key, timeline[key]['value']) \
+          if timeline[key]['type'] == TYPE_SCHOOL \
+          else companyItem(key, timeline[key]['value'])
+    %>
+    </div>
+  %endif
+
+  <div class="center-title">${_('Others')}
+    %if canEdit:
+      <span class="title-toolbox">
+        <a href="/settings?dt=personal" class="ajax">Edit</a>
+      </span>
+    %endif
+  </div>
+  <div class="pinfo-contents">
       <div id="summary-personal-contact" class="summary-line">
       %if user.get('personal', {}).has_key('email'):
-        <span class="summary-item" title="${_('Personal Email')}">${user['personal']['email']}</span>
+        <span class="summary-item pinfo-inlineval" title="${_('Personal Email')}">${user['personal']['email']}</span>
       %endif
       %if user.get('personal', {}).has_key('phone'):
         <span class="summary-icon landline-icon"/>
-        <span class="summary-item" title="${_('Personal Phone')}">${user['personal']['phone']}</span>
+        <span class="summary-item pinfo-inlineval" title="${_('Personal Phone')}">${user['personal']['phone']}</span>
       %endif
       %if user.get('personal', {}).has_key('mobile'):
         <span class="summary-icon mobile-icon"/>
-        <span class="summary-item" title="${_('Personal Mobile')}">${user['personal']['mobile']}</span>
+        <span class="summary-item pinfo-inlineval" title="${_('Personal Mobile')}">${user['personal']['mobile']}</span>
       %endif
       </div>
 
@@ -240,98 +349,16 @@
             stamp = user['personal']['birthday']  ## YYYYMMDD
             formatmap = {"year": stamp[0:4], "month": utils.monthName(int(stamp[4:6])), "day": stamp[6:]}
           %>
-          ${'<span class="summary-item">' + _('Born on %(month)s %(day)s, %(year)s') % formatmap + '</span>'}
+          ${'<span class="summary-item">' + _('Born on <span class="pinfo-inlineval">%(month)s %(day)s, %(year)s</span>') % formatmap + '</span>'}
         </div>
       %endif
 
       %if user.get('personal', {}).has_key('currentCity'):
         <div id="summary-personal-location" class="summary-line">
-          <span class="summary-item">${ _('Currently residing in ' + user['personal']['currentCity']) }</span>
+          <span class="summary-item">${ _('Currently residing in <span class="pinfo-inlineval">%s</span>') % user['personal']['currentCity'] }</span>
         </div>
       %endif
-
   </div>
-  %if user.has_key('work'):
-    <%
-      keys = sorted(user['work'].keys(), reverse=True)
-    %>
-    <div class="content-title"><h4>${_('Work at %s') % ('Synovel')}</h4></div>
-    <dl id="content-workhere">
-      %for key in keys:
-        <%
-          end, start, title = key.split(':')
-          sy, sm = start[0:4], start[4:6]
-          args = {'sm': utils.monthName(int(sm), True), 'sy': sy}
-          duration = ''
-          if len(end) == 0:
-            duration = _('Started in %(sm)s %(sy)s') % args
-          else:
-            ey, em = end[0:4], end[4:6]
-            args['em'] = utils.monthName(int(em), True)
-            args['ey'] = ey
-            duration = _('%(sm)s %(sy)s &mdash; %(em)s %(ey)s') % args
-        %>
-        <dt>${title}</dt>
-        <dd>
-          <ul>
-            <li class="light">${duration}</li>
-            <li>${user['work'][key]}</li>
-          </ul>
-        </dd>
-      %endfor
-    </dl>
-  %endif
-  %if user.has_key('companies'):
-    <%
-      keys = sorted(user['companies'].keys(), reverse=True)
-    %>
-    <div class="content-title"><h4>${_('Past Employment')}</h4></div>
-    <dl id="content-workex">
-      %for key in keys:
-        <%
-          end, start, org = key.split(':')[0:3]
-          duration = _('%(sy)s &mdash; %(ey)s') % {'sy': start, 'ey': end}
-        %>
-        <dt>${org}</dt>
-        <dd>
-          <ul>
-            <li class="light">${duration}</li>
-            <li>${user['companies'][key]}</li>
-          </ul>
-        </dd>
-      %endfor
-    </dl>
-  %endif
-  %if user.has_key('schools'):
-    <%
-      keys = sorted(user['schools'].keys(), reverse=True)
-    %>
-    <div class="content-title"><h4>${_('Education')}</h4></div>
-    <dl id="content-education">
-      %for key in keys:
-        <%
-          end, school = key.split(':')
-          duration = _('%(ey)s') % {'ey': end}
-        %>
-        <dt>${school}</dt>
-        <dd>
-          <ul>
-            <li class="light">${user['schools'][key]} - ${duration}</li>
-          </ul>
-        </dd>
-      %endfor
-    </dl>
-  %endif
-  %if user.has_key('expertise'):
-    <div class="content-title"><h4>${_('Expertise')}</h4></div>
-    <dl id="content-expertise">
-      <dd><ul>
-        %for item in user['expertise'].keys():
-          <li>${item}</li>
-        %endfor
-      </ul></dd>
-    </dl>
-  %endif
 </%def>
 
 <%def name="activity_block(grp, tzone)">

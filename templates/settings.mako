@@ -58,7 +58,7 @@
   %>
   <div id="mymenu-container" class="sidemenu-container">
     <ul class="v-links sidemenu">
-      <li><button class="button ajax" data-href="/profile?id=${myId}"><span class="sidemenu-icon icon back-icon" style="position: relative; top: -1px;"></span>${_('View Profile')}</button></li>
+      <li><button class="button ajax" data-href="/profile?id=${myId}&dt=info"><span class="sidemenu-icon icon back-icon" style="position: relative; top: -1px;"></span>${_('View Profile')}</button></li>
     </ul>
     <ul class="v-links sidemenu">
       ${navMenuItem("/settings?dt=basic", _("Basic"), "basic")}
@@ -234,34 +234,24 @@
   </form>
 </%def>
 
-
-<%def name="companyItem(companyId, companyVal, highlight=False)">
+##
+## DUPLICATE CODE: Similar code exists in profile.mako
+##
+<%def name="companyItem(companyId, companyVal)">
   <%
     end, start, name = companyId.split(':', 2)
     title = companyVal
     companyId = utils.encodeKey(companyId)
 
-    if len(start) > 4:
-      startYear = start[:4]
-      startMonth = utils.monthName(int(start[4:]))
-      endYear = end[:4]
-      endMonth = utils.monthName(int(end[4:]))
-    else:
-      startYear = start
-      startMonth = None
-      endYear = end
-      endMonth = None
+    startYear = start[:4]
+    startMonth = utils.monthName(int(start[4:]))
+    endYear = end[:4]
+    endMonth = utils.monthName(int(end[4:]))
 
     if endYear != '9999':
-      if startMonth and endMonth:
-        duration = "%(startMonth)s, %(startYear)s &ndash; %(endMonth)s, %(endYear)s"
-      else:
-        duration = "%(startYear)s &ndash; %(endYear)s"
+      duration = "%(startMonth)s, %(startYear)s &ndash; %(endMonth)s, %(endYear)s"
     else:
-      if startMonth and endMonth:
-        duration = "%(startMonth)s, %(startYear)s &ndash; present"
-      else:
-        duration = "%(startYear)s &ndash; present"
+      duration = "%(startMonth)s, %(startYear)s &ndash; present"
 
     duration = duration % locals()
   %>
@@ -280,7 +270,10 @@
 </%def>
 
 
-<%def name="schoolItem(schoolId, schoolVal, highlight=False)">
+##
+## DUPLICATE CODE: Similar code exists in profile.mako
+##
+<%def name="schoolItem(schoolId, schoolVal)">
   <%
     year, name = schoolId.split(':', 1)
     degree = schoolVal
@@ -290,7 +283,8 @@
     <div class="company-avatar school-default"/>
     <div class="company-details">
       <div class="company-name"><button data-ref="/settings/school?id=${schoolId}" class="button-plain ajax" style="font-weight:bold;">${name}</button></div>
-      <div class="company-title">${degree}, ${year}</div>
+      <div class="company-title">${degree}</div>
+      <div class="company-title">${year}</div>
       <button class="company-remove ajaxpost" title="Delete ${name}"
            data-ref="/settings/school?id=${schoolId}&action=d">&nbsp;</button>
     </div>

@@ -532,7 +532,8 @@ a:hover, a:active, a:focus {
 .subtitle {
     color: gray;
     font-size: 16px;
-    margin-top: 6px;
+    line-height: 1.8em;
+    margin-top: 8px;
 }
 
 .center-header {
@@ -561,7 +562,14 @@ a:hover, a:active, a:focus {
     border-bottom: 1px solid #EFEFEF;
     margin: 20px 10px;
 }
-
+.title-toolbox {
+    text-align: right;
+    font-size: 12px;
+    line-height: 2em;
+    margin-left: 20px;
+    padding-left: 20px;
+    border-left: 1px solid #DDD;
+}
 
 
 #useravatar {
@@ -576,6 +584,11 @@ a:hover, a:active, a:focus {
 
 #userprofile {
     padding-left: 15px;
+}
+
+.summary-line {
+    font-size: 14px;
+    line-height: 1.8em;
 }
 
 .summary-item {
@@ -618,6 +631,15 @@ a:hover, a:active, a:focus {
 
 #profile-content {
     padding: 15px 0 0;
+}
+
+.pinfo-contents {
+    padding: 0 100px;
+    margin-bottom: 40px;
+}
+
+.pinfo-inlineval {
+    color: #333;
 }
 
 .activity-item {
@@ -2218,6 +2240,10 @@ td.file-info, td.file-context, td.file-actions {
 
 .company-title, .company-name, .company-toolbox {
     color: #888;
+}
+.company-name {
+    color: inherit;
+    font-weight: bold;
 }
 
 .company-remove {
