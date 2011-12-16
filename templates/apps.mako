@@ -86,7 +86,9 @@
         %endfor
       </div>
     %else:
-      You did not authorize any third-party application to access your data.
+      <div class="tl-empty-msg">
+        You did not authorize any third-party application to access your data.
+      </div>
     %endif
     <div class="clear" style="margin-bottom: 10px;"/>
   </div>
@@ -206,9 +208,11 @@
     <li class="form-row">
       <span class="styled-label">Permissions</span>
       <span class="styledform-text" style="height: 9em;">
+        <ul style="padding: 2px 0 2px 20px; line-height: 1.5em;">
         %for scope in clientScopes:
-          <div>${scopes[scope]}</div>
+          <li>${scopes[scope]}</li>
         %endfor
+        </ul>
       </span>
     </li>
     %if not apiKey:
@@ -221,7 +225,8 @@
         <span class="styledform-text">${meta['redirect']}</span>
       </li>
     %endif
-    <div style="margin:20px 0 20px 33%;">
+    <div class="styledform-buttons">
+      <a href="/apps" class="ajax">&laquo; Back to Applications</a>&nbsp;&nbsp;&nbsp;&nbsp;
       %if apiKey:
         <button data-ref="/apps/revoke?id=${clientId}" class="button ajaxpost">Revoke Access</button>
       %else:
@@ -247,9 +252,11 @@
     <li class="form-row">
       <span class="styled-label">Permissions</span>
       <span class="styledform-text" style="height: 9em;">
+        <ul style="padding: 2px 0 2px 20px; line-height: 1.5em;">
         %for scope in clientScopes:
-          <div>${scopes[scope]}</div>
+          <li>${scopes[scope]}</li>
         %endfor
+        </ul>
       </span>
     </li>
     %if not apiKey:
@@ -262,7 +269,8 @@
         <span class="styledform-text">${meta['redirect']}</span>
       </li>
     %endif
-    <div style="margin:20px 0 20px 33%;">
+    <div class="styledform-buttons">
+      <a href="/apps" class="ajax">&laquo; Back to Applications</a>&nbsp;&nbsp;&nbsp;&nbsp;
       %if subscribed or apiKey:
         <button data-ref="/apps/revoke?id=${clientId}" class="button ajaxpost">Revoke Access</button>
         &nbsp;&nbsp;
