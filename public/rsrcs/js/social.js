@@ -365,7 +365,6 @@ _initChunkLoader: function _initChunkLoader(resources) {
                         break;
                     case "set":
                     default:
-                        console.log(rsrc.content);
                         $(rsrc.node).html(rsrc.content);
                 }
             }
@@ -655,7 +654,6 @@ var ui = {
             ver = parseFloat(ua.version.replace(/\./g, function() {
                               return (c++ == 1) ? '' : '.';
                             }));
-        console.log(ua);
         if (ua.msie && ver < 8 && document.documentMode) {
           $('#compatibility-mode').css('display', 'block');
         } else if (ua.msie && ver >= 8 ||
