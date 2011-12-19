@@ -139,7 +139,7 @@
     meta = conv['meta']
     userId = meta["owner"]
     voted = myVotes[convId] if (myVotes and myVotes.get(convId, False)) else False
-    normalize = utils.normalizeText
+    richText = meta.get('richText', 'False') == 'True'
 
     target = meta.get('target', '')
     target = target.split(',') if target else ''
@@ -163,7 +163,7 @@
         comment = meta.get('comment', '') or meta.get('question', '')
         snippet = meta.get('snippet', '')
       %>
-      ${item._renderText(snippet, comment)}
+      ${item._renderText(snippet, comment, richText=richText)}
     </div>
   </div>
   <div id="poll-contents-${convId}" class="item-contents has-icon">

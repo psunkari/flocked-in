@@ -361,6 +361,7 @@
     userId = meta["owner"]
     comment = meta["comment"]
     snippet = meta.get('snippet', None)
+    richText = meta.get('richText', 'False') == 'True'
     normalize = utils.normalizeText
   %>
   <div class="conv-comment" id="comment-${commentId}">
@@ -373,7 +374,7 @@
     <div class="comment-container">
       <span class="conv-other-actions" onclick="$.post('/ajax/item/delete', {id:'${commentId}'});">&nbsp;</span>
       <span class="comment-user">${utils.userName(userId, entities[userId])}</span>
-      ${_renderText(snippet, comment, _('Expand this comment &#187;'), _('Collapse this comment'))}
+      ${_renderText(snippet, comment, _('Expand this comment &#187;'), _('Collapse this comment'), richText)}
     </div>
     <div class="comment-meta" id = "item-footer-${commentId}">
       ${self.item_footer(commentId)}
@@ -433,18 +434,20 @@
 <%def name="item_subactions()">
 </%def>
 
-<%def name="_renderText(snippet, text, expandStr=None, collapseStr=None)">
+<%def name="_renderText(snippet, text, expandStr=None, collapseStr=None, richText=False)">
   <%
     normalize = utils.normalizeText
+    snippet = normalize(snippet, richText)
+    text = normalize(text, richText)
   %>
   %if snippet:
-    <span class="text-preview">${snippet|normalize}</span>
-    <span class="text-full" style="display:none;">${text|normalize}</span>
+    <span class="text-preview">${snippet}</span>
+    <span class="text-full" style="display:none;">${text}</span>
     &nbsp;&nbsp;
     <button class="text-expander" onclick="$$.convs.expandText(event);">${expandStr or _('Expand this post &#187;')}</button>
     <button class="text-collapser" style="display:none;" onclick="$$.convs.collapseText(event);">${collapseStr or _('Collapse this post')}</button>
   %else:
-    <span class="text-full">${text|normalize}</span>
+    <span class="text-full">${text}</span>
   %endif
 </%def>
 
@@ -458,6 +461,7 @@
     itemTitleText = "item-title-text" if has_icon else ''
     target = meta.get('target', '')
     target = target.split(',') if target else ''
+    richText = meta.get('richText', 'False') == 'True'
     if target:
       target = [x for x in target if x in relations.groups]
   %>
@@ -481,7 +485,7 @@
         comment = meta.get('comment', '')
         snippet = meta.get('snippet', '')
       %>
-      ${_renderText(snippet, comment)}
+      ${_renderText(snippet, comment, richText=richText)}
     </div>
   </div>
 </%def>
@@ -538,6 +542,7 @@
     title = meta.get("link_title", '') or meta.get("title", '')
     imgsrc = meta.get("link_imgSrc", '') or meta.get("imgSrc", '')
     summary = meta.get("link_summary", '') or meta.get("summary", '')
+    richText = meta.get('richText', 'False') == 'True'
 
     hasEmbed = False
     embedType = meta.get("link_embedType", '') or meta.get("embedType", '')
@@ -569,7 +574,7 @@
         comment = meta.get('comment', '')
         snippet = meta.get('snippet', '')
       %>
-      ${_renderText(snippet, comment)}
+      ${_renderText(snippet, comment, richText=richText)}
       <div class="link-item">
         %if imgsrc and hasEmbed:
           <div onclick="$$.convs.embed('${convId}');" class="embed-wrapper">

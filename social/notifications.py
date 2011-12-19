@@ -206,18 +206,26 @@ class NotificationByMail(object):
 
             # Sending to conversation owner
             if toOwner:
+                if 'comment_text' in data:
+                    data['comment'] = data['comment_text']
                 s = self._convNotifySubject[notifyType][0] % data
                 b = self._convNotifyBody[notifyType][0] + self._signature
                 b = b % data
+                if 'comment_html' in data:
+                    data['comment'] = data['comment_html']
                 h = getBlock("emails.mako",
                              "notifyOwner"+notifyType, **data)
                 return utils.sendmail(mailId, s, b, h)
 
             # Sending to user other than conversation owner
             if 'subject' not in stringCache:
+                if 'comment_text' in data:
+                    data['comment'] = data['comment_text']
                 s = self._convNotifySubject[notifyType][1] % data
                 b = self._convNotifyBody[notifyType][1] + self._signature
                 b = b % data
+                if 'comment_html' in data:
+                    data['comment'] = data['comment_html']
                 h = getBlock("emails.mako", "notifyOther"+notifyType, **data)
                 stringCache.update({'subject':s, 'text':b, 'html':h})
 
@@ -225,6 +233,13 @@ class NotificationByMail(object):
                                   stringCache['text'], stringCache['html'])
 
         data = kwargs.copy()
+
+        if 'richText' in data and 'comment' in data:
+            comment_text = utils.richTextToText(data['comment'])
+            comment_html = utils.richTextToHtml(data['comment'])
+            data.update({'comment_text': comment_text,
+                         'comment_html': comment_html,
+                         'comment_markup': data['comment']})
         convUrl = "%s/item?id=%s" % (rootUrl, convId)
         senderAvatarUrl = utils.userAvatar(myId, me, "medium")
         data.update({"senderName": senderName, "convUrl": convUrl,
