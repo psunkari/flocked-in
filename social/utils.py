@@ -189,9 +189,14 @@ def getValidItemId(request, arg, type=None, columns=None, itemId=None, myOrgId=N
         parent = supercolumnsToDict(parent)
         acl = parent["meta"]["acl"]
         owner = parent["meta"]["owner"]
+        deleted = 'deleted' in parent['meta']
     else:
         acl = meta["acl"]
         owner = meta["owner"]
+        deleted = 'deleted' in meta
+
+    if deleted:
+        raise errors.InvalidItem(itemType, itemId)
 
     if not myOrgId:
         myOrgId = request.getSession(IAuthInfo).organization
