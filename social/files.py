@@ -36,17 +36,17 @@ from social.logging     import log, profile, dump_args
 def pushfileinfo(myId, orgId, convId, conv):
     acl = pickle.loads(conv['meta']['acl'])
 
-    accept_groups = acl.get('accept', {}).get('groups', [])
-    deny_groups = acl.get('deny', {}).get('groups', [])
-    groups = [x for x in accept_groups if x not in deny_groups]
-    accept_orgs = acl.get('accept', {}).get('orgs', [])
+    allowedGroups = acl.get('accept', {}).get('groups', [])
+    deniedGroups = acl.get('deny', {}).get('groups', [])
+    groups = [x for x in allowedGroups if x not in deniedGroups]
+    allowedOrgs = acl.get('accept', {}).get('orgs', [])
     ownerId = conv['meta']['owner']
 
     entities = [myId]
     entities.extend(groups)
-    entities.extend(accept_orgs)
-    e = yield utils.expandAcl(myId, orgId, conv['meta']['acl'], convId, ownerId, True)
-    entities.extend(e)
+    entities.extend(allowedOrgs)
+    entities_ = yield utils.expandAcl(myId, orgId, conv['meta']['acl'], convId, ownerId, True)
+    entities.extend(entities_)
 
     for attachmentId in conv.get('attachments', {}):
         tuuid, name, size, ftype =conv['attachments'][attachmentId].split(':')
@@ -55,6 +55,32 @@ def pushfileinfo(myId, orgId, convId, conv):
         yield db.insert(myId, "user_files", value, tuuid)
         for entityId in entities:
             yield db.insert(entityId, "entityFeed_files", value, tuuid)
+
+@defer.inlineCallbacks
+def deleteFileInfo(myId, orgId, convId, conv):
+    acl = pickle.loads(conv['meta']['acl'])
+
+    allowedGroups = acl.get('accept', {}).get('groups', [])
+    deniedGroups = acl.get('deny', {}).get('groups', [])
+    groups = [x for x in allowedGroups if x not in deniedGroups]
+    allowedOrgs = acl.get('accept', {}).get('orgs', [])
+    ownerId = conv['meta']['owner']
+
+    entities = [myId]
+    entities.extend(groups)
+    entities.extend(allowedOrgs)
+    entities_ = yield utils.expandAcl(myId, orgId, conv['meta']['acl'], convId, ownerId, True)
+    entities.extend(entities_)
+    deferreds = []
+    for attachmentId in conv.get('attachments', {}):
+        tuuid, name, size, ftype =conv['attachments'][attachmentId].split(':')
+        tuuid = utils.decodeKey(tuuid)
+        deferreds.append(db.remove(myId, "user_files", tuuid))
+        for entityId in entities:
+            deferreds.append(db.remove(entityId, "entityFeed_files", tuuid))
+    if deferreds:
+        yield defer.DeferredList(deferreds)
+
 
 
 @profile

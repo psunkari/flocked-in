@@ -953,6 +953,7 @@ class ItemResource(base.BaseResource):
             else:
                 d1 = db.insert(convOwnerId, 'deletedConvs', timestamp, convId)
                 d1.addCallback(lambda x: fts.solr.deleteIndex(itemId))
+                d1.addCallback(lambda x: files.deleteFileInfo(myId, orgId, convId, conv))
                 deferreds.append(d1)
 
             # Rollback changes to feeds.
