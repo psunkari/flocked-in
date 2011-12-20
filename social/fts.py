@@ -175,7 +175,7 @@ class Solr(object):
             response.deliverBody(JsonBodyReceiver(finished))
             return finished
         term = quote(term)
-        url = URL + "/select?q=%s&start=%s&rows=%s&fq=orgId:%s&sort=%s&hl=true&hl.fl=comment" % (term, start, count, orgId, quote('timestamp desc'))
+        url = URL + "/select?q=%s&start=%s&rows=%s&fq=orgId:%s&sort=%s&hl=true&hl.fl=*" % (term, start, count, orgId, quote('timestamp desc'))
         if filters:
             for x in filters:
                 url += '&fq=%s:%s' %(x, filters[x])
@@ -298,8 +298,17 @@ class FTSResource(base.BaseResource):
 
         entities = yield db.multiget_slice(toFetchEntities, "entities", ['basic'])
         entities = utils.multiSuperColumnsToDict(entities)
-        fromFetchMore = True if start else False
 
+        for userId in people:
+            if userId in highlighting and userId in entities:
+                entities[userId]['basic']['reason'] = {}
+                for key in highlighting[userId]:
+                    if key in entities[userId]['basic']:
+                        entities[userId]['basic'][key] = " ".join(highlighting[userId][key])
+                    else:
+                        entities[userId]['basic']['reason'][key] = highlighting[userId][key]
+
+        fromFetchMore = True if start else False
         args['term'] = term
         args['items'] = items
         args['people'] = people
