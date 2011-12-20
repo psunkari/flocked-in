@@ -196,6 +196,9 @@ class ItemResource(base.BaseResource):
         convId, conv = yield utils.getValidItemId(request, "id", columns=['tags'])
         itemType = conv["meta"].get("type", None)
 
+        if 'parent' in conv['meta']:
+            raise errors.InvalidItem('conversation', convId)
+
         start = utils.getRequestArg(request, "start") or ''
         start = utils.decodeKey(start)
 
