@@ -7,8 +7,9 @@ from telephus.cassandra     import ttypes
 
 from social                 import db, utils, base, plugins, _, __
 from social                 import constants, feed, errors, people
-from social                 import notifications, files
+from social                 import notifications, files, config
 from social.template        import render, renderDef, renderScriptBlock
+from social.template        import getBlock
 from social.relations       import Relation
 from social.logging         import dump_args, profile, log
 from social.isocial         import IAuthInfo
@@ -193,6 +194,41 @@ class ProfileResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
+    def _reportUser(self, request, myId, targetId):
+        cols = yield db.multiget_slice([myId, targetId], "entities", ["basic"])
+        users = utils.multiSuperColumnsToDict(cols)
+        reportedBy = users[myId]["basic"]["name"]
+        email = users[targetId]["basic"]["emailId"]
+        rootUrl = config.get('General', 'URL')
+        brandName = config.get('Branding', 'Name')
+
+        cols = yield db.get_slice(email, "userAuth", ["reactivateToken", "isFlagged"])
+        cols = utils.columnsToDict(cols)
+        if cols.has_key("isFlagged"):
+            token = cols.get("reactivateToken")
+        else:
+            token = utils.getRandomKey()
+            yield db.insert(email, "userAuth", token, 'reactivateToken')
+            yield db.insert(email, "userAuth", "", 'isFlagged')
+
+        body = "%(reportedBy)s has flagged your account for verification."\
+               "You can verify your account by clicking on the link below.\n"\
+               "\n\n%(reactivateUrl)s\n\n"
+
+        reactivateUrl = "%(rootUrl)s/password/verify?email=%(email)s&token=%(token)s"%(locals())
+        args = {"brandName": brandName, "rootUrl": rootUrl,
+                "reportedBy":reportedBy, "reactivateUrl": reactivateUrl}
+        subject = "[%(brandName)s] Your profile has been flagged for review" %(locals())
+        htmlBody = getBlock("emails.mako", "reportUser", **args)
+        textBody = body %(locals())
+
+        yield utils.sendmail(email, subject, textBody, htmlBody)
+
+        request.write('$$.alerts.info("%s");' % _('User has been flagged for verification'))
+
+    @profile
+    @defer.inlineCallbacks
+    @dump_args
     def _render(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
 
@@ -357,6 +393,8 @@ class ProfileResource(base.BaseResource):
                 actionDeferred = self._follow(myId, targetId)
             elif action == "unfollow":
                 actionDeferred = self._unfollow(myId, targetId)
+            elif action == "report":
+                actionDeferred = self._reportUser(request, myId, targetId)
             else:
                 raise errors.NotFoundError()
 

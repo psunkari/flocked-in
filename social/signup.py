@@ -310,7 +310,7 @@ class SignupResource(BaseResource):
         pwdrepeat = utils.getRequestArg(request, 'pwdrepeat', False)
 
         if not (email and token and passwd and pwdrepeat):
-            raise MissingParams([''])
+            raise MissingParams(['Email', 'Password Reset Token'])
 
         if (passwd != pwdrepeat):
             raise errors.PasswordsNoMatch()
@@ -366,6 +366,23 @@ class SignupResource(BaseResource):
         args = {"view": "resetPassword", "email": email, "token": token}
         yield render(request, "signup.mako",  **args)
 
+    @defer.inlineCallbacks
+    def _verifyProfile(self, request):
+        email = utils.getRequestArg(request, 'email')
+        token = utils.getRequestArg(request, 'token')
+
+        if not (email and token):
+            raise MissingParams(['Email', 'Account Verification Token'])
+
+        cols = yield db.get_slice(email, "userAuth", ["reactivateToken", "isFlagged"])
+        cols = utils.columnsToDict(cols)
+        if cols.has_key("isFlagged"):
+            storedToken = cols.get("reactivateToken", None)
+            if storedToken == token:
+                yield db.batch_remove({"userAuth": [email]},
+                                    names=["reactivateToken", "isFlagged"])
+
+        request.redirect('/signin')
 
     @profile
     @dump_args
@@ -388,6 +405,8 @@ class SignupResource(BaseResource):
                     d = self.renderForgotPassword(request)
                 elif action == 'resend':
                     d = self.request_resetPassword(request)
+                elif action == 'verify':
+                    d = self._verifyProfile(request)
             else:
                 if action == 'blockSender':
                     d = self._block(request, "sender")

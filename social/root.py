@@ -74,6 +74,8 @@ class SigninResource(resource.Resource):
     MISSING_FIELDS = 'Please enter both username and password'
     USER_BLOCKED = 'Account blocked or disabled'
     UNKNOWN_ERROR = 'Unknown Error. Please try again after sometime'
+    USER_FLAGGED = 'Your account has been flagged for verification. '\
+                   'Please check your mail for instructions.'
 
     @defer.inlineCallbacks
     def _saveSessionAndRedirect(self, request, data, remember=False):
@@ -127,6 +129,8 @@ class SigninResource(resource.Resource):
                 return self._renderSigninForm(request, self.AUTHENTICATION_FAILED)
             if cols.has_key("isBlocked"):
                 return self._renderSigninForm(request, self.USER_BLOCKED)
+            if cols.has_key("isFlagged"):
+                return self._renderSigninForm(request, self.USER_FLAGGED)
             self._saveSessionAndRedirect(request, cols, remember)
         def errback(error):
             return self._renderSigninForm(request, self.UNKNOWN_ERROR)

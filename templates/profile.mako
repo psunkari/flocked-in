@@ -128,24 +128,24 @@
 
 <%def name="user_subactions(userId, renderWrapper=True)">
   %if myId != userId:
-    ##%if renderWrapper:
-    ##  <div class="sidebar-chunk">
-    ##  <ul id="user-subactions-${userId}" class="middle user-subactions v-links">
-    ##%endif
+    %if renderWrapper:
+      <div class="sidebar-chunk">
+      <ul id="user-subactions-${userId}" class="middle user-subactions v-links">
+    %endif
     ##<li><a href="/profile/block?id=${userId}"
     ##       onclick="$.post('/ajax/profile/block', 'id=${userId}'); $.event.fix(event).preventDefault();">
     ##      ${_("Block User")}
     ##    </a>
     ##</li>
-    ##<li><a href="/profile/review?id=${userId}"
-    ##       onclick="$.post('/ajax/profile/review', 'id=${userId}'); $.event.fix(event).preventDefault();">
-    ##      ${_("Request Admin Review")}
-    ##    </a>
-    ##</li>
-    ##%if renderWrapper:
-    ##  </ul>
-    ##  </div>
-    ##%endif
+    <li><a href="/profile/review?id=${userId}"
+           onclick="$.post('/ajax/profile/report', 'id=${userId}'); $.event.fix(event).preventDefault();">
+          ${_("Verify Account")}
+        </a>
+    </li>
+    %if renderWrapper:
+      </ul>
+      </div>
+    %endif
   %endif
 </%def>
 

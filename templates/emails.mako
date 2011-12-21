@@ -119,8 +119,12 @@
   ${header()}
   <td style="font-size: 14px;">
     A request was received to reset the password for ${email} on <a href="${rootUrl}">${brandName}</a>.
-    To change the password please click the following link, or paste it into your browser:<br/><br/>
-    <a href="${resetPasswdUrl}">${resetPasswdUrl}</a> <br/>
+    To change your password please click the button below:<br/><br/>
+    <a href="${resetPasswdUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">Reset Your Account</div></a>
+    <br/><br/>
+    You may also paste this link in your browser:
+    <a href="${resetPasswdUrl}">${resetPasswdUrl}</a>
+    <br/><br/>
     This link is valid for 24 hours only.<br/>
     If you did not request this email there is no need for further action<br/>
   </td>
@@ -351,4 +355,19 @@
     </tr>
   %endfor
   </table>
+</%def>
+
+<%def name="reportUser()">
+  ${header()}
+  <td style="font-size: 14px;">
+    ${reportedBy} has flagged your account for verification.
+    Please click the button to verify your account:
+    <br/><br/>
+    <a href="${reactivateUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">Verify Your Account</div></a>
+    <br/><br/>
+    You may also paste this link in your browser:
+    <a href="${reactivateUrl}">${reactivateUrl}</a>
+    <br/><br/>
+  </td>
+  ${footer(text=False)}
 </%def>
