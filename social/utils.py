@@ -689,23 +689,24 @@ def existingUser(emailId):
 
 
 @defer.inlineCallbacks
-def addUser(emailId, displayName, passwd, orgKey, jobTitle = None, timezone=None):
+def addUser(emailId, displayName, passwd, orgId, jobTitle = None, timezone=None):
     userId = getUniqueKey()
 
-    userInfo = {'basic': {'name': displayName, 'org':orgKey,
+    userInfo = {'basic': {'name': displayName, 'org':orgId,
                           'type': 'user', 'emailId':emailId}}
-    userAuthInfo = {"passwordHash": hashpass(passwd), "org": orgKey, "user": userId}
+    userAuthInfo = {"passwordHash": hashpass(passwd), "org": orgId, "user": userId}
 
     if jobTitle:
         userInfo["basic"]["jobTitle"] = jobTitle
     if timezone:
         userInfo["basic"]["timezone"] = timezone
 
-    yield db.insert(orgKey, "orgUsers", '', userId)
+    yield db.insert(orgId, "orgUsers", '', userId)
     yield db.batch_insert(userId, "entities", userInfo)
     yield db.batch_insert(emailId, "userAuth", userAuthInfo)
-    yield db.insert(orgKey, "displayNameIndex", "", displayName.lower()+ ":" + userId)
-    yield db.insert(orgKey, "nameIndex", "", displayName.lower()+ ":" + userId)
+    yield updateDisplayNameIndex(userId, [orgId], displayName, None)
+    yield updateNameIndex(userId, [orgId], displayName, None)
+    yield updateNameIndex(userId, [orgId], emailId, None)
 
     defer.returnValue(userId)
 
@@ -750,27 +751,19 @@ def isAdmin(userId, entityId):
 @profile
 @defer.inlineCallbacks
 @dump_args
-def deleteNameIndex(userKey, name, targetKey):
-    if name:
-        yield db.remove(userKey, "nameIndex", ":".join([name.lower(), targetKey]))
-
-
-@profile
-@defer.inlineCallbacks
-@dump_args
-def updateDisplayNameIndex(userKey, targetKeys, newName, oldName):
+def updateDisplayNameIndex(userId, targetIds, newName, oldName):
     calls = []
     muts = {}
 
-    for targetKey in targetKeys:
+    for targetId in targetIds:
         if oldName or newName:
-            muts[targetKey] = {'displayNameIndex':{}}
+            muts[targetId] = {'displayNameIndex':{}}
         if oldName:
-            colName = oldName.lower() + ":" + userKey
-            muts[targetKey]['displayNameIndex'][colName] = None
+            colName = oldName.lower() + ":" + userId
+            muts[targetId]['displayNameIndex'][colName] = None
         if newName:
-            colName = newName.lower() + ':' + userKey
-            muts[targetKey]['displayNameIndex'][colName] = ''
+            colName = newName.lower() + ':' + userId
+            muts[targetId]['displayNameIndex'][colName] = ''
     if muts:
         yield db.batch_mutate(muts)
 
@@ -778,17 +771,19 @@ def updateDisplayNameIndex(userKey, targetKeys, newName, oldName):
 @profile
 @defer.inlineCallbacks
 @dump_args
-def updateNameIndex(userKey, targetKeys, newName, oldName):
+def updateNameIndex(userId, targetIds, newName, oldName):
     muts = {}
-    for targetKey in targetKeys:
+    for targetId in targetIds:
         if oldName or newName:
-            muts[targetKey] = {'nameIndex':{}}
+            muts[targetId] = {'nameIndex':{}}
         if oldName :
-            colName = oldName.lower() + ":" + userKey
-            muts[targetKey]['nameIndex'][colName] = None
+            for part in oldName.split():
+                colName = part.lower() + ":" + userId
+                muts[targetId]['nameIndex'][colName] = None
         if newName:
-            colName = newName.lower() + ":" + userKey
-            muts[targetKey]['nameIndex'][colName] = ''
+            for part in newName.split():
+                colName = part.lower() + ":" + userId
+                muts[targetId]['nameIndex'][colName] = ''
     if muts:
         yield db.batch_mutate(muts)
 

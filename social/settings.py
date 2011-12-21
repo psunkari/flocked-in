@@ -341,17 +341,21 @@ class SettingsResource(base.BaseResource):
         # Update name indicies of organization.
         nameIndexKeys = [orgId]
         nameIndicesDeferreds = []
+        oldNameParts = []
+        newNameParts = []
         for field in ["name", "lastname", "firstname"]:
             if field in basicUpdatedInfo:
-                d = utils.updateNameIndex(myId, nameIndexKeys,
-                                          basicUpdatedInfo[field],
-                                          me["basic"].get(field, None))
+                newNameParts.extend(basicUpdatedInfo[field].split())
+                oldNameParts.extend(me['basic'].get(field, '').split())
                 if field == 'name':
                     d1 = utils.updateDisplayNameIndex(myId, nameIndexKeys,
                                                       basicUpdatedInfo[field],
                                                       me["basic"].get(field, None))
                     nameIndicesDeferreds.append(d1)
-                nameIndicesDeferreds.append(d)
+        d = utils.updateNameIndex(myId, nameIndexKeys,
+                                  " ".join(newNameParts),
+                                  " ".join(oldNameParts))
+        nameIndicesDeferreds.append(d)
 
         # Avatar (display picture)
         dp = utils.getRequestArg(request, "dp", sanitize=False)
@@ -363,7 +367,7 @@ class SettingsResource(base.BaseResource):
             basicUpdated = True
         if userInfo["basic"]:
             yield db.batch_insert(myId, "entities", userInfo)
-            me.update(userInfo)
+            me['basic'].update(userInfo['basic'])
             yield fts.solr.updatePeopleIndex(myId, me, orgId)
 
         if to_remove:
@@ -396,7 +400,7 @@ class SettingsResource(base.BaseResource):
         args.update({'suggested_sections':tmp_suggested_sections})
 
         yield renderScriptBlock(request, "settings.mako", "right",
-                                landing, ".right-contents", "set", **args)
+                                False, ".right-contents", "set", **args)
 
 
     @defer.inlineCallbacks
