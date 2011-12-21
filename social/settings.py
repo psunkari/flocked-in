@@ -363,7 +363,7 @@ class SettingsResource(base.BaseResource):
             basicUpdated = True
         if userInfo["basic"]:
             yield db.batch_insert(myId, "entities", userInfo)
-            me.update(userInfo)
+            me['basic'].update(userInfo['basic'])
             yield fts.solr.updatePeopleIndex(myId, me, orgId)
 
         if to_remove:
@@ -396,7 +396,7 @@ class SettingsResource(base.BaseResource):
         args.update({'suggested_sections':tmp_suggested_sections})
 
         yield renderScriptBlock(request, "settings.mako", "right",
-                                landing, ".right-contents", "set", **args)
+                                False, ".right-contents", "set", **args)
 
 
     @defer.inlineCallbacks
