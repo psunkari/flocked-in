@@ -581,6 +581,36 @@ var convs = {
         $container.find('.text-expander').css('display', 'inline');
         $container.find('.text-full').css('display', 'none');
         $container.find('.text-collapser').css('display', 'none');
+    },
+
+    showItemReportDialog: function(itemId) {
+        var dialogOptions = {
+            id: 'report-dlg-'+itemId,
+            buttons: [
+                {
+                    text:'Report',
+                    click : function() {
+                        comment = $("#conv-report-comment").val();
+                        parent = $("#conv-report-parent").val();
+                        action = $("#conv-report-action").val();
+                        $.post("/ajax/item/report", {
+                            parent:parent,
+                            action:action,
+                            comment:comment
+                        });
+                        $$.dialog.close(this, true)
+                    }
+                },
+                {
+                    text: 'Cancel',
+                    click: function() {
+                        $$.dialog.close(this, true)
+                    }
+                }
+            ]
+        };
+        $$.dialog.create(dialogOptions);
+        $.get('/ajax/item/showReportDialog?id='+itemId);
     }
 };
 
@@ -1402,4 +1432,3 @@ var settings = {
 }
 $$.settings = settings;
 }})(social, jQuery);
-

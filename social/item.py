@@ -1,6 +1,10 @@
 import uuid
 import time
 import re
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
 from telephus.cassandra import ttypes
 from twisted.internet   import defer
@@ -1005,6 +1009,211 @@ class ItemResource(base.BaseResource):
         # Update the user interface
         request.write("$$.convs.remove('%s', '%s');"%(convId,itemId))
 
+    @defer.inlineCallbacks
+    def _renderReportDialog(self, request):
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        landing = not self._ajax
+        itemId, item = yield utils.getValidItemId(request, "id")
+
+        itemType = item["meta"].get("type")
+
+        args['title'] = _("Report this %s") %type
+        args['convId'] = itemId
+
+        yield renderScriptBlock(request, "item.mako", "render_report_dialog", False,
+                                "#report-dlg-%s"%(itemId), "set", **args)
+
+
+
+    @defer.inlineCallbacks
+    def _renderReport(self, request):
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        landing = not self._ajax
+        convId, conv = yield utils.getValidItemId(request, "id", columns=['report'])
+        toFetchEntities = []
+        reportResponseActions = {}
+
+        if 'parent' in conv['meta']:
+            raise errors.InvalidItem('conversation', convId)
+
+        if "report" in conv:
+            reportId = conv["report"]["reportId"]
+            toFetchEntities.append(conv["report"]["reportedBy"])
+        else:
+            reportId = None
+
+        args['convId'] = convId
+        args['myId'] = myKey
+        args['items'] = {convId: conv}
+        meta = conv["meta"]
+        owner = meta["owner"]
+        args['ownerId'] = owner
+        args['entities'] = {}
+
+        toFetchEntities.extend([owner, myKey])
+        entities = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
+        entities = utils.multiSuperColumnsToDict(entities)
+        args["entities"].update(entities)
+
+        yield self.renderItem(request)
+        yield renderScriptBlock(request, "item.mako", "render_item_report",
+                              landing, ".center-contents", "append", **args)
+
+        print "Report Id is %s" %reportId
+        if reportId:
+            reportResponses = yield db.get_slice(reportId, "itemResponses",
+                                                 reverse=True, count=5)
+            reportResponseKeys, toFetchEntities = [], []
+            for response in reportResponses:
+                userKey, responseKey, action = response.column.value.split(":")
+                reportResponseKeys.append(responseKey)
+                toFetchEntities.append(userKey)
+                reportResponseActions[responseKey] = action
+
+            fetchedResponses = yield db.multiget_slice(reportResponseKeys,
+                                                       "items", ["meta"])
+            fetchedResponses = utils.multiSuperColumnsToDict(fetchedResponses)
+            args["reportId"] = reportId
+            args["items"] = fetchedResponses
+            args["responseKeys"] = reportResponseKeys
+            args["reportResponseActions"] = reportResponseActions
+
+            #Show comments from reporting only if I am the OP or the reporter
+            if myKey in [owner, conv["report"]["reportedBy"]]:
+                yield renderScriptBlock(request, "item.mako", 'render_report_comments',
+                                   landing, '#report-comments', 'prepend',
+                                   **args)
+
+    @defer.inlineCallbacks
+    def _submitReport(self, request):
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        landing = not self._ajax
+        snippet, comment = utils.getTextWithSnippet(request, "comment",
+                                            constants.COMMENT_PREVIEW_LENGTH,
+                                            richText=False)
+        action = utils.getRequestArg(request, "action")
+        isNewReport = False
+        timeUUID = uuid.uuid1().bytes
+        toFetchEntities = []
+
+        if not action or action not in ["accept", "report", "re-edit", "repost", "reject"]:
+            raise errors.MissingParams([_('Action')])
+
+        convId, conv = yield utils.getValidItemId(request, "parent", columns=['report'])
+        convOwnerId = conv["meta"]["owner"]
+        convType = conv["meta"]["type"]
+        convACL = conv["meta"]["acl"]
+
+        #Don't allow any further action if OP has accepted and hidden the item
+        # permanently
+        if "report" in conv and conv["report"]["itemStatus"] == "accept":
+            raise errors.EntityAccessDenied(convType, convId)
+
+        if "report" in conv:
+            if conv["report"]["itemStatus"] == "ok":
+                #A report was posted earlier but resolved
+                reportId = conv["report"]["reportId"]
+                isNewReport = True
+            else:
+                reportId = conv["report"]["reportId"]
+                isNewReport = False
+        else:
+            isNewReport = True
+            reportId = utils.getUniqueKey()
+
+        if isNewReport and convOwnerId == myKey:
+            raise errors.PermissionDenied("You cannot report your own Item. Delete the item instead")
+
+        if myKey == convOwnerId:
+            if action not in ["accept", "repost", "re-edit"]:
+                raise errors.MissingParams([_('Action')])
+            convReport = {"itemStatus":action}
+            yield db.batch_insert(convId, "items", {"report": convReport})
+        else:
+            if action not in ["report", "repost", "reject"]:
+                raise errors.MissingParams([_('Action')])
+            if isNewReport:
+                #1. Update Existing Item Information with Report Meta
+                newACL = pickle.dumps({"accept":{"users":[convOwnerId, myKey]}})
+                item = {}
+                #itemStatus can be ["pending", "accepted", "repost", "re-edit"]
+                #pending is pending action from OP
+                #accept is permanently hidden by OP
+                #repost is when OP replies back with a reason to repost the item
+                #re edit when OP makes changes to item and reposts the item
+                convReport = {"reportedBy":myKey, "reportId":reportId,
+                                   "itemStatus":"pending", "original_acl":convACL}
+
+                yield db.batch_insert(convId, "items", {"report": convReport,
+                                                        "meta":{"acl":newACL}})
+            else:
+                #Restore the original ACL if complainant withdraws the complaint
+                if action == "repost" and myKey == conv["report"]["reportedBy"]:
+                    _acl = conv["report"]["original_acl"]
+                    convReport = {"itemStatus":"ok"}
+                    yield db.batch_insert(convId, "items", {"meta":{"acl":_acl}})
+                    #XXXShould we remove all report related comments ?
+                elif action == "reject":
+                    convReport = {"itemStatus":"pending"}
+                yield db.batch_insert(convId, "items", {"report": convReport})
+
+        #2. Update New Report comment Details
+        commentId = utils.getUniqueKey()
+        timeUUID = uuid.uuid1().bytes
+        meta = {"owner": myKey, "parent": convId, "comment": comment,
+                "timestamp": str(int(time.time())),
+                "uuid": timeUUID, "richText": str(False)}
+        if snippet:
+            meta['snippet'] = snippet
+
+        yield db.batch_insert(commentId, "items", {'meta': meta})
+
+        #3. Update list of comments for this report
+        yield db.insert(reportId, "itemResponses",
+                        "%s:%s:%s" % (myKey, commentId, action), timeUUID)
+
+        if script:
+            convId, conv = yield utils.getValidItemId(request, "parent", columns=['report'])
+            convOwnerId = conv["meta"]["owner"]
+            convType = conv["meta"]["type"]
+            convACL = conv["meta"]["acl"]
+            reportOwnerId = conv["report"]["reportedBy"]
+            toFetchEntities.extend([convOwnerId, reportOwnerId])
+            entities = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
+            entities = utils.multiSuperColumnsToDict(entities)
+            args["entities"] = entities
+            args['convId'] = convId
+            args['myId'] = myKey
+            args['items'] = {convId: conv}
+            args['ownerId'] = convOwnerId
+
+            yield renderScriptBlock(request, "item.mako", "render_item_report",
+                                  landing, ".center-contents", "append", True,
+                                  handlers={"onload": "$('#conv-report').remove();"}, **args)
+
+            reportResponses = yield db.get_slice(reportId, "itemResponses", count=5)
+            reportResponseKeys = []
+            reportResponseActions = {}
+            for response in reportResponses:
+                userKey, responseKey, action = response.column.value.split(":")
+                reportResponseKeys.append(responseKey)
+                reportResponseActions[responseKey] = action
+
+            fetchedResponses = yield db.multiget_slice(reportResponseKeys,
+                                                       "items", ["meta"])
+            fetchedResponses = utils.multiSuperColumnsToDict(fetchedResponses)
+            args["reportId"] = reportId
+            args["items"] = fetchedResponses
+            reportResponseKeys.reverse()
+            args["responseKeys"] = reportResponseKeys
+            args["reportResponseActions"] = reportResponseActions
+
+            yield renderScriptBlock(request, "item.mako", 'render_report_comments',
+                               landing, '#report-comments', 'set',
+                               **args)
+
+        else:
+            request.redirect('/item/report?id=%s'%convId)
 
     @profile
     @dump_args
@@ -1019,6 +1228,10 @@ class ItemResource(base.BaseResource):
                 d = self._responses(request)
             if action == "likes":
                 d = self._likes(request)
+            if action == "report":
+                d = self._renderReport(request)
+            if action == "showReportDialog":
+                d = self._renderReportDialog(request)
 
         return self._epilogue(request, d)
 
@@ -1037,7 +1250,8 @@ class ItemResource(base.BaseResource):
                 d = getattr(self, "_" + request.postpath[0])(request)
             elif action == 'delete':
                 d = self._remove(request)
-
+            elif action == "report":
+                d = self._submitReport(request)
         return self._epilogue(request, d)
 
 
@@ -1076,4 +1290,3 @@ class APIItemResource(base.APIBaseResource):
             d = self._newComment(request)
 
         return self._epilogue(request, d)
-

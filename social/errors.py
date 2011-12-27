@@ -95,7 +95,7 @@ class MissingParams(BaseError):
     def __init__(self, params=None):
         self.params = params
         message = _("One or more required parameters are missing")
-        BaseError.__init__(self, message, 418)  # XXX: No suitable error code
+        BaseError.__init__(self, message, 412)  # XXX: No suitable error code
 
     def errorData(self):
         message = self.message
@@ -279,4 +279,3 @@ class APIErrorPage(resource.Resource):
 
     def getChild(self, path, request):
         return self
-

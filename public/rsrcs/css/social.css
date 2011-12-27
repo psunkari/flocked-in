@@ -1868,7 +1868,7 @@ abbr.timestamp {
 #feedback-desc-page {
     padding: 10px 0 0;
 }
-#feedback-desc {
+#feedback-desc, #conv-report-comment {
     resize: none;
     height: 60px;
     width: 100%;
@@ -2285,4 +2285,3 @@ td.file-info, td.file-context, td.file-actions {
     text-align: right;
     border-top: 1px solid #E0D7CF;
 }
-
