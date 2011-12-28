@@ -15,7 +15,7 @@ from twisted.internet import defer, reactor
 from twisted.python import log
 
 sys.path.append(os.getcwd())
-from social import config, db, utils, fts
+from social import config, db, utils, search
 
 
 KEYSPACE = config.get("Cassandra", "Keyspace")
@@ -29,41 +29,41 @@ def reindexProfileContent():
         if entity.get('basic', {}).get('type', '') == 'user':
             orgId = entity['basic'].get('org', '')
             if orgId:
-                yield fts.solr.updatePeopleIndex(entityId, entity, orgId)
+                yield search.solr.updatePeopleIndex(entityId, entity, orgId)
 
 
 
 
 @defer.inlineCallbacks
 def reindexItems():
-    """
-        re index all items
-    """
-    rows = yield db.get_range_slice('items', count=10000, reverse=True)
-    data = {}
-    i=0
-    log.msg("no.of items", len(rows))
-    for row in rows:
-        i +=1
+    items = {}
+    fetchedItems = yield db.get_range_slice('items', count=10000, reverse=True)
+    for row in fetchedItems:
+        items[row.key] = utils.supercolumnsToDict(row.columns)
+
+    log.msg("Total items:", len(fetchedItems))
+    for i, row in enumerate(fetchedItems):
         itemId = row.key
-        log.msg(itemId, i)
-        item = utils.supercolumnsToDict(row.columns)
-        if 'meta' not in item:
+        item = items[itemId]
+        log.msg(i+1, itemId)
+
+        if 'meta' not in item or 'owner' not in item['meta']:
             continue
-        if 'owner' not in item['meta']:
-            continue
+
         owner = item['meta']['owner']
         try:
             col = yield db.get(owner, "entities", "org", "basic")
             ownerOrgId = col.column.value
         except:
-            log.msg(itemId, "error")
+            log.msg("Error when indexing:", itemId)
             continue
 
-        if item['meta'].get('type', '') == 'poll':
-            item['meta']['poll_options'] = ' '.join(item['options'].values())
-        yield fts.solr.updateIndex(itemId, item, ownerOrgId)
+        parentId = item['meta'].get('parent', None)
 
+        if not parentId:
+            yield search.solr.updateItem(itemId, item, ownerOrgId)
+        else:
+            yield search.solr.updateItem(itemId, item, ownerOrgId, conv=items[parentId])
 
 
 if __name__ == '__main__':

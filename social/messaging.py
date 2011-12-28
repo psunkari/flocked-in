@@ -16,7 +16,7 @@ from boto.s3.connection import VHostCallingFormat, SubdomainCallingFormat
 from twisted.internet   import defer
 from twisted.web        import static, server
 
-from social             import db, utils, base, errors, config, _, fts
+from social             import db, utils, base, errors, config, _, search
 from social             import notifications
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
@@ -46,7 +46,7 @@ class MessagingResource(base.BaseResource):
         meta['parent'] = convId
         meta['timestamp'] = meta['date_epoch']
         meta = {"meta":meta}
-        fts.solr.updateIndex(messageId, meta, myOrgId, attachments)
+        search.solr.updateMessage(messageId, meta, myOrgId, attachments)
 
     @profile
     @defer.inlineCallbacks

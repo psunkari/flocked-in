@@ -2286,3 +2286,26 @@ td.file-info, td.file-context, td.file-actions {
     border-top: 1px solid #E0D7CF;
 }
 
+
+/*
+ * Search results
+ */
+
+#search-results {
+    padding: 20px;
+}
+
+.search-subtitle {
+    font-size: 16px;
+    line-height: 1.5em;
+    color: #888;
+    border-bottom: 1px solid #EFEFEF;
+    margin: 20px 10px 20px -10px;
+}
+
+.search-conv-avatar {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    padding-left: 16px;
+}

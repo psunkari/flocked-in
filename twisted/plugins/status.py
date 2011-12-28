@@ -17,8 +17,6 @@ class Status(object):
     itemType = "status"
     position = 1
     hasIndex = True
-    #fields indexed by solr
-    indexFields = [('meta', 'comment'), ('meta', 'parent')]
 
 
     @defer.inlineCallbacks
@@ -67,8 +65,8 @@ class Status(object):
             val = "%s:%s:%s:%s:%s" %(utils.encodeKey(timeuuid), fid, name, size, ftype)
             yield db.insert(convId, "item_files", val, timeuuid, attachmentId)
 
-        from social import fts
-        fts.solr.updateIndex(convId, item, myOrgId, attachments)
+        from social import search
+        search.solr.updateItem(convId, item, myOrgId, attachments)
         defer.returnValue((convId, item))
 
 

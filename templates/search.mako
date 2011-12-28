@@ -3,7 +3,7 @@
 <%! from social import utils, _, __, plugins %>
 
 <%namespace name="widgets" file="widgets.mako"/>
-<%namespace name="item" file="item.mako"/>
+<%namespace name="itemTmpl" file="item.mako"/>
 <%namespace name="feed" file="feed.mako"/>
 <%inherit file="base.mako"/>
 
@@ -35,12 +35,10 @@
           </div>
         </div>
         <div style="margin-top: 30px">
-          <div class="center-contents">
-            <div id="user-feed">
+          <div id="search-results" class="center-contents">
               %if not script:
                 ${self.results()}
               %endif
-            </div>
           </div>
         </div>
       </div>
@@ -54,7 +52,171 @@
   <span class="middle title">${_("Search Results")}</span>
 </%def>
 
+
+<%def name="peopleResults()">
+  <div class="center-title">People</div>
+</%def>
+
+
+<%def name="groupResults()">
+  <div class="center-title">Groups</div>
+</%def>
+
+
+<%def name="tagResults()">
+  <div class="center-title">Tags</div>
+</%def>
+
+
+<%def name="messageResults()">
+  <div class="center-title">Private Messages</div>
+</%def>
+
+<%def name="item_footer(itemId, parentId=None)">
+</%def>
+
+
+<%def name="conv_root(convId)">
+  <% itemType = items[convId]["meta"]["type"] %>
+  %if itemType in plugins:
+    ${plugins[itemType].rootHTML(convId, isQuoted, context.kwargs)}
+  %endif
+  <% attachments = items[convId].get("attachments", {}) %>
+  %if len(attachments.keys()) > 0:
+    <div class="attachment-list">
+      %for attachmentId in attachments:
+        <%
+          tuuid, name, size, ftype = attachments[attachmentId].split(':')
+          name = urlsafe_b64decode(name)
+          size = formatFileSize(int(size))
+          location = '/files?id=%s&fid=%s&ver=%s'%(convId, attachmentId, tuuid)
+        %>
+        <div class="attachment-item">
+          <span class="icon attach-file-icon"></span>
+          <span class="attachment-name"><a href="${location}" target="filedownload">${name|h}</a></span>
+          <span class="attachment-meta">&nbsp;&nbsp;&ndash;&nbsp;&nbsp;${size}</span>
+        </div>
+      %endfor
+    </div>
+  %endif
+</%def>
+
+
+<%def name="item_layout(itemId, classes='')">
+  <div id="conv-${itemId}" class="conv-item ${classes}">
+    <div class="conv-avatar" id="conv-avatar-${itemId}">
+      <%
+        itemMeta = items[itemId]['meta']
+        ownerId = itemMeta['owner']
+        parentId = itemMeta.get('parent', None)
+        itemType = itemMeta.get('type', 'status') if not parentId else 'comment'
+      %>
+      %if itemType != 'feedback':
+        <% avatarURI = utils.userAvatar(ownerId, entities[ownerId], "small") %>
+        <img src="${avatarURI}" style="max-height: 32px; max-width: 32px;"/>
+      %else:
+        <div class="feedback-mood-icon ${type}-icon"></div>
+      %endif
+    </div>
+    <div class="conv-data">
+      <div id="conv-root-${itemId}" class="conv-root">
+        <div class="conv-summary">
+          %if itemType in plugins:
+            ${plugins[itemType].rootHTML(itemId, isQuoted, context.kwargs)}
+          %else:    ## responses
+            <%
+              comment = itemMeta.get('comment', '')
+              snippet = itemMeta.get('snippet', '')
+              richText = itemMeta.get('richText', 'False') == 'True'
+              ownerName = utils.userName(ownerId, entities[ownerId], "conv-user-cause")
+              if parentId:
+                  parentMeta = items[parentId]['meta']
+                  parentType = parentMeta.get('type', 'status')
+                  parentOwnerId = parentMeta['owner']
+                  parentOwnerName = entities[parentOwnerId]['basic']['name']
+            %>
+            %if parentId:
+              ${_("%(ownerName)s, in reply to <a class='ajax' href='/item?id=%(parentId)s'>%(parentOwnerName)s's %(parentType)s</a>") % locals()}
+            %else:
+              ownerName
+            %endif
+            <div class="item-title">
+              ${itemTmpl._renderText(snippet, comment, richText=richText)}
+            </div>
+          %endif
+          <div id="item-attachments"></div>
+          <div id="item-tags"></div>
+          <div id="item-footer-${itemId}" class="conv-footer busy-indicator">
+            <%
+              timestamp = int(itemMeta['timestamp'])
+              likesCount = int(itemMeta.get('likesCount', '0'))
+              commentsCount = int(itemMeta.get('responseCount', '0'))
+              myTimezone = me['basic'].get("timezone", None)
+            %>
+            ${utils.simpleTimestamp(timestamp, myTimezone)}
+            %if likesCount:
+              &nbsp;&#183;
+            %endif
+            %if not parentId:
+              <button class="ajax button-link" title="${_('View %s') % itemType}" href="/item?id=${itemId}">
+                %if likesCount > 0:
+                  <div class="small-icon small-like"></div>${likesCount}
+                %endif
+                %if commentsCount > 0:
+                  &nbsp;&#183;&nbsp;
+                  <div class="small-icon small-comment"></div>${commentsCount}
+                %endif
+                &nbsp;&#183;&nbsp;
+                ${_('View %s' % itemType)}
+              </button>
+            %else:
+              <button class="ajax button-link" title="${_('View %s') % parentType}" href="/item?id=${parentId}">
+                %if likesCount > 0:
+                  <div class="small-icon small-like"></div>${likesCount}
+                %endif
+              </button>
+            %endif
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</%def>
+
+
 <%def name="results()">
+  %if matchedUserIds:
+    <div id="search-people">
+      ${peopleResults()}
+    </div>
+  %endif
+  %if matchedGroupIds:
+    <div id="search-groups">
+      ${groupResults()}
+    </div>
+  %endif
+  %if matchedTagIds:
+    <div id="search-tags">
+      ${tagResults()}
+    </div>
+  %endif
+  %if matchedMsgIds:
+    <div id="search-messages">
+      ${messageResults()}
+    </div>
+  %endif
+  %if matchedItemIds:
+    <div class="search-subtitle">Posts</div>
+    <div id="search-convs">
+      %for itemId in matchedItemIds:
+        ${self.item_layout(itemId)}
+      %endfor
+    </div>
+  %endif
+</%def>
+
+
+<%def name="_results()">
   <%
     rTypeClasses = {"status": "comment", "question": "answer", "L": "like"}
     simpleTimestamp = utils.simpleTimestamp
@@ -75,7 +237,6 @@
         itemOwner = items[itemId]['meta']['owner']
         convOwnerStr = _("%s's "%(utils.userName(convOwner, entities[convOwner])))
         itemOwnerStr = _("%s's "%(utils.userName(itemOwner, entities[itemOwner])))
-
       %>
 
       <div class="activity-item ${rTypeClass}">

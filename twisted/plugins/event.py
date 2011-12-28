@@ -264,10 +264,8 @@ class Event(object):
     itemType = "event"
     position = 4
     disabled = True
-    hasIndex = False
-    #fields indexed by solr
-    indexFields = [('meta', 'parent'),('meta', 'desc'),
-                   ('meta', 'location'), ('meta', 'title')]
+    hasIndex = True
+    indexFields = {'meta':set(['event_desc','event_location','event_title'])}
 
     @profile
     @defer.inlineCallbacks
@@ -421,8 +419,8 @@ class Event(object):
             val = "%s:%s:%s:%s:%s" %(utils.encodeKey(timeuuid), fid, name, size, ftype)
             yield db.insert(convId, "item_files", val, timeuuid, attachmentId)
 
-        from social import fts
-        d = fts.solr.updateIndex(convId, item, myOrgId, attachments)
+        from social import search
+        d = search.solr.updateItem(convId, item, myOrgId, attachments)
         defer.returnValue((convId, item))
 
     @defer.inlineCallbacks

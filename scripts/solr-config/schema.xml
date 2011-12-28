@@ -201,51 +201,57 @@
             <filter class="solr.LowerCaseFilterFactory" />
           </analyzer>
         </fieldType>
-        <fieldtype name="ignored" stored="false" indexed="false" multiValued="true" class="solr.StrField" /> 
-
+        <fieldtype name="ignored" stored="false" indexed="false" multiValued="true" class="solr.StrField" />
     </types>
+
     <fields>
-    
+       <!-- Generic -->
        <field name="id" type="string" indexed="true" stored="true" required="true" />
-       <field name="orgId" type="string" indexed="true" stored="true" required="true" />
-       <field name="comment" type = "text" indexed="true" stored="true" />
+       <field name="org" type="string" indexed="true" stored="true" required="true" />
+       <field name="_type" type="text" indexed="true" stored="true" required="true" />
+
+       <!-- All Items -->
+       <field name="comment" type="text" indexed="true" stored="true" />
        <field name="parent" type="text" stored="true" />
-       <field name="ownerId" type = "uuid" stored="true" />
-       <field name="target" type="uuid" stored="true" />
-       <field name="itemType" type = "text" indexed="true" stored="true" />
-       <field name="summary" type = "text" indexed="true" stored="true" />
-       <field name="title" type = "text" indexed="true" stored="true" />
-       <field name="location" type = "text" indexed="true" stored="true" />
-       <field name="poll_options" type = "text" indexed="true" stored="true" />
-       <field name="filename" type = "text" indexed="true" stored="true" />
-       <field name="subject" type = "text" indexed="true" stored="true" />
-       <field name="body" type = "text" indexed="true" stored="true" />
-       <field name="timestamp" type = "sdouble" indexed="true" stored="true" />
-       <field name="question" type = "text" indexed="true" stored="true" />
-       <field name="desc" type = "text" indexed="true" stored="true" />
-       <field name="acl" type="text" stored="true"   />
-       <field name="ownerName" type="text" indexed="true" stored="true" />
-       <field name="targetName" type="text" indexed="true" stored="true" />
-       <field name="text" type="text" indexed="true" stored="false" multiValued="true"/>
-       <field name="im" type="text" indexed="true" stored="true" multiValued="true"/>
-       <field name="phone" type="text" indexed="true" stored="true" multiValued="true"/>
-       <field name="mail" type="text" indexed="true" stored="true" multiValued="true"/>
-       <field name="firstname" type="text" indexed="true" stored="true"/>
-       <field name="lastname" type="text" indexed="true" stored="true"/>
-       <field name="name" type="text" indexed="true" stored="true"/>
-       <field name="hometown" type="text" indexed="true" stored="true"/>
-       <field name="currentCity" type="text" indexed="true" stored="true"/>
-       <field name="expertise" type="text" indexed="true" stored="true"/>
-       <field name="interests" type="text" indexed="true" stored="true"/>
-       <field name="languages" type="text" indexed="true" stored="true"/>
-       <field name="schools" type="text" indexed="true" stored="true" multiValued="true"/>
-       <field name="companies" type="text" indexed="true" stored="true" multiValued="true"/>
-       <dynamicField name="*" type="text" indexed="true" stored="true" multiValued="true"/>
+       <field name="type" type="text" indexed="true" stored="true" />
+       <field name="timestamp" type="sdouble" indexed="true" stored="true" />
+       <field name="attachment" type="text" indexed="true" stored="true" multiValued="true" />
+       <field name="_denyACL" type="text" indexed="true" multiValued="true" />
+       <field name="_acceptACL" type="text" indexed="true" multiValued="true" />
+
+       <!-- Links -->
+       <field name="link_summary" type="text" indexed="true" stored="true" />
+       <field name="link_title" type="text" indexed="true" stored="true" />
+
+       <!-- Events -->
+       <field name="event_location" type="text" indexed="true" stored="true" />
+       <field name="event_title" type="text" indexed="true" stored="true" />
+       <field name="event_desc" type="text" indexed="true" stored="true" />
+
+       <!-- Polls -->
+       <dynamicField name="poll_option_*" type="text" indexed="true" stored="true" />
+       <field name="poll_option" type="text" indexed="true" stored="false" multiValued="true"/>
+
+       <!-- Messages -->
+       <field name="subject" type="text" indexed="true" stored="true" />
+       <field name="body" type="text" indexed="true" stored="true" />
+       <field name="recipient" type="text" indexed="true" />
+
+       <!-- People -->
+       <field name="phone" type="text" indexed="true" stored="true" multiValued="true" />
+       <field name="mobile" type="text" indexed="true" stored="true" multiValued="true" />
+       <field name="mail" type="text" indexed="true" stored="true" multiValued="true" />
+       <field name="firstname" type="text" indexed="true" stored="true" />
+       <field name="lastname" type="text" indexed="true" stored="true" />
+       <field name="name" type="text" indexed="true" stored="true" />
+       <field name="hometown" type="text" indexed="true" stored="true" />
+       <field name="currentCity" type="text" indexed="true" stored="true" />
+       <field name="expertise" type="text" indexed="true" stored="true" />
+       <field name="school" type="text" indexed="true" stored="true" multiValued="true" />
+       <field name="company" type="text" indexed="true" stored="true" multiValued="true" />
+       <field name="jobTitle" type="text" indexed="true" stored="true" />
     </fields>
     <uniqueKey>id</uniqueKey>
-    <defaultSearchField>text</defaultSearchField>
-    <solrQueryParser defaultOperator="OR"/>
-    <copyField source="*" dest="text"/>
-
+    <copyField source="poll_option_*" dest="poll_option"/>
 </schema>
 

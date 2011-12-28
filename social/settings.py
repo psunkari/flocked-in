@@ -13,7 +13,7 @@ from telephus.cassandra     import ttypes
 
 from social.template        import render, renderDef, renderScriptBlock
 from social.relations       import Relation
-from social                 import db, utils, base, plugins, _, __, fts
+from social                 import db, utils, base, plugins, _, __, search
 from social                 import constants, feed, errors
 from social.logging         import dump_args, profile, log
 from social.isocial         import IAuthInfo
@@ -256,7 +256,7 @@ class SettingsResource(base.BaseResource):
         yield renderScriptBlock(request, "settings.mako", "right",
                                 landing, ".right-contents", "set", **args)
         me.update({'personal':data})
-        yield fts.solr.updatePeopleIndex(myId, me, orgId)
+        yield search.solr.updatePeopleIndex(myId, me, orgId)
 
 
     @profile
@@ -305,7 +305,7 @@ class SettingsResource(base.BaseResource):
         yield renderScriptBlock(request, "settings.mako", "right",
                                 landing, ".right-contents", "set", **args)
         me.update({'contact':data})
-        yield fts.solr.updatePeopleIndex(myId, me, orgId)
+        yield search.solr.updatePeopleIndex(myId, me, orgId)
 
 
     @profile
@@ -364,7 +364,7 @@ class SettingsResource(base.BaseResource):
         if userInfo["basic"]:
             yield db.batch_insert(myId, "entities", userInfo)
             me.update(userInfo)
-            yield fts.solr.updatePeopleIndex(myId, me, orgId)
+            yield search.solr.updatePeopleIndex(myId, me, orgId)
 
         if to_remove:
             yield db.batch_remove({'entities':[myId]}, names=to_remove, supercolumn='basic')
@@ -731,7 +731,7 @@ class SettingsResource(base.BaseResource):
                                 False, "#expertise-container", "set", True,
                                 handlers={"onload": onload}, args=[expertise])
 
-        yield fts.solr.updatePeopleIndex(myId, me, orgId)
+        yield search.solr.updatePeopleIndex(myId, me, orgId)
 
 
 
