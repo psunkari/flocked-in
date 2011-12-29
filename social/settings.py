@@ -273,7 +273,7 @@ class SettingsResource(base.BaseResource):
         data = {}
         to_remove = []
 
-        for field in ["im", "phone", "mobile"]:
+        for field in ["phone", "mobile"]:
             val = utils.getRequestArg(request, field)
             if val:
                 data[field] = val
@@ -289,9 +289,10 @@ class SettingsResource(base.BaseResource):
         if data:
             yield db.batch_insert(myId, "entities", {"contact": data})
         if to_remove:
-            yield db.batch_remove({"entities":[myId]}, names= to_remove, supercolumn='contact')
+            yield db.batch_remove({"entities":[myId]}, names=to_remove, supercolumn='contact')
+
         contactInfo = me.get('contact', {})
-        if any([contactInfo.get(x, None) != data.get(x, None) for x in ["im", "phone", "mobile"]]):
+        if any([contactInfo.get(x, None) != data.get(x, None) for x in ["phone", "mobile"]]):
             request.write('$$.alerts.info("%s");' % _('Profile updated'))
 
         args = {"detail": "", "me": me}
