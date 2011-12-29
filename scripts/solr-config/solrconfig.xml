@@ -536,14 +536,17 @@
         poll_option
         subject^2.0 body^1.5
         phone^1.8 mobile^1.8 mail^1.8 firstname^2.0 lastname^1.8 name^1.8
-            hometown currentCity expertise^2.0 school company jobTitle^1.8
+            currentCity expertise^2.0 jobTitle^1.8
       </str>
       <str name="pf">
         comment^2.2 link_title^1.8 event_title^1.8 subject^2.2 body^1.6
       </str>
       <int name="ps">50</int>
       <float name="tie">0.01</float>
-      <str name='fl'>id,parent,_type,type</str>
+      <str name='fl'>
+        id,parent,_type,type
+        name,firstname,lastname,jobTitle,avatar
+      </str>
       <str name="hl.fl">*</str>
       <str name="hl.fragsize">0</str>
     </lst>

@@ -25,21 +25,10 @@
         <div id="groups-block"></div>
       </div>
       <div id="center">
-        <% q = term if term else '' %>
-        <div style="float:left" >
-          <div id="search-container">
-            <form id="search" action="/search" method="GET" class="ajaxget">
-              <input type="text" id="searchbox" name="q" value="${q}" />
-              <input type="submit" id="searchbutton" value="${_('Go!')}"/>
-            </form>
-          </div>
-        </div>
-        <div style="margin-top: 30px">
-          <div id="search-results" class="center-contents">
-              %if not script:
-                ${self.results()}
-              %endif
-          </div>
+        <div id="search-results" class="center-contents">
+            %if not script:
+              ${self.results()}
+            %endif
         </div>
       </div>
         <div class="clear"></div>
@@ -54,7 +43,51 @@
 
 
 <%def name="peopleResults()">
-  <div class="center-title">People</div>
+  <div class="search-subtitle">People</div>
+  <div id="search-people">
+    %for userId in matchedUsers.keys():
+      <%
+        user = matchedUsers[userId]
+        matches = highlight[userId]
+
+        name = matches['name'][0] if 'name' in matches else user.get('name', '')
+        fname = matches['firstname'][0] if 'firstname' in matches else user.get('firstname', '')
+        lname = matches['lastname'][0] if 'lastname' in matches else user.get('lastname', '')
+        title = matches['jobTitle'][0] if 'jobTitle' in matches else user.get('jobTitle', '')
+        avatarURI = user.get('avatar', '')
+      %>
+      <div id="user-${userId}" class="conv-item">
+        <div class="conv-avatar">
+          <img src="${avatarURI}" style="max-height: 32px; max-width: 32px;" />
+        </div>
+        <div class="conv-data">
+          <div class="item-title user"><a class="ajax" href="/profile?id=${userId}">${name}</a></div>
+          <div>
+            %if fname and lname:
+              <span>${fname + " " + lname}</span>,
+            %endif
+            <span>${title}</span>
+          </div>
+          <%
+            otherHits = [x for x in matches.keys() \
+                         if x not in ['name','firstname','lastname','jobTitle']]
+          %>
+          %if otherHits:
+            %for hit in otherHits:
+              %if hit == "expertise":
+                <% expertise = matches['expertise'][0].split(',') %>
+                %for x in expertise:
+                  <span class="tag">${x}</span>
+                %endfor
+              %else:
+                <div>${matches[hit][0]}</div>
+              %endif
+            %endfor
+          %endif
+        </div>
+      </div>
+    %endfor
+  </div>
 </%def>
 
 
@@ -125,7 +158,11 @@
             ${plugins[itemType].rootHTML(itemId, isQuoted, context.kwargs)}
           %else:    ## responses
             <%
-              comment = itemMeta.get('comment', '')
+              if 'comment' in highlight[itemId]:
+                  comment = highlight[itemId]['comment'][0]
+              else:
+                  comment = itemMeta.get('comment', '')
+
               snippet = itemMeta.get('snippet', '')
               richText = itemMeta.get('richText', 'False') == 'True'
               ownerName = utils.userName(ownerId, entities[ownerId], "conv-user-cause")
@@ -185,10 +222,8 @@
 
 
 <%def name="results()">
-  %if matchedUserIds:
-    <div id="search-people">
-      ${peopleResults()}
-    </div>
+  %if matchedUsers:
+    <% peopleResults() %>
   %endif
   %if matchedGroupIds:
     <div id="search-groups">

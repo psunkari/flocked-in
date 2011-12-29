@@ -222,6 +222,7 @@
        <!-- Links -->
        <field name="link_summary" type="text" indexed="true" stored="true" />
        <field name="link_title" type="text" indexed="true" stored="true" />
+       <field name="link_url" type="text" indexed="true" stored="true" />
 
        <!-- Events -->
        <field name="event_location" type="text" indexed="true" stored="true" />
@@ -244,12 +245,10 @@
        <field name="firstname" type="text" indexed="true" stored="true" />
        <field name="lastname" type="text" indexed="true" stored="true" />
        <field name="name" type="text" indexed="true" stored="true" />
-       <field name="hometown" type="text" indexed="true" stored="true" />
        <field name="currentCity" type="text" indexed="true" stored="true" />
        <field name="expertise" type="text" indexed="true" stored="true" />
-       <field name="school" type="text" indexed="true" stored="true" multiValued="true" />
-       <field name="company" type="text" indexed="true" stored="true" multiValued="true" />
        <field name="jobTitle" type="text" indexed="true" stored="true" />
+       <field name="avatar" type="text" stored="true" />
     </fields>
     <uniqueKey>id</uniqueKey>
     <copyField source="poll_option_*" dest="poll_option"/>

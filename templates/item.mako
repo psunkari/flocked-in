@@ -482,7 +482,11 @@
         ${utils.userName(userId, entities[userId])}
       %endif
       <%
-        comment = meta.get('comment', '')
+        if highlight and convId in highlight and 'comment' in highlight[convId]:
+            comment = highlight[convId]['comment'][0]
+        else:
+            comment = meta.get('comment', '')
+
         snippet = meta.get('snippet', '')
       %>
       ${_renderText(snippet, comment, richText=richText)}
@@ -534,21 +538,25 @@
     convType = conv["meta"]["type"]
     userId = conv["meta"]["owner"]
 
-    ## "url" is replaced by "link_url" in the new schema.
-    ## the older column names are here for backward compatibility
-    ## can be removed after DB update
     meta = conv["meta"]
-    url = meta.get("link_url", '') or meta.get("url", '')
-    title = meta.get("link_title", '') or meta.get("title", '')
-    imgsrc = meta.get("link_imgSrc", '') or meta.get("imgSrc", '')
-    summary = meta.get("link_summary", '') or meta.get("summary", '')
+    if highlight and convId in highlight:
+      match = highlight[convId]
+      url = match["link_url"][0] if 'link_url' in match else meta.get("link_url", '')
+      title = match["link_title"][0] if 'link_title' in match else meta.get("link_title", '')
+      summary = match["link_summary"][0] if 'link_summary' in match else meta.get("link_summary", '')
+    else:
+      url = meta.get("link_title", '')
+      title = meta.get("link_title", '')
+      summary = meta.get("link_summary", '')
+
+    imgsrc = meta.get("link_imgSrc", '')
     richText = meta.get('richText', 'False') == 'True'
 
     hasEmbed = False
-    embedType = meta.get("link_embedType", '') or meta.get("embedType", '')
-    embedSrc = meta.get("link_embedSrc", '') or meta.get("embedSrc", '')
-    embedWidth = meta.get("link_embedWidth", '') or meta.get("embedWidth", 0)
-    embedHeight = meta.get("link_embedHeight", '') or meta.get("embedHeight", 0)
+    embedType = meta.get("link_embedType", '')
+    embedSrc = meta.get("link_embedSrc", '')
+    embedWidth = meta.get("link_embedWidth", '')
+    embedHeight = meta.get("link_embedHeight", '')
     if embedType and embedSrc and embedWidth and embedHeight:
         hasEmbed = True
 
@@ -571,7 +579,11 @@
     <span class="icon item-icon link-icon"></span>
     <div class="item-title-text">
       <%
-        comment = meta.get('comment', '')
+        if highlight and convId in highlight and 'comment' in highlight[convId]:
+            comment = highlight[convId]['comment'][0]
+        else:
+            comment = meta.get('comment', '')
+
         snippet = meta.get('snippet', '')
       %>
       ${_renderText(snippet, comment, richText=richText)}

@@ -26,8 +26,6 @@ from social.relations           import Relation
 
 
 URL = config.get('SOLR', 'HOST')
-#In devel environ set SOLR-URL in devel.cfg to http://localhost:8983/solr
-DEBUG = False
 
 
 class XMLBodyProducer(object):
@@ -36,7 +34,6 @@ class XMLBodyProducer(object):
     def __init__(self, domtree):
         self._body = etree.tostring(domtree)
         self.length = len(self._body)
-        print self._body
 
     def startProducing(self, consumer):
         consumer.write(self._body)
@@ -94,7 +91,7 @@ class Solr(object):
             else:
                 return str(text)
 
-        mailId = me['basic']['emailId']
+        mailId = me['basic']['emailId'].split('@')[0]
         fields = [self.elementMaker.field(myId, {"name":"id"}),
                   self.elementMaker.field(orgId, {"name":"org"}),
                   self.elementMaker.field('people', {"name":"_type"}),
@@ -103,23 +100,24 @@ class Solr(object):
         for field in ['name', 'lastname', 'firstname', 'jobTitle']:
             if field in me['basic']:
                 fields.append(self.elementMaker.field(toUnicodeOrText(me['basic'][field]), {'name': field}))
+
         for field in ['phone', 'mobile']:
             if field in me.get('contact', {}):
                 fields.append(self.elementMaker.field(toUnicodeOrText(me['contact'][field]), {'name': field}))
-        for field in ['mail', 'phone', 'mobile', 'hometown', 'currentCity']:
+
+        for field in ['mail', 'phone', 'mobile', 'currentCity']:
             if field in me.get('personal', {}):
                 fields.append(self.elementMaker.field(toUnicodeOrText(me['personal'][field]), {'name': field}))
-        for school in me.get('schools', {}):
-            value = "%s:%s" %(school, me['schools'][school])
-            fields.append(self.elementMaker.field(toUnicodeOrText(value), {'name': "school"}))
-        for employer in me.get('companies', {}):
-            value = "%s:%s" %(employer, me['companies'][employer])
-            fields.append(self.elementMaker.field(toUnicodeOrText(value), {'name': "company"}))
 
         skills = ','.join(me.get('expertise', {}).keys())
         if skills:
             fields.append(self.elementMaker.field(toUnicodeOrText(skills), {'name': 'expertise'}))
+
         fields.append(self.elementMaker.field(str(int(time.time())), {'name': 'timestamp'}))
+
+        avatarURI = utils.userAvatar(myId, me, 'small')
+        fields.append(self.elementMaker.field(avatarURI, {'name': 'avatar'}))
+
         root = self.elementMaker.add(self.elementMaker.doc(*fields))
         return self._request("POST", self._updateURL, {}, XMLBodyProducer(root))
 
@@ -278,7 +276,7 @@ class SearchResource(base.BaseResource):
 
         itemType = utils.getRequestArg(request, "it")
         if not itemType or itemType not in self.itemTypes:
-            itemType = self.TYPE_ITEMS | self.TYPE_PEOPLE # | self.TYPE_GROUPS | self.TYPE_TAGS | self.TYPE_MESSAGES
+            itemType = self.TYPE_ITEMS | self.TYPE_PEOPLE
         else:
             itemType = self.itemTypes[itemType]
         args["itemType"] = itemType
@@ -303,7 +301,7 @@ class SearchResource(base.BaseResource):
         toFetchItems = set()
         toFetchTags = set()
         deferreds = []
-        highlighting = {}
+        highlight = {}
 
         # If searching for more than one itemType then use half the count.
         count = SEARCH_RESULTS_PER_PAGE if itemType in [1,2,4,8,16] else SEARCH_RESULTS_PER_PAGE/2
@@ -311,17 +309,16 @@ class SearchResource(base.BaseResource):
         relation = Relation(myId, [])
         relation_d = relation.initGroupsList()
 
-        people = []
-        args['matchedUserIds'] = people
+        people = {}
+        args['matchedUsers'] = people
         if itemType & self.TYPE_PEOPLE:
             d = solr.search(term, count, start, filters={'org': myOrgId, '_type':'people'})
             def _gotPeople(results):
                 docs = results.data.get('response', {}).get('docs', [])
-                highlighting.update(results.data.get('highlighting'))
+                highlight.update(results.data.get('highlighting'))
                 for item in docs:
                     entityId = item['id']
-                    people.append(entityId)
-                    toFetchEntities.add(entityId)
+                    people[entityId] = item
             d.addCallback(_gotPeople)
             deferreds.append(d)
 
@@ -340,7 +337,7 @@ class SearchResource(base.BaseResource):
             @defer.inlineCallbacks
             def _gotConvs(results):
                 docs = results.data.get('response', {}).get('docs', [])
-                highlighting.update(results.data.get('highlighting'))
+                highlight.update(results.data.get('highlighting'))
                 for index, item in enumerate(docs):
                     itemId = item['id']
                     parentId = item.get('parent', None)
@@ -395,6 +392,7 @@ class SearchResource(base.BaseResource):
             fetchedTags = yield db.get_slice(myOrgId, "orgTags", toFetchTags)
             tags.update(utils.supercolumnsToDict(fetchedTags))
 
+        args['highlight'] = highlight
         if script:
             yield renderScriptBlock(request, "search.mako", "results",
                                     landing, "#search-results", "set", **args)

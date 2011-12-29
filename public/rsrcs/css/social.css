@@ -670,8 +670,9 @@ a:hover, a:active, a:focus {
     background-position: 0 -224px;
 }
 
-.highlight {
-    background-color: yellow;
+.soccshl {
+    background-color: #DFFF00;
+    padding: 0 3px;
 }
 
 /*
@@ -1014,6 +1015,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     width: 48px;
     height: 48px;
     position: absolute;
+    text-align: right;
 }
 
 .conv-data {
@@ -2292,7 +2294,7 @@ td.file-info, td.file-context, td.file-actions {
  */
 
 #search-results {
-    padding: 20px;
+    padding: 0 20px 20px;
 }
 
 .search-subtitle {
