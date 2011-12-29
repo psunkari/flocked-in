@@ -102,8 +102,12 @@ class NotificationByMail(object):
         "L": ["[%(brandName)s] %(senderName)s liked your %(convType)s"],
         "T": ["[%(brandName)s] %(senderName)s tagged your %(convType)s as %(tagName)s"],
        "LC": ["[%(brandName)s] %(senderName)s liked your comment on your %(convType)s",
-              "[%(brandName)s] %(senderName)s liked your comment on %(convOwnerName)s's %(convType)s"]
-
+              "[%(brandName)s] %(senderName)s liked your comment on %(convOwnerName)s's %(convType)s"],
+       "RI": ["[%(brandName)s] %(senderName)s reported on your %(convType)s",
+              "[%(brandName)s] %(senderName)s has replied to your report.",
+              "[%(brandName)s] %(senderName)s has removed the %(convType)s you had reported",
+              "[%(brandName)s] %(senderName)s has withdrawn the report on your %(convType)s",
+              ]
     }
 
     _convNotifyBody = {
@@ -127,7 +131,20 @@ class NotificationByMail(object):
               "See the full conversation at %(convUrl)s",
               "Hi,\n\n"\
               "%(senderName)s liked your comment on %(convOwnerName)s's %(convType)s.\n"\
-              "See the full conversation at %(convUrl)s"]
+              "See the full conversation at %(convUrl)s"],
+       "RI": ["Hi,\n\n"\
+              "%(senderName)s has reported your %(convType)s\n."\
+              "See the full item report at %(convUrl)s\n\n",
+              "Hi, \n\n"\
+              "%(senderName)s has replied to your report.\n"\
+              "See the full item report at %(convUrl)s\n\n",
+              "Hi, \n\n"\
+              "%(senderName)s has removed the %(convType)s you had reported.\n"\
+              "See the full item report at %(convUrl)s\n\n",
+              "Hi, \n\n"\
+              "%(senderName)s has withdrawn his report.\n"\
+              "See the full item report at %(convUrl)s\n\n"
+              ]
     }
 
     _otherNotifySubject = {
@@ -359,6 +376,8 @@ class NotificationsResource(base.BaseResource):
                              4: ["%(user0)s, %(user1)s and %(count)s others liked your comment on your %(itemType)s",
                                 "%(user0)s, %(user1)s and %(count)s others liked your comment on %(owner)s's %(itemType)s"]}
 
+    _itemReportTemplate = {1: ["%(user0)s reported your %(itemType)s"]}
+
     _inviteAccepted = {1: "%(user0)s accepted your invitation to join %(brandName)s",
                        2: "%(user0)s and %(user1)s accepted your invitation to join %(brandName)s",
                        3: "%(user0)s, %(user1)s and 1 other accepted your invitation to join %(brandName)s",
@@ -508,6 +527,8 @@ class NotificationsResource(base.BaseResource):
                 tmpl = self._answerLikesTemplate[noOfUsers]
             elif notifyType == "LC":
                 tmpl = self._commentLikesTemplate[noOfUsers]
+            elif notifyType == "RI":
+                tmpl = self._itemReportTemplate[noOfUsers]
 
             # Strings change if current user owns the conversation
             tmpl = tmpl[0] if convOwnerId == myId else tmpl[1]
@@ -624,4 +645,3 @@ class NotificationsResource(base.BaseResource):
             d = utils.getLatestCounts(request)
             d.addCallback(lambda x: request.write('$$.menu.counts(%s);' % x))
         return self._epilogue(request, d)
-

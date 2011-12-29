@@ -207,10 +207,9 @@
   ## Add a tag
   class="button-link" title="${_('Add Tag')}" onclick="$$.convs.editTags('${convId}', true);">${_("Add Tag")}</button>
   %if convType != "activity":
-    %if myId != meta["owner"]:
-      &#183;<button class="button-link" title="${_('Report')}" onclick="$$.convs.showItemReportDialog('${convId}')">${_("Report")}</button>
+    %if "reportId" in meta and meta["reportStatus"] != "ok":
+      &#183;<a class="button-link" title="${_('View Report')}" href="/item/report?id=${convId}">${_("View Report")}</a>
     %endif
-    &#183;<a class="button-link" title="${_('View Report')}" href="/item/report?id=${convId}">${_("View Report")}</a>
   %endif
 </%def>
 
@@ -692,6 +691,7 @@
           <li><a class="menu-item noicon" onclick="$.post('/ajax/item/delete', {id:'${convId}'});">${_("Delete")}</a></li>
         %else:
           <li><a class="menu-item noicon" onclick="$.post('/ajax/item/remove', {id:'${convId}'});">${_("Hide from my Feed")}</a></li>
+          <li><a class="menu-item noicon" onclick="$$.convs.showItemReportDialog('${convId}')">${_("Report this %s" %convType)}</a></li>
         %endif
     </ul>
   %endif
@@ -703,7 +703,7 @@
       <label id="feedback-type">${_('Reason for reporting this item')}</label>
       <textarea name="comment" id="conv-report-comment" placeholder="Enter a reason for reporting this item" required></textarea>
       <input type="hidden" name="parent" value="${convId}" id="conv-report-parent"></input>
-      <input type="hidden" name="action" value="reject" id="conv-report-action"></input>
+      <input type="hidden" name="action" value="report" id="conv-report-action"></input>
   </div>
 </%def>
 
@@ -712,10 +712,15 @@
     ${report_status()}
     <%
       reportedBy = None
-      if "report" in items[convId]:
-        if items[convId]["report"]["itemStatus"] != "ok":
-          reportedBy = items[convId]["report"]["reportedBy"]
+      if "reportId" in convMeta:
+        if convMeta["reportStatus"] != "ok":
+          reportedBy = convMeta["reportedBy"]
     %>
+    <div>
+      <div id="conv-meta-wrapper" class="conv-meta-wrapper no-tags">
+        <div id="report-comments"></div>
+      </div>
+    </div>
     %if myKey != ownerId:
       ${self.render_item_report_comment_form(reportedBy)}
     %else:
@@ -723,11 +728,6 @@
         ${self.render_item_report_comment_form(reportedBy)}
       %endif
     %endif
-    <div>
-      <div id="conv-meta-wrapper" class="conv-meta-wrapper no-tags">
-        <div id="report-comments"></div>
-      </div>
-    </div>
   </div>
 </%def>
 
@@ -747,16 +747,17 @@
           <input type="hidden" name="action" value="" id="conv-report-action"></input>
           <textarea id="report-comment" title="Reply" required placeholder="Enter a Reason for this Report"
                     name="comment" class="conversation-reply"
-                    %if reportedBy and items[convId]["report"]["itemStatus"] == "accept":
+                    %if reportedBy and convMeta["reportStatus"] == "accept":
                       disabled
                     %endif
                     style="resize: none; overflow: auto; height: 60px;"></textarea>
         </div>
         <div class="conversation-reply-actions">
-          ${self.render_item_report_actions(reportedBy)}
+          %if convMeta["reportStatus"] != "accept":
+            ${self.render_item_report_actions(reportedBy)}
+          %endif
         </div>
         <div class="clear"></div>
-        <div id="next-load-wrapper">Showing Last 5 Actions on this Report</div>
       </div>
     </form>
   </div>
@@ -766,11 +767,11 @@
 <ul class="middle user-actions h-links" id="report-actions">
   %if myKey != ownerId :
     %if reportedBy:
-      %if items[convId]["report"]["itemStatus"] in ["repost", "re-edit"]:
+      %if convMeta["reportStatus"] in ["repost", "re-edit", "pending"]:
         <input type="submit" onclick="$('#conv-report-action').attr('value', 'reject')"
                class="button default" value="Reject"</input>
       %endif
-      %if items[convId]["report"]["itemStatus"] != "accept":
+      %if convMeta["reportStatus"] != "accept":
         <button onclick="$('#conv-report-action').attr('value', 'repost')"
                class="button"><span class="button-text">Withdraw Complaint</span></button>
       %endif
@@ -780,7 +781,7 @@
     %endif
   %else:
     %if reportedBy:
-      %if items[convId]["report"]["itemStatus"] == "pending":
+      %if convMeta["reportStatus"] in ["pending", "repost", "re-edit"]:
         <input type="submit" onclick="$('#conv-report-action').attr('value', 'repost')"
                class="button default" type="submit" value="Repost"</input>
         <input type="submit" onclick="$('#conv-report-action').attr('value', 're-edit')"
@@ -826,12 +827,12 @@
   <div id="next-load-wrapper">
     <%
       if myKey == ownerId:
-        if "report" not in items[convId]:
+        if "reportId" not in convMeta:
           status = "No one has reported on your item yet"
         else:
-          item_status = items[convId]["report"]["itemStatus"]
-          reported_by = utils.userName(items[convId]["report"]["reportedBy"],
-                              entities[items[convId]["report"]["reportedBy"]])
+          item_status = convMeta["reportStatus"]
+          reported_by = utils.userName(convMeta["reportedBy"],
+                              entities[convMeta["reportedBy"]])
           if item_status == "ok":
             status = "Your post has been restored. There are no open complaints."
           elif item_status == "pending":
@@ -847,11 +848,11 @@
                         received a complaint against it and you chose to hide the\
                         content."
       else:
-        if "report" not in items[convId]:
+        if "reportId" not in convMeta:
           status = "If you feel this item violates your company's policy. \
                       Kindly state a reason and click the 'Report' button"
         else:
-          item_status = items[convId]["report"]["itemStatus"]
+          item_status = convMeta["reportStatus"]
           owned_by = utils.userName(ownerId,
                               entities[ownerId])
           if item_status == "ok":

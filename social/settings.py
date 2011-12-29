@@ -118,9 +118,9 @@ notifyItemRequests = 14
 notifyNM = 15
 notifyMR = 16
 notifyMA = 17
-
+notifyMyItemRI = 17
 # Total number of notification types and default setting
-_notificationsCount = 18
+_notificationsCount = 19
 defaultNotify = "3" * _notificationsCount
 
 # Notification medium
