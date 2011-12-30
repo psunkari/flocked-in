@@ -241,7 +241,7 @@
        <!-- People -->
        <field name="phone" type="text" indexed="true" stored="true" multiValued="true" />
        <field name="mobile" type="text" indexed="true" stored="true" multiValued="true" />
-       <field name="mail" type="text" indexed="true" stored="true" multiValued="true" />
+       <field name="email" type="text" indexed="true" stored="true" multiValued="true" />
        <field name="firstname" type="text" indexed="true" stored="true" />
        <field name="lastname" type="text" indexed="true" stored="true" />
        <field name="name" type="text" indexed="true" stored="true" />

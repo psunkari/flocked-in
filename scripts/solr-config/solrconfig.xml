@@ -535,7 +535,7 @@
         event_location^1.5 event_title^1.6 event_desc
         poll_option
         subject^2.0 body^1.5
-        phone^1.8 mobile^1.8 mail^1.8 firstname^2.0 lastname^1.8 name^1.8
+        phone^1.8 mobile^1.8 email^1.8 firstname^2.0 lastname^1.8 name^1.8
             currentCity expertise^2.0 jobTitle^1.8
       </str>
       <str name="pf">

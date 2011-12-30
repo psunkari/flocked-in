@@ -67,7 +67,6 @@ def reindexItems():
 
 
 if __name__ == '__main__':
-
     parser = optparse.OptionParser()
     parser.add_option('-i', '--index-items', dest="items", action="store_true")
     parser.add_option('-p', '--index-people', dest='people', action="store_true")

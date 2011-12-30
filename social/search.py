@@ -91,11 +91,11 @@ class Solr(object):
             else:
                 return str(text)
 
-        mailId = me['basic']['emailId'].split('@')[0]
+        mailId = me['basic']['emailId']
         fields = [self.elementMaker.field(myId, {"name":"id"}),
                   self.elementMaker.field(orgId, {"name":"org"}),
                   self.elementMaker.field('people', {"name":"_type"}),
-                  self.elementMaker.field(mailId, {'name':'mail'}) ]
+                  self.elementMaker.field(mailId, {'name':'email'}) ]
 
         for field in ['name', 'lastname', 'firstname', 'jobTitle']:
             if field in me['basic']:
@@ -105,7 +105,7 @@ class Solr(object):
             if field in me.get('contact', {}):
                 fields.append(self.elementMaker.field(toUnicodeOrText(me['contact'][field]), {'name': field}))
 
-        for field in ['mail', 'phone', 'mobile', 'currentCity']:
+        for field in ['email', 'phone', 'mobile', 'currentCity']:
             if field in me.get('personal', {}):
                 fields.append(self.elementMaker.field(toUnicodeOrText(me['personal'][field]), {'name': field}))
 
@@ -122,15 +122,15 @@ class Solr(object):
         return self._request("POST", self._updateURL, {}, XMLBodyProducer(root))
 
 
-    def _getAttachmentFields(self, attachments={}):
-        attachments = []
-        for attachId in attachments:
-            timeUUID, fId, name, size, fileType = attachments[attachId]
-            attachments.append(self.elementMaker.field(urlsafe_b64decode(name), {'name': 'attachment'}))
-        return attachments
+    def _getAttachmentFields(self, attachments):
+        fields = []
+        for attachId in attachments.keys():
+            timeUUID, name, size, fileType = attachments[attachId].split(':')
+            fields.append(self.elementMaker.field("%s:%s"%(attachId, urlsafe_b64decode(name)), {'name': 'attachment'}))
+        return fields
 
 
-    def updateMessage(self, itemId, item, orgId, attachments={}):
+    def updateMessage(self, itemId, item, orgId):
         fields = [self.elementMaker.field(itemId, {"name":"id"}),
                   self.elementMaker.field(orgId, {"name":"org"}),
                   self.elementMaker.field('message', {"name":"_type"})]
@@ -142,8 +142,8 @@ class Solr(object):
                 value = value.decode('utf-8', 'replace')
                 fields.append(self.elementMaker.field(value, {"name": name}))
 
-        if attachments:
-            fields.extend(self._getAttachFields(attachments))
+        if 'attachments' in item:
+            fields.extend(self._getAttachmentFields(item['attachments']))
 
         if 'timestamp' in meta and meta['timestamp']:
             fields.append(self.elementMaker.field(meta['timestamp'], {"name": "timestamp"}))
@@ -156,7 +156,7 @@ class Solr(object):
         return self._request("POST", self._updateURL, {}, XMLBodyProducer(root))
 
 
-    def updateItem(self, itemId, item, orgId, attachments={}, conv=None):
+    def updateItem(self, itemId, item, orgId, conv=None):
         fields = [self.elementMaker.field(itemId, {"name":"id"}),
                   self.elementMaker.field(orgId, {"name":"org"}),
                   self.elementMaker.field('item', {"name":"_type"})]
@@ -180,8 +180,6 @@ class Solr(object):
                         indexFields[key].update(value)
 
         for superColName, columnNames in indexFields.items():
-            print "SuperColumn:", superColName
-            print "colNames:", columnNames
             if isinstance(columnNames, set):
                 for columnName in columnNames:
                     value = item.get(superColName, {}).get(columnName, None)
@@ -197,12 +195,10 @@ class Solr(object):
             elif isinstance(columnNames, dict) and not parentId:
                 indexType = columnNames.get('type', 'keyval')
                 indexTmpl = columnNames.get('template', '')
-                log.info("IndexType:", indexType)
                 if indexType == "keyvals":
                     if not indexTmpl:
                         indexTmpl = itemType + "_" + superColumnName + "_%s"
                     for key, val in item.get(superColName, {}).items():
-                        log.info("Key, Val:", key, val)
                         fields.append(self.elementMaker.field(val, {"name": indexTmpl % key}))
                 elif indexType == "multikeys":
                     if not indexTmpl:
@@ -215,8 +211,8 @@ class Solr(object):
                     for val in item.get(superColName, {}).values():
                         fields.append(self.elementMaker.field(val, {"name": indexTmpl}))
 
-        if attachments:
-            fields.extend(self._getAttachFields(attachments))
+        if 'attachments' in item:
+            fields.extend(self._getAttachmentFields(item['attachments']))
 
         acl = meta.get('acl', None) if not parentId else convMeta.get('acl', None)
         acl = pickle.loads(acl) if acl else {}
@@ -308,6 +304,7 @@ class SearchResource(base.BaseResource):
 
         relation = Relation(myId, [])
         relation_d = relation.initGroupsList()
+        args['relations'] = relation
 
         people = {}
         args['matchedUsers'] = people

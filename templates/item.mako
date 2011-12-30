@@ -147,29 +147,42 @@
 </%def>
 
 
+<%def name="conv_attachments(convId, attachments)">
+  <%
+    hits = {}
+    if highlight and convId in highlight and 'attachment' in highlight[convId]:
+      for x in highlight[convId]['attachment']:
+        fileId, name = x.split(':', 1)
+        hits[fileId] = name
+  %>
+  <div class="attachment-list">
+    %for fileId in attachments:
+      <%
+        tuuid, name, size, ftype = attachments[fileId].split(':')
+        name = hits[fileId] if fileId in hits else urlsafe_b64decode(name)
+        size = formatFileSize(int(size))
+        location = '/files?id=%s&fid=%s&ver=%s'%(convId, fileId, tuuid)
+      %>
+      <div class="attachment-item">
+        <span class="icon attach-file-icon"></span>
+        <span class="attachment-name"><a href="${location}" target="filedownload">${name}</a></span>
+        <span class="attachment-meta">&nbsp;&nbsp;&ndash;&nbsp;&nbsp;${size}</span>
+      </div>
+    %endfor
+  </div>
+</%def>
+
+
 <%def name="conv_root(convId, isQuoted=False)">
   <% itemType = items[convId]["meta"]["type"] %>
   %if itemType in plugins:
     ${plugins[itemType].rootHTML(convId, isQuoted, context.kwargs)}
   %endif
-  <% attachments = items[convId].get("attachments", {}) %>
-  %if len(attachments.keys()) > 0:
-    <div class="attachment-list">
-      %for attachmentId in attachments:
-        <%
-          tuuid, name, size, ftype = attachments[attachmentId].split(':')
-          name = urlsafe_b64decode(name)
-          size = formatFileSize(int(size))
-          location = '/files?id=%s&fid=%s&ver=%s'%(convId, attachmentId, tuuid)
-        %>
-        <div class="attachment-item">
-          <span class="icon attach-file-icon"></span>
-          <span class="attachment-name"><a href="${location}" target="filedownload">${name|h}</a></span>
-          <span class="attachment-meta">&nbsp;&nbsp;&ndash;&nbsp;&nbsp;${size}</span>
-        </div>
-      %endfor
-    </div>
-  %endif
+  <%
+    attachments = items[convId].get("attachments", {})
+    if len(attachments.keys()) > 0:
+      self.conv_attachments(convId, attachments)
+  %>
 </%def>
 
 

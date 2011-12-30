@@ -66,7 +66,7 @@ class Status(object):
             yield db.insert(convId, "item_files", val, timeuuid, attachmentId)
 
         from social import search
-        search.solr.updateItem(convId, item, myOrgId, attachments)
+        search.solr.updateItem(convId, item, myOrgId)
         defer.returnValue((convId, item))
 
 

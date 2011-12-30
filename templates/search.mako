@@ -181,8 +181,11 @@
               ${itemTmpl._renderText(snippet, comment, richText=richText)}
             </div>
           %endif
-          <div id="item-attachments"></div>
-          <div id="item-tags"></div>
+          <%
+            attachments = items[itemId].get("attachments", {})
+            if len(attachments.keys()) > 0:
+              itemTmpl.conv_attachments(itemId, attachments)
+          %>
           <div id="item-footer-${itemId}" class="conv-footer busy-indicator">
             <%
               timestamp = int(itemMeta['timestamp'])

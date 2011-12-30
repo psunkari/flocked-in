@@ -157,7 +157,6 @@ class SettingsResource(base.BaseResource):
     @defer.inlineCallbacks
     def _changePassword(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        landing = not self._ajax
 
         currentPass = utils.getRequestArg(request, "curr_passwd", sanitize=False)
         newPass = utils.getRequestArg(request, "passwd1", sanitize=False)
@@ -199,7 +198,6 @@ class SettingsResource(base.BaseResource):
         # Personal information about the user
         myId = request.getSession(IAuthInfo).username
         orgId = request.getSession(IAuthInfo).organization
-        landing = False
         data = {}
         to_remove = []
 
@@ -254,7 +252,7 @@ class SettingsResource(base.BaseResource):
         args.update({'suggested_sections':tmp_suggested_sections})
 
         yield renderScriptBlock(request, "settings.mako", "right",
-                                landing, ".right-contents", "set", **args)
+                                False, ".right-contents", "set", **args)
         me.update({'personal':data})
         yield search.solr.updatePeopleIndex(myId, me, orgId)
 
@@ -266,7 +264,6 @@ class SettingsResource(base.BaseResource):
         # Contact information at work.
         myId = request.getSession(IAuthInfo).username
         orgId = request.getSession(IAuthInfo).organization
-        landing = not self._ajax
 
         me = yield db.get_slice(myId, 'entities')
         me = utils.supercolumnsToDict(me)
@@ -304,7 +301,7 @@ class SettingsResource(base.BaseResource):
         args.update({'suggested_sections':tmp_suggested_sections})
 
         yield renderScriptBlock(request, "settings.mako", "right",
-                                landing, ".right-contents", "set", **args)
+                                False, ".right-contents", "set", **args)
         me.update({'contact':data})
         yield search.solr.updatePeopleIndex(myId, me, orgId)
 
@@ -364,7 +361,7 @@ class SettingsResource(base.BaseResource):
             basicUpdated = True
         if userInfo["basic"]:
             yield db.batch_insert(myId, "entities", userInfo)
-            me.update(userInfo)
+            me['basic'].update(userInfo['basic'])
             yield search.solr.updatePeopleIndex(myId, me, orgId)
 
         if to_remove:
@@ -397,7 +394,7 @@ class SettingsResource(base.BaseResource):
         args.update({'suggested_sections':tmp_suggested_sections})
 
         yield renderScriptBlock(request, "settings.mako", "right",
-                                landing, ".right-contents", "set", **args)
+                                False, ".right-contents", "set", **args)
 
 
     @defer.inlineCallbacks

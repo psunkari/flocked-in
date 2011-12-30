@@ -420,7 +420,7 @@ class Event(object):
             yield db.insert(convId, "item_files", val, timeuuid, attachmentId)
 
         from social import search
-        d = search.solr.updateItem(convId, item, myOrgId, attachments)
+        d = search.solr.updateItem(convId, item, myOrgId)
         defer.returnValue((convId, item))
 
     @defer.inlineCallbacks
