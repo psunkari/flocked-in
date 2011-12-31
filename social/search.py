@@ -269,12 +269,15 @@ class SearchResource(base.BaseResource):
         term = utils.getRequestArg(request, "q")
         if not term:
             errors.MissingParams(['Search term'])
+        args["term"] = term
 
-        itemType = utils.getRequestArg(request, "it")
-        if not itemType or itemType not in self.itemTypes:
+        itemType = utils.getRequestArg(request, "it") or 0
+        try:
+            itemType = int(itemType)
+            if not 0 < itemType < 31:
+                raise ValueError
+        except ValueError:
             itemType = self.TYPE_ITEMS | self.TYPE_PEOPLE
-        else:
-            itemType = self.itemTypes[itemType]
         args["itemType"] = itemType
 
         start = utils.getRequestArg(request, "start") or 0
@@ -316,6 +319,7 @@ class SearchResource(base.BaseResource):
                 for item in docs:
                     entityId = item['id']
                     people[entityId] = item
+                args['matchedUserCount'] = results.data.get('response', {}).get('numFound', 0)
             d.addCallback(_gotPeople)
             deferreds.append(d)
 
@@ -370,6 +374,7 @@ class SearchResource(base.BaseResource):
                 for success, ret in result:
                     if success:
                         toFetchEntities.update(ret)
+                args['matchedItemCount'] = results.data.get('response', {}).get('numFound', 0)
 
             d.addCallback(_gotConvs)
             deferreds.append(d)

@@ -1,6 +1,7 @@
 <!DOCTYPE HTML>
 
-<%! from social import utils, _, __, plugins %>
+<%! from social import utils, _, __, plugins, constants %>
+<%! from social.search import SearchResource as search %>
 
 <%namespace name="widgets" file="widgets.mako"/>
 <%namespace name="itemTmpl" file="item.mako"/>
@@ -38,12 +39,49 @@
 
 
 <%def name="_title()">
-  <span class="middle title">${_("Search Results")}</span>
+  <span class="middle title">${_('Search Results for <em class="soccshl">%s</em>') % term}</span>
 </%def>
 
+<%def name="paging(start, count, total)">
+  <%
+    nextPageStart = start + count if 0 < start + count < total else -1
+    prevPageStart = start - constants.SEARCH_RESULTS_PER_PAGE
+    if prevPageStart < 0:
+        prevPageStart = 0
+
+    formatVars = {'start': start + 1, 'end': start + count, 'total': total}
+  %>
+  <ul class="h-links">
+    <li class="search-pagemeta">${_('%(start)s&ndash;%(end)s of %(total)s') % formatVars}</li>
+    %if start > 0:
+      <li class="button"><a class="ajax" href="/search?q=${term}&it=${itemType}&start=${prevPageStart}">${_("&#9666; Previous")}</a></li>
+    %else:
+      <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
+    %endif
+    %if nextPageStart >= 0:
+      <li class="button"><a class="ajax" href="/search?q=${term}&it=${itemType}&start=${nextPageStart}">${_("Next &#9656;")}</a></li>
+    %else:
+      <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
+    %endif
+  </ul>
+</%def>
 
 <%def name="peopleResults()">
-  <div class="search-subtitle">People</div>
+  <%
+    statsMap = {'total': matchedUserCount, 'shown': len(matchedUsers),
+                'term': term, 'start': start, 'itemType': search.TYPE_PEOPLE}
+  %>
+  %if itemType != search.TYPE_PEOPLE:
+    <div class="search-subtitle">
+      %if len(matchedUsers) < matchedUserCount:
+        ${_('People &mdash; Showing %(shown)s of %(total)s found. <a href="/search?q=%(term)s&start=%(start)s&it=%(itemType)s">View more people &raquo;</a>') % statsMap}
+      %else:
+        ${__('People &mdash; Only 1 found', 'People &mdash; Showing all %(total)s found.', len(matchedUsers)) % statsMap}
+      %endif
+    </div>
+  %else:
+    <div class="search-subtitle">People</div>
+  %endif
   <div id="search-people">
     %for userId in matchedUsers.keys():
       <%
@@ -88,24 +126,11 @@
       </div>
     %endfor
   </div>
-</%def>
-
-
-<%def name="groupResults()">
-  <div class="center-title">Groups</div>
-</%def>
-
-
-<%def name="tagResults()">
-  <div class="center-title">Tags</div>
-</%def>
-
-
-<%def name="messageResults()">
-  <div class="center-title">Private Messages</div>
-</%def>
-
-<%def name="item_footer(itemId, parentId=None)">
+  %if itemType == search.TYPE_PEOPLE:
+    <div id="search-people-paging" class="pagingbar search-paging">
+       <% paging(start, len(matchedUsers), matchedUserCount) %>
+    </div>
+  %endif
 </%def>
 
 
@@ -175,7 +200,7 @@
             %if parentId:
               ${_("%(ownerName)s, in reply to <a class='ajax' href='/item?id=%(parentId)s'>%(parentOwnerName)s's %(parentType)s</a>") % locals()}
             %else:
-              ownerName
+              ${ownerName}
             %endif
             <div class="item-title">
               ${itemTmpl._renderText(snippet, comment, richText=richText)}
@@ -226,29 +251,37 @@
 
 <%def name="results()">
   %if matchedUsers:
-    <% peopleResults() %>
-  %endif
-  %if matchedGroupIds:
-    <div id="search-groups">
-      ${groupResults()}
-    </div>
-  %endif
-  %if matchedTagIds:
-    <div id="search-tags">
-      ${tagResults()}
-    </div>
-  %endif
-  %if matchedMsgIds:
-    <div id="search-messages">
-      ${messageResults()}
+    <div id="search-people-wrapper">
+      <% peopleResults() %>
     </div>
   %endif
   %if matchedItemIds:
-    <div class="search-subtitle">Posts</div>
-    <div id="search-convs">
-      %for itemId in matchedItemIds:
-        ${self.item_layout(itemId)}
-      %endfor
+    <%
+      statsMap = {'total': matchedItemCount, 'shown': len(matchedItemIds),
+                  'term': term, 'start': start, 'itemType': search.TYPE_ITEMS}
+    %>
+    <div id="search-convs-wrapper">
+      %if itemType != search.TYPE_ITEMS:
+        <div class="search-subtitle">
+          %if len(matchedItemIds) < matchedItemCount:
+            ${_('Posts &mdash; Showing %(shown)s of total %(total)s found. <a href="/search?q=%(term)s&start=%(start)s&it=%(itemType)s">View more posts &raquo;</a>') % statsMap}
+          %else:
+            ${__('Posts &mdash; Only 1 found', 'Showing all %(total)s found.', len(matchedItemIds)) % statsMap}
+          %endif
+        </div>
+      %else:
+        <div class="search-subtitle">Posts</div>
+      %endif
+      <div id="search-convs">
+        %for itemId in matchedItemIds:
+          ${self.item_layout(itemId)}
+        %endfor
+      </div>
+      %if itemType == search.TYPE_ITEMS:
+        <div id="search-convs-paging" class="pagingbar search-paging">
+          <% paging(start, len(matchedItemIds), matchedItemCount) %>
+        </div>
+      %endif
     </div>
   %endif
 </%def>

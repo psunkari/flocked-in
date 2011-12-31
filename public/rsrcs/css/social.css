@@ -2311,3 +2311,9 @@ td.file-info, td.file-context, td.file-actions {
     height: 32px;
     padding-left: 16px;
 }
+
+.search-pagemeta {
+    line-height: 1.5em;
+    font-weight: bold;
+    padding: 6px 10px !important;
+}
