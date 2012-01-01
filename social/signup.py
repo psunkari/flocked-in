@@ -1,4 +1,4 @@
-#import PythonMagick
+import PythonMagick
 import imghdr
 import time
 from datetime           import datetime
