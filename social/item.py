@@ -147,6 +147,12 @@ def _notify(notifyType, convId, timeUUID, **kwargs):
     elif notifyType == "LC":
         recipients = [kwargs["itemOwnerId"]]
         toFetchEntities = recipients + [convOwnerId]
+    elif notifyType == "RFC":
+        if myId == convOwnerId:
+            recipients = [kwargs["reportedBy"]]
+        else:
+            recipients = [convOwnerId]
+        toFetchEntities = recipients
     else:
         toFetchEntities = recipients = [convOwnerId]
 
@@ -1017,7 +1023,7 @@ class ItemResource(base.BaseResource):
 
         itemType = item["meta"].get("type")
 
-        args['title'] = _("Report this %s") %type
+        args['title'] = _("Report this %s") %itemType
         args['convId'] = itemId
 
         yield renderScriptBlock(request, "item.mako", "render_report_dialog", False,
@@ -1027,7 +1033,7 @@ class ItemResource(base.BaseResource):
     def _renderReport(self, request):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
-        convId, conv = yield utils.getValidItemId(request, "id")
+        convId, conv = yield utils.getValidItemId(request, "id", columns=["reports"])
         toFetchEntities = []
         reportResponseActions = {}
         convMeta = conv["meta"]
@@ -1097,29 +1103,26 @@ class ItemResource(base.BaseResource):
         toFetchEntities = set()
         orgId = request.getSession(IAuthInfo).organization
 
-        if not action or action not in ["accept", "report", "re-edit", "repost", "reject"]:
+        if not action or action not in ["accept", "report", "re-edit",
+                                            "repost", "reject"]:
             raise errors.MissingParams([_('Action')])
 
-        convId, conv = yield utils.getValidItemId(request, "parent", columns=['report'])
+        convId, conv = yield utils.getValidItemId(request, "parent")
         convOwnerId = conv["meta"]["owner"]
         convType = conv["meta"]["type"]
         convACL = conv["meta"]["acl"]
         convMeta = conv["meta"]
 
         if "reportId" in convMeta:
-            if convMeta["reportStatus"] == "ok":
-                #A report was posted earlier but resolved
-                reportId = convMeta["reportId"]
-                isNewReport = True
-            else:
-                reportId = convMeta["reportId"]
-                isNewReport = False
+            reportId = convMeta["reportId"]
+            isNewReport = False
         else:
             isNewReport = True
             reportId = utils.getUniqueKey()
 
         if isNewReport and convOwnerId == myKey:
-            raise errors.PermissionDenied("You cannot report your own Item. Delete the item instead")
+            raise errors.PermissionDenied(_("You cannot report your own Item. \
+                                                Delete the item instead"))
 
         if myKey == convOwnerId:
             if action not in ["accept", "repost", "re-edit"]:
@@ -1145,6 +1148,10 @@ class ItemResource(base.BaseResource):
                 request.write("$$.fetchUri('/feed');")
                 request.write("$$.alerts.info('%s')" %_("Your item has been deleted"))
                 request.finish()
+            else:
+                yield _notify("RFC", convId, timeUUID, convType=convType,
+                                  convOwnerId=convOwnerId, myId=myKey,
+                                  me=args["me"], reportedBy=convMeta["reportedBy"])
         else:
             if action not in ["report", "repost", "reject"]:
                 raise errors.MissingParams([_('Action')])
@@ -1152,11 +1159,10 @@ class ItemResource(base.BaseResource):
                 #1. Update Existing Item Information with Report Meta
                 newACL = pickle.dumps({"accept":{"users":[convOwnerId, myKey]}})
                 item = {}
-                #reportStatus can be ["pending", "accepted", "repost", "re-edit"]
+                #reportStatus can be ["pending", "accept", "repost"]
                 #pending is pending action from OP
                 #accept is permanently hidden by OP
                 #repost is when OP replies back with a reason to repost the item
-                #re edit when OP makes changes to item and reposts the item
                 convReport = {"reportedBy":myKey, "reportId":reportId,
                                    "reportStatus":"pending",
                                    "original_acl":convACL,
@@ -1165,15 +1171,36 @@ class ItemResource(base.BaseResource):
                 yield db.batch_insert(convId, "items", {"meta": convReport})
                 reportLink = """&#183;<a class="button-link" title="View Report" href="/item/report?id=%s"> View Report</a>""" %convId
                 request.write("""$("#item-footer-%s").append('%s');""" %(convId, reportLink))
+                yield _notify("FC", convId, timeUUID, convType=convType,
+                                  convOwnerId=convOwnerId, myId=myKey, me=args["me"])
             else:
                 #Restore the original ACL if complainant withdraws the complaint
-                if action == "repost" and myKey == convMeta["reportedBy"]:
+                if action == "repost":
                     _acl = convMeta["original_acl"]
                     convReport = {"reportStatus":"ok"}
                     yield db.batch_insert(convId, "items", {"meta":{"acl":_acl}})
-                    #XXXShould we remove all report related comments ?
+                    oldReportMeta = {"reportedBy":convMeta["reportedBy"],
+                                  "reportId":convMeta["reportId"],
+                                  "acl":convMeta["original_acl"]}
+                    #Save the now resolved report in items and remove its
+                    # reference in the item meta so new reporters wont't see
+                    # old reports
+                    timestamp = str(int(time.time()))
+                    yield db.batch_insert(convId, "items",
+                                          {"reports":
+                                            {timestamp:convMeta["reportId"]}})
+                    yield db.batch_insert(reportId, "items", {"meta":oldReportMeta})
+                    yield db.batch_remove({'items':[convId]},
+                                            names=["reportId"],
+                                            supercolumn='meta')
+                    yield _notify("UFC", convId, timeUUID, convType=convType,
+                                      convOwnerId=convOwnerId, myId=myKey,
+                                      me=args["me"])
                 elif action in ["reject", "report"]:
                     convReport = {"reportStatus":"pending"}
+                    yield _notify("RFC", convId, timeUUID, convType=convType,
+                                      convOwnerId=convOwnerId, myId=myKey,
+                                      me=args["me"], reportedBy=convMeta["reportedBy"])
 
                 yield db.batch_insert(convId, "items", {"meta": convReport})
 
@@ -1202,9 +1229,6 @@ class ItemResource(base.BaseResource):
             toFetchEntities.update([convOwnerId, reportOwnerId])
             entities = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
             entities = utils.multiSuperColumnsToDict(entities)
-            yield _notify("RI", convId, timeUUID, convType=convType,
-                              convOwnerId=convOwnerId, myId=myKey,
-                              itemOwnerId=convOwnerId, me=args["me"])
 
             args["entities"] = entities
             args['convId'] = convId

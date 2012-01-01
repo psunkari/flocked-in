@@ -784,8 +784,8 @@
       %if convMeta["reportStatus"] in ["pending", "repost", "re-edit"]:
         <input type="submit" onclick="$('#conv-report-action').attr('value', 'repost')"
                class="button default" type="submit" value="Repost"</input>
-        <input type="submit" onclick="$('#conv-report-action').attr('value', 're-edit')"
-               class="button" type="submit" value="Edit and Re-post"</input>
+        ##<input type="submit" onclick="$('#conv-report-action').attr('value', 're-edit')"
+        ##       class="button" type="submit" value="Edit and Re-post"</input>
       %endif
     %endif
     <button type="submit" onclick="$('#conv-report-action').attr('value', 'accept')"
@@ -815,12 +815,30 @@
       ${_renderText(snippet, comment, _('Expand this comment &#187;'), _('Collapse this comment'), richText)}
     </div>
     <div class="comment-meta">
-      ${utils.simpleTimestamp(timestamp, myTimezone)}
+      ${render_report_meta_status(userId, reportResponseActions[responseKey])}
       &#183;
-      ${reportResponseActions[responseKey]}
+      ${utils.simpleTimestamp(timestamp, myTimezone)}
     </div>
   </div>
 %endfor
+</%def>
+
+<%def name="render_report_meta_status(userId, action)">
+  <%
+    if userId == convMeta["reportedBy"]:
+      if action == "report":
+        status = "Item reported"
+      elif action == "reject":
+        status = "Request to withdraw rejected"
+      elif action == "repost":
+        status = "Complaint withdrawn"
+    else:
+      if action == "repost":
+        status = "Request to withdraw submitted"
+      elif action == "accept":
+        status = "Item permanently hidden"
+  %>
+  <span class="button-plain">${status}</span>
 </%def>
 
 <%def name="report_status()">

@@ -118,9 +118,12 @@ notifyItemRequests = 14
 notifyNM = 15
 notifyMR = 16
 notifyMA = 17
-notifyMyItemRI = 17
+notifyMyItemFC = 17
+notifyMyItemRFC = 18
+notifyMyItemDFC = 19
+notifyMyItemUFC = 20
 # Total number of notification types and default setting
-_notificationsCount = 19
+_notificationsCount = 21
 defaultNotify = "3" * _notificationsCount
 
 # Notification medium
@@ -132,7 +135,8 @@ _notifyNames = ['friendRequest', 'friendAccept', 'follower', 'newMember',
     'groupRequest', 'groupAccept', 'groupInvite', 'groupNewMember',
     'myItemTag', 'myItemComment', 'myItemlike', 'itemCommentLike',
     'itemComment', 'mention', 'itemRequests',
-    'messageConv', 'messageMessage', 'messageAccessChange']
+    'messageConv', 'messageMessage', 'messageAccessChange', 'notifyMyItemFC',
+    'notifyMyItemRFC', 'notifyMyItemDFC', 'notifyMyItemUFC']
 
 # List of notifications that currently must not be displayed to the user
 _hiddenNotifys = [notifyFR, notifyFA, notifyMention, notifyItemRequests]

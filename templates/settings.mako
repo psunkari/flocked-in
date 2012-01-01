@@ -490,7 +490,11 @@
 
               _('New private conversation'),
               _('New message in an existing conversations'),
-              _('Recipients of a conversation were changed')]
+              _('Recipients of a conversation were changed'),
+              _('Someone flagged your item for review'),
+              _('Someone replied to your review of a flagged item'),
+              _('The owner of a flagged item deleted the item'),
+              _('Your flagged item has been unflagged')]
   %>
   <form class="ajax" id="settings-form" action="/settings/notify" method="post"  enctype="multipart/form-data">
     <table id='notify-setup' valign='middle' role='display'>
@@ -646,4 +650,3 @@
     </div>
   </div>
 </%def>
-
