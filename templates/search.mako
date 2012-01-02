@@ -39,7 +39,7 @@
 
 
 <%def name="_title()">
-  <span class="middle title">${_('Search Results for <em class="soccshl">%s</em>') % term}</span>
+  <span class="middle title">${_('Search Results for <a href="/search?q=%s"><em class="soccshl">%s</em></a>') % (term, term)}</span>
 </%def>
 
 <%def name="paging(start, count, total)">
