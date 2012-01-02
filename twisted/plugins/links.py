@@ -35,8 +35,7 @@ class Links(object):
     itemType = "link"
     position = 3
     hasIndex = True
-    indexFields = [('meta', 'summary'), ('meta', 'comment'),
-                   ('meta', 'title'), ('meta', 'parent')]
+    indexFields = {'meta':set(['link_summary','link_title'])}
 
 
     @defer.inlineCallbacks
@@ -115,8 +114,8 @@ class Links(object):
             val = "%s:%s:%s:%s:%s" %(utils.encodeKey(timeuuid), fid, name, size, ftype)
             yield db.insert(convId, "item_files", val, timeuuid, attachmentId)
 
-        from social import fts
-        fts.solr.updateIndex(convId, item, myOrgId, attachments)
+        from social import search
+        search.solr.updateItem(convId, item, myOrgId)
         defer.returnValue((convId, item))
 
     @defer.inlineCallbacks
