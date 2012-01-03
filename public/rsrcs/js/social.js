@@ -591,10 +591,10 @@ var convs = {
                     text:'Report',
                     click : function() {
                         comment = $("#conv-report-comment").val();
-                        parent = $("#conv-report-parent").val();
+                        id = $("#conv-report-id").val();
                         action = $("#conv-report-action").val();
-                        $.post("/ajax/item/report", {
-                            parent:parent,
+                        $.post("/ajax/item/report/report", {
+                            id:id,
                             action:action,
                             comment:comment
                         });

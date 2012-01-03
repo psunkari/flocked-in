@@ -497,6 +497,11 @@ def itemLink(itemId, itemType, classes=None):
            "<a class='ajax' href='/item?id=%s'>%s</a></span>"\
            % (itemId, _(itemType))
 
+def itemReportLink(itemId, itemType, classes=None):
+    return "<span class='item %s'>" % (classes if classes else "") +\
+           "<a class='ajax' href='/item/report?id=%s'>%s</a></span>"\
+           % (itemId, _(itemType))
+
 
 def userName(id, user, classes=None):
     return "<span class='user%s'>" % (' '+classes if classes else "") +\
@@ -850,4 +855,3 @@ def uniqify(lst):
         if x not in new_list:
             new_list.append(x)
     return new_list
-

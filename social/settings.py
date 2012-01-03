@@ -118,12 +118,12 @@ notifyItemRequests = 14
 notifyNM = 15
 notifyMR = 16
 notifyMA = 17
-notifyMyItemFC = 17
-notifyMyItemRFC = 18
-notifyMyItemDFC = 19
-notifyMyItemUFC = 20
+notifyMyItemFC = 18
+notifyMyItemRFC = 19
+notifyMyItemDFC = 20
+notifyMyItemUFC = 21
 # Total number of notification types and default setting
-_notificationsCount = 21
+_notificationsCount = 22
 defaultNotify = "3" * _notificationsCount
 
 # Notification medium
