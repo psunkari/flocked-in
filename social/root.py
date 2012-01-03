@@ -23,7 +23,7 @@ from social.notifications   import NotificationsResource
 from social.groups          import GroupsResource
 from social.groups          import GroupFeedResource
 from social.groups          import GroupSettingsResource
-from social.fts             import FTSResource
+from social.search          import SearchResource
 from social.tags            import TagsResource
 from social.auto            import AutoCompleteResource
 from social.feedback        import FeedbackResource
@@ -186,7 +186,7 @@ class RootResource(resource.Resource):
         self._groups = GroupsResource(self._isAjax)
         self._groupFeed = GroupFeedResource(self._isAjax)
         self._groupSetting = GroupSettingsResource(self._isAjax)
-        self._search = FTSResource(self._isAjax)
+        self._search = SearchResource(self._isAjax)
         self._admin = Admin(self._isAjax)
         self._pluginResources = getPluggedResources(self._isAjax)
         self._messages = MessagingResource(self._isAjax)

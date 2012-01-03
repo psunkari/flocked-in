@@ -5,7 +5,7 @@ from ordereddict        import OrderedDict
 from twisted.internet   import defer
 from twisted.web        import static, server
 
-from social             import db, utils, base, errors, config, _, fts
+from social             import db, utils, base, errors, config, _
 from social             import notifications
 from social.relations   import Relation
 from social.isocial     import IAuthInfo

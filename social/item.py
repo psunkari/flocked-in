@@ -7,7 +7,7 @@ from twisted.internet   import defer
 from twisted.web        import server
 
 from social             import base, db, utils, feed, config
-from social             import plugins, constants, tags, fts
+from social             import plugins, constants, tags, search
 from social             import notifications, _, errors, files
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
@@ -121,7 +121,7 @@ def _comment(request, myId, orgId, convId=None, richText=False):
     yield _notify("C", convId, timeUUID, convType=convType,
                       convOwnerId=convOwnerId, myId=myId, me=me,
                       comment=comment, richText=richText)
-    fts.solr.updateIndex(itemId, {'meta':meta}, orgId)
+    search.solr.updateItemIndex(itemId, {'meta':meta}, orgId, conv=conv)
     items = {itemId: {'meta':meta}, convId: conv}
     defer.returnValue((itemId, convId, items))
 
@@ -660,7 +660,6 @@ class ItemResource(base.BaseResource):
                                 '#comments-%s' % convId, 'append', True,
                                 handlers={"onload": "(function(){$('.comment-input', '#comment-form-%s').val(''); $('[name=\"nc\"]', '#comment-form-%s').val('%s');})();" % (convId, convId, numShowing)},
                                 args=[convId, itemId], **args)
-        #fts.solr.updateIndex(itemId, {'meta':meta}, args["orgKey"])
 
 
     @profile
@@ -948,11 +947,11 @@ class ItemResource(base.BaseResource):
                 d2.addCallback(lambda x: db.get_count(convId, "itemResponses"))
                 d2.addCallback(lambda x: db.insert(convId, 'items',\
                                          str(x), 'responseCount', 'meta'))
-                d2.addCallback(lambda x: fts.solr.deleteIndex(itemId))
+                d2.addCallback(lambda x: search.solr.delete(itemId))
                 deferreds.extend([d1, d2])
             else:
                 d1 = db.insert(convOwnerId, 'deletedConvs', timestamp, convId)
-                d1.addCallback(lambda x: fts.solr.deleteIndex(itemId))
+                d1.addCallback(lambda x: search.solr.delete(itemId))
                 d1.addCallback(lambda x: files.deleteFileInfo(myId, orgId, convId, conv))
                 deferreds.append(d1)
 

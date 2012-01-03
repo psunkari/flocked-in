@@ -46,6 +46,11 @@
         percent = (count * 100)/total if total > 0 else 0
         checked = 'checked="true"' if (voted and voted == option) else ''
         optionId = 'option-%s-%s' % (option, convId)
+
+        if highlight and convId in highlight and "poll_option_%s"%option in highlight[convId]:
+          optionText = highlight[convId]["poll_option_%s"%option][0]
+        else:
+          optionText = options[option]
       %>
       <li>
         %if checked:
@@ -55,7 +60,7 @@
         %endif
         <div class="poll-wrapper">
           <div class="poll-bar-wrapper">
-            <span class="poll-option-text" title="${options[option]}">${options[option]}</span>
+            <span class="poll-option-text" title="${options[option]}">${optionText}</span>
             <div class="poll-bar option-${int(option)%10}" style="width:${percent}%;">&nbsp;</div>
           </div>
           %if percent > 0:
@@ -98,12 +103,17 @@
             percent = (count * 100)/total if total > 0 else 0
             checked = 'checked="true"' if (voted and voted == option) else ''
             optionId = 'option-%s-%s' % (option, convId)
+
+            if highlight and convId in highlight and "poll_option_%s"%option in highlight[convId]:
+              optionText = highlight[convId]["poll_option_%s"%option][0]
+            else:
+              optionText = options[option]
           %>
           <li>
             <input type="radio" name="option" value="${option}" id="${optionId}" ${checked} class="poll-options-option"/>
             <div class="poll-wrapper" onclick="$('#${optionId}').attr('checked', true)">
               <div class="poll-bar-wrapper">
-                <span class="poll-option-text" title="${options[option]}">${options[option]}</span>
+                <span class="poll-option-text" title="${options[option]}">${optionText}</span>
                 <div class="poll-bar option-${int(option)%10}" style="width:${percent}%;">&nbsp;</div>
               </div>
               %if percent > 0:
@@ -159,8 +169,11 @@
     <span class="icon item-icon poll-icon"></span>
     <div class="item-title-text">
       <%
-        # XXX: 'question' is a backward compatible way. can be removed after db upgrade.
-        comment = meta.get('comment', '') or meta.get('question', '')
+        if highlight and convId in highlight and 'comment' in highlight[convId]:
+            comment = highlight[convId]['comment'][0]
+        else:
+            comment = meta.get('comment', '')
+
         snippet = meta.get('snippet', '')
       %>
       ${item._renderText(snippet, comment, richText=richText)}
