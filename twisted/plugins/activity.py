@@ -16,7 +16,7 @@ class Activity(object):
     implements(IPlugin, IItemType)
     itemType = "activity"
     position = -1
-    hasIndex = True
+    hasIndex = False
 
     @defer.inlineCallbacks
     def getReason(self, convId, requesters, userId):
