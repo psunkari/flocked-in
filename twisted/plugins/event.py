@@ -154,7 +154,7 @@ class EventResource(base.BaseResource):
         responseCount = yield db.get_count(convId, "eventResponses", response)
         optionCounts[response] = str(responseCount)
 
-        yield db.batch_insert(convId, "items", {"options":optionCounts})
+        yield db.batch_insert(convId, "items", {"rsvp":optionCounts})
 
         if script:
             #Update the inline status of your rsvp
@@ -196,7 +196,7 @@ class EventResource(base.BaseResource):
             if item.column.value not in invitations:
                 invitations.append(item.column.value)
 
-        events = yield db.multiget_slice(convs + invitations, "items", ["meta", "options"])
+        events = yield db.multiget_slice(convs + invitations, "items", ["meta", "rsvp"])
         events = utils.multiSuperColumnsToDict(events)
         myResponses = {}
 
@@ -337,7 +337,7 @@ class Event(object):
         convId = convId or args["convId"]
         myKey = args["myKey"]
 
-        conv = yield db.get_slice(convId, "items", ["options"])
+        conv = yield db.get_slice(convId, "items", ["rsvp"])
         if not conv:
             raise errors.InvalidRequest()
         conv = utils.supercolumnsToDict(conv)
