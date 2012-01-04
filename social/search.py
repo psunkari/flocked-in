@@ -65,6 +65,15 @@ class PythonBodyReceiver(protocol.Protocol):
             self._deferred.errback(reason)
 
 
+def _toUnicodeOrText(text):
+    if isinstance(text, str):
+        return text.decode('utf8', 'replace')
+    elif isinstance(text, unicode):
+        return text
+    else:
+        return str(text)
+
+
 class Solr(object):
     def __init__(self):
         self._updateURL = URL + "/update?commit=true"
@@ -83,14 +92,6 @@ class Solr(object):
 
 
     def updatePeopleIndex(self, myId, me, orgId):
-        def toUnicodeOrText(text):
-            if isinstance(text, str):
-                return text.decode('utf8', 'replace')
-            elif isinstance(text, unicode):
-                return text
-            else:
-                return str(text)
-
         mailId = me['basic']['emailId']
         fields = [self.elementMaker.field(myId, {"name":"id"}),
                   self.elementMaker.field(orgId, {"name":"org"}),
@@ -99,31 +100,31 @@ class Solr(object):
 
         for field in ['name', 'lastname', 'firstname', 'jobTitle']:
             if field in me['basic']:
-                fields.append(self.elementMaker.field(toUnicodeOrText(me['basic'][field]), {'name': field}))
+                fields.append(self.elementMaker.field(_toUnicodeOrText(me['basic'][field]), {'name': field}))
 
         for field in ['phone', 'mobile']:
             if field in me.get('contact', {}):
-                fields.append(self.elementMaker.field(toUnicodeOrText(me['contact'][field]), {'name': field}))
+                fields.append(self.elementMaker.field(_toUnicodeOrText(me['contact'][field]), {'name': field}))
 
         for field in ['email', 'phone', 'mobile', 'currentCity']:
             if field in me.get('personal', {}):
-                fields.append(self.elementMaker.field(toUnicodeOrText(me['personal'][field]), {'name': field}))
+                fields.append(self.elementMaker.field(_toUnicodeOrText(me['personal'][field]), {'name': field}))
 
         schools = set()
         for school in me.get('schools', {}).keys():
             year, name = school.split(':', 1)
             schools.add(name)
-        fields.extend([self.elementMaker.field(toUnicodeOrText(x), {'name': 'school'}) for x in schools])
+        fields.extend([self.elementMaker.field(_toUnicodeOrText(x), {'name': 'school'}) for x in schools])
 
         companies = set()
         for company in me.get('companies', {}).keys():
             end, start, name = company.split(':', 2)
             companies.add(name)
-        fields.extend([self.elementMaker.field(toUnicodeOrText(x), {'name': 'company'}) for x in companies])
+        fields.extend([self.elementMaker.field(_toUnicodeOrText(x), {'name': 'company'}) for x in companies])
 
         skills = ','.join(me.get('expertise', {}).keys())
         if skills:
-            fields.append(self.elementMaker.field(toUnicodeOrText(skills), {'name': 'expertise'}))
+            fields.append(self.elementMaker.field(_toUnicodeOrText(skills), {'name': 'expertise'}))
 
         fields.append(self.elementMaker.field(str(int(time.time())), {'name': 'timestamp'}))
 
@@ -138,7 +139,8 @@ class Solr(object):
         fields = []
         for attachId in attachments.keys():
             timeUUID, name, size, fileType = attachments[attachId].split(':')
-            fields.append(self.elementMaker.field("%s:%s"%(attachId, urlsafe_b64decode(name)), {'name': 'attachment'}))
+            name = _toUnicodeOrText(urlsafe_b64decode(name))
+            fields.append(self.elementMaker.field("%s:%s"%(attachId, name, {'name': 'attachment'}))
         return fields
 
 
