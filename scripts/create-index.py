@@ -61,9 +61,9 @@ def reindexItems():
         parentId = item['meta'].get('parent', None)
 
         if not parentId:
-            yield search.solr.updateItem(itemId, item, ownerOrgId)
+            yield search.solr.updateItemIndex(itemId, item, ownerOrgId)
         else:
-            yield search.solr.updateItem(itemId, item, ownerOrgId, conv=items[parentId])
+            yield search.solr.updateItemIndex(itemId, item, ownerOrgId, conv=items[parentId])
 
 
 if __name__ == '__main__':
