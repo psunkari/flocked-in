@@ -130,7 +130,7 @@ def userFiles(myId, entityId, myOrgId, start='', end='', fromFeed=True):
             items = utils.multiSuperColumnsToDict(items)
             for itemId in items:
                 acl = items[itemId]['meta']['acl']
-                if utils.checkAcl(myId, acl, entityId, relation, myOrgId):
+                if utils.checkAcl(myId, myOrgId, False, relation, items[itemId]['meta']):
                     accessibleItems.append(itemId)
             allItems.update(items)
 

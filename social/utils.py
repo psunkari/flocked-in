@@ -189,11 +189,12 @@ def getValidItemId(request, arg, type=None, columns=None, itemId=None, myOrgId=N
         parent = supercolumnsToDict(parent)
         acl = parent["meta"]["acl"]
         owner = parent["meta"]["owner"]
-        deleted = 'deleted' in parent['meta']
+        deleted = parent['meta'].get('state', None) == 'deleted'
     else:
+        parent = item
         acl = meta["acl"]
         owner = meta["owner"]
-        deleted = 'deleted' in meta
+        deleted = parent['meta'].get('state', None) == 'deleted'
 
     if deleted:
         raise errors.InvalidItem(itemType, itemId)
@@ -202,9 +203,10 @@ def getValidItemId(request, arg, type=None, columns=None, itemId=None, myOrgId=N
         myOrgId = request.getSession(IAuthInfo).organization
     if not myId:
         myId = request.getSession(IAuthInfo).username
+
     relation = Relation(myId, [])
     yield relation.initGroupsList()
-    if not checkAcl(myId, acl, owner, relation, myOrgId):
+    if not checkAcl(myId, myOrgId, False, relation, parent['meta']):
         raise errors.ItemAccessDenied(itemType, itemId)
 
     defer.returnValue((itemId, item))
@@ -387,33 +389,46 @@ def expandAcl(userId, orgId, acl, convId, convOwnerId=None, allItemFollowers=Fal
         defer.returnValue(keys)
 
 
-def checkAcl(userId, acl, owner, relation, userOrgId=None):
-    acl = pickle.loads(acl)
-    deny = acl.get("deny", {})
-    accept = acl.get("accept", {})
-    # if userID is owner of the conversation, show the item irrespective of acl
-    if userId == owner:
-        return True
+def checkAcl(userId, userOrgId, userIsAdmin, relation, itemMeta):
+    state = itemMeta.get('state', None)
+    ownerId = itemMeta['owner']
 
-    if userId in deny.get("users", []) or \
-       userOrgId in deny.get("org", []) or \
-       any([groupid in deny.get("groups", []) for groupid in relation.groups]):
+    if not state or state == "published":
+        # if userID is owner of the conversation
+        # show the item irrespective of acl
+        if userId == ownerId:
+            return True
+
+        acl = pickle.loads(itemMeta['acl'])
+        deny = acl.get("deny", {})
+        accept = acl.get("accept", {})
+
+        if userId in deny.get("users", []) or \
+           userOrgId in deny.get("org", []) or \
+           any([groupid in deny.get("groups", []) for groupid in relation.groups]):
+            return False
+
+        returnValue = False
+        if "public" in accept:
+            returnValue |= True
+        if "orgs" in accept:
+            returnValue |= userOrgId in accept["orgs"]
+        if "groups" in accept:
+            returnValue |= any([groupid in accept["groups"] for groupid in relation.groups])
+        if "users" in accept:
+            returnValue |= userId in accept["users"]
+        return returnValue
+
+    # TODO: This should be visible to the admin for restoring deleted items.
+    elif state == "deleted":
         return False
 
-    returnValue = False
-    if "public" in accept:
-        returnValue |=True
-    if "orgs" in accept:
-        returnValue |= userOrgId in accept["orgs"]
-    if "groups" in accept:
-        returnValue |= any([groupid in accept["groups"] for groupid in relation.groups])
-    if "followers" in accept and accept["followers"]:
-        returnValue |= (userId == owner)
-        if relation.subscriptions:
-            returnValue |= (owner in relation.subscriptions)
-    if "users" in accept:
-        returnValue |= userId in accept["users"]
-    return returnValue
+    elif state == "flagged":
+        flaggedBy = itemMeta.get("reportedBy", None)
+        if userId == flaggedBy or userId == ownerId or userIsAdmin:
+            return True
+
+    return False
 
 
 def encodeKey(key):

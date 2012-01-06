@@ -947,7 +947,7 @@ class ItemResource(base.BaseResource):
             # convId - convId is used as key for comments and ownerId for
             # conversations. Also mark the item as deleted, update responses
             # and update deleted index
-            d = db.insert(itemId, 'items', timestamp, 'deleted', 'meta')
+            d = db.insert(itemId, 'items', 'deleted', 'state', 'meta')
             deferreds.append(d)
             if comment:
                 d1 = db.insert(convId, 'deletedConvs', timestamp, itemId)
@@ -1187,7 +1187,7 @@ class ItemResource(base.BaseResource):
                 d = db.remove(tagId, "tagItems", convUUID)
                 deferreds.append(d)
 
-        d = db.insert(convId, 'items', timestamp, 'deleted', 'meta')
+        d = db.insert(convId, 'items', 'deleted', 'state', 'meta')
         deferreds.append(d)
         d1 = db.insert(convOwnerId, 'deletedConvs', timestamp, convId)
         d1.addCallback(lambda x: fts.solr.deleteIndex(convId))
@@ -1255,8 +1255,7 @@ class ItemResource(base.BaseResource):
                 # Update Existing Item Information with Report Meta
                 newACL = pickle.dumps({"accept":{"users":[convOwnerId, myId]}})
                 convReport = {"reportedBy":myId, "reportId":reportId,
-                              "reportStatus":"pending", "original_acl":convACL,
-                              "acl":newACL}
+                              "reportStatus":"pending", "state":"flagged"}
                 convMeta.update(convReport)
                 yield db.batch_insert(convId, "items", {"meta": convReport})
 
@@ -1266,29 +1265,21 @@ class ItemResource(base.BaseResource):
                               convOwnerId=convOwnerId, myId=myId, me=args["me"])
             else:
                 if action == "repost":
-                    # Restore the original ACL if complainant withdraws the complaint
                     # Remove the reportId key, so owner cannot post any comment
                     yield db.batch_remove({'items':[convId]},
                                             names=["reportId", "reportStatus",
-                                                   "reportedBy", "original_acl"],
+                                                   "reportedBy", "state"],
                                             supercolumn='meta')
 
-                    # Restore the original ACL
-                    _acl = convMeta["original_acl"]
-                    yield db.insert(convId, "items", _acl, "acl", "meta")
-
                     oldReportMeta = {"reportedBy": convMeta["reportedBy"],
-                                     "reportId": convMeta["reportId"],
-                                     "acl": convMeta["original_acl"]}
+                                     "reportId": reportId}
 
                     # Save the now resolved report in items and remove its
                     #  reference in the item meta so new reporters wont't see
                     #  old reports
                     timestamp = str(int(time.time()))
-                    yield db.batch_insert(convId, "items", {"reports":
-                                          {timestamp:convMeta["reportId"]}})
-                    yield db.batch_insert(reportId, "items",
-                                          {"meta":oldReportMeta})
+                    yield db.insert(convId, "items", reportId, timestamp, "reports")
+                    yield db.batch_insert(reportId, "items", {"meta":oldReportMeta})
 
                     # Notify the owner that the report has been withdrawn
                     yield _notify("UFC", convId, timeUUID, convType=convType,

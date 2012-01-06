@@ -234,10 +234,10 @@ def fetchAndFilterConvs(ids, count, relation, items, myId, myOrgId):
         meta = items.get(convId, {}).get("meta", {})
         if not meta:
             continue
-        if "deleted" in meta:
+        if "state" in meta and meta["state"] == "deleted":
             deleted.add(convId)
             continue
-        if checkAcl(myId, meta["acl"], meta["owner"], relation, myOrgId):
+        if checkAcl(myId, myOrgId, False, relation, meta):
             retIds.append(convId)
             if len(retIds) == count:
                 break
