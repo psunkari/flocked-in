@@ -140,7 +140,7 @@ class Solr(object):
         for attachId in attachments.keys():
             timeUUID, name, size, fileType = attachments[attachId].split(':')
             name = _toUnicodeOrText(urlsafe_b64decode(name))
-            fields.append(self.elementMaker.field("%s:%s"%(attachId, name, {'name': 'attachment'})))
+            fields.append(self.elementMaker.field("%s:%s"%(attachId, name), {'name': 'attachment'}))
         return fields
 
 
