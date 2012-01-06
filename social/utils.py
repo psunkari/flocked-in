@@ -753,6 +753,10 @@ def removeUser(request, userId, orgAdminId, userInfo=None, orgAdminInfo=None):
 
     for clientId in apps:
         yield db.remove(apps[clientId], "oAuthData")
+
+    cols = yield db.get_slice(userId, "appsByOwner")
+    cols = columnsToDict(cols)
+    for clientId in cols:
         yield db.remove(orgId, "appsByOwner", clientId)
     yield db.remove(userId, "appsByOwner" )
     yield db.remove(userId, "entities", super_column="apps")

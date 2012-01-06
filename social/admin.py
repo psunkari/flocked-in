@@ -94,7 +94,7 @@ class Admin(base.BaseResource):
 
         # Admin cannot block himself.
         if userId == myId:
-            raise errors.InvalidRequest(_("An administrator cannot block himself/herself"))
+            raise errors.InvalidRequest(_("You cannot block yourself."))
 
         emailId = user.get("basic", {}).get("emailId", None)
         yield db.insert(emailId, "userAuth", 'True', "isBlocked")
