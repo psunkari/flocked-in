@@ -49,7 +49,6 @@ for plg in getPlugins(IItemType):
     if not hasattr(plg, "disabled") or not plg.disabled:
         plugins[plg.itemType] = plg
 
-
 #
 # Whitelist: List of domains that can invite anyone to flocked.in
 # Blacklist: List of domains that cannot create networks on flocked.in
