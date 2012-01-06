@@ -167,7 +167,7 @@ class OAuthAuthorizeResource(base.BaseResource):
                        "redirect_uri": b64encode(redirectUri),
                        "scope": scopes, "type": "auth"}
             yield db.batch_insert(authCode, "oAuthData", authMap, ttl=120)
-            yield db.insert(myId, "entities", authCode, "apps", clientId, ttl=120)
+            yield db.insert(myId, "entities", authCode, clientId, "apps", ttl=120)
             self._redirectOnSuccess(request, redirectUri, authCode, state)
         else:
             self._redirectOnError(request, redirectUri, "access_denied", state)
@@ -290,8 +290,8 @@ class OAccessTokenResource(base.BaseResource):
                             "auth_code": authCode, "scope": grant["scope"]}
         yield db.batch_insert(refreshToken, "oAuthData",
                               refreshTokenData, ttl=self._refreshTokenExpiry)
-        yield db.insert(userId, "entities", refreshToken, "apps",
-                        clientId, ttl=self._refreshTokenExpiry)
+        yield db.insert(userId, "entities", refreshToken, clientId,
+                        "apps", ttl=self._refreshTokenExpiry)
 
         yield db.remove(authCode, "oAuthData")
         self._success(request, accessToken, refreshToken)
