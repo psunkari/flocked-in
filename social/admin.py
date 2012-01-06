@@ -4,7 +4,7 @@ from csv import reader
 from twisted.web        import server
 from twisted.internet   import defer
 
-from social             import base, db, utils, people, errors
+from social             import base, db, utils, people, errors, _
 from social.isocial     import IAuthInfo
 from social.signup      import getOrgKey # move getOrgKey to utils
 from social.template    import render, renderScriptBlock
@@ -85,42 +85,83 @@ class Admin(base.BaseResource):
 
     @defer.inlineCallbacks
     def _blockUser(self, request):
-        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        orgId = args["orgKey"]
+        authInfo = request.getSession(IAuthInfo)
+        myId = authInfo.username
+        orgId = authInfo.organization
         userId, user = yield utils.getValidEntityId(request, "id")
 
         # Admin cannot block himself.
-        if userId == myKey:
+        if userId == myId:
             raise errors.InvalidRequest(_("An administrator cannot block himself/herself"))
 
         emailId = user.get("basic", {}).get("emailId", None)
         yield db.insert(emailId, "userAuth", 'True', "isBlocked")
         yield db.insert(orgId, "blockedUsers", '', userId)
+        yield renderScriptBlock(request, "admin.mako", "admin_actions",
+                                False, "#user-actions-%s" %(userId),
+                                "set", args=[userId, 'blocked'])
 
 
     @defer.inlineCallbacks
-    def _unBlockUser(self, request):
-        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        orgId = args["orgKey"]
+    def _unblockUser(self, request):
+        authInfo = request.getSession(IAuthInfo)
+        myId = authInfo.username
+        orgId = authInfo.organization
 
         userId, user = yield utils.getValidEntityId(request, "id")
         emailId = user.get("basic", {}).get("emailId", None)
 
         yield db.remove(emailId, "userAuth", "isBlocked")
         yield db.remove(orgId, "blockedUsers", userId)
+        yield renderScriptBlock(request, "admin.mako", "admin_actions",
+                                False, "#user-actions-%s" %(userId),
+                                "set", args=[userId, 'unblocked'])
 
 
     @defer.inlineCallbacks
     def _deleteUser(self, request):
-        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        orgId = args["orgKey"]
+        authInfo = request.getSession(IAuthInfo)
+        myId = authInfo.username
+        orgId = authInfo.organization
         userId, user = yield utils.getValidEntityId(request, "id")
+        delete = utils.getRequestArg(request, 'deleted') == 'deleted'
 
         # Admin cannot block himself.
-        if userId == myKey:
-            raise errors.InvalidRequest(_("An administrator cannot delete himself/herself"))
+        if userId == myId:
+            raise errors.InvalidRequest(_("You are the only administrator, you can not delete yourself"))
 
-        yield utils.removeUser(userId, user)
+        if delete:
+            yield utils.removeUser(request, userId, myId, user)
+            yield renderScriptBlock(request, "admin.mako", "admin_actions",
+                                    False, "#user-actions-%s" %(userId),
+                                    "set", args=[userId, 'deleted'])
+        else:
+            orgAdminNewGroups = []
+            affectedGroups = []
+            groups = yield db.get_slice(userId, "entityGroupsMap")
+            groupIds = [x.column.name.split(':')[1] for x in groups]
+            groupAdmins = yield db.multiget_slice(groupIds, "entities", ['admins'])
+            groupAdmins = utils.multiSuperColumnsToDict(groupAdmins)
+            for group in groups:
+                name, groupId = group.column.name.split(':')
+                if len(groupAdmins[groupId].get('admins', {}))==1 and userId in groupAdmins[groupId]['admins']:
+                    orgAdminNewGroups.append((groupId, name))
+                affectedGroups.append((groupId, name))
+
+            apiKeys = yield db.get_slice(userId, "entities", ['apikeys'])
+            apiKeys = utils.supercolumnsToDict(apiKeys)
+            if apiKeys.get('apikeys', {}).keys():
+                apps = yield db.multiget_slice(apiKeys['apikeys'].keys(), "apps", ['meta'])
+                apps = utils.multiSuperColumnsToDict(apps)
+            else :
+                apps = {}
+
+            args = {'affectedGroups': affectedGroups}
+            args['orgAdminNewGroups'] = orgAdminNewGroups
+            args['apps'] = apps
+            args['userId'] = userId
+            yield renderScriptBlock(request, 'admin.mako', "confirm_remove_user",
+                                    False, "#removeuser-dlg", "set", **args)
 
 
     @defer.inlineCallbacks
@@ -141,10 +182,14 @@ class Admin(base.BaseResource):
             if "basic" not in orgInfo:
                 orgInfo["basic"] = {}
             orgInfo["basic"]["name"] = name
+            args['org']['basic']['name'] = name
         if orgInfo:
             yield db.batch_insert(orgId, "entities", orgInfo)
 
-        request.redirect('/admin/org')
+        ###TODO: update orgImage when image is uploaded.
+        request.write("""<script>
+                            parent.$$.alerts.info('update successful');
+                        </script>""")
 
 
     @defer.inlineCallbacks
@@ -170,8 +215,10 @@ class Admin(base.BaseResource):
         args["viewType"] = "org"
 
         if script:
+            handlers = {'onload': "$$.ui.bindFormSubmit('#orginfo-form');"}
             yield renderScriptBlock(request, "admin.mako", "orgInfo",
-                                    landing, "#list-users", "set", **args)
+                                    landing, "#list-users", "set", True,
+                                    handlers = handlers, **args)
 
         if script and landing:
             request.write("</body></html>")
@@ -206,7 +253,12 @@ class Admin(base.BaseResource):
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         orgId = args["orgKey"]
         landing = not self._ajax
-
+        start = utils.getRequestArg(request, 'start') or ''
+        start = utils.decodeKey(start)
+        count = PEOPLE_PER_PAGE
+        toFetchCount = count+1
+        nextPageStart = ''
+        prevPageStart = ''
         args["menuId"] = "users"
 
         if script and landing:
@@ -217,19 +269,27 @@ class Admin(base.BaseResource):
                                     landing, "#mainbar", "set", **args)
 
         args["heading"] = "Admin Console - Blocked Users"
-        cols = yield db.get_slice(orgId, "blockedUsers")
-        blockedUsers = utils.columnsToDict(cols).keys()
+        cols = yield db.get_slice(orgId, "blockedUsers", start=start, count=toFetchCount)
+        blockedUsers = [col.column.name for col in cols]
+        if len(blockedUsers) > count:
+            nextPageStart = utils.encodeKey(blockedUsers[-1])
+            blockedUsers = blockedUsers[:count]
+        if start:
+            cols = yield db.get_slice(orgId, "blockedUsers", start=start, count=toFetchCount, reverse=True)
+            if len(cols) > 1:
+                prevPageStart = utils.decodeKey(cols[-1].column.name)
 
         cols = yield db.multiget_slice(blockedUsers, "entities", ["basic"])
-        userInfo = utils.multiSuperColumnsToDict(cols)
+        entities = utils.multiSuperColumnsToDict(cols)
 
-        args["entities"] = userInfo
+        args["entities"] = entities
+        args['nextPageStart'] = nextPageStart
+        args['prevPageStart'] = prevPageStart
         args["viewType"] = "blocked"
 
         if script:
             yield renderScriptBlock(request, "admin.mako", "viewOptions",
                                 landing, "#users-view", "set", **args)
-
             yield renderScriptBlock(request, "admin.mako", "list_blocked",
                                     landing, "#list-users", "set", **args)
 
@@ -246,6 +306,7 @@ class Admin(base.BaseResource):
         start = utils.getRequestArg(request, 'start') or ''
         args["title"] = "Manage Users"
         args["menuId"] = "users"
+        start = utils.decodeKey(start)
 
         if script and landing:
             yield render(request, "admin.mako", **args)
@@ -255,6 +316,7 @@ class Admin(base.BaseResource):
                                     landing, "#mainbar", "set", **args)
         users, relations, userIds,blockedUsers,\
             nextPageStart, prevPageStart = yield people.getPeople(myKey, orgId, orgId, start=start)
+
         args["entities"] = users
         args["relations"] = relations
         args["people"] = userIds
@@ -295,7 +357,7 @@ class Admin(base.BaseResource):
             if segmentCount == 1 and request.postpath[0] == "block":
                 dfd = self._blockUser(request)
             elif segmentCount == 1 and  request.postpath[0] == "unblock":
-                dfd = self._unBlockUser(request)
+                dfd = self._unblockUser(request)
             elif segmentCount == 1 and request.postpath[0] == "add":
                 dfd = self._addUsers(request)
             elif segmentCount == 1 and request.postpath[0] == "delete":

@@ -55,6 +55,9 @@ def createColumnFamilies(client):
     sessions = CfDef(KEYSPACE, 'sessions', 'Standard', 'BytesType', None,
                      'Session information for logged in users')
     yield client.system_add_column_family(sessions)
+    userSessionsMap = CfDef(KEYSPACE, 'userSessionsMap', 'Standard', 'BytesType', None,
+                            'userId-Session Map')
+    yield client.system_add_column_family(userSessionsMap)
 
     # Invitations sent out by existing users
     # Key is the e-mail of the recipient - contains inviteKey, sender's key etc;
@@ -103,6 +106,9 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(blockedUsers)
 
 
+    deletedUsers = CfDef(KEYSPACE, "deletedUsers", "Standard", "UTF8Type", None,
+                         "List of users removed from the networks by admins.")
+    yield client.system_add_column_family(deletedUsers)
     # List of members in a group
     # userKey => <subscribed>:<activityKey>
     groupMembers = CfDef(KEYSPACE, 'groupMembers', 'Standard', 'UTF8Type', None,
@@ -630,7 +636,8 @@ def truncateColumnFamilies(client):
                "mArchivedConversations", "mDeletedConversations",
                "mConvMessages", "mConvFolders", "latest", "doNotSpam",
                "files", "tmp_files", "item_files", "invitationsSent",
-               "user_files", "suggestions", "apps", "appsByOwner", "oAuthData"]:
+               "user_files", "suggestions", "apps", "appsByOwner", "oAuthData",
+               "userSessionsMap", "deletedUsers"]:
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 

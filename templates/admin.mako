@@ -88,9 +88,7 @@
     <div class="user-details-title">${entities[userId]["basic"].get("jobTitle", '')}</div>
     <div class="user-details-actions">
       <ul id="user-actions-${userId}" class="middle user-actions h-links">
-        <li><button class="button default" onclick="$.post('/ajax/admin/unblock', 'id=${userId}')">
-          _("Unblock")
-        </button></li>
+        ${admin_actions(userId, 'blocked')}
       </ul>
     </div>
   </div>
@@ -122,6 +120,9 @@
     %if counter % 2 == 1:
       </div>
     %endif
+
+    <div id="people-paging" class="pagingbar">
+      ${paging(type='blocked')}
   %endif
 </%def>
 
@@ -137,18 +138,23 @@
   </ul>
 </%def>
 
-<%def name="paging()">
+<%def name="paging(type='')">
+  <%
+    typeFilter = ''
+    if type and type == 'blocked':
+      typeFilter = '&type=blocked'
+  %>
   <ul class="h-links">
     %if prevPageStart:
       <li class="button">
-        <a class="ajax" href="/admin/people?start=${prevPageStart}">${_("&#9666; Previous")}</a>
+        <a class="ajax" href="/admin/people?start=${prevPageStart}${typeFilter}">${_("&#9666; Previous")}</a>
       </li>
     %else:
       <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
     %endif
     %if nextPageStart:
       <li class="button">
-        <a class="ajax" href="/admin/people?&start=${nextPageStart}">${_("Next &#9656;")}</a>
+        <a class="ajax" href="/admin/people?&start=${nextPageStart}${typeFilter}">${_("Next &#9656;")}</a>
       </li>
     %else:
       <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
@@ -157,7 +163,7 @@
 </%def>
 
 <%def name="list_users()" >
-  ${people.listPeople()}
+  ${people.listUsers(showBlocked=True)}
   <div id="people-paging" class="pagingbar">
     ${paging()}
   </div>
@@ -256,14 +262,11 @@
   </div>
 </%def>
 
-
 <%def name="orgInfo()">
   <%
     name = org.get("basic", {}).get("name", '')
   %>
-  <form action="/admin/org" method="POST" enctype="multipart/form-data">
-  <!-- fileupload doesn't work with ajax request.
-      TODO: find workaround to submit file in ajax request-->
+  <form id='orginfo-form' class='ajax' action="/admin/org" method="POST" enctype="multipart/form-data">
     <ul class="styledform">
       <li class="form-row">
         <label class="styled-label" for="name">${_("Name")}</label>
@@ -278,4 +281,44 @@
         <button type="submit" class="button default">${_("Save")}</button>
     </div>
   </form>
+</%def>
+
+<%def name="admin_actions(userId, action='')">
+  %if not action or action == 'unblocked':
+    <li><button class="button default" onclick="$.post('/ajax/admin/block', 'id=${userId}')">${_("Block")}</button></li>
+    <li><button class="button default" onclick="$$.removeUser.showRemoveUser('${userId}')">${_("Remove")}</button></li>
+  %elif action == 'blocked':
+    <li><button class="button" onclick="$.post('/ajax/admin/unblock', 'id=${userId}')">${_("Unblock")}</button></li>
+    <li><button class="button default" onclick="$$.removeUser.showRemoveUser('${userId}')">${_("Remove")}</button></li>
+  %elif action == 'deleted':
+    <li>${_('User deleted from the network')}</li>
+  %endif
+
+</%def>
+
+<%def name="confirm_remove_user()">
+  <div class="ui-dialog-titlebar ui-widget-header ui-corner-all ui-helper-clearfix">
+    <span class="ui-dialog-title" id="ui-dialog-title-dialog-form">Remove user</span>
+  </div>
+  <div style="color:red;font-size:12px;"> Caution! removing an user is irreversible process.
+  User will not be able to login again. Access to apps created by the user will be revoked.
+  </div>
+  %if affectedGroups:
+    <div class=''> User will be removed from following groups</div>
+    % for groupId, name in affectedGroups:
+      <span> <a href='/group?id=${groupId}'>${name}</a></span>
+    %endfor
+  %endif
+  %if orgAdminNewGroups:
+    <div class=''> This User is the only administrator for the following groups.  You will be made the administrator for these groups. </div>
+    % for groupId, name in orgAdminNewGroups:
+      <span> <a href='/group?id=${groupId}'>${name}</a></span>
+    %endfor
+  %endif
+  %if apps:
+    <div class=''> The following apps will be removed from the network.</div>
+    % for appId in apps:
+      <span> <a href='/apps?id=${appId}'>${apps[appId]['meta']['name']}</a></span>
+    % endfor
+  %endif
 </%def>

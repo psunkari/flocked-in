@@ -34,6 +34,13 @@ def createCF():
                                 "List of files that appeared in entity's feed")
     yield db.system_add_column_family(entityFeed_files)
 
+    userSessionsMap = CfDef(KEYSPACE, 'userSessionsMap', 'Standard',
+                            'BytesType', None, 'userId-Session Map')
+    yield client.system_add_column_family(userSessionsMap)
+
+    deletedUsers = CfDef(KEYSPACE, "deletedUsers", "Standard", "UTF8Type", None,
+                         "List of users removed from the networks by admins.")
+    yield client.system_add_column_family(deletedUsers)
 
 @defer.inlineCallbacks
 def updateData():

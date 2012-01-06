@@ -729,25 +729,84 @@ def addUser(emailId, displayName, passwd, orgId, jobTitle = None, timezone=None)
 
 
 @defer.inlineCallbacks
-def removeUser(userId, userInfo=None):
+def removeUser(request, userId, orgAdminId, userInfo=None, orgAdminInfo=None):
     if not userInfo:
         cols = yield db.get_slice(userId, "entities", ["basic"])
         userInfo = supercolumnsToDict(cols)
+    if not orgAdminInfo:
+        cols = yield db.get_slice(orgAdminId, "entities", ["basic"])
+        orgAdminInfo = supercolumnsToDict(cols)
+
     emailId = userInfo["basic"].get("emailId", None)
     displayName = userInfo["basic"].get("name", None)
-    orgKey = userInfo["basic"]["org"]
+    firstname = userInfo['basic'].get('firstname', None)
+    lastname = userInfo['basic'].get('lastname', None)
+    orgId = userInfo["basic"]["org"]
+
+    cols = yield db.get_slice(userId, "entities", ['apikeys', 'apps'])
+    apps_apiKeys = supercolumnsToDict(cols)
+    apiKeys = apps_apiKeys.get('apikeys', {})
+    apps = apps_apiKeys.get('apps', {})
+    for clientId in apiKeys:
+        yield db.remove(clientId, "apps")
+    yield db.remove(userId, "entities", super_column='apikeys')
+
+    for clientId in apps:
+        yield db.remove(apps[clientId], "oAuthData")
+        yield db.remove(orgId, "appsByOwner", clientId)
+    yield db.remove(userId, "appsByOwner" )
+    yield db.remove(userId, "entities", super_column="apps")
+
+    sessions = yield db.get_slice(userId, "userSessionsMap")
+    sessions = columnsToDict(sessions)
+    for sessionId in sessions:
+        yield db.remove(sessionId, "sessions")
+    yield db.remove(userId, "userSessionsMap")
+
+    groups = yield db.get_slice(userId, "entityGroupsMap")
+    groupIds = [x.column.name.split(':')[1] for x in groups]
+    groupAdmins = yield db.multiget_slice(groupIds, "entities", ['admins'])
+    groupAdmins = multiSuperColumnsToDict(groupAdmins)
+    for group in groups:
+        name, groupId = group.column.name.split(':')
+        yield db.remove(groupId, "followers", userId)
+        yield db.remove(groupId, "groupMembers", userId)
+        if len(groupAdmins[groupId].get('admins', {}))==1 and userId in groupAdmins[groupId]['admins']:
+            yield db.insert(groupId, "entities", '', orgAdminId, 'admins')
+            cols = yield db.get_slice(groupId, "groupMembers", [orgAdminId])
+            if not cols:
+                itemId = getUniqueKey()
+                acl = {"accept":{"groups":[groupId]}}
+                item, attachments = yield createNewItem(request, "activity",
+                                                      userId, orgId, acl,
+                                                      "groupJoin")
+                item["meta"]["target"] = groupId
+                yield db.batch_insert(itemId, "items", item)
+                yield db.insert(groupId, "followers", "", orgAdminId)
+                yield db.insert(groupId, "groupMembers", itemId, orgAdminId)
+                yield db.insert(orgAdminId, "entityGroupsMap", "", group.column.name)
+                yield db.insert(orgAdminId, "entities",  name, groupId, 'adminOfGroups')
+                yield updateDisplayNameIndex(orgAdminId, [groupId], orgAdminInfo['basic']['name'], None)
+
+
+        yield db.remove(groupId, "entities", userId, "admins")
+
+    yield updateDisplayNameIndex(userId, groupIds, None, displayName)
+    yield db.remove(userId, "entityGroupsMap")
+    yield db.remove(userId, "entities", super_column='adminOfGroups')
 
     yield db.remove(emailId, "userAuth")
-    yield db.remove(orgKey, "displayNameIndex", ":".join([displayName.lower(), userId]))
-    yield db.remove(orgKey, "orgUsers", userId)
-    yield db.remove(orgKey, "blockedUsers", userId)
-    #
-    # TODO:
-    #   unfriend - remove all pending requests
-    #   clear displayName index
-    #   clear nameindex
-    #   unfollow
-    #   unsubscribe from all groups
+    yield db.remove(orgId, "orgUsers", userId)
+    yield db.remove(orgId, "blockedUsers", userId)
+    yield db.insert(userId, "entities", '', 'deleted', 'basic')
+    yield db.insert(orgId, "deletedUsers", '', userId)
+    yield updateDisplayNameIndex(userId, [orgId], None, displayName)
+    yield updateNameIndex(userId, [orgId], None, displayName)
+    yield updateNameIndex(userId, [orgId], None, emailId)
+    if firstname:
+        yield updateNameIndex(userId, [orgId], None, firstname)
+    if lastname:
+        yield updateNameIndex(userId, [orgId], None, lastname)
 
 
 @defer.inlineCallbacks
