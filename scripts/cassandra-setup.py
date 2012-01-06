@@ -265,10 +265,16 @@ def createColumnFamilies(client):
                      "List of items in this tag")
     orgTagsByName = CfDef(KEYSPACE, "orgTagsByName", "Standard", "UTF8Type",
                           None, "List of tags by their name")
+    orgPresetTags = CfDef(KEYSPACE, "orgPresetTags", "Standard", "UTF8Type",
+                          None, "List of preset tags. Only admin can create"
+                          "or delete these tags. unlike normal tags these tags"
+                          "will not be deleted automatically. On deletion it"
+                          "behaves like a normal tag")
     yield client.system_add_column_family(orgTags)
     yield client.system_add_column_family(tagFollowers)
     yield client.system_add_column_family(tagItems)
     yield client.system_add_column_family(orgTagsByName)
+    yield client.system_add_column_family(orgPresetTags)
 
     deletedConvs = CfDef(KEYSPACE, "deletedConvs", "Standard", "UTF8Type",
                          None, "list of deleted convs")
@@ -637,7 +643,7 @@ def truncateColumnFamilies(client):
                "mConvMessages", "mConvFolders", "latest", "doNotSpam",
                "files", "tmp_files", "item_files", "invitationsSent",
                "user_files", "suggestions", "apps", "appsByOwner", "oAuthData",
-               "userSessionsMap", "deletedUsers"]:
+               "userSessionsMap", "deletedUsers", "orgPresetTags"]:
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 

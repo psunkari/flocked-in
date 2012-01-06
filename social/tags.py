@@ -18,28 +18,31 @@ from social.logging     import profile, dump_args, log
 @profile
 @defer.inlineCallbacks
 @dump_args
-def ensureTag(request, tagName, orgId=None):
+def ensureTag(request, tagName, orgId=None, presetTag=False):
     authInfo = request.getSession(IAuthInfo)
     myId = authInfo.username
     myOrgId = authInfo.organization if not orgId else orgId
-    consistency = ttypes.ConsistencyLevel
 
     try:
         tagName = tagName.lower()
-        c = yield db.get(myOrgId, "orgTagsByName",
-                         tagName, consistency=consistency.QUORUM)
+        c = yield db.get(myOrgId, "orgTagsByName", tagName)
         tagId = c.column.value
-        c = yield db.get_slice(myOrgId, "orgTags", super_column=tagId,
-                               consistency=consistency.QUORUM)
+        c = yield db.get_slice(myOrgId, "orgTags", super_column=tagId)
         tag = utils.columnsToDict(c)
+        if presetTag and not tag.get('isPreset', '') == 'True':
+            yield db.insert(myOrgId, "orgPresetTags", tagId, tagName)
+            yield db.insert(myOrgId, "orgTags", 'True', 'isPreset', tagId)
+            tag['isPreset'] = 'True'
     except ttypes.NotFoundException:
         tagId = utils.getUniqueKey()
-        tag = {"title": tagName}
+        tag = {"title": tagName, 'createdBy': myId}
+        if presetTag:
+            tag['isPreset'] = 'True'
         tagName = tagName.lower()
-        yield db.batch_insert(myOrgId, "orgTags",
-                              {tagId: tag}, consistency=consistency.QUORUM)
-        yield db.insert(myOrgId, "orgTagsByName", tagId,
-                        tagName, consistency=consistency.QUORUM)
+        yield db.batch_insert(myOrgId, "orgTags", {tagId: tag})
+        yield db.insert(myOrgId, "orgTagsByName", tagId, tagName)
+        if presetTag:
+            yield db.insert(myOrgId, "orgPresetTags", tagId, tagName)
 
     defer.returnValue((tagId, tag))
 
@@ -203,6 +206,62 @@ class TagsResource(base.BaseResource):
         if not script:
             yield render(request, "tags.mako", **args)
 
+    @defer.inlineCallbacks
+    def _follow(self, request):
+        authInfo = request.getSession(IAuthInfo)
+        myId = authInfo.username
+        orgId = authInfo.organization
+        tagId, tag = yield utils.getValidTagId(request, "id")
+
+        count = int(tag[tagId].get('followersCount', 0))
+        if count % 5 == 3:
+            count = yield db.get_count(tagId, "tagFollowers")
+        count = count + 1
+
+        yield db.insert(tagId, "tagFollowers", '', myId)
+        yield db.insert(orgId, "orgTags", str(count), "followersCount", tagId)
+
+        args = {'tags': tag}
+        args['tagsFollowing'] = [tagId]
+        tag[tagId]['followersCount']= count
+        fromListTags = (utils.getRequestArg(request, '_pg') == '/tags/list')
+        if fromListTags:
+            yield renderScriptBlock(request, "tags.mako", "_displayTag",
+                                    False, "#tag-%s" % tagId, "replace",
+                                    args=[tagId], **args)
+        else:
+            yield renderScriptBlock(request, 'tags.mako', "tag_actions", False,
+                                    "#tag-actions-%s" %(tagId), "set",
+                                    args= [tagId, True, False])
+
+    @defer.inlineCallbacks
+    def _unfollow(self, request):
+        authInfo = request.getSession(IAuthInfo)
+        myId = authInfo.username
+        orgId = authInfo.organization
+        tagId, tag = yield utils.getValidTagId(request, "id")
+
+        count = int(tag[tagId].get('followersCount', 0))
+        if count % 5 == 3:
+            count = yield db.get_count(tagId, "tagFollowers")
+        count = count - 1 if count > 0 else count
+
+        yield db.remove(tagId, 'tagFollowers', myId)
+        yield db.insert(orgId, "orgTags", str(count), "followersCount", tagId)
+
+        tag[tagId]['followersCount']= count
+        args = {'tags': tag}
+        args['tagsFollowing'] = []
+        fromListTags = (utils.getRequestArg(request, '_pg') == '/tags/list')
+        if fromListTags:
+            yield renderScriptBlock(request, "tags.mako", "_displayTag",
+                                    False, "#tag-%s" % tagId, "replace",
+                                    args=[tagId], **args)
+        else:
+            yield renderScriptBlock(request, 'tags.mako', "tag_actions", False,
+                                    "#tag-actions-%s" %(tagId), "set",
+                                    args= [tagId, False, False])
+
 
     @profile
     @dump_args
@@ -227,27 +286,10 @@ class TagsResource(base.BaseResource):
         segmentCount = len(request.postpath)
         if segmentCount != 1:
             return self._epilogue(request, defer.fail(errors.NotFoundError()))
-
-        requestDeferred = utils.getValidTagId(request, "id")
-        def callback((tagId, tag)):
-            actionDeferred = None
-            action = request.postpath[0]
-            myId = request.getSession(IAuthInfo).username
-
-            if action == "follow":
-                actionDeferred = db.insert(tagId, "tagFollowers", '', myId)
-            elif action == "unfollow":
-                actionDeferred = db.remove(tagId, "tagFollowers", myId)
-            else:
-                raise errors.NotFoundError()
-
-            def renderActions(result):
-                return renderScriptBlock(request, "tags.mako", "tag_actions",
-                                False, "#tag-actions-%s" % tagId, "set",
-                                args=[tagId], tagFollowing=(action=="follow"))
-            actionDeferred.addCallback(renderActions)
-            return actionDeferred
-
-        requestDeferred.addCallback(callback)
-        return self._epilogue(request, requestDeferred)
+        action = request.postpath[0]
+        if action == 'follow':
+            d = self._follow(request)
+        elif action == 'unfollow':
+            d = self._unfollow(request)
+        return self._epilogue(request, d)
 

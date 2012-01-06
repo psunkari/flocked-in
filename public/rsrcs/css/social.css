@@ -1440,6 +1440,7 @@ abbr.timestamp {
 .tl-toolbox {
     font-size: 90%;
     margin-left: -4px;
+    white-space: normal;
 }
 
 .users-row {
@@ -2344,3 +2345,14 @@ td.file-info, td.file-context, td.file-actions {
     padding: 6px 10px !important;
 }
 
+.large-icon {
+    width: 48px;
+    height: 48px;
+    background-image: url(/rsrcs/img/large-sprite.png);
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.large-tag-following {
+    background-position: 0 -48px;
+}

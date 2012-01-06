@@ -1,10 +1,12 @@
 import csv
+import re
 from csv import reader
 
+from telephus.cassandra import ttypes
 from twisted.web        import server
 from twisted.internet   import defer
 
-from social             import base, db, utils, people, errors, _
+from social             import base, db, utils, people, errors, tags, _
 from social.isocial     import IAuthInfo
 from social.signup      import getOrgKey # move getOrgKey to utils
 from social.template    import render, renderScriptBlock
@@ -217,7 +219,7 @@ class Admin(base.BaseResource):
         if script:
             handlers = {'onload': "$$.ui.bindFormSubmit('#orginfo-form');"}
             yield renderScriptBlock(request, "admin.mako", "orgInfo",
-                                    landing, "#list-users", "set", True,
+                                    landing, "#content", "set", True,
                                     handlers = handlers, **args)
 
         if script and landing:
@@ -259,7 +261,9 @@ class Admin(base.BaseResource):
         toFetchCount = count+1
         nextPageStart = ''
         prevPageStart = ''
+        args["title"] = "Manage Users"
         args["menuId"] = "users"
+        args["viewType"] = "blocked"
 
         if script and landing:
             yield render(request, "admin.mako", **args)
@@ -285,16 +289,18 @@ class Admin(base.BaseResource):
         args["entities"] = entities
         args['nextPageStart'] = nextPageStart
         args['prevPageStart'] = prevPageStart
-        args["viewType"] = "blocked"
 
         if script:
             yield renderScriptBlock(request, "admin.mako", "viewOptions",
                                 landing, "#users-view", "set", **args)
-            yield renderScriptBlock(request, "admin.mako", "list_blocked",
-                                    landing, "#list-users", "set", **args)
+            yield renderScriptBlock(request, "admin.mako", "list_users",
+                                    landing, "#content", "set", **args)
 
         if script and landing:
             request.write("</body></html>")
+        if not script:
+            yield render(request, "admin.mako", **args)
+
 
 
     @defer.inlineCallbacks
@@ -306,6 +312,7 @@ class Admin(base.BaseResource):
         start = utils.getRequestArg(request, 'start') or ''
         args["title"] = "Manage Users"
         args["menuId"] = "users"
+        args["viewType"] = "all"
         start = utils.decodeKey(start)
 
         if script and landing:
@@ -323,14 +330,16 @@ class Admin(base.BaseResource):
         args["nextPageStart"] = nextPageStart
         args["prevPageStart"] = prevPageStart
         args["blockedUsers"] = blockedUsers
-        args["viewType"] = "all"
 
         if script:
             yield renderScriptBlock(request, "admin.mako", "viewOptions",
                                 landing, "#users-view", "set", **args)
 
             yield renderScriptBlock(request, "admin.mako", "list_users",
-                                    landing, "#list-users", "set", **args)
+                                    landing, "#content", "set", **args)
+        else:
+            yield render(request, "admin.mako", **args)
+
 
 
     @defer.inlineCallbacks
@@ -349,22 +358,122 @@ class Admin(base.BaseResource):
             raise errors.PermissionDenied(_("Only company administrators are allowed here!"))
 
 
+    @defer.inlineCallbacks
+    def _listPresetTags(self, request):
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        orgId = args["orgKey"]
+        landing = not self._ajax
+
+        args['title'] = 'Preset Tags'
+        args['menuId'] = 'tags'
+
+        if script and landing:
+            yield render(request, "admin.mako", **args)
+
+        if script and appchange:
+            yield renderScriptBlock(request, "admin.mako", "layout",
+                                    landing, "#mainbar", "set", **args)
+
+        presetTags = yield db.get_slice(orgId, "orgPresetTags", count=100)
+        presetTags = utils.columnsToDict(presetTags, ordered=True).values()
+        if presetTags:
+          tags = yield db.get_slice(orgId, "orgTags", presetTags)
+          tags = utils.supercolumnsToDict(tags)
+        else:
+          tags = {}
+
+        args['tagsList'] = presetTags
+        args['tags'] = tags
+        yield renderScriptBlock(request, "admin.mako", "list_tags",
+                                landing, "#content", "set", **args)
+
+
+    @defer.inlineCallbacks
+    def _addPresetTag(self, request):
+        orgId = request.getSession(IAuthInfo).organization
+        tagNames = utils.getRequestArg(request, 'tag')
+        if not tagNames:
+            return
+
+        invalidTags = []
+        tagNames = [x.strip().decode('utf-8', 'replace') for x in tagNames.split(',')]
+        for tagName in tagNames:
+            if len(tagName) < 50 and re.match('^[\w-]*$', tagName):
+                yield tags.ensureTag(request, tagName, orgId, True)
+            else:
+                invalidTags.append(tagName)
+
+        presetTags = yield db.get_slice(orgId, "orgPresetTags")
+        presetTags = utils.columnsToDict(presetTags, ordered=True).values()
+
+        tags_ = yield db.get_slice(orgId, "orgTags", presetTags)
+        tags_ = utils.supercolumnsToDict(tags_)
+        args = {'tags': tags_, 'tagsList': presetTags}
+
+        handlers = {}
+        if invalidTags:
+            if len(invalidTags) == 1:
+                message = " %s is invalid tag. " %(invalidTags[0])
+            else:
+                message = " %s are invalid tags. " %(",".join(invalidTags))
+            errorMsg =  "%s <br/>Tag can contain alpha-numeric characters or hyphen only. It cannot be more than 50 characters" %(message)
+            handlers = {'onload': "$$.alerts.error('%s')"%(errorMsg)}
+
+        yield renderScriptBlock(request, "admin.mako", "list_tags",
+                                False, "#content", "set", True,
+                                handlers = handlers,  **args)
+
+
+    @defer.inlineCallbacks
+    def _deletePresetTag(self, request):
+        orgId = request.getSession(IAuthInfo).organization
+        tagId = utils.getRequestArg(request, 'id')
+        if not tagId:
+            return
+
+        try:
+            tag = yield db.get(orgId, 'orgTags', super_column = tagId)
+            tag = utils.supercolumnsToDict([tag])
+            tagName = tag[tagId]['title']
+            if 'isPreset' in tag[tagId]:
+                yield db.remove(orgId, "orgTags", 'isPreset', tagId)
+                yield db.remove(orgId, 'orgPresetTags', tagName)
+            presetTags = yield db.get_slice(orgId, "orgPresetTags")
+            presetTags = utils.columnsToDict(presetTags, ordered=True).values()
+            if presetTags:
+              tags = yield db.get_slice(orgId, "orgTags", presetTags)
+              tags = utils.supercolumnsToDict(tags)
+            else:
+              tags = {}
+            args = {'tagsList': presetTags, 'tags': tags}
+            request.write('$("#tag-%s").remove()'%(tagId))
+        except ttypes.NotFoundException:
+            return
+
+
     def render_POST(self, request):
         segmentCount = len(request.postpath)
         d = self._ensureAdmin(request)
         def callback(ignored):
             dfd = None
-            if segmentCount == 1 and request.postpath[0] == "block":
-                dfd = self._blockUser(request)
-            elif segmentCount == 1 and  request.postpath[0] == "unblock":
-                dfd = self._unblockUser(request)
-            elif segmentCount == 1 and request.postpath[0] == "add":
-                dfd = self._addUsers(request)
-            elif segmentCount == 1 and request.postpath[0] == "delete":
-                dfd = self._deleteUser(request)
-            elif segmentCount == 1 and request.postpath[0] == "org":
-                dfd = self._updateOrgInfo(request)
-            else:
+            postpath = request.postpath
+            if segmentCount == 1:
+                if postpath[0] == "block":
+                    dfd = self._blockUser(request)
+                elif postpath[0] == "unblock":
+                    dfd = self._unblockUser(request)
+                elif postpath[0] == "add":
+                    dfd = self._addUsers(request)
+                elif postpath[0] == "delete":
+                    dfd = self._deleteUser(request)
+                elif postpath[0] == "org":
+                    dfd = self._updateOrgInfo(request)
+            elif segmentCount == 2:
+                if postpath[0] == 'tags' and postpath[1] == 'add':
+                    dfd = self._addPresetTag(request)
+                elif postpath[0] == 'tags' and postpath[1] == 'delete':
+                    dfd = self._deletePresetTag(request)
+            if not dfd:
                 raise errors.NotFoundError()
             return dfd
         d.addCallback(callback)
@@ -378,13 +487,16 @@ class Admin(base.BaseResource):
             dfd = None
             if segmentCount == 0:
                 dfd = self._renderUsers(request)
-            elif segmentCount== 1 and request.postpath[0] == "add":
-                dfd = self._renderAddUsers(request)
-            elif segmentCount == 1 and request.postpath[0] == "people":
-                dfd = self._renderUsers(request)
-            elif segmentCount == 1 and request.postpath[0] == "org":
-                dfd = self._renderOrgInfo(request)
-            else:
+            elif segmentCount== 1:
+                if request.postpath[0] == "add":
+                    dfd = self._renderAddUsers(request)
+                elif request.postpath[0] == "people":
+                    dfd = self._renderUsers(request)
+                elif request.postpath[0] == "org":
+                    dfd = self._renderOrgInfo(request)
+                elif request.postpath[0] == 'tags':
+                    dfd = self._listPresetTags (request)
+            if not dfd:
                 raise errors.NotFoundError()
             return dfd
         d.addCallback(callback)

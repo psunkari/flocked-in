@@ -42,6 +42,14 @@ def createCF():
                          "List of users removed from the networks by admins.")
     yield client.system_add_column_family(deletedUsers)
 
+    orgPresetTags = CfDef(KEYSPACE, "orgPresetTags", "Standard", "UTF8Type",
+                          None, "List of preset tags. Only admin can create"
+                          "or delete these tags. unlike normal tags these tags"
+                          "will not be deleted automatically. On deletion it"
+                          "behaves like a normal tag")
+    yield client.system_add_column_family(orgPresetTags)
+
+
 @defer.inlineCallbacks
 def updateData():
     yield db.truncate('user_files')

@@ -4,6 +4,7 @@
 
 <%namespace name="widgets" file="widgets.mako"/>
 <%namespace name="people" file="people.mako"/>
+<%namespace name="tagsmako" file="tags.mako"/>
 <%inherit file="base.mako"/>
 
 <%def name="nav_menu()">
@@ -24,8 +25,9 @@
     </ul>
     <ul id="mymenu" class="v-links sidemenu">
       ${navMenuItem("/admin/people", _("Users"), "users")}
-      ${navMenuItem("admin/groups", _("Groups"), "groups")}
+      ##${navMenuItem("admin/groups", _("Groups"), "groups")}
       ${navMenuItem("/admin/org", _("Organization"), "org")}
+      ${navMenuItem("/admin/tags", _("Preset Tags"), "tags")}
     </ul>
   </div>
 </%def>
@@ -45,9 +47,11 @@
           %else:
             <span class="middle title">${_("Admin Console")}</span>
           %endif
-          <span class="button title-button">
-            <a class="ajax" href="/admin/add" data-ref="/admin/add">${_('Add Users')}</a>
-          </span>
+          %if not menuId or menuId == 'users':
+            <span class="button title-button">
+              <a class="ajax" href="/admin/add" data-ref="/admin/add">${_('Add Users')}</a>
+            </span>
+          %endif
         </div>
         <div id="add-user-wrapper"></div>
       </div>
@@ -58,12 +62,15 @@
       </div>
       <div id="center">
         <div class="center-contents">
-          <div id="users-view" class="viewbar">
-            %if not script:
-              ${viewOptions()}
-            %endif
-          </div>
-          <div id="list-users" class="paged-container">
+          %if not menuId or menuId == 'users':
+            <div id="users-view" class="viewbar">
+              %if not script:
+                <% option = 'all' if not viewType else viewType %>
+                ${viewOptions(option)}
+              %endif
+            </div>
+          %endif
+          <div id="content" class="paged-container">
             %if not script:
               ${self.list_users()}
             %endif
@@ -99,30 +106,27 @@
     <div id="next-load-wrapper">${_("No blocked users")}</div>
   % else:
     <%
-      counter = 0
-      firstRow = True
-    %>
-    %for userId in entities:
-      %if counter % 2 == 0:
-        %if firstRow:
-          <div class="users-row users-row-first">
-          <% firstRow = False %>
-        %else:
-          <div class="users-row">
+        counter = 0
+        firstRow = True
+      %>
+      %for userId in entities:
+        %if counter % 2 == 0:
+          %if firstRow:
+            <div class="users-row users-row-first">
+            <% firstRow = False %>
+          %else:
+            <div class="users-row">
+          %endif
         %endif
-      %endif
-      <div class="users-user">${_displayUser(userId)}</div>
+        <div class="users-user">${_displayUser(userId)}</div>
+        %if counter % 2 == 1:
+          </div>
+        %endif
+        <% counter += 1 %>
+      %endfor
       %if counter % 2 == 1:
         </div>
       %endif
-      <% counter += 1 %>
-    %endfor
-    %if counter % 2 == 1:
-      </div>
-    %endif
-
-    <div id="people-paging" class="pagingbar">
-      ${paging(type='blocked')}
   %endif
 </%def>
 
@@ -163,9 +167,19 @@
 </%def>
 
 <%def name="list_users()" >
-  ${people.listUsers(showBlocked=True)}
+  <div id='list-users'>
+    %if viewType == 'blocked':
+      ${list_blocked()}
+    %else:
+      ${people.listUsers(showBlocked=True)}
+    %endif
+  </div>
   <div id="people-paging" class="pagingbar">
-    ${paging()}
+    %if viewType == 'all':
+      ${paging()}
+    %elif viewType == 'blocked' and entities:
+      ${paging(viewType)}
+    %endif
   </div>
 </%def>
 
@@ -321,4 +335,28 @@
       <span> <a href='/apps?id=${appId}'>${apps[appId]['meta']['name']}</a></span>
     % endfor
   %endif
+</%def>
+
+
+<%def name="list_tags()">
+  <ul class="styledform">
+    <li class="form-row">
+      <label class="styled-label">${_("Tags")}</label>
+      <div class="styledform-helpwrap">
+        <form method="post" action="/admin/tags/add" class="ajax" autocomplete="off">
+          <div class="styledform-inputwrap" id="expertise-input">
+            <input type="textarea" name="tag" id="expertise-textbox" value="" required title="tag"  autofocus/>
+            <input type="submit" id="expertise-add" class="button" value="Add" style="margin:0px;"/>
+          </div>
+        </form>
+        <div>Enter comma separated tags. Tag can contain alpha-numerics or hypen only. It cannot be more than 50 characters.</div>
+      </div>
+    </li>
+  </ul>
+  <div class='center-title'></div>
+  <div  id='tags-container' class="tl-wrapper">
+    %for tagId in tagsList:
+      ${tagsmako._displayTag(tagId, False, True)}
+    %endfor
+  </div>
 </%def>

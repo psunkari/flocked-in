@@ -51,7 +51,7 @@
       %if tagId:
         <span class="middle title">${tags[tagId]["title"]}</span>
         <ul id='tag-actions-${tagId}' class="middle h-links">
-          ${tag_actions(tagId, tagFollowing)}
+          ${tag_actions(tagId, tagFollowing, False)}
         </ul>
       %else:
         <span class="middle title">${"Tags"}</span>
@@ -87,15 +87,19 @@
   %endif
 </%def>
 
-<%def name="tag_actions(tagId, tagFollowing)">
+<%def name="tag_actions(tagId, tagFollowing, fromListTags=True)">
+  <%
+    if fromListTags:
+      button_class  = 'button-link'
+    elif tagFollowing:
+      button_class = 'button'
+    else:
+      button_class= 'button default'
+  %>
   %if not tagFollowing:
-    <button class="button default" onclick="$.post('/ajax/tags/follow', 'id=${tagId}')">
-      <span class="button-text">${_("Follow")}</span>
-    </button>
+    <button class='${button_class} ajaxpost' title='follow the tag' data-ref="/tags/follow?id=${tagId}">${_("Follow")}</button>
   %else:
-    <button class="button" onclick="$.post('/ajax/tags/unfollow', 'id=${tagId}')">
-      <span class="button-text">${_("Unfollow")}</span>
-    </button>
+    <button class="${button_class} ajaxpost"  data-ref='/tags/unfollow?id=${tagId}' title='unfollow the tag'>${_("Unfollow")}</button>
   %endif
 </%def>
 
@@ -115,50 +119,41 @@
 </%def>
 
 <%def name="tagsListLayout()">
-  <div id="tags-wrapper" class="paged-container">
-    ${self.listTags()}
+  <div id="tags-wrapper" class="paged-container tl-wrapper">
+    ${listTags()}
   </div>
+  <div class='clear'></div>
   <div id="tags-paging" class="pagingbar">
     ${self.paging()}
   </div>
 </%def>
 
 <%def name="listTags()">
-  <%
-    counter = 0
-    firstRow = True
-  %>
   %for tagId in tagIds:
-    %if counter % 2 == 0:
-      %if firstRow:
-        <div class="users-row users-row-first">
-        <% firstRow = False %>
-      %else:
-        <div class="users-row">
-      %endif
-    %endif
-    <div class="users-user">${_displayTag(tagId)}</div>
-    %if counter % 2 == 1:
-      </div>
-    %endif
-    <% counter += 1 %>
+    ${_displayTag(tagId)}
   %endfor
-  %if counter % 2 == 1:
-    </div>
-  %endif
 </%def>
 
-<%def name="_displayTag(tagId)" >
-  <% tagName = tags[tagId]["title"] %>
-  <div class="users-avatar">
-    <div class="tag-items-count"><span>${tags[tagId].get("itemsCount", "0")}</span></div>
-  </div>
-  <div class = 'users-details'>
-    <div class="user-details-name"><a class="ajax" href="/tags?id=${tagId}">${tagName}</a></div>
-    <div class="user-details-actions">
-      <ul id='tag-actions-${tagId}' class="middle h-links">
-        ${tag_actions(tagId, tagId in tagsFollowing)}
-      </ul>
+<%def name="_displayTag(tagId, showActions=True, showDelete=False)">
+  <%
+    tagName = tags[tagId]['title']
+    followersCount = tags[tagId].get('followersCount', 0)
+    itemsCount = tags[tagId].get("itemsCount", "0")
+    tagicon = 'large-icon' if not tagsFollowing or tagId not in tagsFollowing else 'large-icon large-tag-following'
+  %>
+  <div id ='tag-${tagId}'>
+    <div class="tl-item" id="tag-${tagId}">
+      <div class='tl-avatar ${tagicon}'></div>
+      <div class='tl-details'>
+        <div class='tl-name'><a href='/tags?id=${tagId}'>${tagName}</a></div>
+        <div class='tl-title'>${_('%s posts, %s followers' %(itemsCount, followersCount))}</div>
+        % if showDelete:
+            <button class='company-remove ajaxpost' title='' data-ref='/admin/tags/delete?id=${tagId}'></button>
+        %endif
+        %if showActions:
+          <div class="tl-toolbox" id='tag-actions-${tagId}'>${tag_actions(tagId, tagId in tagsFollowing)}</div>
+        %endif
+      </div>
     </div>
   </div>
 </%def>
