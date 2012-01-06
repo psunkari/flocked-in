@@ -34,7 +34,7 @@ def render(request, path, *args, **data):
     kwargs = data
 
     if request.args.has_key("_ns"):
-        request.addCookie("_ns", "1")
+        request.addCookie("_ns", "1", path='/')
 
     if kwargs.has_key("script") and kwargs["script"]:
         kwargs["noscriptUrl"] = request.path + "?_ns=1" \

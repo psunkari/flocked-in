@@ -6,6 +6,7 @@
 <!DOCTYPE HTML>
 
 <%namespace name="widgets" file="widgets.mako"/>
+<%namespace name="item" file="item.mako"/>
 <%inherit file="base.mako"/>
 
 
@@ -17,34 +18,13 @@
       </div>
     </div>
     <div id="center-right">
-      <div id="right">
-        <div id="item-me">
-          %if not script:
-            ${self.item_me()}
-          %endif
-        </div>
-        <div id="item-meta">
-          %if not script:
-            ${self.item_meta()}
-          %endif
-        </div>
-        <div id="item-subactions">
-          %if not script:
-            ${self.item_subactions()}
-          %endif
-        </div>
-      </div>
+      <div id="right"></div>
       <div id="center">
         <div class="center-contents">
           %if script:
             ${self.item_lazy_layout(convId)}
           %else:
             ${self.item_layout(convId)}
-          %endif
-        </div>
-        <div class="center-contents" id="report-contents">
-          %if not script:
-            ${item_report()}
           %endif
         </div>
       </div>
@@ -60,7 +40,9 @@
     <div class="conv-data">
       <div id="conv-root-${convId}">
         <div class="conv-summary"></div>
+        <div id="item-footer-${convId}" class="conv-footer busy-indicator"></div>
       </div>
+      <div id="report-contents" class="conv-meta-wrapper"></div>
     </div>
   </div>
 </%def>
@@ -77,9 +59,9 @@
             reasonUserId = convMeta["owner"]
       %>
       %if convMeta['type'] != 'feedback':
-        ${self.conv_owner(reasonUserId)}
+        ${item.conv_owner(reasonUserId)}
       %else:
-        ${self.feedback_icon(convMeta['subType'])}
+        ${item.feedback_icon(convMeta['subType'])}
       %endif
     </div>
     <div class="conv-data">
@@ -106,60 +88,29 @@
         %else:
           <div class="conv-summary">
         %endif
-          ${self.conv_root(convId, hasReason)}
+          ${item.conv_root(convId, hasReason)}
           <div id="item-footer-${convId}" class="conv-footer busy-indicator">
+            <% self.conv_footer(convId) %>
           </div>
         </div>
+      </div>
+      <div id="conv-meta-wrapper-${convId}" class="conv-meta-wrapper${' no-comments' if not hasKnownComments else ''}${' no-tags' if not hasTags else ''}${' no-likes' if not hasKnownLikes else ''}">
+        <% item_report() %>
       </div>
     </div>
   </div>
 </%def>
 
 
-<%def name="conv_owner(ownerId)">
-  <% avatarURI = utils.userAvatar(ownerId, entities[ownerId]) %>
-  %if avatarURI:
-    <img src="${avatarURI}" style="max-height: 48px; max-width: 48px;"/>
-  %endif
+<%def name="conv_footer(convId)">
+  <%
+    meta = items[convId]['meta']
+    timestamp = int(meta['timestamp'])
+    myTimezone = me['basic'].get("timezone", None)
+  %>
+  ${utils.simpleTimestamp(timestamp, myTimezone)}
 </%def>
 
-
-<%def name="conv_root(convId, isQuoted=False)">
-  <% itemType = items[convId]["meta"]["type"] %>
-  %if itemType in plugins:
-    ${plugins[itemType].rootHTML(convId, isQuoted, context.kwargs)}
-  %endif
-  <% attachments = items[convId].get("attachments", {}) %>
-  %if len(attachments.keys()) > 0:
-    <div class="attachment-list">
-      %for attachmentId in attachments:
-        <%
-          tuuid, name, size, ftype = attachments[attachmentId].split(':')
-          name = urlsafe_b64decode(name)
-          size = formatFileSize(int(size))
-          location = '/files?id=%s&fid=%s&ver=%s'%(convId, attachmentId, tuuid)
-        %>
-        <div class="attachment-item">
-          <span class="icon attach-file-icon"></span>
-          <span class="attachment-name"><a href="${location}" target="filedownload">${name|h}</a></span>
-          <span class="attachment-meta">&nbsp;&nbsp;&ndash;&nbsp;&nbsp;${size}</span>
-        </div>
-      %endfor
-    </div>
-  %endif
-</%def>
-
-
-<%def name="item_me()">
-</%def>
-
-
-<%def name="item_meta()">
-</%def>
-
-
-<%def name="item_subactions()">
-</%def>
 
 <%def name="_renderText(snippet, text, expandStr=None, collapseStr=None, richText=False)">
   <%
@@ -178,140 +129,6 @@
   %endif
 </%def>
 
-<%def name="render_status(convId, isQuoted=False)">
-  <%
-    conv = items[convId]
-    meta = conv["meta"]
-    convType = meta["type"]
-    userId = meta["owner"]
-    has_icon = "has-icon" if convType in ["question"] else ''
-    itemTitleText = "item-title-text" if has_icon else ''
-    target = meta.get('target', '')
-    target = target.split(',') if target else ''
-    richText = meta.get('richText', 'False') == 'True'
-    if target:
-      target = [x for x in target if x in relations.groups]
-  %>
-  %if not isQuoted:
-    %if not target:
-      ${utils.userName(userId, entities[userId], "conv-user-cause")}
-    %else:
-      ${utils.userName(userId, entities[userId], "conv-user-cause")}  ${_("on")} ${utils.groupName(target[0], entities[target[0]])}
-    %endif
-  %endif
-  <div class="item-title ${has_icon}">
-    %if has_icon:
-      <span class="icon item-icon ${convType}-icon"></span>
-    %endif
-
-    <div class="${itemTitleText}">
-      %if isQuoted and not has_icon:
-        ${utils.userName(userId, entities[userId])}
-      %endif
-      <%
-        comment = meta.get('comment', '')
-        snippet = meta.get('snippet', '')
-      %>
-      ${_renderText(snippet, comment, richText=richText)}
-    </div>
-  </div>
-</%def>
-
-<%def name="render_link(convId, isQuoted=False)">
-  <%
-    conv = items[convId]
-    convType = conv["meta"]["type"]
-    userId = conv["meta"]["owner"]
-
-    ## "url" is replaced by "link_url" in the new schema.
-    ## the older column names are here for backward compatibility
-    ## can be removed after DB update
-    meta = conv["meta"]
-    url = meta.get("link_url", '') or meta.get("url", '')
-    title = meta.get("link_title", '') or meta.get("title", '')
-    imgsrc = meta.get("link_imgSrc", '') or meta.get("imgSrc", '')
-    summary = meta.get("link_summary", '') or meta.get("summary", '')
-    richText = meta.get('richText', 'False') == 'True'
-
-    hasEmbed = False
-    embedType = meta.get("link_embedType", '') or meta.get("embedType", '')
-    embedSrc = meta.get("link_embedSrc", '') or meta.get("embedSrc", '')
-    embedWidth = meta.get("link_embedWidth", '') or meta.get("embedWidth", 0)
-    embedHeight = meta.get("link_embedHeight", '') or meta.get("embedHeight", 0)
-    if embedType and embedSrc and embedWidth and embedHeight:
-        hasEmbed = True
-
-    title = title if title else url
-    if imgsrc and secureProxy:
-        imgsrc = secureProxy % b64encode(imgsrc)
-    target = items[convId]["meta"].get('target', '')
-    target = target.split(',') if target else ''
-    if target:
-      target = [x for x in target if x in relations.groups]
-  %>
-  %if not isQuoted:
-    %if not target:
-      ${utils.userName(userId, entities[userId], "conv-user-cause")}
-    %else:
-      ${utils.userName(userId, entities[userId], "conv-user-cause")}  ${_("on")} ${utils.groupName(target[0], entities[target[0]])}
-    %endif
-  %endif
-  <div class="item-title has-icon">
-    <span class="icon item-icon link-icon"></span>
-    <div class="item-title-text">
-      <%
-        comment = meta.get('comment', '')
-        snippet = meta.get('snippet', '')
-      %>
-      ${_renderText(snippet, comment, richText=richText)}
-      <div class="link-item">
-        %if imgsrc and hasEmbed:
-          <div onclick="$$.convs.embed('${convId}');" class="embed-wrapper">
-            <div class="embed-overlay embed-${embedType}"></div>
-            <img src='${imgsrc}' class="link-image has-embed embed-${embedType}"/>
-          </div>
-          <div class="embed-frame-wrapper" id="embed-frame-${convId}"
-               style="width:${embedWidth}px;height:${embedHeight}px;display:none;"/>
-        %elif imgsrc:
-          <img src='${imgsrc}' class="link-image"/>
-        %endif
-        <div class="link-details">
-          <a href=${url} target="_blank"><div class="link-title">${title}</div></a>
-          %if summary:
-            <div id="summary" class="link-summary">${summary}</div>
-          %endif
-          %if title != url:
-            <% domain = urlsplit(url)[1] %>
-            <div id="url" class="link-url">${domain}</div>
-          %endif
-        </div>
-      </div>
-    </div>
-  </div>
-</%def>
-
-
-<%def name="render_activity(convId, isQuoted=False)">
-  <%
-    conv = items[convId]
-    userId = conv["meta"]["owner"]
-    subtype = conv["meta"]["subType"]
-    target = conv["meta"]["target"]
-    fmtUser = utils.userName
-    fmtGroup = utils.groupName
-    activity = None
-    if subtype == "following":
-      activity = _("%s started following %s.") % (fmtUser(userId, entities[userId]), fmtUser(target, entities[target]))
-    elif subtype == "groupJoin":
-      activity = _("%s joined %s.") % (fmtUser(userId, entities[userId]), fmtGroup(target, entities[target]))
-    elif subtype == "groupLeave":
-      activity = _("%s left %s.") % (fmtUser(userId, entities[userId]), fmtGroup(target, entities[target]))
-  %>
-  %if activity:
-    ${activity}
-  %endif
-</%def>
-
 
 <%def name="report_dialog()">
   <div class="ui-dlg-title">${title}</div>
@@ -322,6 +139,7 @@
     <input type="hidden" name="action" value="report" id="conv-report-action"></input>
   </div>
 </%def>
+
 
 <%def name="item_report()">
   <div id="conv-report" class="conv-item">
@@ -334,7 +152,11 @@
     %>
     <div>
       <div id="conv-meta-wrapper" class="conv-meta-wrapper no-tags">
-        <div id="report-comments"></div>
+        <div id="report-comments">
+          %if not script:
+            <% report_comments() %>
+          %endif
+        </div>
       </div>
     </div>
     %if myId != ownerId:
@@ -347,28 +169,26 @@
 
 <%def name="report_comment_form(reportedBy)">
   <div class="comment-form-wrapper busy-indicator" id="report-form-wrapper" >
-    <form method="post" action="/item/report/report" class="ajax" autocomplete="off"
-          required id="report-form">
+    <form method="post" class="ajax" autocomplete="off" id="report-form">
       <div class="conversation-composer">
-        <div class="conv-avatar">
-          <% avatarURI = utils.userAvatar(ownerId, entities[ownerId]) %>
+        <div class="comment-avatar">
+          <% avatarURI = utils.userAvatar(ownerId, entities[ownerId], "small") %>
           %if avatarURI:
-            <img src="${avatarURI}" style="max-height: 48px; max-width: 48px;"/>
+            <img src="${avatarURI}" style="max-height: 32px; max-width: 32px;"/>
           %endif
         </div>
-        <div class="input-wrap conversation-reply-wrapper">
-          <input type="hidden" name="id" value="${convId}"></input>
-          <textarea id="report-comment" title="Reply" required placeholder="${_('Give your reason for this report')}"
-                    name="comment" class="conversation-reply"
-                    %if reportedBy and convMeta["reportStatus"] == "accept":
-                      disabled
-                    %endif
-                    style="resize: none; overflow: auto; height: 60px;"></textarea>
-        </div>
-        <div class="conversation-reply-actions">
-          %if convMeta["reportStatus"] != "accept":
-            ${self.item_report_actions(reportedBy)}
-          %endif
+        <div class="comment-container">
+          <div class="input-wrap">
+            <input type="hidden" name="id" value="${convId}"></input>
+            <textarea id="report-comment" title="Add comment" name="comment"
+                      placeholder="${_('Add comment to this report')}" required
+                      style="resize: none; overflow: auto; height: 60px;"></textarea>
+          </div>
+          <div class="conversation-reply-actions">
+            %if "reportId" in convMeta:
+              ${self.item_report_actions(reportedBy)}
+            %endif
+          </div>
         </div>
         <div class="clear"></div>
       </div>
@@ -376,33 +196,33 @@
   </div>
 </%def>
 
+
 <%def name="item_report_actions(reportedBy)">
   <ul class="middle user-actions h-links" id="report-actions">
-    ${convMeta["reportStatus"]}
     %if myId != ownerId :
       %if reportedBy:
         %if convMeta["reportStatus"] == "repost":
           <input type="submit" onclick="$('#report-form').attr('action', '/item/report/reject')"
-                 class="button default" value="Reject"</input>
+                 class="button default" value="Post Comment"/>
         %elif convMeta["reportStatus"] == "pending":
           <input type="submit" onclick="$('#report-form').attr('action', '/item/report/report')"
-                 class="button default" value="Report"</input>
+                 class="button default" value="Post Comment"/>
         %endif
         %if convMeta["reportStatus"] != "accept":
-          <button onclick="$('#report-form').attr('action', '/item/report/repost')"
-                 class="button"><span class="button-text">Withdraw Complaint</span></button>
+          <input type="submit" onclick="$('#report-form').attr('action', '/item/report/repost')"
+                 class="button" value="Unflag and Publish"/>
         %endif
       %else:
-        <button onclick="$('#report-form').attr('action', '/item/report/report')"
-               class="button default"><span class="button-text">Report</span></button>
+        <input type="submit" onclick="$('#report-form').attr('action', '/item/report/report')"
+               class="button default" value="Flag for Review"/>
       %endif
     %else:
       %if reportedBy and convMeta["reportStatus"] in ["pending", "repost"]:
         <input type="submit" onclick="$('#report-form').attr('action', '/item/report/repost')"
-                class="button default" type="submit" value="Repost"</input>
+                class="button default" type="submit" value="Request to Publish"/>
       %endif
-      <button type="submit" onclick="$('#report-form').attr('action', '/item/report/accept')"
-              class="button"><span class="button-text">Hide Permanently</span></button>
+      <input type="submit" onclick="$('#report-form').attr('action', '/item/report/accept')"
+             class="button" value="Hide Permanently"/>
     %endif
   </ul>
 </%def>
@@ -442,66 +262,58 @@
       if action == "report":
         status = "Item reported"
       elif action == "reject":
-        status = "Request to withdraw rejected"
+        status = "Request to publish rejected"
       elif action == "repost":
-        status = "Complaint withdrawn"
+        status = "Item published"
     else:
       if action == "repost":
-        status = "Request to withdraw submitted"
+        status = "Request to publish submitted"
       elif action == "accept":
         status = "Item permanently hidden"
   %>
-  <span class="button-plain">${status}</span>
+  <span>${status}</span>
 </%def>
 
 <%def name="report_status()">
-  <div id="next-load-wrapper">
-    ##reportStatus can be ["pending", "accept", "repost"]
-    ##pending is pending action from owner
-    ##accept is permanently hidden by owner
-    ##repost is when owner replies back with a reason to repost the item
+  <div id="report-status">
+    ## reportStatus can be ["pending", "accept", "repost"]
+    ##   pending is pending action from owner
+    ##   accept is permanently hidden by owner
+    ##   repost is when owner replies back with a reason to repost the item
     <%
       if myId == ownerId:
         if "reportId" not in convMeta:
-          status = "No one has reported on your item yet"
+          status = "Your item is currently not flagged for review."
         else:
           item_status = convMeta["reportStatus"]
           reported_by = utils.userName(convMeta["reportedBy"],
-                              entities[convMeta["reportedBy"]])
-          if item_status == "ok":
-            status = "Your post has been restored. There are no open complaints."
-          elif item_status == "pending":
-            status = "Your post has been reported by %s. \
-                        Please perform a suitable action as mentioned below" \
+                                       entities[convMeta["reportedBy"]])
+          if item_status == "pending":
+            status = "This item was flagged for review by %s. \
+                      Please perform a suitable action below" \
                       %reported_by
           elif item_status == "repost":
-            status = "Your request to repost the content has been sent to %s.\
-                        Your post will be reposted when %s accepts your reason" \
+            status = "Your request to repost this item was sent to %s.\
+                      The item will be reposted when %s accepts your reason" \
                       %(reported_by, reported_by)
           elif item_status == "accept":
-            status = "Your post has been permanently hidden because you had \
-                        received a complaint against it and you chose to hide the\
-                        content."
+            status = "This item is hidden because it was flagged for\
+                      review and you chose to hide it permanently."
       else:
         if "reportId" not in convMeta:
-          status = "If you feel this item violates your company's policy. \
-                      Kindly state a reason and click the 'Report' button"
+          status = "This item is currently not flagged for review.\
+                    You can report the content using the form below."
         else:
           item_status = convMeta["reportStatus"]
-          owned_by = utils.userName(ownerId,
-                              entities[ownerId])
-          if item_status == "ok":
-            status = "If you feel this item violates your company's policy. \
-                        Kindly state a reason and click the 'Report' button"
-          elif item_status == "pending":
-            status = "The following post has been reported and is pending action\
-                        from %s." %owned_by
+          owned_by = utils.userName(ownerId, entities[ownerId])
+          if item_status == "pending":
+            status = "This item was flagged for review\
+                      and is pending action from %s." %owned_by
           elif item_status == "repost":
-            status = "%s has requested that you reconsider the report. \
-                        We recommend having a private conversation and take an\
-                        appropriate action below" %(owned_by)
+            status = "%s requested that you reconsider your report. \
+                      You may choose to unflag the item or keep it hidden" %owned_by
           elif item_status == "accept":
-            status = "This post has been permanently blocked by %s." %owned_by
+            status = "This post was permanently hidden by %s." %owned_by
     %>
     <span>${status}</span>
   </div>

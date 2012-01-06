@@ -103,10 +103,10 @@ class NotificationByMail(object):
         "T": ["[%(brandName)s] %(senderName)s tagged your %(convType)s as %(tagName)s"],
        "LC": ["[%(brandName)s] %(senderName)s liked your comment on your %(convType)s",
               "[%(brandName)s] %(senderName)s liked your comment on %(convOwnerName)s's %(convType)s"],
-       "FC": ["[%(brandName)s] %(senderName)s has flagged your %(convType)s"],
-      "UFC": ["[%(brandName)s] %(senderName)s has unflagged your %(convType)s"],
-      "RFC": ["[%(brandName)s] %(senderName)s has replied to your report."],
-      "DFC": ["[%(brandName)s] %(senderName)s has removed the item you had flagged."]
+       "FC": ["[%(brandName)s] %(senderName)s flagged your %(convType)s for review"],
+      "UFC": ["[%(brandName)s] %(senderName)s restored your %(convType)s"],
+      "RFC": ["[%(brandName)s] %(senderName)s replied on your flagged %(convType)s.",
+              "[%(brandName)s] %(senderName)s replied on the %(convType)s you flagged."]
     }
 
     _convNotifyBody = {
@@ -132,16 +132,17 @@ class NotificationByMail(object):
               "%(senderName)s liked your comment on %(convOwnerName)s's %(convType)s.\n"\
               "See the full conversation at %(convUrl)s"],
        "FC": ["Hi,\n\n"\
-              "%(senderName)s has flagged your %(convType)s\n."\
-              "See the full item report at %(convUrl)s\n\n"],
+              "%(senderName)s has flagged your %(convType)s for review\n."\
+              "See the full report at %(convUrl)s\n\n"],
       "UFC": ["Hi, \n\n"\
-              "%(senderName)s has unflagged your item.\n"\
-              "See the full item report at %(convUrl)s\n\n"],
+              "Your $(convType) that was earlier flagged for review by %(senderName)s has been restored.\n"\
+              "See the full report at %(convUrl)s\n\n"],
       "RFC": ["Hi, \n\n"\
-                "%(senderName)s has replied to your report.\n"\
-                "See the full item report at %(convUrl)s\n\n"],
-      "DFC": ["Hi, \n\n"\
-              "%(senderName)s has removed the item you had flagged.\n"]
+               "%(senderName)s commented on your $(convType)s that was flagged for review.\n"\
+               "See the full report at %(convUrl)s\n\n",
+               "Hi, \n\n"\
+               "%(senderName)s commented on the $(convType)s that you flagged for review.\n"\
+               "See the full report at %(convUrl)s\n\n"]
     }
 
     _otherNotifySubject = {
@@ -198,14 +199,14 @@ class NotificationByMail(object):
         senderName = me["basic"]["name"]
         convOwnerId = kwargs["convOwnerId"]
         entities = kwargs.get("entities", {})
-        convOwnerName = entities[convOwnerId]["name"]
+        convOwnerName = entities[convOwnerId]["basic"]["name"]
         stringCache = {}
 
         # Filter out users who don't need notification
         def needsNotifyCheck(userId):
             attr = 'notifyMyItem'+notifyType if convOwnerId == userId\
                                          else 'notifyItem'+notifyType
-            user = entities[userId]
+            user = entities[userId]['basic']
             return settings.getNotifyPref(user.get("notify", ''),
                             getattr(settings, attr), settings.notifyByMail)
         users = [x for x in recipients if needsNotifyCheck(x)]
@@ -213,7 +214,7 @@ class NotificationByMail(object):
         # Actually send the mail notification.
         def sendNotificationMail(followerId, data):
             toOwner = True if followerId == convOwnerId else False
-            follower = entities[followerId]
+            follower = entities[followerId]['basic']
             mailId = follower.get('emailId', None)
             if not mailId:
                 return defer.succeed(None)
@@ -254,7 +255,7 @@ class NotificationByMail(object):
             data.update({'comment_text': comment_text,
                          'comment_html': comment_html,
                          'comment_markup': data['comment']})
-        if notifyType in ["FC", "RFC", "DFC", "UFC"]:
+        if notifyType in ["FC", "RFC", "UFC"]:
             convUrl = "%s/item/report?id=%s" % (rootUrl, convId)
         else:
             convUrl = "%s/item?id=%s" % (rootUrl, convId)
@@ -376,14 +377,12 @@ class NotificationsResource(base.BaseResource):
                              4: ["%(user0)s, %(user1)s and %(count)s others liked your comment on your %(itemType)s",
                                 "%(user0)s, %(user1)s and %(count)s others liked your comment on %(owner)s's %(itemType)s"]}
 
-    _itemFlaggedTemplate = {1: ["%(user0)s flagged your %(itemType)s"]}
+    _itemFlaggedTemplate = {1: ["%(user0)s flagged your %(itemType)s for review"]}
 
-    _itemRepliedFlaggedTemplate = {1: ["%(user0)s has replied to your flagged %(itemType)s",
-                                       "%(user0)s has replied to the %(itemType)s that you had flagged"]}
+    _itemRepliedFlaggedTemplate = {1: ["%(user0)s replied on your flagged %(itemType)s",
+                                       "%(user0)s replied on the %(itemType)s that you flagged for review"]}
 
-    _itemDeletedFlaggedTemplate = {1: ["%(user0)s has deleted the item you had flagged"]}
-
-    _itemUnFlaggedTemplate = {1: ["%(user0)s has unflagged your %(itemType)s"]}
+    _itemUnFlaggedTemplate = {1: ["%(user0)s restored your %(itemType)s"]}
 
     _inviteAccepted = {1: "%(user0)s accepted your invitation to join %(brandName)s",
                        2: "%(user0)s and %(user1)s accepted your invitation to join %(brandName)s",
@@ -538,8 +537,6 @@ class NotificationsResource(base.BaseResource):
                 tmpl = self._itemFlaggedTemplate[noOfUsers]
             elif notifyType == "RFC":
                 tmpl = self._itemRepliedFlaggedTemplate[noOfUsers]
-            elif notifyType == "DFC":
-                tmpl = self._itemDeletedFlaggedTemplate[noOfUsers]
             elif notifyType == "UFC":
                 tmpl = self._itemUnFlaggedTemplate[noOfUsers]
 
@@ -547,7 +544,7 @@ class NotificationsResource(base.BaseResource):
             tmpl = tmpl[0] if convOwnerId == myId else tmpl[1]
 
             vals["owner"] = utils.userName(convOwnerId, entities[convOwnerId])
-            if notifyType in ["FC", "RFC", "DFC", "UFC"]:
+            if notifyType in ["FC", "RFC", "UFC"]:
                 vals["itemType"] = utils.itemReportLink(convId, convType)
             else:
                 vals["itemType"] = utils.itemLink(convId, convType)

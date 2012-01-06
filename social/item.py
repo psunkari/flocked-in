@@ -138,6 +138,7 @@ def _notify(notifyType, convId, timeUUID, **kwargs):
     convOwnerId = kwargs["convOwnerId"]
     convType = kwargs["convType"]
     myId = kwargs["myId"]
+    toFetchEntities = []
     notifyId = ":".join([convId, convType, convOwnerId, notifyType])
 
     # List of people who will get the notification about current action
@@ -148,11 +149,9 @@ def _notify(notifyType, convId, timeUUID, **kwargs):
         recipients = [kwargs["itemOwnerId"]]
         toFetchEntities = recipients + [convOwnerId]
     elif notifyType == "RFC":
-        if myId == convOwnerId:
-            recipients = [kwargs["reportedBy"]]
-        else:
-            recipients = [convOwnerId]
-        toFetchEntities = recipients
+        recipients = [kwargs["reportedBy"]] if myId == convOwnerId else [convOwnerId]
+    elif notifyType == "FC" or notifyType == "UFC":
+        recipients = [convOwnerId]
     else:
         toFetchEntities = recipients = [convOwnerId]
 
@@ -162,11 +161,10 @@ def _notify(notifyType, convId, timeUUID, **kwargs):
     # Get all data that is required to send offline notifications
     # XXX: Entities generally contains a map of userId => {Basic: Data}
     #      In this case it will contain userId => data directly.
-    notify_d = db.multiget_slice(toFetchEntities, "entities",
-                        ["name", "emailId", "notify"], super_column="basic") \
+    notify_d = db.multiget_slice(toFetchEntities, "entities", ["basic"]) \
                         if recipients else defer.succeed([])
     def _gotEntities(cols):
-        entities = utils.multiColumnsToDict(cols)
+        entities = utils.multiSuperColumnsToDict(cols)
         kwargs.setdefault('entities', {}).update(entities)
     def _sendNotifications(ignored):
         return notifications.notify(recipients, notifyId,
@@ -262,7 +260,6 @@ class ItemResource(base.BaseResource):
             args.update({"entities": {convOwner: owner}})
 
         args["ownerId"] = convOwner
-
         if script:
             if itemType != "feedback":
                 d = renderScriptBlock(request, "item.mako", "conv_owner",
@@ -1015,6 +1012,7 @@ class ItemResource(base.BaseResource):
         # Update the user interface
         request.write("$$.convs.remove('%s', '%s');"%(convId,itemId))
 
+
     @defer.inlineCallbacks
     def _renderReportDialog(self, request):
         authinfo = request.getSession(IAuthInfo)
@@ -1034,69 +1032,13 @@ class ItemResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _renderItemRoot(self, request):
-        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        landing = not self._ajax
-        myOrgId = args["orgKey"]
-
-        convId, conv = yield utils.getValidItemId(request, "id", columns=['tags'])
         itemType = conv["meta"].get("type", None)
 
-        if 'parent' in conv['meta']:
-            raise errors.InvalidItem('conversation', convId)
-
-        start = utils.getRequestArg(request, "start") or ''
-        start = utils.decodeKey(start)
-
-        args['convId'] = convId
-        args['isItemView'] = True
-        args['items'] = {convId: conv}
-        meta = conv["meta"]
         owner = meta["owner"]
-
-        relation = Relation(myKey, [])
-        yield defer.DeferredList([relation.initGroupsList(),
-                                  relation.initSubscriptionsList()])
-        args["relations"] = relation
-
-        if script and landing:
-            yield render(request, "item-report.mako", **args)
-
-        if script and appchange:
-            yield renderScriptBlock(request, "item-report.mako", "layout",
-                                    landing, "#mainbar", "set", **args)
 
         args["entities"] = {}
         toFetchEntities = set()
-        toFetchTags = set(conv.get("tags", {}).keys())
 
-        plugin = plugins[itemType] if itemType in plugins else None
-        if plugin:
-            entityIds = yield plugin.fetchData(args)
-            toFetchEntities.update(entityIds)
-
-        toFetchEntities.add(conv['meta']['owner'])
-        if "target" in conv["meta"]:
-            toFetchEntities.update(conv['meta']['target'].split(','))
-
-        entities = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
-        entities = utils.multiSuperColumnsToDict(entities)
-        args["entities"].update(entities)
-
-        renderers = []
-
-        if script:
-            d = renderScriptBlock(request, "item-report.mako", "conv_root",
-                        landing, "#conv-root-%s > .conv-summary" %(convId),
-                        "set", **args)
-            renderers.append(d)
-
-        convOwner = args["items"][convId]["meta"]["owner"]
-        if convOwner not in args["entities"]:
-            owner = yield db.get(convOwner, "entities", super_column="basic")
-            owner = utils.supercolumnsToDict([owner])
-            args.update({"entities": {convOwner: owner}})
-
-        args["ownerId"] = convOwner
 
         if script:
             if itemType != "feedback":
@@ -1119,34 +1061,92 @@ class ItemResource(base.BaseResource):
     def _renderReport(self, request, partial=False):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
+
         convId, conv = yield utils.getValidItemId(request, "id", columns=["reports"])
-        toFetchEntities = []
-        convMeta = conv["meta"]
+        if 'parent' in conv['meta']:
+            raise errors.InvalidItem('conversation', convId)
 
-        if not partial:
-            yield self._renderItemRoot(request)
-
-        if "reportId" in convMeta:
-            reportId = convMeta["reportId"]
-            toFetchEntities.append(convMeta["reportedBy"])
-        else:
-            reportId = None
+        args["entities"] = {}
+        toFetchEntities = set()
 
         args['convId'] = convId
         args['items'] = {convId: conv}
-        owner = convMeta["owner"]
-        args['ownerId'] = owner
-        args['entities'] = {}
-        args['convMeta'] = convMeta
+        convMeta = conv["meta"]
+        convType = convMeta.get("type", None)
 
-        toFetchEntities.extend([owner, myId])
+        relation = Relation(myId, [])
+        yield relation.initGroupsList()
+        args["relations"] = relation
+
+        if script and landing:
+            yield render(request, "item-report.mako", **args)
+
+        if script and appchange:
+            yield renderScriptBlock(request, "item-report.mako", "layout",
+                                    landing, "#mainbar", "set", **args)
+
+        plugin = plugins[convType] if convType in plugins else None
+        if plugin:
+            entityIds = yield plugin.fetchData(args)
+            toFetchEntities.update(entityIds)
+
+        convOwner = convMeta['owner']
+        toFetchEntities.add(convOwner)
+        if "target" in convMeta:
+            toFetchEntities.update(convMeta['target'].split(','))
+        if "reportId" in convMeta:
+            toFetchEntities.add(convMeta['reportedBy'])
+
         entities = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
         entities = utils.multiSuperColumnsToDict(entities)
         args["entities"].update(entities)
+        args["ownerId"] = convOwner
+
+        renderers = []
+        if script:
+            d = renderScriptBlock(request, "item.mako", "conv_root",
+                        landing, "#conv-root-%s > .conv-summary" %(convId),
+                        "set", **args)
+            renderers.append(d)
+
+            d = renderScriptBlock(request, "item-report.mako", 'conv_footer',
+                                  landing, '#item-footer-%s' % convId,
+                                  'set', **args)
+            renderers.append(d)
+
+            if convType != "feedback":
+                d = renderScriptBlock(request, "item.mako", "conv_owner",
+                                      landing, "#conv-avatar-%s" % convId,
+                                      "set", **args)
+            else:
+                feedbackType = conv['meta']['subType']
+                d = renderScriptBlock(request, "item.mako", "feedback_icon",
+                                      landing, "#conv-avatar-%s" % convId,
+                                      "set", args=[feedbackType])
+
+            renderers.append(d)
+
+        d = self._renderReportResponses(request, convId, convMeta, args)
+        renderers.append(d)
+
+        if renderers:
+            yield defer.DeferredList(renderers)
+
+        if not script:
+            yield render(request, "item-report.mako", **args)
+
+
+    @defer.inlineCallbacks
+    def _renderReportResponses(self, request, convId, convMeta, args):
+        reportId = convMeta.get('reportId', None)
+        args['convMeta'] = convMeta
+        script = args["script"]
+        myId = args["myId"]
+        landing = not self._ajax
 
         if script:
             yield renderScriptBlock(request, "item-report.mako", "item_report",
-                                  landing, "#report-contents", "set" if partial else "append", **args)
+                                    landing, "#report-contents", "set", **args)
 
         if reportId:
             reportResponses = yield db.get_slice(reportId, "itemResponses")
@@ -1156,36 +1156,20 @@ class ItemResource(base.BaseResource):
             for response in reportResponses:
                 userKey, responseKey, action = response.column.value.split(":")
                 reportResponseKeys.append(responseKey)
-                toFetchEntities.append(userKey)
                 reportResponseActions[responseKey] = action
 
-            deferreds = []
-            deferreds.append(db.multiget_slice(reportResponseKeys, "items",
-                                               ["meta"]))
-            deferreds.append(db.multiget_slice(toFetchEntities, "entities",
-                                               ["basic"]))
-
-            if deferreds:
-                [(True, fetchedResponses), (True, entities)] = \
-                    yield defer.DeferredList(deferreds)
-                fetchedResponses = utils.multiSuperColumnsToDict(fetchedResponses)
-                entities = utils.multiSuperColumnsToDict(entities)
+            fetchedResponses = yield db.multiget_slice(reportResponseKeys, "items", ["meta"])
+            fetchedResponses = utils.multiSuperColumnsToDict(fetchedResponses)
 
             args["reportId"] = reportId
             args["reportItems"] = fetchedResponses
             args["responseKeys"] = reportResponseKeys
             args["reportResponseActions"] = reportResponseActions
 
-            args["entities"].update(entities)
-
             #Show comments from report only if I am the owner or the reporter
-            if myId in [convMeta["owner"], convMeta["reportedBy"]] and script:
+            if script and myId in [convMeta["owner"], convMeta["reportedBy"]]:
                 yield renderScriptBlock(request, "item-report.mako", 'report_comments',
-                                            landing, '#report-comments',
-                                            'set', **args)
-
-            if not script:
-                yield render(request, "item-report.mako", **args)
+                                        landing, '#report-comments', 'set', **args)
 
 
     @defer.inlineCallbacks
@@ -1217,22 +1201,21 @@ class ItemResource(base.BaseResource):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
         snippet, comment = utils.getTextWithSnippet(request, "comment",
-                                            constants.COMMENT_PREVIEW_LENGTH,
-                                            richText=False)
+                                            constants.COMMENT_PREVIEW_LENGTH)
         isNewReport = False
         timeUUID = uuid.uuid1().bytes
-        toFetchEntities = set()
-        orgId = request.getSession(IAuthInfo).organization
 
         convId, conv = yield utils.getValidItemId(request, "id")
-        convOwnerId = conv["meta"]["owner"]
-        convType = conv["meta"]["type"]
-        convACL = conv["meta"]["acl"]
         convMeta = conv["meta"]
+        convOwnerId = convMeta["owner"]
+        convType = convMeta["type"]
+        convACL = convMeta["acl"]
+        toFetchEntities = set([myId, convOwnerId])
 
         if "reportId" in convMeta:
             reportId = convMeta["reportId"]
             isNewReport = False
+            toFetchEntities.add(convMeta['reportedBy'])
         else:
             isNewReport = True
             reportId = utils.getUniqueKey()
@@ -1241,11 +1224,16 @@ class ItemResource(base.BaseResource):
             raise errors.InvalidRequest(_("You cannot report your own Item. \
                                                 Delete the item instead"))
 
+        toFetchEntities.remove(myId)
+        entities = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
+        entities = utils.multiSuperColumnsToDict(entities)
+        entities.update({myId: args["me"]})
+
         if myId == convOwnerId:
             if action not in ["accept", "repost"]:
-                raise errors.MissingParams([_('Action')])
+                raise errors.InvalidRequest(_('Invalid action was performed on the report'))
 
-            convReport = {"reportStatus":action}
+            convReport = {"reportStatus": action}
             yield db.batch_insert(convId, "items", {"meta": convReport})
 
             if action == "accept":
@@ -1257,39 +1245,41 @@ class ItemResource(base.BaseResource):
             else:
                 # Owner posted a reply, so notify reporter of the same
                 yield _notify("RFC", convId, timeUUID, convType=convType,
-                                  convOwnerId=convOwnerId, myId=myId,
-                                  me=args["me"], reportedBy=convMeta["reportedBy"])
+                               convOwnerId=convOwnerId, myId=myId, entities=entities,
+                               me=args["me"], reportedBy=convMeta["reportedBy"])
         else:
             if action not in ["report", "repost", "reject"]:
-                raise errors.MissingParams([_('Action')])
+                raise errors.InvalidRequest(_('Invalid action was performed on the report'))
 
             if isNewReport:
                 # Update Existing Item Information with Report Meta
                 newACL = pickle.dumps({"accept":{"users":[convOwnerId, myId]}})
                 convReport = {"reportedBy":myId, "reportId":reportId,
-                                "reportStatus":"pending", "original_acl":convACL,
-                                    "acl":newACL}
-
+                              "reportStatus":"pending", "original_acl":convACL,
+                              "acl":newACL}
+                convMeta.update(convReport)
                 yield db.batch_insert(convId, "items", {"meta": convReport})
-                reportLink = """&#183;<a class="button-link" title="View Report" href="/item/report?id=%s"> View Report</a>""" %convId
+
+                reportLink = """&#183;<a class="button-link" title="View Report" href="/item/report?id=%s"> View Report</a>""" % convId
                 request.write("""$("#item-footer-%s").append('%s');""" %(convId, reportLink))
-                yield _notify("FC", convId, timeUUID, convType=convType,
-                                  convOwnerId=convOwnerId, myId=myId, me=args["me"])
+                yield _notify("FC", convId, timeUUID, convType=convType, entities=entities,
+                              convOwnerId=convOwnerId, myId=myId, me=args["me"])
             else:
                 if action == "repost":
                     # Restore the original ACL if complainant withdraws the complaint
                     # Remove the reportId key, so owner cannot post any comment
                     yield db.batch_remove({'items':[convId]},
-                                            names=["reportId"],
+                                            names=["reportId", "reportStatus",
+                                                   "reportedBy", "original_acl"],
                                             supercolumn='meta')
 
-                    # Restore the orignial ACL
+                    # Restore the original ACL
                     _acl = convMeta["original_acl"]
-                    convReport = {"reportStatus":"ok"}
-                    yield db.batch_insert(convId, "items", {"meta":{"acl":_acl}})
-                    oldReportMeta = {"reportedBy":convMeta["reportedBy"],
-                                  "reportId":convMeta["reportId"],
-                                  "acl":convMeta["original_acl"]}
+                    yield db.insert(convId, "items", _acl, "acl", "meta")
+
+                    oldReportMeta = {"reportedBy": convMeta["reportedBy"],
+                                     "reportId": convMeta["reportId"],
+                                     "acl": convMeta["original_acl"]}
 
                     # Save the now resolved report in items and remove its
                     #  reference in the item meta so new reporters wont't see
@@ -1302,22 +1292,25 @@ class ItemResource(base.BaseResource):
 
                     # Notify the owner that the report has been withdrawn
                     yield _notify("UFC", convId, timeUUID, convType=convType,
-                                      convOwnerId=convOwnerId, myId=myId,
-                                      me=args["me"])
+                                  convOwnerId=convOwnerId, myId=myId,
+                                  entities=entities, me=args["me"])
+
                 elif action  in ["reject", "report"]:
                     # Reporter rejects the comment by the owner or reports the
                     #  same item again.
                     convReport = {"reportStatus":"pending"}
                     yield _notify("RFC", convId, timeUUID, convType=convType,
-                                      convOwnerId=convOwnerId, myId=myId,
-                                      me=args["me"], reportedBy=convMeta["reportedBy"])
+                                  convOwnerId=convOwnerId, myId=myId, entities=entities,
+                                  me=args["me"], reportedBy=convMeta["reportedBy"])
+                    yield db.batch_insert(convId, "items", {"meta": convReport})
 
-                yield db.batch_insert(convId, "items", {"meta": convReport})
+        args.update({"entities": entities, "ownerId": convOwnerId,
+                     "convId": convId})
 
         # Update New Report comment Details
         commentId = utils.getUniqueKey()
         timeUUID = uuid.uuid1().bytes
-        meta = {"owner": myId, "parent": convId, "comment": comment,
+        meta = {"owner": myId, "parent": reportId, "comment": comment,
                 "timestamp": str(int(time.time())),
                 "uuid": timeUUID, "richText": str(False)}
         if snippet:
@@ -1329,11 +1322,8 @@ class ItemResource(base.BaseResource):
         yield db.insert(reportId, "itemResponses",
                         "%s:%s:%s" % (myId, commentId, action), timeUUID)
 
-        if script:
-            yield self._renderReport(request, True)
-            request.write("$('#report-comment').attr('value', '')")
-        else:
-            request.redirect('/item/report?id=%s'%convId)
+        yield self._renderReportResponses(request, convId, convMeta, args)
+        request.write("$('#report-comment').attr('value', '')")
 
 
     @profile

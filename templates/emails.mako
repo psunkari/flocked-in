@@ -211,6 +211,58 @@
   ${footer()}
 </%def>
 
+<%def name="notifyOwnerFC()">
+  ${header()}
+  <td valign="top" align="right" style="width:48px;" rowspan="2">
+    <img src="${senderAvatarUrl}" alt="">
+  </td>
+  <td style="font-size: 14px;">
+    <b>${senderName}</b> flagged your ${convType} for review.
+    <br/><br/>
+    <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View report</div></a>
+  </td>
+  ${footer()}
+</%def>
+
+<%def name="notifyOwnerRFC()">
+  ${header()}
+  <td valign="top" align="right" style="width:48px;" rowspan="2">
+    <img src="${senderAvatarUrl}" alt="">
+  </td>
+  <td style="font-size: 14px;">
+    <b>${senderName}</b> commented on your ${convType} that was flagged for review.
+    <br/><br/>
+    <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View report</div></a>
+  </td>
+  ${footer()}
+</%def>
+
+<%def name="notifyOtherRFC()">
+  ${header()}
+  <td valign="top" align="right" style="width:48px;" rowspan="2">
+    <img src="${senderAvatarUrl}" alt="">
+  </td>
+  <td style="font-size: 14px;">
+    <b>${senderName}</b> commented on the ${convType} that you flagged for review.
+    <br/><br/>
+    <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View report</div></a>
+  </td>
+  ${footer()}
+</%def>
+
+<%def name="notifyOwnerUFC()">
+  ${header()}
+  <td valign="top" align="right" style="width:48px;" rowspan="2">
+    <img src="${senderAvatarUrl}" alt="">
+  </td>
+  <td style="font-size: 14px;">
+    Your ${convType} that was earlier flagged for review by <b>${senderName}</b> has been restored.
+    <br/><br/>
+    <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View report</div></a>
+  </td>
+  ${footer()}
+</%def>
+
 <%def name="notifyNF()">
   ${header()}
   <td valign="top" align="right" style="width:48px;" rowspan="2">
