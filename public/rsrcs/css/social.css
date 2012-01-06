@@ -2123,7 +2123,7 @@ abbr.timestamp {
 /* Browser compatibility errors */
 #unsupported-browser,
 #compatibility-mode,
-#javascript-missing {
+#missing-javascript {
     text-align: center;
     position: fixed;
     width: 100%;
@@ -2132,6 +2132,9 @@ abbr.timestamp {
     font-size: 12px;
     font-weight: bold;
     line-height: 1.5em;
+}
+#unsupported-browser,
+#compatibility-mode {
     display: none;
 }
 
