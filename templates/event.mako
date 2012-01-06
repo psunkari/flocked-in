@@ -75,7 +75,7 @@
       <!--<div class="input-wrap">-->
         <!--<input type="text" id="eventstarttime"/>-->
         ${self.selectTime("startTime", "Start Time",)}
-        
+
       <!--</div>-->
     </div>
     <span> to </span>
@@ -83,7 +83,7 @@
       <!--<div class="input-wrap">-->
         <!--<input type="text" id="eventendtime"/>-->
         ${self.selectTime("endTime", "End Time",)}
-        
+
       <!--</div>-->
     </div>
     <div style="display:inline-block;width:8em">
@@ -117,12 +117,13 @@
 <%def name="event_root(convId, isQuoted=False)">
   <%
     conv = items[convId]
-    title = items[convId]["meta"].get("title", '')
-    location = items[convId]["meta"].get("location", '')
+    title = items[convId]["meta"].get("event_title", '')
+    location = items[convId]["meta"].get("event_location", '')
     desc = items[convId]["meta"].get("desc", "")
-    start = items[convId]["meta"].get("startTime")
-    end   = items[convId]["meta"].get("endTime", '')
-    options = items[convId]["options"] or ["yes", "maybe", "no"]
+    start = items[convId]["meta"].get("event_startTime")
+    end   = items[convId]["meta"].get("event_endTime", '')
+
+    options = items[convId]["rsvp"] or ["yes", "maybe", "no"]
     owner = items[convId]["meta"]["owner"]
     ownerName = entities[owner]["basic"]["name"]
     my_tz = timezone(me['basic']['timezone'])

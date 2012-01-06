@@ -1,6 +1,0 @@
-#export JAVA_HOME=/usr/lib/jvm/java-gcj/jre
-
-#export JETTY_HOME=/usr/local/apache-solr-1.1.0-incubating/example
-
-#CLASSPATH=$CLASSPATH:$JETTY_HOME
-#export JETTY_ARGS=etc/jetty.xml

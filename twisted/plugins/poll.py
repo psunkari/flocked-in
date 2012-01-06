@@ -159,9 +159,8 @@ class Poll(object):
     implements(IPlugin, IItemType)
     itemType = "poll"
     position = 5
-    hasIndex = False
-    indexFields = [("meta", "comment"), ("meta", "poll_options"),
-                   ("meta", "start"), ("meta", "end")]
+    hasIndex = True
+    indexFields = {'options':{'template':'poll_option_%s','type':'keyvals'}}
 
     @defer.inlineCallbacks
     def renderShareBlock(self, request, isAjax):
@@ -219,9 +218,10 @@ class Poll(object):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def create(self, request, myId, myOrgId):
+    def create(self, request, myId, myOrgId, richText=False):
         snippet, comment = utils.getTextWithSnippet(request, "comment",
-                                        constants.POST_PREVIEW_LENGTH)
+                                        constants.POST_PREVIEW_LENGTH,
+                                        richText=richText)
         end = utils.getRequestArg(request, "end")
         start = utils.getRequestArg(request, "start")
         options = utils.getRequestArg(request, "options", multiValued=True)
@@ -234,7 +234,7 @@ class Poll(object):
             raise errors.MissingParams([_('Add atleast two options to choose from')])
 
         convId = utils.getUniqueKey()
-        item, attachments = yield utils.createNewItem(request, self.itemType. myId, myOrgId)
+        item, attachments = yield utils.createNewItem(request, self.itemType, myId, myOrgId, richText=richText)
 
         meta = {"comment": comment, "showResults": showResults}
         if snippet:
@@ -258,8 +258,8 @@ class Poll(object):
             val = "%s:%s:%s:%s:%s" %(utils.encodeKey(timeuuid), fid, name, size, ftype)
             yield db.insert(convId, "item_files", val, timeuuid, attachmentId)
 
-        from social import fts
-        fts.solr.updateIndex(convId, item, myOrgId, attachments)
+        from social import search
+        search.solr.updateItem(convId, item, myOrgId)
         defer.returnValue((convId, item))
 
 

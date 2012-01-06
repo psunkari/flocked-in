@@ -16,7 +16,7 @@ from boto.s3.connection import VHostCallingFormat, SubdomainCallingFormat
 from twisted.internet   import defer
 from twisted.web        import static, server
 
-from social             import db, utils, base, errors, config, _, fts
+from social             import db, utils, base, errors, config, _, search
 from social             import notifications
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
@@ -40,13 +40,15 @@ class MessagingResource(base.BaseResource):
 
         return attach_meta
 
+
     def _indexMessage(self, convId, messageId, myOrgId, meta, attachments, body):
         meta['type']="message"
         meta['body'] = body
         meta['parent'] = convId
         meta['timestamp'] = meta['date_epoch']
         meta = {"meta":meta}
-        fts.solr.updateIndex(messageId, meta, myOrgId, attachments)
+        search.solr.updateMessageIndex(messageId, meta, myOrgId, attachments)
+
 
     @profile
     @defer.inlineCallbacks
@@ -59,6 +61,7 @@ class MessagingResource(base.BaseResource):
         if tmpFileIds:
             attachments = yield utils._upload_files(myId, tmpFileIds)
         defer.returnValue((attachments))
+
 
     @profile
     @defer.inlineCallbacks
@@ -109,6 +112,7 @@ class MessagingResource(base.BaseResource):
         url = files['meta']['uri']
         defer.returnValue([owner, url, filetype, size, name])
 
+
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -151,6 +155,7 @@ class MessagingResource(base.BaseResource):
         request.setResponseCode(307)
         request.setHeader('Location', Location)
 
+
     def _parseComposerArgs(self, request):
         #Since we will deal with composer related forms. Take care of santizing
         # all the input and fill with safe defaults wherever needed.
@@ -167,6 +172,7 @@ class MessagingResource(base.BaseResource):
             recipients = re.sub(',\s+', ',', recipients).split(",")
         return recipients, body, subject, parent
 
+
     def _fetchSnippet(self, body):
         #XXX:obviously we need a better regex than matching ":wrote"
         lines = body.split("\n")
@@ -178,6 +184,7 @@ class MessagingResource(base.BaseResource):
             else:
                 continue
         return snippet
+
 
     @profile
     @defer.inlineCallbacks
@@ -247,6 +254,7 @@ class MessagingResource(base.BaseResource):
         yield db.batch_insert(messageId, "messages", {'meta':meta})
         defer.returnValue(messageId)
 
+
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -258,6 +266,7 @@ class MessagingResource(base.BaseResource):
                                                 "participants": participants,
                                                 "attachments":attach_meta})
         defer.returnValue(convId)
+
 
     @profile
     @defer.inlineCallbacks
@@ -296,8 +305,8 @@ class MessagingResource(base.BaseResource):
         yield db.batch_insert(convId, "mConversations",
                               {'meta':meta, 'attachments':attach_meta})
 
-        self._indexMessage(convId, messageId, myOrgId, meta, attachments, body)
-
+        # Currently, we don't support searching for private messages
+        # self._indexMessage(convId, messageId, myOrgId, meta, attachments, body)
 
         for file, file_meta in attachments.iteritems():
             timeuuid, fid, name, size, ftype  = file_meta
@@ -373,6 +382,7 @@ class MessagingResource(base.BaseResource):
             request.redirect('/messages')
             request.finish()
 
+
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -437,6 +447,7 @@ class MessagingResource(base.BaseResource):
         if script:
             request.write("$('#composer').empty();$$.fetchUri('/messages');")
 
+
     @defer.inlineCallbacks
     def _composeMessage(self, request):
         parent = utils.getRequestArg(request, "parent") or None
@@ -444,6 +455,7 @@ class MessagingResource(base.BaseResource):
             yield self._reply(request)
         else:
             yield self._createConversation(request)
+
 
     @profile
     @defer.inlineCallbacks
@@ -528,6 +540,7 @@ class MessagingResource(base.BaseResource):
         else:
             yield render(request, "message.mako", **args)
 
+
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -571,6 +584,7 @@ class MessagingResource(base.BaseResource):
                                     landing, ".right-contents", "set", True,
                                     handlers={"onload":onload}, **args)
 
+
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -613,6 +627,7 @@ class MessagingResource(base.BaseResource):
         if mailNotificants and newMembers:
             data["addedMembers"] = newMembers
             yield notifications.notify(mailNotificants, ":MA", myId, **data)
+
 
     @profile
     @defer.inlineCallbacks
@@ -767,6 +782,7 @@ class MessagingResource(base.BaseResource):
                 else:
                     request.write("$('%s').remove()" %','.join(['#thread-%s' %convId for convId in convIds]))
 
+
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -899,6 +915,7 @@ class MessagingResource(base.BaseResource):
         else:
             yield render(request, "message.mako", **args)
 
+
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -922,6 +939,7 @@ class MessagingResource(base.BaseResource):
         else:
             yield render(request, "message.mako", **args)
 
+
     def render_GET(self, request):
         segmentCount = len(request.postpath)
         d = None
@@ -935,6 +953,7 @@ class MessagingResource(base.BaseResource):
         elif segmentCount == 1 and request.postpath[0] == "file":
             d = self._renderFile(request)
         return self._epilogue(request, d)
+
 
     def render_POST(self, request):
         segmentCount = len(request.postpath)

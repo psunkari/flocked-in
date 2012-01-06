@@ -154,7 +154,7 @@ class EventResource(base.BaseResource):
         responseCount = yield db.get_count(convId, "eventResponses", response)
         optionCounts[response] = str(responseCount)
 
-        yield db.batch_insert(convId, "items", {"options":optionCounts})
+        yield db.batch_insert(convId, "items", {"rsvp":optionCounts})
 
         if script:
             #Update the inline status of your rsvp
@@ -196,7 +196,7 @@ class EventResource(base.BaseResource):
             if item.column.value not in invitations:
                 invitations.append(item.column.value)
 
-        events = yield db.multiget_slice(convs + invitations, "items", ["meta", "options"])
+        events = yield db.multiget_slice(convs + invitations, "items", ["meta", "rsvp"])
         events = utils.multiSuperColumnsToDict(events)
         myResponses = {}
 
@@ -264,10 +264,8 @@ class Event(object):
     itemType = "event"
     position = 4
     disabled = True
-    hasIndex = False
-    #fields indexed by solr
-    indexFields = [('meta', 'parent'),('meta', 'desc'),
-                   ('meta', 'location'), ('meta', 'title')]
+    hasIndex = True
+    indexFields = {'meta':set(['event_desc','event_location','event_title'])}
 
     @profile
     @defer.inlineCallbacks
@@ -339,7 +337,7 @@ class Event(object):
         convId = convId or args["convId"]
         myKey = args["myKey"]
 
-        conv = yield db.get_slice(convId, "items", ["options"])
+        conv = yield db.get_slice(convId, "items", ["rsvp"])
         if not conv:
             raise errors.InvalidRequest()
         conv = utils.supercolumnsToDict(conv)
@@ -421,8 +419,8 @@ class Event(object):
             val = "%s:%s:%s:%s:%s" %(utils.encodeKey(timeuuid), fid, name, size, ftype)
             yield db.insert(convId, "item_files", val, timeuuid, attachmentId)
 
-        from social import fts
-        d = fts.solr.updateIndex(convId, item, myOrgId, attachments)
+        from social import search
+        d = search.solr.updateItem(convId, item, myOrgId)
         defer.returnValue((convId, item))
 
     @defer.inlineCallbacks

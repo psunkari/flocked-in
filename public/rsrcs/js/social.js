@@ -696,8 +696,8 @@ var ui = {
         }
 
         /* Add a scroll to bottom handler */
-        $(window).scroll(function(){
-            if ($(window).scrollTop() > $(document).height() - (50 + $(window).height())){
+        $('#bigwrap').scroll(function(){
+            if ($('#bigwrap').scrollTop() > $('#mainbar').height() - (100 + $('#bigwrap').height())){
                 $nextPageLoad = $('#next-page-load');
                 if (!$nextPageLoad.attr('requested')) {
                     $nextPageLoad.click();

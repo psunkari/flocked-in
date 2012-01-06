@@ -119,10 +119,10 @@ def createColumnFamilies(client):
     files = CfDef(KEYSPACE, 'files', 'Super', 'UTF8Type', 'UTF8Type',
                   'files and its details')
     yield client.system_add_column_family(files)
+
     tmp_files = CfDef(KEYSPACE, 'tmp_files', 'Standard', 'UTF8Type', None,
                   "tmp files and their details")
     yield client.system_add_column_family(tmp_files)
-
 
     item_files = CfDef(KEYSPACE, "item_files", 'Super', 'UTF8Type', 'TimeUUIDType',
                       'files and its version')
@@ -131,7 +131,6 @@ def createColumnFamilies(client):
     user_files = CfDef(KEYSPACE, 'user_files', 'Standard', 'TimeUUIDType', None,
                   "List of files owned by the user")
     yield client.system_add_column_family(user_files)
-
 
     entityFeed_files = CfDef(KEYSPACE, 'entityFeed_files', 'Standard', 'TimeUUIDType', None,
                              "List of files that appeared in entity's feed")
@@ -151,7 +150,7 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(userItems)
 
     # Index of posts by type
-    for itemType in ['status', 'link', 'document', 'question']:
+    for itemType in ['status', 'link', 'document', 'question', 'poll']:
         columnFamily = "userItems_" + str(itemType)
         userItemsType = CfDef(KEYSPACE, columnFamily, 'Standard',
                               'TimeUUIDType', None,
@@ -168,7 +167,7 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(feedItems)
 
     # Index of feed by type
-    for itemType in ['status', 'link', 'document', 'question']:
+    for itemType in ['status', 'link', 'document', 'question', 'poll']:
         columnFamily = "feed_" + str(itemType)
         feedType = CfDef(KEYSPACE, columnFamily, 'Standard', 'TimeUUIDType',
                          None, 'Feed of %s items'%(itemType))
@@ -409,7 +408,6 @@ def addSampleData(client):
                                     '2007:2003:Example Technology Services': 'Chief Financial Officer'
                                 },
                                 'contact': {
-                                    'mail': 'kevin@example.com',
                                     'phone': '+11234567890',
                                     'mobile': '+12234567890'
                                 },
@@ -418,7 +416,7 @@ def addSampleData(client):
                                     "Networking": ""
                                 },
                                 'personal': {
-                                    'mail': 'kevin@example.org',
+                                    'email': 'kevin@example.org',
                                     'hometown': 'New York',
                                     'birthday': '19700229',
                                     'sex': 'M'
@@ -448,11 +446,10 @@ def addSampleData(client):
                                     '1998:Acpak Institute of Technology': 'Graduation'
                                 },
                                 'contact': {
-                                    'mail': 'ashok@example.com',
                                     'phone': '+11234567890'
                                 },
                                 'personal': {
-                                    'mail': 'ashok@example.net',
+                                    'email': 'ashok@example.net',
                                     'hometown': 'Guntur, India'
                                 }})
     yield client.batch_insert(williamKey, 'entities', {
@@ -478,7 +475,6 @@ def addSampleData(client):
                                     '2010:2008:JohnDoe Corp': 'Chief Executive Officer'
                                 },
                                 'contact': {
-                                    'mail': 'william@example.com',
                                     'phone': '+11234567890'
                                 },
                                 'interests': {
@@ -486,7 +482,7 @@ def addSampleData(client):
                                     "Trekking": "sports"
                                 },
                                 'personal': {
-                                    'mail': 'william@gmail.com',
+                                    'email': 'william@gmail.com',
                                     'hometown': 'Berlin, Germany',
                                     'currentcity': 'San Fransisco'
                                 },
@@ -514,7 +510,6 @@ def addSampleData(client):
                                     '2004:Green Tea Institute of Technology': 'Graduation'
                                 },
                                 'contact': {
-                                    'mail': 'paul@example.com',
                                     'phone': '+911234567890'
                                 },
                                 'interests': {
@@ -522,7 +517,7 @@ def addSampleData(client):
                                     "Open Source": "technology"
                                 },
                                 'personal': {
-                                    'mail': 'paul@example.org',
+                                    'email': 'paul@example.org',
                                     'hometown': 'San Antonio',
                                     'birthday': '19820202',
                                     'sex': 'M'
@@ -546,7 +541,6 @@ def addSampleData(client):
                                     '2008:Diced Onion Technology University': 'Graduation'
                                 },
                                 'contact': {
-                                    'mail': 'john@example.com',
                                     'phone': '+911234567890'
                                 },
                                 'interests': {
@@ -554,7 +548,7 @@ def addSampleData(client):
                                     "Open Source": "technology"
                                 },
                                 'personal': {
-                                    'mail': 'john@example.org',
+                                    'email': 'john@example.org',
                                     'hometown': 'Beechum County, Alabama',
                                     'birthday': '19780215',
                                     'sex': 'M'

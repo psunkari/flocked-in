@@ -373,11 +373,8 @@ def expandAcl(userId, orgId, acl, convId, convOwnerId=None, allItemFollowers=Fal
     # See if followers and the company feed should get this update.
     if any([typ in ["orgs", "public"] for typ in accept]):
         followers = yield getFollowers(userId, count=INFINITY)
-        #XXX: can do away with db fetch if orgId is passed. entities[userId]['basic']['orgId']
-        # or  request.get_session(IAuthInfo).organizations can be used
-        companyKey = yield getCompanyKey(userId)
         keys.update([uid for uid in followers if uid not in deniedUsers])
-        keys.add(companyKey)
+        keys.add(orgId)
 
     # Remove keys of people who unfollowed the item.
     if not allItemFollowers:
