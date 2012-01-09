@@ -32,6 +32,7 @@ def createKeyspace(client):
 def createColumnFamilies(client):
     # Information about organizations/groups/Users. Includes meta data
     # about the organization/groups/users (admins, logo, etc).
+
     entities = CfDef(KEYSPACE, 'entities', 'Super', 'UTF8Type', 'UTF8Type',
                   'Organization Information - name, avatar, admins...')
     yield client.system_add_column_family(entities)
@@ -151,7 +152,7 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(userItems)
 
     # Index of posts by type
-    for itemType in ['status', 'link', 'document', 'question']:
+    for itemType in ['status', 'link', 'document', 'question', 'event']:
         columnFamily = "userItems_" + str(itemType)
         userItemsType = CfDef(KEYSPACE, columnFamily, 'Standard',
                               'TimeUUIDType', None,
@@ -168,7 +169,7 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(feedItems)
 
     # Index of feed by type
-    for itemType in ['status', 'link', 'document', 'question']:
+    for itemType in ['status', 'link', 'document', 'question', 'event']:
         columnFamily = "feed_" + str(itemType)
         feedType = CfDef(KEYSPACE, columnFamily, 'Standard', 'TimeUUIDType',
                          None, 'Feed of %s items'%(itemType))
@@ -184,22 +185,21 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(votes)
 
     # Events
-    userEventResponse = CfDef(KEYSPACE, 'userEventResponse', 'Standard',
-                              'UTF8Type', None,
-                              'List of responses of users for events')
-    eventInvitations = CfDef(KEYSPACE, "eventInvitations", "Super", "UTF8Type",
-                             "TimeUUIDType", "")
-    eventResponses = CfDef(KEYSPACE, 'eventResponses', 'Super', 'UTF8Type',
-                           'UTF8Type', '')
-    userEvents = CfDef(KEYSPACE, "userEvents", "Standard",
-                       "TimeUUIDType", None, "")
-    userEventInvitations = CfDef(KEYSPACE, "userEventInvitations", "Standard",
-                                 "TimeUUIDType", None, "")
-    yield client.system_add_column_family(userEventResponse)
-    yield client.system_add_column_family(eventInvitations)
+    userAgenda = CfDef(KEYSPACE, "userAgenda", "Standard", "TimeUUIDType",
+                             None, "Time sorted list of events for a user")
+    yield client.system_add_column_family(userAgenda)
+
+    userAgendaMap = CfDef(KEYSPACE, "userAgendaMap", "Standard", "TimeUUIDType",
+                             None, "Reverse map of user:event to agenda entry")
+    yield client.system_add_column_family(userAgendaMap)
+
+    eventAttendees = CfDef(KEYSPACE, "eventAttendees", "Standard", "UTF8Type",
+                             None, "List of users who have responded to an event")
+    yield client.system_add_column_family(eventAttendees)
+
+    eventResponses = CfDef(KEYSPACE, "eventResponses", "Standard", "UTF8Type",
+                            None, "List of RSVP responses to an event")
     yield client.system_add_column_family(eventResponses)
-    yield client.system_add_column_family(userEvents)
-    yield client.system_add_column_family(userEventInvitations)
 
     # Notifications
     notifications = CfDef(KEYSPACE, 'notifications', 'Standard', 'TimeUUIDType', None,
@@ -636,7 +636,10 @@ def truncateColumnFamilies(client):
                "mArchivedConversations", "mDeletedConversations",
                "mConvMessages", "mConvFolders", "latest", "doNotSpam",
                "files", "tmp_files", "item_files", "invitationsSent",
-               "user_files", "suggestions", "apps", "appsByOwner", "oAuthData"]:
+               "user_files", "suggestions", "apps", "appsByOwner", "oAuthData",
+               "feed_event", "userItems_event", "userAgenda", "eventResponses",
+               "eventAttendees", "userAgendaMap"]:
+
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 

@@ -4,7 +4,7 @@ from csv import reader
 from twisted.web        import server
 from twisted.internet   import defer
 
-from social             import base, db, utils, people, errors
+from social             import base, db, utils, people, errors, _, __
 from social.isocial     import IAuthInfo
 from social.signup      import getOrgKey # move getOrgKey to utils
 from social.template    import render, renderScriptBlock
@@ -64,7 +64,7 @@ class Admin(base.BaseResource):
 
         isValidData = yield self._validData(data, format, orgId)
         if not isValidData:
-          raise errors.InvalidData()
+          raise errors.InvalidRequest("New user details are invalid")
 
         if format in ("csv", "tsv"):
             dialect = csv.excel_tab  if format == "tsv" else csv.excel
@@ -80,7 +80,14 @@ class Admin(base.BaseResource):
                         continue
                     userKey = yield utils.addUser(email, displayName, passwd,
                                                   orgId, jobTitle, timezone)
-        request.redirect("/admin/people?type=all")
+
+        response = """
+                        $$.alerts.info('%s');
+                        $.get('/ajax/notifications/new');
+                        $$.fetchUri('/admin/people?type=all');
+                        $('#add-user-wrapper').empty();
+                   """ %(_("User Added"))
+        request.write(response)
 
 
     @defer.inlineCallbacks

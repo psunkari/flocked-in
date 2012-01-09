@@ -186,7 +186,7 @@
       </li>
   </div>
   <div id="add-user-block">
-    <form action="/admin/add" method="POST" enctype="multipart/form-data" autocomplete="off">
+    <form class="ajax" action="/admin/add" method="POST" enctype="multipart/form-data" autocomplete="off">
       <ul class="styledform">
         <li class="form-row">
           <label class="styled-label" for="name">${_("Display Name")}</label>

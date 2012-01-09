@@ -25,6 +25,7 @@
     </div>
     <div id="center-right">
       <div id="right">
+        <div class="right-contents"></div>
       </div>
       <div id="center">
         <div class="">
@@ -65,28 +66,14 @@
     <input type="text" name="title" placeholder="${_('Title of your event?')}"/>
   </div>
   <div>
-    <div style="display:inline-block;width:8em">
+    <div style="display:inline-block;width:16em">
       <div class="input-wrap">
         <input type="text" id="eventstartdate"/>
         <input type="hidden" name="startDate" id="startDate"/>
       </div>
     </div>
-    <div style="display:inline-block;width:8em;border:1px solid #C3D9FF" id="startTimeWrapper" class="styledform">
-      <!--<div class="input-wrap">-->
-        <!--<input type="text" id="eventstarttime"/>-->
-        ${self.selectTime("startTime", "Start Time",)}
-        
-      <!--</div>-->
-    </div>
     <span> to </span>
-    <div style="display:inline-block;width:8em;border:1px solid #C3D9FF" id="endTimeWrapper" class="styledform">
-      <!--<div class="input-wrap">-->
-        <!--<input type="text" id="eventendtime"/>-->
-        ${self.selectTime("endTime", "End Time",)}
-        
-      <!--</div>-->
-    </div>
-    <div style="display:inline-block;width:8em">
+    <div style="display:inline-block;width:16em">
       <div class="input-wrap">
         <input type="text" id="eventenddate"/>
         <input type="hidden" id="endDate" name="endDate"/>
@@ -96,9 +83,8 @@
       ${timezone(me['basic']['timezone'])}
     </div>
     <div style="display:inline-block;float:right">
-      <!--<div class="input-wrap">-->
-        <input type="checkbox" name="allDay" id="allDay"/><label for="allDay">${_("All Day")}</label>
-      <!--</div>-->
+        <input type="checkbox" name="allDay" id="allDay"/>
+        <label for="allDay">${_("All Day")}</label>
     </div>
   </div>
   <div class="input-wrap">
@@ -108,30 +94,32 @@
       <textarea name="desc" placeholder="${_('Write something about your event')}"></textarea>
   </div>
   <div class="input-wrap">
-    <div style="float:left" id="invitees" name="invitees"></div>
-    <div>To invite a specific group of people or groups, select the custom option from the Audience option below</div>
+    <div onclick="$('#event-invitee').focus()">
+        <div class="event-invitees"></div>
+        <input name="invitees" id="invitees" type="hidden"/>
+        <div>
+            <input type="text" size="15" placeholder="${_('Enter a name')}"
+                   title="${_('List of Invitees')}" id="event-invitee"/>
+        </div>
+    </div>
   </div>
   <input type="hidden" name="type" value="event"/>
 </%def>
 
 <%def name="event_root(convId, isQuoted=False)">
   <%
+    response = my_response[convId]
     conv = items[convId]
-    title = items[convId]["meta"].get("title", '')
-    location = items[convId]["meta"].get("location", '')
-    desc = items[convId]["meta"].get("desc", "")
-    start = items[convId]["meta"].get("startTime")
-    end   = items[convId]["meta"].get("endTime", '')
-    options = items[convId]["options"] or ["yes", "maybe", "no"]
-    owner = items[convId]["meta"]["owner"]
+    convMeta = conv["meta"]
+    title = convMeta.get("event_title", '')
+    location = convMeta.get("event_location", '')
+    desc = convMeta.get("event_desc", "")
+    start = convMeta.get("event_startTime")
+    end   = convMeta.get("event_endTime")
+    owner = convMeta["owner"]
     ownerName = entities[owner]["basic"]["name"]
-    my_tz = timezone(me['basic']['timezone'])
-    if "invitees" in context.kwargs:
-      invited = invitees[convId]
-    else:
-      invited = []
-    response = myResponse[convId] if "myResponse" in context.kwargs else ""
 
+    my_tz = timezone(me['basic']['timezone'])
     utc = pytz.utc
     startdatetime = datetime.datetime.utcfromtimestamp(float(start)).replace(tzinfo=utc)
     enddatetime = datetime.datetime.utcfromtimestamp(float(end)).replace(tzinfo=utc)
@@ -145,7 +133,7 @@
     startrdelta = relativedelta(startdatetime, today)
     startsToday = False
     endsToday = False
-    allDay = True if items[convId]["meta"].get("allDay", "0") == "1" else False
+    allDay = True if convMeta.get("allDay", "0") == "1" else False
 
     if startrdelta.days == 0:
       if not allDay:
@@ -177,7 +165,7 @@
   %>
   <div class="">
     <span class="conv-reason">
-      %if myKey == owner:
+      %if myId == owner:
         <span class="item">
           <a href="/item?id=${convId}">${title} </a>
         </span>
@@ -235,7 +223,7 @@
           % elif response == "maybe":
             <span id="event-rsvp-status-${convId}">${_("You may attend")}</span>
           %else:
-            <span id="event-rsvp-status-${convId}">&nbsp;</span>
+            <span id="event-rsvp-status-${convId}">${_("You have not responded to this event")}</span>
           %endif
           <button class="button-link" onclick="$$.ui.showPopup(event)">${_("RSVP to this event")}</button>
           <ul class="acl-menu" style="display:none;">
@@ -243,7 +231,7 @@
               <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'no')">${_("No")}</a></li>
               <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'maybe')">${_("Maybe")}</a></li>
           </ul>
-          <a class="ajax" onclick="$$.events.showEventInvitees('${convId}')">${len(invited)}</a>
+          ##<a class="ajax" onclick="$$.events.showEventInvitees('${convId}')">${len(invited_status[convId].keys())}</a>
         </div>
       </div>
     </div>
@@ -260,37 +248,58 @@
   %endif
 </%def>
 
-<%def name="selectTime(name, label)">
-  <select id="${name}" name="${name}" class="inline-select" style="border:none;width:100% !important">
-    <option value="">${label}</option>
-      <%
-        TODAY = datetime.date.today()
-        TOMORROW = TODAY+relativedelta(days=+1)
-        my_tz = timezone(me['basic']['timezone'])
-        NOW = datetime.datetime.now(my_tz)
-        dts = list(rrule(MINUTELY, dtstart=TODAY, interval=30, until=TOMORROW))
-        dtslabels = [a.strftime('%I:%M %p') for a in dts]
-        dtsvalues = [str(calendar.timegm(a.utctimetuple())) for a in dts]
-      %>
-      %for i in range(len(dts)):
-        <%
-          #
-          #
-          selected = False
-          h = relativedelta(my_tz.normalize(dts[i].replace(tzinfo=my_tz)),NOW).hours
-          if h == 0:
-            m = relativedelta(my_tz.normalize(dts[i].replace(tzinfo=my_tz)),NOW).minutes
-            if m:
-              selected = True
-            else:
-              selected = False
-        %>
-        %if selected:
-          <option selected value="${dtsvalues[i]}000">${dtslabels[i]}</option>
-        %else:
-          <option value="${dtsvalues[i]}000">${dtslabels[i]}</option>
-        %endif
-      %endfor
-  </select>
-  <input type="hidden" id="time${name}" value="${dtsvalues[0]}000"/>
+<%def name="event_me()">
+  <div class="sidebar-chunk">
+    <div class="sidebar-title">${_("About this event")}</div>
+    <div class="conversation-people-add-wrapper">
+      <span>This event in your time</span>
+    </div>
+  </div>
+</%def>
+
+<%def name="event_actions()">
+  <div class="sidebar-chunk">
+    <div class="sidebar-title">${_("Invite Someone")}</div>
+    <div class="conversation-people-add-wrapper">
+      <form class="ajax" action="/messages/members">
+        <input type="hidden" name="parent" value="${id}" />
+        <input type="hidden" name="action" value="add" />
+        <input type="hidden" name="recipients" id="conversation_recipients"/>
+        <div class="input-wrap">
+            <input type="text" placeHolder="Your friend's name" id="conversation_add_member" required title="${_('Friend name')}"/>
+        </div>
+      </form>
+    </div>
+  </div>
+</%def>
+
+<%def name="event_meta()">
+  <div class="sidebar-chunk">
+    <div class="sidebar-title">${_("Who are attending")}</div>
+    <div class="conversation-attachments-wrapper">
+      <ul class="v-links peoplemenu" style="-moz-columns:12 8em">
+        %for u in invited_status[convId].keys():
+          <li>${utils.userName(u, entities[u])}</li>
+        %endfor
+      </ul>
+    </div>
+  </div>
+  <div class="sidebar-chunk">
+    <div class="sidebar-title">${_("Who may attend")}</div>
+    <div class="conversation-attachments-wrapper">
+      <ul class="v-links peoplemenu">
+        <li>One</li>
+        <li>One</li>
+      </ul>
+    </div>
+  </div>
+  <div class="sidebar-chunk">
+    <div class="sidebar-title">${_("Who are not attending")}</div>
+    <div class="conversation-attachments-wrapper">
+      <ul class="v-links peoplemenu">
+        <li>One</li>
+        <li>One</li>
+      </ul>
+    </div>
+  </div>
 </%def>

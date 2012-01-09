@@ -361,6 +361,8 @@ class ItemResource(base.BaseResource):
             yield defer.DeferredList(renderers)
 
         # TODO: Render other blocks
+        if plugin and hasattr(plugin, 'renderSideBlock'):
+            yield plugin.renderSideBlock(request, landing, args)
 
         if script and landing:
             request.write("</body></html>")
@@ -376,12 +378,20 @@ class ItemResource(base.BaseResource):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
 
         convId, conv = yield _createNewItem(request, myId, args['orgId'])
+
         entities = {myId: args['me']}
+        toFetchEntities = []
+        convType = utils.getRequestArg(request, "type")
+        plugin = plugins[convType]
+        entityIds = yield plugin.fetchData(args, convId)
+        toFetchEntities.extend(entityIds)
+
         target = conv['meta'].get('target', None)
         if target:
-            toFetchEntities = set(target.split(','))
-            cols = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
-            entities.update(utils.multiSuperColumnsToDict(cols))
+            toFetchEntities = toFetchEntities.extend(target.split(','))
+
+        cols = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
+        entities.update(utils.multiSuperColumnsToDict(cols))
 
         relation = Relation(myId, [])
         yield relation.initGroupsList()
@@ -962,6 +972,9 @@ class ItemResource(base.BaseResource):
                 d1.addCallback(lambda x: fts.solr.deleteIndex(itemId))
                 d1.addCallback(lambda x: files.deleteFileInfo(myId, orgId, convId, conv))
                 deferreds.append(d1)
+
+                plugin = plugins[convType]
+                yield plugin.delete(myId, convId)
 
             # Rollback changes to feeds.
             if comment:
