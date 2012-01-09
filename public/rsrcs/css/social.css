@@ -430,6 +430,7 @@ a:hover, a:active, a:focus {
 .people-icon {
     background-position: 0 -128px;
 }
+.users-icon,
 .groups-icon {
     background-position: 0 -112px;
 }
