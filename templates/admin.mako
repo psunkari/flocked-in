@@ -299,11 +299,11 @@
 
 <%def name="admin_actions(userId, action='')">
   %if not action or action == 'unblocked':
-    <li><button class="button default" onclick="$.post('/ajax/admin/block', 'id=${userId}')">${_("Block")}</button></li>
-    <li><button class="button default" onclick="$$.removeUser.showRemoveUser('${userId}')">${_("Remove")}</button></li>
+    <li><button class="button" onclick="$.post('/ajax/admin/block', 'id=${userId}')">${_("Block")}</button></li>
+    <li><button class="button" onclick="$$.removeUser.showRemoveUser('${userId}')">${_("Remove")}</button></li>
   %elif action == 'blocked':
     <li><button class="button" onclick="$.post('/ajax/admin/unblock', 'id=${userId}')">${_("Unblock")}</button></li>
-    <li><button class="button default" onclick="$$.removeUser.showRemoveUser('${userId}')">${_("Remove")}</button></li>
+    <li><button class="button" onclick="$$.removeUser.showRemoveUser('${userId}')">${_("Remove")}</button></li>
   %elif action == 'deleted':
     <li>${_('User deleted from the network')}</li>
   %endif

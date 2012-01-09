@@ -23,16 +23,16 @@ def createCF():
     #    drop user_files CF
     #    create user_files entityFeed_files
     #
-    yield db.system_drop_column_family('user_files')
-    user_files = ttypes.CfDef(KEYSPACE, 'user_files', 'Standard',
-                             'TimeUUIDType', None,
-                             "List of files owned by the user")
-    yield db.system_add_column_family(user_files)
+    #yield db.system_drop_column_family('user_files')
+    #user_files = ttypes.CfDef(KEYSPACE, 'user_files', 'Standard',
+    #                         'TimeUUIDType', None,
+    #                         "List of files owned by the user")
+    #yield db.system_add_column_family(user_files)
 
-    entityFeed_files = ttypes.CfDef(KEYSPACE, 'entityFeed_files',
-                                'Standard', 'TimeUUIDType', None,
-                                "List of files that appeared in entity's feed")
-    yield db.system_add_column_family(entityFeed_files)
+    #entityFeed_files = ttypes.CfDef(KEYSPACE, 'entityFeed_files',
+    #                            'Standard', 'TimeUUIDType', None,
+    #                            "List of files that appeared in entity's feed")
+    #yield db.system_add_column_family(entityFeed_files)
 
     userSessionsMap = ttypes.CfDef(KEYSPACE, 'userSessionsMap', 'Standard',
                             'BytesType', None, 'userId-Session Map')

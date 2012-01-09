@@ -101,11 +101,11 @@
         ## take a parameter to indicate which actions should be displayed - admin or user.
         %if showBlocked:
           %if userId not in blockedUsers:
-            <li><button class="button default" onclick="$.post('/ajax/admin/block', 'id=${userId}')">${_("Block")}</button></li>
+            <li><button class="button" onclick="$.post('/ajax/admin/block', 'id=${userId}')">${_("Block")}</button></li>
           %else:
             <li><button class="button" onclick="$.post('/ajax/admin/block', 'id=${userId}')">${_("Unblock")}</button></li>
           %endif
-          <li><button class="button default" onclick="$$.removeUser.showRemoveUser('${userId}')">${_("Remove")}</button></li>
+          <li><button class="button" onclick="$$.removeUser.showRemoveUser('${userId}')">${_("Remove")}</button></li>
         %else:
           ${profile.user_actions(userId, True)}
         %endif
