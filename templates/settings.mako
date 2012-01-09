@@ -201,7 +201,7 @@
           ${self.selectYear("dob_year", "Year", doy)}
         </li>
         <li class="form-row">
-          <label class="styled-label" for="email">${_('Email')}</label>
+          <label class="styled-label" for="email">${_('E-Mail')}</label>
           <input type="email" id="email" name="email" value="${personal.get('email', '')}"/>
         </li>
         <li class="form-row">
@@ -318,31 +318,21 @@
       <div class="center-title">Work Contacts</div>
       <ul class="styledform">
           <li class="form-row">
-              <label class="styled-label" for="email">${_('Email')}</label>
+              <label class="styled-label" for="email">${_('E-Mail')}</label>
               <input type="email" id="email" name="email" value="${emailId}" readonly='true' />
           </li>
           <li class="form-row">
-              <label class="styled-label" for="im">${_('Chat Id')}</label>
-              <input type="text" id="im" name="im" value="${contact.get('im', '')}" autofocus />
-          </li>
-          <li class="form-row">
-              <label class="styled-label" for="phone">${_('Work Phone')}</label>
+              <label class="styled-label" for="phone">${_('Phone')}</label>
               <input type="text" id="phone" name="phone" value="${contact.get('phone', '')}"/>
           </li>
           <li class="form-row">
-              <label class="styled-label" for="mobile">${_('Work Mobile')}</label>
+              <label class="styled-label" for="mobile">${_('Mobile')}</label>
               <input type="text" id="mobile" name="mobile" value="${contact.get('mobile', '')}"/>
           </li>
       </ul>
       <div class="styledform-buttons">
         <input type="submit" class="button default" value="${_('Save')}"/>
       </div>
-      %if emailId and emailId[0]:
-        <input type="hidden" value=${emailId[0]} name="emailId" />
-      %endif
-      %if myKey:
-        <input type="hidden" value=${myKey} name="id" />
-      %endif
     </form>
   </div>
   <div id="pro-summary" style="margin-bottom: 25px;">

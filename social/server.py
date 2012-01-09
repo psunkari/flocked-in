@@ -119,10 +119,18 @@ class SiteFactory(server.Site):
 
     @defer.inlineCallbacks
     def updateSession(self, uid, session):
+        userId = session.getComponent(IAuthInfo).username
         serialized = pickle.dumps(session)
         yield db.insert(uid, "sessions", serialized, "auth", ttl=self.timeout)
+        yield db.insert(userId, "userSessionsMap", '', uid, ttl=self.timeout)
 
     @defer.inlineCallbacks
     def clearSession(self, uid):
+        session = yield self.getSession(uid)
+        userId = session.getComponent(IAuthInfo).username
         yield db.remove(uid, "sessions", "auth")
+        yield db.remove(userId, "userSessionsMap", uid)
+
+
+
 

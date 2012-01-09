@@ -32,7 +32,6 @@ def createKeyspace(client):
 def createColumnFamilies(client):
     # Information about organizations/groups/Users. Includes meta data
     # about the organization/groups/users (admins, logo, etc).
-
     entities = CfDef(KEYSPACE, 'entities', 'Super', 'UTF8Type', 'UTF8Type',
                   'Organization Information - name, avatar, admins...')
     yield client.system_add_column_family(entities)
@@ -120,10 +119,10 @@ def createColumnFamilies(client):
     files = CfDef(KEYSPACE, 'files', 'Super', 'UTF8Type', 'UTF8Type',
                   'files and its details')
     yield client.system_add_column_family(files)
+
     tmp_files = CfDef(KEYSPACE, 'tmp_files', 'Standard', 'UTF8Type', None,
                   "tmp files and their details")
     yield client.system_add_column_family(tmp_files)
-
 
     item_files = CfDef(KEYSPACE, "item_files", 'Super', 'UTF8Type', 'TimeUUIDType',
                       'files and its version')
@@ -132,7 +131,6 @@ def createColumnFamilies(client):
     user_files = CfDef(KEYSPACE, 'user_files', 'Standard', 'TimeUUIDType', None,
                   "List of files owned by the user")
     yield client.system_add_column_family(user_files)
-
 
     entityFeed_files = CfDef(KEYSPACE, 'entityFeed_files', 'Standard', 'TimeUUIDType', None,
                              "List of files that appeared in entity's feed")
@@ -152,7 +150,7 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(userItems)
 
     # Index of posts by type
-    for itemType in ['status', 'link', 'document', 'question', 'event']:
+    for itemType in ['status', 'link', 'document', 'question', 'event', 'poll']:
         columnFamily = "userItems_" + str(itemType)
         userItemsType = CfDef(KEYSPACE, columnFamily, 'Standard',
                               'TimeUUIDType', None,
@@ -169,7 +167,7 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(feedItems)
 
     # Index of feed by type
-    for itemType in ['status', 'link', 'document', 'question', 'event']:
+    for itemType in ['status', 'link', 'document', 'question', 'event', 'poll']:
         columnFamily = "feed_" + str(itemType)
         feedType = CfDef(KEYSPACE, columnFamily, 'Standard', 'TimeUUIDType',
                          None, 'Feed of %s items'%(itemType))
@@ -260,10 +258,16 @@ def createColumnFamilies(client):
                      "List of items in this tag")
     orgTagsByName = CfDef(KEYSPACE, "orgTagsByName", "Standard", "UTF8Type",
                           None, "List of tags by their name")
+    orgPresetTags = CfDef(KEYSPACE, "orgPresetTags", "Standard", "UTF8Type",
+                          None, "List of preset tags. Only admin can create"
+                          "or delete these tags. unlike normal tags these tags"
+                          "will not be deleted automatically. On deletion it"
+                          "behaves like a normal tag")
     yield client.system_add_column_family(orgTags)
     yield client.system_add_column_family(tagFollowers)
     yield client.system_add_column_family(tagItems)
     yield client.system_add_column_family(orgTagsByName)
+    yield client.system_add_column_family(orgPresetTags)
 
     deletedConvs = CfDef(KEYSPACE, "deletedConvs", "Standard", "UTF8Type",
                          None, "list of deleted convs")
@@ -409,7 +413,6 @@ def addSampleData(client):
                                     '2007:2003:Example Technology Services': 'Chief Financial Officer'
                                 },
                                 'contact': {
-                                    'mail': 'kevin@example.com',
                                     'phone': '+11234567890',
                                     'mobile': '+12234567890'
                                 },
@@ -418,7 +421,7 @@ def addSampleData(client):
                                     "Networking": ""
                                 },
                                 'personal': {
-                                    'mail': 'kevin@example.org',
+                                    'email': 'kevin@example.org',
                                     'hometown': 'New York',
                                     'birthday': '19700229',
                                     'sex': 'M'
@@ -448,11 +451,10 @@ def addSampleData(client):
                                     '1998:Acpak Institute of Technology': 'Graduation'
                                 },
                                 'contact': {
-                                    'mail': 'ashok@example.com',
                                     'phone': '+11234567890'
                                 },
                                 'personal': {
-                                    'mail': 'ashok@example.net',
+                                    'email': 'ashok@example.net',
                                     'hometown': 'Guntur, India'
                                 }})
     yield client.batch_insert(williamKey, 'entities', {
@@ -478,7 +480,6 @@ def addSampleData(client):
                                     '2010:2008:JohnDoe Corp': 'Chief Executive Officer'
                                 },
                                 'contact': {
-                                    'mail': 'william@example.com',
                                     'phone': '+11234567890'
                                 },
                                 'interests': {
@@ -486,7 +487,7 @@ def addSampleData(client):
                                     "Trekking": "sports"
                                 },
                                 'personal': {
-                                    'mail': 'william@gmail.com',
+                                    'email': 'william@gmail.com',
                                     'hometown': 'Berlin, Germany',
                                     'currentcity': 'San Fransisco'
                                 },
@@ -514,7 +515,6 @@ def addSampleData(client):
                                     '2004:Green Tea Institute of Technology': 'Graduation'
                                 },
                                 'contact': {
-                                    'mail': 'paul@example.com',
                                     'phone': '+911234567890'
                                 },
                                 'interests': {
@@ -522,7 +522,7 @@ def addSampleData(client):
                                     "Open Source": "technology"
                                 },
                                 'personal': {
-                                    'mail': 'paul@example.org',
+                                    'email': 'paul@example.org',
                                     'hometown': 'San Antonio',
                                     'birthday': '19820202',
                                     'sex': 'M'
@@ -546,7 +546,6 @@ def addSampleData(client):
                                     '2008:Diced Onion Technology University': 'Graduation'
                                 },
                                 'contact': {
-                                    'mail': 'john@example.com',
                                     'phone': '+911234567890'
                                 },
                                 'interests': {
@@ -554,7 +553,7 @@ def addSampleData(client):
                                     "Open Source": "technology"
                                 },
                                 'personal': {
-                                    'mail': 'john@example.org',
+                                    'email': 'john@example.org',
                                     'hometown': 'Beechum County, Alabama',
                                     'birthday': '19780215',
                                     'sex': 'M'
@@ -624,22 +623,23 @@ def truncateColumnFamilies(client):
                "sessions", "invitations", "pendingConnections", "subscriptions",
                "followers", "enterpriseLinks", "entityGroupsMap", "groupMembers",
                "items", "itemLikes", "itemResponses", "userItems", "feed",
-               "userItems_status", "userItems_link", "userItems_document",
-               "feed_status", "feed_link","feed_document", "feedItems",
+               "userItems_status", "userItems_link", "userItems_poll",
+               "feed_status", "feed_link","feed_poll", "feedItems",
                "domainOrgMap", "userVotes", "votes", 'userEvents',
                'eventResponses', "userEventInvitations", "userEventResponse",
                'eventInvitations',"notifications", "notificationItems",
                "nameIndex", "displayNameIndex", "orgTags", "tagItems",
                "tagFollowers", "orgTagsByName", "messages",
-               "blockedUsers", "deletedConvs", "feed_question",
+               "blockedUsers", "deletedConvs", "feed_question", 'userItems_question',
                "mConversations", "mAllConversations", "mUnreadConversations",
                "mArchivedConversations", "mDeletedConversations",
                "mConvMessages", "mConvFolders", "latest", "doNotSpam",
                "files", "tmp_files", "item_files", "invitationsSent",
                "user_files", "suggestions", "apps", "appsByOwner", "oAuthData",
+               "userSessionsMap", "deletedUsers", "orgPresetTags",
                "feed_event", "userItems_event", "userAgenda", "eventResponses",
                "eventAttendees", "userAgendaMap"]:
-
+        
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 

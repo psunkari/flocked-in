@@ -672,6 +672,35 @@ $$.feedback = feedback;
 }})(social, jQuery);
 
 
+(function($$, $){ if (!$$.removeUser) {
+var removeUser = {
+    showRemoveUser: function(userId) {
+        var dialogOptions = {
+            id: 'removeuser-dlg',
+            buttons: [
+                {
+                    text:'Confirm',
+                    click : function() {
+                        $.post("/ajax/admin/delete", {id:userId, deleted:'deleted'});
+                        $$.dialog.close(this, true)
+                    }
+                },
+                {
+                    text: 'Cancel',
+                    click: function() {
+                        $$.dialog.close(this, true)
+                    }
+                }
+            ]
+        };
+        $$.dialog.create(dialogOptions);
+        $.post('/ajax/admin/delete',  {id:userId});
+    },
+};
+$$.removeUser = removeUser;
+}})(social, jQuery);
+
+
 /*
  * Elements of the UI
  */
@@ -696,8 +725,8 @@ var ui = {
         }
 
         /* Add a scroll to bottom handler */
-        $(window).scroll(function(){
-            if ($(window).scrollTop() > $(document).height() - (50 + $(window).height())){
+        $('#bigwrap').scroll(function(){
+            if ($('#bigwrap').scrollTop() > $('#mainbar').height() - (100 + $('#bigwrap').height())){
                 $nextPageLoad = $('#next-page-load');
                 if (!$nextPageLoad.attr('requested')) {
                     $nextPageLoad.click();
