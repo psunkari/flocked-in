@@ -34,20 +34,36 @@ def createCF():
                                 "List of files that appeared in entity's feed")
     yield db.system_add_column_family(entityFeed_files)
 
-    userSessionsMap = CfDef(KEYSPACE, 'userSessionsMap', 'Standard',
+    userSessionsMap = ttypes.CfDef(KEYSPACE, 'userSessionsMap', 'Standard',
                             'BytesType', None, 'userId-Session Map')
-    yield client.system_add_column_family(userSessionsMap)
+    yield db.system_add_column_family(userSessionsMap)
 
-    deletedUsers = CfDef(KEYSPACE, "deletedUsers", "Standard", "UTF8Type", None,
+    deletedUsers = ttypes.CfDef(KEYSPACE, "deletedUsers", "Standard", "UTF8Type", None,
                          "List of users removed from the networks by admins.")
-    yield client.system_add_column_family(deletedUsers)
+    yield db.system_add_column_family(deletedUsers)
 
-    orgPresetTags = CfDef(KEYSPACE, "orgPresetTags", "Standard", "UTF8Type",
+    orgPresetTags = ttypes.CfDef(KEYSPACE, "orgPresetTags", "Standard", "UTF8Type",
                           None, "List of preset tags. Only admin can create"
                           "or delete these tags. unlike normal tags these tags"
                           "will not be deleted automatically. On deletion it"
                           "behaves like a normal tag")
-    yield client.system_add_column_family(orgPresetTags)
+    yield db.system_add_column_family(orgPresetTags)
+    # Create column families for poll indexing (in feeds and userItems)
+    #
+    userItemsType = ttypes.CfDef(KEYSPACE, 'userItems_poll', 'Standard',
+                          'TimeUUIDType', None,
+                          'poll items posted by a given user')
+    yield db.system_add_column_family(userItemsType)
+
+    feedType = ttypes.CfDef(KEYSPACE, 'feed_poll', 'Standard', 'TimeUUIDType',
+                     None, 'Feed of poll items')
+    yield db.system_add_column_family(feedType)
+
+    #
+    # Remove unused feed and userItems index
+    #
+    yield db.system_drop_column_family('feed_document')
+    yield db.system_drop_column_family('userItems_document')
 
 
 @defer.inlineCallbacks
@@ -61,11 +77,13 @@ def updateData():
     except ttypes.NotFoundException:
         pass
     entities = {}
+    items = {}
 
     rows = yield db.get_range_slice('items', count=10000, reverse=True)
     for row in rows:
         itemId = row.key
         item = utils.supercolumnsToDict(row.columns)
+        items[itemId]=item
         if 'meta' not in item:
             continue
 
@@ -97,31 +115,61 @@ def updateData():
             updated = {}
 
             if itemType == "link":
-                if 'url' in meta:
-                    updated['link_url'] = meta['url']
-                if 'title' in meta:
-                    updated['link_title'] = meta['title']
-                if 'summary' in meta:
-                    updated['link_summary'] = meta['summary']
-                if 'imgSrc' in meta:
-                    updated['link_imgSrc'] = meta['imgSrc']
-                if 'embedType' in meta:
-                    updated['link_embedType'] = meta['embedType']
-                if 'embedSrc' in meta:
-                    updated['link_embedSrc'] = meta['embedSrc']
-                if 'embedHeight' in meta:
-                    updated['link_embedHeight'] = meta['embedHeight']
-                if 'embedWidth' in meta:
-                    updated['link_embedWidth'] = meta['embedWidth']
+                if 'url' in itemMeta:
+                    updated['link_url'] = itemMeta['url']
+                if 'title' in itemMeta:
+                    updated['link_title'] = itemMeta['title']
+                if 'summary' in itemMeta:
+                    updated['link_summary'] = itemMeta['summary']
+                if 'imgSrc' in itemMeta:
+                    updated['link_imgSrc'] = itemMeta['imgSrc']
+                if 'embedType' in itemMeta:
+                    updated['link_embedType'] = itemMeta['embedType']
+                if 'embedSrc' in itemMeta:
+                    updated['link_embedSrc'] = itemMeta['embedSrc']
+                if 'embedHeight' in itemMeta:
+                    updated['link_embedHeight'] = itemMeta['embedHeight']
+                if 'embedWidth' in itemMeta:
+                    updated['link_embedWidth'] = itemMeta['embedWidth']
             elif itemType == 'poll':
-                if 'question' in meta:
-                    updated['comment'] = meta['question']
+                if 'question' in itemMeta:
+                    updated['comment'] = itemMeta['question']
             else:
                 print 'Found an event:', itemId
 
             if updated:
                 yield db.batch_insert(itemId, 'items', {'meta': updated})
 
+
+    #
+    # Create poll indexes for feed and userItems
+    #
+    rows = yield db.get_range_slice('entities', count=10000, reverse=True)
+    mutations = {}
+    for row in rows:
+        entityId = row.key
+        entity = utils.supercolumnsToDict(row.columns)
+
+        if entity['basic']['type'] != 'user':
+            continue
+
+        d1 = db.get_slice(entityId, 'feed', count=10000)
+        d2 = db.get_slice(entityId, 'userItems', count=10000)
+
+        results = yield d1
+        for col in results:
+            value = col.column.value
+            if value in items:
+                if items.get(value, {}).get('meta', {}).get('type', '') == 'poll':
+                    mutations.setdefault(entityId, {}).setdefault('feed_poll', {}).update({col.column.name: value})
+
+        results = yield d2
+        for col in results:
+            value = col.column.value
+            responseType, itemId, convId, convType, others = value.split(':', 4)
+            if convType == 'poll':
+                mutations.setdefault(entityId, {}).setdefault('userItems_poll', {}).update({col.column.name: value})
+    yield db.batch_mutate(mutations)
 
 
 def main():

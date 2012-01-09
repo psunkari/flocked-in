@@ -156,7 +156,7 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(userItems)
 
     # Index of posts by type
-    for itemType in ['status', 'link', 'document', 'question', 'poll']:
+    for itemType in ['status', 'link', 'question', 'poll']:
         columnFamily = "userItems_" + str(itemType)
         userItemsType = CfDef(KEYSPACE, columnFamily, 'Standard',
                               'TimeUUIDType', None,
@@ -173,7 +173,7 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(feedItems)
 
     # Index of feed by type
-    for itemType in ['status', 'link', 'document', 'question', 'poll']:
+    for itemType in ['status', 'link', 'question', 'poll']:
         columnFamily = "feed_" + str(itemType)
         feedType = CfDef(KEYSPACE, columnFamily, 'Standard', 'TimeUUIDType',
                          None, 'Feed of %s items'%(itemType))
@@ -630,14 +630,14 @@ def truncateColumnFamilies(client):
                "sessions", "invitations", "pendingConnections", "subscriptions",
                "followers", "enterpriseLinks", "entityGroupsMap", "groupMembers",
                "items", "itemLikes", "itemResponses", "userItems", "feed",
-               "userItems_status", "userItems_link", "userItems_document",
-               "feed_status", "feed_link","feed_document", "feedItems",
+               "userItems_status", "userItems_link", "userItems_poll",
+               "feed_status", "feed_link","feed_poll", "feedItems",
                "domainOrgMap", "userVotes", "votes", 'userEvents',
                'eventResponses', "userEventInvitations", "userEventResponse",
                'eventInvitations',"notifications", "notificationItems",
                "nameIndex", "displayNameIndex", "orgTags", "tagItems",
                "tagFollowers", "orgTagsByName", "messages",
-               "blockedUsers", "deletedConvs", "feed_question",
+               "blockedUsers", "deletedConvs", "feed_question", 'userItems_question',
                "mConversations", "mAllConversations", "mUnreadConversations",
                "mArchivedConversations", "mDeletedConversations",
                "mConvMessages", "mConvFolders", "latest", "doNotSpam",
