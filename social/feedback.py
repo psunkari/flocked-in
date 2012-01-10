@@ -48,6 +48,7 @@ class FeedbackResource(base.BaseResource):
         item, attachments = yield utils.createNewItem(request, 'feedback',
                                                       synovelOrgId, synovelOrgId,
                                                       subType=mood)
+        item['meta']['org'] = synovelOrgId
         item['meta']['userId'] = myId
         item['meta']['userOrgId'] = args['orgKey']
         item['meta']['comment'] = comment

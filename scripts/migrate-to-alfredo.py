@@ -24,16 +24,16 @@ def createCF():
     #    drop user_files CF
     #    create user_files entityFeed_files
     #
-    #yield db.system_drop_column_family('user_files')
-    #user_files = ttypes.CfDef(KEYSPACE, 'user_files', 'Standard',
-    #                         'TimeUUIDType', None,
-    #                         "List of files owned by the user")
-    #yield db.system_add_column_family(user_files)
+    yield db.system_drop_column_family('user_files')
+    user_files = ttypes.CfDef(KEYSPACE, 'user_files', 'Standard',
+                             'TimeUUIDType', None,
+                             "List of files owned by the user")
+    yield db.system_add_column_family(user_files)
 
-    #entityFeed_files = ttypes.CfDef(KEYSPACE, 'entityFeed_files',
-    #                            'Standard', 'TimeUUIDType', None,
-    #                            "List of files that appeared in entity's feed")
-    #yield db.system_add_column_family(entityFeed_files)
+    entityFeed_files = ttypes.CfDef(KEYSPACE, 'entityFeed_files',
+                                'Standard', 'TimeUUIDType', None,
+                                "List of files that appeared in entity's feed")
+    yield db.system_add_column_family(entityFeed_files)
 
     userSessionsMap = ttypes.CfDef(KEYSPACE, 'userSessionsMap', 'Standard',
                             'BytesType', None, 'userId-Session Map')
@@ -50,9 +50,9 @@ def createCF():
                           "behaves like a normal tag")
     yield db.system_add_column_family(orgPresetTags)
 
-    keywordItems = CfDef(KEYSPACE, "keywordItems", "Standard", "TimeUUIDType",
-                        None, "list of items which have a keyword monitored by admins")
-    yield client.system_add_column_family(keywordItems)
+    keywordItems = ttypes.CfDef(KEYSPACE, "keywordItems", "Standard", "TimeUUIDType",
+                                None, "list of items which have a keyword monitored by admins")
+    yield db.system_add_column_family(keywordItems)
 
     #
     # Create column families for poll indexing (in feeds and userItems)
@@ -69,8 +69,12 @@ def createCF():
     #
     # Remove unused feed and userItems index
     #
-    yield db.system_drop_column_family('feed_document')
-    yield db.system_drop_column_family('userItems_document')
+    try:
+        yield db.system_drop_column_family('feed_document')
+    except: pass
+    try:
+        yield db.system_drop_column_family('userItems_document')
+    except: pass
 
 
 @defer.inlineCallbacks
@@ -97,32 +101,37 @@ def updateData():
         log.msg(itemId)
         if 'meta' not in item:
             continue
-        # fix acls
+
+        # Add org to all items
+        try:
+            owner = item['meta']['owner']
+            col = yield db.get(owner, "entities", 'org', 'basic')
+            ownerOrgId = col.column.value
+            yield db.insert(itemId, 'items', ownerOrgId, 'org', 'meta')
+        except Exception as e:
+            if item['meta'].get('type', '') == 'feedback':
+                yield db.insert(itemId, 'items', owner, 'org', 'meta')
+
+        # Fix ACLs
         if 'parent' not in item['meta']:
             acl = item['meta']['acl']
             convOwner = item['meta']['owner']
             convId = itemId
-        else:
-            parentId = item['meta']['parent']
-            convId = parentId
-            if parentId not in items:
-                log.msg('Parent not found: parent - %s : item %s ' %(parentId, itemId))
-            else:
-                acl = items[parentId]['meta']['acl']
-                convOwner = items[parentId]['meta']['owner']
-        if acl == 'company':
-            col = yield db.get(convOwner, "entities", "org", "basic")
-            ownerOrgId = col.column.value
-            acl = pickle.dumps({"accept":{"orgs":[ownerOrgId]}})
-            yield db.insert(convId, 'items', acl, 'acl', 'meta')
-        try:
-            acl = pickle.loads(acl)
-            if 'accept' in acl and 'friends' in acl['accept'] and isinstance(acl['accept']['friends'], bool):
-                acl['accept']['friends'] = []
-                acl = pickle.dumps(acl)
+
+            if acl == 'company':
+                col = yield db.get(convOwner, "entities", "org", "basic")
+                ownerOrgId = col.column.value
+                acl = pickle.dumps({"accept":{"orgs":[ownerOrgId]}})
                 yield db.insert(convId, 'items', acl, 'acl', 'meta')
-        except :
-            log.msg('cannot unpack acl', acl)
+            else:
+                try:
+                    acl = pickle.loads(acl)
+                    if 'accept' in acl and 'friends' in acl['accept'] and isinstance(acl['accept']['friends'], bool):
+                        del acl['accept']['friends']
+                        acl = pickle.dumps(acl)
+                        yield db.insert(convId, 'items', acl, 'acl', 'meta')
+                except :
+                    log.msg('cannot unpack acl', acl)
 
         # Migrate files
         #    truncate user_files
