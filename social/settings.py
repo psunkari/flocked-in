@@ -642,14 +642,14 @@ class SettingsResource(base.BaseResource):
         if companyId:
             yield renderScriptBlock(request, "settings.mako", "companyItem",
                                     False, "#"+encodedCompanyId, "replace",
-                                    args=[newCompanyId, newCompanyVal, True])
+                                    args=[newCompanyId, newCompanyVal])
         else:
             onload = """$('#company-empty-msg').remove();"""+\
                      """$('#addemp-wrap').replaceWith('<div id="addemp-wrap"><button class="button ajax" id="addedu-button" data-ref="/settings/company">Add Company</button></div>');"""
             yield renderScriptBlock(request, "settings.mako", "companyItem",
                                     False, "#companies-wrapper", "append", True,
                                     handlers={'onload': onload},
-                                    args=[newCompanyId, newCompanyVal, True])
+                                    args=[newCompanyId, newCompanyVal])
 
 
     @defer.inlineCallbacks
@@ -708,14 +708,14 @@ class SettingsResource(base.BaseResource):
         if schoolId:
             yield renderScriptBlock(request, "settings.mako", "schoolItem",
                                     False, "#"+encodedSchoolId, "replace",
-                                    args=[newSchoolId, newSchoolVal, True])
+                                    args=[newSchoolId, newSchoolVal])
         else:
             onload = """$('#school-empty-msg').remove();"""+\
                      """$('#addedu-wrap').replaceWith('<div id="addedu-wrap"><button class="button ajax" id="addedu-button" data-ref="/settings/school">Add School</button></div>');"""
             yield renderScriptBlock(request, "settings.mako", "schoolItem",
                                     False, "#schools-wrapper", "append", True,
                                     handlers={'onload': onload},
-                                    args=[newSchoolId, newSchoolVal, True])
+                                    args=[newSchoolId, newSchoolVal])
 
 
     @defer.inlineCallbacks
