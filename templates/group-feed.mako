@@ -167,7 +167,6 @@
 </%def>
 
 <%def name="groupAdmins()">
-  <% print entities[groupId]["admins"], [x in entities for x in entities[groupId]["admins"]] %>
   <div class="sidebar-chunk">
     <div class="sidebar-title">${_("Administrators")}</div>
       <ul class="v-links">

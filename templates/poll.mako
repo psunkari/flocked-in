@@ -133,10 +133,10 @@
       <div class="item-subactions">
         <input type="hidden" name="id" value="${convId}"/>
         %if voted:
-          <input style="font-size:11px" type="submit" class="button" id="submit" value="${_('Update')}"/>&nbsp;
+          <input type="submit" class="button" id="submit" value="${_('Update')}"/>&nbsp;
           <a class="ajax" data-ref="/poll/results?id=${convId}">${_('Go back to results')}</a>
         %else:
-          <input type="submit" id="submit" value="${_('Vote')}"/>
+          <input type="submit" id="submit" class="button" value="${_('Vote')}"/>
         %endif
       </div>
     </form>

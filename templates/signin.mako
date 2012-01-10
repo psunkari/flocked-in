@@ -80,14 +80,14 @@
               ${_('Email')}
               <abbr title="Required">*</abbr>
             </label>
-            <input id="signin-email" type="email" class="textfield" name="u" required autofocus></input>
+            <input id="signin-email" type="email" class="textfield" name="u" required autofocus />
           </li>
           <li>
             <label for="signin-password" class="styled-label required">
               ${_('Password')}
               <abbr title="Required">*</abbr>
             </label>
-            <input id="signin-password" type="password" class="textfield" name="p" required></input>
+            <input id="signin-password" type="password" class="textfield" name="p" required />
           </li>
           <li>
             <label for="signin-remember" class="styled-label required">
