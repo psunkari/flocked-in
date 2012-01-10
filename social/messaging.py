@@ -47,7 +47,7 @@ class MessagingResource(base.BaseResource):
         meta['parent'] = convId
         meta['timestamp'] = meta['date_epoch']
         meta = {"meta":meta}
-        search.solr.updateMessageIndex(messageId, meta, myOrgId, attachments)
+        search.solr.updateMessageIndex(messageId, meta, myOrgId)
 
 
     @profile
