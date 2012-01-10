@@ -705,35 +705,6 @@ $$.feedback = feedback;
 }})(social, jQuery);
 
 
-(function($$, $){ if (!$$.removeUser) {
-var removeUser = {
-    showRemoveUser: function(userId) {
-        var dialogOptions = {
-            id: 'removeuser-dlg',
-            buttons: [
-                {
-                    text:'Confirm',
-                    click : function() {
-                        $.post("/ajax/admin/delete", {id:userId, deleted:'deleted'});
-                        $$.dialog.close(this, true)
-                    }
-                },
-                {
-                    text: 'Cancel',
-                    click: function() {
-                        $$.dialog.close(this, true)
-                    }
-                }
-            ]
-        };
-        $$.dialog.create(dialogOptions);
-        $.post('/ajax/admin/delete',  {id:userId});
-    },
-};
-$$.removeUser = removeUser;
-}})(social, jQuery);
-
-
 /*
  * Elements of the UI
  */
@@ -841,11 +812,38 @@ var ui = {
                      processData: false
                  }).complete(function(data) {
                      $(selector).find(":file").val("");
-                 }).success(function(data) {});
+                 }).error(function(data) {});
             $this.trigger('restorePlaceHolders');
             return false;
         });
+    },
+    addGroup: function(){
+        var dialogOptions = {
+            id: 'addgroup-dlg',
+            buttons: [
+                {
+                    text:'Create New Group',
+                    click : function() {
+                        $('#add-group-form-submit').trigger('click');
+                    }
+                },
+                {
+                    text: 'Cancel',
+                    click: function() {
+                        $$.dialog.close(this, true);
+                    }
+                }
+            ]
+        };
+        $$.dialog.create(dialogOptions);
+        init = function() {
+            $$.ui.bindFormSubmit('#add-group-form');
+            $('#add-group-form').html5form({messages: 'en'});
+        };
+        var d = $.get('/ajax/groups/create');
+        d.then(init);
     }
+
 }
 
 $$.ui = ui;
@@ -858,7 +856,7 @@ var files = {
     removeFromShare: function(fileId) {
         $('#upload-'+fileId).remove();
         $('#upload-input-'+fileId).remove();
-        $.post("/ajax/file/remove", {id: fileId});
+        $.post("/ajax/files/remove", {id: fileId});
     },
 
     getNameFromPath: function(strFilepath) {
@@ -1290,36 +1288,47 @@ $$.acl = acl;
 
 /*
  * Messaging related routines
- * Handle adding, removing users from composer etc
  */
 (function($$, $) { if (!$$.messaging) {
 var messaging = {
-    autoFillUsers: function(){
-        $('.conversation-composer-field-recipient').autocomplete({
-            source: '/auto/users',
-            minLength: 2,
-            select: function( event, ui ) {
-                $('.conversation-composer-recipients').append(
-                    $$.messaging.formatUser(ui.item.value, ui.item.uid));
-                var rcpts = jQuery.trim($('#recipientList').val());
-                rcpts = (rcpts == "") ? ui.item.uid: rcpts+","+ui.item.uid
-                $('#recipientList').val(rcpts)
-                this.value = "";
-                return false;
-        }
+    compose: function(rcpt, subject, body) {
+        var dialogOptions = {
+            id: 'msgcompose-dlg',
+            buttons: [
+                {
+                    text:'Send',
+                    click : function() {
+                        $('#msgcompose-form-submit').trigger('click');
+                    }
+                },
+                {
+                    text: 'Cancel',
+                    click: function() {
+                        $$.dialog.close(this, true);
+                    }
+                }
+            ]
+        };
+        $$.dialog.create(dialogOptions);
+        $.get('/ajax/messages/write',
+              {"recipients":rcpt, "subject":subject, "body":body});
+    },
+    initComposer: function() {
+        $('#msgcompose-rcpts').tagedit({
+            autocompleteURL: '/auto/users',
+            additionalListClass: 'dlgform',
+            breakKeyCodes: [13, 44, 32],
+            allowEdit: false,
+            allowAdd: false,
+            autocompleteOptions: {
+                    select: function( event, ui ) {
+                            $(this).val(ui.item.value).trigger('transformToTag', [ui.item.uid]);
+                            return false;
+                    }
+            }
         });
-    },
-    removeUser: function(self, user_id){
-        var recipients = $('#recipientList').val().split(",");
-        var rcpts = jQuery.grep(recipients, function (a) { return a != user_id; });
-        $('#recipientList').val(rcpts.join(","))
-        $(self).parent().remove();
-    },
-    formatUser: function(user_string, user_id){
-        return "<div class='conversation-composer-recipient-wrapper tag'>"+
-            "<span class='conversation-composer-recipient-label'>"+ user_string +"</span>"+
-            "<span class='conversation-composer-recipient-remove button-link' "+
-                "onclick='$$.messaging.removeUser(this, \""+user_id+"\")'>X</span></div>"
+        $$.files.init('msgcompose-attach');
+        $('#msgcompose-form').html5form({messages: 'en'});
     }
 };
 
@@ -1492,4 +1501,90 @@ var settings = {
     }
 }
 $$.settings = settings;
+}})(social, jQuery);
+/*
+ * User Invite/add/Remove etc
+ */
+(function($$, $) { if (!$$.users) {
+var users = {
+    invite: function() {
+        var dialogOptions = {
+            id: 'invitepeople-dlg',
+            buttons: [
+                {
+                    text:'Invite',
+                    click : function() {
+                        $('#invite-people-form-submit').trigger('click');
+                    }
+                },
+                {
+                    text: 'Cancel',
+                    click: function() {
+                        $$.dialog.close(this, true);
+                    }
+                }
+            ]
+        };
+        $$.dialog.create(dialogOptions);
+        init = function() {
+            $('#invite-people-form').html5form({messages: 'en'});
+            $('#invite-people').delegate('.form-row:last','focus',function(event){
+                $(event.target.parentNode).clone().appendTo('#invite-people').find('input:text').blur();
+            });
+        };
+        var d = $.get('/ajax/people/invite');
+        d.then(init);
+    },
+    add: function() {
+        var dialogOptions = {
+            id: 'addpeople-dlg',
+            buttons: [
+                {
+                    text:'Add Users',
+                    click : function() {
+                        var formId = $("#add-user-form-id").val();
+                        console.log('#' + formId + "-submit")
+                        $('#' + formId + "-submit").trigger('click');
+                    }
+                },
+                {
+                    text: 'Cancel',
+                    click: function() {
+                        $$.dialog.close(this, true);
+                    }
+                }
+            ]
+        };
+        $$.dialog.create(dialogOptions);
+        var d = $.get('/ajax/admin/add');
+        d.then(function(){
+            $('#add-user-form').html5form({messages: 'en'});
+            $$.ui.bindFormSubmit('#add-users-form');
+        })
+    },
+
+    remove: function(userId) {
+        var dialogOptions = {
+            id: 'removeuser-dlg',
+            buttons: [
+                {
+                    text:'Confirm',
+                    click : function() {
+                        $.post("/ajax/admin/delete", {id:userId, deleted:'deleted'});
+                        $$.dialog.close(this, true)
+                    }
+                },
+                {
+                    text: 'Cancel',
+                    click: function() {
+                        $$.dialog.close(this, true)
+                    }
+                }
+            ]
+        };
+        $$.dialog.create(dialogOptions);
+        $.post('/ajax/admin/delete',  {id:userId});
+    }
+}
+$$.users = users;
 }})(social, jQuery);

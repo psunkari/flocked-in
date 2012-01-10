@@ -68,7 +68,7 @@ class Admin(base.BaseResource):
 
         isValidData = yield self._validData(data, format, orgId)
         if not isValidData:
-          raise errors.InvalidData()
+          raise errors.InvalidRequest("New user details are invalid")
 
         if format in ("csv", "tsv"):
             dialect = csv.excel_tab  if format == "tsv" else csv.excel
@@ -84,7 +84,14 @@ class Admin(base.BaseResource):
                         continue
                     userKey = yield utils.addUser(email, displayName, passwd,
                                                   orgId, jobTitle, timezone)
-        request.redirect("/admin/people?type=all")
+
+        response = """
+                        $$.alerts.info('%s');
+                        $.get('/ajax/notifications/new');
+                        $$.fetchUri('/admin/people?type=all');
+                        $$.dialog.close('addpeople-dlg', true);
+                   """ %(_("User Added"))
+        request.write(response)
 
 
     @defer.inlineCallbacks
@@ -160,10 +167,14 @@ class Admin(base.BaseResource):
             else :
                 apps = {}
 
+            cols = yield db.multiget_slice([userId], "entities", ["basic"])
+            entities = utils.multiSuperColumnsToDict(cols)
+
             args = {'affectedGroups': affectedGroups}
             args['orgAdminNewGroups'] = orgAdminNewGroups
             args['apps'] = apps
             args['userId'] = userId
+            args["entities"] = entities
             yield renderScriptBlock(request, 'admin.mako', "confirm_remove_user",
                                     False, "#removeuser-dlg", "set", **args)
 
@@ -227,6 +238,8 @@ class Admin(base.BaseResource):
         if script and landing:
             request.write("</body></html>")
 
+        if not script:
+            yield render(request, "admin.mako", **args)
 
     @defer.inlineCallbacks
     def _renderAddUsers(self, request):
@@ -246,7 +259,7 @@ class Admin(base.BaseResource):
 
         if script:
             yield renderScriptBlock(request, "admin.mako", "addUsers",
-                                    landing, "#add-user-wrapper", "set", **args)
+                                    landing, "#addpeople-dlg", "set", **args)
 
         if script and landing:
             request.write("</body></html>")
@@ -605,6 +618,7 @@ class Admin(base.BaseResource):
 
         args['title'] = 'Preset Tags'
         args['menuId'] = 'tags'
+        args["viewType"] = "tags"
 
         if script and landing:
             yield render(request, "admin.mako", **args)
@@ -623,9 +637,12 @@ class Admin(base.BaseResource):
 
         args['tagsList'] = presetTags
         args['tags'] = tags
-        yield renderScriptBlock(request, "admin.mako", "list_tags",
-                                landing, "#content", "set", **args)
+        if script:
+            yield renderScriptBlock(request, "admin.mako", "list_tags",
+                                    landing, "#content", "set", **args)
 
+        if not script:
+            yield render(request, "admin.mako", **args)
 
     @defer.inlineCallbacks
     def _addPresetTag(self, request):

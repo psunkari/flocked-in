@@ -480,20 +480,25 @@ class PeopleResource(base.BaseResource):
         elif src == "sidebar":
             request.redirect('/feed')
         elif src == "people" and self._ajax:
-            request.write("$('#invite-people-wrapper').empty();")
+            pass
         elif src == "people":
             request.redirect('/people')
         if not stats and self._ajax:
-            request.write("$$.alerts.error('%s');"%(_("Use company email-ids only.")))
+            request.write("$$.alerts.error('%s');" \
+                            %(_("Use company email-ids only.")))
         elif stats and self._ajax:
             if len(stats[0]) == 1:
-                request.write("$$.alerts.info('%s');" %_("Invitation sent"))
+                request.write("$$.dialog.close('invitepeople-dlg', true);\
+                              $$.alerts.info('%s');" %_("Invitation sent"))
             elif len(stats[0]) >1:
-                request.write("$$.alerts.info('%s');" %_("Invitations sent"))
+                request.write("$$.dialog.close('invitepeople-dlg', true);\
+                              $$.alerts.info('%s');" %_("Invitations sent"))
             else:
                 #TODO: when user tries to send invitations to existing members,
                 #      show these members as add-as-friend/follow list
-                request.write("$$.alerts.info('%s');" %_("Invitation sent"))
+                request.write("$$.alerts.info('%s');\
+                              $$.dialog.close('invitepeople-dlg', true);" \
+                                %_("Invitations sent"))
 
 
     @defer.inlineCallbacks
@@ -513,15 +518,9 @@ class PeopleResource(base.BaseResource):
 
         if script:
             onload = """
-                    (function(obj){
-                        $('#invite-people-form').html5form({messages: 'en'});
-                        $('#invite-people').delegate('.input-wrap:last-child','focus',function(event){
-                            $(event.target.parentNode).clone().appendTo('#invite-people').find('input:text').blur();
-                        });
-                    })(this);
                     """
             yield renderScriptBlock(request, "people.mako", "invitePeople",
-                                    landing, "#invite-people-wrapper", "set", True,
+                                    landing, "#invitepeople-dlg", "set", True,
                                     handlers={"onload":onload}, **args)
 
         else:

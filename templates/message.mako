@@ -17,20 +17,11 @@
       </div>
     </div>
     <div id="center-right">
-      <div class="center-header">
-        <div class="titlebar">
-          <span class="middle title">${_('Messages')}</span>
-          <span class="button title-button">
-            <a class="ajax" href="/messages/write" data-ref="/messages/write">${_('New Message')}</a>
-          </span>
-        </div>
-        <div id="composer">
-          %if view == "compose":
-            %if not script:
-              ${render_composer()}
-            %endif
-          %endif
-        </div>
+      <div class="titlebar center-header">
+        <span class="middle title">${_('Messages')}</span>
+%if script:
+        <button onclick="$$.messaging.compose();" class="button title-button">${_('New Message')}</button>
+%endif
       </div>
       <div id="right">
         <div class="right-contents">
@@ -208,44 +199,34 @@
     <div class="clear"></div>
 </%def>
 
-<%def name="render_composer()">
-  <div class="conversation-composer">
-    <form method="post" action="/messages/write" class="ajax" id="message-form">
-      <div class="input-wrap conversation-composer-field" onclick="$('.conversation-composer-field-recipient').focus()">
-        <div class="conversation-composer-recipients"></div>
-        <input name="recipients" id="recipientList" type="hidden"/>
-        <div>
-            <input class="conversation-composer-field-recipient" type="text"  size="15" 
-                   placeholder="${_('Enter a name')}" title="${_('Recipient')}"/>
-        </div>
+
+<%def name="composerDialog(rcpts='', subject='', body='')">
+  <div class='ui-dlg-title'>${_('New Message')}</div>
+  <div>
+    <form id="msgcompose-form" action="/messages/write" class="ajax" id="message-form">
+    <ul class="dlgform">
+      <li class="form-row">
+          <label class="dlgform-label" for="msgcompose-rcpts">${_('To')}</label>
+          <input type="text" id="msgcompose-rcpts" name="recipient[]" required autofocus/>
+      </li>
+      <li class="form-row">
+          <label class="dlgform-label" for="msgcompose-subject">${_('Subject')}</label>
+          <input type="text" id="msgcompose-subject" name="subject" value="${subject}" required/>
+      </li>
+      <li class="form-row">
+          <label class="dlgform-label" for="year">${_('Message')}</label>
+          <textarea id="msgcompose-body" name="body" style="height: 150px;">${body}</textarea>
+      </li>
+      <li>
+        <div id="msgcompose-attach-uploaded" class="uploaded-filelist"></div>
+      </li>
+      <input id="msgcompose-form-submit" type="submit" style="visibility:hidden" />
+      </form>
+      <div class="file-attach-wrapper">
+        ${widgets.fileUploadButton('msgcompose-attach')}
       </div>
-      <div class="input-wrap conversation-composer-field">
-        <input class="conversation-composer-field-subject" type="text" name="subject" 
-               placeholder="${_('Enter a subject of your message')}" title="${_('Subject')}"/>
-      </div>
-      <div class="input-wrap conversation-composer-field">
-        <textarea class="conversation-composer-field-body"
-                  placeholder="${_("Write a message to your friends and colleagues")}" name="body" title="${_('Message')}"></textarea>
-      </div>
-      <div id="msgcompose-attach-uploaded" class="uploaded-filelist"></div>
-      <div class="conversation-composer-actions">
-        %if script:
-          <button type="submit" class="button default">
-            ${_('Send')}
-          </button>
-          <button type="button" class="button" onclick="$('#composer').empty()">
-            ${_('Cancel')}
-          </button>
-        %else:
-          <a class="ajax" data-ref="/messages">${'Cancel'}</a>
-        %endif
-      </div>
-    </form>
-    <script>$('#message-form').html5form({messages: 'en'});</script>
-    <div class="file-attach-wrapper">
-      ${widgets.fileUploadButton('msgcompose-attach')}
-    </div>
-    <div class="clear"></div>
+      <div class="clear"></div>
+    </ul>
   </div>
 </%def>
 

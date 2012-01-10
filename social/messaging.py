@@ -170,6 +170,16 @@ class MessagingResource(base.BaseResource):
         recipients = utils.getRequestArg(request, "recipients", sanitize=False)
         if recipients:
             recipients = re.sub(',\s+', ',', recipients).split(",")
+        else:
+            #When using the new composer dialog, the widget returns the
+            # selected tags in "recipient[id]" format
+            arg_keys = request.args.keys()
+            recipients = []
+            for arg in arg_keys:
+                if arg.startswith("recipient["):
+                    rcpt = arg.replace("recipient[", "").replace("-a]", "")
+                    if rcpt != "":recipients.append(rcpt)
+
         return recipients, body, subject, parent
 
 
@@ -445,7 +455,7 @@ class MessagingResource(base.BaseResource):
             yield notifications.notify(users, ":NM", myId, timeUUID, **data)
 
         if script:
-            request.write("$('#composer').empty();$$.fetchUri('/messages');")
+            request.write("$$.dialog.close('msgcompose-dlg', true);$$.fetchUri('/messages');")
 
 
     @defer.inlineCallbacks
@@ -916,28 +926,17 @@ class MessagingResource(base.BaseResource):
             yield render(request, "message.mako", **args)
 
 
-    @profile
     @defer.inlineCallbacks
-    @dump_args
     def _renderComposer(self, request):
-        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        landing = not self._ajax
-        args.update({"view":"compose"})
+        rcpts = utils.getRequestArg(request, 'recipients', True, True) or ''
+        subject = utils.getRequestArg(request, 'subject', True, True) or ''
+        body = utils.getRequestArg(request, 'body', False) or ''
 
-        if script and landing:
-            yield render(request, "message.mako", **args)
-
-        if script:
-            onload = """
-                    $$.messaging.autoFillUsers();
-                    $('.conversation-composer-field-body').autogrow();
-                    $$.files.init('msgcompose-attach');
-                     """
-            yield renderScriptBlock(request, "message.mako", "render_composer",
-                                    landing, "#composer", "set", True,
-                                    handlers={"onload":onload}, **args)
-        else:
-            yield render(request, "message.mako", **args)
+        onload = "$$.messaging.initComposer();"
+        yield renderScriptBlock(request, "message.mako", "composerDialog",
+                                False, "#msgcompose-dlg", "set", True,
+                                handlers={"onload":onload},
+                                args=[rcpts, subject, body])
 
 
     def render_GET(self, request):
