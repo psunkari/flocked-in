@@ -539,7 +539,7 @@ class GroupsResource(base.BaseResource):
             meta["desc"] = description
 
         if dp:
-            avatar = yield saveAvatarItem(groupId, dp)
+            avatar = yield saveAvatarItem(groupId, orgId, dp)
             meta["avatar"] = avatar
 
         yield db.batch_insert(groupId, "entities", {"basic": meta,
@@ -1347,7 +1347,7 @@ class GroupSettingsResource(base.BaseResource):
         if access in ['closed', 'open'] and access != group['basic']['access']:
             meta['basic']['access'] = access
         if dp:
-            avatar = yield saveAvatarItem(groupId, dp)
+            avatar = yield saveAvatarItem(groupId, orgId, dp)
             meta['basic']['avatar'] = avatar
         if name and name!=group["basic"]["name"]:
             members = yield db.get_slice(groupId, "groupMembers")

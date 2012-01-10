@@ -65,14 +65,15 @@ class PythonBodyReceiver(protocol.Protocol):
             self._deferred.errback(reason)
 
 
+illegal_unicode_chars_regex = re.compile(u'[\x00-\x08\x0b\x0c\x0e-\x1F\uD800-\uDFFF\uFFFE\uFFFF]')
 def _toUnicodeOrText(text):
     if isinstance(text, str):
-        return text.decode('utf8', 'replace')
+        text = text.decode('utf8', 'replace')
     elif isinstance(text, unicode):
-        return text
+        pass
     else:
-        return str(text)
-
+        text = str(text)
+    return illegal_unicode_chars_regex.sub('', text)
 
 class Solr(object):
     def __init__(self):
@@ -204,7 +205,7 @@ class Solr(object):
                             value = value.decode('utf-8', 'replace')
                         elif not isinstance(value, unicode):
                             value = str(value)
-
+                        value = illegal_unicode_chars_regex.sub('', value)
                         fields.append(self.elementMaker.field(value, {"name":columnName}))
             elif isinstance(columnNames, dict) and not parentId:
                 indexType = columnNames.get('type', 'keyval')

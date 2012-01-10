@@ -7,6 +7,11 @@ import datetime
 import json
 import re
 
+try:
+    import cPickle as pickle
+except:
+    import pickle
+
 from twisted.web            import resource, server, http
 from twisted.internet       import defer
 from telephus.cassandra     import ttypes
@@ -41,7 +46,7 @@ def deleteAvatarItem(entity, isLogo=False):
 @profile
 @defer.inlineCallbacks
 @dump_args
-def saveAvatarItem(entityId, data, isLogo=False):
+def saveAvatarItem(entityId, orgId, data, isLogo=False):
     imageFormat = _getImageFileFormat(data)
     if imageFormat not in constants.SUPPORTED_IMAGE_TYPES:
         raise errors.InvalidFileFormat("The image format is not supported")
@@ -67,8 +72,9 @@ def saveAvatarItem(entityId, data, isLogo=False):
     image.write(small)
 
     itemId = utils.getUniqueKey()
+    acl = pickle.dumps({"accept":{"orgs":[orgId]}})
     item = {
-        "meta": {"owner": entityId, "acl": "company", "type": "image"},
+        "meta": {"owner": entityId, "acl": acl, "type": "image"},
         "avatar": {
             "format": imageFormat,
             "small": small.data, "medium": medium.data,
@@ -362,7 +368,7 @@ class SettingsResource(base.BaseResource):
         # Avatar (display picture)
         dp = utils.getRequestArg(request, "dp", sanitize=False)
         if dp:
-            avatar = yield saveAvatarItem(myId, dp)
+            avatar = yield saveAvatarItem(myId, orgId, dp)
             userInfo["basic"]["avatar"] = avatar
             avatarURI = utils.userAvatar(myId, userInfo)
             basicUpdatedInfo["avatar"] = avatarURI
