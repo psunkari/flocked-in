@@ -30,8 +30,10 @@
       %if myId in entities[groupId]['admins']:
         ${navMenuItem("/groupsettings?id=%s"%(groupId), _("Settings"), "settings")}
         ${navMenuItem("/groups/members?id=%s"%(groupId), _("Manage Members"), "members")}
-        ${navMenuItem("/groups/pending?id=%s"%(groupId), _("Pending Requests"), "pending")}
-        ${navMenuItem("/groups/banned?id=%s"%(groupId), _("Banned Members"), "banned")}
+        %if entities[groupId]['basic']['access'] != 'open':
+          ${navMenuItem("/groups/pending?id=%s"%(groupId), _("Pending Requests"), "pending")}
+          ${navMenuItem("/groups/banned?id=%s"%(groupId), _("Banned Members"), "banned")}
+        %endif
       %else:
         ${navMenuItem("/groups/members?id=%s"%(groupId), _("Members"), "members")}
       %endif
