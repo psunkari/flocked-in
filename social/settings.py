@@ -128,8 +128,10 @@ notifyMA = 17
 notifyItemFC = notifyItemRFC = notifyItemUFC = 18
 notifyMyItemFC = notifyMyItemRFC = notifyMyItemUFC = 19
 
+notifyKW = 20
+
 # Total number of notification types and default setting
-_notificationsCount = 20
+_notificationsCount = 21
 defaultNotify = "3" * _notificationsCount
 
 # Notification medium
@@ -142,10 +144,10 @@ _notifyNames = ['friendRequest', 'friendAccept', 'follower', 'newMember',
     'myItemTag', 'myItemComment', 'myItemlike', 'itemCommentLike',
     'itemComment', 'mention', 'itemRequests',
     'messageConv', 'messageMessage', 'messageAccessChange',
-    'itemFlagged', 'myItemFlagged']
+    'itemFlagged', 'myItemFlagged', 'keywordMatch']
 
 # List of notifications that currently must not be displayed to the user
-_hiddenNotifys = [notifyFR, notifyFA, notifyMention, notifyItemRequests]
+_hiddenNotifys = [notifyFR, notifyFA, notifyMention, notifyItemRequests, notifyKW]
 
 # Utility function to help parse the notification preference
 # In case of an exception returns true

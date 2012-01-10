@@ -5,8 +5,10 @@ from csv import reader
 from telephus.cassandra import ttypes
 from twisted.web        import server
 from twisted.internet   import defer
+from nltk.corpus        import stopwords
 
-from social             import base, db, utils, people, errors, tags, _
+from social             import base, db, utils, people, errors, tags, _, plugins
+from social.item        import deleteItem
 from social.isocial     import IAuthInfo
 from social.signup      import getOrgKey # move getOrgKey to utils
 from social.template    import render, renderScriptBlock
@@ -279,7 +281,8 @@ class Admin(base.BaseResource):
             nextPageStart = utils.encodeKey(blockedUsers[-1])
             blockedUsers = blockedUsers[:count]
         if start:
-            cols = yield db.get_slice(orgId, "blockedUsers", start=start, count=toFetchCount, reverse=True)
+            cols = yield db.get_slice(orgId, "blockedUsers", start=start,
+                                      count=toFetchCount, reverse=True)
             if len(cols) > 1:
                 prevPageStart = utils.decodeKey(cols[-1].column.name)
 
@@ -349,6 +352,242 @@ class Admin(base.BaseResource):
             yield self._listAllUsers(request)
         else:
             yield self._listBlockedUsers(request)
+
+
+    @defer.inlineCallbacks
+    def _ignoreKeywordMatched(self, request):
+        authinfo = request.getSession(IAuthInfo)
+        myId = authinfo.username
+        myOrgId = authinfo.organization
+        keyword = utils.getRequestArg(request, "keyword")
+        (itemId, item) = yield utils.getValidItemId(request, 'id')
+
+        # Remove this item from this list of keywordItems.
+        timeUUID = item["meta"]["uuid"]
+        yield db.remove(myOrgId+":"+keyword, "keywordItems", timeUUID)
+
+        # Update the UI
+        request.write("$$.convs.remove('%s');"%itemId)
+
+
+    @defer.inlineCallbacks
+    def _removeKeywordMatched(self, request):
+        authinfo = request.getSession(IAuthInfo)
+        myId = authinfo.username
+        myOrgId = authinfo.organization
+        (itemId, item) = yield utils.getValidItemId(request, 'id')
+        yield deleteItem(request, itemId)
+
+        # Update the UI
+        request.write("$$.convs.remove('%s');"%itemId)
+
+
+    @defer.inlineCallbacks
+    def _getKeywordMatches(self, request, keyword, start='', count=10):
+        args = {}
+        authinfo = request.getSession(IAuthInfo)
+        myId = authinfo.username
+        myOrgId = authinfo.organization
+
+        items = {}
+        itemIds = []
+        itemIdKeyMap = {}
+        allFetchedItems = set()
+        deleted = set()
+
+        fetchStart = utils.decodeKey(start)
+        fetchCount = count + 2
+        while len(itemIds) < count:
+            fetchedItemIds = []
+            toFetchItems = set()
+
+            results = yield db.get_slice(myOrgId+":"+keyword, "keywordItems",
+                                         count=fetchCount, start=fetchStart,
+                                         reverse=True)
+            for col in results:
+                fetchStart = col.column.name
+                itemAndParentIds = col.column.value.split(':')
+                itemIdKeyMap[itemAndParentIds[0]] = fetchStart
+                fetchedItemIds.append(itemAndParentIds[0])
+                for itemId in itemAndParentIds:
+                    if itemId not in allFetchedItems:
+                        toFetchItems.add(itemId)
+                        allFetchedItems.add(itemId)
+
+            if toFetchItems:
+                fetchedItems = yield db.multiget_slice(toFetchItems, "items",
+                                                       ["meta", "attachments"])
+                fetchedItems = utils.multiSuperColumnsToDict(fetchedItems)
+                items.update(fetchedItems)
+
+            for itemId in fetchedItemIds:
+                item = items[itemId]
+                if not 'meta' in item:
+                    continue
+
+                state = item['meta'].get('state', 'published')
+                if state == 'deleted':
+                    deleted.add(itemIdKeyMap[itemId])
+                elif utils.checkAcl(myId, myOrgId, True, None, item['meta']):
+                    itemIds.append(itemId)
+
+            if len(results) < fetchCount:
+                break
+
+        if len(itemIds) > count:
+            nextPageStart = utils.encodeKey(itemIdKeyMap[itemIds[-1]])
+            itemIds = itemIds[:-1]
+        else:
+            nextPageStart = None
+
+        dd = db.batch_remove({'keywordItems': [myOrgId+':'+keyword]},
+                             names=deleted) if deleted else defer.succeed([])
+
+        toFetchEntities = set()
+        extraDataDeferreds = []
+        for itemId in itemIds:
+            item = items[itemId]
+            toFetchEntities.add(item['meta']['owner'])
+            if 'target' in item['meta']:
+                toFetchEntities.update(item['meta']['target'].split(','))
+            itemType = item['meta'].get('type', 'status')
+            if itemType in plugins:
+                d = plugins[itemType].fetchData(args, itemId)
+                extraDataDeferreds.append(d)
+
+        result = yield defer.DeferredList(extraDataDeferreds)
+        for success, ret in result:
+            if success:
+                toFetchEntities.update(ret)
+
+        fetchedEntities = {}
+        if toFetchEntities:
+            fetchedEntities = yield db.multiget_slice(toFetchEntities,
+                                                      "entities", ["basic"])
+            fetchedEntities = utils.multiSuperColumnsToDict(fetchedEntities)
+
+        yield dd
+        args.update({'entities': fetchedEntities, 'items': items,
+                     'matches': itemIds, 'nextPageStart': nextPageStart})
+        defer.returnValue(args)
+
+
+    @defer.inlineCallbacks
+    def _renderKeywordMatches(self, request):
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        landing = not self._ajax
+
+        keyword = utils.getRequestArg(request, 'keyword')
+        if not keyword:
+            errors.MissingParams(['Keyword'])
+        args["keyword"] = keyword
+
+        start = utils.getRequestArg(request, "start") or ""
+        args["start"] = start
+
+        if script and landing:
+            yield render(request, "keyword-matches.mako", **args)
+
+        if script and appchange:
+            yield renderScriptBlock(request, "keyword-matches.mako", "layout",
+                                    landing, "#mainbar", "set", **args)
+
+        keywordItems = yield self._getKeywordMatches(request, keyword, start=start)
+        args.update(keywordItems)
+
+        if script:
+            onload = "(function(obj){$$.convs.load(obj);})(this);"
+            yield renderScriptBlock(request, "keyword-matches.mako", "feed",
+                                    landing, "#convs-wrapper", "set", True,
+                                    handlers={"onload": onload}, **args)
+
+        if not script:
+            yield render(request, "keyword-matches.mako", **args)
+
+
+    @defer.inlineCallbacks
+    def _renderKeywordMatchesMore(self, request):
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+
+        keyword = utils.getRequestArg(request, 'keyword')
+        if not keyword:
+            errors.MissingParams(['Keyword'])
+        args["keyword"] = keyword
+
+        start = utils.getRequestArg(request, "start") or ""
+        args["start"] = start
+
+        keywordItems = yield self._getKeywordMatches(request, keyword, start=start)
+        args.update(keywordItems)
+
+        onload = "(function(obj){$$.convs.load(obj);})(this);"
+        yield renderScriptBlock(request, "keyword-matches.mako", "feed",
+                                False, "#next-load-wrapper", "replace", True,
+                                handlers={"onload": onload}, **args)
+
+
+    @defer.inlineCallbacks
+    def _renderKeywordManagement(self, request):
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        orgId = args["orgKey"]
+        landing = not self._ajax
+
+        args["title"] = "Keyword Monitoring"
+        args["menuId"] = "keywords"
+
+        if script and landing:
+            yield render(request, "admin.mako", **args)
+
+        if script and appchange:
+            yield renderScriptBlock(request, "admin.mako", "layout",
+                                    landing, "#mainbar", "set", **args)
+
+        keywords = yield db.get_slice(orgId, "originalKeywords")
+        keywords = utils.columnsToDict(keywords, ordered=True)
+        args['keywords'] = keywords
+
+        if script:
+            yield renderScriptBlock(request, "admin.mako", "listKeywords",
+                                landing, "#content", "set", **args)
+
+
+    @defer.inlineCallbacks
+    def _addKeywords(self, request):
+        orgId = request.getSession(IAuthInfo).organization
+        keywords = utils.getRequestArg(request, 'keywords', sanitize=False) or ''
+        exactMatch = utils.getRequestArg(request, 'exactMatch')
+        exactMatch = True
+        keywords = [x.strip() for x in keywords.split(',')]
+
+        # remove stopwords
+        keywords = set([x.decode('utf-8', 'replace').lower().encode('utf-8') \
+                       for x in keywords if x not in stopwords.words()])
+        for keyword in keywords:
+            yield db.insert(orgId, "keywords", '', keyword)
+            yield db.insert(orgId, "originalKeywords", '', keyword)
+
+        keywords = yield db.get_slice(orgId, "originalKeywords", count=100)
+        keywords = utils.columnsToDict(keywords, ordered=True)
+        args = {'keywords': keywords}
+
+        yield renderScriptBlock(request, "admin.mako", "listKeywords",
+                                False, "#content", "set", **args)
+
+
+    @defer.inlineCallbacks
+    def _deleteKeyword(self, request):
+        orgId = request.getSession(IAuthInfo).organization
+        keyword = utils.getRequestArg(request, 'keyword') or ''
+        keyword = utils.decodeKey(keyword)
+
+        if not keyword:
+            return
+
+        yield db.remove(orgId, "keywords", keyword)
+        yield db.remove(orgId, "originalKeywords", keyword)
+        yield db.remove(orgId+':'+keyword, "keywordItems")
+
+        request.write('$("#keyword-%s").remove()'%(utils.encodeKey(keyword)))
 
 
     @defer.inlineCallbacks
@@ -456,26 +695,39 @@ class Admin(base.BaseResource):
         d = self._ensureAdmin(request)
         def callback(ignored):
             dfd = None
-            postpath = request.postpath
             if segmentCount == 1:
-                if postpath[0] == "block":
+                action = request.postpath[0]
+                if action == "block":
                     dfd = self._blockUser(request)
-                elif postpath[0] == "unblock":
+                elif action == "unblock":
                     dfd = self._unblockUser(request)
-                elif postpath[0] == "add":
+                elif action == "add":
                     dfd = self._addUsers(request)
-                elif postpath[0] == "delete":
+                elif action == "delete":
                     dfd = self._deleteUser(request)
-                elif postpath[0] == "org":
+                elif action == "org":
                     dfd = self._updateOrgInfo(request)
             elif segmentCount == 2:
-                if postpath[0] == 'tags' and postpath[1] == 'add':
-                    dfd = self._addPresetTag(request)
-                elif postpath[0] == 'tags' and postpath[1] == 'delete':
-                    dfd = self._deletePresetTag(request)
+                section = request.postpath[0]
+                action = request.postpath[1]
+                if section == 'tags':
+                    if action == 'add':
+                        dfd = self._addPresetTag(request)
+                    elif action == 'delete':
+                        dfd = self._deletePresetTag(request)
+                elif section == 'keywords':
+                    if action=='add':
+                        dfd = self._addKeywords(request)
+                    elif action=='delete':
+                        dfd = self._deleteKeyword(request)
+                    elif action == "ignore":
+                        dfd = self._ignoreKeywordMatched(request)
+                    elif action == "hide":
+                        dfd = self._removeKeywordMatched(request)
             if not dfd:
                 raise errors.NotFoundError()
             return dfd
+
         d.addCallback(callback)
         return self._epilogue(request, d)
 
@@ -487,17 +739,26 @@ class Admin(base.BaseResource):
             dfd = None
             if segmentCount == 0:
                 dfd = self._renderUsers(request)
-            elif segmentCount== 1:
-                if request.postpath[0] == "add":
+            elif segmentCount == 1:
+                action = request.postpath[0]
+                if action == "add":
                     dfd = self._renderAddUsers(request)
-                elif request.postpath[0] == "people":
+                elif action == "people":
                     dfd = self._renderUsers(request)
-                elif request.postpath[0] == "org":
+                elif action == "org":
                     dfd = self._renderOrgInfo(request)
-                elif request.postpath[0] == 'tags':
+                elif action == 'tags':
                     dfd = self._listPresetTags (request)
+                elif action == 'keywords':
+                    dfd = self._renderKeywordManagement(request)
+                elif action == 'keyword-matches':
+                    dfd = self._renderKeywordMatches(request)
+                elif action == 'keyword-matches-more':
+                    dfd = self._renderKeywordMatchesMore(request)
             if not dfd:
                 raise errors.NotFoundError()
             return dfd
+
         d.addCallback(callback)
         return self._epilogue(request, d)
+

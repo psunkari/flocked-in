@@ -49,6 +49,12 @@ def createCF():
                           "will not be deleted automatically. On deletion it"
                           "behaves like a normal tag")
     yield db.system_add_column_family(orgPresetTags)
+
+    keywordItems = CfDef(KEYSPACE, "keywordItems", "Standard", "TimeUUIDType",
+                        None, "list of items which have a keyword monitored by admins")
+    yield client.system_add_column_family(keywordItems)
+
+    #
     # Create column families for poll indexing (in feeds and userItems)
     #
     userItemsType = ttypes.CfDef(KEYSPACE, 'userItems_poll', 'Standard',

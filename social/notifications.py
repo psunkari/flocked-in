@@ -154,7 +154,8 @@ class NotificationByMail(object):
         "GR": "[%(brandName)s] %(senderName)s wants to join %(groupName)s",
         "NM": "[%(brandName)s] %(subject)s",
         "MR": "[%(brandName)s] Re: %(subject)s",
-        "MA": "[%(brandName)s] Re: %(subject)s"
+        "MA": "[%(brandName)s] Re: %(subject)s",
+        "KW": "[%(brandName)s] %(senderName)s posted content matching a keyword - %(keyword)s",
     }
 
     _otherNotifyBody = {
@@ -180,7 +181,10 @@ class NotificationByMail(object):
               "Visit %(convUrl)s to see the conversation",
         "MA": "Hi,\n\n"\
               "%(senderName)s changed access controls of a message.\n"\
-              "Visit %(convUrl)s to see the conversation"
+              "Visit %(convUrl)s to see the conversation",
+        "KW": "Hi,\n\n"\
+              "%(senderName)s posted content that matched %(keyword)s.\n"\
+              "Visit %(keywordUrl)s to see all conversations that matched this keyword."
     }
 
     _signature = "\n\n"\
@@ -297,6 +301,10 @@ class NotificationByMail(object):
             convId = data['convId']
             convUrl = "%s/messages/thread?id=%s" %(rootUrl, convId)
             data.update({"convUrl": convUrl})
+        elif notifyType == "KW":
+            keyword = notifyIdParts[2]
+            keywordUrl = "%s/admin/keyword-matches?keyword=%s" %(rootUrl, keyword)
+            data.update({"keyword":keyword, "keywordUrl":keywordUrl})
 
         subject = self._otherNotifySubject[notifyType] % data
         body = self._otherNotifyBody[notifyType] + self._signature
@@ -408,6 +416,11 @@ class NotificationsResource(base.BaseResource):
                         2: "%(user0)s and %(user1)s invited you to join %(group0)s",
                         3: "%(user0)s and %(user1)s and 1 other invited you to join %(group0)s",
                         4: "%(user0)s and %(user1)s and %(count)s others invited you to join %(group0)s"}
+
+    _keywordsMatched = {1: "%(user0)s posted content that matched a keyword - %(keyword)s",
+                        2: "%(user0)s and %(user1)s posted content that matched a keyword - %(keyword)s",
+                        3: "%(user0)s and %(user1)s and 1 other posted content that matched a keyword - %(keyword)s",
+                        4: "%(user0)s and %(user1)s and %(count)s others posted content that matched a keyword - %(keyword)s"}
 
     #
     # Fetch notifications from the database
@@ -552,7 +565,6 @@ class NotificationsResource(base.BaseResource):
 
         # Build strings to notify all other actions
         def buildNotifyStr(notifyId):
-            x = notifyId[1:]
             x = notifyId.split(':')[1]
             userIds = utils.uniqify(notifyValues[notifyId])
             notifyUsers[notifyId] = userIds
@@ -568,6 +580,9 @@ class NotificationsResource(base.BaseResource):
             if x == 'GI':
                 groupId = notifyId.split(':')[2]
                 vals.update({'group0': utils.groupName(groupId, entities[groupId])})
+            elif x == 'KW':
+                keyword = notifyId.split(':')[2]
+                vals.update({'keyword': '<a class="ajax" href="/admin/keyword-matches?keyword=%s">%s</a>'%(keyword, keyword)})
 
             vals["count"] = noOfUsers - 2
             vals["brandName"] = brandName
@@ -586,6 +601,8 @@ class NotificationsResource(base.BaseResource):
                 tmpl = self._inviteAccepted[noOfUsers]
             elif x == "GI":
                 tmpl = self._groupInvitation[noOfUsers]
+            elif x == "KW":
+                tmpl = self._keywordsMatched[noOfUsers]
             else:
                 return ''
 
@@ -658,3 +675,4 @@ class NotificationsResource(base.BaseResource):
             d = utils.getLatestCounts(request)
             d.addCallback(lambda x: request.write('$$.menu.counts(%s);' % x))
         return self._epilogue(request, d)
+

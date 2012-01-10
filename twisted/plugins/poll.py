@@ -161,6 +161,7 @@ class Poll(object):
     position = 5
     hasIndex = True
     indexFields = {'options':{'template':'poll_option_%s','type':'keyvals'}}
+    monitoredFields = {'meta':['poll_options', 'comment']}
 
     @defer.inlineCallbacks
     def renderShareBlock(self, request, isAjax):
@@ -233,7 +234,6 @@ class Poll(object):
         if len(options) < 2 :
             raise errors.MissingParams([_('Add atleast two options to choose from')])
 
-        convId = utils.getUniqueKey()
         item, attachments = yield utils.createNewItem(request, self.itemType, myId, myOrgId, richText=richText)
 
         meta = {"comment": comment, "showResults": showResults}
@@ -246,21 +246,13 @@ class Poll(object):
             meta["poll_end"] = end
 
         pollOptions = " ".join(options)
+        meta["poll_options"] = pollOptions  # XXX: Required for keyword monitoring
+
         options = OrderedDict([('%02d'%(x), options[x]) for x in range(len(options))])
         item["options"] = options
         item["meta"].update(meta)
 
-        yield db.batch_insert(convId, "items", item)
-        item["meta"]["poll_options"] = pollOptions # Add options to index
-
-        for attachmentId in attachments:
-            timeuuid, fid, name, size, ftype  = attachments[attachmentId]
-            val = "%s:%s:%s:%s:%s" %(utils.encodeKey(timeuuid), fid, name, size, ftype)
-            yield db.insert(convId, "item_files", val, timeuuid, attachmentId)
-
-        from social import search
-        search.solr.updateItem(convId, item, myOrgId)
-        defer.returnValue((convId, item))
+        defer.returnValue((item, attachments))
 
 
     @defer.inlineCallbacks

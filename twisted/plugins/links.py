@@ -36,7 +36,7 @@ class Links(object):
     position = 3
     hasIndex = True
     indexFields = {'meta':set(['link_summary','link_title'])}
-
+    monitoredFields = {'meta':['comment', 'link_summary', 'link_title']}
 
     @defer.inlineCallbacks
     def renderShareBlock(self, request, isAjax):
@@ -80,7 +80,6 @@ class Links(object):
 
         summary, title, image, embed = yield self._summary(url)
 
-        convId = utils.getUniqueKey()
         item, attachments = yield utils.createNewItem(request, self.itemType, myId, myOrgId, richText=richText)
         meta = {"comment": comment}
         if snippet:
@@ -107,16 +106,7 @@ class Links(object):
                 meta["link_embedWidth"] = str(embedWidth)
         item["meta"].update(meta)
 
-        yield db.batch_insert(convId, "items", item)
-
-        for attachmentId in attachments:
-            timeuuid, fid, name, size, ftype  = attachments[attachmentId]
-            val = "%s:%s:%s:%s:%s" %(utils.encodeKey(timeuuid), fid, name, size, ftype)
-            yield db.insert(convId, "item_files", val, timeuuid, attachmentId)
-
-        from social import search
-        search.solr.updateItem(convId, item, myOrgId)
-        defer.returnValue((convId, item))
+        defer.returnValue((item, attachments))
 
     @defer.inlineCallbacks
     def delete(self, itemId):

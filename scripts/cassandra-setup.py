@@ -301,6 +301,16 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(appsByOwner)
     yield client.system_add_column_family(oAuthData)
 
+    keywords = CfDef(KEYSPACE, 'keywords', 'Standard', 'UTF8Type', None, "list of keywords to be monitored")
+    yield client.system_add_column_family(keywords)
+
+    originalKeywords = CfDef(KEYSPACE, 'originalKeywords', 'Standard', 'UTF8Type', None, 'list of original keywords')
+    yield client.system_add_column_family(originalKeywords)
+
+    keywordItems = CfDef(KEYSPACE, "keywordItems", "Standard", "TimeUUIDType",
+                        None, "list of items which have a keyword monitored by admins")
+    yield client.system_add_column_family(keywordItems)
+
 
 @defer.inlineCallbacks
 def addSampleData(client):
@@ -643,7 +653,8 @@ def truncateColumnFamilies(client):
                "mConvMessages", "mConvFolders", "latest", "doNotSpam",
                "files", "tmp_files", "item_files", "invitationsSent",
                "user_files", "suggestions", "apps", "appsByOwner", "oAuthData",
-               "userSessionsMap", "deletedUsers", "orgPresetTags"]:
+               "userSessionsMap", "deletedUsers", "orgPresetTags",
+               "keywords", "keywordItems", "originalKeywords"]:
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 

@@ -555,7 +555,7 @@ var convs = {
     },
 
     remove: function(convId, commentId) {
-        if (commentId === "undefined" || convId == commentId)
+        if (commentId === undefined || convId == commentId)
             $('#conv-'+convId).slideUp('fast', function(){$(this).remove();});
         else
             $('#comment-'+commentId).slideUp('fast', function(){$(this).remove();});
@@ -604,13 +604,46 @@ var convs = {
                 {
                     text: 'Cancel',
                     click: function() {
-                        $$.dialog.close(this, true)
+                        $$.dialog.close(this, true);
                     }
                 }
             ]
         };
         $$.dialog.create(dialogOptions);
         $.get('/ajax/item/showReportDialog?id='+itemId);
+    },
+
+    reviewRequired: function(template, convId) {
+        var form = null,
+            dlgTemplate = '<div class="ui-dlg-outer" tabindex="0">' +
+                            '<div class="ui-dlg-inner">' +
+                              '<div class="ui-dlg-contents">' +
+                                template +
+                              '</div>' +
+                            '</div>' +
+                          '</div>',
+            dialogOptions = {
+                id: 'review-required-dlg',
+                template: dlgTemplate,
+                buttons: [
+                    {
+                        text: 'Post It',
+                        click: function() {
+                            var review = $('<input type="hidden" name="_review" value="1"/>'),
+                                form = convId? $('#comment-form-'+convId) : $('#sharebar');
+                            form.append(review).submit();
+                            $$.dialog.close(this, true);
+                        }
+                    },
+                    {
+                        text: 'Edit Post',
+                        click: function() {
+                            $$.dialog.close(this, true);
+                        }
+                    }
+                ]
+            };
+        $$.dialog.create(dialogOptions);
     }
 };
 
@@ -976,14 +1009,13 @@ var dialog = {
                 }
             }
         ],
-        destroyOnEscape: true
+        destroyOnEscape: true,
+        template: '<div class="ui-dlg-outer" tabindex="0">' +
+                     '<div class="ui-dlg-inner">' +
+                       '<div class="ui-dlg-contents"/>' +
+                     '</div>' +
+                   '</div>'
     },
-
-    _template: '<div class="ui-dlg-outer" tabindex="0">' +
-                 '<div class="ui-dlg-inner">' +
-                   '<div class="ui-dlg-contents"/>' +
-                 '</div>' +
-               '</div>',
 
     createButtons: function($dialog, dlgId, options) {
         if (!options.buttons || !$.isArray(options.buttons) ||
@@ -1013,8 +1045,8 @@ var dialog = {
     },
 
     create: function(obj) {
-        var $template = $(dialog._template),
-            options = $.extend({}, dialog._options, obj)
+        var options = $.extend({}, dialog._options, obj),
+            $template = $(options.template),
             dlgId = options.id || "dialog-" + dialog._counter,
             self = this;
 

@@ -28,6 +28,7 @@
       ##${navMenuItem("admin/groups", _("Groups"), "groups")}
       ${navMenuItem("/admin/org", _("Organization"), "org")}
       ${navMenuItem("/admin/tags", _("Preset Tags"), "tags")}
+      ${navMenuItem('/admin/keywords', _("Keyword Monitoring"), "keywords")}
     </ul>
   </div>
 </%def>
@@ -358,5 +359,50 @@
     %for tagId in tagsList:
       ${tagsmako._displayTag(tagId, False, True)}
     %endfor
+  </div>
+</%def>
+
+
+<%def name="_displayKeyword(keyword)">
+  <% encodedKeyword = utils.encodeKey(keyword) %>
+  <div id='keyword-${encodedKeyword}'>
+    <div class='tl-item' id='keyword-${encodedKeyword}'>
+      <div class='tl-avatar large-icon large-keyword'></div>
+      <div class='tl-details'>
+        <div class='tl-name'><a href="/admin/keyword-matches?keyword=${keyword}">${keyword}</a></div>
+        <button class='company-remove ajaxpost' title='' data-ref='/admin/keywords/delete?keyword=${encodedKeyword}' ></button>
+      </div>
+    </div>
+  </div>
+</%def>
+
+
+<%def name="_keywords(keywords)">
+  <%
+    if not keywords:
+        return
+  %>
+  %for item in keywords.keys():
+    ${_displayKeyword(item)}
+  %endfor
+</%def>
+
+<%def name="listKeywords()">
+  <ul class="styledform">
+    <li class="form-row">
+      <label class="styled-label">${_('Keywords')}</label>
+      <div class="styledform-helpwrap">
+        <form method="post" action="/admin/keywords/add" class="ajax" autocomplete="off">
+          <div class="styledform-inputwrap" id='expertise-input'>
+            <input type="textarea" name="keywords" id="expertise-textbox" value="" required title="Add expertise" />
+            <input type="submit" id="expertise-add" class="button" value="Add" style="margin:0px;"/>
+          </div>
+        </form>
+      </div>
+    </li>
+  </ul>
+  <div class='center-title'></div>
+  <div  id='tags-container' class="tl-wrapper">
+    ${_keywords(keywords)}
   </div>
 </%def>

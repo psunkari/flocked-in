@@ -25,6 +25,7 @@ from telephus.cassandra import ttypes
 
 from twisted.internet   import defer, threads
 from twisted.mail       import smtp
+from nltk.corpus        import stopwords
 
 from social             import db, _, __, config, errors, cdnHost, rootUrl
 from social.relations   import Relation
@@ -268,6 +269,7 @@ def createNewItem(request, itemType, ownerId, ownerOrgId,
     item = {
         "meta": {
             "acl": acl,
+            "org": ownerOrgId,
             "type": itemType,
             "uuid": uuid.uuid1().bytes,
             "owner": ownerId,
@@ -394,6 +396,9 @@ def checkAcl(userId, userOrgId, userIsAdmin, relation, itemMeta):
         # if userID is owner of the conversation
         # show the item irrespective of acl
         if userId == ownerId:
+            return True
+
+        if userIsAdmin and userOrgId == itemMeta.get('org', None):
             return True
 
         acl = pickle.loads(itemMeta['acl'])
@@ -930,3 +935,24 @@ def uniqify(lst):
         if x not in new_list:
             new_list.append(x)
     return new_list
+
+
+def tokenize(sentences):
+    #tokenizer should be based on language
+    return [x.strip().lower() for x in sentences.split()]
+
+
+def removeStopWords(words):
+    return set([x for x in words if x not in stopwords.words()])
+
+
+@defer.inlineCallbacks
+def watchForKeywords(orgId, text):
+    tokens = tokenize(text)
+    tokens = removeStopWords(tokens)
+    if tokens:
+        cols = yield db.get_slice(orgId, 'keywords', tokens)
+        cols = columnsToDict(cols)
+        defer.returnValue(cols.keys())
+    defer.returnValue([])
+

@@ -17,7 +17,7 @@ class Status(object):
     itemType = "status"
     position = 1
     hasIndex = True
-
+    monitoredFields = {'meta':['comment']}
 
     @defer.inlineCallbacks
     def renderShareBlock(self, request, isAjax):
@@ -51,23 +51,15 @@ class Status(object):
         if not comment:
             raise errors.MissingParams([_('Status')])
 
-        convId = utils.getUniqueKey()
-        item, attachments = yield utils.createNewItem(request, self.itemType, myId, myOrgId, richText=richText)
+        item, attachments = yield utils.createNewItem(request, self.itemType,
+                                                      myId, myOrgId,
+                                                      richText=richText)
         meta = {"comment": comment}
         if snippet:
             meta["snippet"] = snippet
 
         item["meta"].update(meta)
-        yield db.batch_insert(convId, "items", item)
-
-        for attachmentId in attachments:
-            timeuuid, fid, name, size, ftype  = attachments[attachmentId]
-            val = "%s:%s:%s:%s:%s" %(utils.encodeKey(timeuuid), fid, name, size, ftype)
-            yield db.insert(convId, "item_files", val, timeuuid, attachmentId)
-
-        from social import search
-        search.solr.updateItem(convId, item, myOrgId)
-        defer.returnValue((convId, item))
+        defer.returnValue((item, attachments))
 
 
     @defer.inlineCallbacks

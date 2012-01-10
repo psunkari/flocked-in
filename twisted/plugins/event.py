@@ -266,6 +266,7 @@ class Event(object):
     disabled = True
     hasIndex = True
     indexFields = {'meta':set(['event_desc','event_location','event_title'])}
+    monitorFields = {}
 
     @profile
     @defer.inlineCallbacks
@@ -389,7 +390,6 @@ class Event(object):
                                           endDate.day, endTime.hour,
                                           endTime.minute, endTime.second).replace(tzinfo=utc)
 
-        convId = utils.getUniqueKey()
         item, attachments = yield utils.createNewItem(request, self.itemType, myId, myOrgId, richText=richText)
 
         rsvps = dict([('yes', '0'), ('maybe', '0'), ('no', '0')])
@@ -410,18 +410,11 @@ class Event(object):
         item["meta"].update(meta)
         item["rsvps"] = rsvps
 
-        yield db.batch_insert(convId, "items", item)
-        event = self.getResource(False)
-        yield event._inviteUsers(request, convId)
+        # XXX: We should find a way to make things like this work.
+        #event = self.getResource(False)
+        #yield event._inviteUsers(request, convId)
+        defer.returnValue((item, attachments))
 
-        for attachmentId in attachments:
-            timeuuid, fid, name, size, ftype  = attachments[attachmentId]
-            val = "%s:%s:%s:%s:%s" %(utils.encodeKey(timeuuid), fid, name, size, ftype)
-            yield db.insert(convId, "item_files", val, timeuuid, attachmentId)
-
-        from social import search
-        d = search.solr.updateItem(convId, item, myOrgId)
-        defer.returnValue((convId, item))
 
     @defer.inlineCallbacks
     def delete(self, itemId):

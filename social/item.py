@@ -1,6 +1,7 @@
 import uuid
 import time
 import re
+import json
 try:
     import cPickle as pickle
 except:
@@ -15,12 +16,16 @@ from social             import plugins, constants, tags, search
 from social             import notifications, _, errors, files
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
-from social.template    import render, renderScriptBlock
+from social.template    import render, getBlock, renderScriptBlock
 from social.logging     import profile, dump_args, log
-
 
 #
 # Create a new conversation item.
+# Returns a tuple:
+#   1. (convId, conv, None) if no keywords match
+#      or user is okay with admin review on this item
+#   2. (None, None, keywords) if keywords match and the user must be asked
+#      if it is okay to sent it to admin for review.
 #
 @defer.inlineCallbacks
 def _createNewItem(request, myId, myOrgId, richText=False):
@@ -29,62 +34,128 @@ def _createNewItem(request, myId, myOrgId, richText=False):
         raise errors.BaseError('Unsupported item type', 400)
 
     plugin = plugins[convType]
-    convId, conv = yield plugin.create(request, myId, myOrgId, richText)
-    yield files.pushfileinfo(myId, myOrgId, convId, conv)
+    convId = utils.getUniqueKey()
+    conv, attachments = yield plugin.create(request, myId, myOrgId, richText)
 
+    #
+    # Check if this item contains any keywords that admins are interested in.
+    #
+    entities = yield db.multiget_slice([myOrgId, myId], "entities", ['basic', 'admins'])
+    entities = utils.multiSuperColumnsToDict(entities)
+    orgAdmins = entities.get(myOrgId, {}).get('admins', {}).keys()
+    if orgAdmins:
+        text = ''
+        monitoredFields = getattr(plugin, 'monitoredFields', {})
+        for superColumnName in monitoredFields:
+            for columnName in monitoredFields[superColumnName]:
+                if columnName in conv[superColumnName]:
+                    text = " ".join([text, conv[superColumnName][columnName]])
+        matchedKeywords = yield utils.watchForKeywords(myOrgId, text)
+
+        if matchedKeywords:
+            reviewOK = utils.getRequestArg(request, "_review") == "1"
+            if reviewOK:
+                # Add conv to list of items that matched this keyword
+                # and notify the administrators about it.
+                for keyword in matchedKeywords:
+                    yield db.insert(myOrgId+":"+keyword, "keywordItems", convId,
+                                    conv['meta']['uuid'])
+                    yield notifications.notify(orgAdmins, ':KW:'+keyword,
+                                               myId, entities=entities)
+            else:
+                # This item contains a few keywords that are being monitored
+                # by the admin and cannot be posted unless reviewOK is set.
+                defer.returnValue((None, None, matchedKeywords))
+
+    #
+    # Save the new item to database and index it.
+    #
+    yield db.batch_insert(convId, "items", conv)
+    for attachmentId in attachments:
+        timeuuid, fid, name, size, ftype  = attachments[attachmentId]
+        val = "%s:%s:%s:%s:%s" %(utils.encodeKey(timeuuid), fid, name, size, ftype)
+        yield db.insert(convId, "item_files", val, timeuuid, attachmentId)
+
+    yield files.pushfileinfo(myId, myOrgId, convId, conv)
+    search.solr.updateItemIndex(convId, conv, myOrgId)
+
+    #
+    # Push item to feeds and userItems
+    #
     timeUUID = conv["meta"]["uuid"]
     convACL = conv["meta"]["acl"]
-
     deferreds = []
     responseType = 'I'
 
-    # Push to all the feeds.
-    d = feed.pushToFeed(myId, timeUUID, convId, None,
-                        responseType, convType, myId, myId)
-    deferreds.append(d)
-
-    d = feed.pushToOthersFeed(myId, myOrgId, timeUUID, convId, None, convACL,
-                              responseType, convType, myId)
-    deferreds.append(d)
+    # Push to feeds
+    d1 = feed.pushToFeed(myId, timeUUID, convId, None,
+                         responseType, convType, myId, myId)
+    d2 = feed.pushToOthersFeed(myId, myOrgId, timeUUID, convId, None, convACL,
+                               responseType, convType, myId)
+    deferreds.extend([d1, d2])
 
     # Save in user items.
     userItemValue = ":".join([responseType, convId, convId, convType, myId, ''])
     d = db.insert(myId, "userItems", userItemValue, timeUUID)
     deferreds.append(d)
-
     if plugins[convType].hasIndex:
         d = db.insert(myId, "userItems_%s"%(convType), userItemValue, timeUUID)
         deferreds.append(d)
 
     yield defer.DeferredList(deferreds)
-    defer.returnValue((convId, conv))
+    defer.returnValue((convId, conv, None))
 
 
 @defer.inlineCallbacks
 def _comment(request, myId, orgId, convId=None, richText=False):
     snippet, comment = utils.getTextWithSnippet(request, "comment",
-                                        constants.COMMENT_PREVIEW_LENGTH, richText=richText)
+                                                constants.COMMENT_PREVIEW_LENGTH,
+                                                richText=richText)
     if not comment:
         raise errors.MissingParams([_("Comment")])
 
     # 0. Fetch conversation and see if I have access to it.
-    (convId, conv) = yield utils.getValidItemId(request, "parent", myOrgId=orgId, myId=myId, itemId=convId)
+    (convId, conv) = yield utils.getValidItemId(request, "parent", myOrgId=orgId,
+                                                myId=myId, itemId=convId)
     convType = conv["meta"].get("type", "status")
     me = yield db.get_slice(myId, "entities", ['basic'])
     me = utils.supercolumnsToDict(me)
 
-    # 1. Create and add new item
+    # 1. Create the new item
     timeUUID = uuid.uuid1().bytes
     meta = {"owner": myId, "parent": convId, "comment": comment,
-            "timestamp": str(int(time.time())),
+            "timestamp": str(int(time.time())), "org": orgId,
             "uuid": timeUUID, "richText": str(richText)}
     followers = {myId: ''}
     itemId = utils.getUniqueKey()
     if snippet:
         meta['snippet'] = snippet
 
-    yield db.batch_insert(itemId, "items", {'meta': meta,
-                                            'followers': followers})
+    # 1.5. Check if the comment matches any of the keywords
+    entities = yield db.multiget_slice([orgId, myId], "entities",
+                                       ['basic', 'admins'])
+    entities = utils.multiSuperColumnsToDict(entities)
+    orgAdmins = entities.get(orgId, {}).get('admins', {}).keys()
+    if orgAdmins:
+        matchedKeywords = yield utils.watchForKeywords(orgId, comment)
+        if matchedKeywords:
+            reviewOK = utils.getRequestArg(request, '_review') == "1"
+            if reviewOK:
+                # Add item to list of items that matched this keyword
+                # and notify the administrators about it.
+                for keyword in matchedKeywords:
+                    yield db.insert(orgId+":"+keyword, "keywordItems",
+                                    itemId+":"+convId, timeUUID)
+                    yield notifications.notify(orgAdmins, ':KW:'+keyword,
+                                               myId, entities=entities)
+
+            else:
+                # This item contains a few keywords that are being monitored
+                # by the admin and cannot be posted unless reviewOK is set.
+                defer.returnValue((None, convId, {convId: conv}, matchedKeywords))
+
+    # 1.9. Actually store the item
+    yield db.batch_insert(itemId, "items", {'meta': meta})
 
     # 2. Update response count and add myself to the followers of conv
     convOwnerId = conv["meta"]["owner"]
@@ -127,7 +198,83 @@ def _comment(request, myId, orgId, convId=None, richText=False):
                       comment=comment, richText=richText)
     search.solr.updateItemIndex(itemId, {'meta':meta}, orgId, conv=conv)
     items = {itemId: {'meta':meta}, convId: conv}
-    defer.returnValue((itemId, convId, items))
+    defer.returnValue((itemId, convId, items, None))
+
+
+@defer.inlineCallbacks
+def deleteItem(request, itemId, item=None, parent=None):
+    authinfo = request.getSession(IAuthInfo)
+    myId = authinfo.username
+    orgId = authinfo.organization
+
+    if not item:
+        item = yield db.get_slice(itemId, "items", ["meta", "tags"])
+        item = utils.supercolumnsToDict(item)
+
+    meta = item["meta"]
+    convId = meta.get("parent", itemId)
+    itemUUID = meta["uuid"]
+    itemOwnerId = meta["owner"]
+    timestamp = str(int(time.time()))
+
+    d = db.insert(itemId, "items", "deleted", "state", "meta")
+    deferreds = [d]
+
+    if convId == itemId:
+        # Delete from tagItems.
+        if "tags" in item:
+            for tagId in conv["tags"]:
+                d = db.remove(tagId, "tagItems", itemUUID)
+                deferreds.append(d)
+
+        # Actually, delete the conversation.
+        d1 = db.insert(itemOwnerId, 'deletedConvs', timestamp, itemId)
+        d1.addCallback(lambda x: search.solr.delete(itemId))
+        d1.addCallback(lambda x: files.deleteFileInfo(myId, orgId, itemId, item))
+        deferreds.append(d1)
+
+    else:
+        if not parent:
+            parent = yield db.get_slice(convId, "items", ["meta"])
+            parent = utils.supercolumnsToDict(parent)
+
+        convType = parent["meta"]["type"]
+        convOwnerId = parent["meta"]["owner"]
+        convACL = parent["meta"]["acl"]
+
+        d1 = db.insert(convId, 'deletedConvs', timestamp, itemId)
+        d2 = db.remove(convId, 'itemResponses', itemUUID)
+        d2.addCallback(lambda x: db.get_count(convId, "itemResponses"))
+        d2.addCallback(lambda x: db.insert(convId, 'items',\
+                                 str(x), 'responseCount', 'meta'))
+        d2.addCallback(lambda x: search.solr.delete(itemId))
+        deferreds.extend([d1, d2])
+
+        # Rollback changes to feeds caused by this comment
+        d = db.get_slice(itemId, "itemLikes")
+        def removeLikeFromFeeds(result):
+            likes = utils.columnsToDict(result)
+            removeLikeDeferreds = []
+            for actorId, likeUUID in likes.items():
+                d1 = feed.deleteUserFeed(actorId, convType, likeUUID)
+                d2 = feed.deleteFeed(actorId, orgId, itemId, convId, convType,
+                            convACL, convOwnerId, 'L', deleteAll=True)
+                removeLikeDeferreds.extend([d1, d2])
+            return defer.DeferredList(removeLikeDeferreds)
+        d.addCallback(removeLikeFromFeeds)
+        deferreds.append(d)
+
+        # Delete comment from comment owner's userItems
+        d = feed.deleteUserFeed(itemOwnerId, convType, itemUUID)
+        deferreds.append(d)
+
+        # Rollback updates done to comment owner's follower's feeds.
+        responseType = "Q" if convType == "question" else 'C'
+        d = feed.deleteFeed(itemOwnerId, orgId, itemId, convId, convType,
+                            convACL, convOwnerId, responseType, deleteAll=True)
+        deferreds.append(d)
+
+    yield defer.DeferredList(deferreds)
 
 
 # Expects all the basic arguments as well as some information
@@ -375,7 +522,12 @@ class ItemResource(base.BaseResource):
     def _new(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
 
-        convId, conv = yield _createNewItem(request, myId, args['orgId'])
+        convId, conv, keywords = yield _createNewItem(request, myId, args['orgId'])
+        if keywords:
+            block = getBlock('item.mako', 'requireReviewDlg', keywords=keywords)
+            request.write('$$.convs.reviewRequired(%s);' % json.dumps(block));
+            return
+
         entities = {myId: args['me']}
         target = conv['meta'].get('target', None)
         if target:
@@ -648,7 +800,11 @@ class ItemResource(base.BaseResource):
         authInfo = request.getSession(IAuthInfo)
         myId = authInfo.username
         orgId = authInfo.organization
-        itemId, convId, items = yield _comment(request, myId, orgId)
+        itemId, convId, items, keywords = yield _comment(request, myId, orgId)
+        if keywords:
+            block = getBlock('item.mako', 'requireReviewDlg', keywords=keywords, convId=convId)
+            request.write('$$.convs.reviewRequired(%s, "%s");' % (json.dumps(block), convId));
+            return
 
         # Finally, update the UI
         entities = yield db.get(myId, "entities", super_column="basic")
@@ -935,57 +1091,8 @@ class ItemResource(base.BaseResource):
             # The conversation is lazy deleted.
             # If it is the comment being deleted, rollback all feed updates
             # that were made due to this comment and likes on this comment.
-
-            # Delete from tagItems and follower feeds.
-            if not comment and "tags" in conv:
-                for tagId in conv["tags"]:
-                    d = db.remove(tagId, "tagItems", itemUUID)
-                    deferreds.append(d)
-
-            # We maintain an index of all deleted items by ownerId and by
-            # convId - convId is used as key for comments and ownerId for
-            # conversations. Also mark the item as deleted, update responses
-            # and update deleted index
-            d = db.insert(itemId, 'items', 'deleted', 'state', 'meta')
+            d = deleteItem(request, itemId, item, conv)
             deferreds.append(d)
-            if comment:
-                d1 = db.insert(convId, 'deletedConvs', timestamp, itemId)
-                d2 = db.remove(convId, 'itemResponses', itemUUID)
-                d2.addCallback(lambda x: db.get_count(convId, "itemResponses"))
-                d2.addCallback(lambda x: db.insert(convId, 'items',\
-                                         str(x), 'responseCount', 'meta'))
-                d2.addCallback(lambda x: search.solr.delete(itemId))
-                deferreds.extend([d1, d2])
-            else:
-                d1 = db.insert(convOwnerId, 'deletedConvs', timestamp, convId)
-                d1.addCallback(lambda x: search.solr.delete(itemId))
-                d1.addCallback(lambda x: files.deleteFileInfo(myId, orgId, convId, conv))
-                deferreds.append(d1)
-
-            # Rollback changes to feeds.
-            if comment:
-                d = db.get_slice(itemId, "itemLikes")
-                def removeLikeFromFeeds(result):
-                    likes = utils.columnsToDict(result)
-                    removeLikeDeferreds = []
-                    for actorId, likeUUID in likes.items():
-                        d1 = feed.deleteUserFeed(actorId, convType, likeUUID)
-                        d2 = feed.deleteFeed(actorId, orgId, itemId, convId, convType,
-                                    convACL, convOwnerId, 'L', deleteAll=True)
-                        removeLikeDeferreds.extend([d1, d2])
-                    return defer.DeferredList(removeLikeDeferreds)
-                d.addCallback(removeLikeFromFeeds)
-                deferreds.append(d)
-
-                # Delete comment from comment owner's userItems
-                d = feed.deleteUserFeed(itemOwnerId, convType, itemUUID)
-                deferreds.append(d)
-
-                # Rollback updates done to comment owner's follower's feeds.
-                responseType = "Q" if convType == "question" else 'C'
-                d = feed.deleteFeed(itemOwnerId, orgId, itemId, convId, convType,
-                                    convACL, convOwnerId, responseType, deleteAll=True)
-                deferreds.append(d)
 
         else:
             # Just remove from my feed and block any further updates of that
@@ -1172,30 +1279,6 @@ class ItemResource(base.BaseResource):
 
 
     @defer.inlineCallbacks
-    def _deleteReportedItem(self, request, convId, conv):
-        authinfo = request.getSession(IAuthInfo)
-        myId = authinfo.username
-        orgId = authinfo.organization
-        convMeta = conv["meta"]
-        convOwnerId = conv["meta"]["owner"]
-        timestamp = str(int(time.time()))
-        convUUID = convMeta["uuid"]
-        deferreds = []
-        if "tags" in conv:
-            for tagId in conv["tags"]:
-                d = db.remove(tagId, "tagItems", convUUID)
-                deferreds.append(d)
-
-        d = db.insert(convId, 'items', 'deleted', 'state', 'meta')
-        deferreds.append(d)
-        d1 = db.insert(convOwnerId, 'deletedConvs', timestamp, convId)
-        d1.addCallback(lambda x: fts.solr.deleteIndex(convId))
-        d1.addCallback(lambda x: files.deleteFileInfo(myId, orgId, convId, conv))
-        deferreds.append(d1)
-        yield defer.DeferredList(deferreds)
-
-
-    @defer.inlineCallbacks
     def _submitReport(self, request, action):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
@@ -1237,7 +1320,7 @@ class ItemResource(base.BaseResource):
 
             if action == "accept":
                 # Owner removed the comment. Delete the item from his feed
-                yield self._deleteReportedItem(request, convId, conv)
+                yield deleteItem(request, convId)
                 request.write("$$.fetchUri('/feed');")
                 request.write("$$.alerts.info('%s')" %_("Your item has been deleted"))
                 request.finish()

@@ -388,6 +388,20 @@
   ${footer()}
 </%def>
 
+## Keyword match
+<%def name="notifyKW()">
+  ${header()}
+  <td valign="top" align="right" style="width:48px;" rowspan="2">
+    <img src="${senderAvatarUrl}" alt="">
+  </td>
+  <td style="font-size: 14px;">
+    <b>${senderName}</b> posted content that matched a keyword - ${keyword}
+    <br/><br/>
+      <a href="${keywordUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View Matching Conversations</div></a>
+  </td>
+  ${footer()}
+</%def>
+
 <%def name="html_stats()">
   <table>
   <tr><td> No.of new domains </td><td > ${stats[frm_to]["newDomainCount"]} </td></tr>
