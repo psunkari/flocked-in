@@ -364,7 +364,7 @@
             %>
             %if not companies:
               <div id="company-empty-msg" class="company-empty-msg">
-                Nothing found here!<br/>Please click the button below to add information.
+                No information available at present.
               </div>
             %endif
           </div>
@@ -384,7 +384,7 @@
             %>
             %if not schools:
               <div id="school-empty-msg" class="company-empty-msg">
-                Nothing found here!<br/>Please click the button below to add information.
+                No information available at present.
               </div>
             %endif
           </div>
