@@ -552,7 +552,7 @@ class GroupsResource(base.BaseResource):
         cols = yield db.get_slice(orgId, "entityGroupsMap", start=name.lower(), count=2)
         for col in cols:
             if col.column.name.split(':')[0] == name.lower():
-                request.write("<script> parent.$$.alerts.error('Group already exists'); </script>")
+                request.write("<script> parent.$$.alerts.error('Group with same name already exists.'); </script>")
                 raise errors.InvalidGroupName(name)
 
         groupId = utils.getUniqueKey()
@@ -1363,6 +1363,15 @@ class GroupSettingsResource(base.BaseResource):
         desc = utils.getRequestArg(request, 'desc')
         access = utils.getRequestArg(request, 'access') or 'open'
         dp = utils.getRequestArg(request, "dp", sanitize=False) or ''
+
+        # No two groups should have same name.
+        if name:
+            start = name.lower() + ':'
+            cols = yield db.get_slice(orgId, "entityGroupsMap", start=start, count=1)
+            for col in cols:
+                if col.column.name.split(':')[0] == name.lower():
+                    request.write("<script> parent.$$.alerts.error('Group with same name already exists.'); </script>")
+                    raise errors.InvalidGroupName(name)
 
         meta = {'basic':{}}
         if name and name != group['basic']['name']:
