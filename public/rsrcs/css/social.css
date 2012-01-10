@@ -2357,3 +2357,8 @@ td.file-info, td.file-context, td.file-actions {
 .large-tag-following {
     background-position: 0 -48px;
 }
+
+#expertise-container {
+    line-height: 1.3em; 
+    text-transform: capitalize;
+}
