@@ -472,9 +472,27 @@ class GroupsResource(base.BaseResource):
         group['admins'] = {userId:''}
         args = {'entities': {groupId: group}}
 
+        itemType = "activity"
+        responseType = "I"
+        acl = {"accept":{"groups":[groupId]}}
+        _acl = pickle.dumps(acl)
+
+        itemId = utils.getUniqueKey()
+        item, attachments = yield utils.createNewItem(request, "activity",
+                                                      userId, orgId, acl,
+                                                      "groupAdmin")
+        item["meta"]["target"] = groupId
+
+        d1 = db.batch_insert(itemId, 'items', item)
+        d2 = feed.pushToFeed(groupId, item["meta"]["uuid"], itemId,
+                             itemId, responseType, itemType, userId)
+        d3 = feed.pushToOthersFeed(userId, orgId, item["meta"]["uuid"], itemId, itemId,
+                    _acl, responseType, itemType, userId, promoteActor=False)
+
         yield renderScriptBlock(request, "groups.mako", "groupRequestActions",
                                 False, '#group-request-actions-%s-%s' %(userId, groupId),
                                 "set", args=[groupId, userId, "show_manage"], **args)
+        yield defer.DeferredList([d1, d2, d3])
 
     @defer.inlineCallbacks
     def _removeAdmin(self, request):

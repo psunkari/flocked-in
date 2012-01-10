@@ -647,6 +647,8 @@
       activity = _("%s joined %s.") % (fmtUser(userId, entities[userId]), fmtGroup(target, entities[target]))
     elif subtype == "groupLeave":
       activity = _("%s left %s.") % (fmtUser(userId, entities[userId]), fmtGroup(target, entities[target]))
+    elif subtype == "groupAdmin":
+      activity = _("%s is Admin of %s.") % (fmtUser(userId, entities[userId]), fmtGroup(target, entities[target]))
   %>
   %if activity:
     ${activity}
