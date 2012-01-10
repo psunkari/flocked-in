@@ -502,9 +502,17 @@ class GroupsResource(base.BaseResource):
 
         del group['admins'][userId]
         args = {'entities': {groupId: group}}
-        yield renderScriptBlock(request, "groups.mako", "groupRequestActions",
-                                False, '#group-request-actions-%s-%s' %(userId, groupId),
-                                "set", args=[groupId, userId, "show_manage"], **args)
+        if userId != myId:
+            yield renderScriptBlock(request, "groups.mako", "groupRequestActions",
+                                    False, '#group-request-actions-%s-%s' %(userId, groupId),
+                                    "set", args=[groupId, userId, "show_manage"], **args)
+        else:
+            handlers = {'onload':"$$.alerts.info('You are not admin of this group anymore.');"}
+            args['groupId'] = groupId
+            request.write("$$.fetchUri('/groups/members?id=%s');"%(groupId))
+            yield renderScriptBlock(request, "group-settings.mako", "nav_menu",
+                                    False, "#nav-menu", "set", True,
+                                    handlers=handlers, **args)
 
 
     @profile
@@ -872,17 +880,16 @@ class GroupsResource(base.BaseResource):
 
         groupId, group = yield utils.getValidEntityId(request, "id", "group", columns=['admins'])
         start = utils.getRequestArg(request, 'start') or ''
-        manage = utils.getRequestArg(request, 'managed')
-        manage = manage if manage == 'manage' else ''
 
-        if manage and myId not in group["admins"]:
+        cols = yield db.get_slice(groupId, "groupMembers", [myId])
+        if not cols:
             raise errors.InvalidRequest(_("Access Denied"))
 
         fromFetchMore = ((not landing) and (not appchange) and start)
         args["menuId"] = "members"
         args["groupId"] = groupId
         args["entities"] = {groupId: group}
-        args["tab"]= 'manage' if manage else ''
+        args["tab"]= 'manage' if myId in group['admins'] else ''
 
         if script and landing:
             yield render(request, "group-settings.mako", **args)
