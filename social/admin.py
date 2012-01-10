@@ -176,7 +176,7 @@ class Admin(base.BaseResource):
 
         orgInfo = {}
         if dp:
-            avatar = yield saveAvatarItem(orgId, dp, isLogo=True)
+            avatar = yield saveAvatarItem(orgId, orgId, dp, isLogo=True)
             if not orgInfo.has_key("basic"):
                 orgInfo["basic"] = {}
             orgInfo["basic"]["logo"] = avatar

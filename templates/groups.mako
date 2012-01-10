@@ -219,19 +219,19 @@
   %elif action == 'removed':
     <button class="button disabled"><span class="button-text">${_("Removed")}</span></button>
   %elif action == 'show_blocked':
-    <button class="button default" onclick="$.post('/ajax/groups/unblock', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Unblock")}</span></button>
+    <button class="button" onclick="$.post('/ajax/groups/unblock', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Unblock")}</span></button>
   %elif action == 'show_manage':
-    <button class="button default" onclick="$.post('/ajax/groups/remove', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Remove")}</span></button>
+    <button class="button" onclick="$.post('/ajax/groups/remove', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Remove")}</span></button>
     %if userId not in entities[groupId]['admins']:
-      <button class="button default" onclick="$.post('/ajax/groups/makeadmin', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Make Admin")}</span></button>
+      <button class="button" onclick="$.post('/ajax/groups/makeadmin', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Make Admin")}</span></button>
     %else:
-      <button class="button default" onclick="$.post('/ajax/groups/removeadmin', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Remove Admin")}</span></button>
+      <button class="button" onclick="$.post('/ajax/groups/removeadmin', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Remove Admin")}</span></button>
     %endif
 
   %else:
     <button class="button default" onclick="$.post('/ajax/groups/approve', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Accept")}</span></button>
-    <button class="button default" onclick="$.post('/ajax/groups/reject', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Reject")}</span></button>
-    <button class="button default" onclick="$.post('/ajax/groups/block', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Block")}</span></button>
+    <button class="button" onclick="$.post('/ajax/groups/reject', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Reject")}</span></button>
+    <button class="button" onclick="$.post('/ajax/groups/block', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Block")}</span></button>
   %endif
 
 </%def>

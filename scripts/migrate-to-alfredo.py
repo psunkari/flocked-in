@@ -4,6 +4,7 @@ import os
 import sys
 import optparse
 import uuid
+import cPickle as pickle
 
 from telephus.cassandra import ttypes
 from twisted.internet   import defer, reactor
@@ -84,8 +85,38 @@ def updateData():
         itemId = row.key
         item = utils.supercolumnsToDict(row.columns)
         items[itemId]=item
+
+    for itemId in items:
+        item =  items[itemId]
+        log.msg(itemId)
         if 'meta' not in item:
             continue
+        # fix acls
+        if 'parent' not in item['meta']:
+            acl = item['meta']['acl']
+            convOwner = item['meta']['owner']
+            convId = itemId
+        else:
+            parentId = item['meta']['parent']
+            convId = parentId
+            if parentId not in items:
+                log.msg('Parent not found: parent - %s : item %s ' %(parentId, itemId))
+            else:
+                acl = items[parentId]['meta']['acl']
+                convOwner = items[parentId]['meta']['owner']
+        if acl == 'company':
+            col = yield db.get(convOwner, "entities", "org", "basic")
+            ownerOrgId = col.column.value
+            acl = pickle.dumps({"accept":{"orgs":[ownerOrgId]}})
+            yield db.insert(convId, 'items', acl, 'acl', 'meta')
+        try:
+            acl = pickle.loads(acl)
+            if 'accept' in acl and 'friends' in acl['accept'] and isinstance(acl['accept']['friends'], bool):
+                acl['accept']['friends'] = []
+                acl = pickle.dumps(acl)
+                yield db.insert(convId, 'items', acl, 'acl', 'meta')
+        except :
+            log.msg('cannot unpack acl', acl)
 
         # Migrate files
         #    truncate user_files
