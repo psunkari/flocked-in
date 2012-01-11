@@ -74,7 +74,7 @@
       <div id="useravatar" class="avatar" style="background-image:url('${avatarURI}')"></div>
     %endif
     <div id="title">
-      <span class="middle title" id="group-name">${entities[groupId]['basic']['name'].capitalize()}</span>
+      <span class="middle title" id="group-name">${entities[groupId]['basic']['name']}</span>
       <ul id="group-actions-${groupId}" class="middle user-actions h-links">
         ${self.group_actions(groupId)}
       </ul>
