@@ -241,6 +241,33 @@ def updateData():
                 mutations.setdefault(entityId, {}).setdefault('userItems_poll', {}).update({col.column.name: value})
     yield db.batch_mutate(mutations)
 
+    #Group type changed from public-private to open-closed.
+    rows = yield db.get_range_slice('entityGroupsMap', count=1000)
+    groupIds = set()
+    for row in rows:
+        for col in row.columns:
+            name_, groupId = col.column.name.split(':')
+            groupIds.add(groupId)
+
+    cols = yield db.multiget_slice(groupIds, "entities")
+    groups = utils.multiSuperColumnsToDict(cols)
+    for groupId in groups:
+        access = groups[groupId]['basic']['access'].lower()
+        if access == 'public':
+            yield db.insert(groupId, 'entities', 'open', 'access', 'basic')
+        elif access.lower() == 'private':
+            yield db.insert(groupId, 'entities', 'closed', 'access', 'basic')
+
+    #Fix entityGroupsMap
+    rows = yield db.get_range_slice('entityGroupsMap', count=1000)
+    for row in rows:
+        entityId = row.key
+        for col in row.columns:
+            name_, groupId = col.column.name.split(':')
+            if col.column.name != '%s:%s'%(groups[groupId]['basic']['name'].lower(), groupId):
+                yield db.remove(entityId, 'entityGroupsMap', col.column.name)
+                yield db.insert(entityId, 'entityGroupsMap', '', '%s:%s' %(groups[groupId]['basic']['name'].lower(), groupId))
+
 
 def main():
     parser = optparse.OptionParser()
