@@ -1367,7 +1367,8 @@ class GroupSettingsResource(base.BaseResource):
             start = name.lower() + ':'
             cols = yield db.get_slice(orgId, "entityGroupsMap", start=start, count=1)
             for col in cols:
-                if col.column.name.split(':')[0] == name.lower():
+                name_, groupId_ = col.column.name.split(':')
+                if name_ == name.lower() and groupId_ != groupId:
                     request.write("<script> parent.$$.alerts.error('Group with same name already exists.'); </script>")
                     raise errors.InvalidGroupName(name)
 
