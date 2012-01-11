@@ -59,7 +59,10 @@ class PythonBodyReceiver(protocol.Protocol):
             return
 
         if reason.check(client.ResponseDone, PotentialDataLoss):
-            self.data = eval(self.data)
+            try:
+                self.data = eval(self.data)
+            except Exception,e:
+                self.data = None
             self._deferred.callback(self)
         else:
             self._deferred.errback(reason)
@@ -180,7 +183,7 @@ class Solr(object):
         parentId = meta.get('parent', None)
         richText = meta.get('richText', 'False') == 'True'
 
-        indexFields = {'meta':set(['comment','parent','type'])}
+        indexFields = {'meta':set(['comment','parent','type', 'snippet'])}
 
         if parentId:
             convMeta = conv.get('meta', {}) if conv else {}

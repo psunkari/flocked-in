@@ -212,6 +212,7 @@
 
        <!-- All Items -->
        <field name="comment" type="text" indexed="true" stored="true" />
+       <field name="snippet" type="text" stored="true" />
        <field name="parent" type="text" stored="true" />
        <field name="type" type="text" indexed="true" stored="true" />
        <field name="timestamp" type="sdouble" indexed="true" stored="true" />

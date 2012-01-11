@@ -500,12 +500,9 @@
         ${utils.userName(userId, entities[userId])}
       %endif
       <%
-        if highlight and convId in highlight and 'comment' in highlight[convId]:
-            comment = highlight[convId]['comment'][0]
-        else:
-            comment = meta.get('comment', '')
-
-        snippet = meta.get('snippet', '')
+        matches = highlight.get(convId, None) if highlight else None
+        comment = matches['comment'][0] if matches and 'comment' in matches else meta.get('comment', '')
+        snippet = matches['snippet'][0] if matches and 'snippet' in matches else meta.get('snippet', '')
       %>
       ${_renderText(snippet, comment, richText=richText)}
     </div>
@@ -597,12 +594,9 @@
     <span class="icon item-icon link-icon"></span>
     <div class="item-title-text">
       <%
-        if highlight and convId in highlight and 'comment' in highlight[convId]:
-            comment = highlight[convId]['comment'][0]
-        else:
-            comment = meta.get('comment', '')
-
-        snippet = meta.get('snippet', '')
+        matches = highlight.get(convId, None) if highlight else None
+        comment = matches['comment'][0] if matches and 'comment' in matches else meta.get('comment', '')
+        snippet = matches['snippet'][0] if matches and 'snippet' in matches else meta.get('snippet', '')
       %>
       ${_renderText(snippet, comment, richText=richText)}
       <div class="link-item">
