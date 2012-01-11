@@ -79,7 +79,7 @@
     <tr>
       <th class="file-info toolbar">${_("File")}</th>
       <th class="file-context toolbar">${_("Context")}</th>
-      <th class="file-actions toolbar">&hellip;</th>
+      <th class="file-actions toolbar"></th>
     </tr>
     <tbody>
     %for tuuid, (fId, name, itemId, ownerId, item) in files:
