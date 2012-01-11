@@ -267,7 +267,7 @@
           %if len(matchedItemIds) < matchedItemCount:
             ${_('Posts &mdash; Showing %(shown)s of total %(total)s found. <a href="/search?q=%(term)s&start=%(start)s&it=%(itemType)s">View more posts &raquo;</a>') % statsMap}
           %else:
-            ${__('Posts &mdash; Only 1 found', 'Showing all %(total)s found.', len(matchedItemIds)) % statsMap}
+            ${__('Posts &mdash; Only 1 found', 'Posts &mdash; Showing all %(total)s found.', len(matchedItemIds)) % statsMap}
           %endif
         </div>
       %else:
