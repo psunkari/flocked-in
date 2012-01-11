@@ -312,43 +312,17 @@
 </%def>
 
 <%def name="confirm_remove_user()">
-  <div class='ui-dlg-title'>${_('Confirm before deleting user')}</div>
-  <div class="dlgform ui-dlg-center" style="padding:10px;font-size: 12px;">
-    <p class="error-input" style="margin:0px">
-      Removing a user is an irreversible process. To just prevent a user from logging in, use "Block User" instead.
+  <div class='ui-dlg-title'>${_('Confirm User Removal')}</div>
+  <div class="dlgform ui-dlg-center" style="font-size: 12px;max-height:250px;">
+    <p style="margin:0px">
+      User removal is an irreversible process. Instead you can <strong>Block</strong> a user to disable login to the network temporarily.
     </p>
     <p>
       If you proceed with removing ${utils.userName(userId, entities[userId])}, the following actions will happen:
-      <ul>
-        <li>${utils.userName(userId, entities[userId])} will not be able to login again. </li>
-        %if affectedGroups:
-          <li>
-            ${utils.userName(userId, entities[userId])} will be removed from the following groups:
-            </br>
-              <%
-                links = []
-                for groupId, name in affectedGroups:
-                    links.append("""<a target="_blank" href='/group?id=%s'>%s</a>""" %(groupId, name))
-              %>
-              ${", ".join(links)}
-          </li>
-        %endif
-        %if orgAdminNewGroups:
-          <li>
-            You will become the administrator for the following groups,
-            for which ${utils.userName(userId, entities[userId])} is the only administrator.
-            </br>
-              <%
-                links = []
-                for groupId, name in orgAdminNewGroups:
-                  links.append("""<a target="_blank" href='/group?id=%s'>%s</a>""" %(groupId, name))
-              %>
-              ${", ".join(links)}
-          </li>
-        %endif
+      <ol>
         %if apps:
           <li>
-            Access to following applications created by ${utils.userName(userId, entities[userId])} will be revoked:
+            Access to following applications created by ${utils.userName(userId, entities[userId])} will be revoked.
             </br>
               <%
                 links = []
@@ -358,10 +332,23 @@
               ${", ".join(links)}
           </li>
         %endif
-      </ul>
+        %if orgAdminNewGroups:
+          <li>
+            You will become the administrator for the following groups,
+            for which ${utils.userName(userId, entities[userId])} is the only administrator:
+            </br>
+              <%
+                links = []
+                for groupId, name in orgAdminNewGroups:
+                  links.append("""<a target="_blank" href='/group?id=%s'>%s</a>""" %(groupId, name))
+              %>
+              ${", ".join(links)}
+          </li>
+        %endif
+      </ol>
     </p>
     <p>
-      NOTE: Content created by the user will not be removed in this process.
+      <em>Note</em>: Content created by the user will not be removed in this process.
     </p>
   </div>
 </%def>
