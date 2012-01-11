@@ -59,6 +59,9 @@ class ApplicationResource(base.BaseResource):
         if not name:
             raise errors.MissingParams(["Name"])
 
+        if not scope:
+            raise errors.MissingParams(["Permissions"])
+
         if category != "apikey" and not redirect:
             raise errors.MissingParams(["Redirect URL"])
 
