@@ -1454,8 +1454,11 @@ class APIItemResource(base.APIBaseResource):
     def _newItem(self, request):
         token = self._ensureAccessScope(request, 'post-item')
         convId, conv, keywords = yield _createNewItem(request, token.user,
-                                            token.org, richText=True)
-        self._success(request, 201, {'id': convId})
+                                                      token.org, richText=True)
+        if keywords:
+            raise errors.InvalidRequest(_('Matching keywords found(%s). Set reportOK=1.') % ', '.join(keywords))
+        else:
+            self._success(request, 201, {'id': convId})
 
 
     @defer.inlineCallbacks
@@ -1463,8 +1466,11 @@ class APIItemResource(base.APIBaseResource):
         token = self._ensureAccessScope(request, 'post-item')
         convId = request.postpath[0]
         itemId, convId, items, keywords = yield _comment(request, token.user, token.org,
-                                               convId=convId, richText=True)
-        self._success(request, 201, {'id': itemId})
+                                                         convId=convId, richText=True)
+        if keywords:
+            raise errors.InvalidRequest(_('Matching keywords found(%s). Set reportOK=1.') % ', '.join(keywords))
+        else:
+            self._success(request, 201, {'id': itemId})
 
 
     def render_POST(self, request):

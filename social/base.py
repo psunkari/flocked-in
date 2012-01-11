@@ -137,7 +137,7 @@ class APIBaseResource(resource.Resource):
 
         request.setResponseCode(errorCode, errorBrief)
         request.setHeader('content-type', 'application/json')
-        responseObj = {'error': errorBrief}
+        responseObj = {'error': errorBrief, 'error_description': fullErrorStr}
         request.write(json.dumps(responseObj))
 
 

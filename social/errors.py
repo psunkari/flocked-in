@@ -75,7 +75,8 @@ class PermissionDenied(BaseError):
 # the operation is not meant to be called that way
 #
 class InvalidRequest(BaseError):
-    pass
+    def __init__(self, message=''):
+        BaseError.__init__(self, message, 400)
 
 
 #
