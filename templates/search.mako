@@ -249,6 +249,12 @@
 
 
 <%def name="results()">
+  %if not any([matchedUsers, matchedItemIds]):
+    <div style="margin:80px 0; text-align:center;color:#999;font-size:20px;">
+      Zero results found!
+    </div>
+  %endif
+
   %if matchedUsers:
     <div id="search-people-wrapper">
       <% peopleResults() %>
