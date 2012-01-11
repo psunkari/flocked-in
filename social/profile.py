@@ -201,13 +201,15 @@ class ProfileResource(base.BaseResource):
         email = users[targetId]["basic"]["emailId"]
         rootUrl = config.get('General', 'URL')
         brandName = config.get('Branding', 'Name')
+        authinfo = request.getSession(IAuthInfo)
+        amIAdmin = authinfo.isAdmin
 
         cols = yield db.get_slice(email, "userAuth", ["reactivateToken",
                                                       "isFlagged", "isAdmin"])
         cols = utils.columnsToDict(cols)
-        if cols.has_key("isAdmin"):
-            raise errors.PermissionDenied("Administrators cannot be flagged \
-                                            for verification")
+        if cols.has_key("isAdmin") and not amIAdmin:
+            raise errors.PermissionDenied("Only administrators can flag other \
+                                            administrators for verification")
 
         if cols.has_key("isFlagged"):
             token = cols.get("reactivateToken")
