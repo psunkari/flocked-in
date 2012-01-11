@@ -1298,7 +1298,11 @@ var messaging = {
                 {
                     text:'Send',
                     click : function() {
-                        $('#msgcompose-form-submit').trigger('click');
+                        if ($('.tagedit-list.dlgform > .tagedit-listelement-old').length > 0){
+                            $('#msgcompose-form-submit').trigger('click');
+                        }else{
+                            $$.alerts.info("Recipients field cannot be empty");
+                        }
                     }
                 },
                 {

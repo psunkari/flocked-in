@@ -263,6 +263,7 @@ input::-moz-focus-inner {
   padding: 10px;
   font-size: 14px;
   font-weight: bold;
+  text-transform: capitalize;
 }
 
 .ui-dlg-buttonbox {
