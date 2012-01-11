@@ -494,6 +494,7 @@ class GroupsResource(base.BaseResource):
                                 "set", args=[groupId, userId, "show_manage"], **args)
         yield defer.DeferredList([d1, d2, d3])
 
+
     @defer.inlineCallbacks
     def _removeAdmin(self, request):
         authInfo = request.getSession(IAuthInfo)

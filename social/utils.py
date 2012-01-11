@@ -244,7 +244,7 @@ def getUniqueKey():
 
 @defer.inlineCallbacks
 def createNewItem(request, itemType, ownerId, ownerOrgId,
-                  acl=None, subType=None, groupIds = None, richText=False):
+                  acl=None, subType=None, groupIds=None, richText=False):
     if not acl:
         acl = getRequestArg(request, "acl", sanitize=False)
 
