@@ -184,12 +184,10 @@
             ${plugins[itemType].rootHTML(itemId, isQuoted, context.kwargs)}
           %else:    ## responses
             <%
-              if 'comment' in highlight[itemId]:
-                  comment = highlight[itemId]['comment'][0]
-              else:
-                  comment = itemMeta.get('comment', '')
+              matches = highlight.get(itemId, None) if highlight else None
+              comment = matches['comment'][0] if matches and 'comment' in matches else itemMeta.get('comment', '')
+              snippet = matches['snippet'][0] if matches and 'snippet' in matches else itemMeta.get('snippet', '')
 
-              snippet = itemMeta.get('snippet', '')
               richText = itemMeta.get('richText', 'False') == 'True'
               ownerName = utils.userName(ownerId, entities[ownerId], "conv-user-cause")
               if parentId:
