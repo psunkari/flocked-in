@@ -1453,7 +1453,7 @@ class APIItemResource(base.APIBaseResource):
     @defer.inlineCallbacks
     def _newItem(self, request):
         token = self._ensureAccessScope(request, 'post-item')
-        convId, conv = yield _createNewItem(request, token.user,
+        convId, conv, keywords = yield _createNewItem(request, token.user,
                                             token.org, richText=True)
         self._success(request, 201, {'id': convId})
 
@@ -1462,7 +1462,7 @@ class APIItemResource(base.APIBaseResource):
     def _newComment(self, request):
         token = self._ensureAccessScope(request, 'post-item')
         convId = request.postpath[0]
-        itemId, convId, items = yield _comment(request, token.user, token.org,
+        itemId, convId, items, keywords = yield _comment(request, token.user, token.org,
                                                convId=convId, richText=True)
         self._success(request, 201, {'id': itemId})
 
