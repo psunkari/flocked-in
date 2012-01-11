@@ -19,7 +19,6 @@ KEYSPACE = config.get("Cassandra", "Keyspace")
 
 @defer.inlineCallbacks
 def createCF():
-    #
     # Create column families required for file listing
     #    drop user_files CF
     #    create user_files entityFeed_files
@@ -35,6 +34,7 @@ def createCF():
                                 "List of files that appeared in entity's feed")
     yield db.system_add_column_family(entityFeed_files)
 
+    #Remove User from network
     userSessionsMap = ttypes.CfDef(KEYSPACE, 'userSessionsMap', 'Standard',
                             'BytesType', None, 'userId-Session Map')
     yield db.system_add_column_family(userSessionsMap)
@@ -43,6 +43,8 @@ def createCF():
                          "List of users removed from the networks by admins.")
     yield db.system_add_column_family(deletedUsers)
 
+    #Preset Tags
+
     orgPresetTags = ttypes.CfDef(KEYSPACE, "orgPresetTags", "Standard", "UTF8Type",
                           None, "List of preset tags. Only admin can create"
                           "or delete these tags. unlike normal tags these tags"
@@ -50,9 +52,31 @@ def createCF():
                           "behaves like a normal tag")
     yield db.system_add_column_family(orgPresetTags)
 
+    #Keyword Monitoring
+    keywords = ttypes.CfDef(KEYSPACE, 'keywords', 'Standard', 'UTF8Type',
+                            None, "list of keywords to be monitored")
+    yield db.system_add_column_family(keywords)
+
+    originalKeywords = ttypes.CfDef(KEYSPACE, 'originalKeywords', 'Standard', 'UTF8Type',
+                                    None, 'list of original keywords')
+    yield db.system_add_column_family(originalKeywords)
+
     keywordItems = ttypes.CfDef(KEYSPACE, "keywordItems", "Standard", "TimeUUIDType",
                                 None, "list of items which have a keyword monitored by admins")
     yield db.system_add_column_family(keywordItems)
+
+    #API
+    apps = ttypes.CfDef(KEYSPACE, "apps", "Super", "UTF8Type", "UTF8Type",
+                 "Details of Applications registered for API Access")
+    yield db.system_add_column_family(apps)
+
+    appsByOwner = ttypes.CfDef(KEYSPACE, "appsByOwner", "Standard", "UTF8Type",
+                        None, "List of applications registered by a User")
+    yield db.system_add_column_family(appsByOwner)
+
+    oAuthData = ttypes.CfDef(KEYSPACE, "oAuthData", "Standard", "UTF8Type",
+                      None, "List of access, refresh tokens and auth codes")
+    yield db.system_add_column_family(oAuthData)
 
     #
     # Create column families for poll indexing (in feeds and userItems)
