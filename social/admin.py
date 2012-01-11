@@ -7,7 +7,8 @@ from twisted.web        import server
 from twisted.internet   import defer
 from nltk.corpus        import stopwords
 
-from social             import base, db, utils, people, errors, tags, _, plugins
+from social             import base, db, utils, people, errors
+from social             import tags, plugins, location_tz_map, _
 from social.item        import deleteItem
 from social.isocial     import IAuthInfo
 from social.signup      import getOrgKey # move getOrgKey to utils
@@ -21,22 +22,24 @@ class Admin(base.BaseResource):
     isLeaf=True
 
     @defer.inlineCallbacks
-    def _validData(self, data, format, orgId):
-        if format in ("csv", "tsv"):
-            dialect = csv.excel_tab  if format == "tsv" else csv.excel
-            reader = csv.reader(data.split("\n"), dialect=dialect)
-            for row in reader:
-                if row:
-                    if len(row) < 5:
-                        defer.returnValue(False)
-                    email, displayName, jobTitle, passwd, timezone = row
+    def _validData(self, data, orgId):
+        timezones = location_tz_map.values()
+        for row in data:
+            if row:
+                if len(row) !=5:
+                    defer.returnValue(False)
+                displayName, email, jobTitle, timezone, passwd = row
+                if timezone not in timezones:
+                    defer.returnValue(False)
+                try:
                     domain = email.split("@")[1]
-                    userOrg = yield getOrgKey(domain)
-                    if userOrg != orgId:
-                        defer.returnValue(False)
-            defer.returnValue(True)
-        else:
-            defer.returnValue(False)
+                except IndexError:
+                    defer.returnValue(False)
+                #XXX: validate all the domains at once.
+                userOrg = yield getOrgKey(domain)
+                if userOrg != orgId:
+                    defer.returnValue(False)
+        defer.returnValue(True)
 
 
     @defer.inlineCallbacks
@@ -54,43 +57,68 @@ class Admin(base.BaseResource):
         passwd = utils.getRequestArg(request, "passwd", sanitize=False)
         jobTitle = utils.getRequestArg(request, "jobTitle")
         timezone = utils.getRequestArg(request, "timezone")
+        existingUsers = set()
 
         fileUpload = True if (dataFmt or data) else False
+
         if fileUpload and not (dataFmt and data):
             raise errors.MissingParams([_("File")])
+
+        if fileUpload and dataFmt not in ('csv', 'tsv'):
+            raise errors.InvalidRequest("New user details are invalid")
 
         if not fileUpload and not all([name, emailId, passwd, jobTitle, timezone]):
             raise errors.MissingParams([_("All fields are required to create the user")])
 
+        if dataFmt in ("csv", "tsv"):
+            dialect = csv.excel_tab  if dataFmt == "tsv" else csv.excel
+            data = csv.reader(data.split("\n"), dialect=dialect)
+            data = [row for row in data]
         if all([name, emailId, passwd, jobTitle, timezone]):
-            data = ",".join([emailId, name, jobTitle, passwd, timezone])
-            format = "csv"
+            data = [[name, emailId, jobTitle, timezone, passwd]]
 
-        isValidData = yield self._validData(data, format, orgId)
+
+        isValidData = yield self._validData(data, orgId)
         if not isValidData:
+          if fileUpload:
+            request.write("<script>parent.$$.alerts.error('Invalid file');")
           raise errors.InvalidRequest("New user details are invalid")
 
-        if format in ("csv", "tsv"):
-            dialect = csv.excel_tab  if format == "tsv" else csv.excel
-            reader = csv.reader(data.split("\n"), dialect=dialect)
+        for row in data:
+            if row:
+                displayName, email, jobTitle, timezone, passwd = row
+                existingUser = yield utils.existingUser(email)
+                if existingUser:
+                    log.info("%s is already a member of the network."
+                            "not adding it again"%(email))
+                    existingUsers.add(email)
+                    continue
+                userKey = yield utils.addUser(email, displayName, passwd,
+                                              orgId, jobTitle, timezone)
+        if not fileUpload:
+            if existingUsers:
+                response = """
+                                $$.alerts.error('User is already in the network.');
+                                $$.dialog.close('addpeople-dlg', true);
 
-            for row in reader:
-                if row:
-                    email, displayName, jobTitle, passwd, timezone = row
-                    existingUser = yield utils.existingUser(email)
-                    if existingUser:
-                        log.info("%s is already a member of the network."
-                                "not adding it again"%(email))
-                        continue
-                    userKey = yield utils.addUser(email, displayName, passwd,
-                                                  orgId, jobTitle, timezone)
+                            """
+            else:
+                response = """
+                                $$.alerts.info('User Added');
+                                $$.dialog.close('addpeople-dlg', true);
+                                $$.fetchUri('/admin/people?type=all');
 
-        response = """
-                        $$.alerts.info('%s');
-                        $.get('/ajax/notifications/new');
-                        $$.fetchUri('/admin/people?type=all');
-                        $$.dialog.close('addpeople-dlg', true);
-                   """ %(_("User Added"))
+                            """
+        else:
+            response = """
+                            <script>
+                            parent.$$.alerts.info('Users Added');
+                            parent.$$.fetchUri('/admin/people?type=all');
+                            parent.$$.dialog.close('addpeople-dlg', true);
+                            </script>
+
+                        """
+
         request.write(response)
 
 

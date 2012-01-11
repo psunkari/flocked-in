@@ -1285,7 +1285,7 @@ abbr.timestamp {
     float: left;
     margin-right: 2%;
     text-align: right;
-    width: 22%;
+    width: 25%;
     font-size: 12px;
 }
 
@@ -1296,7 +1296,7 @@ abbr.timestamp {
 .dlgform input[type=password],
 .dlgform select,
 .dlgform textarea {
-    width: 70%;
+    width: 67%;
     max-width: 350px;
     float: left;
     background-color: white;
