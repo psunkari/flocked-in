@@ -456,6 +456,7 @@ class Admin(base.BaseResource):
         dd = db.batch_remove({'keywordItems': [myOrgId+':'+keyword]},
                              names=deleted) if deleted else defer.succeed([])
 
+        args['items'] = items
         toFetchEntities = set()
         extraDataDeferreds = []
         for itemId in itemIds:
@@ -465,7 +466,7 @@ class Admin(base.BaseResource):
                 toFetchEntities.update(item['meta']['target'].split(','))
             itemType = item['meta'].get('type', 'status')
             if itemType in plugins:
-                d = plugins[itemType].fetchData(args, itemId)
+                d = plugins[itemType].fetchData(args, itemId, myId)
                 extraDataDeferreds.append(d)
 
         result = yield defer.DeferredList(extraDataDeferreds)
@@ -480,7 +481,7 @@ class Admin(base.BaseResource):
             fetchedEntities = utils.multiSuperColumnsToDict(fetchedEntities)
 
         yield dd
-        args.update({'entities': fetchedEntities, 'items': items,
+        args.update({'entities': fetchedEntities,
                      'matches': itemIds, 'nextPageStart': nextPageStart})
         defer.returnValue(args)
 
