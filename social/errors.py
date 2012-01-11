@@ -95,12 +95,12 @@ class MissingParams(BaseError):
     def __init__(self, params=None):
         self.params = params
         message = _("One or more required parameters are missing")
-        BaseError.__init__(self, message, 418)  # XXX: No suitable error code
+        BaseError.__init__(self, message, 418, "Missing Parameters")
 
     def errorData(self):
         message = self.message
         params = ", ".join(self.params)
-        return (self.errcode, "Missing Params",
+        return (self._httpCode, "Missing Parameters",
                 "%(params)s cannot be empty" % locals(),
                 "<p>%s</p><p><b>%s</b></p>"%(message, params))
 
