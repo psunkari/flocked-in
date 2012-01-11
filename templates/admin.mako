@@ -380,7 +380,7 @@
 <%def name="_keywords(keywords)">
   <%
     for item in keywords.keys():
-      <% _displayKeyword(item)
+      _displayKeyword(item)
   %>
 </%def>
 
@@ -400,10 +400,6 @@
   </ul>
   <div class='center-title'></div>
   <div  id='tags-container' class="tl-wrapper">
-    %if keywords:
-      <% _keywords(keywords) %>
-    %else:
-      No keywords being monitored.
-    %endif
+    <% _keywords(keywords) %>
   </div>
 </%def>
