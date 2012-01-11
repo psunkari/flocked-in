@@ -147,24 +147,24 @@
 
 <%def name="invitePeople()">
   <div class='ui-dlg-title'>${_('Invite People')}</div>
-  <div>
+  <div class="ui-dlg-center">
     <form id="invite-people-form" method="post" action="/people/invite" class="ajax">
       <input type="hidden" name="from" value="people"/>
       <ul class="dlgform" id="invite-people">
         <li class="form-row">
-            <label class="dlgform-label" for="msgcompose-rcpts">${_('Email Address')}</label>
-            <input type="email" name="email" placeholder="" autofocus required="" title="${_("Colleague&#39;s email address")}"/>
+            <label class="dlgform-label" for="msgcompose-rcpts">${_('Email')}</label>
+            <input type="email" name="email" autofocus required="" title="${_("Colleague&#39;s email address")}"/>
         </li>
         <li class="form-row">
-            <label class="dlgform-label" for="msgcompose-rcpts">${_('Email Address')}</label>
+            <label class="dlgform-label" for="msgcompose-rcpts">${_('Email')}</label>
             <input type="email" name="email" title="${_("Colleague&#39;s email address")}"/>
         </li>
         <li class="form-row">
-            <label class="dlgform-label" for="msgcompose-rcpts">${_('Email Address')}</label>
+            <label class="dlgform-label" for="msgcompose-rcpts">${_('Email')}</label>
             <input type="email" name="email" title="${_("Colleague&#39;s email address")}"/>
         </li>
       </ul>
-      <input id="invite-people-form-submit" type="submit" style="visibility:hidden" />
+      <input id="invite-people-form-submit" type="submit" style="display:none;" />
     </form>
   </div>
 </%def>

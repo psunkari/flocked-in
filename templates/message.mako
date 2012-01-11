@@ -202,7 +202,7 @@
 
 <%def name="composerDialog(rcpts='', subject='', body='')">
   <div class='ui-dlg-title'>${_('New Message')}</div>
-  <div>
+  <div class="ui-dlg-center" style="max-height: 300px;">
     <form id="msgcompose-form" action="/messages/write" class="ajax" id="message-form">
     <ul class="dlgform">
       <li class="form-row">
@@ -215,12 +215,12 @@
       </li>
       <li class="form-row">
           <label class="dlgform-label" for="year">${_('Message')}</label>
-          <textarea id="msgcompose-body" name="body" style="height: 150px;">${body}</textarea>
+          <textarea id="msgcompose-body" name="body" style="height:100px;">${body}</textarea>
       </li>
       <li>
         <div id="msgcompose-attach-uploaded" class="uploaded-filelist"></div>
       </li>
-      <input id="msgcompose-form-submit" type="submit" style="visibility:hidden" />
+      <input id="msgcompose-form-submit" type="submit" style="display:none;" />
       </form>
       <div class="file-attach-wrapper">
         ${widgets.fileUploadButton('msgcompose-attach')}

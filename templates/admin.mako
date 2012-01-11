@@ -25,10 +25,9 @@
     </ul>
     <ul id="mymenu" class="v-links sidemenu">
       ${navMenuItem("/admin/people", _("Users"), "users")}
-      ##${navMenuItem("admin/groups", _("Groups"), "groups")}
       ${navMenuItem("/admin/org", _("Organization"), "org")}
       ${navMenuItem("/admin/tags", _("Preset Tags"), "tags")}
-      ${navMenuItem('/admin/keywords', _("Keyword Monitoring"), "keywords")}
+      ${navMenuItem('/admin/keywords', _("Monitored Keywords"), "keywords")}
     </ul>
   </div>
 </%def>
@@ -245,7 +244,7 @@
           <input type="password" name="passwd" required="" title="${_("Password")}"/>
         </li>
       </ul>
-      <input id="add-user-form-submit" type="submit" style="visibility:hidden" />
+      <input id="add-user-form-submit" type="submit" style="display:none;" />
     </form>
   </div>
   <div id="add-users-block" style="display:none">
@@ -273,7 +272,7 @@
           <input type="file" name="data" accept="csv" size="15" required=""/>
         </li>
       </ul>
-      <input id="add-users-form-submit" type="submit" style="visibility:hidden" />
+      <input id="add-users-form-submit" type="submit" style="display:none;" />
     </form>
   </div>
 </%def>
@@ -424,6 +423,7 @@
             <input type="submit" id="expertise-add" class="button" value="Add" style="margin:0px;"/>
           </div>
         </form>
+        <div>Enter comma separated list of words to be monitored.</div>
       </div>
     </li>
   </ul>

@@ -485,46 +485,26 @@ class PeopleResource(base.BaseResource):
             request.redirect('/people')
         if not stats and self._ajax:
             request.write("$$.alerts.error('%s');" \
-                            %(_("Use company email-ids only.")))
+                            %(_("Use company email addresses only.")))
         elif stats and self._ajax:
             if len(stats[0]) == 1:
                 request.write("$$.dialog.close('invitepeople-dlg', true);\
-                              $$.alerts.info('%s');" %_("Invitation sent"))
+                               $$.alerts.info('%s');" %_("Invitation sent"))
             elif len(stats[0]) >1:
                 request.write("$$.dialog.close('invitepeople-dlg', true);\
-                              $$.alerts.info('%s');" %_("Invitations sent"))
+                               $$.alerts.info('%s');" %_("Invitations sent"))
             else:
                 #TODO: when user tries to send invitations to existing members,
                 #      show these members as add-as-friend/follow list
                 request.write("$$.alerts.info('%s');\
-                              $$.dialog.close('invitepeople-dlg', true);" \
-                                %_("Invitations sent"))
+                               $$.dialog.close('invitepeople-dlg', true);" \
+                               %_("Invitations sent"))
 
 
     @defer.inlineCallbacks
     def _renderInvitePeople(self, request):
-        (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        landing = not self._ajax
-        orgId = args["orgKey"]
-        args["entities"] = {}
-        args["menuId"] = "people"
-
-        if script and landing:
-            yield render(request, "people.mako", **args)
-
-        if script and appchange:
-            yield renderScriptBlock(request, "people.mako", "layout",
-                                    landing, "#mainbar", "set", **args)
-
-        if script:
-            onload = """
-                    """
-            yield renderScriptBlock(request, "people.mako", "invitePeople",
-                                    landing, "#invitepeople-dlg", "set", True,
-                                    handlers={"onload":onload}, **args)
-
-        else:
-            yield render(request, "people.mako", **args)
+        yield renderScriptBlock(request, "people.mako", "invitePeople",
+                                False, "#invitepeople-dlg", "set")
 
 
     @defer.inlineCallbacks
@@ -546,7 +526,7 @@ class PeopleResource(base.BaseResource):
 
         if segmentCount == 0:
             d = self._render(request, viewType, start)
-        elif segmentCount == 1 and request.postpath[0] == "invite":
+        elif segmentCount == 1 and self._ajax and request.postpath[0] == "invite":
             d = self._renderInvitePeople(request)
         elif segmentCount == 1 and request.postpath[0] == "suggestions":
             d = self._renderSuggestions(request)
