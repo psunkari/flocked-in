@@ -152,31 +152,33 @@
 
 <%def name="createGroup()">
   <div class='ui-dlg-title'>${_('Create a New Group')}</div>
-  <form id="add-group-form" action="/ajax/groups/create" method="post" enctype="multipart/form-data">
-    <ul class="dlgform">
-      <li class="form-row">
-          <label class="styled-label" for="name">${_('Group Name')}</label>
-          <input type="text" id="groupname" name="name" required
-                 title="${_('Group Name')}"/>
-      </li>
-      <li class="form-row">
-          <label class="styled-label" for="desc">${_('Description')}</label>
-          <textarea class="input-wrap" id="desc" name="desc"></textarea>
-      </li>
-      <li class="form-row">
-          <label class="styled-label">&nbsp;</label>
-          <input type="checkbox" id="access" name="access" value="closed"/>
-          <label for="access">${_("Membership requires administrator approval")}</label>
-      </li>
-      <li class="form-row">
-          <label class="styled-label" for="dp">${_("Group Logo")}</label>
-          <input type="file" id="dp" size="15" name="dp" accept="image/jpx, image/png, image/gif"/>
-    </ul>
-    <input id="add-group-form-submit" type="submit" style="visibility:hidden"/>
-    %if myKey:
-      <input type="hidden" value = ${myKey} name="id" />
-    %endif
-  </form>
+  <div class="ui-dlg-center" style="max-height: 300px;">
+    <form id="add-group-form" action="/ajax/groups/create" method="post" enctype="multipart/form-data">
+      <ul class="dlgform">
+        <li class="form-row">
+            <label class="styled-label" for="name">${_('Group Name')}</label>
+            <input type="text" id="groupname" name="name" required
+                   title="${_('Group Name')}"/>
+        </li>
+        <li class="form-row">
+            <label class="styled-label" for="desc">${_('Description')}</label>
+            <textarea class="input-wrap" id="desc" name="desc"></textarea>
+        </li>
+        <li class="form-row">
+            <label class="styled-label">&nbsp;</label>
+            <input type="checkbox" id="access" name="access" value="closed"/>
+            <label for="access">${_("Membership requires administrator approval")}</label>
+        </li>
+        <li class="form-row">
+            <label class="styled-label" for="dp">${_("Group Logo")}</label>
+            <input type="file" id="dp" size="15" name="dp" accept="image/jpx, image/png, image/gif"/>
+      </ul>
+      <input id="add-group-form-submit" type="submit" style="display:none;"/>
+      %if myKey:
+        <input type="hidden" value = ${myKey} name="id" />
+      %endif
+    </form>
+  </div>
 </%def>
 
 <%def name="allPendingRequests()">

@@ -245,7 +245,7 @@
           <input type="password" name="passwd" required="" title="${_("Password")}"/>
         </li>
       </ul>
-      <input id="add-user-form-submit" type="submit" style="visibility:hidden" />
+      <input id="add-user-form-submit" type="submit" style="display:none;" />
     </form>
   </div>
   <div id="add-users-block" style="display:none">
@@ -273,7 +273,7 @@
           <input type="file" name="data" accept="csv" size="15" required=""/>
         </li>
       </ul>
-      <input id="add-users-form-submit" type="submit" style="visibility:hidden" />
+      <input id="add-users-form-submit" type="submit" style="display:none;" />
     </form>
   </div>
 </%def>
