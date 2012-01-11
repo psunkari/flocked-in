@@ -639,6 +639,10 @@ var convs = {
                         text: 'Edit Post',
                         click: function() {
                             $$.dialog.close(this, true);
+                            if (convId)
+                                $('#comment-form-'+convId).find('.comment-input').focus();
+                            else
+                                $('#sharebar').find(':input:visible:first').focus();
                         }
                     }
                 ]

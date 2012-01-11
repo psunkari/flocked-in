@@ -720,7 +720,7 @@
 
 
 <%def name="requireReviewDlg()">
-  <div class="ui-dlg-title">Notify Administrator?</div>
+  <div class="ui-dlg-title">Confirm Administrator Notification</div>
   <div class="ui-dlg-center" style="padding:20px;font-size: 14px;">
     %if convId:
       %if len(keywords) == 1:
@@ -736,11 +736,11 @@
       %if len(keywords) == 1:
         <p>Your post will be shared with the administrator as it includes a
         flagged word (<span class="socschl">${keywords[0]}</span>)<br/><br/>
-        You may edit your comment or continue to post it.</p>
+        You may edit your post or continue to share it.</p>
       %else:
         <p>Your post will be shared with the administrator as it includes
         flagged words (${', '.join(['<span class="socschl">%s</span>'%x for x in keywords])})<br/><br/>
-        You may edit your comment or continue to post it.</p>
+        You may edit your post or continue to share it.</p>
       %endif
     %endif
   </div>
