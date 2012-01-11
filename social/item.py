@@ -1412,10 +1412,10 @@ class ItemResource(base.BaseResource):
                 d = self._responses(request)
             if action == "likes":
                 d = self._likes(request)
-            if action == "report":
-                d = self._renderReport(request)
-            if action == "showReportDialog":
-                d = self._renderReportDialog(request)
+            #if action == "report":
+            #    d = self._renderReport(request)
+            #if action == "showReportDialog":
+            #    d = self._renderReportDialog(request)
 
         return self._epilogue(request, d)
 
@@ -1434,11 +1434,11 @@ class ItemResource(base.BaseResource):
             elif action == 'delete':
                 d = self._remove(request)
 
-        if segmentCount == 2 and request.postpath[0] == "report":
-            action = request.postpath[1]
-            availableReportActions = ["report", "repost", "accept", "reject"]
-            if action in availableReportActions:
-                d = self._submitReport(request, action)
+        #if segmentCount == 2 and request.postpath[0] == "report":
+        #    action = request.postpath[1]
+        #    availableReportActions = ["report", "repost", "accept", "reject"]
+        #    if action in availableReportActions:
+        #        d = self._submitReport(request, action)
 
         return self._epilogue(request, d)
 
