@@ -202,7 +202,8 @@ _initAjaxRequests: function _initAjaxRequests() {
             currentUri = escape(currentUri.relative)
             window.location = '/signin?_r='+currentUri;
         } else if (request.status == 500 || request.status == 403 ||
-                   request.status == 404 || request.status == 418) {
+                   request.status == 404 || request.status == 418 ||
+                   request.status == 400) {
             $$.alerts.error(request.responseText);
         } else {
             if (window.console){
