@@ -488,11 +488,11 @@ class PeopleResource(base.BaseResource):
                             %(_("Use company email addresses only.")))
         elif stats and self._ajax:
             if len(stats[0]) == 1:
-                request.write("$$.dialog.close('invitepeople-dlg', true);\
-                               $$.alerts.info('%s');" %_("Invitation sent"))
+                request.write("$$.alerts.info('%s');" %_("Invitation sent"))
+                request.write("$$.dialog.close('invitepeople-dlg', true);")
             elif len(stats[0]) >1:
-                request.write("$$.dialog.close('invitepeople-dlg', true);\
-                               $$.alerts.info('%s');" %_("Invitations sent"))
+                request.write("$$.alerts.info('%s');" %_("Invitations sent"))
+                request.write("$$.dialog.close('invitepeople-dlg', true);")
             else:
                 #TODO: when user tries to send invitations to existing members,
                 #      show these members as add-as-friend/follow list
