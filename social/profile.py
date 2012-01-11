@@ -202,8 +202,13 @@ class ProfileResource(base.BaseResource):
         rootUrl = config.get('General', 'URL')
         brandName = config.get('Branding', 'Name')
 
-        cols = yield db.get_slice(email, "userAuth", ["reactivateToken", "isFlagged"])
+        cols = yield db.get_slice(email, "userAuth", ["reactivateToken",
+                                                      "isFlagged", "isAdmin"])
         cols = utils.columnsToDict(cols)
+        if cols.has_key("isAdmin"):
+            raise errors.PermissionDenied("Administrators cannot be flagged \
+                                            for verification")
+
         if cols.has_key("isFlagged"):
             token = cols.get("reactivateToken")
         else:
