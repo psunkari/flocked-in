@@ -379,12 +379,9 @@
 
 <%def name="_keywords(keywords)">
   <%
-    if not keywords:
-        return
+    for item in keywords.keys():
+      <% _displayKeyword(item)
   %>
-  %for item in keywords.keys():
-    ${_displayKeyword(item)}
-  %endfor
 </%def>
 
 <%def name="listKeywords()">
@@ -403,6 +400,10 @@
   </ul>
   <div class='center-title'></div>
   <div  id='tags-container' class="tl-wrapper">
-    ${_keywords(keywords)}
+    %if keywords:
+      <% _keywords(keywords) %>
+    %else:
+      No keywords being monitored.
+    %endif
   </div>
 </%def>
