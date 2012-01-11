@@ -482,6 +482,9 @@ a:hover, a:active, a:focus {
 .unblock-user-icon {
     background-position: 0 -112px;
 }
+.keywords-icon {
+    background-position: 0 -560px;
+}
 
 
 /*
@@ -2361,6 +2364,10 @@ td.file-info, td.file-context, td.file-actions {
     padding: 6px 10px !important;
 }
 
+
+/*
+ * Large icons
+ */
 .large-icon {
     width: 48px;
     height: 48px;
@@ -2372,6 +2379,11 @@ td.file-info, td.file-context, td.file-actions {
 .large-tag-following {
     background-position: 0 -48px;
 }
+
+.large-keyword {
+    background-position: 0 -96px;
+}
+
 
 #expertise-container {
     line-height: 1.3em;
