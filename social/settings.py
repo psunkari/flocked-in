@@ -518,8 +518,8 @@ class SettingsResource(base.BaseResource):
         if myTimezone is None:
             suggestedSections["basic"].append("Configure your timezone")
 
-        # Check Contact
-        suggestedSections["contact"] = []
+        # Check Work
+        suggestedSections["work"] = []
         if "contactInfo" not in args:
             res = yield db.get_slice(myId, "entities", ['contact'])
             contactInfo = utils.supercolumnsToDict(res).get("contact", {})
@@ -528,7 +528,7 @@ class SettingsResource(base.BaseResource):
 
         phone = contactInfo.get('phone', None)
         if not phone:
-            suggestedSections["contact"].append("Add a work phone")
+            suggestedSections["work"].append("Add a work phone")
 
         # Check Personal Info
         suggestedSections["personal"] = []

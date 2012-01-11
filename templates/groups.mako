@@ -17,11 +17,10 @@
       </div>
     </div>
     <div id="center-right">
-      <div class="center-header">
-        <div id="titlebar" class="titlebar">
-          ${self.titlebar()}
-        </div>
-        <div id="add-user-wrapper"></div>
+      <div id="titlebar" class="titlebar center-header">
+        %if not script:
+          <% titlebar() %>
+        %endif
       </div>
       <div id="right"></div>
       <div id="center">
@@ -48,15 +47,13 @@
   </div>
 </%def>
 
-<%def name="titlebar()" >
-  %if heading:
-    <span class="middle title">${heading}</span>
-  %else:
-    <span class="middle title">${_('Groups')}</span>
-    <span class="button title-button">
-      <a class="ajax" href="/groups/create" data-ref="/groups/create">${_('New Group')}</a>
-    </span>
-  %endif
+<%def name="titlebar()">
+    %if heading:
+      <span class="middle title">${heading}</span>
+    %else:
+      <button onclick="$$.ui.addGroup();" class="button title-button">${_('New Group')}</button>
+      <span class="middle title">${_('Groups')}</span>
+    %endif
 </%def>
 
 <%def name="listGroups()">
@@ -154,30 +151,30 @@
 </%def>
 
 <%def name="createGroup()">
-  <form id="group_form" action="/ajax/groups/create" method="post" enctype="multipart/form-data">
-    <ul class="styledform">
+  <div class='ui-dlg-title'>${_('Create a New Group')}</div>
+  <form id="add-group-form" action="/ajax/groups/create" method="post" enctype="multipart/form-data">
+    <ul class="dlgform">
       <li class="form-row">
           <label class="styled-label" for="name">${_('Group Name')}</label>
-          <input type="text" id="groupname" name="name" value= "" required title="${_('Group Name')}" placeholder="${_('Group Name')}"/>
+          <input type="text" id="groupname" name="name" required
+                 title="${_('Group Name')}"/>
       </li>
       <li class="form-row">
           <label class="styled-label" for="desc">${_('Description')}</label>
-          <textarea class="input-wrap" id="desc" name="desc" placeholder="${_('Group Description')}"></textarea>
+          <textarea class="input-wrap" id="desc" name="desc"></textarea>
       </li>
       <li class="form-row">
           <label class="styled-label">&nbsp;</label>
-          <input type="checkbox" id="access" name="access" value="closed">${_("Membership requires administrator approval")}</input>
+          <input type="checkbox" id="access" name="access" value="closed"/>
+          <label for="access">${_("Membership requires administrator approval")}</label>
       </li>
       <li class="form-row">
           <label class="styled-label" for="dp">${_("Group Logo")}</label>
-          <input type="file" id="dp" name="dp" accept="image/jpx, image/png, image/gif"/>
+          <input type="file" id="dp" size="15" name="dp" accept="image/jpx, image/png, image/gif"/>
     </ul>
-    <div class="styledform-buttons">
-        <input type="submit" name="userInfo_submit" value="${_("Save")}" class="button default"/>
-        <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">${_("Cancel")}</button>
-    </div>
+    <input id="add-group-form-submit" type="submit" style="visibility:hidden"/>
     %if myKey:
-    <input type="hidden" value = ${myKey} name="id" />
+      <input type="hidden" value = ${myKey} name="id" />
     %endif
   </form>
 </%def>

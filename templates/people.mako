@@ -17,15 +17,11 @@
       </div>
     </div>
     <div id="center-right">
-      <div class="center-header">
-        <div class="titlebar">
-          <span class="middle title">${_('People')}</span>
-          <span class="button title-button">
-            <a class="ajax" href="/people/invite" data-ref="/people/invite">${_('Invite more people')}</a>
-          </span>
-        </div>
-        <div id="invite-people-wrapper">
-        </div>
+      <div class="titlebar center-header">
+        <span class="middle title">${_('People')}</span>
+          %if script:
+            <button onclick="$$.users.invite();" class="button title-button">${_('Invite People')}</button>
+          %endif
       </div>
       <div id="right"></div>
       <div id="center">
@@ -48,6 +44,7 @@
         </div>
       </div>
       <div class="clear"></div>
+      </div>
     </div>
   </div>
 </%def>
@@ -105,7 +102,7 @@
           %else:
             <li><button class="button" onclick="$.post('/ajax/admin/block', 'id=${userId}')">${_("Unblock")}</button></li>
           %endif
-          <li><button class="button" onclick="$$.removeUser.showRemoveUser('${userId}')">${_("Remove")}</button></li>
+          <li><button class="button" onclick="$$.users.remove('${userId}')">${_("Remove")}</button></li>
         %else:
           ${profile.user_actions(userId, True)}
         %endif
@@ -149,27 +146,25 @@
 </%def>
 
 <%def name="invitePeople()">
-  <div class="header-form">
+  <div class='ui-dlg-title'>${_('Invite People')}</div>
+  <div>
     <form id="invite-people-form" method="post" action="/people/invite" class="ajax">
       <input type="hidden" name="from" value="people"/>
-      <div id="invite-people">
-        <div class="input-wrap">
-          <span class="icon invite-people-entry">&nbsp;</span>
-          <input type="text" name="email" placeholder="${_("Enter your colleague&#39;s email address")}" autofocus required title="${_("Colleague&#39;s email address")}"/>
-        </div>
-        <div class="input-wrap">
-          <span class="icon invite-people-entry">&nbsp;</span>
-          <input type="text" name="email" placeholder="${_("Enter your colleague&#39;s email address")}"/>
-        </div>
-        <div class="input-wrap">
-          <span class="icon invite-people-entry">&nbsp;</span>
-          <input type="text" name="email" placeholder="${_("Enter your colleague&#39;s email address")}"/>
-        </div>
-      </div>
-      <div class="header-form-buttons">
-        <button type="submit" class="button default">${_("Invite")}</button>
-        <button type="button" class="button" onclick="$('#invite-people-wrapper').empty()">${'Cancel'}</button>
-      </div>
+      <ul class="dlgform" id="invite-people">
+        <li class="form-row">
+            <label class="dlgform-label" for="msgcompose-rcpts">${_('Email Address')}</label>
+            <input type="email" name="email" placeholder="" autofocus required="" title="${_("Colleague&#39;s email address")}"/>
+        </li>
+        <li class="form-row">
+            <label class="dlgform-label" for="msgcompose-rcpts">${_('Email Address')}</label>
+            <input type="email" name="email" title="${_("Colleague&#39;s email address")}"/>
+        </li>
+        <li class="form-row">
+            <label class="dlgform-label" for="msgcompose-rcpts">${_('Email Address')}</label>
+            <input type="email" name="email" title="${_("Colleague&#39;s email address")}"/>
+        </li>
+      </ul>
+      <input id="invite-people-form-submit" type="submit" style="visibility:hidden" />
     </form>
   </div>
 </%def>

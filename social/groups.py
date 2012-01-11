@@ -547,12 +547,13 @@ class GroupsResource(base.BaseResource):
         dp = utils.getRequestArg(request, "dp", sanitize=False)
 
         if not name:
+            request.write("<script> parent.$$.alerts.error('Group name is a required field'); </script>")
             raise errors.MissingParams([_("Group name")])
 
         cols = yield db.get_slice(orgId, "entityGroupsMap", start=name.lower(), count=2)
         for col in cols:
             if col.column.name.split(':')[0] == name.lower():
-                request.write("<script> parent.$$.alerts.error('Group already exists'); </script>")
+                request.write("<script> parent.$$.alerts.error('Group with same name already exists.'); </script>")
                 raise errors.InvalidGroupName(name)
 
         groupId = utils.getUniqueKey()
@@ -580,7 +581,7 @@ class GroupsResource(base.BaseResource):
                         parent.$$.alerts.info('%s');
                         parent.$.get('/ajax/notifications/new');
                         parent.$$.fetchUri('/groups');
-                        parent.$('#add-user-wrapper').empty();
+                        parent.$$.dialog.close('addgroup-dlg', true);
                     </script>
                    """ %(_("Group Created"))
         request.write(response)
@@ -596,19 +597,14 @@ class GroupsResource(base.BaseResource):
 
         if script and landing:
             yield render(request, "groups.mako", **args)
+
         if script and appchange:
             yield renderScriptBlock(request, "groups.mako", "layout",
                                     landing, "#mainbar", "set", **args)
+
         if script:
             yield renderScriptBlock(request, "groups.mako", "createGroup",
-                                    landing, "#add-user-wrapper", "set", **args)
-            script = """
-                        $$.ui.bindFormSubmit('#group_form');
-                        $('#group_form').html5form({messages: 'en'});
-                     """
-
-            script = "<script>%s</script>"%(script) if landing else script
-            request.write(script);
+                                    landing, "#addgroup-dlg", "set", **args)
 
 
     @defer.inlineCallbacks
@@ -871,6 +867,8 @@ class GroupsResource(base.BaseResource):
             args["groupFollowers"] = dict([(groupId, []) for groupId in groupIds])
 
         if script:
+            yield renderScriptBlock(request, "groups.mako", "titlebar",
+                                    landing, "#titlebar", "set", **args)
             yield renderScriptBlock(request, "groups.mako", "viewOptions",
                                     landing, "#groups-view", "set", args=[viewType],
                                     showPendingRequestsTab=showPendingRequestsTab,
@@ -1364,6 +1362,15 @@ class GroupSettingsResource(base.BaseResource):
         access = utils.getRequestArg(request, 'access') or 'open'
         dp = utils.getRequestArg(request, "dp", sanitize=False) or ''
 
+        # No two groups should have same name.
+        if name:
+            start = name.lower() + ':'
+            cols = yield db.get_slice(orgId, "entityGroupsMap", start=start, count=1)
+            for col in cols:
+                if col.column.name.split(':')[0] == name.lower():
+                    request.write("<script> parent.$$.alerts.error('Group with same name already exists.'); </script>")
+                    raise errors.InvalidGroupName(name)
+
         meta = {'basic':{}}
         if name and name != group['basic']['name']:
             meta['basic']['name'] = name
@@ -1412,4 +1419,3 @@ class GroupSettingsResource(base.BaseResource):
         if segmentCount == 1 and request.postpath[0] == 'edit':
             d = self._edit(request)
         return self._epilogue(request, d)
-

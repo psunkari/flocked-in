@@ -80,7 +80,8 @@
       %endif
     </div>
   %else:
-    <div class="search-subtitle">People</div>
+    <% pageMap = {'start': start+1,'end': len(matchedUsers)+start, 'total': matchedUserCount}%>
+    <div class="search-subtitle">People ${_('(%(start)s&ndash;%(end)s of %(total)s)') %pageMap}</div>
   %endif
   <div id="search-people">
     %for userId in matchedUsers.keys():
@@ -270,7 +271,8 @@
           %endif
         </div>
       %else:
-        <div class="search-subtitle">Posts</div>
+       <% pageMap = {'start': start+1, 'end': start+len(matchedItemIds), 'total': matchedItemCount}%>
+       <div class="search-subtitle">Posts ${_('(%(start)s&ndash;%(end)s of %(total)s)')%pageMap} </div>
       %endif
       <div id="search-convs">
         %for itemId in matchedItemIds:

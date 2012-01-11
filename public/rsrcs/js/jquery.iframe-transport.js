@@ -85,7 +85,9 @@
     // and should revert all changes made to the page to enable the
     // submission via this transport.
     function cleanUp() {
-      $(addedFields).remove();
+      $(addedFields).each(function() {
+        this.remove();
+      });
       $(disabledFields).each(function() {
         this.disabled = false;
       });
@@ -177,7 +179,10 @@
                   setTimeout(cleanUp, 50);
                 }
                 catch(e){
-                  completeCallback(403, e.message, {}, {});
+                  completeCallback(403, e.message,
+                                   { text:'An error occured while uploading your file.'},
+                                   {});
+                  setTimeout(cleanUp, 50);
                 }
               });
             // Now that the load handler has been set up, reconfigure and

@@ -341,7 +341,7 @@
       <li class="form-row">
         <label class="styled-label">Expertise</label>
         <div class="styledform-helpwrap">
-          <div id="expertise-container" class="editing-tags" style="line-height: 1.3em;">
+          <div id="expertise-container" class="editing-tags">
             <% _expertise(me.get('expertise', {})) %>
           </div>
           <form method="post" action="/settings/expertise" class="ajax" autocomplete="off">
@@ -350,7 +350,7 @@
               <input type="submit" id="expertise-add" class="button" value="Add" style="margin:0px;"/>
             </div>
           </form>
-          <span>Example: cpp, accounting, green-buildings, patent-law</span>
+          <span>Example: Cpp, Accounting, Green-Building, Patent-Law</span>
         </div>
       </li>
       <li class="form-row" style="margin-top: 35px;">

@@ -477,6 +477,8 @@ class FilesResource(base.BaseResource):
             yield renderScriptBlock(request, "files.mako", "pagingBar",
                                     landing, "#files-paging", "set", **args)
 
+        else:
+            yield render(request, "files.mako", **args)
 
     def render_GET(self, request):
         d = None

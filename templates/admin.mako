@@ -41,20 +41,17 @@
       </div>
     </div>
     <div id="center-right">
-      <div class="center-header">
-        <div class="titlebar">
+      <div class="titlebar center-header">
           %if title:
             <span class="middle title">${_(title)}</span>
           %else:
             <span class="middle title">${_("Admin Console")}</span>
           %endif
-          %if not menuId or menuId == 'users':
-            <span class="button title-button">
-              <a class="ajax" href="/admin/add" data-ref="/admin/add">${_('Add Users')}</a>
-            </span>
+          %if script:
+            %if not menuId or menuId == 'users':
+              <button onclick="$$.users.add();" class="button title-button">${_('Add Users')}</button>
+            %endif
           %endif
-        </div>
-        <div id="add-user-wrapper"></div>
       </div>
       <div id="right">
         <div id="home-notifications"></div>
@@ -71,9 +68,15 @@
               %endif
             </div>
           %endif
-          <div id="content" class="paged-container">
-            %if not script:
-              ${self.list_users()}
+          <div id="content">
+            %if not script and viewType:
+              %if viewType == "org":
+                <% self.orgInfo() %>
+              %elif viewType == "tags":
+                <% self.list_tags() %>
+              %else:
+                <% self.list_users() %>
+              %endif
             %endif
           </div>
         </div>
@@ -168,7 +171,7 @@
 </%def>
 
 <%def name="list_users()" >
-  <div id='list-users'>
+  <div id='list-users' class="paged-container">
     %if viewType == 'blocked':
       ${list_blocked()}
     %else:
@@ -187,12 +190,14 @@
 
 <%def name="addUsers()">
   <% myTimezone  = me.get("basic", {}).get("timezone", "") %>
-  <div class="tabs">
+  <div class='ui-dlg-title'>${_('Add Users')}</div>
+  <div class="tabs" style="margin:auto">
     <ul class="tablinks h-links">
       <li><a style="cursor:pointer" class="selected"
              onclick="$('#add-user-block').toggle();
                       $('#add-users-block').toggle();
                       $(this).toggleClass('selected');
+                      $('#add-user-form-id').val('add-user-form');
                       $(this).parent().siblings().children().toggleClass('selected')">
             ${_("New User")}
           </a>
@@ -201,25 +206,27 @@
              onclick="$('#add-users-block').toggle();
                       $('#add-user-block').toggle();
                       $(this).toggleClass('selected');
+                      $('#add-user-form-id').val('add-users-form');
                       $(this).parent().siblings().children().toggleClass('selected')">
             ${_("Multiple Users")}
           </a>
       </li>
   </div>
+  <input id="add-user-form-id" type="hidden" value="add-user-form" />
   <div id="add-user-block">
-    <form action="/admin/add" method="POST" enctype="multipart/form-data" autocomplete="off">
-      <ul class="styledform">
+    <form id="add-user-form" class="ajax" action="/admin/add" method="POST" enctype="multipart/form-data" autocomplete="off">
+      <ul class="dlgform">
         <li class="form-row">
           <label class="styled-label" for="name">${_("Display Name")}</label>
-          <input type="text" name="name" />
+          <input type="text" name="name" required="" title="${_("Display Name")}"/>
         </li>
         <li class="form-row">
           <label class="styled-label" for="email">${_("Email Address")}</label>
-          <input type="text" name="email" />
+          <input type="email" name="email" required="" title="${_("Email Address")}"/>
         </li>
         <li class="form-row">
           <label class="styled-label" for="jobTitle">${_("Job Title")}</label>
-          <input type="text" name="jobTitle" />
+          <input type="text" name="jobTitle" required="" title="${_("Job Title")}"/>
         </li>
         <li class="form-row">
           <label class="styled-label" for="timezone">${_("Timezone")}</label>
@@ -235,17 +242,14 @@
         </li>
         <li class="form-row">
           <label class="styled-label" for="passwd">${_("Password")}</label>
-          <input type="password" name="passwd" />
+          <input type="password" name="passwd" required="" title="${_("Password")}"/>
         </li>
       </ul>
-      <div class="styledform-buttons">
-        <button type="submit" class="button default">${_("Add")}</button>
-        <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">${_("Cancel")}</button>
-      </div>
+      <input id="add-user-form-submit" type="submit" style="visibility:hidden" />
     </form>
   </div>
   <div id="add-users-block" style="display:none">
-    <form action="/admin/add" method="POST" enctype="multipart/form-data" autocomplete="off">
+    <form id="add-users-form" action="/admin/add" method="POST" enctype="multipart/form-data" autocomplete="off">
       <!-- fileupload doesn't work with ajax request.
            TODO: find workaround to submit file in ajax request-->
       <div class="alert alert-info">
@@ -258,7 +262,7 @@
           <span>Password</span>
         </b></div>
       </div>
-      <ul class="styledform">
+      <ul class="dlgform">
         <li class="form-row">
           <label class="styled-label" for="format">${_("File Type")}</label>
           <input type="radio" name="format" value="csv" checked=True/>CSV
@@ -266,13 +270,10 @@
         </li>
         <li class="form-row">
           <label class="styled-label" for="data">${_("Upload File")}</label>
-          <input type="file" name="data" accept="csv" />
+          <input type="file" name="data" accept="csv" size="15" required=""/>
         </li>
       </ul>
-      <div class="styledform-buttons">
-        <button type="submit" class="button default">${_("Add")}</button>
-        <button type="button" class="button default" onclick="$('#add-user-wrapper').empty()">${_("Cancel")}</button>
-      </div>
+      <input id="add-users-form-submit" type="submit" style="visibility:hidden" />
     </form>
   </div>
 </%def>
@@ -301,10 +302,10 @@
 <%def name="admin_actions(userId, action='')">
   %if not action or action == 'unblocked':
     <li><button class="button" onclick="$.post('/ajax/admin/block', 'id=${userId}')">${_("Block")}</button></li>
-    <li><button class="button" onclick="$$.removeUser.showRemoveUser('${userId}')">${_("Remove")}</button></li>
+    <li><button class="button" onclick="$$.users.remove('${userId}')">${_("Remove")}</button></li>
   %elif action == 'blocked':
     <li><button class="button" onclick="$.post('/ajax/admin/unblock', 'id=${userId}')">${_("Unblock")}</button></li>
-    <li><button class="button" onclick="$$.removeUser.showRemoveUser('${userId}')">${_("Remove")}</button></li>
+    <li><button class="button" onclick="$$.users.remove('${userId}')">${_("Remove")}</button></li>
   %elif action == 'deleted':
     <li>${_('User deleted from the network')}</li>
   %endif
@@ -312,30 +313,58 @@
 </%def>
 
 <%def name="confirm_remove_user()">
-  <div class="ui-dialog-titlebar ui-widget-header ui-corner-all ui-helper-clearfix">
-    <span class="ui-dialog-title" id="ui-dialog-title-dialog-form">Remove user</span>
+  <div class='ui-dlg-title'>${_('Confirm before deleting user')}</div>
+  <div class="dlgform ui-dlg-center" style="padding:10px;font-size: 12px;">
+    <p class="error-input" style="margin:0px">
+      Removing a user is an irreversible process. To just prevent a user from logging in, use "Block User" instead.
+    </p>
+    <p>
+      If you proceed with removing ${utils.userName(userId, entities[userId])}, the following actions will happen:
+      <ul>
+        <li>${utils.userName(userId, entities[userId])} will not be able to login again. </li>
+        %if affectedGroups:
+          <li>
+            ${utils.userName(userId, entities[userId])} will be removed from the following groups:
+            </br>
+              <%
+                links = []
+                for groupId, name in affectedGroups:
+                    links.append("""<a target="_blank" href='/group?id=%s'>%s</a>""" %(groupId, name))
+              %>
+              ${", ".join(links)}
+          </li>
+        %endif
+        %if orgAdminNewGroups:
+          <li>
+            You will become the administrator for the following groups,
+            for which ${utils.userName(userId, entities[userId])} is the only administrator.
+            </br>
+              <%
+                links = []
+                for groupId, name in orgAdminNewGroups:
+                  links.append("""<a target="_blank" href='/group?id=%s'>%s</a>""" %(groupId, name))
+              %>
+              ${", ".join(links)}
+          </li>
+        %endif
+        %if apps:
+          <li>
+            Access to following applications created by ${utils.userName(userId, entities[userId])} will be revoked:
+            </br>
+              <%
+                links = []
+                for appId in apps:
+                  links.append("""<a href='/apps?id=%s'>%s</a>""" %(appId, apps[appId]['meta']['name']))
+              %>
+              ${", ".join(links)}
+          </li>
+        %endif
+      </ul>
+    </p>
+    <p>
+      NOTE: Content created by the user will not be removed in this process.
+    </p>
   </div>
-  <div style="color:red;font-size:12px;"> Caution! removing an user is irreversible process.
-  User will not be able to login again. Access to apps created by the user will be revoked.
-  </div>
-  %if affectedGroups:
-    <div class=''> User will be removed from following groups</div>
-    % for groupId, name in affectedGroups:
-      <span> <a href='/group?id=${groupId}'>${name}</a></span>
-    %endfor
-  %endif
-  %if orgAdminNewGroups:
-    <div class=''> This User is the only administrator for the following groups.  You will be made the administrator for these groups. </div>
-    % for groupId, name in orgAdminNewGroups:
-      <span> <a href='/group?id=${groupId}'>${name}</a></span>
-    %endfor
-  %endif
-  %if apps:
-    <div class=''> The following apps will be removed from the network.</div>
-    % for appId in apps:
-      <span> <a href='/apps?id=${appId}'>${apps[appId]['meta']['name']}</a></span>
-    % endfor
-  %endif
 </%def>
 
 
