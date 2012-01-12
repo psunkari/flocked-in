@@ -319,7 +319,7 @@ class SignupResource(BaseResource):
         if validEmail:
             if token not in tokens:
                 raise PermissionDenied("Invalid token. <a href='/password/resend?email=%s'>Click here</a> to reset password"%(email))
-            yield db.insert(email, "userAuth", utils.hasspass(passwd), 'passwordHash')
+            yield db.insert(email, "userAuth", utils.hashpass(passwd), 'passwordHash')
             yield db.batch_remove({"userAuth": [email]}, names=deleteTokens)
         request.redirect('/signin')
         # XXX: notify user
