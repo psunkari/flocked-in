@@ -118,15 +118,15 @@ class AutoCompleteResource(BaseResource):
             if groupId in entities:
                 name = entities[groupId]['basic']['name']
                 data = {"icon": groupAvatar(groupId, entities[groupId], "s"),
-                        "title": name, 'meta':''}
+                        "title": name, 'meta':'&nbsp;'}
                 output.append({"value": name,
                                "label": template%data,
                                "href": "/group?id=%s"%groupId})
 
         for tag in tags:
             title = tag["title"]
-            data = {"icon": "", "title": title,
-                    "meta": ''}
+            data = {"icon": "/rsrcs/img/tag-small.png", "title": title,
+                    "meta": '&nbsp;'}
             output.append({"value": title,
                            "label": template%data,
                            "href": "/tags?id=%s"%tag["id"]})
