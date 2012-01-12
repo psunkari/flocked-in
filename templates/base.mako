@@ -99,7 +99,7 @@
       <div id="search-container">
         <form id="search" action="/search" method="GET" class="ajaxget">
           <input type="text" id="searchbox" name="q"
-                 placeholder="${_('Search people, messages and statuses...')}" required title="${_('Search')}"/>
+                 placeholder="${_('Search people and posts...')}" required title="${_('Search')}"/>
           <input type="submit" id="searchbutton" value="${_('Go!')}"/>
         </form>
       </div>
