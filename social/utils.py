@@ -6,7 +6,7 @@ import hashlib
 import datetime
 import base64
 import json
-import re
+import regex
 import string
 import markdown
 from lxml                import etree
@@ -590,10 +590,10 @@ def companyLogo(orgInfo, size=None):
 
 
 _urlRegEx = r'\b(([\w-]+(?::|&#58;)//?|www[.])[^\s()<>]+(?:\([\w\d]+\)|([^%s\s]|/)))'
-_urlRegEx = _urlRegEx % re.sub(r'([-\\\]])', r'\\\1', string.punctuation)
-_urlRegEx = re.compile(_urlRegEx)
+_urlRegEx = _urlRegEx % regex.sub(r'([-\\\]])', r'\\\1', string.punctuation)
+_urlRegEx = regex.compile(_urlRegEx)
 _newLineRegEx = r'\r\n|\n'
-_newLineRegEx = re.compile(_newLineRegEx)
+_newLineRegEx = regex.compile(_newLineRegEx)
 def normalizeText(text, richText=False):
     if not text:
         return text
@@ -657,9 +657,8 @@ def simpleTimestamp(timestamp, timezone='Asia/Kolkata'):
     return "<abbr class='timestamp' title='%s' data-ts='%s'>%s</abbr>" %(tooltip, timestamp, formatted)
 
 
-_snippetRE = re.compile(r'(.*)\s', re.L|re.U|re.S|re.M)
+_snippetRE = regex.compile(r'(.*)\s', regex.U|regex.S|regex.M)
 def toSnippet(text, maxlen, richText=False):
-
     unitext = text if type(text) == unicode or not text\
                    else text.decode('utf-8', 'replace')
     if richText:
@@ -937,9 +936,12 @@ def uniqify(lst):
     return new_list
 
 
+_withHyphensRegex = regex.compile('(?|[^\w\-]|_)*')
+_withoutHyphensRegex = regex.compile('(?|\W|_)*')
 def tokenize(sentences):
-    #tokenizer should be based on language
-    return [x.strip().lower() for x in sentences.split()]
+    withHyphens = set([x.lower() for x in regex.split(_withHyphensRegex, sentences) if x])
+    withoutHyphens = set([x.lower() for x in regex.split(_withoutHyphensRegex, sentences) if x])
+    return withHyphens.union(withoutHyphens)
 
 
 def removeStopWords(words):

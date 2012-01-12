@@ -1,5 +1,5 @@
 import csv
-import re
+import regex
 from csv import reader
 
 from telephus.cassandra import ttypes
@@ -596,24 +596,46 @@ class Admin(base.BaseResource):
     @defer.inlineCallbacks
     def _addKeywords(self, request):
         orgId = request.getSession(IAuthInfo).organization
-        keywords = utils.getRequestArg(request, 'keywords', sanitize=False) or ''
-        exactMatch = utils.getRequestArg(request, 'exactMatch')
-        exactMatch = True
-        keywords = [x.strip() for x in keywords.split(',')]
+        original = utils.getRequestArg(request, 'keywords', sanitize=False)
+        if not original:
+            return
 
-        # remove stopwords
-        keywords = set([x.decode('utf-8', 'replace').lower().encode('utf-8') \
-                       for x in keywords if x not in stopwords.words()])
-        for keyword in keywords:
-            yield db.insert(orgId, "keywords", '', keyword)
-            yield db.insert(orgId, "originalKeywords", '', keyword)
+        original = original.split(',')
+        decoded = set([x.decode('utf-8', 'replace').strip() for x in original])
 
-        keywords = yield db.get_slice(orgId, "originalKeywords", count=100)
-        keywords = utils.columnsToDict(keywords, ordered=True)
-        args = {'keywords': keywords}
+        # Check if any word is longer than 50 chars
+        decoded = set([x for x in decoded if len(x) < 50])
+        if len(decoded) != len(original):
+            raise errors.InvalidRequest(_('Keywords cannot be more than 50 characters long'))
 
-        yield renderScriptBlock(request, "admin.mako", "listKeywords",
-                                False, "#content", "set", **args)
+        # Check if any word has invalid characters
+        decoded = set([x for x in decoded if regex.match('^[\w-]*$', x)])
+        if len(decoded) != len(original):
+            raise errors.InvalidRequest(_('Keywords can only include numerals, alphabet and hyphens (-)'))
+
+        # Convert to lower case
+        decoded = set([x.lower() for x in decoded])
+
+        # Remove stopwords
+        keywords = set([x.encode('utf-8') for x in decoded\
+                        if x not in stopwords.words()])
+
+        # After all this if we still have words, add them to database
+        if keywords:
+            for keyword in keywords:
+                yield db.insert(orgId, "keywords", '', keyword)
+                yield db.insert(orgId, "originalKeywords", '', keyword)
+
+            keywords = yield db.get_slice(orgId, "originalKeywords", count=100)
+            keywords = utils.columnsToDict(keywords, ordered=True)
+            args = {'keywords': keywords}
+
+            yield renderScriptBlock(request, "admin.mako", "listKeywords",
+                                    False, "#content", "set", **args)
+
+        # We may want to display an error when we removed stopwords.
+        if len(keywords) < len(decoded):
+            pass
 
 
     @defer.inlineCallbacks
@@ -683,7 +705,7 @@ class Admin(base.BaseResource):
         invalidTags = []
         tagNames = [x.strip().decode('utf-8', 'replace') for x in tagNames.split(',')]
         for tagName in tagNames:
-            if len(tagName) < 50 and re.match('^[\w-]*$', tagName):
+            if len(tagName) < 50 and regex.match('^[\w-]*$', tagName):
                 yield tags.ensureTag(request, tagName, orgId, True)
             else:
                 invalidTags.append(tagName)
