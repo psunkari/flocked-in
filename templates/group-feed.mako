@@ -106,7 +106,9 @@
       %endif
       <ul class="v-links">
         %if myKey in entities[groupId].get("admins", {}):
-          <li><a class="ajax" href="/groups/pending?id=${groupId}">${_('Pending Requests')}</a></li>
+          %if entities[groupId]['basic']['access'] == 'closed':
+            <li><a class="ajax" href="/groups/pending?id=${groupId}">${_('Pending Requests')}</a></li>
+          %endif
           <li><a class="ajax" href="/groupsettings?id=${groupId}">${_('Edit Group Settings')}</a></li>
           <li><a class="ajax" href="/groups/members?id=${groupId}&managed=manage">${_('Manage Members')}</a></li>
         %else:
