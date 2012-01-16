@@ -1552,7 +1552,6 @@ var users = {
                     text:'Add Users',
                     click : function() {
                         var formId = $("#add-user-form-id").val();
-                        console.log('#' + formId + "-submit")
                         $('#' + formId + "-submit").trigger('click');
                     }
                 },
@@ -1592,7 +1591,7 @@ var users = {
             ]
         };
         $$.dialog.create(dialogOptions);
-        $.post('/ajax/admin/delete',  {id:userId});
+        $.get('/ajax/admin/delete?id='+userId);
     }
 }
 $$.users = users;

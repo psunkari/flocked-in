@@ -312,40 +312,42 @@
 </%def>
 
 <%def name="confirm_remove_user()">
-  <div class='ui-dlg-title'>${_('Confirm User Removal')}</div>
+  <div class='ui-dlg-title'>${_('Remove user ')} &ndash; ${entities[userId]["basic"]["name"]}</div>
   <div class="dlgform ui-dlg-center" style="font-size: 12px;max-height:250px;">
     <p style="margin:0px">
       User removal is an irreversible process. Instead you can <strong>Block</strong> a user to disable login to the network temporarily.
     </p>
     <p>
-      If you proceed with removing ${utils.userName(userId, entities[userId])}, the following actions will happen:
-      <ol>
-        %if apps:
-          <li>
-            Access to following applications created by ${utils.userName(userId, entities[userId])} will be revoked.
-            </br>
+      %if apps or orgAdminNewGroups:
+        If you proceed with removing ${utils.userName(userId, entities[userId])}, the following actions will happen:
+        <ol>
+          %if apps:
+            <li>
+              Access to following applications created by ${utils.userName(userId, entities[userId])} will be revoked.
+              </br>
               <%
                 links = []
                 for appId in apps:
                   links.append("""<a href='/apps?id=%s'>%s</a>""" %(appId, apps[appId]['meta']['name']))
               %>
               ${", ".join(links)}
-          </li>
-        %endif
-        %if orgAdminNewGroups:
-          <li>
-            You will become the administrator for the following groups,
-            for which ${utils.userName(userId, entities[userId])} is the only administrator:
-            </br>
+            </li>
+          %endif
+          %if orgAdminNewGroups:
+            <li>
+              You will become the administrator for the following groups,
+              for which ${utils.userName(userId, entities[userId])} is the only administrator:
+              </br>
               <%
                 links = []
                 for groupId, name in orgAdminNewGroups:
                   links.append("""<a target="_blank" href='/group?id=%s'>%s</a>""" %(groupId, name))
               %>
               ${", ".join(links)}
-          </li>
-        %endif
-      </ol>
+            </li>
+          %endif
+        </ol>
+      %endif
     </p>
     <p>
       <em>Note</em>: Content created by the user will not be removed in this process.

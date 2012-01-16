@@ -174,6 +174,20 @@ class Admin(base.BaseResource):
             yield renderScriptBlock(request, "admin.mako", "admin_actions",
                                     False, "#user-actions-%s" %(userId),
                                     "set", args=[userId, 'deleted'])
+
+
+    @defer.inlineCallbacks
+    def _renderDeleteUser(self, request):
+        authInfo = request.getSession(IAuthInfo)
+        myId = authInfo.username
+        orgId = authInfo.organization
+        userId, user = yield utils.getValidEntityId(request, "id")
+
+        # Admin cannot block himself.
+        if userId == myId:
+            error_str = "You are the only administrator, you can not delete yourself"
+            request.write("$$.dialog.close('removeuser-dlg');\
+                            $$.alerts.error('%s')" % error_str)
         else:
             orgAdminNewGroups = []
             affectedGroups = []
@@ -823,10 +837,11 @@ class Admin(base.BaseResource):
                     dfd = self._renderKeywordMatches(request)
                 elif action == 'keyword-matches-more':
                     dfd = self._renderKeywordMatchesMore(request)
+                elif action == "delete":
+                    dfd = self._renderDeleteUser(request)
             if not dfd:
                 raise errors.NotFoundError()
             return dfd
 
         d.addCallback(callback)
         return self._epilogue(request, d)
-
