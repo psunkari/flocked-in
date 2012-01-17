@@ -155,15 +155,15 @@
       <ul class="dlgform" id="invite-people">
         <li class="form-row">
             <label class="dlgform-label" for="msgcompose-rcpts">${_('Email')}</label>
-            <input type="email" name="email" autofocus required="" title="${_("Colleague&#39;s email address")}"/>
+            <input type="email" name="email" autofocus required="" title="${_("Email address")}"/>
         </li>
         <li class="form-row">
             <label class="dlgform-label" for="msgcompose-rcpts">${_('Email')}</label>
-            <input type="email" name="email" title="${_("Colleague&#39;s email address")}"/>
+            <input type="text" name="email" title="${_("Email address")}"/>
         </li>
         <li class="form-row">
             <label class="dlgform-label" for="msgcompose-rcpts">${_('Email')}</label>
-            <input type="email" name="email" title="${_("Colleague&#39;s email address")}"/>
+            <input type="text" name="email" title="${_("Email address")}"/>
         </li>
       </ul>
       <input id="invite-people-form-submit" type="submit" style="display:none;" />
