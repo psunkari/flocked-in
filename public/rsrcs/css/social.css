@@ -760,6 +760,12 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     padding-left: 20px;
 }
 
+.acl-button-disabled {
+    color: graytext !important;
+    cursor: default !important;
+}
+
+
 .poll-icon {
     background-position: 0px -32px;
 }

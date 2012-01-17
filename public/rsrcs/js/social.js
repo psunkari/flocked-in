@@ -1243,6 +1243,10 @@ var acl = {
         evt.preventDefault();
     },
 
+    /*
+     * XXX: switchACL is currently used only to switch to groups
+     *      in the group profile page.
+     */
     switchACL: function(id, type, entityId, entityName){
         var aclObj = {accept:{}}
         if (type == "group"){
@@ -1250,9 +1254,10 @@ var acl = {
             $("#"+id).attr("value", $$.json.stringify(aclObj));
             $("#"+id+"-label").text(entityName);
             $("#"+id+"-label").attr("disabled", 'disabled');
+            $("#"+id+"-button").addClass("acl-button-disabled");
+            $("#"+id+"-tooltip").closest('.tooltip').css('visibility', 'hidden');
         }
         return ;
-
     },
 
     updateACL: function(id, ui) {
@@ -1261,22 +1266,21 @@ var acl = {
             str = ui.item.find(".acl-title").text();
             tooltip = ui.item.find(".acltip").text();
 
-        if (type === "public") {
-            aclObj.accept.pub = true;
-        }
-        else if (type.match(/^org:/)) {
+        if (type.match(/^org:/))
             aclObj.accept.orgs = type.substr(4).split(",");
-        }
-        else if (type.match(/^group:/)) {
+        else if (type.match(/^group:/))
             aclObj.accept.groups = type.substr(6).split(",");
-        }
-        else {
+        else
             return;
-        }
 
         $("#"+id+"-tooltip").text(tooltip);
         $("#"+id).attr("value", $$.json.stringify(aclObj));
         $("#"+id+"-label").text(str);
+
+        if (type.match(/^group:/))
+            $("#"+id+"-tooltip").closest('.tooltip').css('visibility', 'hidden');
+        else
+            $("#"+id+"-tooltip").closest('.tooltip').css('visibility', 'visible');
     },
 
     /* Update list of groups displayed in the menu */
