@@ -101,7 +101,7 @@
             %if userId not in blockedUsers:
               <li><button class="button" onclick="$.post('/ajax/admin/block', 'id=${userId}')">${_("Block")}</button></li>
             %else:
-              <li><button class="button" onclick="$.post('/ajax/admin/block', 'id=${userId}')">${_("Unblock")}</button></li>
+              <li><button class="button" onclick="$.post('/ajax/admin/unblock', 'id=${userId}')">${_("Unblock")}</button></li>
             %endif
             <li><button class="button" onclick="$$.users.remove('${userId}')">${_("Remove")}</button></li>
           %endif
