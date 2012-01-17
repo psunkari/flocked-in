@@ -180,6 +180,7 @@
                     if(value==undefined){
                         return true;
                     }
+                    var title = $(this).attr('title') || $(this).attr('name')
                     if(($(this).val()==$(this).attr('placeholder')) || ($(this).val()=='')){
                         emptyInput=$(this);
                         if(opts.emptyMessage){
@@ -188,27 +189,27 @@
                         }
                         else if(opts.messages=='es'){
                             //Spanish empty message
-                            $$.alerts.error('El campo '+$(this).attr('title')+' es requerido.');
+                            $$.alerts.error('El campo '+title+' es requerido.');
                         }
                         else if(opts.messages=='en'){
                             //English empty message
-                            $$.alerts.error('The '+$(this).attr('title')+' field is required.');
+                            $$.alerts.error('The '+title+' field is required.');
                         }
                         else if(opts.messages=='it'){
                             //Italian empty message
-                            $$.alerts.error('Il campo '+$(this).attr('title')+' é richiesto.');
+                            $$.alerts.error('Il campo '+title+' é richiesto.');
                         }
                         else if(opts.messages=='de'){
                             //German empty message
-                            $$.alerts.error($(this).attr('title')+' ist ein Pflichtfeld.');
+                            $$.alerts.error(title+' ist ein Pflichtfeld.');
                         }
                         else if(opts.messages=='fr'){
                             //Frech empty message
-                            $$.alerts.error('Le champ '+$(this).attr('title')+' est requis.');
+                            $$.alerts.error('Le champ '+title+' est requis.');
                         }
                         else if(opts.messages=='nl' || opts.messages=='be'){
                             //Dutch messages
-                            $$.alerts.error($(this).attr('title')+' is een verplicht veld.');
+                            $$.alerts.error(title+' is een verplicht veld.');
                         }                     
                         return false;
                     }

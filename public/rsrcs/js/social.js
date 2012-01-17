@@ -1329,7 +1329,7 @@ var messaging = {
                         if ($('.tagedit-list.dlgform > .tagedit-listelement-old').length > 0){
                             $('#msgcompose-form-submit').trigger('click');
                         }else{
-                            $$.alerts.info("Recipients field cannot be empty");
+                            $$.alerts.error("Recipients field cannot be empty");
                         }
                     }
                 },
