@@ -617,7 +617,7 @@ class SettingsResource(base.BaseResource):
             endYear = utils.getRequestArg(request, 'endyear')
             if not endYear:
                 endYear = 9999
-                endMonth = 12
+                endMonth = 99
             else:
                 endYear = int(endYear)
                 endMonth = int(utils.getRequestArg(request, 'endmonth'))

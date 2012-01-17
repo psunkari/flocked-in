@@ -592,6 +592,8 @@
 <%def name="companyForm(companyId=None, companyVal=None)">
   <%
     end, start, name = companyId.split(':', 2) if companyId else ('', '', '')
+    if end.startswith('9999'):
+      end = '999999'
     jobTitle = companyVal if companyVal else ''
     dlgTitle = 'Add Company' if not companyId else 'Edit Company'
   %>
@@ -614,13 +616,13 @@
           </li>
           <li class="form-row">
               <label class="dlgform-label">${_('Starting from')}</label>
-              ${self.selectMonth("startmonth", selected=startMonth)}
-              ${self.selectYear("startyear", selected=start)}
+              ${self.selectMonth("startmonth", selected=start[4:])}
+              ${self.selectYear("startyear", selected=start[:4])}
           </li>
           <li class="form-row">
               <label class="dlgform-label">${_('Till')}</label>
-              ${self.selectMonth("endmonth", '-', selected=endMonth)}
-              ${self.selectYear("endyear", '--', selected=end)}
+              ${self.selectMonth("endmonth", '-', selected=end[4:])}
+              ${self.selectYear("endyear", '--', selected=end[:4])}
           </li>
           %if companyId:
             <input type="hidden" name="id" value="${utils.encodeKey(companyId)}"/>
