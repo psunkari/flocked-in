@@ -501,9 +501,28 @@ var convs = {
     },
 
     doneTags: function(convId) {
-        $('#conv-tags-wrapper-'+convId).removeClass('editing-tags');
-        if ($('#conv-tags-'+convId).children().length == 0)
-            convs.showHideComponent(convId, 'tags', false);
+        var tag = $('#addtag-form-'+convId+' .conv-tags-input').val();
+        if( tag != "") {
+            var d = $.post("/ajax/item/tag", {
+                            id: convId,
+                            tag: tag
+                    });
+            d.then(function() {
+                if ($('#conv-tags-'+convId).children().length == 0){
+                    convs.showHideComponent(convId, 'tags', false);
+                }
+                else {
+                    convs.showHideComponent(convId, 'tags', true);
+                }
+            })
+            $('#conv-tags-wrapper-'+convId).removeClass('editing-tags');
+        } else {
+            $('#conv-tags-wrapper-'+convId).removeClass('editing-tags');
+            if ($('#conv-tags-'+convId).children().length == 0){
+                convs.showHideComponent(convId, 'tags', false);
+            }
+        }
+        $('#addtag-form-'+convId+' .conv-tags-input').val('');
     },
 
     comment: function(convId) {
