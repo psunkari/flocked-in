@@ -19,34 +19,41 @@ from social.settings    import saveAvatarItem
 from social.logging     import log
 
 
+timezones = location_tz_map.values()
+def validTimezone(timezone):
+    return timezone in timezones
+
+
 class Admin(base.BaseResource):
     isLeaf=True
 
-    @defer.inlineCallbacks
-    def _validData(self, data, orgId):
-        timezones = location_tz_map.values()
-        for row in data:
-            if row:
-                if len(row) !=5:
-                    defer.returnValue(False)
+    def _validateData(self, data, orgId, org):
+        invalidLines = []
+        for i, row in enumerate(data):
+            if row and len(row) == 5:
                 displayName, email, jobTitle, timezone, passwd = row
-                if timezone not in timezones:
-                    defer.returnValue(False)
+                if not validTimezone(timezone):
+                    invalidLines.append(str(i+1))
+                    continue
                 try:
                     domain = email.split("@")[1]
+                    if domain not in org['domains']:
+                        invalidLines.append(str(i+1))
                 except IndexError:
-                    defer.returnValue(False)
-                #XXX: validate all the domains at once.
-                userOrg = yield getOrgKey(domain)
-                if userOrg != orgId:
-                    defer.returnValue(False)
-        defer.returnValue(True)
+                    invalidLines.append(str(i+1))
+            elif row:
+                invalidLines.append(str(i+1))
+
+        return invalidLines
 
 
     @defer.inlineCallbacks
     def _addUsers(self, request):
-        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        orgId = args["orgKey"]
+        authInfo = request.getSession(IAuthInfo)
+        myId = authInfo.username
+        orgId = authInfo.organization
+        cols =  yield db.get_slice(orgId, "entities", ['basic', 'domains'])
+        org = utils.supercolumnsToDict(cols)
 
         # File upload
         dataFmt = utils.getRequestArg(request, 'format')
@@ -75,15 +82,31 @@ class Admin(base.BaseResource):
             dialect = csv.excel_tab  if dataFmt == "tsv" else csv.excel
             data = csv.reader(data.split("\n"), dialect=dialect)
             data = [row for row in data]
+            invalidLines = self._validateData(data, orgId, org)
+            if invalidLines:
+                if len(invalidLines) == 1:
+                    msg = "Invalid data found in line %s."%(invalidLines[0])
+                elif len(invalidLines) <=3 :
+                    msg = "Invalid data found in lines %s." %(",".join(invalidLines[:3]))
+                else:
+                    msg = "Invalid data found in lines %s and others." %(",".join(invalidLines[:3]))
+                request.write("<script>parent.$$.alerts.error('%s');</script>" %(msg))
+                raise errors.InvalidRequest("New user details are invalid")
+
         if all([name, emailId, passwd, jobTitle, timezone]):
             data = [[name, emailId, jobTitle, timezone, passwd]]
+            errorFields = []
+            try:
+                domain = emailId.split("@")[1]
+                if domain not in org['domains']:
+                    errorFields = ['Email']
+            except IndexError:
+                errorFields = ['Email']
 
-
-        isValidData = yield self._validData(data, orgId)
-        if not isValidData:
-          if fileUpload:
-            request.write("<script>parent.$$.alerts.error('File could not be parsed.');</script>")
-          raise errors.InvalidRequest("New user details are invalid")
+            if not validTimezone(timezone):
+                errorFields.append('Timezone')
+            if errorFields:
+                raise errors.InvalidRequest("Invalid %s " %(','.join(errorFields)))
 
         for row in data:
             if row:
