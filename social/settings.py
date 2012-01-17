@@ -725,6 +725,8 @@ class SettingsResource(base.BaseResource):
         myId = request.getSession(IAuthInfo).username
         orgId = request.getSession(IAuthInfo).organization
         expertise = utils.getRequestArg(request, 'expertise', False)
+        if not expertise:
+            raise errors.MissingParams(['Expertise'])
 
         if not remove:
             decoded = expertise.decode('utf-8', 'replace')
