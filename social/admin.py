@@ -82,7 +82,7 @@ class Admin(base.BaseResource):
         isValidData = yield self._validData(data, orgId)
         if not isValidData:
           if fileUpload:
-            request.write("<script>parent.$$.alerts.error('Invalid file');")
+            request.write("<script>parent.$$.alerts.error('File could not be parsed.');</script>")
           raise errors.InvalidRequest("New user details are invalid")
 
         for row in data:
