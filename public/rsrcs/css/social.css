@@ -1129,6 +1129,7 @@ abbr.timestamp {
 
 .text-full, .text-preview {
     word-wrap: break-word;
+    white-space: pre-wrap;
 }
 #empty-message,
 #next-load-wrapper {
