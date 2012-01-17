@@ -502,7 +502,8 @@ var convs = {
 
     doneTags: function(convId) {
         var tag = $('#addtag-form-'+convId+' .conv-tags-input').val();
-        if( tag != "") {
+        var placeholder = $('#addtag-form-'+convId+' .conv-tags-input').attr('placeholder')
+        if( tag != "" && tag != placeholder) {
             var d = $.post("/ajax/item/tag", {
                             id: convId,
                             tag: tag
