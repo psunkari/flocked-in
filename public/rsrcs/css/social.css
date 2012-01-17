@@ -212,7 +212,7 @@ a:hover, a:active, a:focus {
     text-decoration: none;
     padding: 2px 2px 2px;
 }
-#sitelogo {
+#sitelogo, #sitelogo-img {
     margin-left: 10px;
     float: left;
     overflow: hidden;
