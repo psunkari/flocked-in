@@ -24,7 +24,7 @@ class PollResource(base.BaseResource):
         convId, conv = yield utils.getValidItemId(request, 'id', 'poll', ['options'])
         vote = utils.getRequestArg(request, 'option')
         if not vote or vote not in conv.get("options", {}):
-            raise errors.InvalidRequest("The option does not exist")
+            raise errors.MissingParams(["Option"])
 
         optionCounts = {}
         myId = request.getSession(IAuthInfo).username
@@ -115,19 +115,14 @@ class PollResource(base.BaseResource):
     @profile
     @dump_args
     def render_POST(self, request):
-        def success(response):
-            request.finish()
-        def failure(err):
-            log.err(err)
-            request.setResponseCode(500)
-            request.finish()
-
+        d = None
         segmentCount = len(request.postpath)
+
         if segmentCount == 1 and request.postpath[0] == 'vote':
             d = self._vote(request)
-            ##XXX: should we use BaseResource._epilogue ?
-            d.addCallbacks(success, failure)
-            return server.NOT_DONE_YET
+
+        return self._epilogue(request, d)
+
 
     @profile
     @dump_args
@@ -142,17 +137,7 @@ class PollResource(base.BaseResource):
             elif request.postpath[0] == 'voters':
                 d = self._listVoters(request)
 
-        if d:
-            def success(response):
-                request.finish()
-            def failure(err):
-                log.err(err)
-                request.setResponseCode(500)
-                request.finish()
-            d.addCallbacks(success, failure)
-            return server.NOT_DONE_YET
-        else:
-            pass # XXX: 404 error
+        return self._epilogue(request, d)
 
 
 class Poll(object):
