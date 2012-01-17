@@ -350,7 +350,8 @@
               <input type="submit" id="expertise-add" class="button" value="Add" style="margin:0px;"/>
             </div>
           </form>
-          <span>Example: Cpp, Accounting, Green-Building, Patent-Law</span>
+          <span> Enter one word/phrase for each expertise using only alphabet, numerals or hyphen and less than 50 characters.<br/>
+          Example: Cpp, Accounting, Green-Building, Patent-Law</span>
         </div>
       </li>
       <li class="form-row" style="margin-top: 35px;">

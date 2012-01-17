@@ -363,11 +363,11 @@
       <div class="styledform-helpwrap">
         <form method="post" action="/admin/tags/add" class="ajax" autocomplete="off">
           <div class="styledform-inputwrap" id="expertise-input">
-            <input type="textarea" name="tag" id="expertise-textbox" value="" required title="tag"  autofocus/>
+            <input type="textarea" name="tag" id="expertise-textbox" value="" required title="Tags"  autofocus/>
             <input type="submit" id="expertise-add" class="button" value="Add" style="margin:0px;"/>
           </div>
         </form>
-        <div>Enter comma separated tags. Tag can contain alpha-numerics or hypen only. It cannot be more than 50 characters.</div>
+        <div>Enter comma separated tags. Each tag can only have alphabet, numerals or hyphen and cannot exceed 50 characters.</div>
       </div>
     </li>
   </ul>
@@ -408,11 +408,11 @@
       <div class="styledform-helpwrap">
         <form method="post" action="/admin/keywords/add" class="ajax" autocomplete="off">
           <div class="styledform-inputwrap" id='expertise-input'>
-            <input type="textarea" name="keywords" id="expertise-textbox" value="" required title="Add expertise" />
+            <input type="textarea" name="keywords" id="expertise-textbox" value="" required title="Keywords" />
             <input type="submit" id="expertise-add" class="button" value="Add" style="margin:0px;"/>
           </div>
         </form>
-        <div>Enter comma separated list of words to be monitored.</div>
+        <div>Enter comma separated words to be monitored. Each word can only have alphabet, numerals or hyphen and cannot exceed 50 characters.</div>
       </div>
     </li>
   </ul>
