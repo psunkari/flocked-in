@@ -604,7 +604,7 @@ class MessagingResource(base.BaseResource):
         newMembers, body, subject, convId = self._parseComposerArgs(request)
 
         if not (convId and newMembers):
-            raise errors.MissingParams([])
+            raise errors.MissingParams(['Recipient'])
 
         conv = yield db.get_slice(convId, "mConversations")
         conv = utils.supercolumnsToDict(conv)
