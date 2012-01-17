@@ -1,6 +1,7 @@
 import csv
 import regex
 from csv import reader
+import json
 
 from telephus.cassandra import ttypes
 from twisted.web        import server
@@ -229,24 +230,37 @@ class Admin(base.BaseResource):
         name = utils.getRequestArg(request, "name")
         dp = utils.getRequestArg(request, "dp", sanitize=False)
 
-        orgInfo = {}
+        orgInfo, orgDetails = {}, {}
         if dp:
             avatar = yield saveAvatarItem(orgId, orgId, dp, isLogo=True)
             if not orgInfo.has_key("basic"):
                 orgInfo["basic"] = {}
             orgInfo["basic"]["logo"] = avatar
+            orgDetails["logo"] = utils.companyLogo(orgInfo)
         if name:
             if "basic" not in orgInfo:
                 orgInfo["basic"] = {}
             orgInfo["basic"]["name"] = name
             args['org']['basic']['name'] = name
+            orgDetails["name"] = name
         if orgInfo:
             yield db.batch_insert(orgId, "entities", orgInfo)
 
-        ###TODO: update orgImage when image is uploaded.
-        request.write("""<script>
-                            parent.$$.alerts.info('update successful');
-                        </script>""")
+        response = """
+                    <script>
+                        var data = %s;
+                        if (data.logo){
+                          var imageUrl = data.logo;
+                          parent.$('#sitelogo-img').attr('src', imageUrl);
+                        }
+                        if (data.name){
+                            parent.$('#sitelogo-link').attr('title', data.name);
+                            parent.$('#sitelogo-img').attr('alt', data.name);
+                        }
+                        parent.$$.alerts.info("%s");
+                    </script>
+                    """ % (json.dumps(orgDetails),  _("Company details updated"))
+        request.write(response)
 
 
     @defer.inlineCallbacks

@@ -85,11 +85,11 @@
         <div class="avatar" id="avatar" style="background-image:url('${avatarURI}')"></div>
       %endif
       <div id="sitelogo">
-        <a id="sitelogo-link" href="/">
+        <a id="sitelogo-link" href="/" title="${org['basic']['name']}">
           %if org and org.has_key('basic'):
             <% logoURI = utils.companyLogo(org) %>
             %if logoURI:
-              <img id="sitelogo" src="${logoURI}" alt="${org['basic']['name']}"/>
+              <img id="sitelogo-img" src="${logoURI}" alt="${org['basic']['name']}"/>
             %else:
               <span id="sitename">${org['basic']['name']}</span>
             %endif
