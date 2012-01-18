@@ -508,6 +508,8 @@ class ItemResource(base.BaseResource):
             yield defer.DeferredList(renderers)
 
         # TODO: Render other blocks
+        if plugin and hasattr(plugin, 'renderSideBlock'):
+            yield plugin.renderSideBlock(request, landing, args)
 
         if script and landing:
             request.write("</body></html>")
@@ -529,11 +531,18 @@ class ItemResource(base.BaseResource):
             return
 
         entities = {myId: args['me']}
+        toFetchEntities = []
+        convType = utils.getRequestArg(request, "type")
+        plugin = plugins[convType]
+        entityIds = yield plugin.fetchData(args, convId)
+        toFetchEntities.extend(entityIds)
+
         target = conv['meta'].get('target', None)
         if target:
-            toFetchEntities = set(target.split(','))
-            cols = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
-            entities.update(utils.multiSuperColumnsToDict(cols))
+            toFetchEntities = toFetchEntities.extend(target.split(','))
+
+        cols = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
+        entities.update(utils.multiSuperColumnsToDict(cols))
 
         relation = Relation(myId, [])
         yield relation.initGroupsList()
@@ -1092,6 +1101,9 @@ class ItemResource(base.BaseResource):
             # If it is the comment being deleted, rollback all feed updates
             # that were made due to this comment and likes on this comment.
             d = deleteItem(request, itemId, item, conv)
+
+                plugin = plugins[convType]
+                yield plugin.delete(myId, convId)
             deferreds.append(d)
 
         else:

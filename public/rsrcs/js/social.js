@@ -1393,7 +1393,7 @@ var events = {
     },
     RSVP: function(itemId, response){
         //Add routine for submitting an RSVP
-        var postdata = 'type=event&id='+itemId+'&response='+response;
+        var postdata = 'id='+itemId+'&response='+response;
         $.post('/ajax/event/rsvp', postdata)
     },
     removeUser: function(self, user_id){
@@ -1415,28 +1415,64 @@ var events = {
         $$.dialog.create(dialogOptions);
         $.get('/ajax/event/invitee?id='+itemId);
     },
+    _toValidDateString: function(dateText){
+        var dtArray = dateText.split(" ");
+        dtArray.splice(3,0, new Date().getFullYear())
+        var newDateText = dtArray.join(" ");
+        return newDateText
+    },
     prepareDateTimePickers: function(){
         var currentTime = new Date();
         // Set the Display Strings
-        $('#eventstartdate').datepicker({ minDate: currentTime,
-            changeMonth: true, altField: '#startDate', altFormat: '@',
-            onSelect: function(selectedDate){
-                var instance = $(this).data("datepicker")
-                var date = $.datepicker.parseDate(
-                                    instance.settings.dateFormat ||
-                                        $.datepicker._defaults.dateFormat,
-                                    selectedDate, instance.settings );
-                $('#eventenddate').datepicker("option", "minDate", date)
+        var _self = this;
+        $('#eventstartdate').datetimepicker({ minDate: currentTime,
+            dateFormat:'D, d M yy',timeFormat: 'h:m TT', ampm: true,
+            onClose: function(dateText, inst) {
+            },
+            onSelect: function (selectedDateTime){
+                var start = $(this).datetimepicker('getDate');
+                $('#eventenddate').datetimepicker('option', 'minDate', new Date(start.getTime()));
+                $('#startDate').val(start.getTime());
             }
         });
-        $('#eventenddate').datepicker({ minDate: currentTime,
-            changeMonth: true, altField: '#endDate', altFormat: '@'});
-        $('#eventstartdate').datepicker('setDate', new Date());
-        $('#eventenddate').datepicker('setDate', new Date());
+        $('#eventenddate').datetimepicker({ minDate: currentTime,
+            dateFormat:'D, d M yy',timeFormat: 'h:m TT', ampm: true,
+            onClose: function(dateText, inst) {
+            },
+            onSelect: function (selectedDateTime){
+                var end = $(this).datetimepicker('getDate');
+                $('#eventstartdate').datetimepicker('option', 'maxDate', new Date(end.getTime()));
+                $('#endDate').val(end.getTime());
+            }
+        });
+        $('#eventstartdate').datetimepicker('setDate', currentTime);
+        $('#startDate').val(currentTime.getTime());
+        //$('#eventstartdate').datetimepicker('option', 'minDateTime', currentTime);
+        var preSetEndDateTime = new Date(new Date().setHours(currentTime.getHours() + 1))
+        var endMinDateTime = new Date(new Date().setMinutes(currentTime.getMinutes() + 1))
+        $('#eventenddate').datetimepicker('setDate', preSetEndDateTime);
+        $('#endDate').val(preSetEndDateTime.getTime());
+        //$('#eventenddate').datetimepicker('option', 'minDateTime', endMinDateTime);
 
         $("#allDay").change(function(){
             $('#startTimeWrapper, #endTimeWrapper').toggle()
         })
+    },
+    autoFillUsers: function(){
+        $('#event-invitee').autocomplete({
+            source: '/auto/users',
+            minLength: 2,
+            select: function( event, ui ) {
+                $('.event-invitees').append(
+                    $$.messaging.formatUser(ui.item.value, ui.item.uid));
+
+                var rcpts = jQuery.trim($('#invitees').val());
+                rcpts = (rcpts == "") ? ui.item.uid: rcpts+","+ui.item.uid
+                $('#invitees').val(rcpts)
+                this.value = "";
+                return false;
+        }
+        });
     }
 };
 
