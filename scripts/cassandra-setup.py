@@ -191,10 +191,6 @@ def createColumnFamilies(client):
                              None, "Reverse map of user:event to agenda entry")
     yield client.system_add_column_family(userAgendaMap)
 
-    eventAttendees = CfDef(KEYSPACE, "eventAttendees", "Standard", "UTF8Type",
-                             None, "List of users who have responded to an event")
-    yield client.system_add_column_family(eventAttendees)
-
     eventResponses = CfDef(KEYSPACE, "eventResponses", "Standard", "UTF8Type",
                             None, "List of RSVP responses to an event")
     yield client.system_add_column_family(eventResponses)
@@ -648,9 +644,8 @@ def truncateColumnFamilies(client):
                "user_files", "suggestions", "apps", "appsByOwner", "oAuthData",
                "userSessionsMap", "deletedUsers", "orgPresetTags",
                "feed_event", "userItems_event", "userAgenda", "eventResponses",
-               "keywords", "keywordItems", "originalKeywords"]:
-               "eventAttendees", "userAgendaMap"]:
-        
+               "keywords", "keywordItems", "originalKeywords", "userAgendaMap"]:
+
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 

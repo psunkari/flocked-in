@@ -85,7 +85,7 @@ class EventResource(base.BaseResource):
         if not conv:
             raise errors.MissingParams([_("Event ID")])
 
-        if (conv["meta"].has_key("type") and conv["meta"]["type"] != "event"):
+        if ("type" in conv["meta"] and conv["meta"]["type"] != "event"):
             raise errors.InvalidRequest("Not a valid event")
 
         #Find out if already stored response is the same as this one. Saves
@@ -108,7 +108,7 @@ class EventResource(base.BaseResource):
 
         #If I was invited, then update the invited status in convs scf
         if myId in conv["invitees"].keys():
-            conv["invitees"] = {myId:response}
+            conv["invitees"] = {myId: response}
             d = db.batch_insert(convId, "items", conv)
             deferreds.append(d)
 
@@ -133,8 +133,8 @@ class EventResource(base.BaseResource):
 
         #Now insert this user in the list of people who responded to this event
         # Map of user to a response
-        d = db.insert(convId, "eventAttendees", response, myId)
-        deferreds.append(d)
+        #d = db.insert(convId, "eventAttendees", response, myId)
+        #deferreds.append(d)
 
         #Remove the old response to this event by this user.
         yield db.batch_remove({'eventResponses': [convId]},
@@ -147,11 +147,11 @@ class EventResource(base.BaseResource):
         if script:
             #Update the inline status of the rsvp status
             if response == "yes":
-              rsp = _("You are attending")
+                rsp = _("You are attending")
             elif response == "no":
-              rsp = _("You are not attending")
+                rsp = _("You are not attending")
             elif response == "maybe":
-              rsp = _("You may attend")
+                rsp = _("You may attend")
 
             request.write("$('#event-rsvp-status-%s').text('%s')" %(convId, rsp))
 
@@ -295,7 +295,7 @@ class Event(object):
     position = 4
     disabled = False
     hasIndex = True
-    indexFields = {'meta':set(['event_desc','event_location','event_title'])}
+    indexFields = {'meta': set(['event_desc', 'event_location', 'event_title'])}
     monitorFields = {}
 
     @profile
@@ -311,10 +311,10 @@ class Event(object):
             desc = conv["meta"]["desc"]
             titleSnippet = utils.toSnippet(desc, 80)
         noOfRequesters = len(set(requesters))
-        reasons = { 1: "%s invited you to the event: %s ",
-                    2: "%s and %s invited you to the event: %s ",
-                    3: "%s, %s and 1 other invited you to the event: %s ",
-                    4: "%s, %s and %s others invited you to the event: %s "}
+        reasons = {1: "%s invited you to the event: %s ",
+                   2: "%s and %s invited you to the event: %s ",
+                   3: "%s, %s and 1 other invited you to the event: %s ",
+                   4: "%s, %s and %s others invited you to the event: %s "}
         vals = []
         for userId in requesters:
             userName = utils.userName(userId, users[userId])
@@ -374,14 +374,15 @@ class Event(object):
         invitees = utils.multiSuperColumnsToDict(invitees)
         args.setdefault("invited_status", {})[convId] = invitees[convId]["invitees"]
 
-        try:
-            d = yield db.get(convId, "eventAttendees", myId)
-        except ttypes.NotFoundException:
-            pass
-        else:
-            response = d.column.value
+        #try:
+        #    d = yield db.get(convId, "eventAttendees", myId)
+        #except ttypes.NotFoundException:
+        #    pass
+        #else:
+        #    response = d.column.value
 
-        args.setdefault("my_response", {})[convId] = response
+        #TODO:Deal with eventAttendees
+        args.setdefault("my_response", {})[convId] = "yes"
 
         defer.returnValue(invitees[convId]["invitees"].keys())
 
@@ -492,7 +493,7 @@ class Event(object):
 
         #Get the list of every user who responded to this event
         res = yield db.get_slice(convId, "eventResponses")
-        attendees = [x.column.name.split(":",1)[1] for x in res]
+        attendees = [x.column.name.split(":", 1)[1] for x in res]
 
         # Add all the invited people of the item
         res = yield db.get_slice(convId, "items", ['invitees'])
@@ -504,8 +505,8 @@ class Event(object):
                                        uId in attendees], "userAgendaMap")
         res = utils.multiColumnsToDict(res)
 
-        for k,v in res.iteritems():
-            uid = k.split(":",1)[0]
+        for k, v in res.iteritems():
+            uid = k.split(":", 1)[0]
             tuids = v.keys()
             user_tuids[uid] = tuids
 
@@ -564,6 +565,7 @@ class Event(object):
 
     _ajaxResource = None
     _resource = None
+
     def getResource(self, isAjax):
         if isAjax:
             if not self._ajaxResource:

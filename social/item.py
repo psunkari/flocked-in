@@ -1102,8 +1102,8 @@ class ItemResource(base.BaseResource):
             # that were made due to this comment and likes on this comment.
             d = deleteItem(request, itemId, item, conv)
 
-                plugin = plugins[convType]
-                yield plugin.delete(myId, convId)
+            plugin = plugins[convType]
+            yield plugin.delete(myId, convId)
             deferreds.append(d)
 
         else:
