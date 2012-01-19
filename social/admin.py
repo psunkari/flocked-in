@@ -540,10 +540,16 @@ class Admin(base.BaseResource):
         extraDataDeferreds = []
         for itemId in itemIds:
             item = items[itemId]
-            toFetchEntities.add(item['meta']['owner'])
-            if 'target' in item['meta']:
-                toFetchEntities.update(item['meta']['target'].split(','))
-            itemType = item['meta'].get('type', 'status')
+            itemMeta = item['meta']
+            toFetchEntities.add(itemMeta['owner'])
+            if 'target' in itemMeta:
+                toFetchEntities.update(itemMeta['target'].split(','))
+            if 'parent' in itemMeta:
+                parentId = itemMeta['parent']
+                if parentId in items:
+                    toFetchEntities.add(items[parentId]['meta']['owner'])
+
+            itemType = itemMeta.get('type', 'status')
             if itemType in plugins:
                 d = plugins[itemType].fetchData(args, itemId)
                 extraDataDeferreds.append(d)
