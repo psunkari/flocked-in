@@ -19,8 +19,8 @@ from twisted.web.http_headers   import Headers
 
 from social                     import base, utils, config, feed
 from social                     import errors, plugins, _, db
+from social                     import template as t
 from social.constants           import SEARCH_RESULTS_PER_PAGE
-from social.template            import render, renderScriptBlock
 from social.logging             import dump_args, profile, log
 from social.relations           import Relation
 
@@ -269,6 +269,7 @@ class Solr(object):
 
 class SearchResource(base.BaseResource):
     isLeaf = True
+    _templates = ['search.mako']
 
     TYPE_ITEMS = 1
     TYPE_PEOPLE = 2
@@ -309,11 +310,11 @@ class SearchResource(base.BaseResource):
         args["start"] = start
 
         if script  and landing:
-            yield render(request, "search.mako", **args)
+            t.render(request, "search.mako", **args)
 
         if script and appchange:
-            yield renderScriptBlock(request, "search.mako", "layout",
-                                    landing, "#mainbar", "set", **args)
+            t.renderScriptBlock(request, "search.mako", "layout",
+                                landing, "#mainbar", "set", **args)
 
         toFetchEntities = set()
         toFetchItems = set()
@@ -415,10 +416,10 @@ class SearchResource(base.BaseResource):
 
         args['highlight'] = highlight
         if script:
-            yield renderScriptBlock(request, "search.mako", "results",
-                                    landing, "#search-results", "set", **args)
+            t.renderScriptBlock(request, "search.mako", "results",
+                                landing, "#search-results", "set", **args)
         else:
-            yield render(request, "search.mako", **args)
+            t.render(request, "search.mako", **args)
 
 
     @profile
@@ -448,11 +449,11 @@ class SearchResource(base.BaseResource):
             errors.InvalidParamValue()
 
         if script  and landing:
-            yield render(request, "search.mako", **args)
+            t.render(request, "search.mako", **args)
 
         if script and appchange:
-            yield renderScriptBlock(request, "search.mako", "layout",
-                                    landing, "#mainbar", "set", **args)
+            t.renderScriptBlock(request, "search.mako", "layout",
+                                landing, "#mainbar", "set", **args)
         count = SEARCH_RESULTS_PER_PAGE
         items = {}
         convs = set()
@@ -552,22 +553,22 @@ class SearchResource(base.BaseResource):
         if script:
             onload = "(function(obj){$$.convs.load(obj);})(this);"
             if fromFetchMore:
-                yield renderScriptBlock(request, "search.mako", "results",
-                                        landing, "#next-load-wrapper", "replace",
-                                        True, handlers={"onload": onload}, **args)
+                t.renderScriptBlock(request, "search.mako", "results",
+                                    landing, "#next-load-wrapper", "replace",
+                                    True, handlers={"onload": onload}, **args)
             else:
-                yield renderScriptBlock(request, "search.mako", "results",
-                                        landing, "#search-results", "set", True,
-                                        handlers={"onload": onload}, **args)
+                t.renderScriptBlock(request, "search.mako", "results",
+                                    landing, "#search-results", "set", True,
+                                    handlers={"onload": onload}, **args)
             if 'people' not in filters.values() and people:
-              yield renderScriptBlock(request, "search.mako", "_displayUsersMini",
-                                      landing, "#people-block", "set", True, **args)
+              t.renderScriptBlock(request, "search.mako", "_displayUsersMini",
+                                  landing, "#people-block", "set", True, **args)
 
         if script and landing:
             request.write("</body></html>")
 
         if not script:
-            yield render(request, "search.mako", **args)
+            t.render(request, "search.mako", **args)
 
 
     @profile

@@ -8,8 +8,7 @@ from telephus.cassandra     import ttypes
 from social                 import db, utils, base, plugins, _, __
 from social                 import constants, feed, errors, people
 from social                 import notifications, files, config
-from social.template        import render, renderDef, renderScriptBlock
-from social.template        import getBlock
+from social                 import template as t
 from social.relations       import Relation
 from social.logging         import dump_args, profile, log
 from social.isocial         import IAuthInfo
@@ -17,6 +16,7 @@ from social.isocial         import IAuthInfo
 
 class ProfileResource(base.BaseResource):
     isLeaf = True
+    _templates = ['emails.mako', 'profile.mako', 'feed.mako']
     resources = {}
 
 
@@ -226,7 +226,7 @@ class ProfileResource(base.BaseResource):
         args = {"brandName": brandName, "rootUrl": rootUrl,
                 "reportedBy":reportedBy, "reactivateUrl": reactivateUrl}
         subject = "[%(brandName)s] Your profile has been flagged for review" %(locals())
-        htmlBody = getBlock("emails.mako", "reportUser", **args)
+        htmlBody = t.getBlock("emails.mako", "reportUser", **args)
         textBody = body %(locals())
 
         yield utils.sendmail(email, subject, textBody, htmlBody)
@@ -273,12 +273,12 @@ class ProfileResource(base.BaseResource):
         # User entered the URL directly
         # Render the header.  Other things will follow.
         if script and landing:
-            yield render(request, "profile.mako", **args)
+            t.render(request, "profile.mako", **args)
 
         # Start with displaying the template and navigation menu
         if script and appchange:
-            yield renderScriptBlock(request, "profile.mako", "layout",
-                                    landing, "#mainbar", "set", **args)
+            t.renderScriptBlock(request, "profile.mako", "layout",
+                                landing, "#mainbar", "set", **args)
 
         # Prefetch some data about how I am related to the user.
         # This is required in order to reliably filter our profile details
@@ -291,10 +291,10 @@ class ProfileResource(base.BaseResource):
         # Reload all user-depended blocks if the currently displayed user is
         # not the same as the user for which new data is being requested.
         if script:
-            yield renderScriptBlock(request, "profile.mako", "summary",
-                                    landing, "#profile-summary", "set", **args)
-            yield renderScriptBlock(request, "profile.mako", "user_subactions",
-                                    landing, "#user-subactions", "set", **args)
+            t.renderScriptBlock(request, "profile.mako", "summary",
+                                landing, "#profile-summary", "set", **args)
+            t.renderScriptBlock(request, "profile.mako", "user_subactions",
+                                landing, "#user-subactions", "set", **args)
 
         fetchedEntities = set()
         start = utils.getRequestArg(request, "start") or ''
@@ -311,19 +311,19 @@ class ProfileResource(base.BaseResource):
             args['fromProfile'] = True
 
         if script:
-            yield renderScriptBlock(request, "profile.mako", "tabs", landing,
-                                    "#profile-tabs", "set", **args)
+            t.renderScriptBlock(request, "profile.mako", "tabs", landing,
+                                "#profile-tabs", "set", **args)
             handlers = {} if detail != "activity" \
                 else {"onload": "(function(obj){$$.convs.load(obj);})(this);"}
 
             if fromFetchMore and detail == "activity":
-                yield renderScriptBlock(request, "profile.mako", "content", landing,
-                                            "#next-load-wrapper", "replace", True,
-                                            handlers=handlers, **args)
+                t.renderScriptBlock(request, "profile.mako", "content", landing,
+                                    "#next-load-wrapper", "replace", True,
+                                    handlers=handlers, **args)
             else:
-                yield renderScriptBlock(request, "profile.mako", "content", landing,
-                                        "#profile-content", "set", True,
-                                        handlers=handlers, **args)
+                t.renderScriptBlock(request, "profile.mako", "content", landing,
+                                    "#profile-content", "set", True,
+                                    handlers=handlers, **args)
 
         # List the user's subscriptions
         cols = yield db.get_slice(userId, "subscriptions", count=11)
@@ -367,20 +367,20 @@ class ProfileResource(base.BaseResource):
         args["rawGroupData"] = rawGroupData
 
         if script:
-            yield renderScriptBlock(request, "profile.mako", "user_subscriptions",
-                                    landing, "#user-subscriptions", "set", **args)
-            yield renderScriptBlock(request, "profile.mako", "user_followers",
-                                    landing, "#user-followers", "set", **args)
-            yield renderScriptBlock(request, "profile.mako", "user_me",
-                                    landing, "#user-me", "set", **args)
-            yield renderScriptBlock(request, "profile.mako", "user_groups",
-                                    landing, "#user-groups", "set", **args)
+            t.renderScriptBlock(request, "profile.mako", "user_subscriptions",
+                                landing, "#user-subscriptions", "set", **args)
+            t.renderScriptBlock(request, "profile.mako", "user_followers",
+                                landing, "#user-followers", "set", **args)
+            t.renderScriptBlock(request, "profile.mako", "user_me",
+                                landing, "#user-me", "set", **args)
+            t.renderScriptBlock(request, "profile.mako", "user_groups",
+                                landing, "#user-groups", "set", **args)
 
         if script and landing:
             request.write("</body></html>")
 
         if not script:
-            yield render(request, "profile.mako", **args)
+            t.render(request, "profile.mako", **args)
 
 
     @profile
@@ -418,18 +418,18 @@ class ProfileResource(base.BaseResource):
                     d = people.get_suggestions(request, constants.SUGGESTION_PER_PAGE, mini=True)
                     def renderSuggestion(res):
                         suggestions, entities = res
-                        return renderScriptBlock(request, "feed.mako", "_suggestions",
-                                                 False, "#suggestions", "set", True,
-                                                 relations = relation,
-                                                 suggestions = suggestions,
-                                                 entities=entities)
+                        t.renderScriptBlock(request, "feed.mako", "_suggestions",
+                                            False, "#suggestions", "set", True,
+                                            relations = relation,
+                                            suggestions = suggestions,
+                                            entities=entities)
                     d.addCallback(renderSuggestion)
                     return d
                 else:
-                    d = renderScriptBlock(request, "profile.mako", "user_actions",
-                                    False, "#user-actions-%s"%targetId, "set",
-                                    args=[targetId, True], **data)
-                    return d
+                    t.renderScriptBlock(request, "profile.mako", "user_actions",
+                                        False, "#user-actions-%s"%targetId, "set",
+                                        args=[targetId, True], **data)
+                    return defer.succeed([])
 
             actionDeferred.addCallback(fetchRelations)
             actionDeferred.addCallback(renderActions)

@@ -8,9 +8,8 @@ from twisted.internet   import defer
 from twisted.web        import server
 
 from social             import db, utils, base, _, whitelist, blacklist
-from social             import config, errors
+from social             import config, errors, template as t
 from social.relations   import Relation
-from social.template    import render, renderScriptBlock, getBlock
 from social.isocial     import IAuthInfo
 from social.constants   import PEOPLE_PER_PAGE, SUGGESTION_PER_PAGE
 from social.logging     import dump_args, profile, log
@@ -406,6 +405,7 @@ def _getPendingConnections(userId, start='', count=PEOPLE_PER_PAGE, entityType='
 
 class PeopleResource(base.BaseResource):
     isLeaf = True
+    _templates = ['people.mako', 'emails.mako']
 
     @profile
     @defer.inlineCallbacks
@@ -419,11 +419,11 @@ class PeopleResource(base.BaseResource):
         args["menuId"] = "people"
 
         if script and landing:
-            yield render(request, "people.mako", **args)
+            t.render(request, "people.mako", **args)
 
         if script and appchange:
-            yield renderScriptBlock(request, "people.mako", "layout",
-                                    landing, "#mainbar", "set", **args)
+            t.renderScriptBlock(request, "people.mako", "layout",
+                                landing, "#mainbar", "set", **args)
 
         d = None
         if viewType == "all":
@@ -456,16 +456,16 @@ class PeopleResource(base.BaseResource):
         args['showInvitationsTab'] = showInvitationsTab
 
         if script:
-            yield renderScriptBlock(request, "people.mako", "viewOptions",
-                                    landing, "#people-view", "set", args=[viewType],
-                                    showInvitationsTab=showInvitationsTab)
-            yield renderScriptBlock(request, "people.mako", "listPeople",
-                                    landing, "#users-wrapper", "set", **args)
-            yield renderScriptBlock(request, "people.mako", "paging",
+            t.renderScriptBlock(request, "people.mako", "viewOptions",
+                                landing, "#people-view", "set", args=[viewType],
+                                showInvitationsTab=showInvitationsTab)
+            t.renderScriptBlock(request, "people.mako", "listPeople",
+                                landing, "#users-wrapper", "set", **args)
+            t.renderScriptBlock(request, "people.mako", "paging",
                                 landing, "#people-paging", "set", **args)
 
         if not script:
-            yield render(request, "people.mako", **args)
+            t.render(request, "people.mako", **args)
 
     @defer.inlineCallbacks
     def _invite(self, request):
@@ -501,10 +501,10 @@ class PeopleResource(base.BaseResource):
                                %_("Invitations sent"))
 
 
-    @defer.inlineCallbacks
     def _renderInvitePeople(self, request):
-        yield renderScriptBlock(request, "people.mako", "invitePeople",
-                                False, "#invitepeople-dlg", "set")
+        t.renderScriptBlock(request, "people.mako", "invitePeople",
+                            False, "#invitepeople-dlg", "set")
+        return True
 
 
     @defer.inlineCallbacks

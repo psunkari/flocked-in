@@ -15,7 +15,7 @@ from twisted.internet   import defer
 from twisted.web        import server
 
 from social             import db, utils, base, errors, _
-from social.template    import renderScriptBlock, render, getBlock
+from social             import template as t
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
 from social.logging     import dump_args, profile, log
@@ -23,6 +23,7 @@ from social.logging     import dump_args, profile, log
 
 class EventResource(base.BaseResource):
     isLeaf = True
+    _templates = ['event.mako', 'item.mako']
 
     @profile
     @defer.inlineCallbacks
@@ -92,8 +93,8 @@ class EventResource(base.BaseResource):
             args = {"users": invitees, "entities": entities}
             args['title'] = _("People invited to this event ")
 
-            yield renderScriptBlock(request, "item.mako", "userListDialog", False,
-                                    "#invitee-dlg-%s"%(itemId), "set", **args)
+            t.renderScriptBlock(request, "item.mako", "userListDialog", False,
+                                "#invitee-dlg-%s"%(itemId), "set", **args)
 
     @profile
     @defer.inlineCallbacks
@@ -180,11 +181,11 @@ class EventResource(base.BaseResource):
         toFetchEntities = set()
 
         if script and landing:
-            yield render(request, "event.mako", **args)
+            t.render(request, "event.mako", **args)
 
         if script and appchange:
-            yield renderScriptBlock(request, "event.mako", "layout",
-                                    landing, "#mainbar", "set", **args)
+            t.renderScriptBlock(request, "event.mako", "layout",
+                                landing, "#mainbar", "set", **args)
 
         myEvents = yield db.get_slice(myKey, "userEvents", reverse=True)
         myInvitations = yield db.get_slice(myKey, "userEventInvitations", reverse=True)
@@ -222,11 +223,11 @@ class EventResource(base.BaseResource):
         args["inviItems"] = invitations
 
         if script:
-            yield renderScriptBlock(request, "event.mako", "events", landing,
-                                    "#events", "set", **args)
+            t.renderScriptBlock(request, "event.mako", "events", landing,
+                                "#events", "set", **args)
         if script:
-            yield renderScriptBlock(request, "event.mako", "invitations", landing,
-                                    "#invitations", "set", **args)
+            t.renderScriptBlock(request, "event.mako", "invitations", landing,
+                                "#invitations", "set", **args)
 
 
     @profile
@@ -298,37 +299,22 @@ class Event(object):
         defer.returnValue(_(reasons[noOfRequesters])%(tuple(vals)))
 
 
-    @defer.inlineCallbacks
     def renderShareBlock(self, request, isAjax):
-        authinfo = request.getSession(IAuthInfo)
-        myKey = authinfo.username
-        orgKey = authinfo.organization
-
-        cols = yield db.multiget_slice([myKey, orgKey], "entities", ["basic"])
-        cols = utils.multiSuperColumnsToDict(cols)
-
-        me = cols.get(myKey, None)
-        org = cols.get(orgKey, None)
-        args = {"myKey": myKey, "orgKey": orgKey, "me": me, "org": org}
-
-        templateFile = "event.mako"
-        renderDef = "share_event"
-
         onload = """
                 (function(obj){$$.publisher.load(obj)})(this);
                 $$.events.prepareDateTimePickers();
                 """
-        yield renderScriptBlock(request, templateFile, renderDef,
-                                not isAjax, "#sharebar", "set", True,
-                                attrs={"publisherName": "event"},
-                                handlers={"onload": onload}, **args)
+        t.renderScriptBlock(request, "event.mako", "share_event",
+                            not isAjax, "#sharebar", "set", True,
+                            attrs={"publisherName": "event"},
+                            handlers={"onload": onload})
 
 
     def rootHTML(self, convId, isQuoted, args):
         if "convId" in args:
-            return getBlock("event.mako", "event_root", **args)
+            return t.getBlock("event.mako", "event_root", **args)
         else:
-            return getBlock("event.mako", "event_root", args=[convId, isQuoted], **args)
+            return t.getBlock("event.mako", "event_root", args=[convId, isQuoted], **args)
 
 
     @profile

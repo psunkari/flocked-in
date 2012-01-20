@@ -10,10 +10,9 @@ from nltk.corpus        import stopwords
 
 from social             import base, db, utils, people, errors
 from social             import tags, plugins, location_tz_map, _
+from social             import template as t
 from social.item        import deleteItem
 from social.isocial     import IAuthInfo
-from social.signup      import getOrgKey # move getOrgKey to utils
-from social.template    import render, renderScriptBlock
 from social.constants   import PEOPLE_PER_PAGE
 from social.settings    import saveAvatarItem
 from social.logging     import log
@@ -26,6 +25,8 @@ def validTimezone(timezone):
 
 class Admin(base.BaseResource):
     isLeaf=True
+    _templates = ['admin.mako', 'keyword-matches.mako']
+
 
     def _validateData(self, data, orgId, org):
         invalidLines = []
@@ -160,7 +161,7 @@ class Admin(base.BaseResource):
         emailId = user.get("basic", {}).get("emailId", None)
         yield db.insert(emailId, "userAuth", 'True', "isBlocked")
         yield db.insert(orgId, "blockedUsers", '', userId)
-        yield renderScriptBlock(request, "admin.mako", "admin_actions",
+        t.renderScriptBlock(request, "admin.mako", "admin_actions",
                                 False, "#user-actions-%s" %(userId),
                                 "set", args=[userId, 'blocked'])
 
@@ -176,7 +177,7 @@ class Admin(base.BaseResource):
 
         yield db.remove(emailId, "userAuth", "isBlocked")
         yield db.remove(orgId, "blockedUsers", userId)
-        yield renderScriptBlock(request, "admin.mako", "admin_actions",
+        t.renderScriptBlock(request, "admin.mako", "admin_actions",
                                 False, "#user-actions-%s" %(userId),
                                 "set", args=[userId, 'unblocked'])
 
@@ -195,7 +196,7 @@ class Admin(base.BaseResource):
 
         if delete:
             yield utils.removeUser(request, userId, myId, user)
-            yield renderScriptBlock(request, "admin.mako", "admin_actions",
+            t.renderScriptBlock(request, "admin.mako", "admin_actions",
                                     False, "#user-actions-%s" %(userId),
                                     "set", args=[userId, 'deleted'])
 
@@ -241,7 +242,7 @@ class Admin(base.BaseResource):
             args['apps'] = apps
             args['userId'] = userId
             args["entities"] = entities
-            yield renderScriptBlock(request, 'admin.mako', "confirm_remove_user",
+            t.renderScriptBlock(request, 'admin.mako', "confirm_remove_user",
                                     False, "#removeuser-dlg", "set", **args)
 
 
@@ -296,10 +297,10 @@ class Admin(base.BaseResource):
         args["menuId"] = "org"
 
         if script and landing:
-            yield render(request, "admin.mako", **args)
+            t.render(request, "admin.mako", **args)
 
         if script and appchange:
-            yield renderScriptBlock(request, "admin.mako", "layout",
+            t.renderScriptBlock(request, "admin.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
         orgInfo = yield db.get_slice(orgId, "entities", ['basic'])
@@ -310,7 +311,7 @@ class Admin(base.BaseResource):
 
         if script:
             handlers = {'onload': "$$.ui.bindFormSubmit('#orginfo-form');"}
-            yield renderScriptBlock(request, "admin.mako", "orgInfo",
+            t.renderScriptBlock(request, "admin.mako", "orgInfo",
                                     landing, "#content", "set", True,
                                     handlers = handlers, **args)
 
@@ -318,7 +319,8 @@ class Admin(base.BaseResource):
             request.write("</body></html>")
 
         if not script:
-            yield render(request, "admin.mako", **args)
+            t.render(request, "admin.mako", **args)
+
 
     @defer.inlineCallbacks
     def _renderAddUsers(self, request):
@@ -330,14 +332,14 @@ class Admin(base.BaseResource):
         args["menuId"] = "users"
 
         if script and landing:
-            yield render(request, "admin.mako", **args)
+            t.render(request, "admin.mako", **args)
 
         if script and appchange:
-            yield renderScriptBlock(request, "admin.mako", "layout",
+            t.renderScriptBlock(request, "admin.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
         if script:
-            yield renderScriptBlock(request, "admin.mako", "addUsers",
+            t.renderScriptBlock(request, "admin.mako", "addUsers",
                                     landing, "#addpeople-dlg", "set", **args)
 
         if script and landing:
@@ -360,10 +362,10 @@ class Admin(base.BaseResource):
         args["viewType"] = "blocked"
 
         if script and landing:
-            yield render(request, "admin.mako", **args)
+            t.render(request, "admin.mako", **args)
 
         if script and appchange:
-            yield renderScriptBlock(request, "admin.mako", "layout",
+            t.renderScriptBlock(request, "admin.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
         args["heading"] = "Admin Console - Blocked Users"
@@ -386,16 +388,15 @@ class Admin(base.BaseResource):
         args['prevPageStart'] = prevPageStart
 
         if script:
-            yield renderScriptBlock(request, "admin.mako", "viewOptions",
+            t.renderScriptBlock(request, "admin.mako", "viewOptions",
                                 landing, "#users-view", "set", **args)
-            yield renderScriptBlock(request, "admin.mako", "list_users",
+            t.renderScriptBlock(request, "admin.mako", "list_users",
                                     landing, "#content", "set", **args)
 
         if script and landing:
             request.write("</body></html>")
         if not script:
-            yield render(request, "admin.mako", **args)
-
+            t.render(request, "admin.mako", **args)
 
 
     @defer.inlineCallbacks
@@ -411,10 +412,10 @@ class Admin(base.BaseResource):
         start = utils.decodeKey(start)
 
         if script and landing:
-            yield render(request, "admin.mako", **args)
+            t.render(request, "admin.mako", **args)
 
         if script and appchange:
-            yield renderScriptBlock(request, "admin.mako", "layout",
+            t.renderScriptBlock(request, "admin.mako", "layout",
                                     landing, "#mainbar", "set", **args)
         users, relations, userIds,blockedUsers,\
             nextPageStart, prevPageStart = yield people.getPeople(myKey, orgId, orgId, start=start)
@@ -427,13 +428,13 @@ class Admin(base.BaseResource):
         args["blockedUsers"] = blockedUsers
 
         if script:
-            yield renderScriptBlock(request, "admin.mako", "viewOptions",
+            t.renderScriptBlock(request, "admin.mako", "viewOptions",
                                 landing, "#users-view", "set", **args)
 
-            yield renderScriptBlock(request, "admin.mako", "list_users",
+            t.renderScriptBlock(request, "admin.mako", "list_users",
                                     landing, "#content", "set", **args)
         else:
-            yield render(request, "admin.mako", **args)
+            t.render(request, "admin.mako", **args)
 
 
 
@@ -585,10 +586,10 @@ class Admin(base.BaseResource):
         args["start"] = start
 
         if script and landing:
-            yield render(request, "keyword-matches.mako", **args)
+            t.render(request, "keyword-matches.mako", **args)
 
         if script and appchange:
-            yield renderScriptBlock(request, "keyword-matches.mako", "layout",
+            t.renderScriptBlock(request, "keyword-matches.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
         keywordItems = yield self._getKeywordMatches(request, keyword, start=start)
@@ -596,12 +597,12 @@ class Admin(base.BaseResource):
 
         if script:
             onload = "(function(obj){$$.convs.load(obj);})(this);"
-            yield renderScriptBlock(request, "keyword-matches.mako", "feed",
+            t.renderScriptBlock(request, "keyword-matches.mako", "feed",
                                     landing, "#convs-wrapper", "set", True,
                                     handlers={"onload": onload}, **args)
 
         if not script:
-            yield render(request, "keyword-matches.mako", **args)
+            t.render(request, "keyword-matches.mako", **args)
 
 
     @defer.inlineCallbacks
@@ -620,7 +621,7 @@ class Admin(base.BaseResource):
         args.update(keywordItems)
 
         onload = "(function(obj){$$.convs.load(obj);})(this);"
-        yield renderScriptBlock(request, "keyword-matches.mako", "feed",
+        t.renderScriptBlock(request, "keyword-matches.mako", "feed",
                                 False, "#next-load-wrapper", "replace", True,
                                 handlers={"onload": onload}, **args)
 
@@ -635,10 +636,10 @@ class Admin(base.BaseResource):
         args["menuId"] = "keywords"
 
         if script and landing:
-            yield render(request, "admin.mako", **args)
+            t.render(request, "admin.mako", **args)
 
         if script and appchange:
-            yield renderScriptBlock(request, "admin.mako", "layout",
+            t.renderScriptBlock(request, "admin.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
         keywords = yield db.get_slice(orgId, "originalKeywords")
@@ -646,7 +647,7 @@ class Admin(base.BaseResource):
         args['keywords'] = keywords
 
         if script:
-            yield renderScriptBlock(request, "admin.mako", "listKeywords",
+            t.renderScriptBlock(request, "admin.mako", "listKeywords",
                                 landing, "#content", "set", **args)
 
 
@@ -687,7 +688,7 @@ class Admin(base.BaseResource):
             keywords = utils.columnsToDict(keywords, ordered=True)
             args = {'keywords': keywords}
 
-            yield renderScriptBlock(request, "admin.mako", "listKeywords",
+            t.renderScriptBlock(request, "admin.mako", "listKeywords",
                                     False, "#content", "set", **args)
 
         # We may want to display an error when we removed stopwords.
@@ -729,10 +730,10 @@ class Admin(base.BaseResource):
         args["viewType"] = "tags"
 
         if script and landing:
-            yield render(request, "admin.mako", **args)
+            t.render(request, "admin.mako", **args)
 
         if script and appchange:
-            yield renderScriptBlock(request, "admin.mako", "layout",
+            t.renderScriptBlock(request, "admin.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
         presetTags = yield db.get_slice(orgId, "orgPresetTags", count=100)
@@ -746,11 +747,11 @@ class Admin(base.BaseResource):
         args['tagsList'] = presetTags
         args['tags'] = tags
         if script:
-            yield renderScriptBlock(request, "admin.mako", "list_tags",
+            t.renderScriptBlock(request, "admin.mako", "list_tags",
                                     landing, "#content", "set", **args)
 
         if not script:
-            yield render(request, "admin.mako", **args)
+            t.render(request, "admin.mako", **args)
 
     @defer.inlineCallbacks
     def _addPresetTag(self, request):
@@ -783,9 +784,9 @@ class Admin(base.BaseResource):
             errorMsg =  "%s <br/>Tag can contain alpha-numeric characters or hyphen only. It cannot be more than 50 characters" %(message)
             handlers = {'onload': "$$.alerts.error('%s')"%(errorMsg)}
 
-        yield renderScriptBlock(request, "admin.mako", "list_tags",
-                                False, "#content", "set", True,
-                                handlers = handlers,  **args)
+        t.renderScriptBlock(request, "admin.mako", "list_tags",
+                            False, "#content", "set", True,
+                            handlers = handlers,  **args)
 
 
     @defer.inlineCallbacks

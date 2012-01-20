@@ -6,10 +6,9 @@ from twisted.internet   import defer
 from twisted.web        import static, server
 
 from social             import db, utils, base, errors, config, _
-from social             import notifications
+from social             import notifications, template as t
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
-from social.template    import render, renderScriptBlock
 from social.logging     import profile, dump_args, log
 
 
@@ -35,6 +34,7 @@ scopes = OrderedDict([
 class ApplicationResource(base.BaseResource):
     isLeaf = True
     requireAuth = True
+    _templates = ['apps.mako']
 
 
     def setTitle(self, request, title):
@@ -92,8 +92,8 @@ class ApplicationResource(base.BaseResource):
         args['clientId'] = clientId
         args['client']  = meta
         args['client']['secret'] = clientSecret
-        yield renderScriptBlock(request, "apps.mako", "registrationResults",
-                                landing, "#apps-contents", "set", **args)
+        t.renderScriptBlock(request, "apps.mako", "registrationResults",
+                            landing, "#apps-contents", "set", **args)
 
 
     @defer.inlineCallbacks
@@ -109,14 +109,14 @@ class ApplicationResource(base.BaseResource):
         args['title'] = title
 
         if script and landing:
-            yield render(request, "apps.mako", **args)
+            t.render(request, "apps.mako", **args)
 
         if script:
             self.setTitle(request, title)
 
-        yield renderScriptBlock(request, "apps.mako",
-                                "registrationForm", landing, "#apps-contents",
-                                "set", **args)
+        t.renderScriptBlock(request, "apps.mako",
+                            "registrationForm", landing, "#apps-contents",
+                            "set", **args)
 
 
     @defer.inlineCallbacks
@@ -127,11 +127,11 @@ class ApplicationResource(base.BaseResource):
         args['detail'] = 'apps'
 
         if script and landing:
-            yield render(request, "apps.mako", **args)
+            t.render(request, "apps.mako", **args)
 
         if appchange and script:
-            yield renderScriptBlock(request, "apps.mako", "layout",
-                                    landing, "#mainbar", "set", **args)
+            t.renderScriptBlock(request, "apps.mako", "layout",
+                                landing, "#mainbar", "set", **args)
 
         client = yield db.get_slice(clientId, "apps")
         client = utils.supercolumnsToDict(client)
@@ -147,10 +147,10 @@ class ApplicationResource(base.BaseResource):
         args['entities'] = {authorId: author}
 
         if script:
-            yield renderScriptBlock(request, "apps.mako", "appDetails",
-                                    landing, "#apps-contents", "set", **args)
+            t.renderScriptBlock(request, "apps.mako", "appDetails",
+                                landing, "#apps-contents", "set", **args)
         else:
-            yield render(request, "apps.mako", **args)
+            t.render(request, "apps.mako", **args)
 
 
     @defer.inlineCallbacks
@@ -163,11 +163,11 @@ class ApplicationResource(base.BaseResource):
         args['detail'] = 'apps'
 
         if script and landing:
-            yield render(request, "apps.mako", **args)
+            t.render(request, "apps.mako", **args)
 
         if appchange and script:
-            yield renderScriptBlock(request, "apps.mako", "layout",
-                                    landing, "#mainbar", "set", **args)
+            t.renderScriptBlock(request, "apps.mako", "layout",
+                                landing, "#mainbar", "set", **args)
 
         if script:
             self.setTitle(request, title)
@@ -193,10 +193,10 @@ class ApplicationResource(base.BaseResource):
 
         args.update({'entities': entities, 'clients': clients, 'apps': appIds})
         if script:
-            yield renderScriptBlock(request, "apps.mako", "appListing",
-                                    landing, "#apps-contents", "set", **args)
+            t.renderScriptBlock(request, "apps.mako", "appListing",
+                                landing, "#apps-contents", "set", **args)
         else:
-            yield render(request, "apps.mako", **args)
+            t.render(request, "apps.mako", **args)
 
 
     # XXX: Confirm deletion of the application
@@ -276,8 +276,8 @@ class ApplicationResource(base.BaseResource):
         args = {'clientId': clientId, 'client': client['meta'],
                 'info': 'New application secret was generated'}
         args['client']['secret'] = clientSecret
-        yield renderScriptBlock(request, "apps.mako", "registrationResults",
-                                False, "#apps-contents", "set", **args)
+        t.renderScriptBlock(request, "apps.mako", "registrationResults",
+                            False, "#apps-contents", "set", **args)
 
 
     def render_GET(self, request):

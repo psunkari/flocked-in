@@ -25,10 +25,9 @@ from twisted.internet   import defer, threads
 from twisted.web        import static, server
 
 from social             import db, utils, errors, base, feed, _, config
+from social             import constants, template as t
 from social.relations   import Relation
-from social             import constants
 from social.isocial     import IItemType, IAuthInfo
-from social.template    import render, renderScriptBlock, getBlock
 from social.logging     import log, profile, dump_args
 
 
@@ -174,6 +173,7 @@ def userFiles(myId, entityId, myOrgId, start='', end='', fromFeed=True):
 
 class FilesResource(base.BaseResource):
     isLeaf = True
+    _templates = ['files.mako']
 
     @defer.inlineCallbacks
     def _listFileVersions(self, request):
@@ -448,11 +448,11 @@ class FilesResource(base.BaseResource):
 
         args['menuId'] = 'files'
         if script and landing:
-            yield render(request, "files.mako", **args)
+            t.render(request, "files.mako", **args)
 
         if script and appchange:
-            yield renderScriptBlock(request, "files.mako", 'layout',
-                                    landing, "#mainbar", "set", **args)
+            t.renderScriptBlock(request, "files.mako", 'layout',
+                                landing, "#mainbar", "set", **args)
 
 
         args['viewType'] = viewType
@@ -460,8 +460,8 @@ class FilesResource(base.BaseResource):
         fromFeed = viewType != 'myFiles'
 
         if script:
-            yield renderScriptBlock(request, "files.mako", "viewOptions",
-                                    landing, "#file-view", "set", args=[viewType])
+            t.renderScriptBlock(request, "files.mako", "viewOptions",
+                                landing, "#file-view", "set", args=[viewType])
 
         files = yield userFiles(myId, entityId, args['orgId'], start, end, fromFeed)
 
@@ -472,13 +472,13 @@ class FilesResource(base.BaseResource):
         args['userfiles'] = files
 
         if script:
-            yield renderScriptBlock(request, "files.mako", "listFiles",
-                                    landing, "#files-content", "set", **args)
-            yield renderScriptBlock(request, "files.mako", "pagingBar",
-                                    landing, "#files-paging", "set", **args)
+            t.renderScriptBlock(request, "files.mako", "listFiles",
+                                landing, "#files-content", "set", **args)
+            t.renderScriptBlock(request, "files.mako", "pagingBar",
+                                landing, "#files-paging", "set", **args)
 
         else:
-            yield render(request, "files.mako", **args)
+            t.render(request, "files.mako", **args)
 
     def render_GET(self, request):
         d = None

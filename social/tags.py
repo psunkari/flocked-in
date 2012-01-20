@@ -7,9 +7,8 @@ from twisted.internet   import defer
 from twisted.web        import server
 
 from social             import db, utils, _, __, base, plugins
-from social             import constants, errors
+from social             import constants, errors, template as t
 from social.feed        import getFeedItems
-from social.template    import render, renderDef, renderScriptBlock
 from social.isocial     import IAuthInfo
 from social.relations   import Relation
 from social.logging     import profile, dump_args, log
@@ -49,6 +48,7 @@ def ensureTag(request, tagName, orgId=None, presetTag=False):
 
 class TagsResource(base.BaseResource):
     isLeaf = True
+    _templates = ['tags.mako']
 
     def _getTagItems(self, request, tagId, start='', count=10):
         itemsFromFeed = {}
@@ -87,11 +87,11 @@ class TagsResource(base.BaseResource):
         args["menuId"] = "tags"
 
         if script and landing:
-            yield render(request, "tags.mako", **args)
+            t.render(request, "tags.mako", **args)
 
         if script and appchange:
-            yield renderScriptBlock(request, "tags.mako", "layout",
-                                    landing, "#mainbar", "set", **args)
+            t.renderScriptBlock(request, "tags.mako", "layout",
+                                landing, "#mainbar", "set", **args)
 
         try:
             yield db.get(tagId, "tagFollowers", myKey)
@@ -100,8 +100,8 @@ class TagsResource(base.BaseResource):
             pass
 
         if script:
-            yield renderScriptBlock(request, "tags.mako", "header",
-                              landing, "#tags-header", "set", **args)
+            t.renderScriptBlock(request, "tags.mako", "header",
+                                landing, "#tags-header", "set", **args)
         start = utils.getRequestArg(request, "start") or ''
 
         tagItems = yield self._getTagItems(request, tagId, start=start)
@@ -112,12 +112,12 @@ class TagsResource(base.BaseResource):
                         (function(obj){$$.convs.load(obj);})(this);
                         $('form').html5form({messages: 'en'});
                      """
-            yield renderScriptBlock(request, "tags.mako", "itemsLayout",
-                                    landing, "#content", "set", True,
-                                    handlers={"onload": onload}, **args)
+            t.renderScriptBlock(request, "tags.mako", "itemsLayout",
+                                landing, "#content", "set", True,
+                                handlers={"onload": onload}, **args)
 
         if not script:
-            yield render(request, "tags.mako", **args)
+            t.render(request, "tags.mako", **args)
 
 
     @defer.inlineCallbacks
@@ -131,9 +131,9 @@ class TagsResource(base.BaseResource):
         args["tagId"] = tagId
 
         onload = "(function(obj){$$.convs.load(obj);})(this);"
-        yield renderScriptBlock(request, "tags.mako", "items", False,
-                                "#next-load-wrapper", "replace", True,
-                                handlers={"onload": onload}, **args)
+        t.renderScriptBlock(request, "tags.mako", "items", False,
+                            "#next-load-wrapper", "replace", True,
+                            handlers={"onload": onload}, **args)
 
     @defer.inlineCallbacks
     def _listTags(self, request):
@@ -150,15 +150,15 @@ class TagsResource(base.BaseResource):
 
         args["menuId"] = "tags"
         if script and landing:
-            yield render(request, "tags.mako", **args)
+            t.render(request, "tags.mako", **args)
 
         if script and appchange:
-            yield renderScriptBlock(request, "tags.mako", "layout",
-                                    landing, "#mainbar", "set", **args)
+            t.renderScriptBlock(request, "tags.mako", "layout",
+                                landing, "#mainbar", "set", **args)
 
         if script:
-            yield renderScriptBlock(request, "tags.mako", "header",
-                                    landing, "#tags-header", "set", **args )
+            t.renderScriptBlock(request, "tags.mako", "header",
+                                landing, "#tags-header", "set", **args )
 
         tagsByName = yield db.get_slice(myOrgId, "orgTagsByName", start=start, count=toFetchCount)
         tagIds = [x.column.value for x in tagsByName]
@@ -195,16 +195,16 @@ class TagsResource(base.BaseResource):
 
         if script:
             if appchange:
-                yield renderScriptBlock(request, "tags.mako", "tagsListLayout",
-                                        landing, "#content", "set", **args)
+                t.renderScriptBlock(request, "tags.mako", "tagsListLayout",
+                                    landing, "#content", "set", **args)
             else:
-                yield renderScriptBlock(request, "tags.mako", "listTags",
-                                        landing, "#tags-wrapper", "set", **args)
-                yield renderScriptBlock(request, "tags.mako", "paging",
-                                        landing, "#tags-paging", "set", **args)
+                t.renderScriptBlock(request, "tags.mako", "listTags",
+                                    landing, "#tags-wrapper", "set", **args)
+                t.renderScriptBlock(request, "tags.mako", "paging",
+                                    landing, "#tags-paging", "set", **args)
 
         if not script:
-            yield render(request, "tags.mako", **args)
+            t.render(request, "tags.mako", **args)
 
     @defer.inlineCallbacks
     def _follow(self, request):
@@ -226,13 +226,13 @@ class TagsResource(base.BaseResource):
         tag[tagId]['followersCount']= count
         fromListTags = (utils.getRequestArg(request, '_pg') == '/tags/list')
         if fromListTags:
-            yield renderScriptBlock(request, "tags.mako", "_displayTag",
-                                    False, "#tag-%s" % tagId, "replace",
-                                    args=[tagId], **args)
+            t.renderScriptBlock(request, "tags.mako", "_displayTag",
+                                False, "#tag-%s" % tagId, "replace",
+                                args=[tagId], **args)
         else:
-            yield renderScriptBlock(request, 'tags.mako', "tag_actions", False,
-                                    "#tag-actions-%s" %(tagId), "set",
-                                    args= [tagId, True, False])
+            t.renderScriptBlock(request, 'tags.mako', "tag_actions", False,
+                                "#tag-actions-%s" %(tagId), "set",
+                                args= [tagId, True, False])
 
     @defer.inlineCallbacks
     def _unfollow(self, request):
@@ -254,13 +254,13 @@ class TagsResource(base.BaseResource):
         args['tagsFollowing'] = []
         fromListTags = (utils.getRequestArg(request, '_pg') == '/tags/list')
         if fromListTags:
-            yield renderScriptBlock(request, "tags.mako", "_displayTag",
-                                    False, "#tag-%s" % tagId, "replace",
-                                    args=[tagId], **args)
+            t.renderScriptBlock(request, "tags.mako", "_displayTag",
+                                False, "#tag-%s" % tagId, "replace",
+                                args=[tagId], **args)
         else:
-            yield renderScriptBlock(request, 'tags.mako', "tag_actions", False,
-                                    "#tag-actions-%s" %(tagId), "set",
-                                    args= [tagId, False, False])
+            t.renderScriptBlock(request, 'tags.mako', "tag_actions", False,
+                                "#tag-actions-%s" %(tagId), "set",
+                                args= [tagId, False, False])
 
 
     @profile

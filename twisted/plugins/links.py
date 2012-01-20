@@ -8,9 +8,9 @@ from twisted.internet   import defer, threads
 from twisted.plugin     import IPlugin
 from twisted.web        import client
 
-from social.template    import renderScriptBlock, getBlock
-from social.isocial     import IItemType, IAuthInfo
 from social             import db, utils, errors, _, config, constants
+from social             import template as t
+from social.isocial     import IItemType, IAuthInfo
 from social.logging     import profile, dump_args, log
 
 
@@ -38,19 +38,17 @@ class Links(object):
     indexFields = {'meta':set(['link_summary','link_title'])}
     monitoredFields = {'meta':['comment', 'link_summary', 'link_title']}
 
-    @defer.inlineCallbacks
     def renderShareBlock(self, request, isAjax):
-        templateFile = "feed.mako"
-        renderDef = "share_link"
-        yield renderScriptBlock(request, templateFile, renderDef,
-                                not isAjax, "#sharebar", "set", True,
-                                attrs={"publisherName": "link"},
-                                handlers={"onload": "(function(obj){$$.publisher.load(obj)})(this);"})
+        t.renderScriptBlock(request, "feed.mako", "share_link",
+                            not isAjax, "#sharebar", "set", True,
+                            attrs={"publisherName": "link"},
+                            handlers={"onload": "(function(obj){$$.publisher.load(obj)})(this);"})
+
     def rootHTML(self, convId, isQuoted, args):
         if "convId" in args:
-            return getBlock("item.mako", "render_link", **args)
+            return t.getBlock("item.mako", "render_link", **args)
         else:
-            return getBlock("item.mako", "render_link", args=[convId, isQuoted], **args)
+            return t.getBlock("item.mako", "render_link", args=[convId, isQuoted], **args)
 
 
     def fetchData(self, args, convId=None):

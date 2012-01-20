@@ -2,22 +2,20 @@ from twisted.internet   import defer
 from twisted.web        import server
 
 from social             import db, utils, base, tags, _, config, errors, feed
-from social.template    import render, renderScriptBlock
+from social             import template as t
 from social.isocial     import IAuthInfo
 from social.logging     import log
 
 
 class FeedbackResource(base.BaseResource):
     isLeaf=True
+    _templates = ['item.mako']
 
-    @defer.inlineCallbacks
+
     def renderFeedbackForm(self, request):
-        (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        args["users"] = [myId]
-        args["entities"] = {myId:args["me"]}
-        args["title"] = _('Feedback')
-        yield renderScriptBlock(request, "item.mako", "feedbackDialog", False,
-                                "#feedback-dlg", "set", **args)
+        t.renderScriptBlock(request, "item.mako", "feedbackDialog",
+                            False, "#feedback-dlg", "set", **args)
+        return True
 
 
     @defer.inlineCallbacks

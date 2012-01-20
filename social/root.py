@@ -9,8 +9,8 @@ from twisted.internet       import defer
 from twisted.python         import components
 
 from social                 import db, utils, base, plugins
+from social                 import template as t
 from social.logging         import log
-from social.template        import render
 from social.profile         import ProfileResource
 from social.settings        import SettingsResource
 from social.isocial         import IAuthInfo
@@ -90,13 +90,12 @@ class SigninResource(resource.Resource):
         util.redirectTo(urllib.unquote(redirectURL), request)
         request.finish()
 
-    @defer.inlineCallbacks
     def _renderSigninForm(self, request, errcode=''):
         args = {}
         redirect = utils.getRequestArg(request, '_r', sanitize=False) or "/feed"
         args["redirect"] = urllib.quote(redirect,  '*@+/')
         args["reason"] = errcode
-        yield render(request, "signin.mako", **args)
+        t.render(request, "signin.mako", **args)
         request.finish()
 
     def render_GET(self, request):

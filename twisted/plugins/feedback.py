@@ -6,9 +6,9 @@ from twisted.internet   import defer
 from twisted.plugin     import IPlugin
 
 from social             import db, base, utils, errors
+from social             import template as t
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
-from social.template    import render, renderScriptBlock, getBlock
 from social.logging     import dump_args, profile, log
 
 
@@ -24,9 +24,9 @@ class Feedback(object):
 
     def rootHTML(self, convId, isQuoted, args):
         if "convId" in args:
-            return getBlock("item.mako", "render_feedback", **args)
+            return t.getBlock("item.mako", "render_feedback", **args)
         else:
-            return getBlock("item.mako", "render_feedback", args=[convId, isQuoted], **args)
+            return t.getBlock("item.mako", "render_feedback", args=[convId, isQuoted], **args)
 
 
     def fetchData(self, args, convId=None):
