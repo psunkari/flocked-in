@@ -9,6 +9,7 @@ from social             import db, base, utils, errors
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
 from social.logging     import dump_args, profile, log
+from social             import template as t
 
 
 class Activity(object):
