@@ -232,7 +232,7 @@ class NotificationByMail(object):
                 b = b % data
                 if 'comment_html' in data:
                     data['comment'] = data['comment_html']
-                h = getBlock("emails.mako",
+                h = t.getBlock("emails.mako",
                              "notifyOwner"+notifyType, **data)
                 return utils.sendmail(mailId, s, b, h)
 
@@ -245,7 +245,7 @@ class NotificationByMail(object):
                 b = b % data
                 if 'comment_html' in data:
                     data['comment'] = data['comment_html']
-                h = getBlock("emails.mako", "notifyOther"+notifyType, **data)
+                h = t.getBlock("emails.mako", "notifyOther"+notifyType, **data)
                 stringCache.update({'subject':s, 'text':b, 'html':h})
 
             return utils.sendmail(mailId, stringCache['subject'],
@@ -309,7 +309,7 @@ class NotificationByMail(object):
         subject = self._otherNotifySubject[notifyType] % data
         body = self._otherNotifyBody[notifyType] + self._signature
         body = body % data
-        html = getBlock("emails.mako", "notify"+notifyType, **data)
+        html = t.getBlock("emails.mako", "notify"+notifyType, **data)
 
         # Sent the mail if recipient prefers to get it.
         deferreds = []
