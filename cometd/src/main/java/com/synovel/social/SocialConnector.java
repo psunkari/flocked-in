@@ -32,6 +32,8 @@ public class SocialConnector
 	private String disconnectUrlFormat;
 	
 	private String userNotifyChannelFormat;
+	private String userPresenceChannelFormat;
+	private String orgPresenceChannelFormat;
 
 	public static class AuthData {
 		@Key
@@ -68,6 +70,8 @@ public class SocialConnector
     	disconnectUrlFormat = baseUrl + p.getProperty("url.disconnect.format");
     	
     	userNotifyChannelFormat = p.getProperty("channel.user.notify.format");
+    	userPresenceChannelFormat = p.getProperty("channel.user.presence.format");
+    	orgPresenceChannelFormat = p.getProperty("channel.org.presence.format");
 	}
 	
 	public AuthData validateSession(String appSessionId) throws IOException {
@@ -91,7 +95,7 @@ public class SocialConnector
 		return request.execute().parseAs(AuthData.class);
 	}
 	
-	public ResultData validateSubscribe(String appSessionId, String userId, String channelId) throws IOException {
+	public ResultData validateSubscribe(String appSessionId, String channelId, String userId, String orgId) throws IOException {
 		ResultData resultData = new ResultData();
 		
 		if (appSessionId.equals(SHARED_SECRET)) {
@@ -101,9 +105,14 @@ public class SocialConnector
 		}
 		
 		String userNotifyChannel = String.format(userNotifyChannelFormat, userId);
-		if (channelId.equals(userNotifyChannel)) {
+		String userPresenceChannel = String.format(userPresenceChannelFormat, userId);
+		String orgPresenceChannel = String.format(orgPresenceChannelFormat, userId);
+		
+		if (channelId.equals(userNotifyChannel) ||
+			channelId.equals(userPresenceChannel) || 
+			channelId.equals(orgPresenceChannel)) {
 			resultData.status = "SUCCESS";
-			resultData.reason = "Subscription to own channel allowed by default";
+			resultData.reason = "Subscription to own/org notify/presence channel allowed by default";
 			return resultData; 
 		}
 		

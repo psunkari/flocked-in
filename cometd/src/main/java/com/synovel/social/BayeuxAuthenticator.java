@@ -4,6 +4,7 @@ package com.synovel.social;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.Cookie;
 
+import org.apache.http.auth.AUTH;
 import org.cometd.bayeux.ChannelId;
 import org.cometd.bayeux.server.BayeuxServer;
 import org.cometd.bayeux.server.ServerChannel;
@@ -115,7 +116,7 @@ public class BayeuxAuthenticator extends DefaultSecurityPolicy implements Server
         	AuthData authData = (AuthData) session.getAttribute("auth");
         	
         	logger.debug("Trying to validate subscription to channel: " + channel.getId() + " to session: " + appSessionId);
-        	ResultData resultData = connector.validateSubscribe(appSessionId, authData.user, channel.getId());
+        	ResultData resultData = connector.validateSubscribe(appSessionId, channel.getId(), authData.user, authData.org);
         	
         	if (resultData.isSuccess())
         		return true;
