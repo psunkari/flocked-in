@@ -1,6 +1,7 @@
 package com.synovel.social;
 
 import java.io.IOException;
+import java.util.Properties;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,11 +26,12 @@ public class SocialConnector
 
 	private final Logger logger;
 	
-	static final String _baseUrl 				= "http://192.168.36.101:8888/private/";
-	static final String _sessionUrlFormat 		= _baseUrl + "validate-session?sessionid=%s";
-	static final String _subscribeUrlFormat 	= _baseUrl + "is-authorized?sessionid=%s&channelid=";
-	static final String _publishUrlFormat 		= _baseUrl + "validate-session?sessionid=%s&channeid=%s";
-	static final String _disconnectUrlFormat 	= _baseUrl + "disconnnect?sessionid=%s&userid=%s";
+	private String baseUrl;
+	private String sessionUrlFormat;
+	private String subscribeUrlFormat;
+	private String disconnectUrlFormat;
+	
+	private String userNotifyChannelFormat;
 
 	public static class AuthData {
 		@Key
@@ -51,6 +53,21 @@ public class SocialConnector
 	
 	public SocialConnector() {
 		logger = LoggerFactory.getLogger(getClass().getName());
+
+        Properties p = new Properties();
+        try {
+          p.load(this.getClass().getResourceAsStream("/social.properties"));
+        } catch (Exception ex) {
+        }
+
+    	logger.debug("base url: " + p.getProperty("url.base"));
+    	
+    	baseUrl = p.getProperty("url.base");
+    	sessionUrlFormat 	= baseUrl + p.getProperty("url.session.format");
+    	subscribeUrlFormat 	= baseUrl + p.getProperty("url.subscribe.format");
+    	disconnectUrlFormat = baseUrl + p.getProperty("url.disconnect.format");
+    	
+    	userNotifyChannelFormat = p.getProperty("channel.user.notify.format");
 	}
 	
 	public AuthData validateSession(String appSessionId) throws IOException {
@@ -68,18 +85,26 @@ public class SocialConnector
 					}
 				});
 		
-		String url = String.format(_sessionUrlFormat, appSessionId);
+		String url = String.format(sessionUrlFormat, appSessionId);
 		HttpRequest request = requestFactory.buildGetRequest(new GenericUrl(url));
 		
 		return request.execute().parseAs(AuthData.class);
 	}
 	
-	public ResultData validateSubscribe(String appSessionId, String channelId) throws IOException {
+	public ResultData validateSubscribe(String appSessionId, String userId, String channelId) throws IOException {
+		ResultData resultData = new ResultData();
+		
 		if (appSessionId.equals(SHARED_SECRET)) {
-			ResultData resultData = new ResultData();
 			resultData.status = "SUCCESS";
 			resultData.reason = "Passed with shared secret";
 			return resultData;
+		}
+		
+		String userNotifyChannel = String.format(userNotifyChannelFormat, userId);
+		if (channelId.equals(userNotifyChannel)) {
+			resultData.status = "SUCCESS";
+			resultData.reason = "Subscription to own channel allowed by default";
+			return resultData; 
 		}
 		
 		HttpRequestFactory requestFactory = 
@@ -89,13 +114,13 @@ public class SocialConnector
 				}
 			});
 		
-		String url = String.format(_subscribeUrlFormat, appSessionId, channelId);
+		String url = String.format(subscribeUrlFormat, appSessionId, channelId);
 		HttpRequest request = requestFactory.buildGetRequest(new GenericUrl(url));
 		
 		try {
 			return request.execute().parseAs(ResultData.class);
 		} catch (HttpResponseException ex) {
-			ResultData resultData = ex.getResponse().parseAs(ResultData.class);
+			resultData = ex.getResponse().parseAs(ResultData.class);
 			logger.debug("SocialConnector request failed. Reason: " + resultData.reason);
 			throw ex;
 		}
@@ -112,11 +137,9 @@ public class SocialConnector
 		}
 		
 		return resultData;
-		
 	}
 	
-	public void removeSession(String appSessionId, String channelId) throws IOException {
-		
+	public void removeSession(String appSessionId) throws IOException {
 		HttpRequestFactory requestFactory = 
 			HTTP_TRANSPORT.createRequestFactory(new HttpRequestInitializer() {
 				public void initialize(HttpRequest request) {
@@ -124,7 +147,7 @@ public class SocialConnector
 				}
 			});
 		
-		String url = String.format(_disconnectUrlFormat, appSessionId, channelId);
+		String url = String.format(disconnectUrlFormat, appSessionId);
 		HttpRequest request = requestFactory.buildGetRequest(new GenericUrl(url));
 		
 		request.execute();
