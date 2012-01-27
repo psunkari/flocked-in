@@ -60,6 +60,8 @@ public class BayeuxAuthenticator extends DefaultSecurityPolicy implements Server
         	return true;
 
     	String appSessionId = getCookie(server, sessionCookieName);
+    	if (appSessionId == null)
+    		return false;
         
         try {
         	logger.debug("Trying to validate authenticate session: " + appSessionId);

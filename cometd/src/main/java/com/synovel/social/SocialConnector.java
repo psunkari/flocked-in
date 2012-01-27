@@ -37,16 +37,16 @@ public class SocialConnector
 
 	public static class AuthData {
 		@Key
-		public String user;		
+		public String user = "";		
 		@Key
-		public String org;
+		public String org = "";
 	}
 	
 	public static class ResultData {
 		@Key
-		public String status;
+		public String status = "";
 		@Key
-		public String reason;
+		public String reason = "";
 		
 		public boolean isSuccess() {
 			return status.equals("SUCCESS");
@@ -122,7 +122,7 @@ public class SocialConnector
 					request.addParser(new JsonHttpParser(JSON_FACTORY));
 				}
 			});
-		
+			
 		String url = String.format(subscribeUrlFormat, appSessionId, channelId);
 		HttpRequest request = requestFactory.buildGetRequest(new GenericUrl(url));
 		
