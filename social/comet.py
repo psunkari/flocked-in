@@ -161,7 +161,7 @@ def startup():
 cometdClient = CometdClient('http://localhost:8080/social/cometd', 'ABCDE')
 
 @defer.inlineCallbacks
-def publishWrapper(channelId, data):
+def pushToCometd(channelId, data):
     cometdClient = CometdClient('http://localhost:8080/social/cometd', 'ABCDE')
     yield cometdClient.handshake()
     yield cometdClient.publish(channelId, data)

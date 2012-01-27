@@ -7,7 +7,7 @@ from twisted.internet   import defer
 from social.isocial     import IAuthInfo
 from social.presence    import PresenceStates
 from social             import base, utils, db, errors, constants
-from social.comet       import publishWrapper
+from social.comet       import pushToCometd
 from social             import template as t
 from social.logging     import log
 
@@ -39,20 +39,20 @@ class ChatResource(base.BaseResource):
             if myId not in channelSubscribers:
                 raise errors.ChatAccessDenied('')
             yield db.insert(channelId, 'channelSubscribers', '', '%s:%s'%(myId, sessionId))
-            yield db.insert("%s:%s" %(myId, sessionId), "sessionChannelMap", '', channelId)
+            yield db.insert("%s:%s" %(myId, sessionId), "sessionChannelsMap", '', channelId)
             try:
-                yield publishWrapper('/chat/%s'%(channelId), data)
+                yield pushToCometd('/chat/%s'%(channelId), data)
                 count = yield db.get_count(channelId, "channelSubscribers", start='%s:'%(recipientId))
                 if not count:
-                    yield publishWrapper('/notify/%s'%(recipientId), data)
+                    yield pushToCometd('/notify/%s'%(recipientId), data)
             except:
                 channelId = None
         if not channelId:
             channelId = utils.getUniqueKey()
             data['channelId'] = channelId
             try:
-                yield publishWrapper('/notify/%s'%(myId), data)
-                yield publishWrapper('/notify/%s'%(recipientId), data)
+                yield pushToCometd('/notify/%s'%(myId), data)
+                yield pushToCometd('/notify/%s'%(recipientId), data)
             except Exception as e:
                 raise errors.RequestFailed()
             request.write('%s'%(channelId))

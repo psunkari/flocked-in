@@ -9,19 +9,10 @@ from telephus.cassandra     import ttypes
 from twisted.internet       import defer
 from twisted.web            import resource, server, http
 
-from social                 import _, __, db, utils, errors
+from social                 import _, __, db, utils, errors, presence
 from social.base            import APIBaseResource
 from social.isocial         import IAuthInfo
 
-@defer.inlineCallbacks
-def clearChannels(userId, sessionId):
-
-    key = "%s:%s"%(userId, sessionId)
-    cols = yield db.get_slice(key, "sessionChannelsMap")
-    channels = utils.columnsToDict(cols).keys()
-    for channelId in channels:
-        yield db.remove(channelId, "channelSubscribers", key)
-    yield db.remove(key, "sessionChannelsMap")
 
 
 class PrivateResource(APIBaseResource):
@@ -46,11 +37,16 @@ class PrivateResource(APIBaseResource):
     @defer.inlineCallbacks
     def disconnect(self, request):
         sessionId = utils.getRequestArg(request, "sessionid", sanitize=False)
-        userId = utils.getRequestArg(request, "userid", sanitize=False)
-        if not sessionId or not userId:
+        try:
+            session = yield defer.maybeDeferred(request.site.getSession, sessionId)
+        except ttypes.NotFoundException:
             raise errors.NotFoundError()
 
-        yield clearChannels(userId, sessionId)
+        userId = session.getComponent(IAuthInfo).username
+        orgId = session.getComponent(IAuthInfo).organization
+        status = presence.PresenceStates.OFFLINE
+        yield presence.updateAndPublishStatus(userId, orgId, sessionId, status)
+        yield presence.clearChannels(userId, sessionId)
         self._success(request, 200)
 
 
@@ -61,6 +57,16 @@ class PrivateResource(APIBaseResource):
 
         if not sessionId or not channelId:
             raise errors.NotFoundError()
+
+        try:
+            session = yield defer.maybeDeferred(request.site.getSession, sessionId)
+        except ttypes.NotFoundException:
+            raise errors.NotFoundError()
+        userId = session.getComponent(IAuthInfo).username
+        if len(channelId.split('/chat/')) != 2:
+            raise errors.InvalidRequest()
+        nullString, channelId = channelId.split('/chat/')
+
 
         channels = yield db.get_slice(channelId, "channelSubscribers")
         channels = utils.columnsToDict(channels)
