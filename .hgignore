@@ -25,3 +25,5 @@ scripts/deployment/files/*
 
 # Ignore log files
 logs/*
+
+cometd/target
