@@ -23,39 +23,14 @@ def clearChannels(userId, sessionId):
         yield db.remove(channelId, "channelSubscribers", key)
     yield db.remove(key, "sessionChannelsMap")
 
+
 class PrivateResource(APIBaseResource):
     requireAuth = False
     isLeaf = True
 
     @defer.inlineCallbacks
-    def disconnect(self, request):
-        sessionId = utils.getRequestArg(request, "id", sanitize=False)
-        userId = utils.getRequestArg(request, "userId")
-        yield clearChannels(userId, sessionId)
-        self._success(request, 200)
-
-    @defer.inlineCallbacks
-    def isAuthorised(self, request):
-        channelId = utils.getRequestArg(request, "id", sanitize=False)
-        userId = utils.getRequestArg(request, "userId")
-        try:
-            yield db.get(channelId, "channelSubscribers")
-        except ttypes.NotFoundException:
-           self._success(request, 404)
-        try:
-            yield db.get(channelId, "channelSubscribers", userId)
-            self._success(request, 200)
-        except ttypes.NotFoundException:
-           self._success(request, 401)
-
-
-
-
-
-
-    @defer.inlineCallbacks
     def _validateSession(self, request):
-        sessionId = utils.getRequestArg(request, "id", sanitize=False)
+        sessionId = utils.getRequestArg(request, "sessionid", sanitize=False)
         if not sessionId:
             raise errors.NotFoundError()
 
@@ -68,6 +43,35 @@ class PrivateResource(APIBaseResource):
             raise errors.NotFoundError()
 
 
+    @defer.inlineCallbacks
+    def disconnect(self, request):
+        sessionId = utils.getRequestArg(request, "sessionid", sanitize=False)
+        userId = utils.getRequestArg(request, "userid", sanitize=False)
+        if not sessionId or not userId:
+            raise errors.NotFoundError()
+
+        yield clearChannels(userId, sessionId)
+        self._success(request, 200)
+
+
+    @defer.inlineCallbacks
+    def isAuthorized(self, request):
+        sessionId = utils.getRequestArg(request, "sessionid", sanitize=False)
+        channelId = utils.getRequestArg(request, "channelid", sanitize=False)
+
+        if not sessionId or not channelId:
+            raise errors.NotFoundError()
+
+        channels = yield db.get_slice(channelId, "channelSubscribers")
+        channels = utils.columnsToDict(channels)
+        if not channels:
+            self._success(request, 404, {"reason": "Channel not found"})
+        elif userId not in channels:
+            self._success(request, 401, {"reason": "Not authorized"})
+        else:
+            self._success(request, 200)
+
+
     def render_GET(self, request):
         d = None
         segmentCount = len(request.postpath)
@@ -76,6 +80,6 @@ class PrivateResource(APIBaseResource):
             d = self._validateSession(request)
         elif segmentCount == 1 and request.postpath[0] == "disconnect":
             d = self.disconnect(request)
-        elif segmentCount ==1 and request.postpath[0] == "is-authorised":
-            d = self.isAuthorised(request)
+        elif segmentCount ==1 and request.postpath[0] == "is-authorized":
+            d = self.isAuthorized(request)
         return self._epilogue(request, d)
