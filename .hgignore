@@ -27,3 +27,6 @@ scripts/deployment/files/*
 logs/*
 
 cometd/target
+.classpath
+.settings
+.project
