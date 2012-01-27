@@ -15,9 +15,11 @@ from twisted.internet           import defer
 from twisted.web.client         import Agent
 from twisted.web.http_headers   import Headers
 
+from social                     import config
 
-COMET_URL='http://localhost:8080/social/cometd/'
 
+COMET_URL=config.get('Cometd', 'url')
+SECRET=config.get('Cometd', 'secret')
 class _StringProducer(object):
     implements(IBodyProducer)
 
@@ -151,22 +153,19 @@ class CometdClient:
 
 @defer.inlineCallbacks
 def startup():
-    comet = CometdClient('http://localhost:8080/social/cometd', 'ABCDE')
+    comet = CometdClient(COMET_URL, SECRET)
     try:
         yield comet.handshake()
         yield comet.publish('/hello', {'greeting': 'Hello, World!'})
     except Exception as ex:
         log.err(ex)
 
-cometdClient = CometdClient('http://localhost:8080/social/cometd', 'ABCDE')
+cometdClient = CometdClient(COMET_URL, SECRET)
 
 @defer.inlineCallbacks
 def pushToCometd(channelId, data):
-    cometdClient = CometdClient('http://localhost:8080/social/cometd', 'ABCDE')
     yield cometdClient.handshake()
     yield cometdClient.publish(channelId, data)
-
-
 
 
 if __name__ == "__main__":
