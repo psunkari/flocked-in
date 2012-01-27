@@ -127,9 +127,12 @@ class SiteFactory(server.Site):
     @defer.inlineCallbacks
     def clearSession(self, uid):
         session = yield self.getSession(uid)
-        userId = session.getComponent(IAuthInfo).username
+        authInfo = session.getComponent(IAuthInfo)
+        userId = authInfo.username
+        orgId = authInfo.organization
         yield db.remove(uid, "sessions", "auth")
         yield db.remove(userId, "userSessionsMap", uid)
+        yield db.remove(orgId, "presence", uid, userId)
 
 
 

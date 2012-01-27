@@ -159,7 +159,6 @@ def getValidEntityId(request, arg, type="user", columns=None):
     org = basic["org"] if basic["type"] != "org" else entityId
     if myOrgId != org:
         raise errors.EntityAccessDenied(type, entityId)
-
     defer.returnValue((entityId, entity))
 
 

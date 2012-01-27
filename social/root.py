@@ -36,7 +36,9 @@ from social.contact         import ContactResource
 from social.oauth           import OAuthResource
 from social.api             import APIRoot
 from social.apps            import ApplicationResource
-
+from social.chat            import ChatResource
+from social.presence        import PresenceResource
+from social.private         import PrivateResource
 
 def getPluggedResources(ajax=False):
     resources = {}
@@ -191,6 +193,8 @@ class RootResource(resource.Resource):
         self._messages = MessagingResource(self._isAjax)
         self._files = FilesResource(self._isAjax)
         self._apps = ApplicationResource(self._isAjax)
+        self._chat = ChatResource(self._isAjax)
+        self._presence = PresenceResource(self._isAjax)
 
         if not self._isAjax:
             self._home = HomeResource()
@@ -205,6 +209,7 @@ class RootResource(resource.Resource):
             self._contact = ContactResource()
             self._oauth = OAuthResource()
             self._api = APIRoot()
+            self._private = PrivateResource()
         else:
             self._feedback = FeedbackResource(True)
 
@@ -260,6 +265,8 @@ class RootResource(resource.Resource):
                 match = self._signup
             elif path == "rsrcs":
                 match = self._rsrcs
+            elif path == "private":
+                match = self._private
             elif path == 'password':
                 match = self._signup
             elif path == 'oauth':
@@ -304,6 +311,11 @@ class RootResource(resource.Resource):
             match = self._apps
         elif path == "api":
             match = self._api
+        elif path == 'chat':
+            match = self._chat
+        elif path == 'presence':
+            match = self._presence
+
 
         # Resources exposed by plugins
         elif path in plugins and self._pluginResources.has_key(path):
