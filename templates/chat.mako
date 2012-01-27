@@ -47,13 +47,13 @@
       return entities[userId]["basic"]["name"]
 
     if numOthers > 2:
-      return _("%s, %s and %d others") % (userName(others[0]), userName(others[1]), numOthers-1)
+      return _("Chat with %s, %s and %d others") % (userName(others[0]), userName(others[1]), numOthers-1)
     elif numOthers == 2:
-      return _("%s and %s") % (userName(others[0]), userName(others[1]))
+      return _("Chat with %s and %s") % (userName(others[0]), userName(others[1]))
     elif numOthers == 1:
-      return _("%s") % (userName(others[0]))
+      return _("Chat with %s") % (userName(others[0]))
     else:
-      return _("%s") % (userName(myId))
+      return _("Chat with %s") % (userName(myId))
 %>
 
 <%!
@@ -79,8 +79,10 @@
   <%
     entityId, comment, timestamp = chatLog
     others = [x for x in participants if x != myId]
+    username = entities[entityId]['basic']['name']
     if others and entityId == myId:
       entityId = others[-1]
+      username = "me"
     comment = utils.normalizeText(comment)
   %>
   <div id='thread-${chatId}' class="conversation-row">
@@ -94,7 +96,7 @@
           &ndash;&nbsp; ${utils.simpleTimestamp(timestamp, entities[myId]["basic"]["timezone"])}
         </span>
         <div class="conversation-row-subject-wrapper">
-          <span class="conversation-row-snippet">${comment}</span>
+          <span class="conversation-row-snippet">${username}: ${comment}</span>
         </div>
       </div>
     </a>
@@ -170,6 +172,24 @@
     %for chatId in chatIds:
       ${render_chat_row(chatId, chats[chatId], chatParticipants[chatId])}
     %endfor
+    <div id="chat-paging" class="pagingbar">
+      <ul class="h-links">
+        %if prevPageStart:
+          <li class="button">
+            <a class="ajax" href="/chat?start=${prevPageStart}">${_("&#9666; Previous")}</a>
+          </li>
+        %else:
+          <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
+        %endif
+        %if nextPageStart:
+          <li class="button">
+            <a class="ajax" href="/chat?&start=${nextPageStart}">${_("Next &#9656;")}</a>
+          </li>
+        %else:
+          <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
+        %endif
+      </ul>
+    </div>
   </div>
 </%def>
 

@@ -6,7 +6,7 @@ from telephus.cassandra import ttypes
 from twisted.internet   import defer
 from social.isocial     import IAuthInfo
 from social.presence    import PresenceStates
-from social             import base, utils, db, errors
+from social             import base, utils, db, errors, constants
 from social.comet       import publishWrapper
 from social             import template as t
 from social.logging     import log
@@ -131,6 +131,9 @@ class ChatResource(base.BaseResource):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         orgId = args['orgId']
         landing = not self._ajax
+        start = utils.getRequestArg(request, 'start') or ''
+        start = utils.decodeKey(start)
+        count = constants.CHATS_PER_PAGE
 
         if script and landing:
             t.render(request, "chat.mako", **args)
@@ -139,10 +142,18 @@ class ChatResource(base.BaseResource):
             t.renderScriptBlock(request, "chat.mako", "layout",
                                 landing, "#mainbar", "set", **args)
 
-        cols = yield db.get_slice(myId, "chatArchiveList", reverse=True)
-        chatIds = [col.column.value for col in cols]
         chats = {}
         chatParticipants = {}
+        prevPageStart = ''
+        nextPageStart = ''
+        cols = yield db.get_slice(myId, "chatArchiveList", start=start, count=count+1, reverse=True)
+        chatIds = [col.column.value for col in cols]
+        if len(cols) == count+1:
+            chatIds = chatIds[:count]
+            nextPageStart = utils.encodeKey(cols[-1].column.name)
+        cols = yield db.get_slice(myId, "chatArchiveList", start=start, count=count+1)
+        if len(cols) > 1 and start:
+            prevPageStart = utils.encodeKey(cols[-1].column.name)
         if chatIds:
             cols = yield db.multiget_slice(chatIds, "chatLogs", reverse=False)
             chats = OrderedDict()
@@ -160,7 +171,12 @@ class ChatResource(base.BaseResource):
         entities = yield db.multiget_slice(entityIds, "entities", ['basic'])
         entities = utils.multiSuperColumnsToDict(entities)
         entities[myId] = args['me']
-        args.update({'chatParticipants': participants, 'entities': entities, 'chats': chats, 'chatIds': chatIds})
+        args.update({'chatParticipants': participants,
+                      'entities': entities,
+                      'chats': chats,
+                      'chatIds': chatIds,
+                      'nextPageStart': nextPageStart,
+                      'prevPageStart': prevPageStart})
         t.renderScriptBlock(request, "chat.mako", "render_chatList",
                           landing,'.center-contents', "set", **args )
 
@@ -202,7 +218,7 @@ class ChatResource(base.BaseResource):
         entities = yield db.multiget_slice(chatParticipants, "entities", ['basic'])
         entities = utils.multiSuperColumnsToDict(entities)
         entities[myId] = args['me']
-        title = ",".join([entities[x]['basic']['name'] for x in chatParticipants if x != myId ])
+        title = "Chat with " + ",".join([entities[x]['basic']['name'] for x in chatParticipants if x != myId ])
         args.update({'chatLogs': chatLogs, "chatId": chatId, "entities": entities, "nextPageStart": nextPageStart})
         if not start:
             t.renderScriptBlock(request, 'chat.mako', "chat_title", landing,
