@@ -312,18 +312,24 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(keywordItems)
 
     #Chat
-    presence = CfDef(KEYSPACE, "presence", "Super", 'UTF8Type','UTF8Type', "")
-    chatParticipants = CfDef(KEYSPACE, "chatParticipants", "Standard", "UTF8Type", None, "")
-    chatLogs = CfDef(KEYSPACE, "chatLogs", "Standard", 'TimeUUIDType', None, "")
-    chatArchiveList = CfDef(KEYSPACE, "chatArchiveList", "Standard", 'TimeUUIDType', None, "")
-    channelSubscribers = CfDef(KEYSPACE, "channelSubscribers", "Standard", "UTF8Type", None, "")
-    sessionChannelMap =   CfDef(KEYSPACE, "sessionCannelMap", "Standard", "UTF8Type", None, "")
+    presence = CfDef(KEYSPACE, "presence", "Super", 'UTF8Type',
+                     'UTF8Type', "")
+    chatParticipants = CfDef(KEYSPACE, "chatParticipants", "Standard",
+                             "UTF8Type", None, "")
+    chatLogs = CfDef(KEYSPACE, "chatLogs", "Standard",
+                     'TimeUUIDType', None, "")
+    chatArchiveList = CfDef(KEYSPACE, "chatArchiveList", "Standard",
+                            'TimeUUIDType', None, "")
+    channelSubscribers = CfDef(KEYSPACE, "channelSubscribers", "Standard",
+                               "UTF8Type", None, "")
+    sessionChannelsMap =   CfDef(KEYSPACE, "sessionChannelsMap", "Standard",
+                                 "UTF8Type", None, "Map of all channels associated with a session")
     yield client.system_add_column_family(presence)
     yield client.system_add_column_family(chatParticipants)
     yield client.system_add_column_family(chatLogs)
     yield client.system_add_column_family(chatArchiveList)
     yield client.system_add_column_family(channelSubscribers)
-    yield client.system_add_column_family(sessionChannelMap)
+    yield client.system_add_column_family(sessionChannelsMap)
 
 
 @defer.inlineCallbacks
