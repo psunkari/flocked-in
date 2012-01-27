@@ -104,27 +104,20 @@
 </%def>
 
 <%def name="render_chatLog()">
-  %for (entityId, comment, timestamp) in chatLogs:
-    <% comment = utils.normalizeText(comment)%>
-    <div class="conv-item conversation-message-wrapper">
-      <div class="comment-avatar">
-        ${getSenderAvatar(entityId, entities, "s")}
-      </div>
-      <div class="comment-container conversation-message-container">
-        <div class="conv-summary">
-          <div class="conversation-message-headers">
-            <div class="user conversation-message-headers-sender">
-              <a href="/profile?id=${entityId}" class="ajax">
-                ${entities[entityId]["basic"]["name"]}
-              </a>
-            </div>
-            <nobr class="time-label conversation-message-headers-time">${utils.simpleTimestamp(float(timestamp), entities[myId]["basic"]["timezone"])}</nobr>
+  <div class="conv-item conversation-message-wrapper">
+    %for (entityId, comment, timestamp) in chatLogs:
+      <% comment = utils.normalizeText(comment)%>
+      <div class="conversation-message-headers">
+        <div class="chat-summary">
+          <div class="user chat-sender">
+            <a href="/profile?id=${entityId}" class="ajax">${entities[entityId]["basic"]["name"]}:</a>
           </div>
-          <div class="conversation-message-message">${comment}</div>
+          <span class="conversation-message-message">${comment}</span>
         </div>
+        <div class="time-label chat-time">${utils.simpleTimestamp(float(timestamp), entities[myId]["basic"]["timezone"])}</div>
       </div>
-    </div>
-  %endfor
+    %endfor
+  </div>
   <div id="next-page-loader">
     %if nextPageStart:
       <div id="next-load-wrapper" class="busy-indicator">
@@ -133,11 +126,12 @@
     %endif
   </div>
 </%def>
+
 <%def name='render_chat()'>
   <div class="conversation-messages-wrapper">
     ${render_chatLog()}
   </div>
-  <div id="chat-reply-{chatId}">
+  <div id="chat-reply-${chatId}">
     <input type='hidden' name='chatId' value='${chatId}' />
   </div>
 
