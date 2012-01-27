@@ -75,7 +75,7 @@ class PrivateResource(APIBaseResource):
         elif userId not in channels:
             self._success(request, 401, {"reason": "Not authorized"})
         else:
-            self._success(request, 200)
+            self._success(request, 200, {"reason": "OK"})
 
 
     def render_GET(self, request):

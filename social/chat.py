@@ -19,43 +19,54 @@ class ChatResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _postChat(self, request):
-        comment = utils.getRequestArg(request, 'comment')
-        channelId = utils.getRequestArg(request, 'channelId')
-        authInfo = request.getSession(IAuthInfo)
+        comment = utils.getRequestArg(request, 'message')
+        channelId = utils.getRequestArg(request, 'room')
 
-        recipientId, recipient = yield utils.getValidEntityId(request, 'to')
+        if not comment:
+            raise errors.MissingParams(["Message"])
+
+        authInfo = request.getSession(IAuthInfo)
         myId = authInfo.username
         timeuuid = uuid.uuid1().bytes
+
+        recipientId, recipient = yield utils.getValidEntityId(request, 'to')
+        cols = yield db.get_slice(myId, "entities", super_column='basic')
+        myDetails = utils.columnsToDict(cols)
+        myName = myDetails["name"]
+        myAvatar = utils.userAvatar(myId, {"basic": myDetails}, 's')
+
         chatId = utils.getUniqueKey()
         sessionId = request.getCookie('session')
-        data = {'from': myId, 'to': recipientId, 'comment': comment,
-                'channelId': channelId, 'time': time.time()}
-        if not comment:
-            return
+
+        message = {"from": myName, "to": recipientId, "message":comment,
+                   "timestamp": time.time(), "avatar": myAvatar}
+        data = {"type": "room",  "from": myId,  "to": recipientId,
+                "message": message}
+
         if channelId:
             channelSubscribers = yield db.get_slice(channelId, 'channelSubscribers')
             channelSubscribers = utils.columnsToDict(channelSubscribers)
             channelSubscribers = set([x.split(':', 1)[0] for x in channelSubscribers])
+
             if myId not in channelSubscribers:
                 raise errors.ChatAccessDenied('')
             yield db.insert(channelId, 'channelSubscribers', '', '%s:%s'%(myId, sessionId))
             yield db.insert("%s:%s" %(myId, sessionId), "sessionChannelsMap", '', channelId)
-            try:
-                yield pushToCometd('/chat/%s'%(channelId), data)
-                count = yield db.get_count(channelId, "channelSubscribers", start='%s:'%(recipientId))
-                if not count:
-                    yield pushToCometd('/notify/%s'%(recipientId), data)
-            except:
-                channelId = None
-        if not channelId:
-            channelId = utils.getUniqueKey()
-            data['channelId'] = channelId
-            try:
-                yield pushToCometd('/notify/%s'%(myId), data)
+
+            data["room"] = channelId
+
+            yield pushToCometd('/chat/%s'%(channelId), data)
+            count = yield db.get_count(channelId, "channelSubscribers", start='%s:'%(recipientId))
+            if not count:
                 yield pushToCometd('/notify/%s'%(recipientId), data)
-            except Exception as e:
-                raise errors.RequestFailed()
-            request.write('%s'%(channelId))
+
+        else:
+            channelId = utils.getUniqueKey()
+            data['room'] = channelId
+
+            yield pushToCometd('/notify/%s' %(myId), data)
+            yield pushToCometd('/notify/%s' %(recipientId), data)
+
             yield db.insert(channelId, 'channelSubscribers', '', myId)
             yield db.insert(channelId, 'channelSubscribers', '', recipientId)
             channelSubscribers = set([myId, recipientId])
@@ -84,47 +95,6 @@ class ChatResource(base.BaseResource):
             if oldTimeuuid:
                 yield db.remove(userId, "chatArchiveList", oldTimeuuid)
 
-        #if channel:
-        #   cols = yield db.get_slice(channelId, "chatChannels")
-        #   if cols:
-        #       chatId = cols[0].column.name
-        #   else:
-        #       channelId = None
-        #
-        #if not channel
-        #   start = utils.uuid1(timestamp = time.time() - 3600)
-        #   cols = yield db.get_slice(myId, 'chatArchiveList', start=start, reverse=True)
-        #   chatIds = [col.columns.name for col in cols]
-        #   participants = yield db.multiget_slice(chatIds, "chatParticipants")
-        #   participants = utils.multiColumnsToDict(participants, True)
-        #   for chatId in participants:
-        #       _participants = participants[chatId]
-        #       if len(_participants) == 2 and myId in _participants and recipientId in _participants:
-        #           col = yield db.get(chatId, "chatParticipants", 'channelId')
-        #           channelId = col.column.name
-        #           break
-        #   if not channelId:
-        #       create channel
-        #       chatId = utils.getUniqueKey()
-        #       subscribe users to channel
-        #       send channelId to me
-        #       send comment, channelId, sender to recipient channel
-        #       yield db.insert(chatId, "chatParticipants", '', myId)
-        #       yield db.insert(chatId, "chatParticipants", '', recipientId)
-        #   yield db.insert(channelId, "channelSubscribers",'', myId)
-        #   yield db.insert(channelId, "channelSubscribers",'', recipientId)
-        #   yield db.insert(channelId, "chatChannels", '', chatId)
-        #
-        #participants = yield db.get_slice(chatId, "chatParticipants")
-        #participants = utils.columnsToDict(participants)
-        #cols = yield db.get_slice(chatId, "chatLogs", reverse=True, count=1)
-        #if cols:
-        #    oldTimeuuid = cols[0].columns.colum_name
-        #    for participant in participants:
-        #        yield db.remove(participant, 'chatArchiveList', oldTimeuuid)
-        #for participant in participants:
-        #    yield db.insert(participant, "chatArchiveList", chatId, timeuuid)
-        #yield db.insert(chatId, "chatLogs", "%s:%s" %(myId,comment), timeuuid)
 
     @defer.inlineCallbacks
     def _archives(self, request):
@@ -270,5 +240,3 @@ class ChatResource(base.BaseResource):
         if segmentCount == 0:
             d = self._postChat(request)
         return self._epilogue(request, d)
-
-

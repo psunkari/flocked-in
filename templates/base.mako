@@ -53,7 +53,7 @@
           </div>
           <div class="roster-item-name">${user['name']}</div>
           <div class="ui-list-meta" style="float:left">${entities[uid]['jobTitle']}</div>
-          <div class="icon roster-status-icon roster-status-available">&nbsp;</div>
+          <div class="icon roster-status-icon roster-status-${user["status"]}">&nbsp;</div>
           <div class="clear"></div>
         </div>
       %endfor

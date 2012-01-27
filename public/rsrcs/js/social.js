@@ -1748,11 +1748,11 @@ var chatUI = {
         chatUI.create(dlgId, false)
         var ul = $("#chat-"+dlgId+"-outer .roster-chat-logs");
         var tmpl = '<li><div class="chat-avatar-wrapper">'+
-                    '<img src="http://localhost:8000/avatar/s_Mn6vCkYDEeGfRrfWIdOF4A.jpeg"/></div>' +
+                    '<img src="' + message.avatar + '"/></div>' +
                     '<div class="chat-message-wrapper">' +
                         '<div class="chat-message-from">' + message.from +
                         '</div><div class="chat-message">' + message.message +
-                   '</div></div><div><abbr class="chat-time timestamp" data-ts="' + message.timestamp + '">' +
+                   '</div></div><div><abbr class="chat-message-time timestamp" data-ts="' + message.timestamp + '">' +
                    '4:38PM</abbr></div><div class="clear"></div></li>'
 
         $(tmpl).appendTo(ul);
@@ -1841,9 +1841,9 @@ var chat = {
         if (messageType == "room"){
             //Room related notify is sent only when a new room is being
             // created
-            var createdBy = message.data.createdBy;
+            var createdBy = message.data.from;
             var roomId = message.data.room;
-            var userId = message.data.user;
+            var userId = message.data.to;
             var messageObj = message.data.message;
             if (createdBy == chat.myId) {
                 console.info("I got a message about my room")
@@ -1853,9 +1853,10 @@ var chat = {
                 //Update with the new roomId
                 roomObj.updateRoom(roomId);
                 //Subscribe for demo purposes only.
-                roomObj._subscribe(roomId);
+                //roomObj._subscribe(roomId);
                 chat.room2user[roomId] = userId;
                 chat.rooms[roomId] = roomObj;
+                console.info("I am updating my room")
                 roomObj.startChat(messageObj);
             }else {
                 console.info("I got a message about a new room")
@@ -2050,12 +2051,14 @@ function RoomSession(myId, userId){
         //}
 
         //Actual Code when backend is complete
-        _self._subscribe(_self.roomId);
+        if (_self.roomId !== "") {
+            _self._subscribe(_self.roomId);
+        }
 
         if (_self.roomId == "") {
             var postData = {'from': _self.fromId, 'to': _self.toId, 'message': text}
         }else {
-            var postData = {'from': _self.fromId, 'to': _self.toId, 'message': text, 'roomId': _self.roomId}
+            var postData = {'from': _self.fromId, 'to': _self.toId, 'message': text, 'room': _self.roomId}
         }
 
         $.post("/ajax/chat", postData);

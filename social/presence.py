@@ -111,10 +111,11 @@ class PresenceResource(BaseResource):
         entities = utils.multiColumnsToDict(cols)
         for entityId in entities:
             entity = entities[entityId]
+            #XXX:Why setting the value ?
             entities[entityId]['status'] = presence.get(userId, PresenceStates.OFFLINE)
             _data = {"userId": entityId, "name": entity['name'],
                      "status": presence.get(userId, PresenceStates.OFFLINE),
-                     "avatar": utils.userAvatar(entityId, entity, 's')}
+                     "avatar": utils.userAvatar(entityId, {"basic": entity}, 's')}
             data.append(_data)
 
         args = {"users":data, "myId":myId, "myOrgId":orgId, "entities": entities}
