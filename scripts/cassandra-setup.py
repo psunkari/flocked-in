@@ -674,7 +674,10 @@ def truncateColumnFamilies(client):
                "files", "tmp_files", "item_files", "invitationsSent",
                "user_files", "suggestions", "apps", "appsByOwner", "oAuthData",
                "userSessionsMap", "deletedUsers", "orgPresetTags",
-               "keywords", "keywordItems", "originalKeywords"]:
+               "keywords", "keywordItems", "originalKeywords", "presence",
+               "chatParticipants", "chatLogs", "chatArchiveList",
+               "channelSubscribers", "sessionChannelsMap"]:
+        
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
 

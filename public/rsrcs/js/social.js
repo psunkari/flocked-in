@@ -267,7 +267,7 @@ _initTimestampUpdates: function _initTimestampUpdates() {
 
 _initUpdatesCheck: function _initUpdatesCheck() {
     window.setInterval(function() {
-        $.get('/ajax/notifications/new');
+        //$.get('/ajax/notifications/new');
     }, 30000)
 },
 
@@ -788,6 +788,9 @@ var ui = {
                 return true;
             }
         }).closest('form').html5form({messages:'en'});
+
+        /* Power up the cometd connections. */
+        $$.chat.init();
     },
 
     showPopup: function(event, right, above){
@@ -1620,3 +1623,483 @@ var users = {
 }
 $$.users = users;
 }})(social, jQuery);
+/*
+ * Instant Messaging
+ */
+(function($$, $) { if (!$$.chatUI) {
+var chatUI = {
+    _counter: 0,
+    _dialogs: {},
+
+    template: '<div class="roster-dlg-outer" tabindex="0">' +
+                 '<div class="roster-dlg-inner">' +
+                   '<div class="roster-dlg-contents">' +
+                       '<div class="roster-dlg-title">' +
+                            '<div class="icon roster-chat-status-icon roster-status-available">&nbsp;</div>'  +
+                            '<div class="roster-chat-name"></div>'  +
+                            '<div class="roster-chat-actions">' +
+                                '<span class="roster-chat-actions-hide">_</span>' +
+                                '<span class="roster-chat-actions-remove">X</span>' +
+                            '</div>'  +
+                            '<div class="clear"></div>' +
+                        '</div>' +
+                       '<div class="roster-dlg-center">'+
+                           '<ul class="roster-chat-logs"></ul>' +
+                           '<textarea class="roster-chat-input" tabindex="0"></textarea>' +
+                       '</div>' +
+                 '</div>' +
+               '</div>',
+
+    create: function(userId, focus) {
+        $template = $(this.template);
+        dlgId = "chat-" + userId
+        var self = this;
+
+        if (chatUI._dialogs[dlgId]) {
+            $template = chatUI._dialogs[dlgId];
+            $('.roster-dlg-center', $template).show();
+        }else {
+            $template.attr('id', dlgId + '-outer').attr('dlgId', dlgId);
+            $('.roster-dlg-inner', $template).attr('id', dlgId + '-inner');
+            $('.roster-dlg-contents', $template).attr('id', dlgId);
+            $('.roster-dlg-title', $template).attr('id', dlgId + '-title');
+            $('.roster-chat-logs', $template).attr('id', dlgId + '-logs');
+            var chatting_with_name = $$.chat.userNames[userId];
+            $('.roster-chat-name', $template).html(chatting_with_name);
+
+            $template.keydown(function(event) {
+                if (event.which == 27){
+                    var dlg = $(".roster-dlg-contents", this);
+                    var dlgId = $(dlg).attr('id');
+                    self.close(dlgId, true);
+                }
+            });
+
+            $('.roster-chat-actions-remove', $template).click(function(){
+                var dlg = $(this).parents(".roster-dlg-contents");
+                var dlgId = $(dlg).attr('id');
+                self.close(dlgId, true);
+            })
+
+            $('.roster-chat-actions-hide', $template).click(function(){
+                var dlg = $(this).parents(".roster-dlg-contents");
+                $('.roster-dlg-center', dlg).toggle();
+            })
+
+            $('.roster-chat-input', $template).keydown(function(e){
+                var dlg = $(this).parents(".roster-dlg-contents");
+                var userId = dlg.attr('id').replace(/chat-/g,'');
+                if (e.keyCode == 13) {
+                    console.log(userId);
+                    //Find the roomObj associated with this user
+                    var roomObj = $$.chat.user2room[userId];
+                    var text = $(this).val();
+                    $(this).val('');
+                    roomObj.send(text);
+                    e.preventDefault();
+                    return false;
+                }
+            });
+            chatUI._dialogs[dlgId] = $template;
+            //chat.createButtons($template, dlgId, options);
+            $template.appendTo("#bigwrap");
+            $template.css('z-index', 5000+chatUI._counter)
+            //$('#'+dlgId+'-inner').position(options.position);
+            //$('#'+dlgId+'-outer').draggable({
+            //    handle: dlgId + '-title',
+            //    axis: "x",
+            //    snap: "#bigwrap",
+            //    snapMode: 'inner',
+            //    snapTolerance: 40,
+            //    scroll: false
+            //});
+
+            var right = 230*chatUI._counter;
+            $('#'+dlgId+'-outer').css({left: '', right: right+"px", bottom: 0})
+            chatUI._counter += 1;
+        }
+        if (focus){
+            $('.roster-chat-input', $template).focus();
+        }
+    },
+    close: function(dlg, destroy) {
+        var $dialog, id;
+        if (typeof dlg == "string") {
+            $dialog = chatUI._dialogs[dlg];
+            id = dlg;
+        } else {
+            $dialog = dlg;
+            id = dlg.attr('dlgId');
+        }
+
+        if (!$dialog.length)
+            return;
+
+        $dialog.hide();
+        if (destroy) {
+            $dialog.remove();
+            chatUI._counter -= 1;
+            delete chatUI._dialogs[id];
+        }
+    },
+
+    updateMessage: function(dlgId, message) {
+        //{'from':'', 'to':'', 'message':'', timestamp:''}
+        chatUI.create(dlgId, false)
+        var ul = $("#chat-"+dlgId+"-outer .roster-chat-logs");
+        var tmpl = '<li><div class="chat-avatar-wrapper">'+
+                    '<img src="http://localhost:8000/avatar/s_Mn6vCkYDEeGfRrfWIdOF4A.jpeg"/></div>' +
+                    '<div class="chat-message-wrapper">' +
+                        '<div class="chat-message-from">' + message.from +
+                        '</div><div class="chat-message">' + message.message +
+                   '</div></div><div><abbr class="chat-time timestamp" data-ts="' + message.timestamp + '">' +
+                   '4:38PM</abbr></div><div class="clear"></div></li>'
+
+        $(tmpl).appendTo(ul);
+        var ulHeight = ul.prop('scrollHeight');
+        ul.scrollTop(ulHeight);
+    },
+
+    updateForm: function(dlgId, roomId) {
+        //XXX:Update the form with the roomId
+    }
+}
+$$.chatUI = chatUI;
+}})(social, jQuery);
+
+/*
+ * A chat session between two users
+ */
+(function($$, $) {
+var chat = {
+    chatter: "",
+    _wasConnected: false,
+    _connected: false,
+    _username: "",
+    _lastUser: "",
+    _disconnecting: "",
+    user2room:{}, // userId to roomObj
+    room2user:{}, //roomId to userId
+    rooms:{}, // roomId to roomObj
+    //XXX: maintain an array of all channels that I have ever subsc
+    users:[], //
+    userNames:{},
+    myId: "",
+    myOrgId: "",
+    _status: "offline",
+    _monitorSubscriptions: [],
+
+    _connectionInitialized: function() {
+        console.info("Connection Init");
+    },
+    _connectionEstablished: function() {
+        console.info("Connection Estd");
+        chat._connected = true;
+    },
+    _connectionBroken: function() {
+        console.info("Connection Lost");
+        chat._connected = false;
+    },
+    _connectionClosed: function() {
+        console.info("Connection Closed");
+    },
+    _metaConnect: function(message) {
+        if (chat._disconnecting) {
+            chat._connected = false;
+            chat._connectionClosed();
+        }
+        else {
+            chat._wasConnected = chat._connected;
+            chat._connected = message.successful === true;
+            if (!chat._wasConnected && chat._connected) {
+                chat._connectionEstablished();
+            }
+            else if (chat._wasConnected && !chat._connected) {
+                chat._connectionBroken();
+            }
+        }
+    },
+    _metaHandshake: function(message) {
+        if (message.successful) {
+            chat._connectionInitialized();
+        }
+    },
+    _metaSub: function(message) {
+        console.info("A subscribe happened")
+        console.dir(message)
+    },
+    _metaUnSub: function(message) {
+        console.info("An Unsubscribe happened")
+        console.dir(message)
+    },
+    handleMyNotifications: function(message){
+        console.info("Recieved notification ")
+        console.dir(message)
+        //XXX: handle presence notifications and update UI
+        //XXX: maintain a list of all channels I receive and th
+        var messageType = message.data.type;
+        if (messageType == "room"){
+            //Room related notify is sent only when a new room is being
+            // created
+            var createdBy = message.data.createdBy;
+            var roomId = message.data.room;
+            var userId = message.data.user;
+            var messageObj = message.data.message;
+            if (createdBy == chat.myId) {
+                console.info("I got a message about my room")
+                //I created this room, so already have a roomObj but no roomId
+                //Get the roomObj
+                var roomObj = chat.user2room[userId];
+                //Update with the new roomId
+                roomObj.updateRoom(roomId);
+                //Subscribe for demo purposes only.
+                roomObj._subscribe(roomId);
+                chat.room2user[roomId] = userId;
+                chat.rooms[roomId] = roomObj;
+                roomObj.startChat(messageObj);
+            }else {
+                console.info("I got a message about a new room")
+                //I may have chatted with this person in the past, so dig up
+                // the roomObj and update them
+                var userId = createdBy;
+                if (userId in chat.user2room) {
+                    var roomObj = chat.user2room[userId];
+                    roomObj.updateRoom(roomId);
+                    chat.rooms[roomId] = roomObj;
+                    chat.room2user[roomId] = userId;
+                }else{
+                    var roomObj = new RoomSession(chat.myId, userId);
+                    roomObj.updateRoom(roomId);
+                    chat.rooms[roomId] = roomObj;
+                    chat.room2user[roomId] = userId;
+                    chat.user2room[userId] = roomObj;
+                }
+                roomObj.startChat(messageObj);
+            }
+        }
+    },
+    handlePresence: function(message){
+        console.info("I received a presence notification")
+        console.dir(message)
+        var userId = message.data.userId;
+        if (userId == chat.myId) {
+            chat._status = message.data.status
+        }
+        var roster_item = $("#user-"+userId+".roster-item");
+        var allClassesString = "roster-status-available roster-status-offline roster-status-busy roster-status-away"
+        $(".roster-status-icon", roster_item).removeClass(allClassesString).addClass('roster-status-'+message.data.status);
+    },
+    chatWith: function(userId) {
+        //This is called from the UI only, so always focus on the input
+        if (userId == this.myId) {
+            return
+        }
+        var roomObj;
+        console.info("Chatting with "+ userId)
+        if (userId in this.user2room) {
+            var roomObj = this.user2room[userId];
+        }else {
+            var roomObj = new RoomSession(chat.myId, userId);
+            this.user2room[userId] = roomObj;
+            // We do not have the roomId so we have nothing to store. The room
+            // id is received when the user actually makes the post.
+        }
+        console.info("Creating the roomObj")
+        console.dir(this.user2room);
+        $$.chatUI.create(userId, true);
+    },
+    init: function() {
+        if (this._connected) {
+            return
+        }
+
+        var _self = this;
+        //Do not allow init to be called if I am already inited
+
+        var cometdURL = "http://live.example.com/social/cometd/";
+        $.cometd.configure({
+            url: cometdURL,
+            logLevel: 'info'
+        });
+
+        $.cometd.addListener('/meta/handshake', _self._metaHandshake);
+        $.cometd.addListener('/meta/connect', _self._metaConnect);
+        $.cometd.addListener('/meta/subscribe', _self._metaSub);
+        $.cometd.addListener('/meta/unsubscribe', _self._metaUnSub);
+
+        var d = $.cometd.handshake();
+    },
+    signin: function() {
+        if (this._monitorSubscriptions.length != 0) {
+            $.each(this._monitorSubscriptions, function(idx, channel){
+                $.cometd.unsubscribe(channel);
+            })
+        }
+
+        var d = $.post("/ajax/presence", {"status":"available"})
+        d.then(function(){
+            chat._status = "available"
+
+            var d = $.get('/ajax/presence');
+            d.then(function(){
+                $.each(chat.users, function(idx, user) {
+                    var userId = user["userId"];
+                    chat.userNames[userId] = user["name"]
+                });
+                console.info("Subsribing to " + '/presence/'+chat.myId)
+                _myPresenceSubscription = $.cometd.subscribe('/presence/'+chat.myId,
+                                                         chat.handlePresence);
+
+                console.info("Subsribing to " + '/presence/'+chat.myOrgId)
+                _myOrgPresenceSubscription = $.cometd.subscribe('/presence/'+chat.myOrgId,
+                                                         chat.handlePresence);
+
+                console.info("Subsribing to " + '/notify/'+chat.myId)
+                _notifySubscription = $.cometd.subscribe('/notify/'+chat.myId,
+                                                         chat.handleMyNotifications);
+
+                chat._monitorSubscriptions.push(_myPresenceSubscription);
+                chat._monitorSubscriptions.push(_myOrgPresenceSubscription);
+                chat._monitorSubscriptions.push(_notifySubscription);
+
+            });
+        })
+
+
+    },
+    signout: function() {
+        $.post("/ajax/presence", {"status":"offline"})
+    },
+    isConnected: function() {
+        return this._connected;
+    },
+    isSignedIn: function() {
+        return this._status;
+    }
+}
+function RoomSession(myId, userId){
+    _self = this;
+    this._username = chat.userNames[userId];
+    this._myname = chat.userNames[myId];
+    this._roomSubscriptions = [];
+    this.fromId = myId;
+    this.toId = userId;
+    this.roomId = "";
+    this.roomCreator;
+    this._subscribedRoomIds = [];
+
+    this.updateRoom = function(roomId) {
+        console.info("Updating RoomId")
+        if (roomId != _self.roomId){
+            _self.roomId = roomId;
+        }
+    };
+
+    this.send = function(text) {
+        if (!text || !text.length) return;
+
+        //XXX: Demo code, publish to /notify of other user
+        //if (_self.roomId == ""){
+        //    var roomId = parseInt(new Date().getTime()/1000);
+        //    console.info("Publishing to "+ '/notify/'+_self.toId)
+        //    console.info("Sending a New Message")
+        //    //Server sends a notify on the other person's channel
+        //    $.cometd.publish('/notify/'+_self.toId,
+        //                     {'type':'room',
+        //                      'room': roomId,
+        //                      'createdBy': _self.fromId,
+        //                      'user': _self.toId,
+        //                      'message':
+        //                        {'from': _self._myname,
+        //                         'to': _self._username,
+        //                         'message': text,
+        //                         'timestamp':(new Date().getTime())/1000
+        //                        }
+        //                    });
+        //    $.cometd.publish('/chat/'+_self.fromId,
+        //                     {'type':'room',
+        //                      'room': roomId,
+        //                      'createdBy': _self.fromId,
+        //                      'user': _self.toId,
+        //                      'message':
+        //                        {'from': _self._myname,
+        //                         'to': _self._username,
+        //                         'message': text,
+        //                         'timestamp':(new Date().getTime())/1000
+        //                        }
+        //                    });
+        //
+        //    //Server sends me a message on the room channel
+        //    //$.cometd.publish('/notify/'+ roomId,
+        //    //                 {'from': _self._myname,
+        //    //                  'to': _self._username,
+        //    //                  'message': text,
+        //    //                  'timestamp':(new Date().getTime())/1000
+        //    //});
+        //    //_self.updateRoom(roomId);
+        //    //_self._subscribe(_self.roomId);
+        //}else {
+        //    console.info("Publishing to "+ '/chat/'+_self.roomId)
+        //    _self._subscribe(_self.roomId);
+        //    $.cometd.publish('/chat/'+_self.roomId,
+        //                     {'from': _self._myname,
+        //                      'to': _self._username,
+        //                      'message': text,
+        //                      'timestamp':(new Date().getTime())/1000
+        //    });
+        //}
+
+        //Actual Code when backend is complete
+        _self._subscribe(_self.roomId);
+
+        if (_self.roomId == "") {
+            var postData = {'from': _self.fromId, 'to': _self.toId, 'message': text}
+        }else {
+            var postData = {'from': _self.fromId, 'to': _self.toId, 'message': text, 'roomId': _self.roomId}
+        }
+
+        $.post("/ajax/chat", postData);
+    };
+
+    this.startChat = function(message) {
+        //An optional message object if I am the first message of a conv
+
+        if (message != undefined){
+            console.info("creating window for " + _self.toId)
+            $$.chatUI.create(_self.toId, false);
+            $$.chatUI.updateMessage(_self.toId, message);
+        }else{
+            console.info("Sending a create");
+            $$.chatUI.create(_self.toId, true);
+        }
+
+    };
+
+    this.receive = function(message) {
+        var fromUser = message.data.from;
+        var text = message.data.message;
+        var toUser = message.data.to;
+        var timestamp = message.data.timestamp;
+
+        $$.chatUI.updateMessage(_self.toId, message.data);
+    };
+
+    this.unsubscribe = function() {
+        for (s in _self._roomSubscriptions){
+            $.cometd.unsubscribe(_self._roomSubscription);
+        }
+    };
+
+    this._subscribe = function(roomId) {
+        if (_self._subscribedRoomIds.indexOf(roomId) == -1) {
+            console.info("Subscribing to " + "/chat/"+roomId)
+            var subscription = $.cometd.subscribe('/chat/'+roomId, _self.receive);
+           _self._roomSubscriptions.push(subscription);
+           _self._subscribedRoomIds.push(_self.roomId);
+        }
+    };
+
+
+}
+$$.chat = chat;
+})(social, jQuery);

@@ -2398,23 +2398,116 @@ td.file-info, td.file-context, td.file-actions {
     line-height: 1.3em;
     text-transform: capitalize;
 }
+
 .chat-summary {
   display: inline-block;
   width: 85%;
   padding-left: 20px;
 }
+
 .chat-time {
   top: 4px;
   right: 0;
   float: right;
-  z-index: 1000; 
+  z-index: 1000;
   display: inline-block;
   position: absolute;
   padding-left: 3px;
   color: gray;
 }
+
 .chat-sender {
     display: inline-block;
     margin-left: -20px;
     font-weight: bold;
+}
+
+
+/* Roster related CSS */
+
+#roster-container {
+    margin-top: 20px;
+}
+
+#roster-linkwrap {
+    position: fixed;
+    left: 25px;
+    bottom: 0;
+    background: transparent;
+}
+
+#roster-linkwrap > a:link {
+    display: block;
+    color: white;
+    font-weight: bold;
+    padding: 5px 20px;
+    background-color: #3E3D39;
+    border-radius: 4px 4px 0 0;
+}
+
+.roster-list {
+    margin-top: 5px;
+}
+
+.roster-item {
+    cursor: pointer;
+    position: relative;
+    min-height: 38px;
+    display: block;
+    border-bottom: 1px dotted #DDDDDD;
+}
+
+.roster-item:hover, .roster-item:focus {
+    -moz-transition: background-color 0.2s ease-in-out 0s;
+    -webkit-transition: background-color 0.2s ease-in-out 0s;
+    background-color: #f2f1f0;
+}
+
+.roster-status-icon {
+    float: right;
+    right: 4px;
+    position: absolute;
+}
+
+.roster-item-icon {
+    height: 32px;
+    left: 0px;
+    position: absolute;
+    top: 4px;
+    width: 32px;
+}
+
+.roster-icon-holder {
+    display: table-cell;
+    height: 32px;
+    vertical-align: middle;
+}
+
+.roster-status-available {
+    background-image: url(/rsrcs/img/available.png);
+    background-repeat: no-repeat;
+}
+
+.roster-status-offline {
+    background-image: url(/rsrcs/img/offline.png);
+    background-repeat: no-repeat;
+}
+
+.roster-status-away {
+    background-image: url(/rsrcs/img/away.png);
+    background-repeat: no-repeat;
+}
+
+.roster-status-busy {
+    background-image: url(/rsrcs/img/busy.png);
+    background-repeat: no-repeat;
+}
+
+.roster-item-name {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    padding-left: 40px;
+    padding-top: 4px;
+    width: 120px;
 }

@@ -14,6 +14,7 @@ from social                 import _, __, db, utils, comet, errors
 from social.base            import BaseResource
 from social.isocial         import IAuthInfo
 from social.logging         import log
+from social                 import template as t
 
 class PresenceStates:
     OFFLINE   = 'offline'
@@ -35,14 +36,15 @@ def clearChannels(userId, sessionId):
 
 @defer.inlineCallbacks
 def updateAndPublishStatus(userId, orgId, sessionId, status, user=None):
-    # Update the online status
-    yield db.insert(orgId, 'presence', status, sessionId, userId)
-
     # Check if there is a change in the online status
     results = yield db.get_slice(orgId, 'presence', super_column=userId)
     results = utils.columnsToDict(results)
     mostAvailablePresence = getMostAvailablePresence(results.values())
+    print "Most available status:", mostAvailablePresence
+    print "Current status:", status
 
+    # Update the online status
+    yield db.insert(orgId, 'presence', status, sessionId, userId)
 
     # If status changed broadcast the change
     # XXX: Currently everyone on the network will get the presence update.
@@ -105,7 +107,7 @@ class PresenceResource(BaseResource):
             return
 
         userIds = cols.keys()
-        cols = yield db.multiget_slice(userIds, "entities", ['name', 'avatar'], super_column='basic')
+        cols = yield db.multiget_slice(userIds, "entities", super_column='basic')
         entities = utils.multiColumnsToDict(cols)
         for entityId in entities:
             entity = entities[entityId]
@@ -114,7 +116,18 @@ class PresenceResource(BaseResource):
                      "status": presence.get(userId, PresenceStates.OFFLINE),
                      "avatar": utils.userAvatar(entityId, entity, 's')}
             data.append(_data)
-        request.write(json.dumps(data))
+
+        args = {"users":data, "myId":myId, "myOrgId":orgId, "entities": entities}
+        landing = not self._ajax
+
+        onload = """
+                    $$.chat.myId = '%s';
+                    $$.chat.myOrgId = '%s';
+                    $$.chat.users = %s;
+                 """ %( myId, orgId, json.dumps(data))
+        t.renderScriptBlock(request, "base.mako", "chat_roster", landing,
+                            "#roster-container", "set", True,
+                            handlers={"onload":onload}, **args)
 
 
     def render_POST(self, request):

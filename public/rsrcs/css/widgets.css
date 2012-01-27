@@ -344,3 +344,126 @@ input::-moz-focus-inner {
     background-color: #F9F9F9;
     padding: 5px;
 }
+
+/*
+ * Chat Dialogs
+ */
+
+.roster-dlg-outer {
+  position: fixed;
+  border: none;
+  bottom: 0px;
+  outline: none;
+  margin-right: 20px;
+}
+
+.roster-dlg-inner {
+  background-color: white;
+  border: 1px solid #3e3d39;
+  width: 225px;
+}
+
+.roster-dlg-title {
+  background: #3e3d39;
+  color: white;
+  padding: 5px 5px;
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: capitalize;
+}
+
+.roster-dlg-buttonbox {
+  padding: 8px 10px;
+  background-color: #F9F9F9;
+  border-top: 1px solid #CCC;
+  text-align: right;
+}
+.roster-dlg-buttonbox .button {
+  margin-left: 6px;
+}
+
+.roster-dlg-center {
+  overflow: hidden;
+  padding: 5px;
+}
+
+.roster-chat-status-icon {
+    float: left;
+    position: absolute;
+    left: 2px;
+}
+
+.roster-chat-name {
+    display: inline-block;
+    margin-left: 15px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 170px;
+}
+
+.roster-chat-actions {
+    float: right;
+}
+
+.roster-chat-actions span {
+    padding: 0 4px;
+    cursor: pointer;
+}
+
+.roster-chat-logs {
+    margin-bottom: 5px;
+    min-height: 150px;
+    max-height: 180px;
+    padding-left: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.roster-chat-logs li{
+    white-space: pre-wrap;
+    border-bottom: 1px solid #EDEDED;
+    clear: both;
+    margin-bottom: 2px;
+    margin-top: 4px;
+}
+
+.roster-chat-input {
+    resize: none;
+    width: 100%;
+    box-sizing: border-box;
+    border-color: #C0C0C0 #D9D9D9 #D9D9D9 !important;
+    border-radius: 1px 1px 1px 1px;
+    border-right: 1px solid #D9D9D9 !important;
+    border-style: solid !important;
+    border-width: 1px !important;
+    font-size: 13px;
+}
+
+.roster-chat-input:focus {
+    border: 1px solid #73563D;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) inset;
+}
+
+.chat-avatar-wrapper {
+    float: left;
+    width: 40px;
+}
+
+.chat-message-wrapper {
+    margin-left: 40px;
+}
+
+.chat-message-from {
+    font-weight: bold;
+}
+
+.chat-message {
+
+}
+
+.chat-time {
+    float: right;
+    color: #999999;
+    font-size: 10px;
+}
