@@ -101,7 +101,7 @@ class CometdClient:
                         "version": self._supportedVersion,
                         "advice":{"interval":0,"timeout":60000}})
         (response, body) = yield self._request(message)
-        cookies = response.headers.getRawHeaders('Set-Cookie', None)
+        cookies = response.headers.getRawHeaders('Set-Cookie', [])
         for cookie in cookies:
             (name, value) = cookie.split(';')[0].split('=')
             self._cookies[name] = value
