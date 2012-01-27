@@ -106,7 +106,7 @@ public class SocialConnector
 		
 		String userNotifyChannel = String.format(userNotifyChannelFormat, userId);
 		String userPresenceChannel = String.format(userPresenceChannelFormat, userId);
-		String orgPresenceChannel = String.format(orgPresenceChannelFormat, userId);
+		String orgPresenceChannel = String.format(orgPresenceChannelFormat, orgId);
 		
 		if (channelId.equals(userNotifyChannel) ||
 			channelId.equals(userPresenceChannel) || 
