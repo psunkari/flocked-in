@@ -22,6 +22,7 @@ public class BayeuxAuthenticator extends DefaultSecurityPolicy implements Server
 {
     private static String sessionCookieName = "session";
     private final Logger logger;
+    private final SocialConnector connector = new SocialConnector();
 
     public BayeuxAuthenticator() {
         logger = LoggerFactory.getLogger(getClass().getName());
@@ -61,12 +62,17 @@ public class BayeuxAuthenticator extends DefaultSecurityPolicy implements Server
     @Override
     public boolean canHandshake(BayeuxServer server, ServerSession session, ServerMessage message) {
     	logger.debug("Trying to handshake with the server");
+        if (session!=null && session.isLocalSession())
+        	return true;
+
     	String appSessionId = getCookie(server, sessionCookieName);
-        SessionValidator validator = new SessionValidator();
+        
         try {
-        	SessionValidator.AuthData auth = validator.run(appSessionId);
+        	logger.debug("Trying to validate authenticate session: " + appSessionId);
+        	SocialConnector.AuthData auth = connector.validateSession(appSessionId);
         	session.setAttribute("appSessionId", appSessionId);
         	session.setAttribute("auth", auth);
+        	
         	return true;
         } catch(Exception ex) {
         	logger.debug(ex.toString());
@@ -77,16 +83,66 @@ public class BayeuxAuthenticator extends DefaultSecurityPolicy implements Server
     @Override
     public boolean canPublish(BayeuxServer server, ServerSession session, ServerChannel channel, ServerMessage message) {
     	logger.debug("Trying to publish data");
-    	return true;
-        //return session!=null && session.isHandshook() && !channel.isMeta();
+        if (session!=null && session.isLocalSession())
+        	return true;
+
+        if (ChannelId.isMeta(channel.getId()))
+    		return false;
+        
+        try {
+        	String appSessionId = (String) session.getAttribute("appSessionId");
+        	logger.debug("Trying to validate publish to channel: " + channel.getId() + " to session: " + appSessionId);
+        	SocialConnector.ResultData resultData = connector.validateSubscribe(appSessionId, channel.getId());
+        	
+        	if (resultData.isSuccess())
+        		return true;
+        	else {
+        		logger.debug("Not authorized to publish. Reason: " + resultData.reason);
+                return false;
+        	}
+
+        } catch(Exception ex) {
+        	logger.debug(ex.toString());
+        	return false;
+        }
     }
 
     @Override
     public boolean canSubscribe(BayeuxServer server, ServerSession session, ServerChannel channel, ServerMessage message) {
     	logger.debug("Trying to subscribe to a channel");
-        return session!=null && session.isLocalSession() || !channel.isMeta();
+        if (session!=null && session.isLocalSession())
+        	return true;
+    	
+    	if (ChannelId.isMeta(channel.getId()))
+    		return false;
+    		
+        try {
+        	String appSessionId = (String) session.getAttribute("appSessionId");
+        	logger.debug("Trying to validate subscription to channel: " + channel.getId() + " to session: " + appSessionId);
+        	SocialConnector.ResultData resultData = connector.validateSubscribe(appSessionId, channel.getId());
+        	
+        	if (resultData.isSuccess())
+        		return true;
+        	else {
+        		logger.debug("Not authorized to subscribe. Reason: " + resultData.reason);
+                return false;
+        	}
+
+        } catch(Exception ex) {
+        	logger.debug(ex.toString());
+        	return false;
+        }
     }
 
     public void removed(ServerSession session, boolean timeout) {
+        try {
+        	String appSessionId = (String) session.getAttribute("appSessionId");
+        	SocialConnector.AuthData auth = (SocialConnector.AuthData) session.getAttribute("auth");
+        	
+        	logger.debug("Trying to remove session: " + appSessionId + " of userid: " + auth.user);
+        	connector.removeSession(appSessionId, auth.user);        	
+        } catch(Exception ex) {
+        	logger.debug(ex.toString());
+        }
     }
 }
