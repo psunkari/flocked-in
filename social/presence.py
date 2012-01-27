@@ -119,7 +119,7 @@ class PresenceResource(BaseResource):
 
     def render_POST(self, request):
         segmentCount = len(request.postpath)
-
+        d = None
         if segmentCount == 0:
             d = self._updatePresence(request)
 
@@ -129,6 +129,7 @@ class PresenceResource(BaseResource):
     def render_GET(self, request):
         segmentCount = len(request.postpath)
 
+        d = None
         if segmentCount ==0:
             d = self._getPresence(request)
 
