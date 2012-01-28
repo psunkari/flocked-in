@@ -14,7 +14,7 @@ class FeedbackResource(base.BaseResource):
 
     def renderFeedbackForm(self, request):
         t.renderScriptBlock(request, "item.mako", "feedbackDialog",
-                            False, "#feedback-dlg", "set", **args)
+                            False, "#feedback-dlg", "set")
         return True
 
 
