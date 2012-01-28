@@ -15,6 +15,7 @@ secureCookies = False
 try:
     secureCookies = config.get("General", "SSLOnlyCookies")
 except: pass
+COOKIE_DOMAIN = config.get('General', "CookieDomain")
 
 class RequestFactory(server.Request):
     cookiename = 'session'
@@ -59,10 +60,10 @@ class RequestFactory(server.Request):
             if remember:    # Cookie expires in 1 year
                 self.addCookie(self.cookiename, self.session.uid, path='/',
                                expires=formatdate(time.time()+31536000),
-                               secure=secureCookies, domain='.example.com', http_only=True)
+                               secure=secureCookies, domain=COOKIE_DOMAIN, http_only=True)
             else:           # Cookie expires at the end of browser session
                 self.addCookie(self.cookiename, self.session.uid, path='/',
-                               secure=secureCookies, domain='.example.com', http_only=True)
+                               secure=secureCookies, domain=COOKIE_DOMAIN, http_only=True)
             return _component()
         d.addCallbacks(callback)
         d.addErrback(errback)
