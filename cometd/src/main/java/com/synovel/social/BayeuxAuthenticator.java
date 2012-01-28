@@ -69,6 +69,9 @@ public class BayeuxAuthenticator extends DefaultSecurityPolicy implements Server
         	session.setAttribute("appSessionId", appSessionId);
         	session.setAttribute("auth", auth);
         	
+        	// If handshake is successful, add remove listener to cleanup when connection closes
+        	session.addListener(this);
+        	
         	return true;
         } catch(IOException ex) {
         	logger.debug(ex.toString());
