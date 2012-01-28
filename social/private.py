@@ -47,7 +47,7 @@ class PrivateResource(APIBaseResource):
         status = presence.PresenceStates.OFFLINE
         yield presence.updateAndPublishStatus(userId, orgId, sessionId, status)
         yield presence.clearChannels(userId, sessionId)
-        self._success(request, 200)
+        self._success(request, 200, {})
 
 
     @defer.inlineCallbacks
