@@ -42,7 +42,6 @@ class ChatResource(base.BaseResource):
                    "timestamp": time.time(), "avatar": myAvatar}
         data = {"type": "room",  "from": myId,  "to": recipientId,
                 "message": message}
-
         if channelId:
             channelSubscribers = yield db.get_slice(channelId, 'channelSubscribers')
             channelSubscribers = utils.columnsToDict(channelSubscribers)
@@ -55,7 +54,7 @@ class ChatResource(base.BaseResource):
 
             data["room"] = channelId
 
-            yield pushToCometd('/chat/%s'%(channelId), data)
+            yield pushToCometd('/chat/%s'%(channelId), message)
             count = yield db.get_count(channelId, "channelSubscribers", start='%s:'%(recipientId))
             if not count:
                 yield pushToCometd('/notify/%s'%(recipientId), data)
