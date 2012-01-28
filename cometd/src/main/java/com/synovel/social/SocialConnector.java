@@ -44,13 +44,9 @@ public class SocialConnector
 	
 	public static class ResultData {
 		@Key
-		public String status = "";
+		public boolean status = false;
 		@Key
-		public String reason = "";
-		
-		public boolean isSuccess() {
-			return status.equals("SUCCESS");
-		}
+		public String reason = "";		
 	}
 	
 	public SocialConnector() {
@@ -99,7 +95,7 @@ public class SocialConnector
 		ResultData resultData = new ResultData();
 		
 		if (appSessionId.equals(SHARED_SECRET)) {
-			resultData.status = "SUCCESS";
+			resultData.status = true;
 			resultData.reason = "Passed with shared secret";
 			return resultData;
 		}
@@ -111,7 +107,7 @@ public class SocialConnector
 		if (channelId.equals(userNotifyChannel) ||
 			channelId.equals(userPresenceChannel) || 
 			channelId.equals(orgPresenceChannel)) {
-			resultData.status = "SUCCESS";
+			resultData.status = true;
 			resultData.reason = "Subscription to own/org notify/presence channel allowed by default";
 			return resultData; 
 		}
@@ -127,7 +123,9 @@ public class SocialConnector
 		HttpRequest request = requestFactory.buildGetRequest(new GenericUrl(url));
 		
 		try {
-			return request.execute().parseAs(ResultData.class);
+			resultData = request.execute().parseAs(ResultData.class);
+			resultData.status = true;
+			return resultData;
 		} catch (HttpResponseException ex) {
 			resultData = ex.getResponse().parseAs(ResultData.class);
 			logger.debug("SocialConnector request failed. Reason: " + resultData.reason);
@@ -137,11 +135,11 @@ public class SocialConnector
 	
 	public ResultData validatePublish(String appSessionId, String channelId) throws IOException {
 		ResultData resultData = new ResultData();
-		resultData.status = "FAILURE";
+		resultData.status = false;
 		resultData.reason = "Only apps with shared secret can publish";
 		
 		if (appSessionId.equals(SHARED_SECRET)) {
-			resultData.status = "SUCCESS";
+			resultData.status = true;
 			resultData.reason = "Passed with shared secret";
 		}
 		
