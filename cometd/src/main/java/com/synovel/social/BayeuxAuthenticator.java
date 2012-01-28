@@ -90,7 +90,7 @@ public class BayeuxAuthenticator extends DefaultSecurityPolicy implements Server
         	logger.debug("Trying to validate publish to channel: " + channel.getId() + " to session: " + appSessionId);
         	ResultData resultData = connector.validatePublish(appSessionId, channel.getId());
         	
-        	if (resultData.isSuccess())
+        	if (resultData.status)
         		return true;
         	else {
         		logger.debug("Not authorized to publish. Reason: " + resultData.reason);
@@ -120,7 +120,7 @@ public class BayeuxAuthenticator extends DefaultSecurityPolicy implements Server
         			" to session: " + appSessionId + ", user: " + authData.user + ", org: " + authData.org);
         	ResultData resultData = connector.validateSubscribe(appSessionId, channel.getId(), authData.user, authData.org);
         	
-        	if (resultData.isSuccess())
+        	if (resultData.status)
         		return true;
         	else {
         		logger.debug("Not authorized to subscribe. Reason: " + resultData.reason);
