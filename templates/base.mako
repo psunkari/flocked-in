@@ -84,13 +84,6 @@
   <noscript>
     <meta http-equiv="refresh" content="0; URL=${noscriptUrl}"/>
   </noscript>
-  <script type="text/javascript">
-   var social_config = {
-            cometdURL: "${config.get('Cometd', 'Url')}",
-            orgId: "${orgId}",
-            myId : "${myKey}"
-            }
-  </script>
 %else:
   <script>
     var date = new Date(); date.setDate(date.getDate() - 2);
@@ -183,6 +176,13 @@
   </div><!-- bigwrap -->
   <div id="alertbar"></div>
 %if script:
+  <script type="text/javascript">
+      var social_config = {
+          cometdURL: "${config.get('Cometd', 'Url')}",
+          orgId: "${orgId}",
+          myId : "${myKey}"
+      }
+  </script>
   <script type="text/javascript" src="/rsrcs/js/jquery-1.6.4.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.menu.js"></script>

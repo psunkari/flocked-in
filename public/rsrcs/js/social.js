@@ -432,6 +432,7 @@ social._initChunkLoader();
 social._initAjaxRequests();
 social._initTimestampUpdates();
 social._initUpdatesCheck();
+social.config = window.social_config;
 
 $.social = window.social = window.$$ = social;
 }})(window, jQuery);
@@ -790,7 +791,7 @@ var ui = {
         }).closest('form').html5form({messages:'en'});
 
         /* Power up the cometd connections. */
-        $$.chat.init();
+        $$.comet.init();
     },
 
     showPopup: function(event, right, above){
@@ -895,7 +896,7 @@ var files = {
     },
 
     init: function(id){
-        var _self = this;
+        var self = this;
 
         $("#"+id+" :file").change(function() {
             var form = $(this.form), d, mimeType = null, filename = null;
@@ -908,7 +909,7 @@ var files = {
                            {"name":filename, "mimeType":mimeType}, "json");
             }
             if (!filename) {
-                filename = _self.getNameFromPath(this.value);
+                filename = self.getNameFromPath(this.value);
                 d = $.post('/files/form', {"name":filename}, "json");
             }
 
@@ -1538,6 +1539,9 @@ var settings = {
 }
 $$.settings = settings;
 }})(social, jQuery);
+
+
+
 /*
  * User Invite/add/Remove etc
  */
@@ -1623,9 +1627,280 @@ var users = {
 }
 $$.users = users;
 }})(social, jQuery);
+
+
+
+/*
+ *  Comet Handling.
+ */
+(function($$, $) { if (!$$.comet) {
+var comet = {
+    connected: false,
+
+    _connectResponse: function(message) {
+        if ($.cometd.isDisconnected()) {
+            comet.connected = false;
+            // Handle Connection Closed
+        }
+        else {
+            var wasConnected = comet.connected;
+            comet.connected = message.successful === true;
+            if (!wasConnected && comet.connected) {
+                // Handle Connection Established
+            }
+            else if (wasConnected && !comet.connected) {
+                // Handle Connection Broken
+            }
+        }
+    },
+
+    _handshakeResponse: function(message) {
+        if (message.successful) {
+            // Initialized
+        }
+    },
+
+    _subscribeResponse: function(message) {
+        if (message.channel === "/notify/"+$$.config.myId) {
+            if (!message.successful) {
+                // Subscription Error
+            }
+        }
+    },
+
+    _inited: false,
+    init: function() {
+        if (comet._inited)
+            return;
+
+        var self = this;
+        $.cometd.configure({
+            url: $$.config.cometdURL,
+            logLevel: 'info'
+        });
+
+        $.cometd.addListener('/meta/handshake', self._handshakeResponse);
+        $.cometd.addListener('/meta/connect', self._connectResponse);
+        $.cometd.addListener('/meta/subscribe', self._subscribeResponse);
+
+        $.cometd.handshake();
+        comet._inited = true;
+    }
+};
+$$.comet = comet;
+}})(social, jQuery);
+
+
+
 /*
  * Instant Messaging
  */
+(function($$, $) { if (!$$.chat) {
+var chat = {
+    user2room: {},  // userId to roomObj
+    room2user: {},  //roomId to userId
+    rooms: {},      // roomId to roomObj
+    users: [],      // Roster - array of user objects
+    userMap: {},    // UserId to user object
+    status: "offline",
+    _subscriptions: [],
+
+    handleMyNotifications: function(message){
+        console.info("Recieved notification ")
+        console.dir(message)
+
+        var messageType = message.data.type;
+        if (messageType == "room") {
+            // Room related notify is sent only when a new room is being
+            // created
+            var createdBy = message.data.from,
+                roomId = message.data.room,
+                userId = message.data.to,
+                messageObj = message.data.message,
+                roomObj = null;
+
+            if (createdBy == $$.config.myId) {
+                // This is a notification about the room that
+                // I created. Already have a roomObj but roomId isn't
+                // set on it.
+                roomObj = chat.user2room[userId];
+                roomObj.updateRoom(roomId);
+
+                chat.room2user[roomId] = userId;
+                chat.rooms[roomId] = roomObj;
+                roomObj.startChat(messageObj);
+            } else {
+                // I may have chatted with this person in the past,
+                // so dig up the roomObj and update them
+                userId = createdBy;
+                if (userId in chat.user2room) {
+                    roomObj = chat.user2room[userId];
+                    roomObj.updateRoom(roomId);
+                    chat.rooms[roomId] = roomObj;
+                    chat.room2user[roomId] = userId;
+                } else {
+                    roomObj = new ChatSession(userId);
+                    roomObj.updateRoom(roomId);
+                    chat.rooms[roomId] = roomObj;
+                    chat.room2user[roomId] = userId;
+                    chat.user2room[userId] = roomObj;
+                }
+                roomObj.startChat(messageObj);
+            }
+        }
+    },
+
+    handlePresence: function(message){
+        console.info("I received a presence notification")
+        console.dir(message)
+
+        var userId = message.data.userId,
+            rosterItem = $("#user-"+userId+".roster-item"),
+            allClassesString = "roster-status-available roster-status-offline roster-status-busy roster-status-away";
+
+        if (userId == $$.config.myId)
+            chat.status = message.data.status
+
+        $(".roster-status-icon", roster_item).removeClass(allClassesString).addClass('roster-status-'+message.data.status);
+    },
+
+    chatWith: function(userId) {
+        if (userId == $$.config.myId)
+            return;
+
+        var roomObj;
+        if (userId in this.user2room) {
+            roomObj = this.user2room[userId];
+        } else {
+            roomObj = new ChatSession(userId);
+            this.user2room[userId] = roomObj;
+            // We do not have the roomId so we have nothing to store. The room
+            // id is received when the user actually makes the post.
+        }
+        // This is called from the UI only, so always focus on the input
+        $$.chatUI.create(userId, true);
+    },
+
+    signin: function() {
+        if (chat.status !== "offline")
+            return
+
+        var d = $.post("/ajax/presence", {"status":"available"})
+        d.then(function(){
+            chat.status = "available"
+            $.get('/ajax/presence').then(function(){
+                $.each(chat.users, function(idx, user) {
+                    var userId = user["userId"];
+                    chat.userMap[userId] = user;
+                });
+
+                _myPresenceSubscription = $.cometd.subscribe('/presence/'+$$.config.myId,
+                                                         chat.handlePresence);
+                _myOrgPresenceSubscription = $.cometd.subscribe('/presence/'+$$.config.myOrgId,
+                                                         chat.handlePresence);
+                _notifySubscription = $.cometd.subscribe('/notify/'+$$.config.myId,
+                                                         chat.handleMyNotifications);
+
+                chat._subscriptions.push(_myPresenceSubscription);
+                chat._subscriptions.push(_myOrgPresenceSubscription);
+                chat._subscriptions.push(_notifySubscription);
+
+            });
+        });
+    },
+
+    signout: function() {
+        $.post("/ajax/presence", {"status":"offline"});
+        $.each(chat._subscriptions, function(idx, subscription) {
+                $.cometd.unsubscribe(subscription);
+            });
+    }
+}
+
+function ChatSession(userId) {
+    var self = this,
+        myId = $$.config.myId;
+
+    this._username = chat.userMap[userId]['name'];
+    this._myname = chat.userMap[myId]['name'];
+    this._roomSubscriptions = [];
+    this.fromId = myId;
+    this.toId = userId;
+    this.roomId = "";
+    this._subscribedRoomIds = [];
+
+    this.updateRoom = function(roomId) {
+        console.info("Updating RoomId")
+        if (roomId != self.roomId){
+            self.roomId = roomId;
+        }
+    };
+
+    this.send = function(text) {
+        if (!text || !text.length) return;
+
+        function _send(data) {
+          $.post("/ajax/chat", data);
+        }
+
+        if (self.roomId === "")
+            _send({'from': self.fromId, 'to': self.toId, 'message': text});
+        else {
+            var postData = {'from': self.fromId, 'to': self.toId, 'message': text, 'room': self.roomId}
+            if (self._subscribedRoomIds.indexOf(self.roomId) < 0) {
+                var listener = $.cometd.addListener('/meta/subscribe', function(message) {
+                        if (message.subscription == "/chat/"+self.roomId) {
+                            if (message.successful) {
+                                _send(postData);
+                                $.cometd.removeListener(listener);
+                                self._roomSubscriptions.push(subscription);
+                                self._subscribedRoomIds.push(self.roomId);
+                            } else {
+                                // Handle Error
+                            }
+                        }
+                    }),
+                    subscription = $.cometd.subscribe('/chat/'+self.roomId, self.receive);
+            } else {
+                _send(postData);
+            }
+        }
+    };
+
+    this.startChat = function(message) {
+        if (message != undefined){
+            $$.chatUI.create(self.toId, false);
+            $$.chatUI.updateMessage(self.toId, message);
+        } else {
+            $$.chatUI.create(self.toId, true);
+        }
+
+    };
+
+    this.receive = function(message) {
+        $$.chatUI.updateMessage(self.toId, message.data);
+    };
+
+    this.unsubscribe = function() {
+        $(self._roomSubscriptions).each() (function(s) {
+                    $.cometd.unsubscribe(s);
+                })
+        self._subscribedRoomIds = []
+    };
+
+    this._subscribe = function(roomId) {
+        if (self._subscribedRoomIds.indexOf(roomId) == -1) {
+            var subscription = $.cometd.subscribe('/chat/'+roomId, self.receive);
+            self._roomSubscriptions.push(subscription);
+            self._subscribedRoomIds.push(self.roomId);
+        }
+    };
+}
+
+$$.chat = chat;
+}})(social, jQuery);
+
+
 (function($$, $) { if (!$$.chatUI) {
 var chatUI = {
     _counter: 0,
@@ -1651,77 +1926,60 @@ var chatUI = {
                '</div>',
 
     create: function(userId, focus) {
-        $template = $(this.template);
-        dlgId = "chat-" + userId
-        var self = this;
+        var $template,
+            dlgId = "chat-" + userId,
+            self = this;
 
         if (chatUI._dialogs[dlgId]) {
             $template = chatUI._dialogs[dlgId];
-            $('.roster-dlg-center', $template).show();
-        }else {
+            $template.show();
+        } else {
+            $template = $(this.template);
             $template.attr('id', dlgId + '-outer').attr('dlgId', dlgId);
             $('.roster-dlg-inner', $template).attr('id', dlgId + '-inner');
             $('.roster-dlg-contents', $template).attr('id', dlgId);
             $('.roster-dlg-title', $template).attr('id', dlgId + '-title');
             $('.roster-chat-logs', $template).attr('id', dlgId + '-logs');
-            var chatting_with_name = $$.chat.userNames[userId];
-            $('.roster-chat-name', $template).html(chatting_with_name);
+            $('.roster-chat-name', $template).html($$.chat.userMap[userId]['name']);
 
             $template.keydown(function(event) {
                 if (event.which == 27){
-                    var dlg = $(".roster-dlg-contents", this);
-                    var dlgId = $(dlg).attr('id');
-                    self.close(dlgId, true);
+                    self.close($template, true);
                 }
             });
 
             $('.roster-chat-actions-remove', $template).click(function(){
-                var dlg = $(this).parents(".roster-dlg-contents");
-                var dlgId = $(dlg).attr('id');
-                self.close(dlgId, true);
+                self.close($template, true);
             })
 
             $('.roster-chat-actions-hide', $template).click(function(){
-                var dlg = $(this).parents(".roster-dlg-contents");
-                $('.roster-dlg-center', dlg).toggle();
+                $('.roster-dlg-center', $template).toggle();
             })
 
             $('.roster-chat-input', $template).keydown(function(e){
-                var dlg = $(this).parents(".roster-dlg-contents");
-                var userId = dlg.attr('id').replace(/chat-/g,'');
                 if (e.keyCode == 13) {
-                    console.log(userId);
-                    //Find the roomObj associated with this user
-                    var roomObj = $$.chat.user2room[userId];
-                    var text = $(this).val();
+                    var roomObj = $$.chat.user2room[userId],
+                        text = $(this).val();
                     $(this).val('');
                     roomObj.send(text);
                     e.preventDefault();
                     return false;
                 }
             });
+
             chatUI._dialogs[dlgId] = $template;
-            //chat.createButtons($template, dlgId, options);
             $template.appendTo("#bigwrap");
             $template.css('z-index', 5000+chatUI._counter)
-            //$('#'+dlgId+'-inner').position(options.position);
-            //$('#'+dlgId+'-outer').draggable({
-            //    handle: dlgId + '-title',
-            //    axis: "x",
-            //    snap: "#bigwrap",
-            //    snapMode: 'inner',
-            //    snapTolerance: 40,
-            //    scroll: false
-            //});
 
             var right = 230*chatUI._counter;
             $('#'+dlgId+'-outer').css({left: '', right: right+"px", bottom: 0})
             chatUI._counter += 1;
         }
-        if (focus){
+
+        if (focus)
             $('.roster-chat-input', $template).focus();
-        }
     },
+
     close: function(dlg, destroy) {
         var $dialog, id;
         if (typeof dlg == "string") {
@@ -1746,361 +2004,21 @@ var chatUI = {
     updateMessage: function(dlgId, message) {
         //{'from':'', 'to':'', 'message':'', timestamp:''}
         chatUI.create(dlgId, false)
-        var ul = $("#chat-"+dlgId+"-outer .roster-chat-logs");
-        var tmpl = '<li><div class="chat-avatar-wrapper">'+
+        var ul = $("#chat-"+dlgId+"-outer .roster-chat-logs"),
+            tmpl = '<li><div class="chat-avatar-wrapper">'+
                     '<img src="' + message.avatar + '"/></div>' +
                     '<div class="chat-message-wrapper">' +
                         '<div class="chat-message-from">' + message.from +
                         '</div><div class="chat-message">' + message.message +
                    '</div></div><div><abbr class="chat-message-time timestamp" data-ts="' + message.timestamp + '">' +
-                   '4:38PM</abbr></div><div class="clear"></div></li>'
+                   '4:38PM</abbr></div><div class="clear"></div></li>',
+            ulHeight = ul.prop('scrollHeight');
 
         $(tmpl).appendTo(ul);
-        var ulHeight = ul.prop('scrollHeight');
         ul.scrollTop(ulHeight);
     },
-
-    updateForm: function(dlgId, roomId) {
-        //XXX:Update the form with the roomId
-    }
 }
 $$.chatUI = chatUI;
 }})(social, jQuery);
 
-/*
- * A chat session between two users
- */
-(function($$, $) {
-var chat = {
-    chatter: "",
-    _wasConnected: false,
-    _connected: false,
-    _username: "",
-    _lastUser: "",
-    _disconnecting: "",
-    user2room:{}, // userId to roomObj
-    room2user:{}, //roomId to userId
-    rooms:{}, // roomId to roomObj
-    //XXX: maintain an array of all channels that I have ever subsc
-    users:[], //
-    userNames:{},
-    myId: "",
-    myOrgId: "",
-    _status: "offline",
-    _monitorSubscriptions: [],
 
-    _connectionInitialized: function() {
-        console.info("Connection Init");
-    },
-    _connectionEstablished: function() {
-        console.info("Connection Estd");
-        chat._connected = true;
-    },
-    _connectionBroken: function() {
-        console.info("Connection Lost");
-        chat._connected = false;
-    },
-    _connectionClosed: function() {
-        console.info("Connection Closed");
-    },
-    _metaConnect: function(message) {
-        if (chat._disconnecting) {
-            chat._connected = false;
-            chat._connectionClosed();
-        }
-        else {
-            chat._wasConnected = chat._connected;
-            chat._connected = message.successful === true;
-            if (!chat._wasConnected && chat._connected) {
-                chat._connectionEstablished();
-            }
-            else if (chat._wasConnected && !chat._connected) {
-                chat._connectionBroken();
-            }
-        }
-    },
-    _metaHandshake: function(message) {
-        if (message.successful) {
-            chat._connectionInitialized();
-        }
-    },
-    _metaSub: function(message) {
-        console.info("A subscribe happened")
-        console.dir(message)
-    },
-    _metaUnSub: function(message) {
-        console.info("An Unsubscribe happened")
-        console.dir(message)
-    },
-    handleMyNotifications: function(message){
-        console.info("Recieved notification ")
-        console.dir(message)
-        //XXX: handle presence notifications and update UI
-        //XXX: maintain a list of all channels I receive and th
-        var messageType = message.data.type;
-        if (messageType == "room"){
-            //Room related notify is sent only when a new room is being
-            // created
-            var createdBy = message.data.from;
-            var roomId = message.data.room;
-            var userId = message.data.to;
-            var messageObj = message.data.message;
-            if (createdBy == chat.myId) {
-                console.info("I got a message about my room")
-                //I created this room, so already have a roomObj but no roomId
-                //Get the roomObj
-                var roomObj = chat.user2room[userId];
-                //Update with the new roomId
-                roomObj.updateRoom(roomId);
-                //Subscribe for demo purposes only.
-                //roomObj._subscribe(roomId);
-                chat.room2user[roomId] = userId;
-                chat.rooms[roomId] = roomObj;
-                console.info("I am updating my room")
-                roomObj.startChat(messageObj);
-            }else {
-                console.info("I got a message about a new room")
-                //I may have chatted with this person in the past, so dig up
-                // the roomObj and update them
-                var userId = createdBy;
-                if (userId in chat.user2room) {
-                    var roomObj = chat.user2room[userId];
-                    roomObj.updateRoom(roomId);
-                    chat.rooms[roomId] = roomObj;
-                    chat.room2user[roomId] = userId;
-                }else{
-                    var roomObj = new RoomSession(chat.myId, userId);
-                    roomObj.updateRoom(roomId);
-                    chat.rooms[roomId] = roomObj;
-                    chat.room2user[roomId] = userId;
-                    chat.user2room[userId] = roomObj;
-                }
-                roomObj.startChat(messageObj);
-            }
-        }
-    },
-    handlePresence: function(message){
-        console.info("I received a presence notification")
-        console.dir(message)
-        var userId = message.data.userId;
-        if (userId == chat.myId) {
-            chat._status = message.data.status
-        }
-        var roster_item = $("#user-"+userId+".roster-item");
-        var allClassesString = "roster-status-available roster-status-offline roster-status-busy roster-status-away"
-        $(".roster-status-icon", roster_item).removeClass(allClassesString).addClass('roster-status-'+message.data.status);
-    },
-    chatWith: function(userId) {
-        //This is called from the UI only, so always focus on the input
-        if (userId == this.myId) {
-            return
-        }
-        var roomObj;
-        console.info("Chatting with "+ userId)
-        if (userId in this.user2room) {
-            var roomObj = this.user2room[userId];
-        }else {
-            var roomObj = new RoomSession(chat.myId, userId);
-            this.user2room[userId] = roomObj;
-            // We do not have the roomId so we have nothing to store. The room
-            // id is received when the user actually makes the post.
-        }
-        console.info("Creating the roomObj")
-        console.dir(this.user2room);
-        $$.chatUI.create(userId, true);
-    },
-    init: function() {
-        if (this._connected) {
-            return
-        }
-
-        var _self = this;
-        //Do not allow init to be called if I am already inited
-        $.cometd.configure({
-            url: social_config.cometdURL,
-            logLevel: 'info'
-        });
-
-        $.cometd.addListener('/meta/handshake', _self._metaHandshake);
-        $.cometd.addListener('/meta/connect', _self._metaConnect);
-        $.cometd.addListener('/meta/subscribe', _self._metaSub);
-        $.cometd.addListener('/meta/unsubscribe', _self._metaUnSub);
-
-        var d = $.cometd.handshake();
-    },
-    signin: function() {
-        if (this._monitorSubscriptions.length != 0) {
-            $.each(this._monitorSubscriptions, function(idx, channel){
-                $.cometd.unsubscribe(channel);
-            })
-        }
-
-        var d = $.post("/ajax/presence", {"status":"available"})
-        d.then(function(){
-            chat._status = "available"
-
-            var d = $.get('/ajax/presence');
-            d.then(function(){
-                $.each(chat.users, function(idx, user) {
-                    var userId = user["userId"];
-                    chat.userNames[userId] = user["name"]
-                });
-                console.info("Subsribing to " + '/presence/'+chat.myId)
-                _myPresenceSubscription = $.cometd.subscribe('/presence/'+chat.myId,
-                                                         chat.handlePresence);
-
-                console.info("Subsribing to " + '/presence/'+chat.myOrgId)
-                _myOrgPresenceSubscription = $.cometd.subscribe('/presence/'+chat.myOrgId,
-                                                         chat.handlePresence);
-
-                console.info("Subsribing to " + '/notify/'+chat.myId)
-                _notifySubscription = $.cometd.subscribe('/notify/'+chat.myId,
-                                                         chat.handleMyNotifications);
-
-                chat._monitorSubscriptions.push(_myPresenceSubscription);
-                chat._monitorSubscriptions.push(_myOrgPresenceSubscription);
-                chat._monitorSubscriptions.push(_notifySubscription);
-
-            });
-        })
-
-
-    },
-    signout: function() {
-        $.post("/ajax/presence", {"status":"offline"})
-    },
-    isConnected: function() {
-        return this._connected;
-    },
-    isSignedIn: function() {
-        return this._status;
-    }
-}
-function RoomSession(myId, userId){
-    _self = this;
-    this._username = chat.userNames[userId];
-    this._myname = chat.userNames[myId];
-    this._roomSubscriptions = [];
-    this.fromId = myId;
-    this.toId = userId;
-    this.roomId = "";
-    this.roomCreator;
-    this._subscribedRoomIds = [];
-
-    this.updateRoom = function(roomId) {
-        console.info("Updating RoomId")
-        if (roomId != _self.roomId){
-            _self.roomId = roomId;
-        }
-    };
-
-    this.send = function(text) {
-        if (!text || !text.length) return;
-
-        //XXX: Demo code, publish to /notify of other user
-        //if (_self.roomId == ""){
-        //    var roomId = parseInt(new Date().getTime()/1000);
-        //    console.info("Publishing to "+ '/notify/'+_self.toId)
-        //    console.info("Sending a New Message")
-        //    //Server sends a notify on the other person's channel
-        //    $.cometd.publish('/notify/'+_self.toId,
-        //                     {'type':'room',
-        //                      'room': roomId,
-        //                      'createdBy': _self.fromId,
-        //                      'user': _self.toId,
-        //                      'message':
-        //                        {'from': _self._myname,
-        //                         'to': _self._username,
-        //                         'message': text,
-        //                         'timestamp':(new Date().getTime())/1000
-        //                        }
-        //                    });
-        //    $.cometd.publish('/chat/'+_self.fromId,
-        //                     {'type':'room',
-        //                      'room': roomId,
-        //                      'createdBy': _self.fromId,
-        //                      'user': _self.toId,
-        //                      'message':
-        //                        {'from': _self._myname,
-        //                         'to': _self._username,
-        //                         'message': text,
-        //                         'timestamp':(new Date().getTime())/1000
-        //                        }
-        //                    });
-        //
-        //    //Server sends me a message on the room channel
-        //    //$.cometd.publish('/notify/'+ roomId,
-        //    //                 {'from': _self._myname,
-        //    //                  'to': _self._username,
-        //    //                  'message': text,
-        //    //                  'timestamp':(new Date().getTime())/1000
-        //    //});
-        //    //_self.updateRoom(roomId);
-        //    //_self._subscribe(_self.roomId);
-        //}else {
-        //    console.info("Publishing to "+ '/chat/'+_self.roomId)
-        //    _self._subscribe(_self.roomId);
-        //    $.cometd.publish('/chat/'+_self.roomId,
-        //                     {'from': _self._myname,
-        //                      'to': _self._username,
-        //                      'message': text,
-        //                      'timestamp':(new Date().getTime())/1000
-        //    });
-        //}
-
-        //Actual Code when backend is complete
-        if (_self.roomId !== "") {
-            _self._subscribe(_self.roomId);
-        }
-
-        if (_self.roomId == "") {
-            var postData = {'from': _self.fromId, 'to': _self.toId, 'message': text}
-        }else {
-            var postData = {'from': _self.fromId, 'to': _self.toId, 'message': text, 'room': _self.roomId}
-        }
-
-        $.post("/ajax/chat", postData);
-    };
-
-    this.startChat = function(message) {
-        //An optional message object if I am the first message of a conv
-
-        if (message != undefined){
-            console.info("creating window for " + _self.toId)
-            $$.chatUI.create(_self.toId, false);
-            $$.chatUI.updateMessage(_self.toId, message);
-        }else{
-            console.info("Sending a create");
-            $$.chatUI.create(_self.toId, true);
-        }
-
-    };
-
-    this.receive = function(message) {
-        var fromUser = message.data.from;
-        var text = message.data.message;
-        var toUser = message.data.to;
-        var timestamp = message.data.timestamp;
-
-        $$.chatUI.updateMessage(_self.toId, message.data);
-    };
-
-    this.unsubscribe = function() {
-        for (s in _self._roomSubscriptions){
-            $.cometd.unsubscribe(_self._roomSubscription);
-        }
-    };
-
-    this._subscribe = function(roomId) {
-        if (_self._subscribedRoomIds.indexOf(roomId) == -1) {
-            console.info("Subscribing to " + "/chat/"+roomId)
-            var subscription = $.cometd.subscribe('/chat/'+roomId, _self.receive);
-           _self._roomSubscriptions.push(subscription);
-           _self._subscribedRoomIds.push(_self.roomId);
-        }
-    };
-
-
-}
-$$.chat = chat;
-})(social, jQuery);
