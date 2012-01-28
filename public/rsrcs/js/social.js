@@ -1916,10 +1916,8 @@ var chat = {
 
         var _self = this;
         //Do not allow init to be called if I am already inited
-
-        var cometdURL = "http://live.example.com/social/cometd/";
         $.cometd.configure({
-            url: cometdURL,
+            url: social_config.cometdURL,
             logLevel: 'info'
         });
 
