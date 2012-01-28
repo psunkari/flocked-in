@@ -22,7 +22,8 @@ public class SocialConnector
 {
 	static final HttpTransport HTTP_TRANSPORT = new NetHttpTransport();
 	static final JsonFactory JSON_FACTORY = new JacksonFactory();
-	static final String SHARED_SECRET = "ABCDE";
+
+	private String serverSecret;
 
 	private final Logger logger;
 	
@@ -54,24 +55,25 @@ public class SocialConnector
 
         Properties p = new Properties();
         try {
-          p.load(this.getClass().getResourceAsStream("/social.properties"));
+        	p.load(this.getClass().getResourceAsStream("/social.properties"));
+        	
+        	serverSecret = p.getProperty("server.secret");
+
+	    	baseUrl = p.getProperty("url.base");
+	    	sessionUrlFormat 	= baseUrl + p.getProperty("url.session.format");
+	    	subscribeUrlFormat 	= baseUrl + p.getProperty("url.subscribe.format");
+	    	disconnectUrlFormat = baseUrl + p.getProperty("url.disconnect.format");
+	    	
+	    	userNotifyChannelFormat = p.getProperty("channel.user.notify.format");
+	    	userPresenceChannelFormat = p.getProperty("channel.user.presence.format");
+	    	orgPresenceChannelFormat = p.getProperty("channel.org.presence.format");
         } catch (Exception ex) {
         }
 
-    	logger.debug("base url: " + p.getProperty("url.base"));
-    	
-    	baseUrl = p.getProperty("url.base");
-    	sessionUrlFormat 	= baseUrl + p.getProperty("url.session.format");
-    	subscribeUrlFormat 	= baseUrl + p.getProperty("url.subscribe.format");
-    	disconnectUrlFormat = baseUrl + p.getProperty("url.disconnect.format");
-    	
-    	userNotifyChannelFormat = p.getProperty("channel.user.notify.format");
-    	userPresenceChannelFormat = p.getProperty("channel.user.presence.format");
-    	orgPresenceChannelFormat = p.getProperty("channel.org.presence.format");
 	}
 	
 	public AuthData validateSession(String appSessionId) throws IOException {
-		if (appSessionId.equals(SHARED_SECRET)) {
+		if (appSessionId.equals(serverSecret)) {
 			AuthData authData = new AuthData();
 			authData.user = "server";
 			authData.org = "server";
@@ -94,7 +96,7 @@ public class SocialConnector
 	public ResultData validateSubscribe(String appSessionId, String channelId, String userId, String orgId) throws IOException {
 		ResultData resultData = new ResultData();
 		
-		if (appSessionId.equals(SHARED_SECRET)) {
+		if (appSessionId.equals(serverSecret)) {
 			resultData.status = true;
 			resultData.reason = "Passed with shared secret";
 			return resultData;
@@ -138,7 +140,7 @@ public class SocialConnector
 		resultData.status = false;
 		resultData.reason = "Only apps with shared secret can publish";
 		
-		if (appSessionId.equals(SHARED_SECRET)) {
+		if (appSessionId.equals(serverSecret)) {
 			resultData.status = true;
 			resultData.reason = "Passed with shared secret";
 		}
@@ -147,6 +149,10 @@ public class SocialConnector
 	}
 	
 	public void removeSession(String appSessionId) throws IOException {
+		// Do nothing when apps with shared secret disconnect 
+		if (appSessionId.equals(serverSecret))
+			return;
+		
 		HttpRequestFactory requestFactory = 
 			HTTP_TRANSPORT.createRequestFactory(new HttpRequestInitializer() {
 				public void initialize(HttpRequest request) {
