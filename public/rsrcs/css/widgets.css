@@ -426,6 +426,7 @@ input::-moz-focus-inner {
     clear: both;
     margin-bottom: 2px;
     margin-top: 4px;
+    list-style: none;
 }
 
 .roster-chat-input {

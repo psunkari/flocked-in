@@ -29,43 +29,23 @@
       ${navMenuItem("/tags/list", _("Tags"), "tags")}
     </ul>
   </div>
-  <div id="roster-container"></div>
-</%def>
-
-<%def name="chat_roster()">
-  <%
-    userName = utils.userName
-  %>
-  <div class="sidemenu-container">
-    <input id="myId" value="${myId}" type="hidden"/>
-    <input id="myOrgId" value="${myOrgId}" type="hidden"/>
-    <div class="sidebar-title">People you may know</div>
+  <div id="roster-container">
+    <div class="sidebar-title">Chat</div>
+    <button id="online-status-button" class="acl-button acl-text-button" onclick="$$.chatUI.showStatusList(event, 'online-status');" style="margin-top:5px;width:90%;text-align:left;text-transform:capitalize;">
+      <img id="user-online-status-icon" src="/rsrcs/img/offline.png" style="float:left"/>
+      <span id="user-online-status-text">${_("You are not online")}</span>
+      <span>▼</span>
+    </button>
+    <ul class="acl-menu" style="display:none;">
+        <li><a class="acl-item" onclick='$$.chatUI.setStatus("available")'>${_("Available")}</a></li>
+        <li><a class="acl-item" onclick='$$.chatUI.setStatus("away")'>${_("Away")}</a></li>
+        <li><a class="acl-item" onclick='$$.chatUI.setStatus("busy")'>${_("Busy")}</a></li>
+        <li><a class="acl-item" onclick='$$.chat.signout()'>${_("Go Offline")}</a></li>
+    </ul>
     <div class="roster-list">
-      %for user in users:
-        <%
-          uid = user["userId"]
-        %>
-        <div class="roster-item" onclick="$$.chat.chatWith('${uid}')" id="user-${uid}">
-          <div class="roster-item-icon">
-            <div class="roster-icon-holder">
-              <img src="${user['avatar']}"/>
-            </div>
-          </div>
-          <div class="roster-item-name">${user['name']}</div>
-          <div class="ui-list-meta" style="float:left">${entities[uid]['jobTitle']}</div>
-          <div class="icon roster-status-icon roster-status-${user["status"]}">&nbsp;</div>
-          <div class="clear"></div>
-        </div>
-      %endfor
+
     </div>
     </br></br>
-    <button class="default button" onclick="$$.ui.showPopup(event)">${_("Change your status")}</button>
-    <ul class="acl-menu" style="display:none;">
-        <li><a class="acl-item" onclick='$.post("/ajax/presence", {"status":"available"})'>${_("Available")}</a></li>
-        <li><a class="acl-item" onclick='$.post("/ajax/presence", {"status":"away"})'>${_("Away")}</a></li>
-        <li><a class="acl-item" onclick='$.post("/ajax/presence", {"status":"busy"})'>${_("Busy")}</a></li>
-        <li><a class="acl-item" onclick='$.post("/ajax/presence", {"status":"offline"})'>${_("Offline")}</a></li>
-    </ul>
   </div>
 </%def>
 
@@ -168,9 +148,6 @@
 %if script:
   <div id="feedback-linkwrap">
     <a href="javascript:" title=${_('Feedback')} onclick="$$.feedback.showFeedback()"><span class="icon feedback-icon"></span><span>${_('Feedback')}</span></a></li>
-  </div>
-  <div id="roster-linkwrap">
-    <a href="javascript:" title=${_('Go Online')} onclick="$$.chat.signin();"><span class="icon feedback-icon"></span><span>${_('Chat')}</span></a></li>
   </div>
 %endif
   </div><!-- bigwrap -->

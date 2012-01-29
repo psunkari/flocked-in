@@ -61,6 +61,7 @@ def updateAndPublishStatus(userId, orgId, sessionId, status, user=None):
             user = utils.supercolumnsToDict(user)
         data = {"userId": userId, 'status': newPublishedStatus,
                 'name': user['basic']['name'],
+                'title': user['basic']['jobTitle'],
                 'avatar': utils.userAvatar(userId, user, 's')}
         yield comet.pushToCometd('/presence/'+orgId, data)
 
@@ -122,20 +123,11 @@ class PresenceResource(BaseResource):
             entities[entityId]['status'] = presence.get(userId, PresenceStates.OFFLINE)
             _data = {"userId": entityId, "name": entity['name'],
                      "status": presence.get(userId, PresenceStates.OFFLINE),
+                     "title": entity["jobTitle"],
                      "avatar": utils.userAvatar(entityId, {"basic": entity}, 's')}
             data.append(_data)
 
-        args = {"users":data, "myId":myId, "myOrgId":orgId, "entities": entities}
-        landing = not self._ajax
-
-        onload = """
-                    $$.chat.myId = '%s';
-                    $$.chat.myOrgId = '%s';
-                    $$.chat.users = %s;
-                 """ %( myId, orgId, json.dumps(data))
-        t.renderScriptBlock(request, "base.mako", "chat_roster", landing,
-                            "#roster-container", "set", True,
-                            handlers={"onload":onload}, **args)
+        request.write(json.dumps(data))
 
 
     def render_POST(self, request):

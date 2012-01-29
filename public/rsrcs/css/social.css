@@ -2511,3 +2511,9 @@ td.file-info, td.file-context, td.file-actions {
     padding-top: 4px;
     width: 120px;
 }
+
+.roster-item-title {
+    color: #999999;
+    font-size: 90%;
+    padding-left: 40px;
+}

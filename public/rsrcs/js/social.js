@@ -432,7 +432,6 @@ social._initChunkLoader();
 social._initAjaxRequests();
 social._initTimestampUpdates();
 social._initUpdatesCheck();
-social.config = window.social_config;
 
 $.social = window.social = window.$$ = social;
 }})(window, jQuery);
@@ -791,6 +790,7 @@ var ui = {
         }).closest('form').html5form({messages:'en'});
 
         /* Power up the cometd connections. */
+        $$.config = window.social_config;
         $$.comet.init();
 
         /* Add a handler to window unload */
@@ -1770,17 +1770,21 @@ var chat = {
     },
 
     handlePresence: function(message){
-        console.info("I received a presence notification")
-        console.dir(message)
+        var userId = message.data.userId;
 
-        var userId = message.data.userId,
-            rosterItem = $("#user-"+userId+".roster-item"),
-            allClassesString = "roster-status-available roster-status-offline roster-status-busy roster-status-away";
+        chat.userMap[userId] = message.data
 
-        if (userId == $$.config.myId)
-            chat.status = message.data.status
-
-        $(".roster-status-icon", rosterItem).removeClass(allClassesString).addClass('roster-status-'+message.data.status);
+        if (userId == $$.config.myId) {
+            console.info("Got presence for myself as " + message.data.status)
+            chat.status = message.data.status;
+            $$.chatUI.updateMyStatus(message.data.status);
+            //XXX: Do we signout when we reciev our status as offline
+        }
+        else {
+            console.info("Got presence for " + chat.userMap[userId]["name"] + " as " + message.data.status)
+            $$.chatUI.updateRosterList(userId);
+            $$.chatUI.updateWindowStatus(userId);
+        }
     },
 
     chatWith: function(userId) {
@@ -1800,19 +1804,20 @@ var chat = {
         $$.chatUI.create(userId, true);
     },
 
-    signin: function() {
+    signin: function(status) {
         if (chat.status !== "offline")
             return
 
-        var d = $.post("/ajax/presence", {"status":"available"})
+        var d = $.post("/ajax/presence", {"status":status})
         d.then(function(){
             chat.status = "available"
-            $.get('/ajax/presence').then(function(){
-                $.each(chat.users, function(idx, user) {
-                    var userId = user["userId"];
-                    chat.userMap[userId] = user;
-                });
-
+            $.get("/ajax/presence",
+               function(users){
+                    $.each(users, function(idx, user) {
+                        var userId = user["userId"];
+                        chat.userMap[userId] = user;
+                    });
+                    chat.users = users;
                 myPresenceSub = $.cometd.subscribe('/presence/'+$$.config.myId,
                                                    chat.handlePresence);
                 orgPresenceSub = $.cometd.subscribe('/presence/'+$$.config.orgId,
@@ -1823,15 +1828,24 @@ var chat = {
                 chat._subscriptions.push(myPresenceSub);
                 chat._subscriptions.push(orgPresenceSub);
                 chat._subscriptions.push(notifySub);
-            });
+                    $$.chatUI.updateRosterList();
+               }, "json");
         });
     },
 
     signout: function() {
-        $.post("/ajax/presence", {"status":"offline"});
-        $.each(chat._subscriptions, function(idx, subscription) {
-                $.cometd.unsubscribe(subscription);
-            });
+        $.post("/ajax/presence", {"status":"offline"}).then(function(){
+            $.each(chat._subscriptions, function(idx, subscription) {
+                    $.cometd.unsubscribe(subscription);
+                });
+            //XXX:Clear all the subscriptions of all the rooms that were ever created
+            chat.user2room = {};
+            chat.room2user = {};
+            chat.rooms = {};
+            chat.users = [];
+            chat.userMap = {};
+            $$.chatUI.updateRosterList();
+        })
     }
 }
 
@@ -1915,12 +1929,13 @@ $$.chat = chat;
 var chatUI = {
     _counter: 0,
     _dialogs: {},
+    allClassesString: "roster-status-available roster-status-offline roster-status-busy roster-status-away",
 
     template: '<div class="roster-dlg-outer" tabindex="0">' +
                  '<div class="roster-dlg-inner">' +
                    '<div class="roster-dlg-contents">' +
                        '<div class="roster-dlg-title">' +
-                            '<div class="icon roster-chat-status-icon roster-status-available">&nbsp;</div>'  +
+                            '<div class="icon roster-chat-status-icon">&nbsp;</div>'  +
                             '<div class="roster-chat-name"></div>'  +
                             '<div class="roster-chat-actions">' +
                                 '<span class="roster-chat-actions-hide">_</span>' +
@@ -1942,6 +1957,8 @@ var chatUI = {
 
         if (chatUI._dialogs[dlgId]) {
             $template = chatUI._dialogs[dlgId];
+            $('.roster-chat-name', $template).html($$.chat.userMap[userId]['name']);
+            $('.roster-chat-status-icon', $template).removeClass(chatUI.allClassesString).addClass('roster-status-'+$$.chat.userMap[userId]['status']);
             $template.show();
         } else {
             $template = $(this.template);
@@ -1951,6 +1968,7 @@ var chatUI = {
             $('.roster-dlg-title', $template).attr('id', dlgId + '-title');
             $('.roster-chat-logs', $template).attr('id', dlgId + '-logs');
             $('.roster-chat-name', $template).html($$.chat.userMap[userId]['name']);
+            $('.roster-chat-status-icon', $template).addClass('roster-status-'+$$.chat.userMap[userId]['status']);
 
             $template.keydown(function(event) {
                 if (event.which == 27){
@@ -2013,7 +2031,15 @@ var chatUI = {
 
     updateMessage: function(dlgId, message) {
         //{'from':'', 'to':'', 'message':'', timestamp:''}
-        chatUI.create(dlgId, false)
+        chatUI.create(dlgId, false);
+        var timestamp = new Date(parseInt(message.timestamp)*1000);
+        var hours = timestamp.getHours();
+        var AMPM = hours > 12 ? "PM" : "AM";
+        hours = hours > 12 ?  hours-12: hours;
+        var minutes = timestamp.getMinutes();
+        var minuteString = minutes < 10 ? "0"+minutes : minutes;
+        var dateString = hours + ":" + minuteString + " " + AMPM
+
         var ul = $("#chat-"+dlgId+"-outer .roster-chat-logs"),
             tmpl = '<li><div class="chat-avatar-wrapper">'+
                     '<img src="' + message.avatar + '"/></div>' +
@@ -2021,14 +2047,105 @@ var chatUI = {
                         '<div class="chat-message-from">' + message.from +
                         '</div><div class="chat-message">' + message.message +
                    '</div></div><div><abbr class="chat-message-time timestamp" data-ts="' + message.timestamp + '">' +
-                   '4:38PM</abbr></div><div class="clear"></div></li>',
+                   dateString + '</abbr></div><div class="clear"></div></li>',
             ulHeight = ul.prop('scrollHeight');
 
         $(tmpl).appendTo(ul);
         ul.scrollTop(ulHeight);
     },
+
+    updateRosterList: function() {
+        //{"userId": userId, 'status': status, 'name': name, 'avatar': 'avatar'}
+        var tmpl = '<div class="roster-item">' +
+                     '<div class="roster-item-icon">' +
+                       '<div class="roster-icon-holder">' +
+                         '<img class="roster-avatar"/>' +
+                       '</div>' +
+                     '</div>' +
+                     '<div class="roster-item-name"></div>' +
+                     '<div class="roster-item-title" style="float:left"></div>' +
+                     '<div class="icon roster-status-icon ">&nbsp;</div>' +
+                     '<div class="clear"></div>' +
+                   '</div>'
+        //Get the list of available users first, then the remaining ones,
+        // then the offline ones.
+        var availableUsers = [];
+        var onlineUsers = [];
+        var offlineUsers = [];
+        var sortedList = [];
+
+        $.each($$.chat.userMap, function(key, user) {
+            if (key == $$.config.myId) {
+                return
+            }
+
+            if (user.status == "available") {
+                availableUsers.push(key)
+            }else if (["away", "busy"].indexOf(user.status) != -1) {
+                onlineUsers.push(key)
+            }else {
+                offlineUsers.push(key)
+            }
+        });
+
+        $("#roster-container .roster-list").empty();
+        sortedList = sortedList.concat(availableUsers, onlineUsers, offlineUsers)
+
+        $.each(sortedList, function(idx, userId){
+            var $tmpl = $(tmpl);
+            var user = $$.chat.userMap[userId];
+            $('.roster-item', $tmpl).attr('id', 'user-'+userId);
+            $('.roster-avatar', $tmpl).attr('src', user.avatar);
+            $('.roster-item-name', $tmpl).html(user.name);
+            $('.roster-item-title', $tmpl).html(user.title);
+            $('.roster-status-icon', $tmpl).addClass('roster-status-'+user.status);
+            $("#roster-container .roster-list").append($tmpl);
+            $tmpl.click(function(){
+                $$.chat.chatWith(userId);
+            })
+        })
+    },
+
+    updateMyStatus: function(status){
+        $("#user-online-status-icon").attr("src", "/rsrcs/img/"+status+".png");
+        $("#user-online-status-text").html(status);
+    },
+
+    updateWindowStatus: function(userId) {
+        //Update the window title and status icon when the status changes
+        if (chatUI._dialogs["chat-"+userId]) {
+            $template = chatUI._dialogs["chat-"+userId];
+            $('.roster-chat-status-icon', $template).removeClass(chatUI.allClassesString).addClass('roster-status-'+$$.chat.userMap[userId]['status']);
+        }
+    },
+
+    setStatus: function(status) {
+        if ($$.chat.status !== "offline") {
+            $.post("/ajax/presence", {"status":status});
+        }else {
+            $$.chat.signin(status)
+        }
+    },
+
+    showStatusList: function(event, id) {
+        var evt = $.event.fix(event),
+            $target = $("#" + id + "-button"),
+            $menu = $target.next()
+
+        if (!$menu.hasClass("ui-menu")) {
+            $menu.menu().css("z-index", 2000);
+        }
+
+        $menu.show().position({
+                my: "right top",
+                at: "right bottom",
+                of: $target
+            }).focus();
+
+        $(document).one("click", function() {$menu.hide();});
+        evt.stopPropagation();
+        evt.preventDefault();
+    }
 }
 $$.chatUI = chatUI;
 }})(social, jQuery);
-
-
