@@ -242,7 +242,7 @@ _initAjaxRequests: function _initAjaxRequests() {
 _initTimestampUpdates: function _initTimestampUpdates() {
     window.setInterval(function() {
         $('.timestamp').each(function(idx, item) {
-            timestamp = item.getAttribute("_ts")
+            timestamp = item.getAttribute("data-ts")
             tooltip = item.getAttribute("title");
 
             current = new Date();
@@ -267,7 +267,7 @@ _initTimestampUpdates: function _initTimestampUpdates() {
 
 _initUpdatesCheck: function _initUpdatesCheck() {
     window.setInterval(function() {
-        //$.get('/ajax/notifications/new');
+        $.get('/ajax/notifications/new');
     }, 30000)
 },
 
@@ -792,6 +792,13 @@ var ui = {
 
         /* Power up the cometd connections. */
         $$.comet.init();
+
+        /* Add a handler to window unload */
+        $(window).unload(ui.uninit);
+    },
+
+    uninit: function() {
+        $$.comet.uninit();
     },
 
     showPopup: function(event, right, above){
@@ -1638,18 +1645,22 @@ var comet = {
     connected: false,
 
     _connectResponse: function(message) {
+        console.log(message);
         if ($.cometd.isDisconnected()) {
             comet.connected = false;
-            // Handle Connection Closed
+            if (window.console)
+                console.log('COMETD disconnected');
         }
         else {
             var wasConnected = comet.connected;
             comet.connected = message.successful === true;
             if (!wasConnected && comet.connected) {
-                // Handle Connection Established
+                if (window.console)
+                    console.log('COMETD connected');
             }
             else if (wasConnected && !comet.connected) {
-                // Handle Connection Broken
+                if (window.console)
+                    console.log('COMETD connection broken');
             }
         }
     },
@@ -1657,6 +1668,7 @@ var comet = {
     _handshakeResponse: function(message) {
         if (message.successful) {
             // Initialized
+            // Later, subscribe to /notify/<userId>
         }
     },
 
@@ -1685,6 +1697,11 @@ var comet = {
 
         $.cometd.handshake();
         comet._inited = true;
+    },
+
+    uninit: function() {
+        $.cometd.disconnect();
+        comet._inited = false;
     }
 };
 $$.comet = comet;
@@ -1731,7 +1748,7 @@ var chat = {
                 roomObj.startChat(messageObj);
             } else {
                 // I may have chatted with this person in the past,
-                // so dig up the roomObj and update them
+                // so dig up the roomObj and update the object
                 userId = createdBy;
                 if (userId in chat.user2room) {
                     roomObj = chat.user2room[userId];
@@ -1761,7 +1778,7 @@ var chat = {
         if (userId == $$.config.myId)
             chat.status = message.data.status
 
-        $(".roster-status-icon", roster_item).removeClass(allClassesString).addClass('roster-status-'+message.data.status);
+        $(".roster-status-icon", rosterItem).removeClass(allClassesString).addClass('roster-status-'+message.data.status);
     },
 
     chatWith: function(userId) {
@@ -1794,17 +1811,16 @@ var chat = {
                     chat.userMap[userId] = user;
                 });
 
-                _myPresenceSubscription = $.cometd.subscribe('/presence/'+$$.config.myId,
-                                                         chat.handlePresence);
-                _myOrgPresenceSubscription = $.cometd.subscribe('/presence/'+$$.config.myOrgId,
-                                                         chat.handlePresence);
-                _notifySubscription = $.cometd.subscribe('/notify/'+$$.config.myId,
-                                                         chat.handleMyNotifications);
+                myPresenceSub = $.cometd.subscribe('/presence/'+$$.config.myId,
+                                                   chat.handlePresence);
+                orgPresenceSub = $.cometd.subscribe('/presence/'+$$.config.orgId,
+                                                    chat.handlePresence);
+                notifySub = $.cometd.subscribe('/notify/'+$$.config.myId,
+                                               chat.handleMyNotifications);
 
-                chat._subscriptions.push(_myPresenceSubscription);
-                chat._subscriptions.push(_myOrgPresenceSubscription);
-                chat._subscriptions.push(_notifySubscription);
-
+                chat._subscriptions.push(myPresenceSub);
+                chat._subscriptions.push(orgPresenceSub);
+                chat._subscriptions.push(notifySubs);
             });
         });
     },
@@ -1886,14 +1902,6 @@ function ChatSession(userId) {
                     $.cometd.unsubscribe(s);
                 })
         self._subscribedRoomIds = []
-    };
-
-    this._subscribe = function(roomId) {
-        if (self._subscribedRoomIds.indexOf(roomId) == -1) {
-            var subscription = $.cometd.subscribe('/chat/'+roomId, self.receive);
-            self._roomSubscriptions.push(subscription);
-            self._subscribedRoomIds.push(self.roomId);
-        }
     };
 }
 
