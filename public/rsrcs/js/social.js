@@ -1700,8 +1700,10 @@ var comet = {
     },
 
     uninit: function() {
-        $.cometd.disconnect();
-        comet._inited = false;
+        if (comet._inited) {
+            $.cometd.disconnect(true);
+            comet._inited = false;
+        }
     }
 };
 $$.comet = comet;
@@ -1820,7 +1822,7 @@ var chat = {
 
                 chat._subscriptions.push(myPresenceSub);
                 chat._subscriptions.push(orgPresenceSub);
-                chat._subscriptions.push(notifySubs);
+                chat._subscriptions.push(notifySub);
             });
         });
     },

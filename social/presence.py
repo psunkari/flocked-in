@@ -39,21 +39,27 @@ def updateAndPublishStatus(userId, orgId, sessionId, status, user=None):
     # Check if there is a change in the online status
     results = yield db.get_slice(orgId, 'presence', super_column=userId)
     results = utils.columnsToDict(results)
-    mostAvailablePresence = getMostAvailablePresence(results.values())
-    print "Most available status:", mostAvailablePresence
-    print "Current status:", status
+    oldPublishedStatus = getMostAvailablePresence(results.values())
 
     # Update the online status
-    yield db.insert(orgId, 'presence', status, sessionId, userId)
+    if status != 'offline':
+        yield db.insert(orgId, 'presence', status, sessionId, userId)
+    else:
+        yield db.remove(orgId, 'presence', sessionId, userId)
 
     # If status changed broadcast the change
     # XXX: Currently everyone on the network will get the presence update.
     #      This will not scale well with big networks
-    if mostAvailablePresence != status:
+    results[sessionId] = status
+    newPublishedStatus = getMostAvailablePresence(results.values())
+    log.info('>>>>>>>>>> Previous Published Status: %s' % oldPublishedStatus)
+    log.info('>>>>>>>>>> New Published Status: %s' % newPublishedStatus)
+
+    if oldPublishedStatus != newPublishedStatus:
         if not user:
             user = yield db.get_slice(userId, "entities", ['basic'])
             user = utils.supercolumnsToDict(user)
-        data = {"userId": userId, 'status': status,
+        data = {"userId": userId, 'status': newPublishedStatus,
                 'name': user['basic']['name'],
                 'avatar': utils.userAvatar(userId, user, 's')}
         yield comet.pushToCometd('/presence/'+orgId, data)
@@ -66,6 +72,7 @@ def getMostAvailablePresence(states):
         if idx > mostAvailable:
             mostAvailable = idx
     return PresenceStates.ORDERED[mostAvailable]
+
 
 class PresenceResource(BaseResource):
     isLeaf = True
