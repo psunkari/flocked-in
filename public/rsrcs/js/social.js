@@ -1761,7 +1761,7 @@ var chat = {
         if (userId == $$.config.myId)
             chat.status = message.data.status
 
-        $(".roster-status-icon", roster_item).removeClass(allClassesString).addClass('roster-status-'+message.data.status);
+        $(".roster-status-icon", rosterItem).removeClass(allClassesString).addClass('roster-status-'+message.data.status);
     },
 
     chatWith: function(userId) {
@@ -1796,7 +1796,7 @@ var chat = {
 
                 _myPresenceSubscription = $.cometd.subscribe('/presence/'+$$.config.myId,
                                                          chat.handlePresence);
-                _myOrgPresenceSubscription = $.cometd.subscribe('/presence/'+$$.config.myOrgId,
+                _myOrgPresenceSubscription = $.cometd.subscribe('/presence/'+$$.config.orgId,
                                                          chat.handlePresence);
                 _notifySubscription = $.cometd.subscribe('/notify/'+$$.config.myId,
                                                          chat.handleMyNotifications);
