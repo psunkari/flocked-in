@@ -1840,14 +1840,13 @@ var chat = {
             $.each(chat._subscriptions, function(idx, subscription) {
                     $.cometd.unsubscribe(subscription);
                 });
+            chat.status = "offline";
             $$.chatUI.updateMyStatus("offline");
             //XXX:Clear all the subscriptions of all the rooms that were ever created
-            chat.user2room = {};
-            chat.room2user = {};
-            chat.rooms = {};
             chat.users = [];
             chat.userMap = {};
             $$.chatUI.updateRosterList();
+            $$.chatUI.closeAll();
         })
     }
 }
@@ -2032,6 +2031,15 @@ var chatUI = {
         }
     },
 
+    closeAll: function() {
+        $.each(chatUI._dialogs, function(key, value) {
+            value.hide();
+            value.remove();
+        });
+        chatUI._dialogs = {};
+        chatUI._counter = 0;
+    },
+
     updateMessage: function(dlgId, message) {
         //{'from':'', 'to':'', 'message':'', timestamp:''}
         chatUI.create(dlgId, false);
@@ -2066,7 +2074,7 @@ var chatUI = {
                        '</div>' +
                      '</div>' +
                      '<div class="roster-item-name"></div>' +
-                     '<div class="roster-item-title" style="float:left"></div>' +
+                     '<div class="roster-item-title"></div>' +
                      '<div class="icon roster-status-icon ">&nbsp;</div>' +
                      '<div class="clear"></div>' +
                    '</div>'
@@ -2143,8 +2151,9 @@ var chatUI = {
         }
 
         $menu.show().position({
-                my: "right top",
-                at: "right bottom",
+                my: "left top",
+                at: "left bottom",
+                offset: "-3 0",
                 of: $target
             }).focus();
 

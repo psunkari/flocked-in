@@ -2423,10 +2423,38 @@ td.file-info, td.file-context, td.file-actions {
 }
 
 
-/* Roster related CSS */
+/* Roster and chat related CSS */
+
+#online-status-bar {
+    background-color: #F9F9F9;
+    margin-left: -10px;
+    margin-right: 10px;
+}
+
+#user-online-status-text {
+    font-size: 115%;
+}
+
+#online-status-button {
+    margin: 3px;
+    width: 100%;
+    text-align:left;
+    text-transform:capitalize;
+}
+
+#user-online-status-icon {
+    float: left;
+}
 
 #roster-container {
     margin-top: 20px;
+}
+
+#roster-list-container {
+    margin-left: -10px;
+    max-height: 200px;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 #roster-linkwrap {
@@ -2447,6 +2475,7 @@ td.file-info, td.file-context, td.file-actions {
 
 .roster-list {
     margin-top: 5px;
+    margin-right: 10px;
 }
 
 .roster-item {
@@ -2463,17 +2492,13 @@ td.file-info, td.file-context, td.file-actions {
     background-color: #f2f1f0;
 }
 
-.roster-status-icon {
-    float: right;
-    right: 4px;
-    position: absolute;
-}
+.roster-status-icon {}
 
 .roster-item-icon {
     height: 32px;
     left: 0px;
     position: absolute;
-    top: 4px;
+    top: 2px;
     width: 32px;
 }
 
@@ -2509,11 +2534,18 @@ td.file-info, td.file-context, td.file-actions {
     text-overflow: ellipsis;
     padding-left: 40px;
     padding-top: 4px;
-    width: 120px;
+    /*width: 120px;*/
+    margin-bottom: 4px;
+    margin-top: 2px;
+    padding-top: 4px;
 }
 
 .roster-item-title {
     color: #999999;
     font-size: 90%;
     padding-left: 40px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 110px;
+    display: inline-block;
 }

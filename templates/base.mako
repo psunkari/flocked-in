@@ -31,19 +31,23 @@
   </div>
   <div id="roster-container">
     <div class="sidebar-title">Chat</div>
-    <button id="online-status-button" class="acl-button acl-text-button" onclick="$$.chatUI.showStatusList(event, 'online-status');" style="margin-top:5px;width:90%;text-align:left;text-transform:capitalize;">
-      <img id="user-online-status-icon" src="/rsrcs/img/offline.png" style="float:left"/>
-      <span id="user-online-status-text">${_("You are not online")}</span>
-      <span>▼</span>
-    </button>
-    <ul class="acl-menu" style="display:none;">
-        <li><a class="acl-item" onclick='$$.chatUI.setStatus("available")'>${_("Available")}</a></li>
-        <li><a class="acl-item" onclick='$$.chatUI.setStatus("away")'>${_("Away")}</a></li>
-        <li><a class="acl-item" onclick='$$.chatUI.setStatus("busy")'>${_("Busy")}</a></li>
-        <li><a class="acl-item" onclick='$$.chat.signout()'>${_("Go Offline")}</a></li>
-    </ul>
-    <div class="roster-list">
+    <div id="online-status-bar">
+      <button id="online-status-button" class="acl-button acl-text-button" onclick="$$.chatUI.showStatusList(event, 'online-status');">
+        <img id="user-online-status-icon" src="/rsrcs/img/offline.png" style="float:left"/>
+        <span id="user-online-status-text">${_("Offline")}</span>
+        <span>▼</span>
+      </button>
+      <ul class="acl-menu" style="display:none;">
+          <li><a class="acl-item" onclick='$$.chatUI.setStatus("available")'>${_("Available")}</a></li>
+          <li><a class="acl-item" onclick='$$.chatUI.setStatus("away")'>${_("Away")}</a></li>
+          <li><a class="acl-item" onclick='$$.chatUI.setStatus("busy")'>${_("Busy")}</a></li>
+          <li><a class="acl-item" onclick='$$.chat.signout()'>${_("Offline")}</a></li>
+      </ul>
+    </div>
+    <div id="roster-list-container" >
+      <div class="roster-list">
 
+      </div>
     </div>
     </br></br>
   </div>
