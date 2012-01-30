@@ -1840,12 +1840,12 @@ var chat = {
                 });
             chat.status = "offline";
             $$.chatUI.updateMyStatus("offline");
-            //XXX:Clear all the subscriptions of all the rooms that were ever created
+
             chat.users = [];
             chat.userMap = {};
             $$.chatUI.updateRosterList();
             $$.chatUI.closeAll();
-        })
+        });
     }
 }
 
@@ -2064,7 +2064,7 @@ var chatUI = {
     },
 
     updateRosterList: function() {
-        //{"userId": userId, 'status': status, 'name': name, 'avatar': 'avatar'}
+        // {"userId": userId, 'status': status, 'name': name, 'avatar': 'avatar'}
         var tmpl = '<div class="roster-item">' +
                      '<div class="roster-item-icon">' +
                        '<div class="roster-icon-holder">' +
@@ -2075,34 +2075,27 @@ var chatUI = {
                      '<div class="roster-item-title"></div>' +
                      '<div class="icon roster-status-icon ">&nbsp;</div>' +
                      '<div class="clear"></div>' +
-                   '</div>'
-        //Get the list of available users first, then the remaining ones,
-        // then the offline ones.
-        var availableUsers = [];
-        var onlineUsers = [];
-        var offlineUsers = [];
-        var sortedList = [];
+                   '</div>',
+            allUsers = [],
+            orderedStatuses = ["available", "busy", "away", "x-away"];
 
         $.each($$.chat.userMap, function(key, user) {
-            if (key == $$.config.myId) {
+            if (key == $$.config.myId || user.status == "offline")
                 return
-            }
-
-            if (user.status == "available") {
-                availableUsers.push(key)
-            }else if (["away", "busy"].indexOf(user.status) != -1) {
-                onlineUsers.push(key)
-            }else {
-                offlineUsers.push(key)
-            }
+            allUsers.push([key, user]);
+        });
+        allUsers.sort(function(a, b) {
+            var userA = a[1], userB = b[1];
+            if (userA.status == userB.status)
+                return userA.name > userB.name;
+            return orderedStatuses.indexOf(userA.status) < orderedStatuses.indexOf(userB.status);
         });
 
         $("#roster-container .roster-list").empty();
-        sortedList = sortedList.concat(availableUsers, onlineUsers, offlineUsers)
-
-        $.each(sortedList, function(idx, userId) {
-            var $tmpl = $(tmpl);
-            var user = $$.chat.userMap[userId];
+        $.each(allUsers, function(idx, userIdAndUser) {
+            var $tmpl = $(tmpl),
+                userId = userIdAndUser[0],
+                user = userIdAndUser[1];
             $('.roster-item', $tmpl).attr('id', 'user-'+userId);
             $('.roster-avatar', $tmpl).attr('src', user.avatar);
             $('.roster-item-name', $tmpl).html(user.name);
@@ -2111,8 +2104,8 @@ var chatUI = {
             $("#roster-container .roster-list").append($tmpl);
             $tmpl.click(function() {
                 $$.chat.chatWith(userId);
-            })
-        })
+            });
+        });
     },
 
     updateMyStatus: function(status) {
