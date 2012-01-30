@@ -44,9 +44,7 @@ class PrivateResource(APIBaseResource):
 
         userId = session.getComponent(IAuthInfo).username
         orgId = session.getComponent(IAuthInfo).organization
-        status = presence.PresenceStates.OFFLINE
-        yield presence.updateAndPublishStatus(userId, orgId, sessionId, status)
-        yield presence.clearChannels(userId, sessionId)
+        yield utils.cleanupChat(sessionId, userId, orgId)
         self._success(request, 200, {})
 
 

@@ -134,3 +134,4 @@ class SiteFactory(server.Site):
         yield db.remove(uid, "sessions", "auth")
         yield db.remove(userId, "userSessionsMap", uid)
         yield db.remove(orgId, "presence", uid, userId)
+        yield utils.cleanupChat(uid, userId, orgId)

@@ -764,10 +764,11 @@ def removeUser(request, userId, orgAdminId, userInfo=None, orgAdminInfo=None):
     yield db.remove(userId, "appsByOwner" )
     yield db.remove(userId, "entities", super_column="apps")
 
-    sessions = yield db.get_slice(userId, "userSessionsMap")
-    sessions = columnsToDict(sessions)
-    for sessionId in sessions:
+    sessionIds = yield db.get_slice(userId, "userSessionsMap")
+    sessionIds = columnsToDict(sessionIds)
+    for sessionId in sessionIds:
         yield db.remove(sessionId, "sessions")
+        yield cleanupChat(sessionId, userId, orgId)
     yield db.remove(userId, "userSessionsMap")
 
     groups = yield db.get_slice(userId, "entityGroupsMap")
@@ -956,4 +957,14 @@ def watchForKeywords(orgId, text):
         cols = columnsToDict(cols)
         defer.returnValue(cols.keys())
     defer.returnValue([])
+
+
+@defer.inlineCallbacks
+def cleanupChat(sessionId, userId, orgId):
+    from social import presence
+
+    status = presence.PresenceStates.OFFLINE
+    yield presence.updateAndPublishStatus(userId, orgId, sessionId, status)
+    yield presence.clearChannels(userId, sessionId)
+
 
