@@ -64,6 +64,10 @@ fetchUri: function _fetchUri(str, ignoreHistory) {
             tail = uri.query? "&_fp=1": "?_fp=1";
 
         deferred = $.get('/ajax' + str + tail);
+        deferred.then(function() {
+            $$.chatUI.updateMyStatus($$.chat.status);
+            $$.chatUI.updateRosterList();
+        })
     }
     social._fetchUriOldPath = uri.path;
 
@@ -225,7 +229,7 @@ _initAjaxRequests: function _initAjaxRequests() {
 
     /* An address or the hash changed externally, update the page */
     $.address.externalChange(function(event) {
-        self.fetchUri(event.value, true)
+        self.fetchUri(event.value, true);
     });
 
     /* By default we always request script */
@@ -1724,7 +1728,7 @@ var chat = {
     status: "offline",
     _subscriptions: [],
 
-    handleMyNotifications: function(message){
+    handleMyNotifications: function(message) {
         console.info("Recieved notification ")
         console.dir(message)
 
@@ -1769,16 +1773,13 @@ var chat = {
         }
     },
 
-    handlePresence: function(message){
+    handlePresence: function(message) {
         var userId = message.data.userId;
 
         chat.userMap[userId] = message.data
 
         if (userId == $$.config.myId) {
             console.info("Got presence for myself as " + message.data.status)
-            chat.status = message.data.status;
-            $$.chatUI.updateMyStatus(message.data.status);
-            //XXX: Do we signout when we reciev our status as offline
         }
         else {
             console.info("Got presence for " + chat.userMap[userId]["name"] + " as " + message.data.status)
@@ -1809,10 +1810,11 @@ var chat = {
             return
 
         var d = $.post("/ajax/presence", {"status":status})
-        d.then(function(){
-            chat.status = "available"
+        d.then(function() {
+            chat.status = status;
+            $$.chatUI.updateMyStatus(status);
             $.get("/ajax/presence",
-               function(users){
+               function(users) {
                     $.each(users, function(idx, user) {
                         var userId = user["userId"];
                         chat.userMap[userId] = user;
@@ -1834,10 +1836,11 @@ var chat = {
     },
 
     signout: function() {
-        $.post("/ajax/presence", {"status":"offline"}).then(function(){
+        $.post("/ajax/presence", {"status":"offline"}).then(function() {
             $.each(chat._subscriptions, function(idx, subscription) {
                     $.cometd.unsubscribe(subscription);
                 });
+            $$.chatUI.updateMyStatus("offline");
             //XXX:Clear all the subscriptions of all the rooms that were ever created
             chat.user2room = {};
             chat.room2user = {};
@@ -1863,7 +1866,7 @@ function ChatSession(userId) {
 
     this.updateRoom = function(roomId) {
         console.info("Updating RoomId")
-        if (roomId != self.roomId){
+        if (roomId != self.roomId) {
             self.roomId = roomId;
         }
     };
@@ -1900,7 +1903,7 @@ function ChatSession(userId) {
     };
 
     this.startChat = function(message) {
-        if (message != undefined){
+        if (message != undefined) {
             $$.chatUI.create(self.toId, false);
             $$.chatUI.updateMessage(self.toId, message);
         } else {
@@ -1971,20 +1974,20 @@ var chatUI = {
             $('.roster-chat-status-icon', $template).addClass('roster-status-'+$$.chat.userMap[userId]['status']);
 
             $template.keydown(function(event) {
-                if (event.which == 27){
+                if (event.which == 27) {
                     self.close($template, true);
                 }
             });
 
-            $('.roster-chat-actions-remove', $template).click(function(){
+            $('.roster-chat-actions-remove', $template).click(function() {
                 self.close($template, true);
             })
 
-            $('.roster-chat-actions-hide', $template).click(function(){
+            $('.roster-chat-actions-hide', $template).click(function() {
                 $('.roster-dlg-center', $template).toggle();
             })
 
-            $('.roster-chat-input', $template).keydown(function(e){
+            $('.roster-chat-input', $template).keydown(function(e) {
                 if (e.keyCode == 13) {
                     var roomObj = $$.chat.user2room[userId],
                         text = $(this).val();
@@ -2091,7 +2094,7 @@ var chatUI = {
         $("#roster-container .roster-list").empty();
         sortedList = sortedList.concat(availableUsers, onlineUsers, offlineUsers)
 
-        $.each(sortedList, function(idx, userId){
+        $.each(sortedList, function(idx, userId) {
             var $tmpl = $(tmpl);
             var user = $$.chat.userMap[userId];
             $('.roster-item', $tmpl).attr('id', 'user-'+userId);
@@ -2100,13 +2103,13 @@ var chatUI = {
             $('.roster-item-title', $tmpl).html(user.title);
             $('.roster-status-icon', $tmpl).addClass('roster-status-'+user.status);
             $("#roster-container .roster-list").append($tmpl);
-            $tmpl.click(function(){
+            $tmpl.click(function() {
                 $$.chat.chatWith(userId);
             })
         })
     },
 
-    updateMyStatus: function(status){
+    updateMyStatus: function(status) {
         $("#user-online-status-icon").attr("src", "/rsrcs/img/"+status+".png");
         $("#user-online-status-text").html(status);
     },
@@ -2121,7 +2124,10 @@ var chatUI = {
 
     setStatus: function(status) {
         if ($$.chat.status !== "offline") {
-            $.post("/ajax/presence", {"status":status});
+            var d = $.post("/ajax/presence", {"status":status});
+            d.then(function() {
+                chatUI.updateMyStatus(status);
+            })
         }else {
             $$.chat.signin(status)
         }
