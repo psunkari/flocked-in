@@ -2492,11 +2492,15 @@ td.file-info, td.file-context, td.file-actions {
     background-color: #f2f1f0;
 }
 
-.roster-status-icon {}
+.roster-status-icon {
+    left: 3px;
+    position: absolute;
+    top: 11px;
+}
 
 .roster-item-icon {
     height: 32px;
-    left: 0px;
+    left: 19px;
     position: absolute;
     top: 2px;
     width: 32px;
@@ -2532,7 +2536,7 @@ td.file-info, td.file-context, td.file-actions {
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
-    padding-left: 40px;
+    padding-left: 56px;
     padding-top: 4px;
     /*width: 120px;*/
     margin-bottom: 4px;
@@ -2543,9 +2547,10 @@ td.file-info, td.file-context, td.file-actions {
 .roster-item-title {
     color: #999999;
     font-size: 90%;
-    padding-left: 40px;
+    padding-left: 56px;
     text-overflow: ellipsis;
     white-space: nowrap;
-    width: 110px;
+    width: 120px;
     display: inline-block;
+    overflow: hidden;
 }

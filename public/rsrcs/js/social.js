@@ -1945,6 +1945,7 @@ var chatUI = {
                         '</div>' +
                        '<div class="roster-dlg-center">'+
                            '<ul class="roster-chat-logs"></ul>' +
+                           '<span class="roster-msg-box"></span>' +
                            '<textarea class="roster-chat-input" tabindex="0"></textarea>' +
                        '</div>' +
                  '</div>' +
@@ -1958,7 +1959,6 @@ var chatUI = {
         if (chatUI._dialogs[dlgId]) {
             $template = chatUI._dialogs[dlgId];
             $('.roster-chat-name', $template).html($$.chat.userMap[userId]['name']);
-            $('.roster-chat-status-icon', $template).removeClass(chatUI.allClassesString).addClass('roster-status-'+$$.chat.userMap[userId]['status']);
             $template.show();
         } else {
             $template = $(this.template);
@@ -1968,7 +1968,6 @@ var chatUI = {
             $('.roster-dlg-title', $template).attr('id', dlgId + '-title');
             $('.roster-chat-logs', $template).attr('id', dlgId + '-logs');
             $('.roster-chat-name', $template).html($$.chat.userMap[userId]['name']);
-            $('.roster-chat-status-icon', $template).addClass('roster-status-'+$$.chat.userMap[userId]['status']);
 
             $template.keydown(function(event) {
                 if (event.which == 27) {
@@ -2004,6 +2003,7 @@ var chatUI = {
             chatUI._counter += 1;
         }
 
+        this.updateWindowStatus(userId);
         if (focus)
             $('.roster-chat-input', $template).focus();
     },
@@ -2050,7 +2050,7 @@ var chatUI = {
         var dateString = hours + ":" + minuteString + " " + AMPM
 
         var ul = $("#chat-"+dlgId+"-outer .roster-chat-logs"),
-            tmpl = '<li><div class="chat-avatar-wrapper">'+
+            tmpl = '<li class="chat-message-' + message.from + '"><div class="chat-avatar-wrapper">'+
                     '<img src="' + message.avatar + '"/></div>' +
                     '<div class="chat-message-wrapper">' +
                         '<div class="chat-message-from">' + message.from +
@@ -2116,8 +2116,20 @@ var chatUI = {
     updateWindowStatus: function(userId) {
         //Update the window title and status icon when the status changes
         if (chatUI._dialogs["chat-"+userId]) {
-            $template = chatUI._dialogs["chat-"+userId];
-            $('.roster-chat-status-icon', $template).removeClass(chatUI.allClassesString).addClass('roster-status-'+$$.chat.userMap[userId]['status']);
+            var $template = chatUI._dialogs["chat-"+userId],
+                status = $$.chat.userMap[userId]['status'],
+                name = $$.chat.userMap[userId]['name'];
+
+            $('.roster-chat-status-icon', $template).removeClass(chatUI.allClassesString).addClass('roster-status-'+status);
+            if (status === "offline") {
+                $('.roster-chat-input', $template).prop("disabled", true);
+                var not_online_string = name + " is no longer available for chat."
+                $('.roster-msg-box', $template).html(not_online_string);
+                $('.roster-msg-box', $template).toggleClass('roster-msg-box-show', true);
+            }else {
+                $('.roster-msg-box', $template).toggleClass('roster-msg-box-show', false);
+                $('.roster-chat-input', $template).prop("disabled", false);
+            }
         }
     },
 
