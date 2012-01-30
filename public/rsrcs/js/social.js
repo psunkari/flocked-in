@@ -1704,10 +1704,8 @@ var comet = {
     },
 
     uninit: function() {
-        if (comet._inited) {
-            $.cometd.disconnect(true);
-            comet._inited = false;
-        }
+        if (comet._inited)
+            $.cometd.reload();
     }
 };
 $$.comet = comet;
