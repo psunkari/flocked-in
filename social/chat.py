@@ -55,7 +55,9 @@ class ChatResource(base.BaseResource):
             data["room"] = channelId
 
             yield pushToCometd('/chat/%s'%(channelId), message)
-            count = yield db.get_count(channelId, "channelSubscribers", start='%s:'%(recipientId))
+            startKey = '%s:'%recipientId
+            count = yield db.get_count(channelId, "channelSubscribers",
+                                       start=startKey, finish=startKey)
             if not count:
                 yield pushToCometd('/notify/%s'%(recipientId), data)
 

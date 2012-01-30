@@ -170,13 +170,16 @@
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.autocomplete.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.address-1.4.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.autogrow-textarea.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/jquery.cookie.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.iframe-transport.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.html5form-1.3.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.autoGrowInput.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.tagedit.js"></script>
- <script type="text/javascript" src="/rsrcs/js/cometd.js"></script>
- <script type="text/javascript" src="/rsrcs/js/json2.js"></script>
- <script type="text/javascript" src="/rsrcs/js/jquery.cometd.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/Cometd.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/ReloadExtension.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/json2.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/jquery.cometd.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/jquery.cometd-reload.js"></script>
   <script type="text/javascript" src="/rsrcs/js/social.js"></script>
   <script type="text/javascript">
     $().ready(function() {$$.ui.init()});
