@@ -14,7 +14,7 @@ from social.logging     import log
 
 class ChatResource(base.BaseResource):
 
-    isLeaf=True
+    isLeaf = True
     _templates = ['chat.mako']
 
     @defer.inlineCallbacks
@@ -44,23 +44,28 @@ class ChatResource(base.BaseResource):
             raise errors.InvalidRequest()
 
         cols = yield db.get_slice(orgId, "presence", super_column=recipientId)
-        recipientStatus = getMostAvailablePresence(utils.columnsToDict(cols).values())
+        recipientStatus = getMostAvailablePresence(
+                                utils.columnsToDict(cols).values())
         if recipientStatus == PresenceStates.OFFLINE:
             raise errors.InvalidRequest()
 
-        message = {"from": myName, "to": recipientId, "message":comment,
+        message = {"from": myName, "to": recipientId, "message": comment,
                    "timestamp": time.time(), "avatar": myAvatar}
-        data = {"type": "room",  "from": myId,  "to": recipientId,
+        data = {"type": "room", "from": myId, "to": recipientId,
                 "message": message}
         if channelId:
-            channelSubscribers = yield db.get_slice(channelId, 'channelSubscribers')
+            channelSubscribers = yield db.get_slice(channelId,
+                                                    'channelSubscribers')
             channelSubscribers = utils.columnsToDict(channelSubscribers)
-            channelSubscribers = set([x.split(':', 1)[0] for x in channelSubscribers])
+            channelSubscribers = set([x.split(':', 1)[0] \
+                                      for x in channelSubscribers])
 
             if myId not in channelSubscribers:
                 raise errors.ChatAccessDenied('')
-            yield db.insert(channelId, 'channelSubscribers', '', '%s:%s'%(myId, sessionId))
-            yield db.insert("%s:%s" %(myId, sessionId), "sessionChannelsMap", '', channelId)
+            yield db.insert(channelId, 'channelSubscribers', '', '%s:%s'\
+                            %(myId, sessionId))
+            yield db.insert("%s:%s" %(myId, sessionId), "sessionChannelsMap",
+                            '', channelId)
 
             data["room"] = channelId
 
@@ -68,7 +73,8 @@ class ChatResource(base.BaseResource):
             startKey = '%s:'%recipientId
             cols = yield db.get_slice(channelId, "channelSubscribers",
                                       start=startKey, count=1)
-            count = len([col for col in cols if col.column.name.startswith(startKey)])
+            count = len([col for col in cols \
+                         if col.column.name.startswith(startKey)])
             if not count:
                 yield comet.publish('/notify/%s'%(recipientId), data)
 
@@ -83,7 +89,7 @@ class ChatResource(base.BaseResource):
             yield db.insert(channelId, 'channelSubscribers', '', recipientId)
             channelSubscribers = set([myId, recipientId])
 
-        start = utils.uuid1(timestamp = time.time() - 3600).bytes
+        start = utils.uuid1(timestamp=time.time() - 3600).bytes
         cols = yield db.get_slice(myId, 'chatArchiveList', start=start, )
 
         chatIds = [col.column.value for col in cols]
@@ -102,11 +108,11 @@ class ChatResource(base.BaseResource):
             for userId in channelSubscribers:
                 yield db.insert(chatId, "chatParticipants", '', userId)
         for userId in channelSubscribers:
-            yield db.insert(chatId, "chatLogs", '%s:%s'%(myId, comment), timeuuid)
+            yield db.insert(chatId, "chatLogs", '%s:%s'%(myId, comment),
+                            timeuuid)
             yield db.insert(userId, "chatArchiveList", chatId, timeuuid)
             if oldTimeuuid:
                 yield db.remove(userId, "chatArchiveList", oldTimeuuid)
-
 
     @defer.inlineCallbacks
     def _getMyStatus(self, request):
@@ -126,8 +132,34 @@ class ChatResource(base.BaseResource):
         request.write(script)
 
 
+    def render_GET(self, request):
+        segmentCount = len(request.postpath)
+        d = None
+
+        if segmentCount == 1:
+            action = request.postpath[0]
+
+            if action == 'mystatus':
+                d = self._getMyStatus(request)
+
+        return self._epilogue(request, d)
+
+
+    def render_POST(self, request):
+        segmentCount = len(request.postpath)
+        d = None
+
+        if segmentCount == 0:
+            d = self._postChat(request)
+        return self._epilogue(request, d)
+
+class ChatArchivesResource(base.BaseResource):
+
+    isLeaf = True
+    _templates = ['chat.mako']
+
     @defer.inlineCallbacks
-    def _archives(self, request):
+    def _renderChatArchives(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         orgId = args['orgId']
         landing = not self._ajax
@@ -146,12 +178,14 @@ class ChatResource(base.BaseResource):
         chatParticipants = {}
         prevPageStart = ''
         nextPageStart = ''
-        cols = yield db.get_slice(myId, "chatArchiveList", start=start, count=count+1, reverse=True)
+        cols = yield db.get_slice(myId, "chatArchiveList", start=start,
+                                  count=count+1, reverse=True)
         chatIds = [col.column.value for col in cols]
         if len(cols) == count+1:
             chatIds = chatIds[:count]
             nextPageStart = utils.encodeKey(cols[-1].column.name)
-        cols = yield db.get_slice(myId, "chatArchiveList", start=start, count=count+1)
+        cols = yield db.get_slice(myId, "chatArchiveList", start=start,
+                                  count=count+1)
         if len(cols) > 1 and start:
             prevPageStart = utils.encodeKey(cols[-1].column.name)
         if chatIds:
@@ -176,12 +210,18 @@ class ChatResource(base.BaseResource):
                       'chats': chats,
                       'chatIds': chatIds,
                       'nextPageStart': nextPageStart,
-                      'prevPageStart': prevPageStart})
-        t.renderScriptBlock(request, "chat.mako", "render_chatList",
-                          landing,'.center-contents', "set", **args )
+                      'prevPageStart': prevPageStart,
+                      'menuId': 'chats'})
+
+        onload = """
+                     $$.menu.selectItem('chats');
+                 """
+        t.renderScriptBlock(request, "chat.mako", "chatList",
+                            landing, '.center-contents', "set", True,
+                            handlers={"onload": onload}, **args)
 
     @defer.inlineCallbacks
-    def _renderChatLog(self, request):
+    def _renderChat(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         orgId = args['orgId']
         landing = not self._ajax
@@ -193,84 +233,68 @@ class ChatResource(base.BaseResource):
         if appchange and script:
             t.renderScriptBlock(request, "chat.mako", "layout",
                                 landing, "#mainbar", "set", **args)
+
         chatId = utils.getRequestArg(request, 'id')
         start= utils.getRequestArg(request, 'start') or ''
         start = utils.decodeKey(start)
         count = 25
         if not chatId:
-            return
+            raise errors.MissingParams(["Chat Id"])
+
         chatParticipants = yield db.get_slice(chatId, "chatParticipants")
         chatParticipants = utils.columnsToDict(chatParticipants).keys()
+
         if myId not in chatParticipants:
             raise errors.ChatAccessDenied(chatId)
+
         entityIds = set()
         chatLogs = []
         nextPageStart=''
-        cols = yield db.get_slice(chatId, "chatLogs", start=start, count = count+1)
+
+        cols = yield db.get_slice(chatId, "chatLogs", start=start, count=count+1)
         for col in cols:
             timestamp = col.column.timestamp/1e6
             entityId, comment = col.column.value.split(':', 1)
             entityIds.add(entityId)
             chatLogs.append((entityId, comment, timestamp))
+
         if len(cols) == count+1:
             nextPageStart = utils.encodeKey(cols[-1].column.name)
             chatLogs = chatLogs[:count]
+
         entities = yield db.multiget_slice(chatParticipants, "entities", ['basic'])
         entities = utils.multiSuperColumnsToDict(entities)
         entities[myId] = args['me']
-        title = "Chat with " + ",".join([entities[x]['basic']['name'] for x in chatParticipants if x != myId ])
-        args.update({'chatLogs': chatLogs, "chatId": chatId, "entities": entities, "nextPageStart": nextPageStart})
+        title = "Chat with " + ",".join([entities[x]['basic']['name'] \
+                                         for x in chatParticipants if x != myId])
+        args.update({"chatLogs": chatLogs, "chatId": chatId,
+                     "entities": entities, "nextPageStart": nextPageStart,
+                     "menuId": "chats"})
+
         if not start:
+            onload = """
+                     $$.menu.selectItem('chats');
+                     """
             t.renderScriptBlock(request, 'chat.mako', "chat_title", landing,
-                                "#title", "set", chatTitle=title)
-            t.renderScriptBlock(request, "chat.mako", "render_chat",
+                                "#title", "set", True,
+                                handlers={"onload": onload}, chatTitle=title)
+            t.renderScriptBlock(request, "chat.mako", "chat",
                                 landing, ".center-contents", "set", **args)
         else:
-            t.renderScriptBlock(request, "chat.mako", "render_chatLog",
+            t.renderScriptBlock(request, "chat.mako", "chat",
                                 landing, "#next-page-loader", "replace", **args)
-
-    @defer.inlineCallbacks
-    def _post(self, request):
-        (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        orgId = args['orgId']
-        landing = not self._ajax
-        other = utils.getRequestArg(request, 'other')
-
-        if script and landing:
-            t.render(request, "chat.mako", **args)
-
-        if appchange and script:
-            t.renderScriptBlock(request, "chat.mako", "layout",
-                                landing, "#mainbar", "set", **args)
-        args['to'] = 'tDM5JpfaEeCz1EBAhdLyVQ'
-        if script and not other:
-            t.renderScriptBlock(request, "chat.mako", "post",
-                                landing, ".center-contents", "set", **args)
-        else:
-            t.renderScriptBlock(request, "chat.mako", "post_other",
-                                landing, ".center-contents", "set", **args)
 
 
     def render_GET(self, request):
         segmentCount = len(request.postpath)
         d = None
+
         if segmentCount == 0:
-            d = self._archives(request)
+            d = self._renderChatArchives(request)
         elif segmentCount == 1:
             action = request.postpath[0]
-            if action == 'post':
-                d = self._post(request)
-            elif action == 'log':
-                d = self._renderChatLog(request)
-            elif action == 'mystatus':
-                d = self._getMyStatus(request)
 
-        return self._epilogue(request, d)
+            if action == 'chat':
+                d = self._renderChat(request)
 
-
-    def render_POST(self, request):
-        segmentCount = len(request.postpath)
-        d = None
-        if segmentCount == 0:
-            d = self._postChat(request)
         return self._epilogue(request, d)

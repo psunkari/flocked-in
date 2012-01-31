@@ -39,6 +39,7 @@ from social.apps            import ApplicationResource
 from social.chat            import ChatResource
 from social.presence        import PresenceResource
 from social.private         import PrivateResource
+from social.chat            import ChatArchivesResource
 
 def getPluggedResources(ajax=False):
     resources = {}
@@ -195,6 +196,7 @@ class RootResource(resource.Resource):
         self._apps = ApplicationResource(self._isAjax)
         self._chat = ChatResource(self._isAjax)
         self._presence = PresenceResource(self._isAjax)
+        self._chatArchives = ChatArchivesResource(self._isAjax)
 
         if not self._isAjax:
             self._home = HomeResource()
@@ -313,6 +315,8 @@ class RootResource(resource.Resource):
             match = self._api
         elif path == 'chat':
             match = self._chat
+        elif path == 'chats':
+            match = self._chatArchives
         elif path == 'presence':
             match = self._presence
 

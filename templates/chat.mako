@@ -75,7 +75,8 @@
     return '<img src="%s" style="max-height=%spx; max-width=%spx; display:inline-block"/>' \
         %(avatarURI, avatarSize, avatarSize)
 %>
-<%def name="render_chat_row(chatId, chatLog, participants)">
+
+<%def name="chat_row(chatId, chatLog, participants)">
   <%
     entityId, comment, timestamp = chatLog
     others = [x for x in participants if x != myId]
@@ -83,107 +84,103 @@
     if others and entityId == myId:
       entityId = others[-1]
       username = "me"
-    comment = utils.normalizeText(comment)
+    comment = comment.split("\n").pop()
+    comment = comment
   %>
-  <div id='thread-${chatId}' class="conversation-row">
+  <div id="thread-${chatId}" class="conversation-row ">
     <div class="conversation-row-cell conversation-row-sender">
-      ${getSenderAvatar(entityId, entities, 'm')}
+        ${getSenderAvatar(entityId, entities)}
     </div>
-    <a class="conversation-row-cell conversation-row-info ajax" href='/chat/log?id=${chatId}'>
+    <a class="conversation-row-cell conversation-row-info ajax" href="/chats/chat?id=${chatId}">
       <div class="conversation-row-headers">
         <span class="conversation-row-people">${formatPeopleInConversation(participants, myId, entities)}</span>
-        <span class='conversation-row-time'>
+        <span class="conversation-row-time">
           &ndash;&nbsp; ${utils.simpleTimestamp(timestamp, entities[myId]["basic"]["timezone"])}
         </span>
-        <div class="conversation-row-subject-wrapper">
-          <span class="conversation-row-snippet">${username}: ${comment}</span>
-        </div>
+      </div>
+      <div class="conversation-row-subject-wrapper" style="max-width:100% !important">
+        <span class="conversation-row-subject">${username}</span>
+        <span class="conversation-row-snippet">${comment}</span>
       </div>
     </a>
   </div>
 </%def>
 
-<%def name="render_chatLog()">
-  <div class="conv-item conversation-message-wrapper">
-    %for (entityId, comment, timestamp) in chatLogs:
-      <% comment = utils.normalizeText(comment)%>
-      <div class="conversation-message-headers">
-        <div class="chat-summary">
-          <div class="user chat-sender">
-            <a href="/profile?id=${entityId}" class="ajax">${entities[entityId]["basic"]["name"]}:</a>
-          </div>
-          <span class="conversation-message-message">${comment}</span>
-        </div>
-        <div class="time-label chat-time">${utils.simpleTimestamp(float(timestamp), entities[myId]["basic"]["timezone"])}</div>
-      </div>
-    %endfor
+<%def name="chat()">
+  <div class="conversation-messages-wrapper">
+      <%
+          previousBy = ""
+          previousAt = None
+      %>
+      %for (entityId, comment, timestamp) in chatLogs:
+        <%
+          #comment = utils.normalizeText(comment)
+        %>
+          %if entityId == previousBy and (timestamp - previousAt < 300):
+            <div class="conversation-message-wrapper">
+              <div class="chat-message-header" style="margin-bottom:0;padding-top:0;padding-bottom:0">
+                <div class="chat-summary">
+                  <div class="user chat-sender" style="width:20px"></div>
+                  <span class="conversation-message-message">${comment}</span>
+                </div>
+                <div class="time-label chat-time"></div>
+              </div>
+            </div>
+          %else:
+            <div class="chat-item conversation-message-wrapper">
+              <div class="chat-message-header">
+                <div class="chat-summary">
+                  <div class="user chat-sender">
+                    <a href="/profile?id=${entityId}" class="ajax">${entities[entityId]["basic"]["name"]}:</a>
+                  </div>
+                  <span class="conversation-message-message">${comment}</span>
+                </div>
+                <div class="time-label chat-time">${utils.simpleTimestamp(float(timestamp), entities[myId]["basic"]["timezone"])}</div>
+              </div>
+            </div>
+            <%
+              previousAt = timestamp
+            %>
+          %endif
+          <%
+            previousBy = entityId
+          %>
+      %endfor
   </div>
   <div id="next-page-loader">
     %if nextPageStart:
       <div id="next-load-wrapper" class="busy-indicator">
-        <a id="next-page-load" class="ajax" data-ref="/chat/log?start=${nextPageStart}&id=${chatId}">${_("Fetch newer chats")}</a>
+        <a id="next-page-load" class="ajax" data-ref="/chats/chat?start=${nextPageStart}&id=${chatId}">${_("Fetch newer chats")}</a>
       </div>
     %endif
   </div>
 </%def>
 
-<%def name='render_chat()'>
-  <div class="conversation-messages-wrapper">
-    ${render_chatLog()}
-  </div>
-  <div id="chat-reply-${chatId}">
-    <input type='hidden' name='chatId' value='${chatId}' />
-  </div>
-
-</%def>
-
-
-<%def name="render_conversation_reply(script, msg, convId)">
-  <form id="message-reply-form" method="post" class="ajax" action="/messages/write">
-    <div class="conversation-composer">
-      <div class="conv-avatar">
-          ${getAvatarImg(utils.userAvatar(myKey, people[myKey]))}
-      </div>
-      <div class="input-wrap conversation-reply-wrapper">
-          <textarea class="conversation-reply" name="body" placeholder="${_('Quickly reply to this message')}" required title="${_('Reply')}"></textarea>
-          <input type="hidden" value=${convId} name="parent"/>
-      </div>
-      <div id="msgreply-attach-uploaded" class="uploaded-filelist"></div>
-      <div class="conversation-reply-actions">
-        <input type="submit" name="send" value="${_('Reply')}" class="button"/>
-      </div>
-    </form>
-    </div>
-    <div class="file-attach-wrapper conversation-reply-wrapper">
-      ${widgets.fileUploadButton('msgreply-attach')}
-    </div>
-    <div class="clear"></div>
-</%def>
-
-
-<%def name="render_chatList()">
+<%def name="chatList()">
   <div id="threads-wrapper" class="paged-container">
-    %for chatId in chatIds:
-      ${render_chat_row(chatId, chats[chatId], chatParticipants[chatId])}
-    %endfor
-    <div id="chat-paging" class="pagingbar">
-      <ul class="h-links">
-        %if prevPageStart:
-          <li class="button">
-            <a class="ajax" href="/chat?start=${prevPageStart}">${_("&#9666; Previous")}</a>
-          </li>
-        %else:
-          <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
-        %endif
-        %if nextPageStart:
-          <li class="button">
-            <a class="ajax" href="/chat?&start=${nextPageStart}">${_("Next &#9656;")}</a>
-          </li>
-        %else:
-          <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
-        %endif
-      </ul>
+    <div class="conversation-layout-container">
+      %for chatId in chatIds:
+        <% chat_row(chatId, chats[chatId], chatParticipants[chatId]) %>
+      %endfor
     </div>
+  </div>
+  <div id="chat-paging" class="pagingbar">
+    <ul class="h-links">
+      %if prevPageStart:
+        <li class="button">
+          <a class="ajax" href="/chat?start=${prevPageStart}">${_("&#9666; Previous")}</a>
+        </li>
+      %else:
+        <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
+      %endif
+      %if nextPageStart:
+        <li class="button">
+          <a class="ajax" href="/chat?&start=${nextPageStart}">${_("Next &#9656;")}</a>
+        </li>
+      %else:
+        <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
+      %endif
+    </ul>
   </div>
 </%def>
 
@@ -195,22 +192,4 @@
     ${render_chat()}
   </div>
   %endif
-</%def>
-
-<%def name="post_other()">
-<form class='ajax' action='/chat' method='post'>
-  <textarea name="comment"></textarea>
-  <input type='hidden' name='to' value='KID0Jp5XEeCDwEBAhdLyVQ' />
-  <input type='hidden' name='from' value='${to}' />
-  <button type="submit" value="submit" >Submit</button>
-</form>
-</%def>
-
-<%def name="post()">
-<form class='ajax' action='/chat' method='post'>
-  <textarea name="comment"></textarea>
-  <input type='hidden' name='from' value='KID0Jp5XEeCDwEBAhdLyVQ' />
-  <input type='hidden' name='to' value='${to}' />
-  <button type="submit" value="submit" >Submit</button>
-</form>
 </%def>

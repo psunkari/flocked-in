@@ -26,6 +26,7 @@
       ${navMenuItem("/groups", _("Groups"), "groups")}
       ${navMenuItem("/files/list", _("Files"), "files")}
       ${navMenuItem("/tags/list", _("Tags"), "tags")}
+      ${navMenuItem("/chats", _("Chats"), "chats")}
     </ul>
   </div>
 
