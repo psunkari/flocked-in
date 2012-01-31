@@ -30,6 +30,7 @@
     </ul>
   </div>
 
+  %if script:
   <div id="roster-container">
     <div class="sidebar-title">Chat</div>
     <div id="roster-loading" class="busy-indicator busy" style="display:none;line-height:2.5em;color:gray;">Loading...</div>
@@ -53,6 +54,7 @@
       </div>
     </div>
   </div>
+  %endif
 </%def>
 
 <html>
