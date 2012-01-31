@@ -2463,8 +2463,8 @@ td.file-info, td.file-context, td.file-actions {
 #online-status-button {
     margin: 3px;
     width: 100%;
-    text-align:left;
-    text-transform:capitalize;
+    text-align: left;
+    text-transform: capitalize;
 }
 
 #user-online-status-icon {
@@ -2496,6 +2496,13 @@ td.file-info, td.file-context, td.file-actions {
     padding: 5px 20px;
     background-color: #3E3D39;
     border-radius: 4px 4px 0 0;
+}
+
+#roster-error {
+    font-size: 10px;
+    color: #c50000;
+    line-height: 1.75em;
+    padding-top: 5px;
 }
 
 .roster-list {

@@ -1968,24 +1968,29 @@ var chatUI = {
             $('#roster').css('display', 'none');
 
             // Wait till we are connected to the cometd before enabling chat.
-            function fetchMyStatus() {
+            function chatConnected() {
                 d = $.get('/ajax/chat/mystatus');
                 d.then(function() {
+                    $('#roster-error').remove();
                     $('#roster-loading').css('display', 'none');
                     $('#roster').css('display', 'block');
                     chatUI._inited = true;
                 });
             }
-            function signoutChat() {
+            function chatDisconnected() {
                 $$.chat.signout(false);
+            }
+            function chatConnectionBroken() {
+                $('<div id="roster-error">Chat servers are currently not reachable</div>').insertBefore('#roster');
+                $('#roster').css('display', 'none');
             }
 
             if ($$.comet.connected)
                 fetchMyStatus();
 
-            $$.subscribe('cometd.connect.connected', fetchMyStatus);
-            $$.subscribe('cometd.connect.broken', signoutChat);
-            $$.subscribe('cometd.connect.disconnected', signoutChat);
+            $$.subscribe('cometd.connect.connected', chatConnected);
+            $$.subscribe('cometd.connect.broken', chatConnectionBroken);
+            $$.subscribe('cometd.connect.disconnected', chatDisconnected);
         }
     },
 
