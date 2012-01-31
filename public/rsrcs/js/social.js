@@ -56,17 +56,20 @@ parseUri: function parseUri(str) {
  */
 _fetchUriOldPath: null,
 fetchUri: function _fetchUri(str, ignoreHistory) {
-    uri = social.parseUri(str);
-    deferred = null;
+    var uri = social.parseUri(str),
+        deferred = null,
+        tail = '', isFullPage = false;
     if (social._fetchUriOldPath) {
-        tail = '';
-        if (social._fetchUriOldPath != uri.path)
+        if (social._fetchUriOldPath != uri.path) {
             tail = uri.query? "&_fp=1": "?_fp=1";
+            isFullPage = true;
+        }
 
         deferred = $.get('/ajax' + str + tail);
         deferred.then(function() {
-            $$.chatUI.updateMyStatus($$.chat.status);
-            $$.chatUI.updateRosterList();
+            if (isFullPage) {
+                $$.chatUI.init();
+            }
         })
     }
     social._fetchUriOldPath = uri.path;
@@ -796,6 +799,7 @@ var ui = {
         /* Power up the cometd connections. */
         $$.config = window.social_config;
         $$.comet.init();
+        $$.chatUI.init();
 
         /* Add a handler to window unload */
         $(window).unload(ui.uninit);
@@ -1807,6 +1811,9 @@ var chat = {
         if (chat.status !== "offline")
             return
 
+        if (status == 'offline')
+            return chat.signout();
+
         var d = $.post("/ajax/presence", {"status":status})
         d.then(function() {
             chat.status = status;
@@ -1818,18 +1825,15 @@ var chat = {
                         chat.userMap[userId] = user;
                     });
                     chat.users = users;
-                myPresenceSub = $.cometd.subscribe('/presence/'+$$.config.myId,
-                                                   chat.handlePresence);
-                orgPresenceSub = $.cometd.subscribe('/presence/'+$$.config.orgId,
-                                                    chat.handlePresence);
-                notifySub = $.cometd.subscribe('/notify/'+$$.config.myId,
-                                               chat.handleMyNotifications);
+                    myPresenceSub = $.cometd.subscribe('/presence/'+$$.config.myId, chat.handlePresence);
+                    orgPresenceSub = $.cometd.subscribe('/presence/'+$$.config.orgId, chat.handlePresence);
+                    notifySub = $.cometd.subscribe('/notify/'+$$.config.myId, chat.handleMyNotifications);
 
-                chat._subscriptions.push(myPresenceSub);
-                chat._subscriptions.push(orgPresenceSub);
-                chat._subscriptions.push(notifySub);
+                    chat._subscriptions.push(myPresenceSub);
+                    chat._subscriptions.push(orgPresenceSub);
+                    chat._subscriptions.push(notifySub);
                     $$.chatUI.updateRosterList();
-               }, "json");
+                }, "json");
         });
     },
 
@@ -1950,6 +1954,23 @@ var chatUI = {
                        '</div>' +
                  '</div>' +
                '</div>',
+
+    _inited: false,
+    init: function() {
+        if (chatUI._inited) {
+            chatUI.updateMyStatus($$.chat.status);
+            chatUI.updateRosterList();
+        } else {
+            $('#roster-loading').css('display', 'block');
+            $('#roster').css('display', 'none');
+            d = $.get('/ajax/chat/mystatus');
+            d.then(function() {
+                $('#roster-loading').css('display', 'none');
+                $('#roster').css('display', 'block');
+                chatUI._inited = true;
+            });
+        }
+    },
 
     create: function(userId, focus) {
         var $template,
@@ -2139,7 +2160,7 @@ var chatUI = {
             d.then(function() {
                 chatUI.updateMyStatus(status);
             })
-        }else {
+        } else {
             $$.chat.signin(status)
         }
     },

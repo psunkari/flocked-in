@@ -53,8 +53,6 @@ def updateAndPublishStatus(userId, orgId, sessionId, status, user=None):
     #      This will not scale well with big networks
     results[sessionId] = status
     newPublishedStatus = getMostAvailablePresence(results.values())
-    log.info('>>>>>>>>>> Previous Published Status: %s' % oldPublishedStatus)
-    log.info('>>>>>>>>>> New Published Status: %s' % newPublishedStatus)
 
     if oldPublishedStatus != newPublishedStatus:
         if not user:

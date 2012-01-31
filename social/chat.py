@@ -109,6 +109,24 @@ class ChatResource(base.BaseResource):
 
 
     @defer.inlineCallbacks
+    def _getMyStatus(self, request):
+        authInfo = request.getSession(IAuthInfo)
+        myId = authInfo.username
+        orgId = authInfo.organization
+        sessionId = request.getCookie('session')
+        status = 'offline'
+
+        try:
+            row = yield db.get(orgId, 'presence', sessionId, myId)
+            status = row.column.value
+        except Exception as ex:
+            log.err(ex)
+
+        script = "$$.chat.signin('%s')" % status
+        request.write(script)
+
+
+    @defer.inlineCallbacks
     def _archives(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         orgId = args['orgId']
@@ -210,9 +228,9 @@ class ChatResource(base.BaseResource):
         else:
             t.renderScriptBlock(request, "chat.mako", "render_chatLog",
                                 landing, "#next-page-loader", "replace", **args)
+
     @defer.inlineCallbacks
     def _post(self, request):
-
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         orgId = args['orgId']
         landing = not self._ajax
@@ -238,10 +256,14 @@ class ChatResource(base.BaseResource):
         d = None
         if segmentCount == 0:
             d = self._archives(request)
-        elif segmentCount == 1 and request.postpath[0] == 'post':
-            d = self._post(request)
-        elif segmentCount == 1 and request.postpath[0] == 'log':
-            d = self._renderChatLog(request)
+        elif segmentCount == 1:
+            action = request.postpath[0]
+            if action == 'post':
+                d = self._post(request)
+            elif action == 'log':
+                d = self._renderChatLog(request)
+            elif action == 'mystatus':
+                d = self._getMyStatus(request)
 
         return self._epilogue(request, d)
 

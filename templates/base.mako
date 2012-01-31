@@ -21,7 +21,6 @@
       ${navMenuItem("/feed", _("News Feed"), "feed")}
       ${navMenuItem("/notifications", _("Notifications"), "notifications")}
       ${navMenuItem("/messages", _("Messages"), "messages")}
-      ##${navMenuItem("/event", _("Events"), "events")}
       ${navMenuItem("/people", _("People"), "people")}
       ${navMenuItem("/feed?id=%s" % orgKey, _("Company Feed"), "org")}
       ${navMenuItem("/groups", _("Groups"), "groups")}
@@ -29,27 +28,29 @@
       ${navMenuItem("/tags/list", _("Tags"), "tags")}
     </ul>
   </div>
+
   <div id="roster-container">
     <div class="sidebar-title">Chat</div>
-    <div id="online-status-bar">
-      <button id="online-status-button" class="acl-button acl-text-button" onclick="$$.chatUI.showStatusList(event, 'online-status');">
-        <img id="user-online-status-icon" src="/rsrcs/img/offline.png" style="float:left"/>
-        <span id="user-online-status-text">${_("Offline")}</span>
-        <span>▼</span>
-      </button>
-      <ul class="acl-menu" style="display:none;">
-          <li><a class="acl-item" onclick='$$.chatUI.setStatus("available")'>${_("Available")}</a></li>
-          <li><a class="acl-item" onclick='$$.chatUI.setStatus("away")'>${_("Away")}</a></li>
-          <li><a class="acl-item" onclick='$$.chatUI.setStatus("busy")'>${_("Busy")}</a></li>
-          <li><a class="acl-item" onclick='$$.chat.signout()'>${_("Offline")}</a></li>
-      </ul>
-    </div>
-    <div id="roster-list-container" >
-      <div class="roster-list">
-
+    <div id="roster-loading" class="busy-indicator busy" style="display:none;line-height:2.5em;color:gray;">Loading...</div>
+    <div id="roster">
+      <div id="online-status-bar">
+        <button id="online-status-button" class="acl-button acl-text-button" onclick="$$.chatUI.showStatusList(event, 'online-status');">
+          <img id="user-online-status-icon" src="/rsrcs/img/offline.png" style="float:left"/>
+          <span id="user-online-status-text">${_("Offline")}</span>
+          <span>▼</span>
+        </button>
+        <ul class="acl-menu" style="display:none;width:170px;">
+            <li><a class="acl-item" onclick='$$.chatUI.setStatus("available")'>${_("Available")}</a></li>
+            <li><a class="acl-item" onclick='$$.chatUI.setStatus("away")'>${_("Away")}</a></li>
+            <li><a class="acl-item" onclick='$$.chatUI.setStatus("busy")'>${_("Busy")}</a></li>
+            <li><a class="acl-item" onclick='$$.chat.signout()'>${_("Offline")}</a></li>
+        </ul>
+      </div>
+      <div id="roster-list-container" >
+        <div class="roster-list">
+        </div>
       </div>
     </div>
-    </br></br>
   </div>
 </%def>
 
