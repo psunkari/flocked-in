@@ -98,19 +98,20 @@ class PresenceResource(BaseResource):
         authInfo = request.getSession(IAuthInfo)
         orgId = authInfo.organization
         myId = authInfo.username
-        sessionId = request.getCookie('session')
         data = []
 
-        cols = yield db.get_slice(orgId, "presence",)
+        cols = yield db.get_slice(orgId, "presence")
         cols = utils.supercolumnsToDict(cols)
         if myId not in cols:
             myPresence = yield db.get_slice(orgId, "presence", super_column=myId)
             cols[myId] = utils.columnsToDict(myPresence)
+
         presence = {}
         for userId in cols:
             presence[userId] = getMostAvailablePresence(cols[userId].values())
+
         if presence[myId] == PresenceStates.OFFLINE:
-            request.write(data)
+            request.write(json.dumps(data))
             return
 
         userIds = cols.keys()
@@ -118,10 +119,8 @@ class PresenceResource(BaseResource):
         entities = utils.multiColumnsToDict(cols)
         for entityId in entities:
             entity = entities[entityId]
-            #XXX:Why setting the value ?
-            entities[entityId]['status'] = presence.get(userId, PresenceStates.OFFLINE)
             _data = {"userId": entityId, "name": entity['name'],
-                     "status": presence.get(userId, PresenceStates.OFFLINE),
+                     "status": presence.get(entityId, PresenceStates.OFFLINE),
                      "title": entity["jobTitle"],
                      "avatar": utils.userAvatar(entityId, {"basic": entity}, 's')}
             data.append(_data)
