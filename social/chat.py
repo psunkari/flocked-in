@@ -4,6 +4,8 @@ import time
 from ordereddict        import OrderedDict
 from telephus.cassandra import ttypes
 from twisted.internet   import defer
+from twisted.web        import http
+
 from social.isocial     import IAuthInfo
 from social.presence    import PresenceStates, getMostAvailablePresence
 from social             import base, utils, db, errors, constants
@@ -17,13 +19,19 @@ class ChatResource(base.BaseResource):
     isLeaf = True
     _templates = ['chat.mako']
 
+    def setResponseCodeAndWrite(self, request, httpCode, responseObj):
+        request.setResponseCode(httpCode, http.RESPONSES[httpCode])
+        request.setHeader('content-type', 'application/json')
+        request.write(json.dumps(responseObj))
+
     @defer.inlineCallbacks
     def _postChat(self, request):
         comment = utils.getRequestArg(request, 'message')
         channelId = utils.getRequestArg(request, 'room')
 
         if not comment:
-            raise errors.MissingParams(["Message"])
+            self.setResponseCodeAndWrite(request, 200, {'error':  'Message empty'})
+            return
 
         authInfo = request.getSession(IAuthInfo)
         myId = authInfo.username
@@ -41,13 +49,15 @@ class ChatResource(base.BaseResource):
         try:
             col = yield db.get(orgId, 'presence', sessionId, myId)
         except ttypes.NotFoundException:
-            raise errors.InvalidRequest()
+            self.setResponseCodeAndWrite(request, 200, {'error':  'User is offline'})
+            return
 
         cols = yield db.get_slice(orgId, "presence", super_column=recipientId)
         recipientStatus = getMostAvailablePresence(
                                 utils.columnsToDict(cols).values())
         if recipientStatus == PresenceStates.OFFLINE:
-            raise errors.InvalidRequest()
+            self.setResponseCodeAndWrite(request, 200, {'error':  'Recipient is offline'})
+            return
 
         message = {"from": myName, "to": recipientId, "message": comment,
                    "timestamp": time.time(), "avatar": myAvatar}
@@ -61,7 +71,8 @@ class ChatResource(base.BaseResource):
                                       for x in channelSubscribers])
 
             if myId not in channelSubscribers:
-                raise errors.ChatAccessDenied('')
+                self.setResponseCodeAndWrite(request, 200, {'error':  'Access denied'})
+                return
             yield db.insert(channelId, 'channelSubscribers', '', '%s:%s'\
                             %(myId, sessionId))
             yield db.insert("%s:%s" %(myId, sessionId), "sessionChannelsMap",
@@ -69,21 +80,28 @@ class ChatResource(base.BaseResource):
 
             data["room"] = channelId
 
-            yield comet.publish('/chat/%s'%(channelId), message)
             startKey = '%s:'%recipientId
             cols = yield db.get_slice(channelId, "channelSubscribers",
                                       start=startKey, count=1)
             count = len([col for col in cols \
                          if col.column.name.startswith(startKey)])
-            if not count:
-                yield comet.publish('/notify/%s'%(recipientId), data)
+            try:
+                yield comet.publish('/chat/%s'%(channelId), message)
+                if not count:
+                    yield comet.publish('/notify/%s'%(recipientId), data)
+            except Exception, e:
+                self.setResponseCodeAndWrite(request, 200, {'error':  'Failed to publish message'})
+                return
 
         else:
             channelId = utils.getUniqueKey()
             data['room'] = channelId
-
-            yield comet.publish('/notify/%s' %(myId), data)
-            yield comet.publish('/notify/%s' %(recipientId), data)
+            try:
+                yield comet.publish('/notify/%s' %(myId), data)
+                yield comet.publish('/notify/%s' %(recipientId), data)
+            except Exception, e:
+                self.setResponseCodeAndWrite(request, 200, {'error':  'Failed to publish message'})
+                return
 
             yield db.insert(channelId, 'channelSubscribers', '', myId)
             yield db.insert(channelId, 'channelSubscribers', '', recipientId)
