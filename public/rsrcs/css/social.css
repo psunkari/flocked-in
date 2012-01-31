@@ -988,6 +988,11 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
  * Feed
  */
 
+#welcome-message {
+    font-size: 13px;
+    line-height: 1.5em;
+}
+
 #welcome-message ul {
     padding-left: 20px;
     margin: 5px;
