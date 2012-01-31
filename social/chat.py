@@ -7,7 +7,7 @@ from twisted.internet   import defer
 from social.isocial     import IAuthInfo
 from social.presence    import PresenceStates
 from social             import base, utils, db, errors, constants
-from social.comet       import pushToCometd
+from social.comet       import comet
 from social             import template as t
 from social.logging     import log
 
@@ -54,19 +54,19 @@ class ChatResource(base.BaseResource):
 
             data["room"] = channelId
 
-            yield pushToCometd('/chat/%s'%(channelId), message)
+            yield comet.publish('/chat/%s'%(channelId), message)
             startKey = '%s:'%recipientId
             count = yield db.get_count(channelId, "channelSubscribers",
                                        start=startKey, finish=startKey)
             if not count:
-                yield pushToCometd('/notify/%s'%(recipientId), data)
+                yield comet.publish('/notify/%s'%(recipientId), data)
 
         else:
             channelId = utils.getUniqueKey()
             data['room'] = channelId
 
-            yield pushToCometd('/notify/%s' %(myId), data)
-            yield pushToCometd('/notify/%s' %(recipientId), data)
+            yield comet.publish('/notify/%s' %(myId), data)
+            yield comet.publish('/notify/%s' %(recipientId), data)
 
             yield db.insert(channelId, 'channelSubscribers', '', myId)
             yield db.insert(channelId, 'channelSubscribers', '', recipientId)
