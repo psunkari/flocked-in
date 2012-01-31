@@ -413,7 +413,7 @@ input::-moz-focus-inner {
 
 .roster-chat-logs {
     margin-bottom: 5px;
-    min-height: 150px;
+    min-height: 90px;
     max-height: 180px;
     padding-left: 0;
     overflow-y: auto;

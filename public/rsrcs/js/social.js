@@ -2144,7 +2144,7 @@ var chatUI = {
             $('.roster-chat-status-icon', $template).removeClass(chatUI.allClassesString).addClass('roster-status-'+status);
             if (status === "offline") {
                 $('.roster-chat-input', $template).prop("disabled", true);
-                var not_online_string = name + " is no longer available for chat."
+                var not_online_string = name + " is currently unavailable for chat."
                 $('.roster-msg-box', $template).html(not_online_string);
                 $('.roster-msg-box', $template).toggleClass('roster-msg-box-show', true);
             }else {
