@@ -20,7 +20,6 @@ from twisted.web.http_headers   import Headers
 
 from social                     import config
 
-
 COMET_BASEURL = config.get('Cometd', 'BaseUrl')
 COMET_PATH = config.get('Cometd', 'Path')
 COMET_SECRET=config.get('Cometd', 'secret')
@@ -153,12 +152,17 @@ class CometdClient:
             self.clientId = None
             raise Exception(response.reason)
 
-
+    @defer.inlineCallbacks
     def disconnect(self, ):
         """
-        Publish to [/meta/disconnect] channel to disconnect from the server
+       Publish to [/meta/disconnect] channel to disconnect from the server
         Will need clientId, request id and BAYEUX_BROWSER
         """
+        message = self._createBayeuxMessage()
+        message.update({"channel": "/meta/disconnect"})
+        (response, body) = yield self._request(message)
+        if response.code != 200:
+            raise Exception('failed to disconnect')
 
     @defer.inlineCallbacks
     def publish(self, channel, data):
@@ -208,8 +212,7 @@ def startup():
                     #yield comet.handshake()
                     yield threads.blockingCallFromThread(reactor, comet.handshake)
                 elif advice['reconnect'] == 'none':
-                    break
-        yield defer.succeed([])
+                    return
 
     try:
         yield comet.handshake()
