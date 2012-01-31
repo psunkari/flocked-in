@@ -435,6 +435,19 @@ if (!Function.prototype.bind) {
   };
 }
 
+
+/* Pubsub: Based on https://gist.github.com/705311 */
+var o = jQuery({});
+jQuery.each({
+        "subscribe" : "bind",
+        "unsubscribe" : "unbind",
+        "publish" : "trigger"
+    }, function ( fn, api ) {
+        social[ fn ] = function() {
+            o[ api ].apply( o, arguments );
+        };
+    });
+
 social._initChunkLoader();
 social._initAjaxRequests();
 social._initTimestampUpdates();
@@ -1653,22 +1666,23 @@ var comet = {
     connected: false,
 
     _connectResponse: function(message) {
-        console.log(message);
         if ($.cometd.isDisconnected()) {
             comet.connected = false;
+            $$.publish('cometd.connect.disconnected');
             if (window.console)
-                console.log('COMETD disconnected');
+                console.log('COMETD Disconnected');
         }
         else {
             var wasConnected = comet.connected;
             comet.connected = message.successful === true;
             if (!wasConnected && comet.connected) {
+                $$.publish('cometd.connect.connected');
                 if (window.console)
-                    console.log('COMETD connected');
-            }
-            else if (wasConnected && !comet.connected) {
+                    console.log('COMETD Connected');
+            } else if (wasConnected && !comet.connected) {
+                $$.publish('cometd.connect.broken');
                 if (window.console)
-                    console.log('COMETD connection broken');
+                    console.log('COMETD Broken');
             }
         }
     },
@@ -1731,9 +1745,6 @@ var chat = {
     _subscriptions: [],
 
     handleMyNotifications: function(message) {
-        console.info("Recieved notification ")
-        console.dir(message)
-
         var messageType = message.data.type;
         if (messageType == "room") {
             // Room related notify is sent only when a new room is being
@@ -1777,14 +1788,9 @@ var chat = {
 
     handlePresence: function(message) {
         var userId = message.data.userId;
-
         chat.userMap[userId] = message.data
 
-        if (userId == $$.config.myId) {
-            console.info("Got presence for myself as " + message.data.status)
-        }
-        else {
-            console.info("Got presence for " + chat.userMap[userId]["name"] + " as " + message.data.status)
+        if (userId != $$.config.myId) {
             $$.chatUI.updateRosterList(userId);
             $$.chatUI.updateWindowStatus(userId);
         }
@@ -1808,11 +1814,8 @@ var chat = {
     },
 
     signin: function(status) {
-        if (chat.status !== "offline")
-            return
-
-        if (status == 'offline')
-            return chat.signout();
+        if (chat.status !== "offline" || status == "offline")
+            return;
 
         var d = $.post("/ajax/presence", {"status":status})
         d.then(function() {
@@ -1837,7 +1840,7 @@ var chat = {
         });
     },
 
-    signout: function() {
+    signout: function(closeAll) {
         $.post("/ajax/presence", {"status":"offline"}).then(function() {
             $.each(chat._subscriptions, function(idx, subscription) {
                     $.cometd.unsubscribe(subscription);
@@ -1848,7 +1851,9 @@ var chat = {
             chat.users = [];
             chat.userMap = {};
             $$.chatUI.updateRosterList();
-            $$.chatUI.closeAll();
+
+            if (closeAll === undefined || closeAll)
+                $$.chatUI.closeAll();
         });
     }
 }
@@ -1866,10 +1871,8 @@ function ChatSession(userId) {
     this._subscribedRoomIds = [];
 
     this.updateRoom = function(roomId) {
-        console.info("Updating RoomId")
-        if (roomId != self.roomId) {
+        if (roomId != self.roomId)
             self.roomId = roomId;
-        }
     };
 
     this.send = function(text) {
@@ -1963,12 +1966,26 @@ var chatUI = {
         } else {
             $('#roster-loading').css('display', 'block');
             $('#roster').css('display', 'none');
-            d = $.get('/ajax/chat/mystatus');
-            d.then(function() {
-                $('#roster-loading').css('display', 'none');
-                $('#roster').css('display', 'block');
-                chatUI._inited = true;
-            });
+
+            // Wait till we are connected to the cometd before enabling chat.
+            function fetchMyStatus() {
+                d = $.get('/ajax/chat/mystatus');
+                d.then(function() {
+                    $('#roster-loading').css('display', 'none');
+                    $('#roster').css('display', 'block');
+                    chatUI._inited = true;
+                });
+            }
+            function signoutChat() {
+                $$.chat.signout(false);
+            }
+
+            if ($$.comet.connected)
+                fetchMyStatus();
+
+            $$.subscribe('cometd.connect.connected', fetchMyStatus);
+            $$.subscribe('cometd.connect.broken', signoutChat);
+            $$.subscribe('cometd.connect.disconnected', signoutChat);
         }
     },
 
@@ -2109,7 +2126,7 @@ var chatUI = {
             var userA = a[1], userB = b[1];
             if (userA.status == userB.status)
                 return userA.name > userB.name;
-            return orderedStatuses.indexOf(userA.status) < orderedStatuses.indexOf(userB.status);
+            return orderedStatuses.indexOf(userA.status) > orderedStatuses.indexOf(userB.status);
         });
 
         $("#roster-container .roster-list").empty();
