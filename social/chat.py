@@ -56,8 +56,9 @@ class ChatResource(base.BaseResource):
 
             yield comet.publish('/chat/%s'%(channelId), message)
             startKey = '%s:'%recipientId
-            count = yield db.get_count(channelId, "channelSubscribers",
-                                       start=startKey, finish=startKey)
+            cols = yield db.get_slice(channelId, "channelSubscribers",
+                                      start=startKey, count=1)
+            count = len([col for col in cols if col.column.name.startswith(startKey)])
             if not count:
                 yield comet.publish('/notify/%s'%(recipientId), data)
 
