@@ -148,7 +148,6 @@ class CometdClient:
                 if channel=='/meta/connect' and messageId == _message.get('id', ''):
                     advice = _message.get('advice', None)
                     if advice and advice.get('reconnect', None):
-                        advice['reconnect'] = 'handshake'
                         raise CometRetryException(_message)
         else:
             self.clientId = None
