@@ -10,11 +10,12 @@ from telephus.cassandra     import ttypes
 from twisted.internet       import defer
 from twisted.web            import resource, server, http
 
-from social                 import _, __, db, utils, comet, errors
+from social                 import _, __, db, utils,  errors
 from social.base            import BaseResource
 from social.isocial         import IAuthInfo
 from social.logging         import log
 from social                 import template as t
+from social.comet           import comet
 
 class PresenceStates:
     OFFLINE   = 'offline'
@@ -63,7 +64,7 @@ def updateAndPublishStatus(userId, orgId, sessionId, status, user=None):
                 'name': user['basic']['name'],
                 'title': user['basic']['jobTitle'],
                 'avatar': utils.userAvatar(userId, user, 's')}
-        yield comet.pushToCometd('/presence/'+orgId, data)
+        yield comet.publish('/presence/'+orgId, data)
 
 
 def getMostAvailablePresence(states):
