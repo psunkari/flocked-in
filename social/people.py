@@ -214,7 +214,7 @@ def _sendInvitations(myOrgUsers, otherOrgUsers, me, myId, myOrg):
             textBody = (myOrgBody + signature) % locals()
 
         # XXX: getBlock blocks the application for disk reads when reading template
-        htmlBody = getBlock("emails.mako", "invite", **locals())
+        htmlBody = t.getBlock("emails.mako", "invite", **locals())
         deferreds.append(utils.sendmail(emailId, subject, textBody, htmlBody))
         sentUsers.append(emailId)
 
