@@ -5,7 +5,7 @@ from ordereddict        import OrderedDict
 from telephus.cassandra import ttypes
 from twisted.internet   import defer
 from social.isocial     import IAuthInfo
-from social.presence    import PresenceStates
+from social.presence    import PresenceStates, getMostAvailablePresence
 from social             import base, utils, db, errors, constants
 from social.comet       import comet
 from social             import template as t
@@ -27,6 +27,7 @@ class ChatResource(base.BaseResource):
 
         authInfo = request.getSession(IAuthInfo)
         myId = authInfo.username
+        orgId = authInfo.organization
         timeuuid = uuid.uuid1().bytes
 
         recipientId, recipient = yield utils.getValidEntityId(request, 'to')
@@ -37,6 +38,15 @@ class ChatResource(base.BaseResource):
 
         chatId = utils.getUniqueKey()
         sessionId = request.getCookie('session')
+        try:
+            col = yield db.get(orgId, 'presence', sessionId, myId)
+        except ttypes.NotFoundException:
+            raise errors.InvalidRequest()
+
+        cols = yield db.get_slice(orgId, "presence", super_column=recipientId)
+        recipientStatus = getMostAvailablePresence(utils.columnsToDict(cols).values())
+        if recipientStatus == PresenceStates.OFFLINE:
+            raise errors.InvalidRequest()
 
         message = {"from": myName, "to": recipientId, "message":comment,
                    "timestamp": time.time(), "avatar": myAvatar}
