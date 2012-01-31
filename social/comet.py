@@ -10,7 +10,7 @@ import httplib
 from    urlparse                import urljoin, urlparse
 
 from zope.interface             import implements
-from twisted.python             import log
+#from twisted.python             import log
 from twisted.internet           import defer, reactor, protocol, threads, task
 from twisted.web                import client
 from twisted.web.iweb           import IBodyProducer
@@ -19,6 +19,7 @@ from twisted.web.client         import Agent
 from twisted.web.http_headers   import Headers
 
 from social                     import config
+from social.logging             import log
 
 COMET_BASEURL = config.get('Cometd', 'BaseUrl')
 COMET_PATH = config.get('Cometd', 'Path')
@@ -75,6 +76,7 @@ class CometdClient:
         self._supportedVersion = 1.0
         self._cookies = {'session': secret}
         self.url = urljoin("http://"+self.baseUrl, path)
+        self._shutdown = False
 
     def _request(self, message, headers=None, method='POST'):
         agent = Agent(reactor)
@@ -118,7 +120,6 @@ class CometdClient:
         for cookie in cookies:
             (name, value) = cookie.split(';')[0].split('=')
             self._cookies[name] = value
-
         body = json.loads(body)
         for message in body:
             if message.get('channel', None) == "/meta/handshake":
@@ -158,6 +159,7 @@ class CometdClient:
        Publish to [/meta/disconnect] channel to disconnect from the server
         Will need clientId, request id and BAYEUX_BROWSER
         """
+        self._shutdown = True
         message = self._createBayeuxMessage()
         message.update({"channel": "/meta/disconnect"})
         (response, body) = yield self._request(message)
@@ -195,7 +197,7 @@ comet = CometdClient(COMET_BASEURL, COMET_PATH, COMET_SECRET)
 def startup():
     global comet
     conn = httplib.HTTPConnection(COMET_BASEURL, timeout=60)
-    @defer.inlineCallbacks
+
     def _startup(comet, conn):
         timeout = 30000
         while 1:
@@ -209,18 +211,31 @@ def startup():
                     interval = advice.get('interval', 0)
                     time.sleep(interval/1000)
                 elif advice['reconnect'] == 'handshake':
-                    #yield comet.handshake()
-                    yield threads.blockingCallFromThread(reactor, comet.handshake)
+                    threads.blockingCallFromThread(reactor, comet.handshake)
                 elif advice['reconnect'] == 'none':
                     return
+            except Exception, e:
+                raise Exception(e)
+    timeout = 1
+    while 1:
+        try:
+            yield comet.handshake()
+            yield threads.deferToThread(_startup, comet, conn)
+            timeout = 1
+        except Exception as e:
+            comet.clientId = None
+            for i in range(timeout):
+                yield threads.deferToThread(time.sleep, 1)
+                if comet._shutdown:
+                    break
+            timeout = timeout *2 if timeout < 32 else 60
+            log.err(e)
+        if comet._shutdown:
+            break
 
-    try:
-        yield comet.handshake()
-        yield threads.deferToThread(_startup, comet, conn)
-    except Exception as ex:
-        log.err(ex)
 
 d = startup()
+d.addErrback(lambda x: log.err(x))
 
 if __name__ == "__main__":
     d = startup()
