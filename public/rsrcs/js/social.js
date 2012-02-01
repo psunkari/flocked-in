@@ -1992,9 +1992,10 @@ var chatUI = {
                        '<div class="roster-dlg-title">' +
                             '<div class="roster-chat-status-icon">&nbsp;</div>'  +
                             '<div class="roster-chat-name"></div>'  +
-                            '<div class="roster-chat-actions">' +
-                                '<span class="roster-chat-actions-hide">_</span>' +
-                                '<span class="roster-chat-actions-remove">X</span>' +
+                            '<div class="roster-chat-actions roster-chat-actions-maximized">' +
+                                '<span class="roster-chat-actions-maximize">&#9635;</span>' +
+                                '<span class="roster-chat-actions-minimize">_</span>' +
+                                '<span class="roster-chat-actions-remove">x</span>' +
                             '</div>'  +
                             '<div class="clear"></div>' +
                         '</div>' +
@@ -2101,8 +2102,16 @@ var chatUI = {
                 self.close($template, true);
             })
 
-            $('.roster-chat-actions-hide', $template).click(function() {
+            $('.roster-chat-actions-minimize', $template).click(function() {
                 $('.roster-dlg-center', $template).toggle();
+                $('.roster-chat-actions', $template).removeClass('roster-chat-actions-maximized');
+                $('.roster-chat-actions', $template).addClass('roster-chat-actions-minimized');
+            })
+
+            $('.roster-chat-actions-maximize', $template).click(function() {
+                $('.roster-dlg-center', $template).toggle();
+                $('.roster-chat-actions', $template).removeClass('roster-chat-actions-minimized');
+                $('.roster-chat-actions', $template).addClass('roster-chat-actions-maximized');
             })
 
             $('.roster-chat-input', $template).keydown(function(e) {

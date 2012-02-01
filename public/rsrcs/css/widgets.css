@@ -401,16 +401,33 @@ input::-moz-focus-inner {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    width: 170px;
+    width: 160px;
 }
 
 .roster-chat-actions {
     float: right;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -o-user-select: none;
 }
 
 .roster-chat-actions span {
-    padding: 0 4px;
+    padding: 0 4px 2px 4px;
     cursor: pointer;
+}
+
+.roster-chat-actions span:hover {
+    background-color: #F2F1F0;
+    color: #333333;
+}
+
+.roster-chat-actions-maximized > .roster-chat-actions-maximize {
+    display: none;
+}
+.roster-chat-actions-minimized > .roster-chat-actions-minimize {
+    display: none;
 }
 
 .roster-chat-logs {
@@ -452,6 +469,7 @@ input::-moz-focus-inner {
     border-style: solid !important;
     border-width: 1px !important;
     font-size: 13px;
+    height: 47px;
 }
 
 .roster-chat-input:focus {
