@@ -1969,8 +1969,17 @@ var chatUI = {
 
             // Wait till we are connected to the cometd before enabling chat.
             function chatConnected() {
-                d = $.get('/ajax/chat/mystatus');
+                statusOnServer = ''
+                d = $.get('/ajax/chat/mystatus', '', function(data) {statusOnServer = data.status}, "json");
                 d.then(function() {
+                    // Sign-out if comet has reloaded or if my status is offline as per server
+                    if ($.cometd.isReload() || statusOnServer == 'offline')
+                        $$.chat.signout(false);
+
+                    // Sign-in with previous status
+                    if (statusOnServer != 'offline')
+                        $$.chat.signin(statusOnServer);
+
                     $('#roster-error').remove();
                     $('#roster-loading').css('display', 'none');
                     $('#roster').css('display', 'block');
