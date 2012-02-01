@@ -391,6 +391,8 @@ input::-moz-focus-inner {
     float: left;
     position: absolute;
     left: 2px;
+    height: 16px;
+    width: 16px;
 }
 
 .roster-chat-name {
@@ -429,7 +431,7 @@ input::-moz-focus-inner {
 }
 
 .roster-msg-box {
-    color: #73563D;
+    color: #c50000;
     padding-left: 10px;
     white-space: pre-wrap;
     word-wrap: break-word;

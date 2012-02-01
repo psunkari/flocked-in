@@ -1809,8 +1809,8 @@ var chat = {
             // We do not have the roomId so we have nothing to store. The room
             // id is received when the user actually makes the post.
         }
-        // This is called from the UI only, so always focus on the input
-        $$.chatUI.create(userId, true);
+
+        roomObj.startChat();
     },
 
     signin: function(status) {
@@ -1824,9 +1824,12 @@ var chat = {
             $.get("/ajax/presence",
                function(users) {
                     $.each(users, function(idx, user) {
-                        var userId = user["userId"];
-                        chat.userMap[userId] = user;
-                    });
+                            var userId = user["userId"],
+                                remoteStatus = user["status"];
+                            chat.userMap[userId] = user;
+                            if (userId in chat.user2room)
+                                chat.user2room[userId].updateRemoteStatus(remoteStatus);
+                        });
                     chat.users = users;
                     myPresenceSub = $.cometd.subscribe('/presence/'+$$.config.myId, chat.handlePresence);
                     orgPresenceSub = $.cometd.subscribe('/presence/'+$$.config.orgId, chat.handlePresence);
@@ -1842,12 +1845,13 @@ var chat = {
         return d;
     },
 
-    signout: function(closeAll) {
+    signout: function() {
         d = $.post("/ajax/presence", {"status":"offline"});
         d.then(function() {
             $.each(chat._subscriptions, function(idx, subscription) {
                     $.cometd.unsubscribe(subscription);
                 });
+            chat._subscriptions = [];
             chat.status = "offline";
             $$.chatUI.updateMyStatus("offline");
 
@@ -1855,8 +1859,9 @@ var chat = {
             chat.userMap = {};
             $$.chatUI.updateRosterList();
 
-            if (closeAll === undefined || closeAll)
-                $$.chatUI.closeAll();
+            $.each(chat.user2room, function(userId, roomObj) {
+                    roomObj.updateLocalStatus('offline');
+                });
         });
         return d;
     }
@@ -1872,6 +1877,8 @@ function ChatSession(userId) {
     this.fromId = myId;
     this.toId = userId;
     this.roomId = "";
+    this.dialog = null;
+    this.remoteUserOffline = false;
     this._subscribedRoomIds = [];
 
     this.updateRoom = function(roomId) {
@@ -1904,6 +1911,7 @@ function ChatSession(userId) {
                         }
                     }),
                     subscription = $.cometd.subscribe('/chat/'+self.roomId, self.receive);
+                chat._subscriptions.push(subscription);
             } else {
                 _send(postData);
             }
@@ -1912,10 +1920,10 @@ function ChatSession(userId) {
 
     this.startChat = function(message) {
         if (message != undefined) {
-            $$.chatUI.create(self.toId, false);
+            self.dialog = $$.chatUI.create(self.toId, false);
             $$.chatUI.updateMessage(self.toId, message);
         } else {
-            $$.chatUI.create(self.toId, true);
+            self.dialog = $$.chatUI.create(self.toId, true);
         }
 
     };
@@ -1924,11 +1932,47 @@ function ChatSession(userId) {
         $$.chatUI.updateMessage(self.toId, message.data);
     };
 
+    this._updateWindowStatus = function() {
+        var $template = self.dialog,
+            localUserOffline = $$.chat.status == 'offline',
+            reason = '';
+
+        if (!localUserOffline && !self.remoteUserOffline) {
+            $('.roster-msg-box', $template).toggleClass('roster-msg-box-show', false);
+            $('.roster-chat-input', $template).prop("disabled", false);
+        }
+        else {
+            reason = localUserOffline? 'You are currently offline'
+                                       : self._username + ' is currently offline';
+            $('.roster-chat-input', $template).prop("disabled", true);
+            $('.roster-msg-box', $template).html(reason);
+            $('.roster-msg-box', $template).toggleClass('roster-msg-box-show', true);
+        }
+    };
+
+    this.updateRemoteStatus = function(status) {
+        self.remoteUserOffline = status === 'offline';
+        if (self.dialog)
+            $('.roster-chat-status-icon', self.dialog).removeClass($$.chatUI.allClassesString)
+                                                      .addClass('roster-status-'+status);
+        self._updateWindowStatus();
+    };
+
+    this.updateLocalStatus = function(status) {
+        if (status === 'offline') {
+            self.unsubscribe();
+            self.updateRemoteStatus(status);
+        } else {
+            self._updateWindowStatus();
+        }
+    };
+
     this.unsubscribe = function() {
-        $(self._roomSubscriptions).each() (function(s) {
+        $.each(self._roomSubscriptions, function(i, s) {
                     $.cometd.unsubscribe(s);
-                })
-        self._subscribedRoomIds = []
+                });
+        self._subscribedRoomIds = [];
+        self._roomSubscriptions = [];
     };
 }
 
@@ -1946,7 +1990,7 @@ var chatUI = {
                  '<div class="roster-dlg-inner">' +
                    '<div class="roster-dlg-contents">' +
                        '<div class="roster-dlg-title">' +
-                            '<div class="icon roster-chat-status-icon">&nbsp;</div>'  +
+                            '<div class="roster-chat-status-icon">&nbsp;</div>'  +
                             '<div class="roster-chat-name"></div>'  +
                             '<div class="roster-chat-actions">' +
                                 '<span class="roster-chat-actions-hide">_</span>' +
@@ -2084,6 +2128,8 @@ var chatUI = {
         this.updateWindowStatus(userId);
         if (focus)
             $('.roster-chat-input', $template).focus();
+
+        return $template;
     },
 
     close: function(dlg, destroy) {
@@ -2117,15 +2163,17 @@ var chatUI = {
     },
 
     updateMessage: function(dlgId, message) {
-        //{'from':'', 'to':'', 'message':'', timestamp:''}
-        chatUI.create(dlgId, false);
-        var timestamp = new Date(parseInt(message.timestamp)*1000);
-        var hours = timestamp.getHours();
-        var AMPM = hours > 12 ? "PM" : "AM";
+        chatUI.create(dlgId, false);  // Show the dialog, if not already visible.
+
+        var timestamp = new Date(parseInt(message.timestamp)*1000),
+            hours = timestamp.getHours(),
+            AMPM = hours > 12 ? "PM" : "AM",
+            minutes = timestamp.getMinutes(),
+            minuteString = minutes < 10 ? "0"+minutes : minutes,
+            dateString = '';
+
         hours = hours > 12 ?  hours-12: hours;
-        var minutes = timestamp.getMinutes();
-        var minuteString = minutes < 10 ? "0"+minutes : minutes;
-        var dateString = hours + ":" + minuteString + " " + AMPM
+        dateString = hours + ":" + minuteString + " " + AMPM;
 
         var ul = $("#chat-"+dlgId+"-outer .roster-chat-logs"),
             tmpl = '<li class="chat-message-' + message.from + '"><div class="chat-avatar-wrapper">'+
@@ -2133,7 +2181,7 @@ var chatUI = {
                     '<div class="chat-message-wrapper">' +
                         '<div class="chat-message-from">' + message.from +
                         '</div><div class="chat-message">' + message.message +
-                   '</div></div><div><abbr class="chat-message-time timestamp" data-ts="' + message.timestamp + '">' +
+                   '</div></div><div><abbr class="chat-message-time"' + message.timestamp + '">' +
                    dateString + '</abbr></div><div class="clear"></div></li>',
             ulHeight = ul.prop('scrollHeight');
 
@@ -2189,26 +2237,17 @@ var chatUI = {
     updateMyStatus: function(status) {
         $("#user-online-status-icon").attr("src", "/rsrcs/img/"+status+".png");
         $("#user-online-status-text").html(status);
+
+        // Update status on any existing sessions
+        $.each($$.chat.rooms, function(i, r) {
+                r.updateLocalStatus(status);
+            });
     },
 
     updateWindowStatus: function(userId) {
-        //Update the window title and status icon when the status changes
-        if (chatUI._dialogs["chat-"+userId]) {
-            var $template = chatUI._dialogs["chat-"+userId],
-                status = $$.chat.userMap[userId]['status'],
-                name = $$.chat.userMap[userId]['name'];
-
-            $('.roster-chat-status-icon', $template).removeClass(chatUI.allClassesString).addClass('roster-status-'+status);
-            if (status === "offline") {
-                $('.roster-chat-input', $template).prop("disabled", true);
-                var not_online_string = name + " is currently unavailable for chat."
-                $('.roster-msg-box', $template).html(not_online_string);
-                $('.roster-msg-box', $template).toggleClass('roster-msg-box-show', true);
-            }else {
-                $('.roster-msg-box', $template).toggleClass('roster-msg-box-show', false);
-                $('.roster-chat-input', $template).prop("disabled", false);
-            }
-        }
+        roomObj = $$.chat.user2room[userId];
+        if (roomObj)
+            roomObj.updateRemoteStatus($$.chat.userMap[userId]['status']);
     },
 
     setStatus: function(status) {
