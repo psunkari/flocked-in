@@ -139,12 +139,14 @@ class ChatResource(base.BaseResource):
         orgId = authInfo.organization
         sessionId = request.getCookie('session')
 
+        status = ''
         try:
             row = yield db.get(orgId, 'presence', sessionId, myId)
-            request.write("$$.chat.signin('%s');" % row.column.value)
+            status = row.column.value
         except Exception as ex:
-            request.write('$$.chat.signout(false);')
+            status = PresenceStates.OFFLINE
 
+        request.write(json.dumps({"status": status}))
 
 
     def render_GET(self, request):

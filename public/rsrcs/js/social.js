@@ -1841,7 +1841,8 @@ var chat = {
     },
 
     signout: function(closeAll) {
-        $.post("/ajax/presence", {"status":"offline"}).then(function() {
+        d = $.post("/ajax/presence", {"status":"offline"});
+        d.then(function() {
             $.each(chat._subscriptions, function(idx, subscription) {
                     $.cometd.unsubscribe(subscription);
                 });
@@ -1855,6 +1856,7 @@ var chat = {
             if (closeAll === undefined || closeAll)
                 $$.chatUI.closeAll();
         });
+        return d;
     }
 }
 
@@ -1969,8 +1971,22 @@ var chatUI = {
 
             // Wait till we are connected to the cometd before enabling chat.
             function chatConnected() {
-                d = $.get('/ajax/chat/mystatus');
+                statusOnServer = ''
+                d = $.get('/ajax/chat/mystatus', '', function(data) {statusOnServer = data.status}, "json");
                 d.then(function() {
+                    var d2 = null;
+                    // Sign-out if comet has reloaded or if my status is offline as per server
+                    if ($.cometd.isReload() || statusOnServer == 'offline')
+                        d2 = $$.chat.signout(false);
+
+                    // Sign-in with previous status
+                    if (statusOnServer != 'offline') {
+                        if (d2)
+                            d2.then(function() { $$.chat.signin(statusOnServer) });
+                        else
+                            $$.chat.signin(statusOnServer);
+                    }
+
                     $('#roster-error').remove();
                     $('#roster-loading').css('display', 'none');
                     $('#roster').css('display', 'block');
@@ -1986,7 +2002,7 @@ var chatUI = {
             }
 
             if ($$.comet.connected)
-                fetchMyStatus();
+                chatConnected();
 
             $$.subscribe('cometd.connect.connected', chatConnected);
             $$.subscribe('cometd.connect.broken', chatConnectionBroken);
