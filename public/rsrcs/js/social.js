@@ -1986,7 +1986,7 @@ var chatUI = {
             }
 
             if ($$.comet.connected)
-                fetchMyStatus();
+                chatConnected();
 
             $$.subscribe('cometd.connect.connected', chatConnected);
             $$.subscribe('cometd.connect.broken', chatConnectionBroken);
