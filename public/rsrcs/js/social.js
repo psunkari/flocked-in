@@ -2251,7 +2251,7 @@ var chatUI = {
         $("#user-online-status-text").html(status);
 
         // Update status on any existing sessions
-        $.each($$.chat.rooms, function(i, r) {
+        $.each($$.chat.user2room, function(i, r) {
                 r.updateLocalStatus(status);
             });
     },

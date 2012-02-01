@@ -30,12 +30,15 @@ jquery_js='rsrcs/js/jquery-1.6.4.js:rsrcs/js/jquery.address-1.4.js:'\
 
 social_js='rsrcs/js/social.js'
 
+comet_js='rsrcs/js/json2.js:/rsrcs/js/Cometd.js:/rsrcs/js/ReloadExtension.js:'\
+'/rsrcs/js/jquery.cometd.js:/rsrcs/js/jquery.cometd-reload.js'
+
 
 #
 # Output files
 #
 out_styles=( "$social_css" "$about_css" )
-out_scripts=( "$jquery_js" "$social_js" )
+out_scripts=( "$jquery_js" "$social_js" "$comet_js" )
 
 
 #
