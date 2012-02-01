@@ -26,7 +26,8 @@ jquery_js='rsrcs/js/jquery-1.6.4.js:rsrcs/js/jquery.address-1.4.js:'\
 'rsrcs/js/jquery.autogrow-textarea.js:rsrcs/js/jquery.html5form-1.3.js:'\
 'rsrcs/js/jquery.iframe-transport.js:rsrcs/js/jquery.ui.js:'\
 'rsrcs/js/jquery.ui.menu.js:rsrcs/js/jquery.ui.autocomplete.js:'\
-'rsrcs/js/jquery.autoGrowInput.js:rsrcs/js/jquery.tagedit.js'
+'rsrcs/js/jquery.autoGrowInput.js:rsrcs/js/jquery.tagedit.js:'\
+'rsrcs/js/jquery.cookie.js'
 
 social_js='rsrcs/js/social.js'
 
