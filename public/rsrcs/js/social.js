@@ -1891,7 +1891,7 @@ function ChatSession(userId) {
         if (!text || !text.length) return;
 
         function _send(data) {
-          $.post("/ajax/chat", data);
+          $.post("/ajax/chat", data, function(response) {}, "json");
         }
 
         if (self.roomId === "")
