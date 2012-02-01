@@ -8,7 +8,7 @@ from twisted.web            import resource, server, static, util, http
 from twisted.internet       import defer
 from twisted.python         import components
 
-from social                 import db, utils, base, plugins
+from social                 import db, utils, base, plugins, config
 from social                 import template as t
 from social.logging         import log
 from social.profile         import ProfileResource
@@ -347,6 +347,26 @@ class RootResource(resource.Resource):
                     d = defer.succeed(match)
             else:
                 d = defer.succeed(match)
+
+            if path in ('chat', 'chats', 'presence'):
+                chatEnabledOrgs = config.get('Chat', 'orgIds').split(',')
+                def isChatEnabled(res1):
+                    def _isChatEnabled(res):
+                        orgId = res.organization
+                        if orgId and orgId not in chatEnabledOrgs:
+                            return resource.NoResource("Page not found")
+                        elif orgId:
+                            return match
+                        else:
+                            signinPath = '/signin'
+                            if request.path != '/':
+                                signinPath = "/signin?_r=%s" % urllib.quote(request.uri, '*@+/')
+                            return util.Redirect(signinPath)
+
+                    authinfo = defer.maybeDeferred(request.getSession, IAuthInfo)
+                    authinfo.addCallback(_isChatEnabled)
+                    return authinfo
+                d.addCallback(isChatEnabled)
 
             #
             # We update the CSRF token when it is a GET request
