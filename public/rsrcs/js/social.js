@@ -1879,6 +1879,7 @@ function ChatSession(userId) {
     this.roomId = "";
     this.dialog = null;
     this.remoteUserOffline = false;
+    this.localUserOffline = false;
     this._subscribedRoomIds = [];
 
     this.updateRoom = function(roomId) {
@@ -1890,7 +1891,7 @@ function ChatSession(userId) {
         if (!text || !text.length) return;
 
         function _send(data) {
-          $.post("/ajax/chat", data);
+          $.post("/ajax/chat", data, function(response) {}, "json");
         }
 
         if (self.roomId === "")
@@ -1934,16 +1935,15 @@ function ChatSession(userId) {
 
     this._updateWindowStatus = function() {
         var $template = self.dialog,
-            localUserOffline = $$.chat.status == 'offline',
             reason = '';
 
-        if (!localUserOffline && !self.remoteUserOffline) {
+        if (!self.localUserOffline && !self.remoteUserOffline) {
             $('.roster-msg-box', $template).toggleClass('roster-msg-box-show', false);
             $('.roster-chat-input', $template).prop("disabled", false);
         }
         else {
-            reason = localUserOffline? 'You are currently offline'
-                                       : self._username + ' is currently offline';
+            reason = self.localUserOffline? 'You are currently offline'
+                                          : self._username + ' is currently offline';
             $('.roster-chat-input', $template).prop("disabled", true);
             $('.roster-msg-box', $template).html(reason);
             $('.roster-msg-box', $template).toggleClass('roster-msg-box-show', true);
@@ -1960,9 +1960,11 @@ function ChatSession(userId) {
 
     this.updateLocalStatus = function(status) {
         if (status === 'offline') {
+            self.localUserOffline = true;
             self.unsubscribe();
             self.updateRemoteStatus(status);
         } else {
+            self.localUserOffline = false;
             self._updateWindowStatus();
         }
     };
@@ -2063,6 +2065,7 @@ var chatUI = {
             function chatConnectionBroken() {
                 $('<div id="roster-error">Chat servers are currently not reachable</div>').insertBefore('#roster');
                 $('#roster').css('display', 'none');
+                chatUI.updateMyStatus('offline');
             }
 
             if ($$.comet.connected)
