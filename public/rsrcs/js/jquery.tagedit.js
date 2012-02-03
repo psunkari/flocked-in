@@ -99,6 +99,7 @@
 		var baseNameRegexp = new RegExp("^(.*)\\[([0-9]*?("+options.deletedPostfix+"|"+options.addedPostfix+")?)?\]$", "i");
 
 		var baseName = elements.eq(0).attr('name').match(baseNameRegexp);
+		var basePlaceholderText = elements.eq(0).attr('placeholder') || "";
 		if(baseName && baseName.length == 4) {
 			baseName = baseName[1];
 		}
@@ -149,7 +150,7 @@
 			// put an input field at the End
 			// Put an empty element at the end
 			html = '<li class="tagedit-listelement tagedit-listelement-new">';
-			html += '<input type="text" name="'+baseName+'[]" value="" disabled="disabled" class="tagedit-input tagedit-input-disabled" dir="'+options.direction+'"/>';
+			html += '<input type="text" name="'+baseName+'[]" value="" class="tagedit-input tagedit-input-disabled" dir="'+options.direction+'" placeholder="'+ basePlaceholderText +'"/>';
 			html += '</li>';
 			html += '</ul>';
 
@@ -158,7 +159,7 @@
 				// Set function on the input
 				.find('.tagedit-input')
 					.each(function() {
-						$(this).autoGrowInput({comfortZone: 15, minWidth: 15, maxWidth: 20000});
+						$(this).autoGrowInput({comfortZone: 30, minWidth: 180, maxWidth: 20000});
 
 						// Event ist triggert in case of choosing an item from the autocomplete, or finish the input
 						$(this).bind('transformToTag', function(event, id) {
@@ -185,6 +186,8 @@
 
 									$(this).parent().before(html);
 								}
+							}else {
+								$$.alerts.info($(this).val() + " has already been added");
 							}
 							$(this).val('');
 
@@ -222,9 +225,10 @@
 							if($.inArray(code, options.breakKeyCodes) > -1) {
 								if($(this).val().length > 0 && $('ul.ui-autocomplete #ui-active-menuitem').length == 0) {
 									$(this).trigger('transformToTag');
+									event.preventDefault();
+									return false;
 								}
-							event.preventDefault();
-							return false;
+							return true;
 							}
 							return true;
 						})
@@ -239,7 +243,7 @@
 						.blur(function() {
 							if($(this).val().length == 0) {
 								// disable the field to prevent sending with the form
-								$(this).attr('disabled', 'disabled').addClass('tagedit-input-disabled');
+								$(this).addClass('tagedit-input-disabled');
 							}
 							else {
 								// Delete entry after a timeout
@@ -273,7 +277,6 @@
 							}
 						default:
 							$(this).find('.tagedit-input')
-								.removeAttr('disabled')
 								.removeClass('tagedit-input-disabled')
 								.focus();
 					}
@@ -355,7 +358,7 @@
 				.end()
 				.find(':text')
 					.focus()
-					.autoGrowInput({comfortZone: 10, minWidth: 15, maxWidth: 20000})
+					.autoGrowInput({comfortZone: 30, minWidth: 30, maxWidth: 20000})
 					.keypress(function(event) {
 						switch(event.keyCode) {
 							case 13: // RETURN
@@ -403,7 +406,7 @@
 		function isNew(value, checkAutocomplete) {
             checkAutocomplete = typeof checkAutocomplete == 'undefined'? false : checkAutocomplete;
 			var autoCompleteId = null;
-            
+
             var compareValue = options.checkNewEntriesCaseSensitive == true? value : value.toLowerCase();
 
 			var isNew = true;
@@ -440,7 +443,7 @@
 						}
 					});
 				}
-                
+
 				// If there is an entry for that already in the autocomplete, don't use it (Check could be case sensitive or not)
 				for (var i = 0; i < result.length; i++) {
                     var label = options.checkNewEntriesCaseSensitive == true? result[i].label : result[i].label.toLowerCase();

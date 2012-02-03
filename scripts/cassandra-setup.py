@@ -55,6 +55,9 @@ def createColumnFamilies(client):
     sessions = CfDef(KEYSPACE, 'sessions', 'Standard', 'BytesType', None,
                      'Session information for logged in users')
     yield client.system_add_column_family(sessions)
+    userSessionsMap = CfDef(KEYSPACE, 'userSessionsMap', 'Standard', 'BytesType', None,
+                            'userId-Session Map')
+    yield client.system_add_column_family(userSessionsMap)
 
     # Invitations sent out by existing users
     # Key is the e-mail of the recipient - contains inviteKey, sender's key etc;
@@ -103,6 +106,9 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(blockedUsers)
 
 
+    deletedUsers = CfDef(KEYSPACE, "deletedUsers", "Standard", "UTF8Type", None,
+                         "List of users removed from the networks by admins.")
+    yield client.system_add_column_family(deletedUsers)
     # List of members in a group
     # userKey => <subscribed>:<activityKey>
     groupMembers = CfDef(KEYSPACE, 'groupMembers', 'Standard', 'UTF8Type', None,
@@ -150,7 +156,7 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(userItems)
 
     # Index of posts by type
-    for itemType in ['status', 'link', 'document', 'question', 'event', 'poll']:
+    for itemType in ['status', 'link', 'question', 'event', 'poll']:
         columnFamily = "userItems_" + str(itemType)
         userItemsType = CfDef(KEYSPACE, columnFamily, 'Standard',
                               'TimeUUIDType', None,
@@ -167,7 +173,7 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(feedItems)
 
     # Index of feed by type
-    for itemType in ['status', 'link', 'document', 'question', 'event', 'poll']:
+    for itemType in ['status', 'link', 'question', 'event', 'poll']:
         columnFamily = "feed_" + str(itemType)
         feedType = CfDef(KEYSPACE, columnFamily, 'Standard', 'TimeUUIDType',
                          None, 'Feed of %s items'%(itemType))

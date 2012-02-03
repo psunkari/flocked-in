@@ -27,6 +27,7 @@
           <div id ="group-links" ></div>
           <div id ="group-files" ></div>
           <div id ="group-events" ></div>
+          <div id ="group-agenda"></div>
         </div>
         <div id="center">
           <div class='center-contents' id="user-feed">

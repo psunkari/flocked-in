@@ -1260,6 +1260,10 @@ class GroupFeedResource(base.BaseResource):
                                         handlers={"onload":onload}, **args)
             yield renderScriptBlock(request, "group-feed.mako", "groupAdmins",
                                     landing, "#group-admins", "set", True, **args)
+            if "event" in plugins and isMember:
+                blockType = "group"
+                yield plugins["event"].renderSideAgendaBlock(request, landing,
+                                                             blockType, args)
         else:
             yield render(request, "group-feed.mako", **args)
 

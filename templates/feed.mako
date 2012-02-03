@@ -31,6 +31,8 @@
                 ${self._suggestions()}
             %endif
         </div>
+        <div id="agenda">
+        </div>
       </div>
       <div id="center">
         %if script:

@@ -1408,12 +1408,12 @@ var events = {
             "<span class='conversation-composer-recipient-remove button-link' "+
                 "onclick='$$.events.removeUser(this, \""+user_id+"\")'>X</span></div>";
     },
-    showEventInvitees: function(itemId) {
+    showEventAttendance: function(itemId, type) {
         var dialogOptions = {
             id: 'invitee-dlg-'+itemId
         };
         $$.dialog.create(dialogOptions);
-        $.get('/ajax/event/invitee?id='+itemId);
+        $.get('/ajax/event/attendance?id='+itemId+'&type='+type);
     },
     _toValidDateString: function(dateText){
         var dtArray = dateText.split(" ");
@@ -1459,19 +1459,18 @@ var events = {
         })
     },
     autoFillUsers: function(){
-        $('#event-invitee').autocomplete({
-            source: '/auto/users',
-            minLength: 2,
-            select: function( event, ui ) {
-                $('.event-invitees').append(
-                    $$.messaging.formatUser(ui.item.value, ui.item.uid));
-
-                var rcpts = jQuery.trim($('#invitees').val());
-                rcpts = (rcpts == "") ? ui.item.uid: rcpts+","+ui.item.uid
-                $('#invitees').val(rcpts)
-                this.value = "";
-                return false;
-        }
+        $('#event-invitee').tagedit({
+            autocompleteURL: '/auto/users',
+            additionalListClass: 'sharebar',
+            breakKeyCodes: [13, 44, 32],
+            allowEdit: false,
+            allowAdd: false,
+            autocompleteOptions: {
+                    select: function( event, ui ) {
+                            $(this).val(ui.item.value).trigger('transformToTag', [ui.item.uid]);
+                            return false;
+                    }
+            }
         });
     }
 };

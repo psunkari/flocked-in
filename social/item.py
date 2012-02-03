@@ -35,7 +35,8 @@ def _createNewItem(request, myId, myOrgId, richText=False):
 
     plugin = plugins[convType]
     convId = utils.getUniqueKey()
-    conv, attachments = yield plugin.create(request, myId, myOrgId, richText)
+    conv, attachments = yield plugin.create(request, myId, myOrgId,
+                                            convId, richText)
 
     #
     # Check if this item contains any keywords that admins are interested in.
@@ -539,8 +540,7 @@ class ItemResource(base.BaseResource):
 
         target = conv['meta'].get('target', None)
         if target:
-            toFetchEntities = toFetchEntities.extend(target.split(','))
-
+            toFetchEntities.extend(target.split(','))
         cols = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
         entities.update(utils.multiSuperColumnsToDict(cols))
 

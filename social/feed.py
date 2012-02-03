@@ -669,6 +669,10 @@ class FeedResource(base.BaseResource):
                                     handlers={"onload": onload}, **args)
             yield renderScriptBlock(request, "feed.mako", "_suggestions",
                                     landing, "#suggestions", "set", True, **args)
+            if "event" in plugins:
+                blockType = "org" if entityId else "user"
+                yield plugins["event"].renderSideAgendaBlock(request, landing,
+                                                             blockType, args)
 
         if script and landing:
             request.write("</body></html>")

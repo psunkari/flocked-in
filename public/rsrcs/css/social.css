@@ -183,7 +183,12 @@ a:hover, a:active, a:focus {
     height: 23px;
 }
 
-
+.sharebar.tagedit-list {
+    margin-bottom: 0;
+    margin-top: 0;
+    padding-top: 6px;
+    padding-left:8px;
+}
 /*
  * Page Layout - Header.
  */
@@ -1398,6 +1403,10 @@ abbr.timestamp {
     padding: 0 !important;
 }
 
+.sharebar .tagedit-listelement > input {
+    margin-top: 2px;
+}
+
 .styledform abbr {
     color: #a40000;
     border-style: none;
@@ -2052,7 +2061,8 @@ abbr.timestamp {
 
 .event-date-icon {
     position: absolute;
-    width:3em;
+    width: 3.5em;
+    height: 3.5em;
     text-shadow: none !important;
     -moz-border-bottom-colors: none;
     -moz-border-image: none;
@@ -2086,10 +2096,12 @@ abbr.timestamp {
 
 .event-date-day {
     font-size:18px;
+    padding-top: 2px;
 }
 
 .event-contents {
     padding-left: 45px !important;
+    font-size: 12px;
 }
 
 .event-description {
@@ -2097,6 +2109,14 @@ abbr.timestamp {
     color:#808080;
 }
 
+.event-title-text {
+    padding-left: 45px !important;
+    font-weight: bold;
+}
+
+.event-duration-text {
+    font-size: 13px;
+}
 
 /*
  * Styling for preferences
