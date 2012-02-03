@@ -76,6 +76,8 @@ fetchUri: function _fetchUri(str, ignoreHistory) {
 
     if (ignoreHistory === undefined || !ignoreHistory)
         $.address.value(str);
+    if (_gaq)
+        _gaq.push(['_trackPageview', uri.path]);
 
     return deferred;
 },

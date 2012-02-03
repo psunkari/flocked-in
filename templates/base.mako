@@ -71,6 +71,7 @@
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/widgets.css"/>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/messaging.css"/>
   <link rel="shortcut icon" href="/rsrcs/img/favicon.ico" type="image/x-icon" />
+
 %if script:
   <noscript>
     <meta http-equiv="refresh" content="0; URL=${noscriptUrl}"/>
@@ -82,6 +83,7 @@
     url = window.location.href.replace(/_ns=1&?/, "");
     window.location.href = url.replace(/(\?|&)$/, '');
   </script>
+
 %endif
 </head>
 %if script:
@@ -175,7 +177,7 @@
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.menu.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.autocomplete.js"></script>
-  <script type="text/javascript" src="/rsrcs/js/jquery.address-1.4.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/jquery.address-1.4.js?tracker=null"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.autogrow-textarea.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.cookie.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.iframe-transport.js"></script>
@@ -193,6 +195,17 @@
   <script type="text/javascript" src="/rsrcs/js/social.js"></script>
   <script type="text/javascript">
     $().ready(function() {$$.ui.init()});
+  </script>
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-2921978-5']);
+    /*_gaq.push(['_trackPageview']);*/
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
   </script>
 %else:
 </body>
