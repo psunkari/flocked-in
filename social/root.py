@@ -8,9 +8,9 @@ from twisted.web            import resource, server, static, util, http
 from twisted.internet       import defer
 from twisted.python         import components
 
-from social                 import db, utils, base, plugins
+from social                 import db, utils, base, plugins, config
+from social                 import template as t
 from social.logging         import log
-from social.template        import render
 from social.profile         import ProfileResource
 from social.settings        import SettingsResource
 from social.isocial         import IAuthInfo
@@ -36,7 +36,10 @@ from social.contact         import ContactResource
 from social.oauth           import OAuthResource
 from social.api             import APIRoot
 from social.apps            import ApplicationResource
-
+from social.chat            import ChatResource
+from social.presence        import PresenceResource
+from social.private         import PrivateResource
+from social.chat            import ChatArchivesResource
 
 def getPluggedResources(ajax=False):
     resources = {}
@@ -90,13 +93,12 @@ class SigninResource(resource.Resource):
         util.redirectTo(urllib.unquote(redirectURL), request)
         request.finish()
 
-    @defer.inlineCallbacks
     def _renderSigninForm(self, request, errcode=''):
         args = {}
         redirect = utils.getRequestArg(request, '_r', sanitize=False) or "/feed"
         args["redirect"] = urllib.quote(redirect,  '*@+/')
         args["reason"] = errcode
-        yield render(request, "signin.mako", **args)
+        t.render(request, "signin.mako", **args)
         request.finish()
 
     def render_GET(self, request):
@@ -192,6 +194,9 @@ class RootResource(resource.Resource):
         self._messages = MessagingResource(self._isAjax)
         self._files = FilesResource(self._isAjax)
         self._apps = ApplicationResource(self._isAjax)
+        self._chat = ChatResource(self._isAjax)
+        self._presence = PresenceResource(self._isAjax)
+        self._chatArchives = ChatArchivesResource(self._isAjax)
 
         if not self._isAjax:
             self._home = HomeResource()
@@ -206,6 +211,7 @@ class RootResource(resource.Resource):
             self._contact = ContactResource()
             self._oauth = OAuthResource()
             self._api = APIRoot()
+            self._private = PrivateResource()
         else:
             self._feedback = FeedbackResource(True)
 
@@ -261,6 +267,8 @@ class RootResource(resource.Resource):
                 match = self._signup
             elif path == "rsrcs":
                 match = self._rsrcs
+            elif path == "private":
+                match = self._private
             elif path == 'password':
                 match = self._signup
             elif path == 'oauth':
@@ -305,6 +313,13 @@ class RootResource(resource.Resource):
             match = self._apps
         elif path == "api":
             match = self._api
+        elif path == 'chat':
+            match = self._chat
+        elif path == 'chats':
+            match = self._chatArchives
+        elif path == 'presence':
+            match = self._presence
+
 
         # Resources exposed by plugins
         elif path in plugins and self._pluginResources.has_key(path):
@@ -332,6 +347,26 @@ class RootResource(resource.Resource):
                     d = defer.succeed(match)
             else:
                 d = defer.succeed(match)
+
+            if path in ('chat', 'chats', 'presence'):
+                chatEnabledOrgs = config.get('Chat', 'orgIds').split(',')
+                def isChatEnabled(res1):
+                    def _isChatEnabled(res):
+                        orgId = res.organization
+                        if orgId and orgId not in chatEnabledOrgs:
+                            return resource.NoResource("Page not found")
+                        elif orgId:
+                            return match
+                        else:
+                            signinPath = '/signin'
+                            if request.path != '/':
+                                signinPath = "/signin?_r=%s" % urllib.quote(request.uri, '*@+/')
+                            return util.Redirect(signinPath)
+
+                    authinfo = defer.maybeDeferred(request.getSession, IAuthInfo)
+                    authinfo.addCallback(_isChatEnabled)
+                    return authinfo
+                d.addCallback(isChatEnabled)
 
             #
             # We update the CSRF token when it is a GET request

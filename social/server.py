@@ -15,6 +15,7 @@ secureCookies = False
 try:
     secureCookies = config.get("General", "SSLOnlyCookies")
 except: pass
+COOKIE_DOMAIN = config.get('General', "CookieDomain")
 
 class RequestFactory(server.Request):
     cookiename = 'session'
@@ -59,10 +60,10 @@ class RequestFactory(server.Request):
             if remember:    # Cookie expires in 1 year
                 self.addCookie(self.cookiename, self.session.uid, path='/',
                                expires=formatdate(time.time()+31536000),
-                               secure=secureCookies, http_only=True)
+                               secure=secureCookies, domain=COOKIE_DOMAIN, http_only=True)
             else:           # Cookie expires at the end of browser session
                 self.addCookie(self.cookiename, self.session.uid, path='/',
-                               secure=secureCookies, http_only=True)
+                               secure=secureCookies, domain=COOKIE_DOMAIN, http_only=True)
             return _component()
         d.addCallbacks(callback)
         d.addErrback(errback)
@@ -127,10 +128,9 @@ class SiteFactory(server.Site):
     @defer.inlineCallbacks
     def clearSession(self, uid):
         session = yield self.getSession(uid)
-        userId = session.getComponent(IAuthInfo).username
+        authInfo = session.getComponent(IAuthInfo)
+        userId = authInfo.username
+        orgId = authInfo.organization
         yield db.remove(uid, "sessions", "auth")
         yield db.remove(userId, "userSessionsMap", uid)
-
-
-
-
+        yield utils.cleanupChat(uid, userId, orgId)

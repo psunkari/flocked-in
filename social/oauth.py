@@ -16,10 +16,9 @@ from twisted.internet   import defer
 from twisted.web        import resource, static, server
 
 from social             import db, utils, base, errors, config, _
-from social             import notifications
+from social             import notifications, template as t
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
-from social.template    import render, renderScriptBlock
 from social.logging     import profile, dump_args, log
 
 
@@ -27,6 +26,7 @@ from social.logging     import profile, dump_args, log
 class OAuthAuthorizeResource(base.BaseResource):
     isLeaf = True
     requireAuth = True
+    _templates = ['oauth.mako']
 
     CLIENT_MISSING = "The application did not supply the required credentials"
     CLIENT_INVALID = "The identity of the requesting application could not be verified"
@@ -35,10 +35,10 @@ class OAuthAuthorizeResource(base.BaseResource):
     SIGNATURE_MISMATCH = "Please re-initiate authorization from the application"
 
 
-    @defer.inlineCallbacks
     def _error(self, request, errstr):
         args  = {"error": True, "errstr": errstr, "title": "Authorization Error"}
-        yield render(request, "oauth.mako", **args)
+        t.render(request, "oauth.mako", **args)
+        return True
 
 
     def _buildFullUri(self, uri, queryStr):
@@ -72,13 +72,13 @@ class OAuthAuthorizeResource(base.BaseResource):
 
         clientId = utils.getRequestArg(request, "client_id")
         if not clientId:
-            yield self._error(request, self.CLIENT_MISSING)
+            self._error(request, self.CLIENT_MISSING)
             return
 
         client = yield db.get_slice(clientId, "apps")
         client = utils.supercolumnsToDict(client)
         if not client:
-            yield self._error(request, self.CLIENT_INVALID)
+            self._error(request, self.CLIENT_INVALID)
             return
 
         # We have a client now.
@@ -88,7 +88,7 @@ class OAuthAuthorizeResource(base.BaseResource):
         redirectUri = utils.getRequestArg(request, 'redirect_uri', sanitize=False)
         clientRedirectUri = b64decode(clientMeta['redirect'])
         if redirectUri and redirectUri != clientRedirectUri:
-            yield self._error(request, self.REDIRECTURI_MISMATCH)
+            self._error(request, self.REDIRECTURI_MISMATCH)
             return
 
         # All errors from here will be sent to the redirectUri
@@ -128,7 +128,7 @@ class OAuthAuthorizeResource(base.BaseResource):
                   (myId, clientId, ' '.join(scopes), redirectUri, state)
         checksum = hmac.new(myOrgId, message, hashlib.sha256)
         args.update({"signature":checksum.hexdigest()})
-        yield render(request, "oauth.mako", **args)
+        t.render(request, "oauth.mako", **args)
 
 
     @defer.inlineCallbacks
@@ -149,13 +149,13 @@ class OAuthAuthorizeResource(base.BaseResource):
                   (myId, clientId, scopes, redirectUri, state)
         checksum = hmac.new(myOrgId, message, hashlib.sha256)
         if signature != checksum.hexdigest():
-            yield self._error(request, self.SIGNATURE_MISMATCH)
+            self._error(request, self.SIGNATURE_MISMATCH)
             return
 
         client = yield db.get_slice(clientId, "apps")
         client = utils.supercolumnsToDict(client)
         if not client:
-            yield self._error(request, self.CLIENT_GONE)
+            self._error(request, self.CLIENT_GONE)
             return
 
         if allow:
@@ -200,6 +200,7 @@ class OAccessTokenResource(base.BaseResource):
     requireAuth = False
     _accessTokenExpiry = 1800       # 30 Minutes
     _refreshTokenExpiry = 3888000   # 45 Days
+    _templates = ['oauth.mako']
 
 
     def _error(self, request, errstr):

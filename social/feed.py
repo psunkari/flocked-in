@@ -5,9 +5,9 @@ from twisted.internet   import defer
 from twisted.web        import server
 
 from social             import db, utils, base, plugins, _, __, errors, people
+from social             import template as t
 from social.isocial     import IAuthInfo
 from social.relations   import Relation
-from social.template    import render, renderDef, renderScriptBlock
 from social.constants   import INFINITY, MAXFEEDITEMS, MAXFEEDITEMSBYTYPE
 from social.constants   import SUGGESTION_PER_PAGE
 from social.logging     import profile, dump_args, log
@@ -577,6 +577,7 @@ def _feedFilter(request, feedId, itemType, start='', count=10):
 class FeedResource(base.BaseResource):
     isLeaf = True
     resources = {}
+    _templates = ['feed.mako']
 
     @profile
     @defer.inlineCallbacks
@@ -623,24 +624,24 @@ class FeedResource(base.BaseResource):
         args["feedId"] = feedId
 
         if script and landing:
-            yield render(request, "feed.mako", **args)
+            t.render(request, "feed.mako", **args)
             request.write('<script>$("#invite-form").html5form({messages: "en"})</script>')
         elif script and appchange:
             onload = '$("#invite-form").html5form({messages: "en"})'
-            yield renderScriptBlock(request, "feed.mako", "layout",
+            t.renderScriptBlock(request, "feed.mako", "layout",
                                     landing, "#mainbar", "set", handlers={'onload':onload}, **args)
         elif script and feedTitle:
-            yield renderScriptBlock(request, "feed.mako", "feed_title",
-                                    landing, "#title", "set", True,
-                                    handlers={"onload": "$$.menu.selectItem('%s')"%(menuId)}, **args)
+            t.renderScriptBlock(request, "feed.mako", "feed_title",
+                                landing, "#title", "set", True,
+                                handlers={"onload": "$$.menu.selectItem('%s')"%(menuId)}, **args)
 
         if script:
             handlers = {}
             handlers["onload"] = handlers.get("onload", "") +\
                                  "$$.files.init('sharebar-attach');"
-            yield renderScriptBlock(request, "feed.mako", "share_block",
-                                    landing, "#share-block", "set",
-                                    handlers=handlers, **args)
+            t.renderScriptBlock(request, "feed.mako", "share_block",
+                                landing, "#share-block", "set",
+                                handlers=handlers, **args)
             yield self._renderShareBlock(request, "status")
 
         if itemType and itemType in plugins and plugins[itemType].hasIndex:
@@ -664,11 +665,11 @@ class FeedResource(base.BaseResource):
 
         if script:
             onload = "(function(obj){$$.convs.load(obj);})(this);"
-            yield renderScriptBlock(request, "feed.mako", "feed", landing,
-                                    "#user-feed", "set", True,
-                                    handlers={"onload": onload}, **args)
-            yield renderScriptBlock(request, "feed.mako", "_suggestions",
-                                    landing, "#suggestions", "set", True, **args)
+            t.renderScriptBlock(request, "feed.mako", "feed", landing,
+                                "#user-feed", "set", True,
+                                handlers={"onload": onload}, **args)
+            t.renderScriptBlock(request, "feed.mako", "_suggestions",
+                                landing, "#suggestions", "set", True, **args)
             if "event" in plugins:
                 blockType = "org" if entityId else "user"
                 yield plugins["event"].renderSideAgendaBlock(request, landing,
@@ -678,7 +679,7 @@ class FeedResource(base.BaseResource):
             request.write("</body></html>")
 
         if not script:
-            yield render(request, "feed.mako", **args)
+            t.render(request, "feed.mako", **args)
 
 
     # The client has scripts and this is an ajax request
@@ -703,9 +704,9 @@ class FeedResource(base.BaseResource):
         args['itemType'] = itemType
 
         onload = "(function(obj){$$.convs.load(obj);})(this);"
-        yield renderScriptBlock(request, "feed.mako", "feed", False,
-                                "#next-load-wrapper", "replace", True,
-                                handlers={"onload": onload}, **args)
+        t.renderScriptBlock(request, "feed.mako", "feed", False,
+                            "#next-load-wrapper", "replace", True,
+                            handlers={"onload": onload}, **args)
 
 
     @profile
@@ -721,9 +722,9 @@ class FeedResource(base.BaseResource):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
 
         onload = "$('form').html5form({messages: 'en'});"
-        yield renderScriptBlock(request, "feed.mako", "customAudience", False,
-                                "#custom-audience-dlg", "set", True,
-                                handlers={"onload": onload}, **args)
+        t.renderScriptBlock(request, "feed.mako", "customAudience", False,
+                            "#custom-audience-dlg", "set", True,
+                            handlers={"onload": onload}, **args)
 
 
     @profile

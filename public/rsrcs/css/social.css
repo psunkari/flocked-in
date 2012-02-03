@@ -993,6 +993,11 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
  * Feed
  */
 
+#welcome-message {
+    font-size: 13px;
+    line-height: 1.5em;
+}
+
 #welcome-message ul {
     padding-left: 20px;
     margin: 5px;
@@ -2417,4 +2422,187 @@ td.file-info, td.file-context, td.file-actions {
 #expertise-container {
     line-height: 1.3em;
     text-transform: capitalize;
+}
+
+.chat-summary {
+    display: inline-block;
+    width: 80%;
+    /*padding-left: 20px;*/
+}
+
+.chat-item ~ .conversation-message-wrapper:last-child {
+    margin-bottom: 4px;
+}
+
+.chat-time {
+    display: inline-block;
+    padding-left: 3px;
+    color: #999999;
+    float: right;
+}
+
+.chat-sender {
+    display: inline-block;
+    /*margin-left: -20px;*/
+    font-weight: bold;
+}
+
+.chat-message-header {
+    margin-top: 4px;
+    padding: 4px 0 0;
+    position: relative;
+}
+
+.chat-item {
+    border-top: 1px dotted #CCCCCC;
+    margin-top: 4px;
+}
+
+.chat-item:first-child {
+    border-top: medium none;
+    padding-top: 0;
+}
+
+/* Roster and chat related CSS */
+
+.chats-icon {
+    background-position: 0 -224px;
+    width: 16px;
+}
+
+#online-status-bar {
+    background-color: #F9F9F9;
+    margin-left: -10px;
+    margin-right: 10px;
+}
+
+#user-online-status-text {
+    font-size: 115%;
+}
+
+#online-status-button {
+    margin: 3px;
+    width: 100%;
+    text-align: left;
+    text-transform: capitalize;
+}
+
+#user-online-status-icon {
+    float: left;
+}
+
+#roster-container {
+    margin-top: 20px;
+}
+
+#roster-list-container {
+    margin-left: -10px;
+    max-height: 200px;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+#roster-linkwrap {
+    position: fixed;
+    left: 25px;
+    bottom: 0;
+    background: transparent;
+}
+
+#roster-linkwrap > a:link {
+    display: block;
+    color: white;
+    font-weight: bold;
+    padding: 5px 20px;
+    background-color: #3E3D39;
+    border-radius: 4px 4px 0 0;
+}
+
+#roster-error {
+    font-size: 10px;
+    color: #c50000;
+    line-height: 1.75em;
+    padding-top: 5px;
+}
+
+.roster-list {
+    margin-top: 5px;
+    margin-right: 10px;
+}
+
+.roster-item {
+    cursor: pointer;
+    position: relative;
+    min-height: 38px;
+    display: block;
+    border-bottom: 1px dotted #DDDDDD;
+}
+
+.roster-item:hover, .roster-item:focus {
+    -moz-transition: background-color 0.2s ease-in-out 0s;
+    -webkit-transition: background-color 0.2s ease-in-out 0s;
+    background-color: #f2f1f0;
+}
+
+.roster-status-icon {
+    left: 3px;
+    position: absolute;
+    top: 11px;
+}
+
+.roster-item-icon {
+    height: 32px;
+    left: 19px;
+    position: absolute;
+    top: 2px;
+    width: 32px;
+}
+
+.roster-icon-holder {
+    display: table-cell;
+    height: 32px;
+    vertical-align: middle;
+}
+
+.roster-status-available {
+    background-image: url(/rsrcs/img/available.png);
+    background-repeat: no-repeat;
+}
+
+.roster-status-offline {
+    background-image: url(/rsrcs/img/offline.png);
+    background-repeat: no-repeat;
+}
+
+.roster-status-away {
+    background-image: url(/rsrcs/img/away.png);
+    background-repeat: no-repeat;
+}
+
+.roster-status-busy {
+    background-image: url(/rsrcs/img/busy.png);
+    background-repeat: no-repeat;
+}
+
+.roster-item-name {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    padding-left: 56px;
+    padding-top: 4px;
+    /*width: 120px;*/
+    margin-bottom: 4px;
+    margin-top: 2px;
+    padding-top: 4px;
+}
+
+.roster-item-title {
+    color: #999999;
+    font-size: 90%;
+    padding-left: 56px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 120px;
+    display: inline-block;
+    overflow: hidden;
 }

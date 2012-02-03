@@ -8,17 +8,18 @@ except:
 
 
 from social             import base, db, utils, errors, feed, people, _, plugins
-from social             import notifications
+from social             import notifications, template as t
 from social.constants   import PEOPLE_PER_PAGE
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
-from social.template    import render, renderScriptBlock
 from social.logging     import profile, dump_args, log
 from social.settings    import saveAvatarItem
 
 
 class GroupsResource(base.BaseResource):
     isLeaf = True
+    _templates = ['group-feed.mako', 'groups.mako',
+                  'group-settings.mako', 'feed.mako']
 
 
     # Add a notification (TODO: and send mail notifications to admins
@@ -63,9 +64,9 @@ class GroupsResource(base.BaseResource):
             args["groupFollowers"] = {groupId:[myId]}
             args["entities"] = {groupId: group}
             args['myId'] = myId
-            yield renderScriptBlock(request, "group-feed.mako", "group_actions",
-                                    landing, "#group-actions-%s" %(groupId),
-                                    "set", **args)
+            t.renderScriptBlock(request, "group-feed.mako", "group_actions",
+                                landing, "#group-actions-%s" %(groupId),
+                                "set", **args)
         except ttypes.NotFoundException:
             pass
 
@@ -88,8 +89,8 @@ class GroupsResource(base.BaseResource):
             args["groupFollowers"] = {groupId:[]}
             args["entities"] = {groupId: group}
             args['myId'] = myId
-            yield renderScriptBlock(request, "group-feed.mako", "group_actions",
-                                    landing, "#group-actions-%s" %(groupId),
+            t.renderScriptBlock(request, "group-feed.mako", "group_actions",
+                                landing, "#group-actions-%s" %(groupId),
                                     "set", **args)
         except ttypes.NotFoundException:
             pass
@@ -146,9 +147,9 @@ class GroupsResource(base.BaseResource):
             args["groupFollowers"] = {groupId:[]}
             args["pendingConnections"] = []
             args['myId'] = myId
-            yield renderScriptBlock(request, "group-feed.mako", "group_actions",
-                                    False, "#group-actions-%s" %(groupId),
-                                    "set", **args)
+            t.renderScriptBlock(request, "group-feed.mako", "group_actions",
+                                False, "#group-actions-%s" %(groupId),
+                                "set", **args)
 
     @profile
     @defer.inlineCallbacks
@@ -210,9 +211,9 @@ class GroupsResource(base.BaseResource):
                                    }
                                   });
                                  """
-                    yield renderScriptBlock(request, "group-feed.mako", "groupLinks",
-                                            landing, "#group-links", "set",
-                                            handlers={"onload":onload}, **args)
+                    t.renderScriptBlock(request, "group-feed.mako", "groupLinks",
+                                        landing, "#group-links", "set",
+                                        handlers={"onload":onload}, **args)
 
                     onload = "$('#sharebar-attach-fileshare,"\
                                 "#sharebar-attach-file-input,"\
@@ -221,14 +222,14 @@ class GroupsResource(base.BaseResource):
                     onload += "$('#group-links').show();"
                     handlers = {'onload': onload}
 
-                yield renderScriptBlock(request, "group-feed.mako", "group_actions",
-                                        landing, "#group-actions-%s" %(groupId),
-                                        "set", handlers = handlers, **args)
+                t.renderScriptBlock(request, "group-feed.mako", "group_actions",
+                                    landing, "#group-actions-%s" %(groupId),
+                                    "set", handlers = handlers, **args)
                 if access == 'open' and _pg == '/group':
                     feedItems = yield feed.getFeedItems(request, feedId=groupId)
                     args.update(feedItems)
                     onload = "(function(obj){$$.convs.load(obj);})(this);"
-                    yield renderScriptBlock(request, "group-feed.mako", "feed",
+                    t.renderScriptBlock(request, "group-feed.mako", "feed",
                                             landing, "#user-feed", "set", True,
                                             handlers={"onload": onload}, **args)
 
@@ -249,14 +250,16 @@ class GroupsResource(base.BaseResource):
                 yield db.get(groupId, "pendingConnections", "GI:%s"%(userId))
                 d1 = self._removeFromPending(groupId, userId)
                 d2 = self._addMember(request, groupId, userId, orgId, group)
-                d3 = renderScriptBlock(request, "groups.mako",
-                                       "groupRequestActions", False,
-                                       '#group-request-actions-%s-%s' %(userId, groupId),
-                                       "set", args=[groupId, userId, "accept"])
-                data = {"entities": {groupId: group, userId: user}}
-                d4 = notifications.notify([userId], ":GA", groupId, **data)
 
-                yield defer.DeferredList([d1, d2, d3, d4])
+                data = {"entities": {groupId: group, userId: user}}
+                d3 = notifications.notify([userId], ":GA", groupId, **data)
+
+                t.renderScriptBlock(request, "groups.mako",
+                                    "groupRequestActions", False,
+                                    '#group-request-actions-%s-%s' %(userId, groupId),
+                                    "set", args=[groupId, userId, "accept"])
+
+                yield defer.DeferredList([d1, d2, d3])
 
             except ttypes.NotFoundException:
                 pass
@@ -275,10 +278,10 @@ class GroupsResource(base.BaseResource):
             try:
                 yield db.get(groupId, "pendingConnections", "GI:%s"%(userId))
                 yield self._removeFromPending(groupId, userId)
-                yield renderScriptBlock(request, "groups.mako",
-                                        "groupRequestActions", False,
-                                        '#group-request-actions-%s-%s' %(userId, groupId),
-                                        "set", args=[groupId, userId, "reject"])
+                t.renderScriptBlock(request, "groups.mako",
+                                    "groupRequestActions", False,
+                                    '#group-request-actions-%s-%s' %(userId, groupId),
+                                    "set", args=[groupId, userId, "reject"])
             except ttypes.NotFoundException:
                 pass
 
@@ -298,10 +301,10 @@ class GroupsResource(base.BaseResource):
             try:
                 yield db.get(groupId, "pendingConnections", "GI:%s"%(userId))
                 yield self._removeFromPending(groupId, userId)
-                yield renderScriptBlock(request, "groups.mako",
-                                        "groupRequestActions", False,
-                                        '#group-request-actions-%s-%s' %(userId, groupId),
-                                        "set", args=[groupId, userId, "block"])
+                t.renderScriptBlock(request, "groups.mako",
+                                    "groupRequestActions", False,
+                                    '#group-request-actions-%s-%s' %(userId, groupId),
+                                    "set", args=[groupId, userId, "block"])
             except ttypes.NotFoundException:
                 # If the users is already a member, remove the user from the group
                 colname = "%s:%s" %(group['basic']['name'].lower(), groupId)
@@ -324,10 +327,10 @@ class GroupsResource(base.BaseResource):
         if myId in group["admins"]:
             userId, user = yield utils.getValidEntityId(request, "uid", "user")
             yield db.remove(groupId, "blockedUsers", userId)
-            yield renderScriptBlock(request, "groups.mako",
-                                    "groupRequestActions", False,
-                                    '#group-request-actions-%s-%s' %(userId, groupId),
-                                    "set", args=[groupId, userId, "unblock"])
+            t.renderScriptBlock(request, "groups.mako",
+                                "groupRequestActions", False,
+                                '#group-request-actions-%s-%s' %(userId, groupId),
+                                "set", args=[groupId, userId, "unblock"])
 
     @profile
     @defer.inlineCallbacks
@@ -372,16 +375,17 @@ class GroupsResource(base.BaseResource):
         d2 = db.remove(myId, "entityGroupsMap", colname)
         d3 = db.batch_insert(itemId, 'items', item)
         d4 = db.remove(groupId, "groupMembers", myId)
+        d5 = feed.pushToOthersFeed(myId, orgId, item["meta"]["uuid"], itemId,
+                                   itemId, _acl, responseType, itemType, myId,
+                                   promoteActor=False)
+        d6 = utils.updateDisplayNameIndex(myId, [groupId], None,
+                                          args['me']['basic']['name'])
 
-        d5 = feed.pushToOthersFeed(myId, orgId, item["meta"]["uuid"], itemId, itemId,
-                        _acl, responseType, itemType, myId, promoteActor=False)
-        d6 = renderScriptBlock(request, "group-feed.mako", "group_actions",
+        t.renderScriptBlock(request, "group-feed.mako", "group_actions",
                                landing, "#group-actions-%s" %(groupId),
                                "set", **args)
+        deferreds = [d1, d2, d3, d4, d5, d6]
 
-        d7 = utils.updateDisplayNameIndex(myId, [groupId], None,
-                                          args['me']['basic']['name'])
-        deferreds = [d1, d2, d3, d4, d5, d6, d7]
         onload = "(function(obj){$$.convs.load(obj);})(this);"
         onload += "$('#sharebar-attach-fileshare, #sharebar-attach-file-input').attr('disabled', 'disabled');"
         onload += "$('#sharebar-submit').attr('disabled', 'disabled');"
@@ -389,10 +393,9 @@ class GroupsResource(base.BaseResource):
         onload += "$('#group-links').hide();"
         args["isMember"] = False
         if _pg == '/group':
-            d8 = renderScriptBlock(request, "group-feed.mako", "feed", landing,
-                                    "#user-feed", "set", True,
-                                    handlers={"onload": onload}, **args)
-            deferreds.append(d8)
+            t.renderScriptBlock(request, "group-feed.mako", "feed", landing,
+                                "#user-feed", "set", True,
+                                handlers={"onload": onload}, **args)
 
         yield defer.DeferredList(deferreds)
 
@@ -428,15 +431,16 @@ class GroupsResource(base.BaseResource):
             d4 = db.remove(groupId, "groupMembers", userId)
             d5 = utils.updateDisplayNameIndex(userId, [groupId], '', username)
 
-            d6 = renderScriptBlock(request, "groups.mako",
-                                    "groupRequestActions", False,
-                                    '#group-request-actions-%s-%s' %(userId, groupId),
-                                    "set", args=[groupId, userId, "removed"])
-            deferreds = [d1, d2, d3, d4, d5, d6]
+            t.renderScriptBlock(request, "groups.mako",
+                                "groupRequestActions", False,
+                                '#group-request-actions-%s-%s' %(userId, groupId),
+                                "set", args=[groupId, userId, "removed"])
+            deferreds = [d1, d2, d3, d4, d5]
+
             if userId in group['admins']:
-                d7 = db.remove(groupId, 'entities', userId, 'admins')
-                d8 = db.remove(userId, 'entities', groupId, 'adminOfGroups')
-                deferreds.extend([d7, d8])
+                d6 = db.remove(groupId, 'entities', userId, 'admins')
+                d7 = db.remove(userId, 'entities', groupId, 'adminOfGroups')
+                deferreds.extend([d6, d7])
 
             #XXX: remove item from feed?
             yield defer.DeferredList(deferreds)
@@ -489,9 +493,9 @@ class GroupsResource(base.BaseResource):
         d3 = feed.pushToOthersFeed(userId, orgId, item["meta"]["uuid"], itemId, itemId,
                     _acl, responseType, itemType, userId, promoteActor=False)
 
-        yield renderScriptBlock(request, "groups.mako", "groupRequestActions",
-                                False, '#group-request-actions-%s-%s' %(userId, groupId),
-                                "set", args=[groupId, userId, "show_manage"], **args)
+        t.renderScriptBlock(request, "groups.mako", "groupRequestActions",
+                            False, '#group-request-actions-%s-%s' %(userId, groupId),
+                            "set", args=[groupId, userId, "show_manage"], **args)
         yield defer.DeferredList([d1, d2, d3])
 
 
@@ -522,16 +526,16 @@ class GroupsResource(base.BaseResource):
         del group['admins'][userId]
         args = {'entities': {groupId: group}}
         if userId != myId:
-            yield renderScriptBlock(request, "groups.mako", "groupRequestActions",
-                                    False, '#group-request-actions-%s-%s' %(userId, groupId),
-                                    "set", args=[groupId, userId, "show_manage"], **args)
+            t.renderScriptBlock(request, "groups.mako", "groupRequestActions",
+                                False, '#group-request-actions-%s-%s' %(userId, groupId),
+                                "set", args=[groupId, userId, "show_manage"], **args)
         else:
             handlers = {'onload':"$$.alerts.info('You are not admin of this group anymore.');"}
             args['groupId'] = groupId
             request.write("$$.fetchUri('/groups/members?id=%s');"%(groupId))
-            yield renderScriptBlock(request, "group-settings.mako", "nav_menu",
-                                    False, "#nav-menu", "set", True,
-                                    handlers=handlers, **args)
+            t.renderScriptBlock(request, "group-settings.mako", "nav_menu",
+                                False, "#nav-menu", "set", True,
+                                handlers=handlers, **args)
 
 
     @profile
@@ -588,24 +592,10 @@ class GroupsResource(base.BaseResource):
         request.write(response)
 
 
-    @profile
-    @defer.inlineCallbacks
-    @dump_args
     def _renderCreate(self, request):
-        appchange, script, args, myId = yield self._getBasicArgs(request)
-        landing = not self._ajax
-        args["menuId"] = "groups"
-
-        if script and landing:
-            yield render(request, "groups.mako", **args)
-
-        if script and appchange:
-            yield renderScriptBlock(request, "groups.mako", "layout",
-                                    landing, "#mainbar", "set", **args)
-
-        if script:
-            yield renderScriptBlock(request, "groups.mako", "createGroup",
-                                    landing, "#addgroup-dlg", "set", **args)
+        t.renderScriptBlock(request, "groups.mako", "createGroup",
+                            False, "#addgroup-dlg", "set")
+        return True
 
 
     @defer.inlineCallbacks
@@ -774,10 +764,11 @@ class GroupsResource(base.BaseResource):
         groupRequestCount = args["groupRequestCount"] = counts["groups"]
 
         if script and landing:
-            yield render(request, "groups.mako", **args)
+            t.render(request, "groups.mako", **args)
+
         if script and appchange:
-            yield renderScriptBlock(request, "groups.mako", "layout",
-                                    landing, "#mainbar", "set", **args)
+            t.renderScriptBlock(request, "groups.mako", "layout",
+                                landing, "#mainbar", "set", **args)
 
         if viewType not in ['pendingRequests', 'invitations']:
             count = PEOPLE_PER_PAGE
@@ -868,24 +859,24 @@ class GroupsResource(base.BaseResource):
             args["groupFollowers"] = dict([(groupId, []) for groupId in groupIds])
 
         if script:
-            yield renderScriptBlock(request, "groups.mako", "titlebar",
-                                    landing, "#titlebar", "set", **args)
-            yield renderScriptBlock(request, "groups.mako", "viewOptions",
-                                    landing, "#groups-view", "set", args=[viewType],
-                                    showPendingRequestsTab=showPendingRequestsTab,
-                                    showInvitationsTab = args['showInvitationsTab'],
-                                    groupRequestCount=groupRequestCount)
+            t.renderScriptBlock(request, "groups.mako", "titlebar",
+                                landing, "#titlebar", "set", **args)
+            t.renderScriptBlock(request, "groups.mako", "viewOptions",
+                                landing, "#groups-view", "set", args=[viewType],
+                                showPendingRequestsTab=showPendingRequestsTab,
+                                showInvitationsTab = args['showInvitationsTab'],
+                                groupRequestCount=groupRequestCount)
             if viewType == "pendingRequests":
-                yield renderScriptBlock(request, "groups.mako", "allPendingRequests",
-                                        landing, "#groups-wrapper", "set", **args)
+                t.renderScriptBlock(request, "groups.mako", "allPendingRequests",
+                                    landing, "#groups-wrapper", "set", **args)
             else:
-                yield renderScriptBlock(request, "groups.mako", "listGroups",
-                                        landing, "#groups-wrapper", "set", **args)
-            yield renderScriptBlock(request, "groups.mako", "paging",
-                                    landing, "#groups-paging", "set", **args)
+                t.renderScriptBlock(request, "groups.mako", "listGroups",
+                                    landing, "#groups-wrapper", "set", **args)
+            t.renderScriptBlock(request, "groups.mako", "paging",
+                                landing, "#groups-paging", "set", **args)
 
         if not script:
-            yield render(request, "groups.mako", **args)
+            t.render(request, "groups.mako", **args)
 
 
     @profile
@@ -909,9 +900,10 @@ class GroupsResource(base.BaseResource):
         args["tab"]= 'manage' if myId in group['admins'] else ''
 
         if script and landing:
-            yield render(request, "group-settings.mako", **args)
+            t.render(request, "group-settings.mako", **args)
+
         if script and appchange:
-            yield renderScriptBlock(request, "group-settings.mako", "layout",
+            t.renderScriptBlock(request, "group-settings.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
         users, relation, userIds, blockedUsers, nextPageStart,\
@@ -927,11 +919,11 @@ class GroupsResource(base.BaseResource):
         args["entities"].update({groupId: group})
 
         if script:
-            yield renderScriptBlock(request, "groups.mako", "titlebar",
-                                    landing, "#titlebar", "set", **args)
-            yield renderScriptBlock(request, "groups.mako", "displayUsers",
-                                    landing, "#groups-wrapper", "set", **args)
-            yield renderScriptBlock(request, "groups.mako", "paging",
+            t.renderScriptBlock(request, "groups.mako", "titlebar",
+                                landing, "#titlebar", "set", **args)
+            t.renderScriptBlock(request, "groups.mako", "displayUsers",
+                                landing, "#groups-wrapper", "set", **args)
+            t.renderScriptBlock(request, "groups.mako", "paging",
                                 landing, "#groups-paging", "set", **args)
 
     @defer.inlineCallbacks
@@ -953,9 +945,10 @@ class GroupsResource(base.BaseResource):
         args["heading"] = group['basic']['name']
 
         if script and landing:
-            yield render(request, "group-settings.mako", **args)
+            t.render(request, "group-settings.mako", **args)
+
         if script and appchange:
-            yield renderScriptBlock(request, "group-settings.mako", "layout",
+            t.renderScriptBlock(request, "group-settings.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
         toFetchCount = PEOPLE_PER_PAGE + 1
@@ -982,12 +975,12 @@ class GroupsResource(base.BaseResource):
         args["tab"] = "banned"
 
         if script:
-            yield renderScriptBlock(request, "groups.mako", "titlebar",
-                                    landing, "#titlebar", "set", **args)
-            yield renderScriptBlock(request, "groups.mako", "displayUsers",
-                                    landing, "#groups-wrapper", "set", **args)
-            yield renderScriptBlock(request, "groups.mako", "bannedUsersPaging",
-                                    landing, "#groups-paging", "set", **args)
+            t.renderScriptBlock(request, "groups.mako", "titlebar",
+                                landing, "#titlebar", "set", **args)
+            t.renderScriptBlock(request, "groups.mako", "displayUsers",
+                                landing, "#groups-wrapper", "set", **args)
+            t.renderScriptBlock(request, "groups.mako", "bannedUsersPaging",
+                                landing, "#groups-paging", "set", **args)
 
     @profile
     @defer.inlineCallbacks
@@ -1009,10 +1002,10 @@ class GroupsResource(base.BaseResource):
         args["heading"] = group['basic']['name']
 
         if script and landing:
-            yield render(request, "group-settings.mako", **args)
+            t.render(request, "group-settings.mako", **args)
         if script and appchange:
-            yield renderScriptBlock(request, "group-settings.mako", "layout",
-                                    landing, "#mainbar", "set", **args)
+            t.renderScriptBlock(request, "group-settings.mako", "layout",
+                                landing, "#mainbar", "set", **args)
 
         if myId in group["admins"]:
             #or myId in moderators #if i am moderator
@@ -1043,12 +1036,12 @@ class GroupsResource(base.BaseResource):
         args["tab"] = 'pending'
 
         if script:
-            yield renderScriptBlock(request, "groups.mako", "titlebar",
-                                    landing, "#titlebar", "set", **args)
-            yield renderScriptBlock(request, "groups.mako", "displayUsers",
-                                    landing, "#groups-wrapper", "set", **args)
-            yield renderScriptBlock(request, 'groups.mako', "pendingRequestsPaging",
-                                    landing, "#groups-paging", "set", **args)
+            t.renderScriptBlock(request, "groups.mako", "titlebar",
+                                landing, "#titlebar", "set", **args)
+            t.renderScriptBlock(request, "groups.mako", "displayUsers",
+                                landing, "#groups-wrapper", "set", **args)
+            t.renderScriptBlock(request, 'groups.mako', "pendingRequestsPaging",
+                                landing, "#groups-paging", "set", **args)
 
 
 
@@ -1063,10 +1056,10 @@ class GroupsResource(base.BaseResource):
         args["heading"] = group["basic"]["name"]
 
         if script and landing:
-            yield render(request, "groups.mako", **args)
+            t.render(request, "groups.mako", **args)
         if script and appchange:
-            yield renderScriptBlock(request, "groups.mako", "layout",
-                                    landing, "#mainbar", "set", **args)
+            t.renderScriptBlock(request, "groups.mako", "layout",
+                                landing, "#mainbar", "set", **args)
         try:
             yield db.get(groupId, "groupMembers", myId)
         except ttypes.NotFoundException:
@@ -1201,10 +1194,10 @@ class GroupFeedResource(base.BaseResource):
         args["groupFollowers"] = {groupId:[myId]} if isFollower else {groupId:[]}
 
         if script and landing:
-            yield render(request, "group-feed.mako", **args)
+            t.render(request, "group-feed.mako", **args)
         elif script and appchange:
-            yield renderScriptBlock(request, "group-feed.mako", "layout",
-                                    landing, "#mainbar", "set", **args)
+            t.renderScriptBlock(request, "group-feed.mako", "layout",
+                                landing, "#mainbar", "set", **args)
         if script:
             name = group['basic']['name']
             onload = "$$.acl.switchACL('sharebar-acl', 'group', '%s', '%s');" % (groupId, name.replace("'", "\\'"))
@@ -1216,11 +1209,11 @@ class GroupFeedResource(base.BaseResource):
                 onload += "$('#sharebar-submit').attr('disabled', 'disabled');"
                 onload += "$('#group-share-block').addClass('disabled');"
 
-            yield renderScriptBlock(request, "group-feed.mako", "summary",
-                                    landing, "#group-summary", "set", **args)
-            yield renderScriptBlock(request, "feed.mako", "share_block",
-                                    landing,  "#group-share-block", "set",
-                                    handlers={"onload": onload}, **args)
+            t.renderScriptBlock(request, "group-feed.mako", "summary",
+                                landing, "#group-summary", "set", **args)
+            t.renderScriptBlock(request, "feed.mako", "share_block",
+                                landing,  "#group-share-block", "set",
+                                handlers={"onload": onload}, **args)
             yield self._renderShareBlock(request, "status")
 
         if isMember:
@@ -1242,9 +1235,9 @@ class GroupFeedResource(base.BaseResource):
 
         if script:
             onload = "(function(obj){$$.convs.load(obj);})(this);"
-            yield renderScriptBlock(request, "group-feed.mako", "feed", landing,
-                                    "#user-feed", "set", True,
-                                    handlers={"onload": onload}, **args)
+            t.renderScriptBlock(request, "group-feed.mako", "feed", landing,
+                                "#user-feed", "set", True,
+                                handlers={"onload": onload}, **args)
             if isMember:
                 onload = """
                          $('#group_add_invitee').autocomplete({
@@ -1255,17 +1248,17 @@ class GroupFeedResource(base.BaseResource):
                                }
                           });
                          """
-                yield renderScriptBlock(request, "group-feed.mako", "groupLinks",
-                                        landing, "#group-links", "set",
-                                        handlers={"onload":onload}, **args)
-            yield renderScriptBlock(request, "group-feed.mako", "groupAdmins",
-                                    landing, "#group-admins", "set", True, **args)
+                t.renderScriptBlock(request, "group-feed.mako", "groupLinks",
+                                    landing, "#group-links", "set",
+                                    handlers={"onload":onload}, **args)
+            t.renderScriptBlock(request, "group-feed.mako", "groupAdmins",
+                                landing, "#group-admins", "set", True, **args)
             if "event" in plugins and isMember:
                 blockType = "group"
                 yield plugins["event"].renderSideAgendaBlock(request, landing,
                                                              blockType, args)
         else:
-            yield render(request, "group-feed.mako", **args)
+            t.render(request, "group-feed.mako", **args)
 
     @profile
     @defer.inlineCallbacks
@@ -1301,9 +1294,9 @@ class GroupFeedResource(base.BaseResource):
         args["entities"][groupId] = group
 
         onload = "(function(obj){$$.convs.load(obj);})(this);"
-        yield renderScriptBlock(request, "group-feed.mako", "feed", False,
-                                "#next-load-wrapper", "replace", True,
-                                handlers={"onload": onload}, **args)
+        t.renderScriptBlock(request, "group-feed.mako", "feed", False,
+                            "#next-load-wrapper", "replace", True,
+                            handlers={"onload": onload}, **args)
 
     def render_GET(self, request):
         segmentCount = len(request.postpath)
@@ -1316,7 +1309,6 @@ class GroupFeedResource(base.BaseResource):
 
 
 class GroupSettingsResource(base.BaseResource):
-
     isLeaf = True
 
     @profile
@@ -1337,16 +1329,16 @@ class GroupSettingsResource(base.BaseResource):
             raise errors.PermissionDenied('You should be an administrator to edit group meta data')
 
         if script and landing:
-            yield render(request, "group-settings.mako", **args)
+            t.render(request, "group-settings.mako", **args)
         if script and appchange:
-            yield renderScriptBlock(request, "group-settings.mako", "layout",
-                                    landing, "#mainbar", "set", **args)
+            t.renderScriptBlock(request, "group-settings.mako", "layout",
+                                landing, "#mainbar", "set", **args)
         if script:
             handlers = {}
             handlers["onload"] = """$$.ui.bindFormSubmit('#group-form');"""
-            yield renderScriptBlock(request, "group-settings.mako", "edit_group",
-                                    landing, "#center-content", "set", True,
-                                    handlers=handlers, **args)
+            t.renderScriptBlock(request, "group-settings.mako", "edit_group",
+                                landing, "#center-content", "set", True,
+                                handlers=handlers, **args)
 
     @profile
     @defer.inlineCallbacks

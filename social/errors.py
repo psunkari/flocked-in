@@ -56,6 +56,8 @@ class BaseError(Exception):
 class Unauthorized(BaseError):
     pass
 
+class RequestFailed(BaseError):
+    pass
 
 #
 # Current user has access/autorization but is not
@@ -160,6 +162,13 @@ class MessageAccessDenied(BaseError):
     def __init__(self, convId):
         self.convId = convId
         message = _("The requested message does not exist")
+        BaseError.__init__(self, message, 404)
+
+class ChatAccessDenied(BaseError):
+    convId = None
+    def __init__(self, chatId):
+        self.chatId = chatId
+        message = _("The requested chat does not exist")
         BaseError.__init__(self, message, 404)
 
 

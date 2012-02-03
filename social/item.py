@@ -14,9 +14,9 @@ from twisted.web        import server
 from social             import base, db, utils, feed, config
 from social             import plugins, constants, tags, search
 from social             import notifications, _, errors, files
+from social             import template as t
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
-from social.template    import render, getBlock, renderScriptBlock
 from social.logging     import profile, dump_args, log
 
 #
@@ -326,6 +326,7 @@ def _notify(notifyType, convId, timeUUID, **kwargs):
 
 class ItemResource(base.BaseResource):
     isLeaf = True
+    _templates = ['item.mako', 'item-report.mako']
 
     def _cleanupMissingComments(self, convId, missingIds, itemResponses):
         missingKeys = []
@@ -370,11 +371,11 @@ class ItemResource(base.BaseResource):
         args["relations"] = relation
 
         if script and landing:
-            yield render(request, "item.mako", **args)
+            t.render(request, "item.mako", **args)
 
         if script and appchange:
-            yield renderScriptBlock(request, "item.mako", "layout",
-                                    landing, "#mainbar", "set", **args)
+            t.renderScriptBlock(request, "item.mako", "layout",
+                                landing, "#mainbar", "set", **args)
 
         args["entities"] = {}
         toFetchEntities = set()
@@ -396,10 +397,9 @@ class ItemResource(base.BaseResource):
         renderers = []
 
         if script:
-            d = renderScriptBlock(request, "item.mako", "conv_root",
-                        landing, "#conv-root-%s > .conv-summary" %(convId),
-                        "set", **args)
-            renderers.append(d)
+            t.renderScriptBlock(request, "item.mako", "conv_root",
+                                landing, "#conv-root-%s > .conv-summary" %(convId),
+                                "set", **args)
 
         convOwner = args["items"][convId]["meta"]["owner"]
         if convOwner not in args["entities"]:
@@ -410,16 +410,14 @@ class ItemResource(base.BaseResource):
         args["ownerId"] = convOwner
         if script:
             if itemType != "feedback":
-                d = renderScriptBlock(request, "item.mako", "conv_owner",
-                                      landing, "#conv-avatar-%s" % convId,
-                                      "set", **args)
+                t.renderScriptBlock(request, "item.mako", "conv_owner",
+                                    landing, "#conv-avatar-%s" % convId,
+                                    "set", **args)
             else:
                 feedbackType = conv['meta']['subType']
-                d = renderScriptBlock(request, "item.mako", "feedback_icon",
-                                      landing, "#conv-avatar-%s" % convId,
-                                      "set", args=[feedbackType])
-
-            renderers.append(d)
+                t.renderScriptBlock(request, "item.mako", "feedback_icon",
+                                    landing, "#conv-avatar-%s" % convId,
+                                    "set", args=[feedbackType])
 
         # A copy of this code for fetching comments is present in _responses
         # Most changes here may need to be done there too.
@@ -475,48 +473,34 @@ class ItemResource(base.BaseResource):
             args["oldest"] = utils.encodeKey(nextPageStart)
 
         if script:
-            d = renderScriptBlock(request, "item.mako", 'conv_footer',
-                                  landing, '#item-footer-%s' % convId,
-                                  'set', **args)
-            renderers.append(d)
-
-            d = renderScriptBlock(request, "item.mako", 'conv_tags',
-                        landing, '#conv-tags-wrapper-%s' % convId, 'set',
-                        handlers={"onload":"$('#conv-meta-wrapper-%s').removeClass('no-tags')"%convId} if toFetchTags else None, **args)
-            renderers.append(d)
-
-            d = renderScriptBlock(request, "item.mako", 'conv_comments',
-                        landing, '#conv-comments-wrapper-%s' % convId, 'set', **args)
-            renderers.append(d)
-
-            d = renderScriptBlock(request, "item.mako", 'conv_comment_form',
-                        landing, '#comment-form-wrapper-%s' % convId, 'set',
-                        True, handlers={"onload": "(function(obj){$$.convs.load(obj);})(this);"}, **args)
-            renderers.append(d)
+            t.renderScriptBlock(request, "item.mako", 'conv_footer',
+                                landing, '#item-footer-%s' % convId,
+                                'set', **args)
+            t.renderScriptBlock(request, "item.mako", 'conv_tags',
+                                landing, '#conv-tags-wrapper-%s' % convId, 'set',
+                                handlers={"onload":"$('#conv-meta-wrapper-%s').removeClass('no-tags')"%convId} if toFetchTags else None, **args)
+            t.renderScriptBlock(request, "item.mako", 'conv_comments',
+                                landing, '#conv-comments-wrapper-%s' % convId, 'set', **args)
+            t.renderScriptBlock(request, "item.mako", 'conv_comment_form',
+                                landing, '#comment-form-wrapper-%s' % convId, 'set',
+                                True, handlers={"onload": "(function(obj){$$.convs.load(obj);})(this);"}, **args)
 
             numLikes = int(conv["meta"].get("likesCount", "0"))
             if numLikes:
                 numLikes = int(conv["meta"].get("likesCount", "0"))
                 iLike = myKey in args["myLikes"].get(convId, [])
-                d = renderScriptBlock(request, "item.mako", 'conv_likes',
-                            landing, '#conv-likes-wrapper-%s' % convId, 'set',
-                            args=[convId, numLikes, iLike, [x.column.name for x in likes]],
-                            entities= args['entities'])
-                renderers.append(d)
-
-        # Wait till the item is fully rendered.
-        if renderers:
-            yield defer.DeferredList(renderers)
-
-        # TODO: Render other blocks
+                t.renderScriptBlock(request, "item.mako", 'conv_likes',
+                                    landing, '#conv-likes-wrapper-%s' % convId, 'set',
+                                    args=[convId, numLikes, iLike, [x.column.name for x in likes]],
+                                    entities= args['entities'])
         if plugin and hasattr(plugin, 'renderSideBlock'):
-            yield plugin.renderSideBlock(request, landing, args)
+            plugin.renderSideBlock(request, landing, args)
 
         if script and landing:
             request.write("</body></html>")
 
         if not script:
-            yield render(request, "item.mako", **args)
+            t.render(request, "item.mako", **args)
 
 
     @profile
@@ -551,14 +535,12 @@ class ItemResource(base.BaseResource):
                 "entities":entities, "script": True}
         args.update(data)
         onload = "(function(obj){$$.convs.load(obj);$('#sharebar-attach-uploaded').empty();})(this);"
-        d1 = renderScriptBlock(request, "item.mako", "item_layout",
-                        False, "#user-feed", "prepend", args=[convId, 'conv-item-created'],
-                        handlers={"onload":onload}, **args)
+        t.renderScriptBlock(request, "item.mako", "item_layout",
+                            False, "#user-feed", "prepend", args=[convId, 'conv-item-created'],
+                            handlers={"onload":onload}, **args)
 
         defaultType = plugins.keys()[0]
-        d2 = plugins[defaultType].renderShareBlock(request, True)
-
-        yield defer.DeferredList([d1, d2])
+        plugins[defaultType].renderShareBlock(request, True)
 
 
     @profile
@@ -642,9 +624,9 @@ class ItemResource(base.BaseResource):
                 yield _notify("LC", convId, timeUUID, convType=convType,
                                   convOwnerId=convOwnerId, myId=myId,
                                   itemOwnerId=itemOwnerId, me=args["me"])
-            yield renderScriptBlock(request, "item.mako", "item_footer", False,
-                                    "#item-footer-%s"%(itemId), "set",
-                                    args=[itemId], **args)
+            t.renderScriptBlock(request, "item.mako", "item_footer", False,
+                                "#item-footer-%s"%(itemId), "set",
+                                args=[itemId], **args)
         else:
             if myId != convOwnerId:
                 yield _notify("L", convId, timeUUID, convType=convType,
@@ -682,13 +664,13 @@ class ItemResource(base.BaseResource):
 
 
             handler = {"onload":"(function(){$$.convs.showHideComponent('%s', 'likes', true)})();"%(convId)}
-            yield renderScriptBlock(request, "item.mako", "conv_footer", False,
-                                    "#item-footer-%s"%(itemId), "set",
-                                    args=[itemId, hasComments, hasLikes], **args)
+            t.renderScriptBlock(request, "item.mako", "conv_footer", False,
+                                "#item-footer-%s"%(itemId), "set",
+                                args=[itemId, hasComments, hasLikes], **args)
 
-            yield renderScriptBlock(request, "item.mako", 'conv_likes', False,
-                                    '#conv-likes-wrapper-%s' % convId, 'set', True,
-                                    args=[itemId, likesCount+1, True, likes], handlers=handler, **args)
+            t.renderScriptBlock(request, "item.mako", 'conv_likes', False,
+                                '#conv-likes-wrapper-%s' % convId, 'set', True,
+                                args=[itemId, likesCount+1, True, likes], handlers=handler, **args)
 
 
     @profile
@@ -756,9 +738,9 @@ class ItemResource(base.BaseResource):
         args["myLikes"] = {itemId:[]}
 
         if itemId != convId:
-             yield renderScriptBlock(request, "item.mako", "item_footer", False,
-                                     "#item-footer-%s"%(itemId), "set",
-                                     args=[itemId], **args)
+             t.renderScriptBlock(request, "item.mako", "item_footer", False,
+                                 "#item-footer-%s"%(itemId), "set",
+                                 args=[itemId], **args)
         else:
             relation = Relation(myId, [])
             yield relation.initSubscriptionsList()
@@ -794,12 +776,12 @@ class ItemResource(base.BaseResource):
             args["entities"] = entities
 
             handler = {"onload":"(function(){$$.convs.showHideComponent('%s', 'likes', false)})();" %(convId)} if not likes else None
-            yield renderScriptBlock(request, "item.mako", "conv_footer", False,
-                                    "#item-footer-%s"%(itemId), "set",
-                                    args=[itemId, hasComments, likes], **args)
-            yield renderScriptBlock(request, "item.mako", 'conv_likes', False,
-                                    '#conv-likes-wrapper-%s' % convId, 'set', True,
-                                    args=[itemId, likesCount-1, False, likes], handlers=handler, **args)
+            t.renderScriptBlock(request, "item.mako", "conv_footer", False,
+                                "#item-footer-%s"%(itemId), "set",
+                                args=[itemId, hasComments, likes], **args)
+            t.renderScriptBlock(request, "item.mako", 'conv_likes', False,
+                                '#conv-likes-wrapper-%s' % convId, 'set', True,
+                                args=[itemId, likesCount-1, False, likes], handlers=handler, **args)
 
 
     @profile
@@ -824,14 +806,14 @@ class ItemResource(base.BaseResource):
         numShowing = int(numShowing) + 1
         responseCount = items[convId]['meta']['responseCount']
         isItemView = (utils.getRequestArg(request, "_pg") == "/item")
-        yield renderScriptBlock(request, 'item.mako', 'conv_comments_head',
-                        False, '#comments-header-%s' % (convId), 'set',
-                        args=[convId, responseCount, numShowing, isItemView], **args)
+        t.renderScriptBlock(request, 'item.mako', 'conv_comments_head',
+                            False, '#comments-header-%s' % (convId), 'set',
+                            args=[convId, responseCount, numShowing, isItemView], **args)
 
-        yield renderScriptBlock(request, 'item.mako', 'conv_comment', False,
-                                '#comments-%s' % convId, 'append', True,
-                                handlers={"onload": "(function(){$('.comment-input', '#comment-form-%s').val(''); $('[name=\"nc\"]', '#comment-form-%s').val('%s');})();" % (convId, convId, numShowing)},
-                                args=[convId, itemId], **args)
+        t.renderScriptBlock(request, 'item.mako', 'conv_comment', False,
+                            '#comments-%s' % convId, 'append', True,
+                            handlers={"onload": "(function(){$('.comment-input', '#comment-form-%s').val(''); $('[name=\"nc\"]', '#comment-form-%s').val('%s');})();" % (convId, convId, numShowing)},
+                            args=[convId, itemId], **args)
 
 
     @profile
@@ -855,8 +837,8 @@ class ItemResource(base.BaseResource):
         args['title'] = _("People who like %s's %s") %\
                           (utils.userName(owner, entities[owner]), _(itemType))
 
-        yield renderScriptBlock(request, "item.mako", "userListDialog", False,
-                                "#likes-dlg-%s"%(itemId), "set", **args)
+        t.renderScriptBlock(request, "item.mako", "userListDialog", False,
+                            "#likes-dlg-%s"%(itemId), "set", **args)
 
 
     @profile
@@ -925,9 +907,9 @@ class ItemResource(base.BaseResource):
             args["isItemView"] = False
             showing = len(responseKeys)
             handler = {"onload":"(function(){$$.convs.showHideComponent('%s', 'comments', true); $('[name=\"nc\"]', '#comment-form-%s').val('%s');})();"%(convId, convId, showing)}
-            yield renderScriptBlock(request, "item.mako", 'conv_comments',
-                        not self._ajax, '#conv-comments-wrapper-%s' % convId,
-                        'set', True, handlers=handler, **args)
+            t.renderScriptBlock(request, "item.mako", 'conv_comments',
+                                not self._ajax, '#conv-comments-wrapper-%s' % convId,
+                                'set', True, handlers=handler, **args)
         else:
             landing = not self._ajax
             showing = utils.getRequestArg(request, "nc") or "0"
@@ -936,13 +918,13 @@ class ItemResource(base.BaseResource):
             args["total"] = int(args["items"][convId]["meta"].get("responseCount", "0"))
             args["isItemView"] = True
 
-            yield renderScriptBlock(request, "item.mako", 'conv_comments_head',
-                                    landing, '#comments-header-%s' % convId,
-                                    'set', **args)
-            yield renderScriptBlock(request, "item.mako", 'conv_comments_only',
-                            landing, '#comments-%s' % convId, 'prepend', True,
-                            handlers={"onload": "(function(){$('[name=\"nc\"]', '#comment-form-%s').val('%s');})();" % (convId, showing)},
-                            **args)
+            t.renderScriptBlock(request, "item.mako", 'conv_comments_head',
+                                landing, '#comments-header-%s' % convId,
+                                'set', **args)
+            t.renderScriptBlock(request, "item.mako", 'conv_comments_only',
+                                landing, '#comments-%s' % convId, 'prepend', True,
+                                handlers={"onload": "(function(){$('[name=\"nc\"]', '#comment-form-%s').val('%s');})();" % (convId, showing)},
+                                **args)
 
 
     @profile
@@ -983,10 +965,10 @@ class ItemResource(base.BaseResource):
 
         result = yield defer.DeferredList([d1, d2, d3])
         followers = utils.columnsToDict(result[2][1]).keys()
-        yield renderScriptBlock(request, "item.mako", 'conv_tag', False,
-                                '#conv-tags-%s'%itemId, "append", True,
-                                handlers={"onload": "(function(){$('input:text', '#addtag-form-%s').val('');})();" % itemId},
-                                args=[itemId, tagId, tag["title"]])
+        t.renderScriptBlock(request, "item.mako", 'conv_tag', False,
+                            '#conv-tags-%s'%itemId, "append", True,
+                            handlers={"onload": "(function(){$('input:text', '#addtag-form-%s').val('');})();" % itemId},
+                            args=[itemId, tagId, tag["title"]])
 
         convACL = item["meta"]["acl"]
         convType = item["meta"]["type"]
@@ -1144,35 +1126,8 @@ class ItemResource(base.BaseResource):
         args['title'] = _("Report this %s") %itemType
         args['convId'] = itemId
 
-        yield renderScriptBlock(request, "item-report.mako", "report_dialog", False,
-                                "#report-dlg-%s"%(itemId), "set", **args)
-
-
-    @defer.inlineCallbacks
-    def _renderItemRoot(self, request):
-        itemType = conv["meta"].get("type", None)
-
-        owner = meta["owner"]
-
-        args["entities"] = {}
-        toFetchEntities = set()
-
-
-        if script:
-            if itemType != "feedback":
-                d = renderScriptBlock(request, "item-report.mako", "conv_owner",
-                                      landing, "#conv-avatar-%s" % convId,
-                                      "set", **args)
-            else:
-                feedbackType = conv['meta']['subType']
-                d = renderScriptBlock(request, "item-report.mako", "feedback_icon",
-                                      landing, "#conv-avatar-%s" % convId,
-                                      "set", args=[feedbackType])
-
-            renderers.append(d)
-
-        if renderers:
-            yield defer.DeferredList(renderers)
+        t.renderScriptBlock(request, "item-report.mako", "report_dialog", False,
+                            "#report-dlg-%s"%(itemId), "set", **args)
 
 
     @defer.inlineCallbacks
@@ -1197,11 +1152,11 @@ class ItemResource(base.BaseResource):
         args["relations"] = relation
 
         if script and landing:
-            yield render(request, "item-report.mako", **args)
+            t.render(request, "item-report.mako", **args)
 
         if script and appchange:
-            yield renderScriptBlock(request, "item-report.mako", "layout",
-                                    landing, "#mainbar", "set", **args)
+            t.renderScriptBlock(request, "item-report.mako", "layout",
+                                landing, "#mainbar", "set", **args)
 
         plugin = plugins[convType] if convType in plugins else None
         if plugin:
@@ -1220,38 +1175,29 @@ class ItemResource(base.BaseResource):
         args["entities"].update(entities)
         args["ownerId"] = convOwner
 
-        renderers = []
         if script:
-            d = renderScriptBlock(request, "item.mako", "conv_root",
-                        landing, "#conv-root-%s > .conv-summary" %(convId),
-                        "set", **args)
-            renderers.append(d)
+            t.renderScriptBlock(request, "item.mako", "conv_root",
+                                landing, "#conv-root-%s > .conv-summary" %(convId),
+                                "set", **args)
 
-            d = renderScriptBlock(request, "item-report.mako", 'conv_footer',
-                                  landing, '#item-footer-%s' % convId,
-                                  'set', **args)
-            renderers.append(d)
+            t.renderScriptBlock(request, "item-report.mako", 'conv_footer',
+                                landing, '#item-footer-%s' % convId,
+                                'set', **args)
 
             if convType != "feedback":
-                d = renderScriptBlock(request, "item.mako", "conv_owner",
-                                      landing, "#conv-avatar-%s" % convId,
-                                      "set", **args)
+                t.renderScriptBlock(request, "item.mako", "conv_owner",
+                                    landing, "#conv-avatar-%s" % convId,
+                                    "set", **args)
             else:
                 feedbackType = conv['meta']['subType']
-                d = renderScriptBlock(request, "item.mako", "feedback_icon",
-                                      landing, "#conv-avatar-%s" % convId,
-                                      "set", args=[feedbackType])
+                t.renderScriptBlock(request, "item.mako", "feedback_icon",
+                                    landing, "#conv-avatar-%s" % convId,
+                                    "set", args=[feedbackType])
 
-            renderers.append(d)
-
-        d = self._renderReportResponses(request, convId, convMeta, args)
-        renderers.append(d)
-
-        if renderers:
-            yield defer.DeferredList(renderers)
+        yield self._renderReportResponses(request, convId, convMeta, args)
 
         if not script:
-            yield render(request, "item-report.mako", **args)
+            t.render(request, "item-report.mako", **args)
 
 
     @defer.inlineCallbacks
@@ -1263,8 +1209,8 @@ class ItemResource(base.BaseResource):
         landing = not self._ajax
 
         if script:
-            yield renderScriptBlock(request, "item-report.mako", "item_report",
-                                    landing, "#report-contents", "set", **args)
+            t.renderScriptBlock(request, "item-report.mako", "item_report",
+                                landing, "#report-contents", "set", **args)
 
         if reportId:
             reportResponses = yield db.get_slice(reportId, "itemResponses")
@@ -1286,8 +1232,8 @@ class ItemResource(base.BaseResource):
 
             #Show comments from report only if I am the owner or the reporter
             if script and myId in [convMeta["owner"], convMeta["reportedBy"]]:
-                yield renderScriptBlock(request, "item-report.mako", 'report_comments',
-                                        landing, '#report-comments', 'set', **args)
+                t.renderScriptBlock(request, "item-report.mako", 'report_comments',
+                                    landing, '#report-comments', 'set', **args)
 
 
     @defer.inlineCallbacks

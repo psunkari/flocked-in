@@ -8,8 +8,8 @@ from twisted.web        import server
 
 from social             import base, db, utils, feed, settings
 from social             import plugins, constants, _, config
+from social             import template as t
 from social.isocial     import IAuthInfo
-from social.template    import render, renderScriptBlock, getBlock
 from social.logging     import dump_args, profile, log
 
 #
@@ -232,7 +232,7 @@ class NotificationByMail(object):
                 b = b % data
                 if 'comment_html' in data:
                     data['comment'] = data['comment_html']
-                h = getBlock("emails.mako",
+                h = t.getBlock("emails.mako",
                              "notifyOwner"+notifyType, **data)
                 return utils.sendmail(mailId, s, b, h)
 
@@ -245,7 +245,7 @@ class NotificationByMail(object):
                 b = b % data
                 if 'comment_html' in data:
                     data['comment'] = data['comment_html']
-                h = getBlock("emails.mako", "notifyOther"+notifyType, **data)
+                h = t.getBlock("emails.mako", "notifyOther"+notifyType, **data)
                 stringCache.update({'subject':s, 'text':b, 'html':h})
 
             return utils.sendmail(mailId, stringCache['subject'],
@@ -309,7 +309,7 @@ class NotificationByMail(object):
         subject = self._otherNotifySubject[notifyType] % data
         body = self._otherNotifyBody[notifyType] + self._signature
         body = body % data
-        html = getBlock("emails.mako", "notify"+notifyType, **data)
+        html = t.getBlock("emails.mako", "notify"+notifyType, **data)
 
         # Sent the mail if recipient prefers to get it.
         deferreds = []
@@ -336,6 +336,7 @@ notificationHandlers.append(NotificationByMail())
 #
 class NotificationsResource(base.BaseResource):
     isLeaf = True
+    _templates = ['notifications.mako', 'emails.mako']
 
     # String templates used in notifications.
     # Generally there are expected to be in past-tense since
@@ -635,11 +636,12 @@ class NotificationsResource(base.BaseResource):
         args["menuId"] = "notifications"
 
         if script and landing:
-            yield render(request, "notifications.mako", **args)
+            t.render(request, "notifications.mako", **args)
 
         if script and appchange:
-            yield renderScriptBlock(request, "notifications.mako", "layout",
-                                    landing, "#mainbar", "set", **args)
+            t.renderScriptBlock(request, "notifications.mako", "layout",
+                                landing, "#mainbar", "set", **args)
+
         start = utils.getRequestArg(request, "start") or ''
         fromFetchMore = ((not landing) and (not appchange) and start)
         data = yield self._getNotifications(request)
@@ -655,11 +657,11 @@ class NotificationsResource(base.BaseResource):
         args['latestNotifyIds'] = latestNotifyIds
         if script:
             if fromFetchMore:
-                yield renderScriptBlock(request, "notifications.mako", "content",
-                                        landing, "#next-load-wrapper", "replace",
-                                        True, handlers={}, **args)
+                t.renderScriptBlock(request, "notifications.mako", "content",
+                                    landing, "#next-load-wrapper", "replace",
+                                    True, handlers={}, **args)
             else:
-                yield renderScriptBlock(request, "notifications.mako", "content",
+                t.renderScriptBlock(request, "notifications.mako", "content",
                                     landing, "#notifications", "set", **args)
             yield utils.render_LatestCounts(request, landing)
 

@@ -306,6 +306,26 @@ def createColumnFamilies(client):
                         None, "list of items which have a keyword monitored by admins")
     yield client.system_add_column_family(keywordItems)
 
+    #Chat
+    presence = CfDef(KEYSPACE, "presence", "Super", 'UTF8Type',
+                     'UTF8Type', "")
+    chatParticipants = CfDef(KEYSPACE, "chatParticipants", "Standard",
+                             "UTF8Type", None, "")
+    chatLogs = CfDef(KEYSPACE, "chatLogs", "Standard",
+                     'TimeUUIDType', None, "")
+    chatArchiveList = CfDef(KEYSPACE, "chatArchiveList", "Standard",
+                            'TimeUUIDType', None, "")
+    channelSubscribers = CfDef(KEYSPACE, "channelSubscribers", "Standard",
+                               "UTF8Type", None, "")
+    sessionChannelsMap =   CfDef(KEYSPACE, "sessionChannelsMap", "Standard",
+                                 "UTF8Type", None, "Map of all channels associated with a session")
+    yield client.system_add_column_family(presence)
+    yield client.system_add_column_family(chatParticipants)
+    yield client.system_add_column_family(chatLogs)
+    yield client.system_add_column_family(chatArchiveList)
+    yield client.system_add_column_family(channelSubscribers)
+    yield client.system_add_column_family(sessionChannelsMap)
+
 
 @defer.inlineCallbacks
 def addSampleData(client):
@@ -637,9 +657,7 @@ def truncateColumnFamilies(client):
                "items", "itemLikes", "itemResponses", "userItems", "feed",
                "userItems_status", "userItems_link", "userItems_poll",
                "feed_status", "feed_link","feed_poll", "feedItems",
-               "domainOrgMap", "userVotes", "votes", 'userEvents',
-               'eventResponses', "userEventInvitations", "userEventResponse",
-               'eventInvitations',"notifications", "notificationItems",
+               "domainOrgMap", "userVotes", "votes", "notifications", "notificationItems",
                "nameIndex", "displayNameIndex", "orgTags", "tagItems",
                "tagFollowers", "orgTagsByName", "messages",
                "blockedUsers", "deletedConvs", "feed_question", 'userItems_question',
@@ -650,7 +668,9 @@ def truncateColumnFamilies(client):
                "user_files", "suggestions", "apps", "appsByOwner", "oAuthData",
                "userSessionsMap", "deletedUsers", "orgPresetTags",
                "feed_event", "userItems_event", "userAgenda", "eventResponses",
-               "keywords", "keywordItems", "originalKeywords", "userAgendaMap"]:
+               "keywords", "keywordItems", "originalKeywords", "userAgendaMap",
+               "presence", "chatParticipants", "chatLogs", "chatArchiveList",
+               "channelSubscribers", "sessionChannelsMap"]:
 
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)

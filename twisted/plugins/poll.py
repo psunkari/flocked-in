@@ -8,7 +8,7 @@ from twisted.internet   import defer
 from twisted.web        import server
 
 from social             import db, constants, utils, base, errors, _
-from social.template    import renderScriptBlock, render, getBlock
+from social             import template as t
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
 from social.logging     import profile, dump_args, log
@@ -16,6 +16,7 @@ from social.logging     import profile, dump_args, log
 
 class PollResource(base.BaseResource):
     isLeaf = True
+    _templates = ['poll.mako', 'item.mako']
 
     @profile
     @defer.inlineCallbacks
@@ -63,9 +64,9 @@ class PollResource(base.BaseResource):
         voted = myVotes[convId] if (convId in myVotes and myVotes[convId])\
                                 else False
 
-        yield renderScriptBlock(request, "poll.mako", 'poll_results',
-                                False, '#poll-contents-%s'%convId, 'set',
-                                args=[convId, voted], **data)
+        t.renderScriptBlock(request, "poll.mako", 'poll_results',
+                            False, '#poll-contents-%s'%convId, 'set',
+                            args=[convId, voted], **data)
 
     @profile
     @defer.inlineCallbacks
@@ -81,9 +82,9 @@ class PollResource(base.BaseResource):
         voted = myVotes[convId] if (convId in myVotes and myVotes[convId])\
                                 else False
 
-        yield renderScriptBlock(request, "poll.mako", 'poll_options',
-                                False, '#poll-contents-%s'%convId, 'set',
-                                args=[convId, voted], **data)
+        t.renderScriptBlock(request, "poll.mako", 'poll_options',
+                            False, '#poll-contents-%s'%convId, 'set',
+                            args=[convId, voted], **data)
 
     @defer.inlineCallbacks
     def _listVoters(self, request):
@@ -108,7 +109,7 @@ class PollResource(base.BaseResource):
             people = utils.multiSuperColumnsToDict(people)
             args['entities'] = people
 
-        yield renderScriptBlock(request, "item.mako", "userListDialog", False,
+        t.renderScriptBlock(request, "item.mako", "userListDialog", False,
                             "#poll-users-%s-%s"%(option, convId), "set", **args)
 
 
@@ -148,22 +149,18 @@ class Poll(object):
     indexFields = {'options':{'template':'poll_option_%s','type':'keyvals'}}
     monitoredFields = {'meta':['poll_options', 'comment']}
 
-    @defer.inlineCallbacks
     def renderShareBlock(self, request, isAjax):
-        templateFile = "poll.mako"
-        renderDef = "share_poll"
-
-        yield renderScriptBlock(request, templateFile, renderDef,
-                                not isAjax, "#sharebar", "set", True,
-                                attrs={"publisherName": "poll"},
-                                handlers={"onload": "(function(obj){$$.publisher.load(obj);$('#share-poll-options').delegate('.input-wrap:last-child','focus',function(event){$(event.target.parentNode).clone().appendTo('#share-poll-options').find('input:text').blur();});})(this);"})
+        t.renderScriptBlock(request, "poll.mako", "share_poll",
+                            not isAjax, "#sharebar", "set", True,
+                            attrs={"publisherName": "poll"},
+                            handlers={"onload": "(function(obj){$$.publisher.load(obj);$('#share-poll-options').delegate('.input-wrap:last-child','focus',function(event){$(event.target.parentNode).clone().appendTo('#share-poll-options').find('input:text').blur();});})(this);"})
 
 
     def rootHTML(self, convId, isQuoted, args):
         if "convId" in args:
-            return getBlock("poll.mako", "poll_root", **args)
+            return t.getBlock("poll.mako", "poll_root", **args)
         else:
-            return getBlock("poll.mako", "poll_root", args=[convId, isQuoted], **args)
+            return t.getBlock("poll.mako", "poll_root", args=[convId, isQuoted], **args)
 
 
     @profile
@@ -204,7 +201,7 @@ class Poll(object):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def create(self, request, myId, myOrgId, richText=False):
+    def create(self, request, myId, myOrgId, convId, richText=False):
         snippet, comment = utils.getTextWithSnippet(request, "comment",
                                         constants.POST_PREVIEW_LENGTH,
                                         richText=richText)

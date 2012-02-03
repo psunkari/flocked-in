@@ -6,18 +6,20 @@ from functools              import wraps
 from twisted.web            import resource, server, http
 from twisted.internet       import defer
 
-from social.isocial         import IAuthInfo
 from social                 import db, utils, errors
-from social.template        import render, renderScriptBlock, renderDef
+from social                 import template as t
+from social.isocial         import IAuthInfo
 from social.logging         import log
 
 
 class BaseResource(resource.Resource):
     requireAuth = True
+    _templates = ['signin.mako', 'errors.mako']
     _ajax = False
 
     def __init__(self, ajax=False):
         self._ajax = ajax
+        t.warmupTemplateCache(self._templates)
 
     @defer.inlineCallbacks
     def _getBasicArgs(self, request):
@@ -52,7 +54,6 @@ class BaseResource(resource.Resource):
             failure.raiseException()
         except errors.BaseError, e:
             errorCode, errorBrief, shortErrorStr, fullErrorStr = e.errorData()
-            log.err(failure)
         except Exception, e:
             fullErrorStr = """<p>Something went wrong when processing your
                 request.  The incident got noted and we are working on it.</p>
@@ -60,11 +61,9 @@ class BaseResource(resource.Resource):
             errorCode = 500
             shortErrorStr = """Oops... Unable to process your request.
                 Please try after sometime"""
-            log.err(failure)
 
-        log.info(fullErrorStr)
+        log.err(failure)
         referer = request.getHeader('referer')
-
         try:
             appchange, script, args, myId = yield self._getBasicArgs(request)
             ajax = self._ajax
@@ -75,7 +74,7 @@ class BaseResource(resource.Resource):
                 request.write(shortErrorStr)
             elif ajax and appchange:
                 args["msg"] = fullErrorStr
-                yield renderScriptBlock(request, "errors.mako", "layout",
+                t.renderScriptBlock(request, "errors.mako", "layout",
                                     not ajax, "#mainbar", "set", **args)
             else:
                 if referer:
@@ -89,22 +88,25 @@ class BaseResource(resource.Resource):
                 args["msg"] = fullErrorStr
                 if script:
                     request.write("<script>$('body').empty();</script>")
-                yield render(request, "errors.mako", **args)
+                t.render(request, "errors.mako", **args)
         except Exception, e:
             args = {"msg": fullErrorStr}
-            yield renderDef(request, "errors.mako", "fallback", **args)
+            t.renderDef(request, "errors.mako", "fallback", **args)
 
     def _epilogue(self, request, deferred=None):
         d = deferred if deferred else defer.fail(errors.NotFoundError())
-
-        # Check for errors.
-        d.addErrback(self._handleErrors, request)
-
-        # Finally, close the connection if not already closed.
-        def closeConnection(x):
+        def closeConnection(x=None):
             if not request._disconnected:
                 request.finish()
-        d.addBoth(closeConnection)
+
+        # Handle any errors that may have occurred before
+        # closeing the connection.
+        if not isinstance(d, defer.Deferred):
+            closeConnection()
+        else:
+            d.addErrback(self._handleErrors, request)
+            d.addBoth(closeConnection)
+
         return server.NOT_DONE_YET
 
 
@@ -133,8 +135,7 @@ class APIBaseResource(resource.Resource):
             errorCode = 500
             errorBrief = http.RESPONSES[500]
 
-        log.info(failure)
-
+        log.err(failure)
         request.setResponseCode(errorCode, errorBrief)
         request.setHeader('content-type', 'application/json')
         responseObj = {'error': errorBrief, 'error_description': fullErrorStr}

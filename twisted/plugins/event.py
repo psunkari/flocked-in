@@ -25,7 +25,8 @@ from twisted.internet   import defer
 from twisted.web        import server
 
 from social             import db, utils, base, errors, _
-from social.template    import renderScriptBlock, render, getBlock
+from social             import template as t
+#from social.template    import renderScriptBlock, render, getBlock
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
 from social.logging     import dump_args, profile, log
@@ -118,7 +119,7 @@ class EventResource(base.BaseResource):
                              "maybe": _("People who may attend this event")
                              }[list_type]
 
-            yield renderScriptBlock(request, "item.mako", "userListDialog", False,
+            t.renderScriptBlock(request, "item.mako", "userListDialog", False,
                                     "#invitee-dlg-%s"%(itemId), "set", **args)
 
 
@@ -214,16 +215,16 @@ class EventResource(base.BaseResource):
         landing = not self._ajax
 
         if script and landing:
-            yield render(request, "event.mako", **args)
+            t.render(request, "event.mako", **args)
 
         if script and appchange:
-            yield renderScriptBlock(request, "event.mako", "layout",
+            t.renderScriptBlock(request, "event.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
         yield event.fetchMatchingEvents(request, args, myId)
 
         if script:
-            yield renderScriptBlock(request, "event.mako", "events", landing,
+            t.renderScriptBlock(request, "event.mako", "events", landing,
                                     "#events", "set", **args)
 
 
@@ -317,7 +318,7 @@ class Event(object):
                 $$.events.prepareDateTimePickers();
                 $$.events.autoFillUsers();
                 """
-        yield renderScriptBlock(request, templateFile, renderDef,
+        t.renderScriptBlock(request, templateFile, renderDef,
                                 not isAjax, "#sharebar", "set", True,
                                 attrs={"publisherName": "event"},
                                 handlers={"onload": onload}, **args)
@@ -325,9 +326,9 @@ class Event(object):
 
     def rootHTML(self, convId, isQuoted, args):
         if "convId" in args:
-            return getBlock("event.mako", "event_root", **args)
+            return t.getBlock("event.mako", "event_root", **args)
         else:
-            return getBlock("event.mako", "event_root", args=[convId, isQuoted], **args)
+            return t.getBlock("event.mako", "event_root", args=[convId, isQuoted], **args)
 
 
     @profile
@@ -597,19 +598,18 @@ class Event(object):
                      "owner_start_dt":owner_start_dt,
                      "owner_end_dt":owner_end_dt})
 
-        d1 = renderScriptBlock(request, "event.mako", "event_meta", landing,
+        t.renderScriptBlock(request, "event.mako", "event_meta", landing,
                                 "#item-meta", "set", **args)
-        d2 = renderScriptBlock(request, "event.mako", "event_me", landing,
+        t.renderScriptBlock(request, "event.mako", "event_me", landing,
                                 "#item-me", "set", **args)
 
         onload = """
                 $$.events.autoFillUsers();
                 """
-        d3 = renderScriptBlock(request, "event.mako", "event_actions", landing,
+        t.renderScriptBlock(request, "event.mako", "event_actions", landing,
                                 "#item-subactions", "set", True,
                                 handlers={"onload": onload}, **args)
 
-        yield defer.DeferredList([d1, d2, d3])
 
     @defer.inlineCallbacks
     def renderSideAgendaBlock(self, request, landing, blockType, args):
@@ -619,16 +619,16 @@ class Event(object):
 
         if blockType == "org":
             yield event.fetchMatchingEvents(request, args, myOrgId)
-            yield renderScriptBlock(request, "event.mako", "company_agenda",
+            t.renderScriptBlock(request, "event.mako", "company_agenda",
                                    landing, "#agenda", "set", **args)
         elif blockType == "group":
             groupId = args["groupId"]
             yield event.fetchMatchingEvents(request, args, groupId)
-            yield renderScriptBlock(request, "event.mako", "group_agenda",
+            t.renderScriptBlock(request, "event.mako", "group_agenda",
                                    landing, "#group-agenda", "set", **args)
         else:
             yield event.fetchMatchingEvents(request, args, myId)
-            yield renderScriptBlock(request, "event.mako", "quick_agenda",
+            t.renderScriptBlock(request, "event.mako", "quick_agenda",
                                    landing, "#agenda", "set", **args)
 
 

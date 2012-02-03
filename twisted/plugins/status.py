@@ -6,9 +6,9 @@ from twisted.internet   import defer
 from twisted.plugin     import IPlugin
 
 from social             import db, base, utils, errors, _, constants
+from social             import template as t
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
-from social.template    import render, renderScriptBlock, getBlock
 from social.logging     import profile, dump_args, log
 
 
@@ -19,22 +19,18 @@ class Status(object):
     hasIndex = True
     monitoredFields = {'meta':['comment']}
 
-    @defer.inlineCallbacks
     def renderShareBlock(self, request, isAjax):
-        templateFile = "feed.mako"
-        renderDef = "share_status"
-
-        yield renderScriptBlock(request, templateFile, renderDef,
-                                not isAjax, "#sharebar", "set", True,
-                                attrs={"publisherName": "status"},
-                                handlers={"onload": "(function(obj){$$.publisher.load(obj)})(this);"})
+        t.renderScriptBlock(request, "feed.mako", "share_status",
+                            not isAjax, "#sharebar", "set", True,
+                            attrs={"publisherName": "status"},
+                            handlers={"onload": "(function(obj){$$.publisher.load(obj)})(this);"})
 
 
     def rootHTML(self, convId, isQuoted, args):
         if "convId" in args:
-            return getBlock("item.mako", "render_status", **args)
+            return t.getBlock("item.mako", "render_status", **args)
         else:
-            return getBlock("item.mako", "render_status", args=[convId, isQuoted], **args)
+            return t.getBlock("item.mako", "render_status", args=[convId, isQuoted], **args)
 
 
     def fetchData(self, args, convId=None):
@@ -44,7 +40,7 @@ class Status(object):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def create(self, request, myId, myOrgId, richText=False):
+    def create(self, request, myId, myOrgId, convId, richText=False):
         snippet, comment = utils.getTextWithSnippet(request, "comment",
                                                 constants.POST_PREVIEW_LENGTH,
                                                 richText=richText)

@@ -16,10 +16,10 @@ from twisted.web            import resource, server, http
 from twisted.internet       import defer
 from telephus.cassandra     import ttypes
 
-from social.template        import render, renderDef, renderScriptBlock
-from social.relations       import Relation
 from social                 import db, utils, base, plugins, _, __, search
 from social                 import constants, feed, errors
+from social                 import template as t
+from social.relations       import Relation
 from social.logging         import dump_args, profile, log
 from social.isocial         import IAuthInfo
 
@@ -163,6 +163,7 @@ def getNotifyPref(val, typ, medium):
 
 class SettingsResource(base.BaseResource):
     isLeaf = True
+    _templates = ['settings.mako']
     resources = {}
 
 
@@ -263,8 +264,8 @@ class SettingsResource(base.BaseResource):
                 tmp_suggested_sections[section] = items
         args.update({'suggested_sections':tmp_suggested_sections})
 
-        yield renderScriptBlock(request, "settings.mako", "right",
-                                False, ".right-contents", "set", **args)
+        t.renderScriptBlock(request, "settings.mako", "right",
+                            False, ".right-contents", "set", **args)
         me.update({'personal':data})
         yield search.solr.updatePeopleIndex(myId, me, orgId)
 
@@ -312,8 +313,8 @@ class SettingsResource(base.BaseResource):
                 tmp_suggested_sections[section] = items
         args.update({'suggested_sections':tmp_suggested_sections})
 
-        yield renderScriptBlock(request, "settings.mako", "right",
-                                False, ".right-contents", "set", **args)
+        t.renderScriptBlock(request, "settings.mako", "right",
+                            False, ".right-contents", "set", **args)
         me.update({'contact':data})
         yield search.solr.updatePeopleIndex(myId, me, orgId)
 
@@ -409,8 +410,8 @@ class SettingsResource(base.BaseResource):
                 tmp_suggested_sections[section] = items
         args.update({'suggested_sections':tmp_suggested_sections})
 
-        yield renderScriptBlock(request, "settings.mako", "right",
-                                False, ".right-contents", "set", **args)
+        t.renderScriptBlock(request, "settings.mako", "right",
+                            False, ".right-contents", "set", **args)
 
 
     @defer.inlineCallbacks
@@ -445,42 +446,42 @@ class SettingsResource(base.BaseResource):
         args['me'] = me
 
         if script and landing:
-            yield render(request, "settings.mako", **args)
+            t.render(request, "settings.mako", **args)
 
         if script and appchange:
-            yield renderScriptBlock(request, "settings.mako", "layout",
-                                    landing, "#mainbar", "set", **args)
+            t.renderScriptBlock(request, "settings.mako", "layout",
+                                landing, "#mainbar", "set", **args)
 
         if script:
-            yield renderScriptBlock(request, "settings.mako", "settingsTitle",
-                                    landing, "#settings-title", "set", **args)
+            t.renderScriptBlock(request, "settings.mako", "settingsTitle",
+                                landing, "#settings-title", "set", **args)
 
             handlers={"onload": "$$.menu.selectItem('%s');" % detail}
             if detail == "basic":
                 handlers["onload"] += "$$.ui.bindFormSubmit('#settings-form');"
-                yield renderScriptBlock(request, "settings.mako", "editBasicInfo",
-                                        landing, "#settings-content", "set", True,
-                                        handlers = handlers, **args)
+                t.renderScriptBlock(request, "settings.mako", "editBasicInfo",
+                                    landing, "#settings-content", "set", True,
+                                    handlers = handlers, **args)
 
             elif detail == "work":
-                yield renderScriptBlock(request, "settings.mako", "editWork",
-                                        landing, "#settings-content", "set", True,
-                                        handlers=handlers, **args)
+                t.renderScriptBlock(request, "settings.mako", "editWork",
+                                    landing, "#settings-content", "set", True,
+                                    handlers=handlers, **args)
 
             elif detail == "personal":
-                yield renderScriptBlock(request, "settings.mako", "editPersonal",
-                                        landing, "#settings-content", "set", True,
-                                        handlers=handlers, **args)
+                t.renderScriptBlock(request, "settings.mako", "editPersonal",
+                                    landing, "#settings-content", "set", True,
+                                    handlers=handlers, **args)
 
             elif detail == "passwd":
-                yield renderScriptBlock(request, "settings.mako", "changePasswd",
-                                        landing, "#settings-content", "set", True,
-                                        handlers=handlers, **args)
+                t.renderScriptBlock(request, "settings.mako", "changePasswd",
+                                    landing, "#settings-content", "set", True,
+                                    handlers=handlers, **args)
 
             elif detail == "notify":
-                yield renderScriptBlock(request, "settings.mako", "filterNotifications",
-                                        landing, "#settings-content", "set", True,
-                                        handlers=handlers, **args)
+                t.renderScriptBlock(request, "settings.mako", "filterNotifications",
+                                    landing, "#settings-content", "set", True,
+                                    handlers=handlers, **args)
 
             else:
                 raise errors.InvalidRequest('')
@@ -492,14 +493,14 @@ class SettingsResource(base.BaseResource):
                 tmp_suggested_sections[section] = items
         args.update({'suggested_sections':tmp_suggested_sections})
         if script:
-            yield renderScriptBlock(request, "settings.mako", "right",
-                                    landing, ".right-contents", "set", **args)
+            t.renderScriptBlock(request, "settings.mako", "right",
+                                landing, ".right-contents", "set", **args)
 
         if script and landing:
             request.write("</body></html>")
 
         if not script:
-            yield render(request, "settings.mako", **args)
+            t.render(request, "settings.mako", **args)
 
 
     @defer.inlineCallbacks

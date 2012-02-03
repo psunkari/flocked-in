@@ -17,15 +17,15 @@ from twisted.internet   import defer
 from twisted.web        import static, server
 
 from social             import db, utils, base, errors, config, _, search
-from social             import notifications
+from social             import notifications, template as t
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
-from social.template    import render, renderScriptBlock
 from social.logging     import profile, dump_args, log
 
 
 class MessagingResource(base.BaseResource):
     isLeaf = True
+    _templates = ['message.mako']
     _folders = {'inbox': 'mAllConversations',
                 'archive': 'mArchivedConversations',
                 'trash': 'mDeletedConversations',
@@ -357,12 +357,10 @@ class MessagingResource(base.BaseResource):
                         $('.conversation-reply').attr('value', '');
                         $('#msgreply-attach-uploaded').empty();
                      """
-            yield renderScriptBlock(request, "message.mako",
-                                            "render_conversation_messages",
-                                            landing,
-                                            ".conversation-messages-wrapper",
-                                            "append", True,
-                                            handlers={"onload":onload}, **args)
+            t.renderScriptBlock(request, "message.mako",
+                                "render_conversation_messages", landing,
+                                ".conversation-messages-wrapper", "append", True,
+                                handlers={"onload":onload}, **args)
 
         #Update the right side bar with any attachments the user uploaded
         args.update({"conv":conv})
@@ -384,9 +382,9 @@ class MessagingResource(base.BaseResource):
                            }
                       });
                      """
-            yield renderScriptBlock(request, "message.mako", "right",
-                                    landing, ".right-contents", "set", True,
-                                    handlers={"onload":onload}, **args)
+            t.renderScriptBlock(request, "message.mako", "right",
+                                landing, ".right-contents", "set", True,
+                                handlers={"onload":onload}, **args)
 
         else:
             request.redirect('/messages')
@@ -480,11 +478,11 @@ class MessagingResource(base.BaseResource):
         start = utils.decodeKey(start)
 
         if script and landing:
-            yield render(request, "message.mako", **args)
+            t.render(request, "message.mako", **args)
 
         if appchange and script:
-            yield renderScriptBlock(request, "message.mako", "layout",
-                                    landing, "#mainbar", "set", **args)
+            t.renderScriptBlock(request, "message.mako", "layout",
+                                landing, "#mainbar", "set", **args)
 
         unread = []
         convs = []
@@ -543,12 +541,12 @@ class MessagingResource(base.BaseResource):
                      $$.menu.selectItem('%s');
                      $('#mainbar .contents').removeClass("has-right");
                      """ %args["menuId"]
-            yield renderScriptBlock(request, "message.mako", "render_conversations", landing,
-                                    ".center-contents", "set", True,
-                                    handlers={"onload": onload}, **args)
+            t.renderScriptBlock(request, "message.mako", "render_conversations", landing,
+                                ".center-contents", "set", True,
+                                handlers={"onload": onload}, **args)
             yield utils.render_LatestCounts(request, landing)
         else:
-            yield render(request, "message.mako", **args)
+            t.render(request, "message.mako", **args)
 
 
     @profile
@@ -590,9 +588,9 @@ class MessagingResource(base.BaseResource):
                            }
                       });
                      """
-            yield renderScriptBlock(request, "message.mako", "right",
-                                    landing, ".right-contents", "set", True,
-                                    handlers={"onload":onload}, **args)
+            t.renderScriptBlock(request, "message.mako", "right",
+                                landing, ".right-contents", "set", True,
+                                handlers={"onload":onload}, **args)
 
 
     @profile
@@ -845,11 +843,11 @@ class MessagingResource(base.BaseResource):
             raise errors.MissingParams([])
 
         if script and landing:
-            yield render(request, "message.mako", **args)
+            t.render(request, "message.mako", **args)
 
         if appchange and script:
-            yield renderScriptBlock(request, "message.mako", "layout",
-                              landing, "#mainbar", "set", **args)
+            t.renderScriptBlock(request, "message.mako", "layout",
+                                landing, "#mainbar", "set", **args)
 
         cols = yield db.get_slice(convId, "mConversations")
         conv = utils.supercolumnsToDict(cols)
@@ -903,9 +901,9 @@ class MessagingResource(base.BaseResource):
                      $('.conversation-reply').autogrow();
                      $('#message-reply-form').html5form({messages: 'en'});
                      """
-            renderMessage = renderScriptBlock(request, "message.mako", "render_conversation",
-                                    landing, ".center-contents", "set", True,
-                                    handlers={"onload":onload}, **args)
+            t.renderScriptBlock(request, "message.mako", "render_conversation",
+                                landing, ".center-contents", "set", True,
+                                handlers={"onload":onload}, **args)
 
             onload = """
                      $$.files.init('msgreply-attach');
@@ -917,26 +915,25 @@ class MessagingResource(base.BaseResource):
                            }
                       });
                     """
-            renderParticipants = renderScriptBlock(request, "message.mako", "right",
-                                    landing, ".right-contents", "set", True,
-                                    handlers={"onload":onload}, **args)
-            renderCounts = utils.render_LatestCounts(request, landing)
-            yield defer.DeferredList([renderMessage, renderParticipants, renderCounts])
+            t.renderScriptBlock(request, "message.mako", "right",
+                                landing, ".right-contents", "set", True,
+                                handlers={"onload":onload}, **args)
+            yield utils.render_LatestCounts(request, landing)
         else:
-            yield render(request, "message.mako", **args)
+            t.render(request, "message.mako", **args)
 
 
-    @defer.inlineCallbacks
     def _renderComposer(self, request):
         rcpts = utils.getRequestArg(request, 'recipients', True, True) or ''
         subject = utils.getRequestArg(request, 'subject', True, True) or ''
         body = utils.getRequestArg(request, 'body', False) or ''
 
         onload = "$$.messaging.initComposer();"
-        yield renderScriptBlock(request, "message.mako", "composerDialog",
-                                False, "#msgcompose-dlg", "set", True,
-                                handlers={"onload":onload},
-                                args=[rcpts, subject, body])
+        t.renderScriptBlock(request, "message.mako", "composerDialog",
+                            False, "#msgcompose-dlg", "set", True,
+                            handlers={"onload":onload},
+                            args=[rcpts, subject, body])
+        return True
 
 
     def render_GET(self, request):

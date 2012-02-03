@@ -14,9 +14,8 @@ from email.mime.text    import MIMEText
 import social.constants as constants
 from social.base        import BaseResource
 from social             import utils, db, config, people, errors, _
-from social             import notifications, blacklist
+from social             import notifications, blacklist, template as t
 from social.isocial     import IAuthInfo
-from social.template    import render, renderScriptBlock, getBlock
 from social.logging     import dump_args, profile, log
 from social.errors      import PermissionDenied, MissingParams
 
@@ -62,7 +61,7 @@ def _sendmailResetPassword(email, token):
     args = {"brandName": brandName, "rootUrl": rootUrl,
             "resetPasswdUrl": resetPasswdUrl, "email":email}
     subject = "[%(brandName)s] Reset Password requested for %(email)s" %(locals())
-    htmlBody = getBlock("emails.mako", "forgotPasswd", **args)
+    htmlBody = t.getBlock("emails.mako", "forgotPasswd", **args)
     textBody = body %(locals())
     yield utils.sendmail(email, subject, textBody, htmlBody)
 
@@ -113,7 +112,7 @@ def _sendSignupInvitation(emailId):
         body = "You already have an account on %(brandName)s.\n"\
                "Please visit %(rootUrl)s/signin to sign-in.\n\n"
         textBody = (body + signature) % locals()
-        htmlBody = getBlock("emails.mako", "accountExists", **locals())
+        htmlBody = t.getBlock("emails.mako", "accountExists", **locals())
     else:
         subject = "Welcome to %s" %(brandName)
         body = "Please click the following link to join %(orgName)s network on %(brandName)s\n"\
@@ -124,7 +123,7 @@ def _sendSignupInvitation(emailId):
         insert_d = db.insert(domain, "invitations", emailId, token, emailId)
         activationUrl = activationTmpl % locals()
         textBody = (body + signature) % locals()
-        htmlBody = getBlock("emails.mako", "signup", **locals())
+        htmlBody = t.getBlock("emails.mako", "signup", **locals())
         yield insert_d
 
     yield utils.sendmail(emailId, subject, textBody, htmlBody)
@@ -135,6 +134,7 @@ class SignupResource(BaseResource):
     requireAuth = False
     thanksPage = None
     invalidEmailPage = None
+    _templates = ['signup.mako', 'emails.mako']
 
     @defer.inlineCallbacks
     def _isValidToken(self, emailId, token):
@@ -169,7 +169,7 @@ class SignupResource(BaseResource):
             raise InvalidRegistration("The invite is not valid anymore.  Already registered?")
 
         args = {'emailId': emailId, 'token': token, 'view': 'userinfo'}
-        yield render(request, "signup.mako", **args)
+        t.render(request, "signup.mako", **args)
 
 
     # Results of first step in signup - basic user information
@@ -266,7 +266,7 @@ class SignupResource(BaseResource):
                 db.batch_remove({'invitationsSent':userIds}, names=[emailId])
 
             yield db.remove(domain, "invitations", super_column=emailId)
-            yield render(request, "signup.mako", **args)
+            t.render(request, "signup.mako", **args)
 
             # Notify all invitees about this user.
             token = utils.getRequestArg(request, "token")
@@ -300,7 +300,7 @@ class SignupResource(BaseResource):
         # the invited person did not join flocked.in
 
         args = {'view': 'block', 'blockType': blockType, 'emailId': emailId}
-        yield render(request, "signup.mako", **args)
+        t.render(request, "signup.mako", **args)
 
     @defer.inlineCallbacks
     def resetPassword(self, request):
@@ -344,12 +344,12 @@ class SignupResource(BaseResource):
             yield _sendmailResetPassword(email, token)
 
         args = {"view": "forgotPassword-post"}
-        yield render(request, "signup.mako", **args)
+        t.render(request, "signup.mako", **args)
 
     @defer.inlineCallbacks
     def renderForgotPassword(self, request):
         args = {"view": "forgotPassword"}
-        yield render(request, "signup.mako",  **args)
+        t.render(request, "signup.mako",  **args)
 
     @defer.inlineCallbacks
     def renderResetPassword(self, request):
@@ -364,7 +364,7 @@ class SignupResource(BaseResource):
         if not validEmail or token not in tokens:
             raise PermissionDenied("Invalid token. <a href='/password/resend?email=%s'>Click here</a> to reset password"%(email))
         args = {"view": "resetPassword", "email": email, "token": token}
-        yield render(request, "signup.mako",  **args)
+        t.render(request, "signup.mako",  **args)
 
     @defer.inlineCallbacks
     def _verifyProfile(self, request):
