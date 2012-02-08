@@ -18,7 +18,7 @@ _sendingAjaxRequest: function(evt, xhr, options) {
         method = options.type,
         data = options.data || '',
         cookies = document.cookie.split(';'),
-        currentUri = social.parseUri($.address.value()),
+        currentUri = social.parseUri(social._fetchUriOldPath),
         separator = null, csrfToken = null, payload = null;
 
     if (!social._historyHasStates && (currentUri.path == '' || currentUri.path == '/'))
@@ -59,21 +59,29 @@ fetchUri: function _fetchUri(str, ignoreHistory) {
     var uri = social.parseUri(str),
         deferred = null,
         tail = '', isFullPage = false;
+
+    /* Ignore the first event that we get upon page load */
     if (social._fetchUriOldPath) {
         if (social._fetchUriOldPath != uri.path) {
             tail = uri.query? "&_fp=1": "?_fp=1";
             isFullPage = true;
         }
-
         deferred = $.get('/ajax' + str + tail);
-        deferred.then(function() {
-            if (isFullPage) {
-                $$.chatUI.init();
-            }
-        })
-    }
-    social._fetchUriOldPath = uri.path;
 
+        /* Updated only after a successful response */
+        deferred.then(function() {
+            social._fetchUriOldPath = uri.path;
+            if (_gaq)
+                _gaq.push(['_trackPageview', uri.path]);
+
+            if (isFullPage)
+                $$.chatUI.init();
+        });
+    } else {
+        social._fetchUriOldPath = uri.path;
+    }
+
+    /* Update address in the navigation bar */
     if (ignoreHistory === undefined || !ignoreHistory)
         $.address.value(str);
 
@@ -98,7 +106,9 @@ setBusy: function _setBusy(deferred, node) {
         busyIndicator = node.closest('.busy-indicator');
 
     busyIndicator.addClass("busy");
-    deferred.done(function(){busyIndicator.removeClass("busy");});
+
+    clearBusyClass = function(){busyIndicator.removeClass("busy");};
+    deferred.then(clearBusyClass, clearBusyClass);
 },
 
 /*
@@ -774,8 +784,8 @@ var ui = {
         }
 
         /* Add a scroll to bottom handler */
-        $('#bigwrap').scroll(function(){
-            if ($('#bigwrap').scrollTop() > $('#mainbar').height() - (100 + $('#bigwrap').height())){
+        $(window).scroll(function(){
+            if ($(window).scrollTop() > $('#mainbar').height() - (50 + $(window).height())){
                 $nextPageLoad = $('#next-page-load');
                 if (!$nextPageLoad.attr('requested')) {
                     $nextPageLoad.click();
@@ -2349,7 +2359,7 @@ var chatUI = {
             });
 
             chatUI._dialogs[dlgId] = $template;
-            $template.appendTo("#bigwrap");
+            $template.appendTo('body');
             $template.css('z-index', 5000+chatUI._counter)
 
             var right = 230*chatUI._counter;

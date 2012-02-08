@@ -512,7 +512,7 @@ class ItemResource(base.BaseResource):
 
         convId, conv, keywords = yield _createNewItem(request, myId, args['orgId'])
         if keywords:
-            block = getBlock('item.mako', 'requireReviewDlg', keywords=keywords)
+            block = t.getBlock('item.mako', 'requireReviewDlg', keywords=keywords)
             request.write('$$.convs.reviewRequired(%s);' % json.dumps(block));
             return
 
@@ -804,7 +804,7 @@ class ItemResource(base.BaseResource):
         orgId = authInfo.organization
         itemId, convId, items, keywords = yield _comment(request, myId, orgId)
         if keywords:
-            block = getBlock('item.mako', 'requireReviewDlg', keywords=keywords, convId=convId)
+            block = t.getBlock('item.mako', 'requireReviewDlg', keywords=keywords, convId=convId)
             request.write('$$.convs.reviewRequired(%s, "%s");' % (json.dumps(block), convId));
             return
 

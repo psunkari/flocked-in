@@ -1,6 +1,6 @@
 
-html, body {
-    overflow: hidden;
+html>/**/body {           /* > IE7 */
+    overflow-y: scroll;
 }
 
 body {
@@ -17,17 +17,6 @@ textarea, input {
 form {
     margin-bottom: 0;
 }
-
-#bigwrap {
-    position: fixed;
-    height: 100%;
-    width: 100%;
-    top: 0;
-    left: 0;
-    overflow-x: auto;
-    overflow-y: scroll;
-}
-
 
 .contents {
     -moz-transition: width 0.2s ease-in-out 0s;

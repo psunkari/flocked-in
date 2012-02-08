@@ -15,8 +15,8 @@ import org.slf4j.LoggerFactory;
 
 public class BayeuxInitializer extends GenericServlet
 {
-	private static final long serialVersionUID = 3001025220864808334L;
-	private static Logger logger;
+    private static final long serialVersionUID = 3001025220864808334L;
+    private static Logger logger;
 
     public void init() throws ServletException {
         logger = LoggerFactory.getLogger(getClass().getName());
