@@ -11,11 +11,15 @@ from social                 import db, utils, base, plugins, config
 from social.isocial         import IAuthInfo
 from social.logging         import log
 
-secureCookies = False
+SECURE_COOKIES = False
 try:
-    secureCookies = config.get("General", "SSLOnlyCookies")
+    SECURE_COOKIES = config.get("General", "SSLOnlyCookies")
 except: pass
-COOKIE_DOMAIN = config.get('General', "CookieDomain")
+
+COOKIE_DOMAIN = None
+try:
+    COOKIE_DOMAIN = config.get('General', "CookieDomain")
+except: pass
 
 class RequestFactory(server.Request):
     cookiename = 'session'
@@ -60,10 +64,12 @@ class RequestFactory(server.Request):
             if remember:    # Cookie expires in 1 year
                 self.addCookie(self.cookiename, self.session.uid, path='/',
                                expires=formatdate(time.time()+31536000),
-                               secure=secureCookies, domain=COOKIE_DOMAIN, http_only=True)
+                               secure=SECURE_COOKIES, domain=COOKIE_DOMAIN,
+                               http_only=True)
             else:           # Cookie expires at the end of browser session
                 self.addCookie(self.cookiename, self.session.uid, path='/',
-                               secure=secureCookies, domain=COOKIE_DOMAIN, http_only=True)
+                               secure=SECURE_COOKIES, domain=COOKIE_DOMAIN,
+                               http_only=True)
             return _component()
         d.addCallbacks(callback)
         d.addErrback(errback)
