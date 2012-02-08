@@ -108,7 +108,6 @@
       Compatibility mode &ndash; Please switch your browser to normal mode
     </span>
   </div>
-  <div id='bigwrap'>
   <div id="topbar">
     <div id="top" class="contents">
       <% avatarURI = utils.userAvatar(myKey, me) %>
@@ -163,7 +162,6 @@
     <a href="javascript:" title=${_('Feedback')} onclick="$$.feedback.showFeedback()"><span class="icon feedback-icon"></span><span>${_('Feedback')}</span></a></li>
   </div>
 %endif
-  </div><!-- bigwrap -->
   <div id="alertbar"></div>
 %if script:
   <script type="text/javascript">
