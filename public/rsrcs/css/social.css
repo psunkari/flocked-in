@@ -1276,6 +1276,9 @@ abbr.timestamp {
     padding: 8px 0 0;
 }
 
+#item-subactions {
+    margin-bottom: 10px;
+}
 
 /*
  * Edit profile & Style for a generic form.
@@ -2063,7 +2066,31 @@ abbr.timestamp {
 /*
  * Styling for events
  */
+.ui-autocomplete {
+        max-height: 140px;
+        overflow-y: auto;
+        /* prevent horizontal scrollbar */
+        overflow-x: hidden;
+        /* add padding to account for vertical scrollbar */
+        padding-right: 20px;
+}
 
+.event-time-button {
+    background: -moz-linear-gradient(center top , #F9F9F9 0%, #E3E3E3 100%) repeat scroll 0 0 transparent;
+    border-color: #CCCCCC #BBBBBB #A0A0A0;
+    border-style: solid;
+    border-width: 1px;
+    box-shadow: -1px -2px rgba(0, 0, 0, 0.1) inset;
+    color: #000000;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 16px;
+    outline: medium none;
+    text-align: center;
+    text-shadow: 1px 1px white;
+    white-space: nowrap;
+}
 .event-date-icon {
     position: absolute;
     width: 3.5em;
@@ -2123,6 +2150,50 @@ abbr.timestamp {
     font-size: 13px;
 }
 
+.event-agenda-link {
+    display: inline-block !important;
+}
+
+.event-agenda-link-expired {
+    display: inline-block !important;
+    color: #888888 !important;
+}
+
+.event-agenda-due-in {
+    display: inline-block;
+    float: right;
+}
+
+.concise .event-description {
+    display: none;
+}
+
+.concise .item-subactions {
+    display: none;
+}
+
+.concise .conv-data {
+    display: inline-block;
+}
+
+.concise .event-duration-text {
+    font-size: 11px;
+}
+
+.event-details {
+    display: inline-block;
+    float: right;
+    position: relative;
+    margin-top: 10px;
+}
+
+.event-details  > div {
+    padding: 2px 4px;
+}
+
+.event-details .button-link {
+    padding: 0px;
+}
 /*
  * Styling for preferences
  */

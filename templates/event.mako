@@ -1,7 +1,5 @@
 <%! from social import utils, _, __, constants %>
-<!DOCTYPE HTML>
-
-<%! import pytz, datetime, calendar %>
+<%! import pytz, datetime, time %>
 <%! from pytz import timezone %>
 <%! from dateutil.relativedelta import relativedelta, weekday, MO, TU, WE, TH, \
                                         FR, SA, SU
@@ -10,55 +8,167 @@
                                 YEARLY, MONTHLY, WEEKLY, DAILY, HOURLY, \
                                 MINUTELY, SECONDLY, MO, TU, WE, TH, FR, SA, SU
 %>
+<!DOCTYPE HTML>
 
-<%namespace name="widgets" file="widgets.mako"/>
-<%namespace name="item" file="item.mako"/>
 <%inherit file="base.mako"/>
-
+<%namespace name="item" file="item.mako"/>
 
 <%def name="layout()">
-  <div class="contents has-left has-right">
+  <div class="contents has-left">
     <div id="left">
       <div id="nav-menu">
-        ${self.nav_menu()}
+          <%self.nav_menu()%>
       </div>
     </div>
     <div id="center-right">
+      <div class="titlebar center-header">
+        <span class="middle title">Events</span>
+      </div>
       <div id="right">
         <div class="right-contents"></div>
       </div>
       <div id="center">
-        <div class="">
-          <div id= "events">
-            ${self.events()}
-          </div>
-        </div>
-        <div >
-          <div id="invitations">
-            ${self.invitations()}
-          </div>
+        <div class="center-contents">
+            %if not script:
+                <%self.events()%>
+            %endif
         </div>
       </div>
+      <div class="clear"></div>
     </div>
   </div>
 </%def>
 
-<%def name="events()">
-  %if conversations:
-    <div id="title"> <span class = "middle title">${_("Events")}</span> ${start} -- ${end}</div>
-    %for convId in conversations:
-      ${item.item_layout(convId)}
-    %endfor
-  %endif
+<%def name="event_layout(convId, classes='')">
+  <div id="conv-${convId}" class="conv-item ${classes}">
+    <div class="conv-avatar" id="conv-avatar-${convId}">
+      <%
+        convMeta = items[convId]['meta']
+        utc = pytz.utc
+        start = convMeta.get("event_startTime")
+        end = convMeta.get("event_endTime")
+        start = datetime.datetime.utcfromtimestamp(float(start)).replace(tzinfo=utc)
+        end = datetime.datetime.utcfromtimestamp(float(end)).replace(tzinfo=utc)
+        now = datetime.datetime.utcfromtimestamp(time.time()).replace(tzinfo=utc)
+        present = now <= end #This event is either in progress or has not started yet.
+        iamOwner = myId == items[convId]["meta"]["owner"]
+
+        if reasonUserIds and reasonUserIds.get(convId, []):
+            reasonUserId = reasonUserIds[convId][0]
+        else:
+            reasonUserId = convMeta["owner"]
+      %>
+      <%item.conv_owner(reasonUserId)%>
+    </div>
+    <div class="conv-data">
+      <%
+        convType = convMeta["type"]
+        convOwner = convMeta["owner"]
+      %>
+      <div id="conv-root-${convId}" class="conv-root">
+        <div class="conv-summary">
+          <%self.conv_root(convId, hasReason)%>
+        </div>
+      </div>
+    </div>
+    <div class="event-details">
+      <div class="event-people-attending">
+        <%
+          reason = ""
+          if myId in yes_people[convId]:
+              if len(yes_people[convId]) == 2:
+                  other_person_id = list(set(yes_people[convId]) - set([myId]))[0]
+                  if present:
+                    reason = _("You and %s are attending this event") % (utils.userName(other_person_id, entities[other_person_id]))
+                  else:
+                    reason = _("You and %s went to this event") % (utils.userName(other_person_id, entities[other_person_id]))
+              elif len(yes_people[convId]) > 2:
+                  if present:
+                    reason = _("You and %d others are attending this event") % (len(yes_people[convId]) - 1)
+                  else:
+                    reason = _("You and %d others went to this event") % (len(yes_people[convId]) - 1)
+              else:
+                  if present:
+                    reason = _("You are attending this event")
+                  else:
+                    reason = _("You went to this event")
+          else:
+              if present:
+                  if len(yes_people[convId]) == 1:
+                    reason = "%s is attending" % (utils.userName(yes_people[convId][0],
+                                                  entities[yes_people[convId][0]]))
+                  elif len(yes_people[convId]) == 2:
+                    reason = "%s and %s are attending" % (utils.userName(yes_people[convId][0], entities[yes_people[convId][0]]),
+                                                        utils.userName(yes_people[convId][1], entities[yes_people[convId][1]]))
+                  elif len(yes_people[convId]) == 3:
+                    reason = "%s, %s and %s are attending" % (utils.userName(yes_people[convId][0], entities[yes_people[convId][0]]),
+                                                        utils.userName(yes_people[convId][1], entities[yes_people[convId][1]]),
+                                                        utils.userName(yes_people[convId][2], entities[yes_people[convId][2]]))
+                  elif len(yes_people[convId]) > 3:
+                    reason = "%s, %s and %d others are attending" % (utils.userName(yes_people[convId][0], entities[yes_people[convId][0]]),
+                                                        utils.userName(yes_people[convId][1], entities[yes_people[convId][1]]),
+                                                        len(yes_people[convId]) - 3)
+              else:
+                  if len(yes_people[convId]) > 1:
+                    reason = "%d people went to this event" % (len(yes_people[convId]))
+                  else:
+                    reason = ""
+        %>
+        ${reason}
+      </div>
+      <div class="event-who-invited">
+        <%
+          reason = ""
+          if not iamOwner:
+            if myId in invited_people[convId]:
+                invited_by = invited_people[convId][myId]
+                reason = _("%s invited you to this event") % (utils.userName(invited_by, entities[invited_by]))
+            else:
+                if len(invited_people[convId]) > 1:
+                    reason = _("You invited %d people to this event") % (len(invited_people[convId]) - 1)
+                else:
+                    reason = _("You have not invited anyone to this event")
+          else:
+              target = convMeta.get("target", None)
+              if target:
+                  groupId = target.split(',')[0]
+                  reason = _("Anyone in %s can attend this event") % (utils.groupName(groupId, entities[groupId]))
+              else:pass
+        %>
+        <span>${reason}</span>
+      </div>
+      <div class="event-join-decline">
+        %if present:
+          %if my_response[convId] != "yes":
+            <button class="button-link ajaxpost" onclick="$$.events.RSVP('${convId}', 'yes')">${_("Join")}</button>&nbsp;&#183;
+            <button class="button-link ajaxpost" onclick="$$.events.RSVP('${convId}', 'no')">${_("Decline")}</button>
+          %endif
+        %else:
+            <span>${_("This event has passed")}</span>
+        %endif
+      </div>
+    </div>
+    <div class="clear"></div>
+  </div>
 </%def>
 
-<%def name="invitations()">
- %if inviItems:
-    <div id="title"> <span class = "middle title">${_("Invitations")}</span> </div>
-    %for convId in inviItems:
-      ${item.item_layout(convId)}
+<%def name="conv_root(convId, isQuoted=False)">
+  <%self.event_root(convId, isQuoted, context.kwargs)%>
+</%def>
+
+<%def name="events()">
+  %if conversations:
+    %for convId in conversations:
+      <%event_layout(convId, "concise")%>
     %endfor
   %endif
+  <div id="next-page-loader">
+    %if nextPage:
+      <div id="next-load-wrapper" class="busy-indicator">
+        <a id="next-page-load" class="ajax" data-ref="/event?page=${nextPage}">${_("Fetch more events")}</a>
+      </div>
+    %endif
+  </div>
 </%def>
 
 <%def name="share_event()">
@@ -66,26 +176,84 @@
     <textarea type="text" name="title" placeholder="${_('Title of your event?')}" required=""></textarea>
   </div>
   <div>
-    <div style="display:inline-block;width:16em">
+    <div style="display:inline-block;width:12em">
       <div class="input-wrap">
-        <input type="text" id="eventstartdate"/>
+        <input type="text" id="startdate"/>
         <input type="hidden" name="startDate" id="startDate" required=""/>
       </div>
     </div>
-    <span><strong>to</strong></span>
-    <div style="display:inline-block;width:16em">
+    <div style="display:inline-block;width:9em">
       <div class="input-wrap">
-        <input type="text" id="eventenddate"/>
+            <select id="starttime">
+                <%
+                    my_tz = timezone(me["basic"]["timezone"])
+                    utc_now = datetime.datetime.now(pytz.utc)
+                    mytz_now = utc_now.astimezone(my_tz)
+                    hoursNow = mytz_now.hour
+                    print hoursNow
+                %>
+                %for slot in range(0, 48):
+                    <%
+                        seconds = 1800 * slot
+                        ampm = "PM" if slot > 24 else "AM"
+                        hours = "%02d" % ((slot/2) % 12)
+                        minutes = "30" if (slot % 2) else "00"
+                        if hoursNow == (slot/2) and minutes != "30":
+                            selected=True
+                        else:
+                            selected=False
+                    %>
+                    <option value="${seconds}" ${'selected' if selected else ''}>${hours}:${minutes} ${ampm}</option>
+                %endfor
+            </select>
+        <input type="hidden" name="startTime" id="startTime" required=""/>
+        ##<button class="event-time-button" type='button' onclick="$$.events.showTimePicker('starttime')">&#9650;</button>
+      </div>
+    </div>
+    <span><strong>to</strong></span>
+    <div style="display:inline-block;width:12em">
+      <div class="input-wrap">
+        <input type="text" id="enddate"/>
         <input type="hidden" id="endDate" name="endDate" required=""/>
       </div>
     </div>
+    <div style="display:inline-block;width:9em">
+      <div class="input-wrap">
+            <select id="endtime">
+                <%
+                    my_tz = timezone(me["basic"]["timezone"])
+                    utc_now = datetime.datetime.now(pytz.utc)
+                    mytz_now = utc_now.astimezone(my_tz)
+                    if mytz_now.hour < 23:
+                        hoursNow = mytz_now.hour + 1
+                    else:
+                        hoursNow = 0
+                %>
+                %for slot in range(0, 48):
+                    <%
+                        seconds = 1800 * slot
+                        ampm = "PM" if slot > 24 else "AM"
+                        hours = "%02d" % ((slot/2) % 12)
+                        minutes = "30" if (slot % 2) else "00"
+                        if hoursNow == (slot/2) and minutes != "30":
+                            selected=True
+                        else:
+                            selected=False
+                    %>
+                    <option value="${seconds}" ${'selected' if selected else ''}>${hours}:${minutes} ${ampm}</option>
+                %endfor
+            </select>
+        <input type="hidden" id="endTime" name="endTime" required=""/>
+        ##<button class="event-time-button" type='button' onclick="$$.events.showTimePicker('endtime')">&#9650;</button>
+      </div>
+    </div>
     <div style="display:inline-block">
-      ${timezone(me['basic']['timezone'])}
+      ##${timezone(me['basic']['timezone'])}
     </div>
-    <div style="display:inline-block;float:right">
-        <input type="checkbox" name="allDay" id="allDay"/>
-        <label for="allDay">${_("All Day")}</label>
-    </div>
+    ##<div style="display:inline-block;float:right">
+        ##<input type="checkbox" name="allDay" id="allDay"/>
+        ##<label for="allDay">${_("This is an all day event")}</label>
+    ##</div>
   </div>
   <div class="input-wrap">
     <textarea type="text" name="location" placeholder="${_('Where is the event being hosted?')}"></textarea>
@@ -100,7 +268,7 @@
   <input type="hidden" name="type" value="event"/>
 </%def>
 
-<%def name="event_root(convId, isQuoted=False)">
+<%def name="event_root(convId, isQuoted=False, isConcise=False)">
   <%
     response = my_response[convId]
     conv = items[convId]
@@ -128,11 +296,12 @@
     owner_start_dt = owner_tz.normalize(startdatetime.astimezone(owner_tz))
     owner_end_dt = owner_tz.normalize(enddatetime.astimezone(owner_tz))
 
-    #If start and end on the same day then don't show end date
-    today = datetime.datetime.now().replace(tzinfo=my_tz)
-    startrdelta = relativedelta(startdatetime, today)
-    startsToday = False
-    endsToday = False
+    # Determine if start date and end date are on the same day
+    if start_dt.date() == end_dt.date():
+        sameDay = True
+    else:
+        sameDay = False
+
     allDay = True if convMeta.get("allDay", "0") == "1" else False
 
     if not allDay:
@@ -141,18 +310,21 @@
       event_start_fmt = "%a %b %d"
     event_start = start_dt.strftime(event_start_fmt)
 
-    endrdelta = relativedelta(start_dt, end_dt)
-    if not allDay:
-      event_end_fmt = "%a %b %d, %I:%M %p"
-    else:
+    if allDay:
       event_end_fmt = "%a %b %d"
+    elif sameDay:
+      event_end_fmt = "%I:%M %p"
+    else:
+      event_end_fmt = "%a %b %d, %I:%M %p"
     event_end = end_dt.strftime(event_end_fmt)
-    normalize = utils.normalizeText
 
-    target = convMeta.get('target', '')
-    target = target.split(',') if target else ''
+    normalize = utils.normalizeText
     richText = convMeta.get('richText', 'False') == 'True'
+    short_desc = desc.split("\n").pop()
+
+    target = convMeta.get('target')
     if target:
+      target = target.split(',')
       target = [x for x in target if x in relations.groups]
 
   %>
@@ -173,35 +345,28 @@
     </span>
 
     <div class="item-title-text event-title-text">
-      <span>${title}</span>
+      <a href="/item?id=${convId}">${title}</a>
+      ##<span>${start_dt}</span>
     </div>
 
     <div class="event-contents">
       %if not allDay:
-        % if startsToday:
-          <span class="event-duration-text">${_("today from")} ${event_start}</span>
-        % else:
-          <span class="event-duration-text">${_("")} ${event_start}</span>
-        % endif
-        % if endsToday:
+        <span class="event-duration-text">${event_start}</span>
+        % if sameDay:
           <span class="event-duration-text">to ${event_end}</span>
         % else:
           <span class="event-duration-text">-- ${event_end}</span>
         % endif
       %else:
-        % if startsToday:
-          <span class="event-duration-text">${_("")} ${event_start}</span>
-        % else:
-          <span class="event-duration-text">${_("")} ${event_start}</span>
-        % endif
-        % if endsToday:
+        <span class="event-duration-text">${event_start}</span>
+        % if sameDay:
           <span class="event-duration-text">${_("All Day")}</span>
         % else:
           <span class="event-duration-text">-- ${event_end}</span>
         % endif
       %endif
       <div class="event-description">${desc|normalize}</div>
-      %if location.strip() != "":
+      %if location.strip() != "" and not isConcise:
         <div><b>Venue</b> ${location}</div>
       %endif
       <div class="item-subactions">
@@ -220,20 +385,9 @@
             <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'no')">${_("No")}</a></li>
             <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'maybe')">${_("Maybe")}</a></li>
         </ul>
-        ##<a class="ajax" onclick="$$.events.showEventInvitees('${convId}')">${len(invited_status[convId].keys())}</a>
       </div>
     </div>
   </div>
-</%def>
-
-<%def name="update_rsvp(response, convId)">
-  % if response == "yes":
-    <span id="event-rsvp-status-${convId}">${_("You are attending")}</span>
-  % elif response == "no":
-    <span id="event-rsvp-status-${convId}">${_("You are not attending")}</span>
-  % elif response == "maybe":
-    <span id="event-rsvp-status-${convId}">${_("You may attend")}</span>
-  %endif
 </%def>
 
 <%def name="event_me()">
@@ -241,19 +395,16 @@
     <div class="sidebar-title">${_("About this event")}</div>
     <div class="conversation-people-add-wrapper">
       <ul class="v-links">
-        %if myId != items[convId]["meta"]["owner"] and myId in invited_status[convId]:
+        %if myId != items[convId]["meta"]["owner"] and myId in invited_people[convId]:
           <%
-            invited_by = invited_status[convId][myId]
+            invited_by = invited_people[convId][myId]
           %>
           <li>
             <span>${entities[invited_by]["basic"]["name"]}</span>&nbsp;<span>${_("invited you to this event")} &nbsp; </span>
           </li>
         %endif
         <li>
-          <span>${start_dt.strftime("%b %d, %H:%M")} - ${end_dt.strftime("%b %d, %H:%M %Z")}</span>
-        </li>
-        <li>
-          <span>${owner_start_dt.strftime("%b %d, %H:%M")} - ${owner_end_dt.strftime("%b %d, %H:%M %Z")}</span>
+          <span>Event Starts in 3 hours</span>
         </li>
       </ul>
     </div>
@@ -277,14 +428,17 @@
 </%def>
 
 <%def name="event_meta()">
+  <%
+    iamOwner = myId == items[convId]["meta"]["owner"]
+  %>
   <div class="sidebar-chunk">
-    <div class="sidebar-title">${_("Who are attending")}</div>
+    <div class="sidebar-title">${_("Who are attending (%d)") % (len(yes_people[convId]))}</div>
     %if yes_people[convId]:
       <div class="conversation-attachments-wrapper">
         <ul class="v-links peoplemenu">
           %for u in yes_people[convId]:
             <li>
-              %if u in invited_status[convId].keys():
+              %if u in invited_people[convId].keys():
                 <strong>
                   ${utils.userName(u, entities[u])}
                 </strong>
@@ -302,14 +456,14 @@
       <p> No one has accepted your invite yet!</p>
     %endif
   </div>
-  %if maybe_people[convId]:
+  %if maybe_people[convId] and iamOwner:
     <div class="sidebar-chunk">
-      <div class="sidebar-title">${_("Who may attend")}</div>
+      <div class="sidebar-title">${_("Who may attend (%d)") % (len(maybe_people[convId]))}</div>
       <div class="conversation-attachments-wrapper">
         <ul class="v-links peoplemenu">
           %for u in maybe_people[convId]:
             <li>
-              %if u in invited_status[convId].keys():
+              %if u in invited_people[convId].keys():
                 <strong>
                   ${utils.userName(u, entities[u])}
                 </strong>
@@ -325,14 +479,14 @@
       %endif
     </div>
   %endif
-  %if no_people[convId]:
+  %if no_people[convId] and iamOwner:
     <div class="sidebar-chunk">
-      <div class="sidebar-title">${_("Who are not attending")}</div>
+      <div class="sidebar-title">${_("Who are not attending (%d)") % (len(no_people[convId]))}</div>
       <div class="conversation-attachments-wrapper">
         <ul class="v-links peoplemenu">
           %for u in no_people[convId]:
             <li>
-              %if u in invited_status[convId].keys():
+              %if u in invited_people[convId].keys():
                 <strong>
                   ${utils.userName(u, entities[u])}
                 </strong>
@@ -350,40 +504,41 @@
   %endif
 </%def>
 
-<%def name="quick_agenda()">
+<%def name="side_agenda()">
   <div class="sidebar-chunk">
-    <div class="sidebar-title">${_("My Upcoming Agenda")}</div>
-    <ul class="v-links">
-      <% print items %>
+    <div class="sidebar-title">${title}</div>
+    <ul class="v-links" style="margin-right: 20px;">
       %for convId in conversations:
-        <li>
-          <a href="/item?id=${convId}">${items[convId]['meta']['event_title']}</a>
-        </li>
-      %endfor
-    </ul>
-  </div>
-</%def>
+        <%
+          convMeta = items[convId]['meta']
+          utc = pytz.utc
+          expired = False
+          start = convMeta.get("event_startTime")
+          end = convMeta.get("event_endTime")
+          start = datetime.datetime.utcfromtimestamp(float(start)).replace(tzinfo=utc)
+          end = datetime.datetime.utcfromtimestamp(float(end)).replace(tzinfo=utc)
+          now = datetime.datetime.utcfromtimestamp(time.time()).replace(tzinfo=utc)
 
-<%def name="company_agenda()">
-  <div class="sidebar-chunk">
-    <div class="sidebar-title">${_("Upcoming Events")}</div>
-    <ul class="v-links">
-      %for convId in conversations:
-        <li>
-          <a href="/item?id=${convId}">${items[convId]['meta']['event_title']}</a>
-        </li>
-      %endfor
-    </ul>
-  </div>
-</%def>
+          if now > end:
+              expired = True
+              eventDueIn = "Over"
+          elif now > start and now < end:
+              eventDueIn = "In progress"
+          else:
+            delta = relativedelta(start, now)
 
-<%def name="group_agenda()">
-  <div class="sidebar-chunk">
-    <div class="sidebar-title">${_("Group Agenda")}</div>
-    <ul class="v-links">
-      %for convId in conversations:
+            if delta.days:
+                eventDueIn = "%sd" %delta.days
+            elif delta.hours:
+                eventDueIn = "%sh" %delta.hours
+            elif delta.minutes:
+                eventDueIn = "%sm" %delta.minutes
+            else:
+                eventDueIn = "now"
+        %>
         <li>
-          <a href="/item?id=${convId}">${items[convId]['meta']['event_title']}</a>
+          <a class="event-agenda-link${'-expired' if expired else ''}" href="/item?id=${convId}">${convMeta['event_title']}</a>
+          <span class="event-agenda-due-in">${eventDueIn}</span>
         </li>
       %endfor
     </ul>

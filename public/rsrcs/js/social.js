@@ -1457,38 +1457,77 @@ var events = {
         var currentTime = new Date();
         // Set the Display Strings
         var _self = this;
-        $('#eventstartdate').datetimepicker({ minDate: currentTime,
-            dateFormat:'D, d M yy',timeFormat: 'h:m TT', ampm: true,
-            onClose: function(dateText, inst) {
-            },
-            onSelect: function (selectedDateTime){
-                var start = $(this).datetimepicker('getDate');
-                $('#eventenddate').datetimepicker('option', 'minDate', new Date(start.getTime()));
-                $('#startDate').val(start.getTime());
+        $('#startdate').datepicker({ minDate: currentTime,
+            dateFormat:'D, d M yy',
+            onSelect: function (selectedDate){
+                var instance = $( this ).data( "datepicker" );
+                var date = $.datepicker.parseDate(
+                            instance.settings.dateFormat ||
+                            $.datepicker._defaults.dateFormat,
+                            selectedDate, instance.settings );
+                $('#enddate').datepicker( "option", 'minDate', date );
+                var seconds = $( "#starttime" ).data('combobox').parseTimeString($('#starttime-picker').val())
+                events.setWidgetDateTime("starttime", seconds);
             }
         });
-        $('#eventenddate').datetimepicker({ minDate: currentTime,
-            dateFormat:'D, d M yy',timeFormat: 'h:m TT', ampm: true,
-            onClose: function(dateText, inst) {
-            },
-            onSelect: function (selectedDateTime){
-                var end = $(this).datetimepicker('getDate');
-                $('#eventstartdate').datetimepicker('option', 'maxDate', new Date(end.getTime()));
-                $('#endDate').val(end.getTime());
+        $('#startdate').change(function() {
+            var instance = $( this ).data( "datepicker" );
+            var selectedDate = $(this).val();
+            var date = $.datepicker.parseDate(
+                        instance.settings.dateFormat ||
+                        $.datepicker._defaults.dateFormat,
+                        selectedDate, instance.settings );
+            $('#enddate').datepicker( "option", 'minDate', date );
+            var seconds = $( "#starttime" ).data('combobox').parseTimeString($('#starttime-picker').val())
+            events.setWidgetDateTime("starttime", seconds);
+        });
+        $('#enddate').datepicker({ minDate: currentTime,
+            dateFormat:'D, d M yy',
+            onSelect: function (selectedDate){
+                var instance = $( this ).data( "datepicker" );
+                var date = $.datepicker.parseDate(
+                            instance.settings.dateFormat ||
+                            $.datepicker._defaults.dateFormat,
+                            selectedDate, instance.settings );
+                $('#startdate').datepicker( "option", 'maxDate', date );
+                var seconds = $( "#endtime" ).data('combobox').parseTimeString($('#endtime-picker').val())
+                console.log(seconds)
+                events.setWidgetDateTime("endtime", seconds);
             }
         });
-        $('#eventstartdate').datetimepicker('setDate', currentTime);
-        $('#startDate').val(currentTime.getTime());
-        //$('#eventstartdate').datetimepicker('option', 'minDateTime', currentTime);
-        var preSetEndDateTime = new Date(new Date().setHours(currentTime.getHours() + 1))
-        var endMinDateTime = new Date(new Date().setMinutes(currentTime.getMinutes() + 1))
-        $('#eventenddate').datetimepicker('setDate', preSetEndDateTime);
-        $('#endDate').val(preSetEndDateTime.getTime());
-        //$('#eventenddate').datetimepicker('option', 'minDateTime', endMinDateTime);
+        $('#enddate').change(function() {
+            var instance = $( this ).data( "datepicker" );
+            var selectedDate = $(this).val();
+            var date = $.datepicker.parseDate(
+                        instance.settings.dateFormat ||
+                        $.datepicker._defaults.dateFormat,
+                        selectedDate, instance.settings );
+            $('#startdate').datepicker( "option", 'maxDate', date );
+            var seconds = $( "#endtime" ).data('combobox').parseTimeString($('#endtime-picker').val())
+            events.setWidgetDateTime("endtime", seconds);
+        });
+        $('#startdate').datetimepicker('setDate', currentTime);
+        var preSetEndDateTime = new Date();
+        preSetEndDateTime.setHours(currentTime.getHours() + 1);
+        $('#enddate').datetimepicker('setDate', preSetEndDateTime);
 
-        $("#allDay").change(function(){
-            $('#startTimeWrapper, #endTimeWrapper').toggle()
-        })
+        //$("#allDay").change(function(){
+        //    $('#startTimeWrapper, #endTimeWrapper').toggle()
+        //})
+        $( "#starttime" ).combobox({'currentTime':currentTime.getTime()});
+        $( "#endtime" ).combobox({'currentTime':preSetEndDateTime.getTime()});
+        var seconds = $( "#starttime" ).data('combobox').parseTimeString($('#starttime-picker').val())
+        events.setWidgetDateTime("starttime", seconds);
+        var seconds = $( "#endtime" ).data('combobox').parseTimeString($('#endtime-picker').val())
+        events.setWidgetDateTime("endtime", seconds);
+
+        $( "#starttime" ).bind( "comboboxselected", function(event, ui) {
+            events.setWidgetDateTime('starttime', ui.item.timestamp);
+        });
+        $( "#endtime" ).bind( "comboboxselected", function(event, ui) {
+            events.setWidgetDateTime('endtime', ui.item.timestamp);
+        });
+
     },
     autoFillUsers: function(){
         $('#event-invitee').tagedit({
@@ -1504,9 +1543,155 @@ var events = {
                     }
             }
         });
+    },
+
+    setWidgetDateTime: function(id, seconds) {
+        if (id == "starttime") {
+            var date = $('#startdate').val();
+        }else {
+            var date = $('#enddate').val();
+        }
+        var datestamp = new Date(date);
+        datestamp.setHours(0)
+        datestamp.setMinutes(0)
+        datestamp.setSeconds(0)
+        var timestamp = datestamp.getTime()/1000 + parseInt(seconds)
+        $((id == 'starttime')?'#startDate':'#endDate').val(timestamp*1000);
     }
 };
+    $.widget( "ui.combobox", {
+        options: {
+                currentTime: null
+        },
 
+        parseTimeString: function(string) {
+            var matcher = new RegExp(/^([01]?\d|2[0-3]):([0-5]\d) (AM|PM)$/i);
+            var parts = string.match( matcher );
+            if (parts) {
+                hours = parts[1];
+                minutes = parts[2];
+                ampm = parts[3];
+                if (hours > 12) {
+                    hours = parseInt(hours)
+                }
+                else if (ampm.toUpperCase() == "PM") {
+                    hours = parseInt(hours) + 12
+                }else {
+                    hours = parseInt(hours)
+                }
+                var secondsElapsed = (hours * 60 * 60) + (parseInt(minutes) * 60);
+                return secondsElapsed
+            }else {
+                return 0
+            }
+        },
+
+        _showTimePicker: function() {
+            if ( this.input.autocomplete( "widget" ).is( ":visible" ) ) {
+                    //this.input.autocomplete( "close" );
+                    return;
+            }
+
+            $( this ).blur();
+
+            this.input.autocomplete( "search", "" );
+        },
+
+        _create: function() {
+                var self = this,
+                        select = this.element.hide(),
+                        selected = select.children( ":selected" ),
+                        value = selected.val() ? selected.text() : "";
+                var input = this.input = $( "<input>" )
+                        .insertAfter( select )
+                        .val( value )
+                        .click(function() {
+                            self._showTimePicker();
+                        })
+                        .focus(function() {
+                            self._showTimePicker();
+                        })
+                        .attr('id', select.attr('id')+'-picker')
+                        .attr('required', true)
+                        .autocomplete({
+                                delay: 0,
+                                minLength: 0,
+                                source: function( request, response ) {
+                                    var matcher = new RegExp( $.ui.autocomplete.escapeRegex(request.term), "i" );
+                                    response( select.children( "option" ).map(function() {
+                                        var text = $( this ).text();
+                                        if ( this.value && ( !request.term || matcher.test(text) ) )
+                                            return {
+                                                label: text.replace(
+                                                        new RegExp(
+                                                                "(?![^&;]+;)(?!<[^<>]*)(" +
+                                                                $.ui.autocomplete.escapeRegex(request.term) +
+                                                                ")(?![^<>]*>)(?![^&;]+;)", "gi"
+                                                        ), "<strong>$1</strong>" ),
+                                                value: text,
+                                                timestamp: parseInt($(this).val()),
+                                                option: this
+                                            };
+                                    }) );
+                                },
+                                select: function( event, ui ) {
+                                    self._trigger( "selected", event, {
+                                            item: {'timestamp': ui.item.timestamp}
+                                    });
+                                },
+                                change: function( event, ui ) {
+                                    if ( !ui.item ) {
+                                        var matcher = new RegExp(/^([01]?\d|2[0-3]):([0-5]\d) (AM|PM)$/i),
+                                            valid = false;
+                                        if ( $( this ).val().trim().match( matcher ) ) {
+                                            console.info("Matched")
+                                            valid = true;
+                                            var timestamp = self.parseTimeString($( this ).val().trim())
+                                            self._trigger( "selected", event, {
+                                                    item: {'timestamp': timestamp}
+                                            });
+                                            var parts = $(this).val().trim().match(matcher);
+                                            hours = parts[1];
+                                            minutes = parts[2];
+                                            ampm = parts[3];
+                                            if (hours > 12) {
+                                                hours = parseInt(hours) - 12
+                                                ampm = "PM"
+                                            }
+                                            $( this ).val(hours+":"+minutes+" " + ampm.toUpperCase());
+                                            return false;
+                                        }
+                                        if ( !valid ) {
+                                            //$( this ).val( "" );
+                                            select.val( "" );
+                                            input.data( "autocomplete" ).term = "";
+                                            return false;
+                                        }
+                                    }
+                                },
+                                open: function(event, ui) {
+                                    var timeNow = new Date(self.options.currentTime),
+                                        hoursNow = timeNow.getHours(),
+                                        minutesNow = timeNow.getMinutes();
+                                    var height = (hoursNow - 1.5)*2*25;
+                                    $(this).data('autocomplete').menu.element.scrollTop(height);
+                                }
+                        })
+                        .addClass( "ui-widget ui-widget-content ui-corner-left" );
+
+                input.data( "autocomplete" )._renderItem = function( ul, item ) {
+                        return $( "<li></li>" )
+                                .data( "item.autocomplete", item )
+                                .append( "<a>" + item.label + "</a>" )
+                                .appendTo( ul );
+                };
+        },
+
+        destroy: function() {
+                this.input.remove();
+                $.Widget.prototype.destroy.call( this );
+        }
+    });
 $$.events = events;
 }})(social, jQuery);
 

@@ -18,6 +18,7 @@ try:
     import cPickle as pickle
 except:
     import pickle
+from operator import itemgetter, attrgetter
 
 from zope.interface     import implements
 from twisted.plugin     import IPlugin
@@ -26,7 +27,8 @@ from twisted.web        import server
 
 from social             import db, utils, base, errors, _
 from social             import template as t
-#from social.template    import renderScriptBlock, render, getBlock
+from social             import constants
+from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
 from social.logging     import dump_args, profile, log
@@ -38,7 +40,6 @@ class EventResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    #TODO
     def _invite(self, request, convId=None):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
@@ -59,7 +60,6 @@ class EventResource(base.BaseResource):
         res = utils.multiSuperColumnsToDict(res)
         invitees = [x for x in res.keys() if res[x]["basic"]["org"] == myOrgId]
         new_invitees = [x for x in invitees if x not in conv["invitees"].keys()]
-        print new_invitees
 
         #TODO: Make sure the invited user is within the ACL limits.
 
@@ -213,6 +213,13 @@ class EventResource(base.BaseResource):
     def _events(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
+        page = utils.getRequestArg(request, 'page') or '1'
+        print page
+        if page.isdigit():
+            page = int(page)
+        else:
+            page = 1
+        count = constants.EVENTS_PER_PAGE
 
         if script and landing:
             t.render(request, "event.mako", **args)
@@ -221,11 +228,20 @@ class EventResource(base.BaseResource):
             t.renderScriptBlock(request, "event.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-        yield event.fetchMatchingEvents(request, args, myId)
+        args.update({'page':page})
 
-        if script:
-            t.renderScriptBlock(request, "event.mako", "events", landing,
-                                    "#events", "set", **args)
+        yield event.fetchMatchingEvents(request, args, myId, count=count)
+
+        if page == 1:
+            onload = """
+                     $$.menu.selectItem('events');
+                     """
+            t.renderScriptBlock(request, 'event.mako', "events", landing,
+                                ".center-contents", "set", True,
+                                handlers={"onload": onload}, **args)
+        else:
+            t.renderScriptBlock(request, "event.mako", "events",
+                                landing, "#next-page-loader", "replace", **args)
 
 
     @profile
@@ -341,11 +357,10 @@ class Event(object):
         responses = {}
         yes_people, no_people, maybe_people = [], [], []
 
-        #Status of invited people
+        #List of invited people
         invitees = yield db.multiget_slice([convId], "items", ["invitees"])
         invitees = utils.multiSuperColumnsToDict(invitees)
-        args.setdefault("invited_status", {})[convId] = invitees[convId]["invitees"]
-        #responses.update(invitees[convId]["invitees"])
+        args.setdefault("invited_people", {})[convId] = invitees[convId]["invitees"]
 
         #Status of others
         cols = yield db.get_slice(convId, "eventResponses")
@@ -518,14 +533,16 @@ class Event(object):
         for attendee in user_tuids:
             yield db.batch_remove({'userAgendaMap': ["%s:%s"%(attendee, convId)]},
                                     names=user_tuids[attendee])
-
+        #TODO: Also refresh the sidebar agenda
 
     @defer.inlineCallbacks
     def inviteUsers(self, request, starttimeUUID, endtimeUUID, convId, myId,
                      myOrgId, invitees, acl=None):
-        #Return a dict of users who were explicitly invited and their current
-        # RSVP set to ""
         deferreds = []
+        toNotify = {}
+        toRemove = {'latest':[]}
+        print "conv id ",
+        print convId
         #TODO:Send notifications to each one of these people
         for invitee in invitees:
             #Add to the user's agenda
@@ -536,6 +553,14 @@ class Event(object):
             d4 = db.insert("%s:%s" %(invitee, convId), "userAgendaMap", "",
                           endtimeUUID)
             deferreds.extend([d1, d3, d2, d4])
+            #if invitee != myId:
+            #    toNotify[invitee]= {'latest': {'events':{starttimeUUID: convId}}}
+            #toRemove['latest'].append(invitee)
+
+        #if toRemove['latest']:
+        #    yield db.batch_remove(toRemove, names=[oldTimeUUID], supercolumn="events")
+        #if toNotify:
+        #    yield db.batch_mutate(toNotify)
 
         if acl:
             # Based on the ACL, if company or groups were included, then add an
@@ -565,8 +590,7 @@ class Event(object):
         defer.returnValue([])
 
 
-    @defer.inlineCallbacks
-    def renderSideBlock(self, request, landing, args):
+    def renderItemSideBlock(self, request, landing, args):
 
         convId = args["convId"]
         conv = args["items"][convId]
@@ -612,31 +636,33 @@ class Event(object):
 
 
     @defer.inlineCallbacks
-    def renderSideAgendaBlock(self, request, landing, blockType, args):
+    def renderFeedSideBlock(self, request, landing, blockType, args):
         authinfo = request.getSession(IAuthInfo)
         myId = authinfo.username
         myOrgId = authinfo.organization
 
         if blockType == "org":
+            args["title"] = _("Company Wide Events")
             yield event.fetchMatchingEvents(request, args, myOrgId)
-            t.renderScriptBlock(request, "event.mako", "company_agenda",
+            t.renderScriptBlock(request, "event.mako", "side_agenda",
                                    landing, "#agenda", "set", **args)
         elif blockType == "group":
+            args["title"] = _("Group Agenda")
             groupId = args["groupId"]
             yield event.fetchMatchingEvents(request, args, groupId)
-            t.renderScriptBlock(request, "event.mako", "group_agenda",
+            t.renderScriptBlock(request, "event.mako", "side_agenda",
                                    landing, "#group-agenda", "set", **args)
         else:
+            args["title"] = _("My Upcoming Events")
             yield event.fetchMatchingEvents(request, args, myId)
-            t.renderScriptBlock(request, "event.mako", "quick_agenda",
+            t.renderScriptBlock(request, "event.mako", "side_agenda",
                                    landing, "#agenda", "set", **args)
 
 
     @defer.inlineCallbacks
-    def fetchMatchingEvents(self, request, args, entityId, count=5,
-                            start=None, end=None):
+    def fetchMatchingEvents(self, request, args, entityId, count=5):
         """Find matching events for the user, org or group for a given time
-        range.
+        range. Events are sorted by their start time and then by their end time.
 
         """
         # since we store times in UTC, find out the utc time for the user's
@@ -649,66 +675,58 @@ class Event(object):
         invitations = []
         toFetchEntities = set()
 
-        if not start:
-            mytz_start = mytz_now+relativedelta(hour=0, minute=0, second=0)
+        page = args.get("page", 1)
 
-        if not end:
-            mytz_end = mytz_now+relativedelta(days=7, hour=23, minute=59, second=59)
-
+        mytz_start = mytz_now+relativedelta(hour=0, minute=0, second=0)
         print mytz_start.strftime('%a %b %d, %I:%M %p %Z')
         timestamp = calendar.timegm(mytz_start.utctimetuple())
         timeUUID = utils.uuid1(timestamp=timestamp)
-        stimeUUID = timeUUID.bytes
+        start = timeUUID.bytes
 
-        print mytz_end.strftime('%a %b %d, %I:%M %p %Z')
-        args["start"] = mytz_start.strftime('%a %b %d, %I:%M %p %Z')
-        args["end"] = mytz_end.strftime('%a %b %d, %I:%M %p %Z')
-        timestamp = calendar.timegm(mytz_end.utctimetuple())
-        timeUUID = utils.uuid1(timestamp=timestamp)
-        etimeUUID = timeUUID.bytes
+        print "page number is %d" %page
 
-        myevents = yield db.get_slice(entityId, "userAgenda", start=stimeUUID,
-                                      count=count, finish=etimeUUID)
-        matched_events = []
-        matched_tids = []
-        for event in myevents:
-            matched_events.append(event.column.value)
-            matched_tids.append(uuid.UUID(bytes=event.column.name))
+        cols = yield db.get_slice(entityId, "userAgenda", start=start,
+                                      count=(page*count)*2)
+        matched_events = [col.column.value for col in cols]
+        res = yield db.multiget_slice(matched_events, "items", ["meta"])
+        matched_events = utils.multiSuperColumnsToDict(res)
+        to_sort_time_tuples = [(x, y["meta"]["event_startTime"],
+                                y["meta"]["event_endTime"]) \
+                                    for x, y in matched_events.iteritems()]
 
-        matched_tids.sort()
-        mevents = []
-        for x in matched_events:
-            if x not in mevents:
-                mevents.append(x)
+        sorted_time_tuples = sorted(to_sort_time_tuples,
+                                    key=itemgetter(int(1), int(2)))
 
-        res = yield db.multiget_slice(mevents, "items", ["meta"])
-        events = utils.multiSuperColumnsToDict(res, ordered=True)
+        sorted_event_ids = [x[0] for x in sorted_time_tuples]
+        events_in_this_page = sorted_event_ids[(page-1)*count:page*count]
 
-        #Get this user's response for each of these events.
-        rsvp_names = ["%s:%s" %(x, myId) for x in ['yes', 'no', 'maybe']]
-        myResponses = {}
-        cols = yield db.multiget_slice(mevents, "eventResponses", rsvp_names)
-        res = utils.multiColumnsToDict(cols)
-        for event, resp in res.iteritems():
-            if resp.keys():
-                myResponses[event] = resp.keys()[0].split(":", 1)[0]
-            else:
-                myResponses[event] = ""
+        if len(events_in_this_page) == count:
+            nextPage = page + 1
+            args.update({'nextPage': nextPage})
+        else:
+            args.update({'nextPage': ''})
 
-        args["items"] = events
-        args["conversations"] = mevents
-        args["my_response"] = myResponses
-        args["invited_status"] = {}
+        args["items"] = matched_events
+        args["conversations"] = events_in_this_page
 
-        toFetchEntities.update([events[id]["meta"]["owner"] for id in events])
-        invitees = yield db.multiget_slice(matched_events, "items", ["invitees"])
-        invitees = utils.multiSuperColumnsToDict(invitees)
-        for convId in matched_events:
-            #args["invited_status"][convId] = invitees[convId]["invitees"]
-            toFetchEntities.update(invitees[convId]["invitees"])
+        #Now fetch all related entities, participants, owners, attendees,
+        # invitees, groups etc
+        for convId in events_in_this_page:
+            entityIds = yield self.fetchData(args, convId)
+            toFetchEntities.update(entityIds)
+
+        relation = Relation(myId, [])
+        yield relation.initGroupsList()
+
+        for event, event_meta in matched_events.iteritems():
+            target = event_meta['meta'].get('target')
+            if target:
+                toFetchEntities.update(target.split(','))
+
         entities = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
         entities = utils.multiSuperColumnsToDict(entities)
         args["entities"] = entities
+        args["relations"] = relation
 
 
     _ajaxResource = None

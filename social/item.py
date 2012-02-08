@@ -493,8 +493,8 @@ class ItemResource(base.BaseResource):
                                     landing, '#conv-likes-wrapper-%s' % convId, 'set',
                                     args=[convId, numLikes, iLike, [x.column.name for x in likes]],
                                     entities= args['entities'])
-        if plugin and hasattr(plugin, 'renderSideBlock'):
-            plugin.renderSideBlock(request, landing, args)
+        if plugin and hasattr(plugin, 'renderItemSideBlock'):
+            plugin.renderItemSideBlock(request, landing, args)
 
         if script and landing:
             request.write("</body></html>")
@@ -508,6 +508,7 @@ class ItemResource(base.BaseResource):
     @dump_args
     def _new(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        landing = not self._ajax
 
         convId, conv, keywords = yield _createNewItem(request, myId, args['orgId'])
         if keywords:
@@ -542,6 +543,16 @@ class ItemResource(base.BaseResource):
         defaultType = plugins.keys()[0]
         plugins[defaultType].renderShareBlock(request, True)
 
+        if plugin and hasattr(plugin, 'renderFeedSideBlock'):
+            #TODO: Determine the blockType
+            if target:
+                blockType = "group"
+                args["groupId"] = target.split(',')[0]
+            else:
+                blockType = "user"
+
+            yield plugins["event"].renderFeedSideBlock(request, landing,
+                                                         blockType, args)
 
     @profile
     @defer.inlineCallbacks

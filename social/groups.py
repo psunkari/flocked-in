@@ -1251,12 +1251,17 @@ class GroupFeedResource(base.BaseResource):
                 t.renderScriptBlock(request, "group-feed.mako", "groupLinks",
                                     landing, "#group-links", "set",
                                     handlers={"onload":onload}, **args)
+
             t.renderScriptBlock(request, "group-feed.mako", "groupAdmins",
                                 landing, "#group-admins", "set", True, **args)
-            if "event" in plugins and isMember:
-                blockType = "group"
-                yield plugins["event"].renderSideAgendaBlock(request, landing,
-                                                             blockType, args)
+
+            for pluginType in plugins:
+                plugin = plugins[pluginType]
+                if hasattr(plugin, 'renderFeedSideBlock') and isMember:
+                    blockType = "group"
+                    yield plugins["event"].renderFeedSideBlock(request, landing,
+                                                               blockType, args)
+
         else:
             t.render(request, "group-feed.mako", **args)
 

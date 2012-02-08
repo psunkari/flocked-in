@@ -185,9 +185,7 @@
   <script type="text/javascript" src="/rsrcs/js/jquery.html5form-1.3.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.autoGrowInput.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.tagedit.js"></script>
-  <script type="text/javascript" src="/rsrcs/js/jquery.ui.slider.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.datepicker.js"></script>
-  <script type="text/javascript" src="/rsrcs/js/jquery-ui-timepicker-addon.js"></script>
   <% chatEnabledOrgs = config.get('Chat', 'orgIds').split(',') %>
   %if orgId in chatEnabledOrgs:
     <script type="text/javascript" src="/rsrcs/js/json2.js"></script>
