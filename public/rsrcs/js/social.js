@@ -776,8 +776,8 @@ var ui = {
         }
 
         /* Add a scroll to bottom handler */
-        $('#bigwrap').scroll(function(){
-            if ($('#bigwrap').scrollTop() > $('#mainbar').height() - (100 + $('#bigwrap').height())){
+        $(window).scroll(function(){
+            if ($(window).scrollTop() > $('#mainbar').height() - (50 + $(window).height())){
                 $nextPageLoad = $('#next-page-load');
                 if (!$nextPageLoad.attr('requested')) {
                     $nextPageLoad.click();
@@ -2131,7 +2131,7 @@ var chatUI = {
             });
 
             chatUI._dialogs[dlgId] = $template;
-            $template.appendTo("#bigwrap");
+            $template.appendTo('body');
             $template.css('z-index', 5000+chatUI._counter)
 
             var right = 230*chatUI._counter;
