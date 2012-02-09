@@ -1150,7 +1150,7 @@ class MessagingResource(base.BaseResource):
             d = self._renderComposer(request)
         elif segmentCount == 1 and request.postpath[0] == "thread":
             d = self._renderConversation(request)
-        elif segmentCount == 1 and request.postpath[0] == "file":
+        elif segmentCount == 1 and request.postpath[0] == "files":
             d = self._renderFile(request)
         return self._epilogue(request, d)
 
