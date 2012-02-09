@@ -54,6 +54,15 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _handleAttachments(self, request):
+        """Commit the files that were uploaded to S3 with the conversation.
+        Returns a dictionary mapping of each file and its meta info like
+        name, mimeType, version id.
+
+        Keyword Arguments:
+        tmpFileIds: A list of file ids on the S3 system that are to be associated
+            with this conversation.
+
+        """
         authinfo = request.getSession(IAuthInfo)
         myId = authinfo.username
         tmpFileIds = utils.getRequestArg(request, 'fId', False, True)
@@ -67,6 +76,16 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _getFileInfo(self, request):
+        """Fetch the meta info on a file that is being requested to be
+        downloaded. Returns the meta info of the file in question.
+
+        Keyword Arguments:
+        itemId: id of the conversation on which this file is attached.
+        attachmentId: id of the file on the amazon S3 that is to be served.
+        version: version of the file on the amazon S3 that the user is
+            requesting.
+
+        """
         authinfo = request.getSession(IAuthInfo)
         myId = authinfo.username
         myOrgId = authinfo.organization
@@ -117,6 +136,17 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _renderFile(self, request):
+        """Allow the user to download a file attached to a conversation.
+        Redirects the user to the donwload location on S3.
+
+        Keyword arguments:
+        filename: The name of the file.
+        myId: userId of the person who uploaded the file.
+        myOrgId: orgId of the currently logged in user.
+        fileType: mimeType of the file as detected during uploading.
+        url: filename of the file object in the Amazon S3 system.
+
+        """
         fileInfo = yield self._getFileInfo(request)
         owner, url, fileType, size, name = fileInfo
         authinfo = request.getSession(IAuthInfo)
@@ -157,13 +187,25 @@ class MessagingResource(base.BaseResource):
 
 
     def _parseComposerArgs(self, request):
+        """Parse the request object for common conversation related fields.
+        Return the tuple of (recipients, body, subject, parent)
+
+        Keyword Arguments:
+        recipients: A list of valid user ids who are party to this conversation.
+        subject: The subject of this conversation.
+        body: The body or actual message of this request.
+        parent: Optional, the id of the conversation to which request was acted
+            upon. This is optional if it is a new conversation else a valid id
+            in mConversations.
+
+        """
         #Since we will deal with composer related forms. Take care of santizing
         # all the input and fill with safe defaults wherever needed.
         #To, CC, Subject, Body,
         body = utils.getRequestArg(request, "body")
         if body:
             body = body.decode('utf-8').encode('utf-8', "replace")
-        parent = utils.getRequestArg(request, "parent") #TODO
+        parent = utils.getRequestArg(request, "parent")
         subject = utils.getRequestArg(request, "subject") or ''
         if subject: subject.decode('utf-8').encode('utf-8', "replace")
 
@@ -200,6 +242,19 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _deliverMessage(self, convId, recipients, timeUUID, owner):
+        """To each participant in a conversation, add the conversation
+        to the list of unread conversations.
+
+        CF Changes:
+        mConversations
+        mConvFolders
+        messages
+        mAllConversations
+        mDeletedConversations
+        mArchivedConversations
+        latest
+
+        """
         convFolderMap = {}
         userFolderMap = {}
         toNotify = {}
@@ -254,6 +309,13 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _newMessage(self, ownerId, timeUUID, body, epoch):
+        """Commit the meta information of a message. A message is a reply to a
+        an existing conversation or the first message of a new conversation.
+
+        CF Changes:
+        messages
+
+        """
         messageId = utils.getUniqueKey()
         meta =  { "owner": ownerId,
                  "timestamp": str(int(time.time())),
@@ -269,6 +331,13 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _newConversation(self, ownerId, participants, meta, attachments):
+        """Commit the meta information about a new conversation. Returns
+        the conversation id of the newly created conversation.
+
+        CF Changes:
+        mConversations
+
+        """
         participants = dict ([(userId, '') for userId in participants])
         convId = utils.getUniqueKey()
         attach_meta = self._formatAttachMeta(attachments)
@@ -282,6 +351,20 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _reply(self, request):
+        """Commit a new message in reply to an existing conversation. Creates
+        a new message, uploads any attachments, updates the conversation meta
+        info and finally renders the message for the user.
+
+        Keyword Arguments:
+        convId: conversation id to which this user is replying to.
+        body: The content of the reply.
+
+        CF Changes:
+        mConversations
+        mConvMessages
+        item_files
+
+        """
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
         myOrgId = args['orgKey']
@@ -395,6 +478,19 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _createConversation(self, request):
+        """Create a new conversation including committing meta info about the
+        conversation and the message.
+
+        Keyword Arguments:
+        recipients: A list of user ids who also receive this conversation.
+        body: Text of the first message in this conversation.
+        subject: Subject of the conversation.
+
+        CF Changes:
+        mConvMessages
+        item_files
+
+        """
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
         myOrgId = args['orgKey']
@@ -458,6 +554,14 @@ class MessagingResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _composeMessage(self, request):
+        """Call functions to create a new conversation or post a reply to an
+        existing conversation.
+
+        Keyword Arguments:
+        parent: The optional id of the conversation to which this message
+            was posted.
+
+        """
         parent = utils.getRequestArg(request, "parent") or None
         if parent:
             yield self._reply(request)
@@ -469,6 +573,15 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _listConversations(self, request):
+        """Renders a time sorted list of coversations in a particular view.
+
+        Keyword Arguments:
+        filerType: The folder view which is to rendered. One of ['unread', 'all',
+            'archive', 'trash'].
+        start: The base64 encoded timeUUID of the starting conversation id of
+            the page that needs to be rendered.
+
+        """
         (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
         filterType = utils.getRequestArg(request, 'type')
@@ -553,6 +666,15 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _members(self, request):
+        """Allow a participant of a conversation to add or remove another user
+        to the conversation.
+
+        Keyword arguments:
+        action: Either one of [add, remove]
+        convId: The conversation to which this user wants to either add or
+            remove another user.
+
+        """
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
         action = utils.getRequestArg(request, "action")
@@ -597,6 +719,17 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _addMembers(self, request):
+        """This method add a new user to this conversation.
+
+        Keyword Arguments:
+        newMembers: A list of members who will be added to this conversation.
+        convId: The id of the conversation to which these new members will be
+            added as participants.
+
+        CF Changes:
+        mConversations
+
+        """
         myId = request.getSession(IAuthInfo).username
         orgId = request.getSession(IAuthInfo).organization
         newMembers, body, subject, convId = self._parseComposerArgs(request)
@@ -641,6 +774,19 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _removeMembers(self, request):
+        """This method allows the current user to remove another participant
+        to this conversation.
+
+        Keyword Arguments:
+        newMembers: A list of members who will be added to this conversation.
+        convId: The id of the conversation to which these new members will be
+            added as participants.
+
+        CF Changes:
+        mConversations
+        latest
+
+        """
         myId = request.getSession(IAuthInfo).username
         orgId = request.getSession(IAuthInfo).organization
         members, body, subject, convId = self._parseComposerArgs(request)
@@ -703,6 +849,34 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _actions(self, request):
+        """Perform an action on a conversation or a group of conversations.
+        Update the UI based on the folder and the view that the user is in.
+
+        Keyword arguments:
+        convIds: A list of conversations upon which an action is to be taken.
+        filterType: The folder view in which this action was taken.
+        trash: A presence of this argument indicates that the action is to
+            delete the selected conversations.
+        archive: A presence of this argument indicates that the action is to
+            archive the selected conversations.
+        unread: A presence of this argument indicates that the action is to
+            mark the selected conversations as unread.
+        inbox: A presence of this argument indicates that the action is to
+            move the selected conversations to inbox.
+        view: one of [message, messages] indicates whether the user is
+            performing action on a single conversation or multiple conversations.
+        action: The actual action that the user wants to peform. One of
+            ["inbox", "archive", "trash", "read", "unread"]. This is used
+            if none of the above are mentioned.
+
+        CF Changes:
+        mConvFolders
+        mUnreadConversations
+        latest
+        mAllConversations
+        mDeletedConversations
+
+        """
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         convIds = utils.getRequestArg(request, 'selected', multiValued=True) or []
         filterType = utils.getRequestArg(request, "filterType") or "all"
@@ -719,6 +893,7 @@ class MessagingResource(base.BaseResource):
         else:action = utils.getRequestArg(request, "action")
 
         if convIds:
+            #Move the conversations based on action and update the CFs.
             if action in self._folders.keys():
                 yield self._moveConversation(request, convIds, action)
             elif action == "read":
@@ -746,11 +921,13 @@ class MessagingResource(base.BaseResource):
                         yield db.insert(myId, folder, "r:%s"%(convId), timeUUID)
                 count = yield utils.render_LatestCounts(request)
 
+        #XXX:Actions are not supported in non js mode so this check is unncessary.
         if not self._ajax:
             #Not all actions on message(s) happen over ajax, for them do a redirect
             request.redirect("/messages?type=%s" %filterType)
             request.finish()
         elif self._ajax and len(convIds) > 0:
+            #Update the UI based on the actions and folder view.
             #For all actions other than read/unread, since the action won't be
             # available to the user in same view; i.e, archive won't be on
             # archive view, we can simply remove the conv.
@@ -758,9 +935,9 @@ class MessagingResource(base.BaseResource):
                 if filterType != "unread":
                     request.write("$('%s').remove();" %','.join(['#thread-%s' %convId for convId in convIds]))
                 if view == "message":
-                    reason = _("Message has been moved to the %s" %(action.capitalize()))
+                    reason = _("Message moved to %s" %(action.capitalize()))
                     if action == "archive":
-                        reason = _("Message has been archived")
+                        reason = _("Message archived")
 
                     request.write("""$$.fetchUri('/messages?type=%s');$$.alerts.info("%s");""" %(filterType, _(reason)))
             elif action == "unread":
@@ -773,7 +950,7 @@ class MessagingResource(base.BaseResource):
                 query = "".join([query_template % (convId, convId, convId, convId, convId, filterType) for convId in convIds])
 
                 if view == "message":
-                    request.write("""$$.fetchUri('/messages');$$.alerts.info("%s");""" %("Message has been marked as unread"))
+                    request.write("""$$.fetchUri('/messages');$$.alerts.info("%s");""" %("Message marked as unread"))
                 else:
                     request.write(query)
             elif action == "read":
@@ -795,6 +972,19 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _moveConversation(self, request, convIds, toFolder):
+        """Move a conversation or conversations from one folder to another.
+
+        Keyword Arguments:
+        convIds: List of conversation ids which need to be moved.
+        toFolder: The final destination of the above conversations
+
+        CF Changes:
+        mConvFolders
+        mUnreadConversations
+        mAllConversations
+        mDeletedConversations
+
+        """
         myId = request.getSession(IAuthInfo).username
 
         convs = yield db.multiget_slice(convIds, "mConversations")
@@ -836,6 +1026,12 @@ class MessagingResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _renderConversation(self, request):
+        """Render a conversation.
+
+        Keyword arguments:
+        convId: The id of the conversation that needs to be rendered.
+
+        """
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
         convId = utils.getRequestArg(request, 'id', sanitize=False)
@@ -924,6 +1120,14 @@ class MessagingResource(base.BaseResource):
 
 
     def _renderComposer(self, request):
+        """Render the New Message Composer.
+
+        Keyword arguments:
+        recipients: An optional list of userIds as recipients.
+        subject: An optional subject line for the new message.
+        body: An optional message for the recipients.
+
+        """
         rcpts = utils.getRequestArg(request, 'recipients', True, True) or ''
         subject = utils.getRequestArg(request, 'subject', True, True) or ''
         body = utils.getRequestArg(request, 'body', False) or ''
