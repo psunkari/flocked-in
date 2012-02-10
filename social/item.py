@@ -549,6 +549,9 @@ class ItemResource(base.BaseResource):
                 blockType = "group"
                 args["groupId"] = target.split(',')[0]
             else:
+                #No better way to find out if this item was created from the
+                # user's feed page or from the company feed page
+                referer = request.getHeader('referer')
                 blockType = "user"
 
             yield plugins["event"].renderFeedSideBlock(request, landing,
@@ -1043,6 +1046,9 @@ class ItemResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _remove(self, request):
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        landing = not self._ajax
+
         (itemId, item) = yield utils.getValidItemId(request, 'id', columns=['tags'])
         convId = item["meta"].get("parent", itemId)
         itemOwnerId = item["meta"]["owner"]
@@ -1096,7 +1102,7 @@ class ItemResource(base.BaseResource):
             d = deleteItem(request, itemId, item, conv)
 
             plugin = plugins[convType]
-            yield plugin.delete(myId, convId)
+            yield plugin.delete(myId, convId, conv)
             deferreds.append(d)
 
         else:
@@ -1123,6 +1129,21 @@ class ItemResource(base.BaseResource):
         # Update the user interface
         request.write("$$.convs.remove('%s', '%s');"%(convId,itemId))
 
+        target = conv['meta'].get('target', None)
+
+        if plugin and hasattr(plugin, 'renderFeedSideBlock') and not comment:
+            #TODO: Determine the blockType
+            if target:
+                blockType = "group"
+                args["groupId"] = target.split(',')[0]
+            else:
+                #No better way to find out if this item was created from the
+                # user's feed page or from the company feed page
+                referer = request.getHeader('referer')
+                blockType = "user"
+
+            yield plugins["event"].renderFeedSideBlock(request, landing,
+                                                         blockType, args)
 
     @defer.inlineCallbacks
     def _renderReportDialog(self, request):

@@ -48,20 +48,38 @@ class EventResource(base.BaseResource):
 
         # Parse invitees from the tag edit plugin values
         arg_keys = request.args.keys()
-        invitees = []
+        invitees, new_invitees = [], []
         for arg in arg_keys:
             if arg.startswith("invitee[") and arg.endswith("-a]"):
                 rcpt = arg.replace("invitee[", "").replace("-a]", "")
                 if rcpt != "":
                     invitees.append(rcpt)
 
-        #Check if they are valid uids
+        if myId not in conv["invitees"].keys():
+            raise errors.invalidRequest(_("Only those who are invited can invite others"))
+
         res = yield db.multiget_slice(invitees, "entities", ['basic'])
         res = utils.multiSuperColumnsToDict(res)
         invitees = [x for x in res.keys() if res[x]["basic"]["org"] == myOrgId]
-        new_invitees = [x for x in invitees if x not in conv["invitees"].keys()]
+        invitees = [x for x in invitees if x not in conv["invitees"].keys()]
+        relation = Relation(myId, [])
 
-        #TODO: Make sure the invited user is within the ACL limits.
+        updateConv = {"meta":{}, "invitees":{}}
+        if myId == conv["meta"]["owner"]:
+            #If invited by owner, add the invitees to the ACL
+            acl = conv["meta"]["acl"]
+            acl = pickle.loads(acl)
+            acl.setdefault("accept", {}).setdefault("users", [])
+            acl["accept"]["users"].extend(invitees)
+            updateConv["meta"]["acl"] = pickle.dumps(acl)
+            new_invitees.extend(invitees)
+        else:
+            for invitee in invitees:
+                relation = Relation(invitee, [])
+                yield relation.initGroupsList()
+                withinAcl = utils.checkAcl(invitee, myOrgId, False, relation, conv["meta"])
+                if withinAcl:
+                    new_invitees.append(invitee)
 
         if new_invitees:
             convMeta = conv["meta"]
@@ -73,8 +91,8 @@ class EventResource(base.BaseResource):
             endtimeUUID = utils.uuid1(timestamp=endtime)
             endtimeUUID = endtimeUUID.bytes
 
-            conv["invitees"] = dict([(x, myId) for x in new_invitees])
-            d = yield db.batch_insert(convId, "items", conv)
+            updateConv["invitees"] = dict([(x, myId) for x in new_invitees])
+            d = yield db.batch_insert(convId, "items", updateConv)
 
             yield event.inviteUsers(request, starttimeUUID, endtimeUUID,
                                         convId, myId, myOrgId, new_invitees)
@@ -198,12 +216,22 @@ class EventResource(base.BaseResource):
             elif response == "maybe":
                 rsp = _("You may attend")
 
-            request.write("$('#event-rsvp-status-%s').text('%s')" %(convId, rsp))
+            request.write("$('#event-rsvp-status-%s').text('%s');" %(convId, rsp))
+            request.write("$('#conv-%s .event-join-decline').text('%s');" %(convId, rsp))
 
         if deferreds:
             res = yield defer.DeferredList(deferreds)
 
-        #TODO:Update the UI for changes.
+        if script:
+            args.update({"items":{convId:conv}, "convId":convId})
+            entityIds = yield event.fetchData(args, convId)
+            entities = yield db.multiget_slice(entityIds, "entities", ["basic"])
+            entities = utils.multiSuperColumnsToDict(entities)
+            args["entities"] = entities
+
+            t.renderScriptBlock(request, "event.mako", "event_meta",
+                                landing, "#item-meta", "set", **args)
+
         #TODO:Once a user who has not been invited responds, add the item to his
         # feed.
 
@@ -214,12 +242,23 @@ class EventResource(base.BaseResource):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
         page = utils.getRequestArg(request, 'page') or '1'
-        print page
+        entityId = utils.getRequestArg(request, 'id') or myId
+        view = utils.getRequestArg(request, 'view') or "agenda"
+        authinfo = request.getSession(IAuthInfo)
+        myOrgId = authinfo.organization
+
+        #Check if entity Id is my Org or a group that I have access to.
+        if entityId != myId and entityId != myOrgId:
+            yield utils.getValidEntityId(request, "id", "group")
+
         if page.isdigit():
             page = int(page)
         else:
             page = 1
         count = constants.EVENTS_PER_PAGE
+
+        args.update({'view':view})
+        args.update({'page':page, 'entityId': entityId})
 
         if script and landing:
             t.render(request, "event.mako", **args)
@@ -228,20 +267,23 @@ class EventResource(base.BaseResource):
             t.renderScriptBlock(request, "event.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-        args.update({'page':page})
+        yield event.fetchMatchingEvents(request, args, entityId, count=count)
 
-        yield event.fetchMatchingEvents(request, args, myId, count=count)
+        if script:
+            if page == 1:
+                onload = """
+                         $$.menu.selectItem('events');
+                         """
+                t.renderScriptBlock(request, 'event.mako', "render_events", landing,
+                                    "#center", "set", True,
+                                    handlers={"onload": onload}, **args)
+            else:
+                t.renderScriptBlock(request, "event.mako", "events",
+                                    landing, "#next-page-loader", "replace", **args)
 
-        if page == 1:
-            onload = """
-                     $$.menu.selectItem('events');
-                     """
-            t.renderScriptBlock(request, 'event.mako', "events", landing,
-                                ".center-contents", "set", True,
-                                handlers={"onload": onload}, **args)
-        else:
-            t.renderScriptBlock(request, "event.mako", "events",
-                                landing, "#next-page-loader", "replace", **args)
+    @defer.inlineCallbacks
+    def _invitations(self, request):
+        pass
 
 
     @profile
@@ -488,7 +530,7 @@ class Event(object):
 
 
     @defer.inlineCallbacks
-    def delete(self, myId, convId):
+    def delete(self, myId, convId, conv):
         log.debug("plugin:delete", convId)
         user_tuids = {}
 
@@ -501,12 +543,14 @@ class Event(object):
         res = utils.supercolumnsToDict(res)
         attendees.extend(res["invitees"].keys())
 
-        log.debug("Attendees", attendees)
         log.debug("Maps", ["%s:%s"%(uId, convId) for \
                                        uId in attendees])
 
-        # TODO:Add the orgId in case, the event was posted to the company.
-        # TODO:Add the groups, if the event was posted to groups.
+        convMeta = conv["meta"]
+        res = yield utils.expandAcl(myId, convMeta["org"], convMeta["acl"], convId)
+        attendees.extend(res)
+
+        log.debug("Attendees", attendees)
 
         #Get the timeuuids that were inserted for this user
         res = yield db.multiget_slice(["%s:%s"%(uId, convId) for \
@@ -533,7 +577,6 @@ class Event(object):
         for attendee in user_tuids:
             yield db.batch_remove({'userAgendaMap': ["%s:%s"%(attendee, convId)]},
                                     names=user_tuids[attendee])
-        #TODO: Also refresh the sidebar agenda
 
     @defer.inlineCallbacks
     def inviteUsers(self, request, starttimeUUID, endtimeUUID, convId, myId,
@@ -541,8 +584,6 @@ class Event(object):
         deferreds = []
         toNotify = {}
         toRemove = {'latest':[]}
-        print "conv id ",
-        print convId
         #TODO:Send notifications to each one of these people
         for invitee in invitees:
             #Add to the user's agenda
@@ -553,14 +594,10 @@ class Event(object):
             d4 = db.insert("%s:%s" %(invitee, convId), "userAgendaMap", "",
                           endtimeUUID)
             deferreds.extend([d1, d3, d2, d4])
-            #if invitee != myId:
-            #    toNotify[invitee]= {'latest': {'events':{starttimeUUID: convId}}}
-            #toRemove['latest'].append(invitee)
-
-        #if toRemove['latest']:
-        #    yield db.batch_remove(toRemove, names=[oldTimeUUID], supercolumn="events")
-        #if toNotify:
-        #    yield db.batch_mutate(toNotify)
+            if invitee == myId:
+                # The organizer auto accepts an event
+                d = db.insert(convId, "eventResponses", "", "yes:%s" %(myId))
+                deferreds.append(d)
 
         if acl:
             # Based on the ACL, if company or groups were included, then add an
@@ -657,7 +694,7 @@ class Event(object):
             yield event.fetchMatchingEvents(request, args, myId)
             t.renderScriptBlock(request, "event.mako", "side_agenda",
                                    landing, "#agenda", "set", **args)
-
+        #XXX: What if too many expired events come up in the search.
 
     @defer.inlineCallbacks
     def fetchMatchingEvents(self, request, args, entityId, count=5):

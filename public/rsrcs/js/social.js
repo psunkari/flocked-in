@@ -1417,38 +1417,10 @@ $$.messaging = messaging;
  */
 (function($$, $) { if (!$$.events) {
 var events = {
-    formatTimein12: function(dateObj){
-        //Format time in AM/PM format derived from a date object
-        var currentHours = dateObj.getHours();
-        var currentMinutes = dateObj.getMinutes();
-
-        currentMinutes = ( currentMinutes < 10 ? "0" : "" ) + currentMinutes;
-        // Choose either "AM" or "PM" as appropriate
-        var timeOfDay = ( currentHours < 12 ) ? "AM" : "PM";
-
-        // Convert the hours component to 12-hour format if needed
-        currentHours = ( currentHours > 12 ) ? currentHours - 12 : currentHours;
-
-        // Convert an hours component of "0" to "12"
-        currentHours = ( currentHours == 0 ) ? 12 : currentHours;
-        return currentHours + ":" + currentMinutes + timeOfDay
-    },
     RSVP: function(itemId, response){
         //Add routine for submitting an RSVP
         var postdata = 'id='+itemId+'&response='+response;
         $.post('/ajax/event/rsvp', postdata)
-    },
-    removeUser: function(self, user_id){
-        var invitees = $('#inviteeList').val().split(",");
-        var rcpts = jQuery.grep(invitees, function (a) { return a != user_id; });
-        $('#inviteeList').val(rcpts.join(","))
-        $(self).parent().remove();
-    },
-    formatUser: function(user_string, user_id){
-        return "<div class='tag'>"+
-            "<span class='conversation-composer-recipient-label'>"+ user_string +"</span>"+
-            "<span class='conversation-composer-recipient-remove button-link' "+
-                "onclick='$$.events.removeUser(this, \""+user_id+"\")'>X</span></div>";
     },
     showEventAttendance: function(itemId, type) {
         var dialogOptions = {
@@ -1457,16 +1429,9 @@ var events = {
         $$.dialog.create(dialogOptions);
         $.get('/ajax/event/attendance?id='+itemId+'&type='+type);
     },
-    _toValidDateString: function(dateText){
-        var dtArray = dateText.split(" ");
-        dtArray.splice(3,0, new Date().getFullYear())
-        var newDateText = dtArray.join(" ");
-        return newDateText
-    },
     prepareDateTimePickers: function(){
         var currentTime = new Date();
         // Set the Display Strings
-        var _self = this;
         $('#startdate').datepicker({ minDate: currentTime,
             dateFormat:'D, d M yy',
             onSelect: function (selectedDate){
@@ -1476,7 +1441,7 @@ var events = {
                             $.datepicker._defaults.dateFormat,
                             selectedDate, instance.settings );
                 $('#enddate').datepicker( "option", 'minDate', date );
-                var seconds = $( "#starttime" ).data('combobox').parseTimeString($('#starttime-picker').val())
+                var seconds = $( "#starttime" ).data('timepicker').parseTimeString($('#starttime-picker').val())
                 events.setWidgetDateTime("starttime", seconds);
             }
         });
@@ -1488,7 +1453,7 @@ var events = {
                         $.datepicker._defaults.dateFormat,
                         selectedDate, instance.settings );
             $('#enddate').datepicker( "option", 'minDate', date );
-            var seconds = $( "#starttime" ).data('combobox').parseTimeString($('#starttime-picker').val())
+            var seconds = $( "#starttime" ).data('timepicker').parseTimeString($('#starttime-picker').val())
             events.setWidgetDateTime("starttime", seconds);
         });
         $('#enddate').datepicker({ minDate: currentTime,
@@ -1500,8 +1465,7 @@ var events = {
                             $.datepicker._defaults.dateFormat,
                             selectedDate, instance.settings );
                 $('#startdate').datepicker( "option", 'maxDate', date );
-                var seconds = $( "#endtime" ).data('combobox').parseTimeString($('#endtime-picker').val())
-                console.log(seconds)
+                var seconds = $( "#endtime" ).data('timepicker').parseTimeString($('#endtime-picker').val())
                 events.setWidgetDateTime("endtime", seconds);
             }
         });
@@ -1513,31 +1477,30 @@ var events = {
                         $.datepicker._defaults.dateFormat,
                         selectedDate, instance.settings );
             $('#startdate').datepicker( "option", 'maxDate', date );
-            var seconds = $( "#endtime" ).data('combobox').parseTimeString($('#endtime-picker').val())
+            var seconds = $( "#endtime" ).data('timepicker').parseTimeString($('#endtime-picker').val())
             events.setWidgetDateTime("endtime", seconds);
         });
-        $('#startdate').datetimepicker('setDate', currentTime);
+        $('#startdate').datepicker('setDate', currentTime);
         var preSetEndDateTime = new Date();
         preSetEndDateTime.setHours(currentTime.getHours() + 1);
-        $('#enddate').datetimepicker('setDate', preSetEndDateTime);
+        $('#enddate').datepicker('setDate', preSetEndDateTime);
 
-        //$("#allDay").change(function(){
-        //    $('#startTimeWrapper, #endTimeWrapper').toggle()
-        //})
-        $( "#starttime" ).combobox({'currentTime':currentTime.getTime()});
-        $( "#endtime" ).combobox({'currentTime':preSetEndDateTime.getTime()});
-        var seconds = $( "#starttime" ).data('combobox').parseTimeString($('#starttime-picker').val())
+        $("#allDay").change(function(){
+            $('.time-picker').toggle()
+        })
+        $( "#starttime" ).timepicker({'currentTime':currentTime.getTime()});
+        $( "#endtime" ).timepicker({'currentTime':preSetEndDateTime.getTime()});
+        var seconds = $( "#starttime" ).data('timepicker').parseTimeString($('#starttime-picker').val())
         events.setWidgetDateTime("starttime", seconds);
-        var seconds = $( "#endtime" ).data('combobox').parseTimeString($('#endtime-picker').val())
+        var seconds = $( "#endtime" ).data('timepicker').parseTimeString($('#endtime-picker').val())
         events.setWidgetDateTime("endtime", seconds);
 
-        $( "#starttime" ).bind( "comboboxselected", function(event, ui) {
+        $( "#starttime" ).bind( "timepickerselected", function(event, ui) {
             events.setWidgetDateTime('starttime', ui.item.timestamp);
         });
-        $( "#endtime" ).bind( "comboboxselected", function(event, ui) {
+        $( "#endtime" ).bind( "timepickerselected", function(event, ui) {
             events.setWidgetDateTime('endtime', ui.item.timestamp);
         });
-
     },
     autoFillUsers: function(){
         $('#event-invitee').tagedit({
@@ -1554,7 +1517,6 @@ var events = {
             }
         });
     },
-
     setWidgetDateTime: function(id, seconds) {
         if (id == "starttime") {
             var date = $('#startdate').val();
@@ -1565,31 +1527,42 @@ var events = {
         datestamp.setHours(0)
         datestamp.setMinutes(0)
         datestamp.setSeconds(0)
-        var timestamp = datestamp.getTime()/1000 + parseInt(seconds)
+        var timestamp = datestamp.getTime()/1000 + parseInt(seconds, 10)
+        console.info("Setting DT as " + new Date(timestamp*1000).toString())
         $((id == 'starttime')?'#startDate':'#endDate').val(timestamp*1000);
+    },
+    showAgendaDatePicker: function() {
+        $( "#datepicker" ).datepicker({
+                showOn: "button",
+                buttonImage: "/rsrcs/img/calendar.gif",
+                buttonImageOnly: true
+        });
     }
 };
-    $.widget( "ui.combobox", {
+    $.widget( "ui.timepicker", {
         options: {
                 currentTime: null
         },
 
         parseTimeString: function(string) {
             var matcher = new RegExp(/^([01]?\d|2[0-3]):([0-5]\d) (AM|PM)$/i);
-            var parts = string.match( matcher );
+            var parts = string.match( matcher ),
+                hours = 0;
+
             if (parts) {
-                hours = parts[1];
-                minutes = parts[2];
+                hour = parts[1];
+                minute = parts[2];
                 ampm = parts[3];
-                if (hours > 12) {
-                    hours = parseInt(hours)
+
+                if (hour > 12) {
+                    hours = parseInt(hour, 10)
                 }
                 else if (ampm.toUpperCase() == "PM") {
-                    hours = parseInt(hours) + 12
+                    hours = parseInt(hour, 10) + 12
                 }else {
-                    hours = parseInt(hours)
+                    hours = parseInt(hour, 10)
                 }
-                var secondsElapsed = (hours * 60 * 60) + (parseInt(minutes) * 60);
+                var secondsElapsed = (hours * 60 * 60) + (parseInt(minute, 10) * 60);
                 return secondsElapsed
             }else {
                 return 0
@@ -1639,7 +1612,7 @@ var events = {
                                                                 ")(?![^<>]*>)(?![^&;]+;)", "gi"
                                                         ), "<strong>$1</strong>" ),
                                                 value: text,
-                                                timestamp: parseInt($(this).val()),
+                                                timestamp: parseInt($(this).val(), 10),
                                                 option: this
                                             };
                                     }) );
@@ -1665,7 +1638,7 @@ var events = {
                                             minutes = parts[2];
                                             ampm = parts[3];
                                             if (hours > 12) {
-                                                hours = parseInt(hours) - 12
+                                                hours = parseInt(hours, 10) - 12
                                                 ampm = "PM"
                                             }
                                             $( this ).val(hours+":"+minutes+" " + ampm.toUpperCase());

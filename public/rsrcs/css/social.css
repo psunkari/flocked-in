@@ -2161,7 +2161,7 @@ abbr.timestamp {
     display: none;
 }
 
-.concise .conv-data {
+.concise .conv-root {
     display: inline-block;
 }
 
@@ -2169,15 +2169,23 @@ abbr.timestamp {
     font-size: 11px;
 }
 
+.concise .conv-reason {
+    display: none;
+}
+
+.conv-item.concise {
+    padding-bottom: 10px !important;
+}
+
 .event-details {
     display: inline-block;
     float: right;
     position: relative;
-    margin-top: 10px;
 }
 
 .event-details  > div {
     padding: 2px 4px;
+    text-align: right;
 }
 
 .event-details .button-link {

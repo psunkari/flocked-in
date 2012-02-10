@@ -56,9 +56,9 @@
 
 /* Component containers
 ----------------------------------*/
-.ui-widget { font-family: Helvetica, Arial, sans-serif; font-size: 1.1em; }
+.ui-widget { font-size: 1.1em; }
 .ui-widget .ui-widget { font-size: 1em; }
-.ui-widget input, .ui-widget select, .ui-widget textarea, .ui-widget button { font-family: Helvetica, Arial, sans-serif; font-size: 1em; }
+.ui-widget input, .ui-widget select, .ui-widget textarea, .ui-widget button { font-size: 1em; }
 .ui-widget-content { border: 1px solid #e8eefa; background: #ffffff; color: #333; }
 .ui-widget-content a { color: #444444; }
 .ui-widget-header { border: 1px solid #e8eefa; background: #e8eefa; color: #333; font-weight: bold; }

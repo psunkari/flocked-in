@@ -231,6 +231,11 @@ input::-moz-focus-inner {
   padding: 4px !important;
 }
 
+.ui-datepicker {
+    padding: 0px !important;
+    width: 13em !important;
+}
+
 .ui-menu-separator {
   max-height: 0px;
   border-bottom: 1px solid #CCC;
