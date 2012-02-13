@@ -1266,7 +1266,7 @@ var acl = {
 
         if (!$menu.hasClass("ui-menu")) {
             $menu.menu({
-                     select: function(event, ui) {
+                     selected: function(event, ui) {
                          $(this).hide();
                          acl.updateACL(id, ui);
                      }

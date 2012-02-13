@@ -175,8 +175,6 @@
   </script>
   <script type="text/javascript" src="/rsrcs/js/jquery-1.6.4.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.js"></script>
-  <script type="text/javascript" src="/rsrcs/js/jquery.ui.mouse.js"></script>
-  <script type="text/javascript" src="/rsrcs/js/jquery.ui.menu.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.autocomplete.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.address-1.4.js?tracker=null"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.autogrow-textarea.js"></script>

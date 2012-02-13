@@ -1,4 +1,4 @@
-#import embedly
+import embedly
 import urllib
 import re
 from lxml               import etree

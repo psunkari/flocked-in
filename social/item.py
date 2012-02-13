@@ -1094,14 +1094,13 @@ class ItemResource(base.BaseResource):
         convACL = conv["meta"]["acl"]
         timestamp = str(int(time.time()))
         itemUUID = item["meta"]["uuid"]
+        plugin = plugins[convType]
 
         if delete:
             # The conversation is lazy deleted.
             # If it is the comment being deleted, rollback all feed updates
             # that were made due to this comment and likes on this comment.
             d = deleteItem(request, itemId, item, conv)
-
-            plugin = plugins[convType]
             yield plugin.delete(myId, convId, conv)
             deferreds.append(d)
 
