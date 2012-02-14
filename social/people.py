@@ -478,7 +478,7 @@ class PeopleResource(base.BaseResource):
         if src == "sidebar" and self._ajax:
             request.write("$('#invite-others').val('');" )
         elif src == "sidebar":
-            request.redirect('/feed')
+            request.redirect('/feed/')
         elif src == "people" and self._ajax:
             pass
         elif src == "people":

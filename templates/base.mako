@@ -142,7 +142,7 @@
       %>
       <div id="name">${name}</div>
       <div id="menubar-links-wrapper">
-        <a href="/feed" class="ajax">${_("Home")}</a>
+        <a href="/feed/" class="ajax">${_("Home")}</a>
         %if isOrgAdmin:
           <a href="/admin" class="ajax">${_("Admin")}</a>
         %endif

@@ -411,8 +411,8 @@ class ProfileResource(base.BaseResource):
                 return relation.initSubscriptionsList()
 
             isProfile = (utils.getRequestArg(request, "_pg") == "/profile")
-            isFeed =    (utils.getRequestArg(request, "_pg")  == "/feed")
-            isPeople =  (utils.getRequestArg(request, "_pg")  == "/people")
+            isFeed =    (utils.getRequestArg(request, "_pg") == "/feed")
+            isPeople =  (utils.getRequestArg(request, "_pg") == "/people")
             def renderActions(ign):
                 if isFeed:
                     d = people.get_suggestions(request, constants.SUGGESTION_PER_PAGE, mini=True)

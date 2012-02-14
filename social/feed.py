@@ -665,7 +665,7 @@ class FeedResource(base.BaseResource):
         if itemType and itemType in plugins and plugins[itemType].hasIndex:
             feedItems = yield _feedFilter(request, feedId, itemType, start)
         else:
-            feedItems = yield getFeedItems(request, feedId=feedId, start=start)
+            feedItems = yield getFeedItems(request, feedId=entityId, start=start)
 
         args.update(feedItems)
         args['itemType'] = itemType

@@ -21,7 +21,7 @@
   %>
   <div id="mymenu-container" class="sidemenu-container">
     <ul id="mymenu" class="v-links sidemenu">
-       ${navMenuItem("/feed", _("Back to Home"), "back")}
+       ${navMenuItem("/feed/", _("Back to Home"), "back")}
     </ul>
     <ul id="mymenu" class="v-links sidemenu">
       ${navMenuItem("/admin/people", _("Users"), "users")}

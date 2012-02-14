@@ -1267,7 +1267,7 @@ class ItemResource(base.BaseResource):
             if action == "accept":
                 # Owner removed the comment. Delete the item from his feed
                 yield deleteItem(request, convId)
-                request.write("$$.fetchUri('/feed');")
+                request.write("$$.fetchUri('/feed/');")
                 request.write("$$.alerts.info('%s')" %_("Your item has been deleted"))
                 request.finish()
             else:
