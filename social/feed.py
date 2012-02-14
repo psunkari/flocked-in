@@ -579,13 +579,31 @@ class FeedResource(base.BaseResource):
     resources = {}
     _templates = ['feed.mako']
 
+    def paths(self):
+        return  [('GET', '^/ui/share/(?P<typ>[^/]+)$', self.renderShareBlock),
+                 ('GET', '^/(?P<entityId>[^/]*)$',     self.get)]
+
+    def get(self, request, entityId=None):
+        itemType = utils.getRequestArg(request, 'type')
+        start = utils.getRequestArg(request, 'start') or ''
+        more = utils.getRequestArg(request, 'more') or False
+
+        if more:
+            return self._renderMore(request, entityId, start, itemType)
+        else:
+            return self._render(request, entityId, start, itemType)
+
+    def renderShareBlock(self, request, typ):
+        plugin = plugins.get(typ, None)
+        if plugin:
+            plugin.renderShareBlock(request, self._ajax)
+
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _render(self, request):
+    def _render(self, request, entityId, start, itemType):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         itemType = utils.getRequestArg(request, 'type')
-        entityId = utils.getRequestArg(request, 'id')
         start = utils.getRequestArg(request, "start") or ''
 
         landing = not self._ajax
@@ -642,7 +660,7 @@ class FeedResource(base.BaseResource):
             t.renderScriptBlock(request, "feed.mako", "share_block",
                                 landing, "#share-block", "set",
                                 handlers=handlers, **args)
-            yield self._renderShareBlock(request, "status")
+            yield self.renderShareBlock(request, "status")
 
         if itemType and itemType in plugins and plugins[itemType].hasIndex:
             feedItems = yield _feedFilter(request, feedId, itemType, start)
@@ -680,12 +698,9 @@ class FeedResource(base.BaseResource):
 
     # The client has scripts and this is an ajax request
     @defer.inlineCallbacks
-    def _renderMore(self, request):
+    def _renderMore(self, request, entityId, start, itemType):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
 
-        entityId = utils.getRequestArg(request, "id")
-        start = utils.getRequestArg(request, "start") or ""
-        itemType = utils.getRequestArg(request, 'type')
         entity = yield db.get_slice(entityId, "entities", ["basic"])
         entity = utils.supercolumnsToDict(entity)
         if entity and entity["basic"].get("type", '') == "group":
@@ -705,14 +720,6 @@ class FeedResource(base.BaseResource):
                             handlers={"onload": onload}, **args)
 
 
-    @profile
-    @defer.inlineCallbacks
-    @dump_args
-    def _renderShareBlock(self, request, typ):
-        plugin = plugins.get(typ, None)
-        if plugin:
-            yield plugin.renderShareBlock(request, self._ajax)
-
     @defer.inlineCallbacks
     def _renderChooseAudience(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
@@ -722,21 +729,3 @@ class FeedResource(base.BaseResource):
                             "#custom-audience-dlg", "set", True,
                             handlers={"onload": onload}, **args)
 
-
-    @profile
-    @dump_args
-    def render_GET(self, request):
-        segmentCount = len(request.postpath)
-        d = None
-
-        if segmentCount == 0 or (segmentCount==1 and request.postpath[0]==''):
-            d = self._render(request)
-        elif segmentCount == 1 and request.postpath[0] == "more":
-            d = self._renderMore(request)
-        elif segmentCount == 1 and request.postpath[0] == "audience":
-            d = self._renderChooseAudience(request)
-        elif segmentCount == 2 and request.postpath[0] == "share":
-            if self._ajax:
-                d = self._renderShareBlock(request, request.postpath[1])
-
-        return self._epilogue(request, d)

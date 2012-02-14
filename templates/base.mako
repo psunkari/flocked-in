@@ -18,11 +18,11 @@
   %>
   <div id="mymenu-container" class="sidemenu-container">
     <ul id="mymenu" class="v-links sidemenu">
-      ${navMenuItem("/feed", _("News Feed"), "feed")}
+      ${navMenuItem("/feed/", _("News Feed"), "feed")}
       ${navMenuItem("/notifications", _("Notifications"), "notifications")}
       ${navMenuItem("/messages", _("Messages"), "messages")}
       ${navMenuItem("/people", _("People"), "people")}
-      ${navMenuItem("/feed?id=%s" % orgKey, _("Company Feed"), "org")}
+      ${navMenuItem("/feed/%s" % orgKey, _("Company Feed"), "org")}
       ${navMenuItem("/groups", _("Groups"), "groups")}
       ${navMenuItem("/files/list", _("Files"), "files")}
       ${navMenuItem("/tags/list", _("Tags"), "tags")}
