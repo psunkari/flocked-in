@@ -15,7 +15,6 @@
       cls = "sidemenu-selected" if id == menuId else ''
       countStr = "<div class='new-count'>%s</div>" % counts[id] if (id in counts and counts[id] > 0) else ''
       return '<li><a href="%(link)s" id="%(id)s-sideitem" class="ajax busy-indicator %(cls)s"><span class="sidemenu-icon icon %(id)s-icon"></span><span class="sidemenu-text">%(text)s</span>%(countStr)s</a></li>' % locals()
-    chatEnabledOrgs = config.get('Chat', 'orgIds').split(',')
   %>
   <div id="mymenu-container" class="sidemenu-container">
     <ul id="mymenu" class="v-links sidemenu">
@@ -27,36 +26,34 @@
       ${navMenuItem("/groups", _("Groups"), "groups")}
       ${navMenuItem("/files/list", _("Files"), "files")}
       ${navMenuItem("/tags/list", _("Tags"), "tags")}
-      %if orgId in chatEnabledOrgs:
-        ${navMenuItem("/chats", _("Chats"), "chats")}
-      %endif
+      ${navMenuItem("/chats", _("Chats"), "chats")}
     </ul>
   </div>
 
-  %if script and orgId in chatEnabledOrgs:
-    <div id="roster-container">
-      <div class="sidebar-title">Chat</div>
-      <div id="roster-loading" class="busy-indicator busy" style="display:none;line-height:2.5em;color:gray;">Loading...</div>
-      <div id="roster">
-        <div id="online-status-bar">
-          <button id="online-status-button" class="acl-button acl-text-button" onclick="$$.chatUI.showStatusList(event, 'online-status');">
-            <img id="user-online-status-icon" src="/rsrcs/img/offline.png" style="float:left"/>
-            <span id="user-online-status-text">${_("Offline")}</span>
-            <span>▼</span>
-          </button>
-          <ul class="acl-menu" style="display:none;width:170px;">
-              <li><a class="acl-item" onclick='$$.chatUI.setStatus("available")'>${_("Available")}</a></li>
-              <li><a class="acl-item" onclick='$$.chatUI.setStatus("away")'>${_("Away")}</a></li>
-              <li><a class="acl-item" onclick='$$.chatUI.setStatus("busy")'>${_("Busy")}</a></li>
-              <li><a class="acl-item" onclick='$$.chat.signout()'>${_("Offline")}</a></li>
-          </ul>
-        </div>
-        <div id="roster-list-container" >
-          <div class="roster-list">
-          </div>
+  %if script:
+  <div id="roster-container">
+    <div class="sidebar-title">Chat</div>
+    <div id="roster-loading" class="busy-indicator busy" style="display:none;line-height:2.5em;color:gray;">Loading...</div>
+    <div id="roster">
+      <div id="online-status-bar">
+        <button id="online-status-button" class="acl-button acl-text-button" onclick="$$.chatUI.showStatusList(event, 'online-status');">
+          <img id="user-online-status-icon" src="/rsrcs/img/offline.png" style="float:left"/>
+          <span id="user-online-status-text">${_("Offline")}</span>
+          <span>▼</span>
+        </button>
+        <ul class="acl-menu" style="display:none;width:170px;">
+            <li><a class="acl-item" onclick='$$.chatUI.setStatus("available")'>${_("Available")}</a></li>
+            <li><a class="acl-item" onclick='$$.chatUI.setStatus("away")'>${_("Away")}</a></li>
+            <li><a class="acl-item" onclick='$$.chatUI.setStatus("busy")'>${_("Busy")}</a></li>
+            <li><a class="acl-item" onclick='$$.chat.signout()'>${_("Offline")}</a></li>
+        </ul>
+      </div>
+      <div id="roster-list-container" >
+        <div class="roster-list">
         </div>
       </div>
     </div>
+  </div>
   %endif
 </%def>
 
@@ -182,14 +179,11 @@
   <script type="text/javascript" src="/rsrcs/js/jquery.html5form-1.3.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.autoGrowInput.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.tagedit.js"></script>
-  <% chatEnabledOrgs = config.get('Chat', 'orgIds').split(',') %>
-  %if orgId in chatEnabledOrgs:
-    <script type="text/javascript" src="/rsrcs/js/json2.js"></script>
-    <script type="text/javascript" src="/rsrcs/js/Cometd.js"></script>
-    <script type="text/javascript" src="/rsrcs/js/ReloadExtension.js"></script>
-    <script type="text/javascript" src="/rsrcs/js/jquery.cometd.js"></script>
-    <script type="text/javascript" src="/rsrcs/js/jquery.cometd-reload.js"></script>
-  %endif
+  <script type="text/javascript" src="/rsrcs/js/Cometd.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/ReloadExtension.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/json2.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/jquery.cometd.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/jquery.cometd-reload.js"></script>
   <script type="text/javascript" src="/rsrcs/js/social.js"></script>
   <script type="text/javascript">
     $().ready(function() {$$.ui.init()});
