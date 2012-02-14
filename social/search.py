@@ -215,17 +215,17 @@ class Solr(object):
                 indexTmpl = columnNames.get('template', '')
                 if indexType == "keyvals":
                     if not indexTmpl:
-                        indexTmpl = itemType + "_" + superColumnName + "_%s"
+                        indexTmpl = itemType + "_" + superColName + "_%s"
                     for key, val in item.get(superColName, {}).items():
                         fields.append(self.elementMaker.field(val, {"name": indexTmpl % key}))
                 elif indexType == "multikeys":
                     if not indexTmpl:
-                        indexTmpl = itemType + "_" + superColumnName
+                        indexTmpl = itemType + "_" + superColName
                     for key in item.get(superColName, {}).keys():
                         fields.append(self.elementMaker.field(key, {"name": indexTmpl}))
                 elif indexType == "multivals":
                     if not indexTmpl:
-                        indexTmpl = itemType + "_" + superColumnName
+                        indexTmpl = itemType + "_" + superColName
                     for val in item.get(superColName, {}).values():
                         fields.append(self.elementMaker.field(val, {"name": indexTmpl}))
 

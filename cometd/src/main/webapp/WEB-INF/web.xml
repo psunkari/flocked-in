@@ -8,6 +8,10 @@
         <servlet-name>cometd</servlet-name>
         <servlet-class>org.cometd.server.CometdServlet</servlet-class>
         <load-on-startup>1</load-on-startup>
+        <init-param>
+            <param-name>maxSessionsPerBrowser</param-name>
+            <param-value>-1</param-value>
+        </init-param>
     </servlet>
     <servlet-mapping>
         <servlet-name>cometd</servlet-name>

@@ -13,10 +13,10 @@
 .tagedit-listelement-old a.tagedit-close,
 .tagedit-listelement-old a.tagedit-break,
 .tagedit-listelement-old a.tagedit-delete,
-.tagedit-listelement-old a.tagedit-save {font-weight: bold; text-indent: -2000px; display: inline-block; width: 15px; height: 100%; cursor: pointer; border-left: 1px dotted #7E9DD6; margin: 0 2px 0 5px; background: url(../img/te-cross.png) center center no-repeat;}
-.tagedit-listelement-old a.tagedit-save {background-image: url(../img/te-tick.png); margin-right: 0;}
-.tagedit-listelement-old a.tagedit-break {background-image: url(../img/te-undo.png); margin-right: 0;}
-.tagedit-listelement-old a.tagedit-delete {background-image: url(../img/te-delete.png); margin: 0 5px 0 2px; background-position: right center;}
+.tagedit-listelement-old a.tagedit-save {font-weight: bold; text-indent: -2000px; display: inline-block; width: 15px; height: 100%; cursor: pointer; border-left: 1px dotted #7E9DD6; margin: 0 2px 0 5px; background: url(/rsrcs/img/te-cross.png) center center no-repeat;}
+.tagedit-listelement-old a.tagedit-save {background-image: url(/rsrcs/img/te-tick.png); margin-right: 0;}
+.tagedit-listelement-old a.tagedit-break {background-image: url(/rsrcs/img/te-undo.png); margin-right: 0;}
+.tagedit-listelement-old a.tagedit-delete {background-image: url(/rsrcs/img/te-delete.png); margin: 0 5px 0 2px; background-position: right center;}
 
  /* Items that are edited */
 .tagedit-listelement-edit input.tagedit-edit-input {border: 0; background: transparent; font-size: 11px; color: #666; padding: 0;}

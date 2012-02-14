@@ -584,13 +584,13 @@ class SettingsResource(base.BaseResource):
                 myId = request.getSession(IAuthInfo).username
                 companyVal = yield db.get(myId, 'entities', companyId, "companies")
                 companyVal = companyVal.column.value
-                yield renderScriptBlock(request, "settings.mako", "companyForm",
+                yield t.renderScriptBlock(request, "settings.mako", "companyForm",
                                         False, "#"+encodedCompanyId, "replace",
                                         args=[companyId, companyVal])
                 return
             except: pass
 
-        yield renderScriptBlock(request, "settings.mako", "companyForm",
+        yield t.renderScriptBlock(request, "settings.mako", "companyForm",
                                 False, "#addemp-wrap", "set")
 
 
@@ -643,13 +643,13 @@ class SettingsResource(base.BaseResource):
         db.insert(myId, "entities", newCompanyVal, newCompanyId, "companies")
 
         if companyId:
-            yield renderScriptBlock(request, "settings.mako", "companyItem",
+            yield t.renderScriptBlock(request, "settings.mako", "companyItem",
                                     False, "#"+encodedCompanyId, "replace",
                                     args=[newCompanyId, newCompanyVal])
         else:
             onload = """$('#company-empty-msg').remove();"""+\
                      """$('#addemp-wrap').replaceWith('<div id="addemp-wrap"><button class="button ajax" id="addedu-button" data-ref="/settings/company">Add Company</button></div>');"""
-            yield renderScriptBlock(request, "settings.mako", "companyItem",
+            yield t.renderScriptBlock(request, "settings.mako", "companyItem",
                                     False, "#companies-wrapper", "append", True,
                                     handlers={'onload': onload},
                                     args=[newCompanyId, newCompanyVal])
@@ -665,13 +665,13 @@ class SettingsResource(base.BaseResource):
                 myId = request.getSession(IAuthInfo).username
                 schoolVal = yield db.get(myId, 'entities', schoolId, "schools")
                 schoolVal = schoolVal.column.value
-                yield renderScriptBlock(request, "settings.mako", "schoolForm",
+                yield t.renderScriptBlock(request, "settings.mako", "schoolForm",
                                         False, "#"+encodedSchoolId, "replace",
                                         args=[schoolId, schoolVal])
                 return
             except: pass
 
-        yield renderScriptBlock(request, "settings.mako", "schoolForm",
+        yield t.renderScriptBlock(request, "settings.mako", "schoolForm",
                                 False, "#addedu-wrap", "set")
 
 
@@ -709,13 +709,13 @@ class SettingsResource(base.BaseResource):
         db.insert(myId, "entities", newSchoolVal, newSchoolId, "schools")
 
         if schoolId:
-            yield renderScriptBlock(request, "settings.mako", "schoolItem",
+            yield t.renderScriptBlock(request, "settings.mako", "schoolItem",
                                     False, "#"+encodedSchoolId, "replace",
                                     args=[newSchoolId, newSchoolVal])
         else:
             onload = """$('#school-empty-msg').remove();"""+\
                      """$('#addedu-wrap').replaceWith('<div id="addedu-wrap"><button class="button ajax" id="addedu-button" data-ref="/settings/school">Add School</button></div>');"""
-            yield renderScriptBlock(request, "settings.mako", "schoolItem",
+            yield t.renderScriptBlock(request, "settings.mako", "schoolItem",
                                     False, "#schools-wrapper", "append", True,
                                     handlers={'onload': onload},
                                     args=[newSchoolId, newSchoolVal])
@@ -744,7 +744,7 @@ class SettingsResource(base.BaseResource):
         expertise = me.get('expertise')
 
         onload = "$('#expertise-textbox').val('');"
-        yield renderScriptBlock(request, "settings.mako", "_expertise",
+        yield t.renderScriptBlock(request, "settings.mako", "_expertise",
                                 False, "#expertise-container", "set", True,
                                 handlers={"onload": onload}, args=[expertise])
 

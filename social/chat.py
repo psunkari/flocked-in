@@ -29,8 +29,7 @@ class ChatResource(base.BaseResource):
         comment = utils.getRequestArg(request, 'message')
         channelId = utils.getRequestArg(request, 'room')
 
-        if not comment:
-            self.setResponseCodeAndWrite(request, 200, {'error':  'Message empty'})
+        if not comment: # Ignore empty comment
             return
 
         authInfo = request.getSession(IAuthInfo)
@@ -49,14 +48,14 @@ class ChatResource(base.BaseResource):
         try:
             col = yield db.get(orgId, 'presence', sessionId, myId)
         except ttypes.NotFoundException:
-            self.setResponseCodeAndWrite(request, 200, {'error':  'User is offline'})
+            self.setResponseCodeAndWrite(request, 200, {'error':  'You are currently offline'})
             return
 
         cols = yield db.get_slice(orgId, "presence", super_column=recipientId)
         recipientStatus = getMostAvailablePresence(
                                 utils.columnsToDict(cols).values())
         if recipientStatus == PresenceStates.OFFLINE:
-            self.setResponseCodeAndWrite(request, 200, {'error':  'Recipient is offline'})
+            self.setResponseCodeAndWrite(request, 200, {'error':  'Cannot send message. User is currently offline'})
             return
 
         message = {"from": myName, "to": recipientId, "message": comment,
@@ -90,7 +89,7 @@ class ChatResource(base.BaseResource):
                 if not count:
                     yield comet.publish('/notify/%s'%(recipientId), data)
             except Exception, e:
-                self.setResponseCodeAndWrite(request, 200, {'error':  'Failed to publish message'})
+                self.setResponseCodeAndWrite(request, 200, {'error':  'The message could not be sent!'})
                 return
 
         else:
@@ -100,7 +99,7 @@ class ChatResource(base.BaseResource):
                 yield comet.publish('/notify/%s' %(myId), data)
                 yield comet.publish('/notify/%s' %(recipientId), data)
             except Exception, e:
-                self.setResponseCodeAndWrite(request, 200, {'error':  'Failed to publish message'})
+                self.setResponseCodeAndWrite(request, 200, {'error':  'The message could not be sent!'})
                 return
 
             yield db.insert(channelId, 'channelSubscribers', '', myId)
@@ -132,6 +131,7 @@ class ChatResource(base.BaseResource):
             if oldTimeuuid:
                 yield db.remove(userId, "chatArchiveList", oldTimeuuid)
 
+
     @defer.inlineCallbacks
     def _getMyStatus(self, request):
         authInfo = request.getSession(IAuthInfo)
@@ -139,12 +139,14 @@ class ChatResource(base.BaseResource):
         orgId = authInfo.organization
         sessionId = request.getCookie('session')
 
+        status = ''
         try:
             row = yield db.get(orgId, 'presence', sessionId, myId)
-            request.write("$$.chat.signin('%s');" % row.column.value)
+            status = row.column.value
         except Exception as ex:
-            request.write('$$.chat.signout(false);')
+            status = PresenceStates.OFFLINE
 
+        request.write(json.dumps({"status": status}))
 
 
     def render_GET(self, request):

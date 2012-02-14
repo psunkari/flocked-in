@@ -53,6 +53,11 @@ org.cometd.ReloadExtension = function(configuration)
     var _state = null;
     var _cookieMaxAge = 5;
     var _batch = false;
+    var _reloadDone = false;
+
+    function _isReload() {
+        return _reloadDone;
+    }
 
     function _reload(config)
     {
@@ -97,6 +102,7 @@ org.cometd.ReloadExtension = function(configuration)
     {
         _cometd = cometd;
         _cometd.reload = _reload;
+        _cometd.isReload = _isReload;
         _debug = _cometd._debug;
     };
 
@@ -150,11 +156,15 @@ org.cometd.ReloadExtension = function(configuration)
                             _batch = true;
                             _cometd.startBatch();
                         }
+
+                        _reloadDone = true;
+
                         // This handshake is aborted, as we will replay the prior handshake response
                         return null;
                     }
                     else
                     {
+                        _reloadDone = false;
                         _debug('Reload extension could not restore state', oldState);
                     }
                 }
