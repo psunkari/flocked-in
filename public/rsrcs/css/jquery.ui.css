@@ -59,10 +59,10 @@
 .ui-widget { font-family: Helvetica, Arial, sans-serif; font-size: 1.1em; }
 .ui-widget .ui-widget { font-size: 1em; }
 .ui-widget input, .ui-widget select, .ui-widget textarea, .ui-widget button { font-family: Helvetica, Arial, sans-serif; font-size: 1em; }
-.ui-widget-content { border: 1px solid #e8eefa; background: #ffffff; color: #333; }
-.ui-widget-content a { color: #444444; }
-.ui-widget-header { border: 1px solid #e8eefa; background: #e8eefa; color: #333; font-weight: bold; }
-.ui-widget-header a { color: #444444; }
+.ui-widget-content { border: 1px solid #E8EEFA; background: #FFFFFF; color: #333; }
+.ui-widget-content a { color: #333333; }
+.ui-widget-header { border: 1px solid #E8EEFA; background: #E8EEFA; color: #333; font-weight: bold; }
+.ui-widget-header a { color: #333333; }
 
 /* Interaction states
 ----------------------------------*/
@@ -70,17 +70,17 @@
 .ui-state-default a, .ui-state-default a:link, .ui-state-default a:visited { color: #333; text-decoration: none; }
 .ui-state-hover, .ui-widget-content .ui-state-hover, .ui-widget-header .ui-state-hover, .ui-state-focus, .ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus { border: 0; background: #e0d7cf; color: #000000; }
 .ui-state-hover a, .ui-state-hover a:hover { color: #ffffff; text-decoration: none; }
-.ui-state-active, .ui-widget-content .ui-state-active, .ui-widget-header .ui-state-active { border: 1px solid #dddddd; background: #ffffff; font-weight: bold; color: #ff0084; }
+.ui-state-active, .ui-widget-content .ui-state-active, .ui-widget-header .ui-state-active { border: 1px solid #E3E3E3; background: #ffffff; font-weight: bold; color: #ff0084; }
 .ui-state-active a, .ui-state-active a:link, .ui-state-active a:visited { color: #ff0084; text-decoration: none; }
 .ui-widget :active { outline: none; }
 
 /* Interaction Cues
 ----------------------------------*/
-.ui-state-highlight, .ui-widget-content .ui-state-highlight, .ui-widget-header .ui-state-highlight  {border: 1px solid #cccccc; background: #ffffff; color: #444444; }
-.ui-state-highlight a, .ui-widget-content .ui-state-highlight a,.ui-widget-header .ui-state-highlight a { color: #444444; }
-.ui-state-error, .ui-widget-content .ui-state-error, .ui-widget-header .ui-state-error {border: 1px solid #ff0084; background: #ffffff; color: #222222; }
-.ui-state-error a, .ui-widget-content .ui-state-error a, .ui-widget-header .ui-state-error a { color: #222222; }
-.ui-state-error-text, .ui-widget-content .ui-state-error-text, .ui-widget-header .ui-state-error-text { color: #222222; }
+.ui-state-highlight, .ui-widget-content .ui-state-highlight, .ui-widget-header .ui-state-highlight  {border: 1px solid #E3E3E3; background: #ffffff; color: #333333; }
+.ui-state-highlight a, .ui-widget-content .ui-state-highlight a,.ui-widget-header .ui-state-highlight a { color: #333333; }
+.ui-state-error, .ui-widget-content .ui-state-error, .ui-widget-header .ui-state-error {border: 1px solid #ff0084; background: #ffffff; color: #333333; }
+.ui-state-error a, .ui-widget-content .ui-state-error a, .ui-widget-header .ui-state-error a { color: #333333; }
+.ui-state-error-text, .ui-widget-content .ui-state-error-text, .ui-widget-header .ui-state-error-text { color: #333333; }
 .ui-priority-primary, .ui-widget-content .ui-priority-primary, .ui-widget-header .ui-priority-primary { font-weight: bold; }
 .ui-priority-secondary, .ui-widget-content .ui-priority-secondary,  .ui-widget-header .ui-priority-secondary { opacity: .7; filter:Alpha(Opacity=70); font-weight: normal; }
 .ui-state-disabled, .ui-widget-content .ui-state-disabled, .ui-widget-header .ui-state-disabled { opacity: .35; filter:Alpha(Opacity=35); background-image: none; }
@@ -89,7 +89,7 @@
 ----------------------------------*/
 
 /* Overlays */
-.ui-widget-overlay { background: #eeeeee; opacity: .80;filter:Alpha(Opacity=80); }
+.ui-widget-overlay { background: #EAEAEA; opacity: .80;filter:Alpha(Opacity=80); }
 .ui-widget-shadow { margin: -4px 0 0 -4px; padding: 4px; background: #aaaaaa; opacity: .60;filter:Alpha(Opacity=60); -moz-border-radius: 0px; -webkit-border-radius: 0px; border-radius: 0px; }
 
 
