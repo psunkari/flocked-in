@@ -355,18 +355,10 @@ class Event(object):
         defer.returnValue(_(reasons[noOfRequesters])%(tuple(vals)))
 
 
-    @defer.inlineCallbacks
     def renderShareBlock(self, request, isAjax):
         authinfo = request.getSession(IAuthInfo)
         myId = authinfo.username
-        orgKey = authinfo.organization
-
-        cols = yield db.multiget_slice([myId, orgKey], "entities", ["basic"])
-        cols = utils.multiSuperColumnsToDict(cols)
-
-        me = cols.get(myId, None)
-        org = cols.get(orgKey, None)
-        args = {"myId": myId, "orgKey": orgKey, "me": me, "org": org}
+        orgId = authinfo.organization
 
         templateFile = "event.mako"
         renderDef = "share_event"
@@ -379,7 +371,7 @@ class Event(object):
         t.renderScriptBlock(request, templateFile, renderDef,
                                 not isAjax, "#sharebar", "set", True,
                                 attrs={"publisherName": "event"},
-                                handlers={"onload": onload}, **args)
+                                handlers={"onload": onload})
 
 
     def rootHTML(self, convId, isQuoted, args):

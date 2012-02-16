@@ -204,7 +204,9 @@
       <div class="input-wrap">
             <select id="starttime">
                 <%
-                    my_tz = timezone(me["basic"]["timezone"])
+                    #my_tz = timezone(me["basic"]["timezone"])
+                    ##TODO: me is not available after latest change in feed.py
+                    my_tz = timezone("Asia/Kolkata")
                     utc_now = datetime.datetime.now(pytz.utc)
                     mytz_now = utc_now.astimezone(my_tz)
                     hoursNow = mytz_now.hour
@@ -231,7 +233,9 @@
       <div class="input-wrap">
             <select id="endtime">
                 <%
-                    my_tz = timezone(me["basic"]["timezone"])
+                    #my_tz = timezone(me["basic"]["timezone"])
+                    ##TODO: me is not available after latest change in feed.py
+                    my_tz = timezone("Asia/Kolkata")
                     utc_now = datetime.datetime.now(pytz.utc)
                     mytz_now = utc_now.astimezone(my_tz)
                     if mytz_now.hour < 23:

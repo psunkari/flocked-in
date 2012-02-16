@@ -1061,6 +1061,13 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     font-weight: bold;
 }
 
+.conv-target {
+    font-size: 1.4em;
+    line-height: 1em;
+    color: #999999;
+    padding: 0 6px;
+}
+
 .conv-comments-more,
 .conv-comment,
 .conv-likes,

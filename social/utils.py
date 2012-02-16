@@ -227,6 +227,50 @@ def getValidTagId(request, arg):
     defer.returnValue((tagId, tag))
 
 
+@defer.inlineCallbacks
+def fetchAndFilterConvs(ids, relation, items, myId, orgId,
+                        isOrgAdmin=False, supercols=None):
+    """Fetch items represented by ids and check if the authenticated
+    user has access to them.  Since the data is already fetched, cache it.
+
+    Keyword arguments:
+    @ids - List of conversation Ids that need to be fetched
+    @relation - Relation object for the authenticated user
+    @items - Dictionary into which the fetched data is stored
+    @myId - Id of the authenticated user
+    @orgId - Id of the authenticated user's org.
+    """
+    retIds = []
+    deleted = set()
+    if not ids:
+        defer.returnValue((retIds, deleted))
+
+    supercols = supercols or ["meta", "tags", "attachments"]
+    cols = yield db.multiget_slice(ids, "items", supercols)
+    items.update(multiSuperColumnsToDict(cols))
+
+    # Filter the items (checkAcl only for conversations)
+    for convId in ids:
+        if convId not in items:
+            continue
+
+        # Ignore if it is a comment
+        meta = items.get(convId, {}).get("meta", {})
+        if not meta or "parent" in meta:
+            continue
+
+        # Check if the conversation was already deleted
+        if "state" in meta and meta["state"] == "deleted":
+            deleted.add(convId)
+            continue
+
+        # Check ACL
+        if checkAcl(myId, orgId, isOrgAdmin, relation, meta):
+            retIds.append(convId)
+
+    defer.returnValue((retIds, deleted))
+
+
 # Not to be used for unique Id generation.
 # OK to be used for validation keys, passwords etc;
 def getRandomKey():

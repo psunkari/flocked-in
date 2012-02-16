@@ -1,7 +1,9 @@
 
 import json
 import urlparse
+import regex
 from functools              import wraps
+from itertools              import ifilter
 
 from twisted.web            import resource, server, http
 from twisted.internet       import defer
@@ -12,12 +14,81 @@ from social.isocial         import IAuthInfo
 from social.logging         import log
 
 
-class BaseResource(resource.Resource):
+class RESTfulResource(resource.Resource):
+    """Simple wrapper over resource.Resource to make
+    handling RESTful APIs easier
+    Based on txrestapi: https://github.com/iancmcc/txrestapi
+    """
+    _registry = None
+
+    def __init__(self):
+        self._registry = []
+        self._registerPaths()
+
+    def _registerPaths(self, paths=None):
+        """Register all paths given or all those returned by
+        paths method of this object.
+        """
+        paths = paths if paths else self.paths()
+        for (method, path, callback) in paths:
+            self._registry.append((method, regex.compile(path), callback))
+
+    def paths(self):
+        """ Return list of static paths supported by this resource
+        Classes inheriting from this class must override the paths
+        function to specify static paths supported by this resource
+        """
+        return []
+
+    def callback(self, request):
+        """Fetch the first matching registered handler for the request.
+
+        Keyword arguments:
+        @request: Request whose path will be matched
+        """
+        filterf = lambda t:t[0] in (request.method, 'ALL')
+        path = "/" + "/".join(request.postpath) if request.postpath else ''
+        for m, r, cb in ifilter(filterf, self._registry):
+            result = r.search(path)
+            if result:
+                return cb, result.groupdict()
+        return None, None
+
+    def register(self, method, path, callback):
+        """Add a new path handler to the registry.
+
+        Keyword arguments:
+        @method: HTTP method
+        @path: Regular expression to match for path
+        @callback: Function to be called when a matching path is requested
+        """
+        self._registry.append((method, regex.compile(path), callback))
+
+    def unregister(self, method, path, callback):
+        """Remove the path handler from the registry.
+
+        Keyword arguments:
+        @method: HTTP method
+        @path: Regular expression to match for path
+        @callback: Function to be called when a matching path is requested
+        """
+        if path is not None:
+            path = regex.compile(path)
+
+        for m, r, cb in self._registry[:]:
+            if not method or (method and m == method):
+                if not path or (path and r == path):
+                    if not callback or (callback and cb == callback):
+                        self._registry.remove((m, r, cb))
+
+
+class BaseResource(RESTfulResource):
     requireAuth = True
     _templates = ['signin.mako', 'errors.mako']
     _ajax = False
 
     def __init__(self, ajax=False):
+        RESTfulResource.__init__(self)
         self._ajax = ajax
         t.warmupTemplateCache(self._templates)
 
@@ -109,9 +180,22 @@ class BaseResource(resource.Resource):
 
         return server.NOT_DONE_YET
 
+    def render(self, request):
+        callback, args = self.callback(request)
+        if callback:
+            deferred = defer.maybeDeferred(callback, request, **args)
+            return self._epilogue(request, deferred)
+        else:
+            m = getattr(self, 'render_' + request.method, None)
+            if m:
+                return m(request)
+
+        # We don't have a handler or a render method defined.
+        # That means we must throw a 404 error!
+        return self._epilogue(request, None)
 
 
-class APIBaseResource(resource.Resource):
+class APIBaseResource(RESTfulResource):
     isLeaf = True
 
     def _ensureAccessScope(self, request, needed):
@@ -123,7 +207,6 @@ class APIBaseResource(resource.Resource):
             raise errors.PermissionDenied()
 
         return token
-
 
     @defer.inlineCallbacks
     def _handleErrors(self, failure, request):

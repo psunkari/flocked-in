@@ -66,8 +66,8 @@ class ProfileResource(base.BaseResource):
                 convId = col.column.value.split(":")[2]
                 if convId not in tmpIds and convId not in convs:
                     tmpIds.append(convId)
-            (filteredConvs, deletedConvs) = yield feed.fetchAndFilterConvs\
-                        (tmpIds, toFetchCount, relation, items, myId, myOrgId)
+            (filteredConvs, deletedConvs) = yield utils.fetchAndFilterConvs\
+                                        (tmpIds, relation, items, myId, myOrgId)
             for col in cols[0:count]:
                 convId = col.column.value.split(":")[2]
                 if len(convs) == count or len(fetchedUserItem) == count*2:
@@ -411,8 +411,8 @@ class ProfileResource(base.BaseResource):
                 return relation.initSubscriptionsList()
 
             isProfile = (utils.getRequestArg(request, "_pg") == "/profile")
-            isFeed =    (utils.getRequestArg(request, "_pg")  == "/feed")
-            isPeople =  (utils.getRequestArg(request, "_pg")  == "/people")
+            isFeed =    (utils.getRequestArg(request, "_pg") == "/feed")
+            isPeople =  (utils.getRequestArg(request, "_pg") == "/people")
             def renderActions(ign):
                 if isFeed:
                     d = people.get_suggestions(request, constants.SUGGESTION_PER_PAGE, mini=True)

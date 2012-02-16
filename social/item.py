@@ -2,10 +2,7 @@ import uuid
 import time
 import re
 import json
-try:
-    import cPickle as pickle
-except:
-    import pickle
+import cPickle as pickle
 
 from telephus.cassandra import ttypes
 from twisted.internet   import defer
@@ -327,6 +324,24 @@ def _notify(notifyType, convId, timeUUID, **kwargs):
 class ItemResource(base.BaseResource):
     isLeaf = True
     _templates = ['item.mako', 'item-report.mako']
+
+    """
+    def paths(self):
+        return  [('GET',    '/(?P<itemId>)/',               self._get),
+                 ('GET',    '/(?P<itemId>)/comments/',      self._getComments),
+                 ('GET',    '/(?P<itemId>)/likes/',         self._getLikes),
+                 ('GET',    '/(?P<itemId>)/tags/',          self._getTags),
+                 ('GET',    '/(?P<itemId>)/files/',         self._getFiles),
+
+                 ('POST',   '/',                            self._new),
+                 ('POST',   '/(?P<itemId>)/comments/',      self._comment),
+                 ('POST',   '/(?P<itemId>)/likes/',         self._like),
+                 ('POST',   '/(?P<itemId>)/tags/',          self._tag),
+
+                 ('DELETE', '/(?P<itemId>)/',               self._delete),
+                 ('DELETE', '/(?P<itemId>)/likes/',         self._unlike),
+                 ('DELETE', '/(?P<itemId>)/tags/(?<tag>)',  self._untag)]
+    """
 
     def _cleanupMissingComments(self, convId, missingIds, itemResponses):
         missingKeys = []
@@ -1312,7 +1327,7 @@ class ItemResource(base.BaseResource):
             if action == "accept":
                 # Owner removed the comment. Delete the item from his feed
                 yield deleteItem(request, convId)
-                request.write("$$.fetchUri('/feed');")
+                request.write("$$.fetchUri('/feed/');")
                 request.write("$$.alerts.info('%s')" %_("Your item has been deleted"))
                 request.finish()
             else:

@@ -487,7 +487,7 @@
     %if not target:
       ${utils.userName(userId, entities[userId], "conv-user-cause")}
     %else:
-      ${utils.userName(userId, entities[userId], "conv-user-cause")}  &#9656; ${utils.groupName(target[0], entities[target[0]])}
+      ${utils.userName(userId, entities[userId], "conv-user-cause")}<span class="conv-target">&#9656;</span>${utils.groupName(target[0], entities[target[0]])}
     %endif
   %endif
   <div class="item-title ${has_icon}">
@@ -587,7 +587,7 @@
     %if not target:
       ${utils.userName(userId, entities[userId], "conv-user-cause")}
     %else:
-      ${utils.userName(userId, entities[userId], "conv-user-cause")}  ${_("on")} ${utils.groupName(target[0], entities[target[0]])}
+      ${utils.userName(userId, entities[userId], "conv-user-cause")}<span class="conv-target">&#9656;</span>${utils.groupName(target[0], entities[target[0]])}
     %endif
   %endif
   <div class="item-title has-icon">

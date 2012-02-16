@@ -139,9 +139,9 @@
           supported = [(plugin.itemType.capitalize(), plugin.itemType) for plugin in sortedList if plugin.position > 0]
           itemName, itemType = supported[0]
         %>
-        <li><a data-ref="/feed/share/${itemType}" id="publisher-${itemType}" class="ajax selected"><span class="sharebar-icon icon ${itemType}-icon"></span><span class="sharebar-text">${_(itemName)}</span></a></li>
+        <li><a data-ref="/feed/ui/share/${itemType}" id="publisher-${itemType}" class="ajax selected"><span class="sharebar-icon icon ${itemType}-icon"></span><span class="sharebar-text">${_(itemName)}</span></a></li>
         %for itemName, itemType in supported[1:]:
-          <li><a data-ref="/feed/share/${itemType}" id="publisher-${itemType}" class="ajax"><span class="sharebar-icon icon ${itemType}-icon"></span><span class="sharebar-text">${_(itemName)}</span></a></li>
+          <li><a data-ref="/feed/ui/share/${itemType}" id="publisher-${itemType}" class="ajax"><span class="sharebar-icon icon ${itemType}-icon"></span><span class="sharebar-text">${_(itemName)}</span></a></li>
         %endfor
       </ul>
     </div>
@@ -215,7 +215,7 @@
   %endif
   %if nextPageStart:
     <% typ_filter = '&type=%s' %(itemType) if itemType else '' %>
-    <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" href="/feed?start=${nextPageStart}&id=${feedId}" data-ref="/feed/more?start=${nextPageStart}&id=${feedId}${typ_filter}">${_("Fetch older posts")}</a></div>
+    <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" href="/feed/${feedId}/?start=${nextPageStart}${typ_filter}" data-ref="/feed/${feedId}?start=${nextPageStart}&more=1${typ_filter}">${_("Fetch older posts")}</a></div>
   %else:
     <div id="next-load-wrapper">${_("No more posts to show")}</div>
   %endif

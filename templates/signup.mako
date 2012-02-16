@@ -222,7 +222,7 @@
         %endfor
       </ul>
       <div class="buttons-wrapper" >
-        <a href="/feed">Skip</a>&nbsp;&nbsp;&nbsp;
+        <a href="/feed/">Skip</a>&nbsp;&nbsp;&nbsp;
         <button type="submit" class="default button" name="submit" value="Submit">${_('Invite People')}</button>
       </div>
     </form>

@@ -3,10 +3,11 @@ import uuid
 
 from twisted.internet   import defer
 from twisted.web        import server
+from twisted.plugin     import getPlugins
 
 from social             import db, utils, base, plugins, _, __, errors, people
 from social             import template as t
-from social.isocial     import IAuthInfo
+from social.isocial     import IAuthInfo, IFeedUpdateType
 from social.relations   import Relation
 from social.constants   import INFINITY, MAXFEEDITEMS, MAXFEEDITEMSBYTYPE
 from social.constants   import SUGGESTION_PER_PAGE
@@ -205,373 +206,302 @@ def updateFeedResponses(userKey, parentKey, itemKey, timeuuid, itemType,
                           {parentKey:{timeuuid: feedItemValue}})
 
 
-#
-# getFeedItems: Generic function to fetch items to be displayed as a feed
-#  - Checks ACLs (based on current user) on all the items in the feed but
-#    does not verify if the user has access to the feed
-#  - Unless feedItemsId is explicitly given context will always be based on
-#    the currently logged in user.
-#  - Use feedItemsId to establish context of another user - may be used for
-#    administration purposes or when visiting other user's profile
-#  - If getFn is given, it is called to fetch the list of ids from the db.
-#
-# Filter conversations based on ACL, delete status etc;
-@defer.inlineCallbacks
-def fetchAndFilterConvs(ids, count, relation, items, myId, myOrgId):
-    retIds = []
-    deleted = set()
-    if not ids:
-        defer.returnValue((retIds, deleted))
+class Feed(object):
+    plugins =  dict()
+    for plg in getPlugins(IFeedUpdateType):
+        if not hasattr(plg, "disabled") or not plg.disabled:
+            plugins[plg.updateType] = plg
 
-    cols = yield db.multiget_slice(ids, "items", ["meta", "tags", "attachments"])
-    items.update(utils.multiSuperColumnsToDict(cols))
-    checkAcl = utils.checkAcl
-
-    # Filter the items (checkAcl only for conversations)
-    for convId in ids:
-        if convId not in items:
-            continue
-        meta = items.get(convId, {}).get("meta", {})
-        if not meta:
-            continue
-        if "state" in meta and meta["state"] == "deleted":
-            deleted.add(convId)
-            continue
-        if checkAcl(myId, myOrgId, False, relation, meta):
-            retIds.append(convId)
-            if len(retIds) == count:
-                break
-
-    defer.returnValue((retIds, deleted))
-
-@profile
-@defer.inlineCallbacks
-@dump_args
-def getFeedItems(request, feedId=None, feedItemsId=None, convIds=None,
-                 getFn=None, cleanFn=None, start='', count=10, getReason=True):
-    toFetchItems = set()    # Items and entities that need to be fetched
-    toFetchEntities = set() #
-    toFetchTags = set()     #
-
-    items = {}              # Fetched items, entities and tags
-    entities = {}           #
-    tags = {}               #
-
-    deleted = set()         # List of items that were deleted
-
-    responses = {}          # Cached data of item responses and likes
-    likes = {}              #
-    myLikes = {}
-
-    authinfo = request.getSession(IAuthInfo)
-    myId = authinfo.username
-    myOrgId = authinfo.organization
-
-    data = {"myKey": myId}  # Passed to plugins and is ultimately returned
-
-    feedItemsId = feedItemsId or myId
-    feedItems_d = []        # List of deferred used to fetch feedItems
-    rawFeedItems = {}       # Feed items - fetched in parallel
-    allFetchedConvIds = []  # List of all convIds considered for filtering
-    itemsFromFeed = {}      # All the key-values retrieved from feed
-
-    relation = Relation(myId, [])
-    relationsFetched = False
-    yield relation.initGroupsList()
-
-    # Fetch and process feed items
-    reasonUserIds = {}
-    reasonTagId = {}
-    reasonTmpl = {}
+    @classmethod
     @defer.inlineCallbacks
-    def fetchFeedItems(ids):
-        rawFeedItems = yield db.get_slice(feedItemsId, "feedItems", ids) \
-                                            if ids else defer.succeed([])
-        for conv in rawFeedItems:
-            convId = conv.super_column.name
-            updates = conv.super_column.columns
-            mostRecentItem = None
-            tagId = None
-            responseUsers = []
-            responses[convId] = []
-            likes[convId] = []
+    def get(cls, auth, feedId=None, feedItemsId=None, convIds=None,
+            getFn=None, cleanFn=None, start='', count=10, getReasons=True,
+            forceCount=False, itemType=None):
+        """Fetch data from feed represented by feedId. Returns a dictionary
+        that has the items from feed, start of the next page and responses and
+        likes that I know of.
 
-            for update in updates:
-                update = update.value.split(':')
-                if len(update) < 4:
-                    continue
+        Keyword params:
+        @auth -  An instance of AuthInfo representing the authenticated user
+        @feedId -  Id of the feed from which the data is to be fetched
+        @feedItemsId -  Id of the feed from with feed items must be fetched
+        @convIds -  List of conversation id's to be used as feed
+        @getFn -  Function that must be used to fetch items
+        @cleanFn -  Function that must be used to clean items that don't exist
+        @start -  Id of the item where the fetching must start
+        @count - Number of items to fetch
+        @getReasons - Add reason strings to the returned dictionary
+        @forceCount - Try hard to get atleast count items from the feed
+        """
+        toFetchItems = set()    # Items and entities that need to be fetched
+        toFetchEntities = set() #
+        toFetchTags = set()     #
 
-                (x, user, item, entities) = update[0:4]
-                toFetchEntities.add(user)
-                if entities:
-                    toFetchEntities.update(entities.split(","))
+        items = {}              # Fetched items, entities and tags
+        entities = {}           #
+        tags = {}               #
 
-                # If I am the cause for any update ensure that my
-                # name is not listed in the reason string.
-                myAction = True if user == myId else False
+        deleted = []            # List of items that were deleted
+        deleteKeys = []         # List of keys that need to be deleted
 
-                if not getReason:
-                    if x in ["C", "Q"]:
-                        if item not in responses.get(convId, []):
-                            responses[convId].append(item)
-                            toFetchItems.add(item)
-                    elif x == "L" and convId != item:
-                        if entities and item not in responses.get(convId, []):
-                            responses[convId].append(item)
-                            toFetchItems.add(item)
-                    elif x == "L":
-                        likes[convId].insert(0, user)
+        responses = {}          # Cached data of item responses and likes
+        likes = {}              #
+        myLikes = {}
 
-                elif x in ("C", "Q"):
-                    if not myAction:
-                        responseUsers.insert(0, user)
-                    responses[convId].append(item)
-                    toFetchItems.add(item)
-                elif x == "L" and convId == item:
-                    if not myAction:
-                        likes[convId].insert(0, user)
-                elif x == "L":
-                    if entities:
-                        toFetchItems.add(item)
-                        if item not in toFetchItems:
-                            responses[convId].append(item)
-                elif x == "T":
-                    if len(update) > 4 and update[4]:
-                        tagId = update[4]
-                        toFetchTags.add(tagId)
+        myId = auth.username
+        orgId = auth.organization
 
-                # Ignore my action when deciding on the most recent
-                # update that happened on this item.
-                if getReason and not myAction:
-                    mostRecentItem = update
+        feedSource = "feed_%s" % itemType\
+                            if itemType and itemType in plugins\
+                                        and plugins[itemType].hasIndex\
+                            else "feed"
+        feedItemsId = feedItemsId or myId
+        feedItems_d = []            # List of deferred used to fetch feedItems
 
-            if mostRecentItem:
-                (x, userId, itemId) = mostRecentItem[0:3]
-                if x == "C":
-                    reasonUserIds[convId] = utils.uniqify(responseUsers)
-                    reasonTmpl[convId] = [["%(user0)s commented on your %(itemType)s",
-                                           "%(user0)s commented on %(owner)s's %(itemType)s"],
-                                          ["%(user0)s and %(user1)s commented on your %(itemType)s",
-                                           "%(user0)s and %(user1)s commented on %(owner)s's %(itemType)s"],
-                                          ["%(user0)s, %(user1)s and %(user2)s commented on your %(itemType)s",
-                                           "%(user0)s, %(user1)s and %(user2)s commented on %(owner)s's %(itemType)s"]]\
-                                         [len(reasonUserIds[convId])-1]
-                elif x == 'Q':
-                    reasonUserIds[convId] = utils.uniqify(responseUsers)
-                    reasonTmpl[convId] = [["%(user0)s answered your %(itemType)s",
-                                          "%(user0)s answered %(owner)s's %(itemType)s"],
-                                          ["%(user0)s and %(user1)s answered your %(itemType)s",
-                                          "%(user0)s and %(user1)s answered %(owner)s's %(itemType)s"],
-                                          ["%(user0)s, %(user1)s and %(user2)s answered your %(itemType)s",
-                                          "%(user0)s, %(user1)s and %(user2)s answered %(owner)s's %(itemType)s"]]\
-                                         [len(reasonUserIds[convId])-1]
+        # Used for checking ACL
+        relation = Relation(myId, [])
+        yield relation.initGroupsList()
 
-                elif x == "L" and itemId == convId:
-                    reasonUserIds[convId] = utils.uniqify(likes[convId])
-                    reasonTmpl[convId] = [["%(user0)s liked your %(itemType)s",
-                                           "%(user0)s liked %(owner)s's %(itemType)s"],
-                                          ["%(user0)s and %(user1)s liked your %(itemType)s",
-                                           "%(user0)s and %(user1)s liked %(owner)s's %(itemType)s"],
-                                          ["%(user0)s, %(user1)s and %(user2)s liked your %(itemType)s",
-                                           "%(user0)s, %(user1)s and %(user2)s liked %(owner)s's %(itemType)s"]]\
-                                         [len(reasonUserIds[convId])-1]
-                elif x == "L":
-                    reasonUserIds[convId] = [userId]
-                    reasonTmpl[convId] = [["%(user0)s liked a comment on your %(itemType)s",
-                                           "%(user0)s liked a comment on %(owner)s's %(itemType)s"],
-                                          ["%(user0)s and %(user1)s liked a comment on your %(itemType)s",
-                                           "%(user0)s and %(user1)s liked a comment on %(owner)s's %(itemType)s"],
-                                          ["%(user0)s, %(user1)s and %(user2)s liked a comment on your %(itemType)s",
-                                           "%(user0)s, %(user1)s and %(user2)s liked a comment on %(owner)s's %(itemType)s"]]\
-                                         [len(reasonUserIds[convId])-1]
-                elif x == "T":
-                    reasonUserIds[convId] = [userId]
-                    reasonTagId[convId] = tagId
-                    reasonTmpl[convId] = ["%(user0)s added %(tagName)s on your %(itemType)s",
-                                          "%(user0)s added %(tagName)s on %(owner)s's %(itemType)s"]
+        # The updates that will be used to build reason strings
+        convReasonUpdates = {}
 
+        # Data that is sent to various plugins and returned by this function
+        # XXX: myKey is depricated - use myId
+        data = {"myId": myId, "orgId": orgId, "responses": responses,
+                "likes": likes, "myLikes": myLikes, "items": items,
+                "entities": entities, "tags": tags, "myKey": myId,
+                "relations": relation}
 
-    # If we don't have a list of conversations,
-    # fetch the list of either the given feedId or from the user's feed
-    nextPageStart = None
-    if not convIds:
-        feedId = feedId or myId
-        keysFromFeed = []   # Sorted list of keys (used for paging)
-        convIds = []        # List of convIds that will be displayed
+        @defer.inlineCallbacks
+        def fetchFeedItems(ids):
+            rawFeedItems = yield db.get_slice(feedItemsId, "feedItems", ids) \
+                                                if ids else defer.succeed([])
+            for conv in rawFeedItems:
+                convId = conv.super_column.name
+                convUpdates = conv.super_column.columns
+                responses[convId] = []
+                likes[convId] = []
+                latest = None
 
-        fetchStart = utils.decodeKey(start)
-        fetchCount = count + 2
-        while len(convIds) < count:
-            fetchedConvIds = []
+                updatesByType = {}
+                for update in convUpdates:
+                    parts = update.value.split(':')
+                    updatesByType.setdefault(parts[0], []).append(parts)
+                    if parts[1] != myId:    # Ignore my own updates
+                        latest = parts      # when displaying latest actors
 
-            # Use the getFn function if given.
-            if getFn:
-                results = yield getFn(start=fetchStart, count=fetchCount)
-                for name, value in results.items():
-                    if value not in allFetchedConvIds:
-                        fetchedConvIds.append(value)
-                        allFetchedConvIds.append(value)
+                # Parse all notification to make sure we fetch any required
+                # items, entities. and cache generic stuff that we display
+                for tipe in updatesByType.keys():
+                    updates = updatesByType[tipe]
+
+                    if tipe in cls.plugins:
+                        (i,e) = cls.plugins[tipe].parse(convId, updates)
+                        toFetchItems.update(i)
+                        toFetchEntities.update(e)
+
+                    if tipe == "L":
+                        for update in updates:
+                            if update[2] == convId:
+                                likes[convId].append(update[1])
+                            # XXX: Adding this item may break the sorting
+                            #      of responses on this conversation
+                            #      Bug #493
+                            #else:
+                            #    responses[convId].append(update[2])
+                    elif tipe in ["C", "Q"]:
+                        for update in updates:
+                            responses[convId].append(update[2])
+
+                # Store any information that can be used to render
+                # the reason strings when we have the required data
+                if getReasons and latest:
+                    convReasonUpdates[convId] = updatesByType[latest[0]]
+
+        # Fetch the feed if required and at the same time make sure
+        # we delete unwanted items from the feed (cleanup).
+        # NOTE: We assume that there will be very few deletes.
+        nextPageStart = None
+        if not convIds:
+            feedId = feedId or myId
+            allFetchedConvIds = set()   # Complete set of convIds fetched
+            itemsFromFeed = {}          # All the key-values retrieved from feed
+            keysFromFeed = []           # Sorted list of keys (used for paging)
+            convIds = []                # List of convIds that will be displayed
+
+            fetchStart = utils.decodeKey(start)
+            fetchCount = count + 1
+
+            while len(convIds) < count:
+                fetchedConvIds = []
+
+                # Use the getFn function if given.
+                # NOTE: Part of this code is duplicated just below this.
+                if getFn:
+                    results = yield getFn(start=fetchStart, count=fetchCount)
+                    for name, value in results.items():
                         keysFromFeed.append(name)
-                        itemsFromFeed[name] = value
+                        if value not in allFetchedConvIds:
+                            fetchedConvIds.append(value)
+                            allFetchedConvIds.add(value)
+                            itemsFromFeed[name] = value
+                        else:
+                            deleteKeys.append(name)
 
-            # Fetch user's feed when getFn isn't given.
-            else:
-                results = yield db.get_slice(feedId, "feed", count=fetchCount,
-                                              start=fetchStart, reverse=True)
-                for col in results:
-                    value = col.column.value
-                    if value not in allFetchedConvIds:
-                        fetchedConvIds.append(value)
-                        allFetchedConvIds.append(value)
+                # Fetch user's feed when getFn isn't given.
+                # NOTE: Part of this code is from above
+                else:
+                    results = yield db.get_slice(feedId, feedSource,
+                                                 count=fetchCount,
+                                                 start=fetchStart, reverse=True)
+                    for col in results:
+                        value = col.column.value
                         keysFromFeed.append(col.column.name)
-                        itemsFromFeed[col.column.name] = value
+                        if value not in allFetchedConvIds:
+                            fetchedConvIds.append(value)
+                            allFetchedConvIds.add(value)
+                            itemsFromFeed[col.column.name] = value
+                        else:
+                            deleteKeys.append(col.column.name)
 
-            if not keysFromFeed:
-                break
+                # Initiate fetching feed items for all the conversation Ids.
+                # Meanwhile we check if the authenticated user has access to
+                # all the fetched conversation ids.
+                # NOTE: Conversations would rarely be filtered out. So, we
+                #       just go ahead with fetching data for all convs.
+                feedItems_d.append(fetchFeedItems(fetchedConvIds))
+                (filteredConvIds, deletedIds) = yield utils.fetchAndFilterConvs\
+                                    (fetchedConvIds, relation, items, myId, orgId)
+                convIds.extend(filteredConvIds)
+                deleted.extend(deletedIds)
 
-            fetchStart = keysFromFeed[-1]
-            feedItems_d.append(fetchFeedItems(fetchedConvIds))
-            (filteredConvIds, deletedIds) = yield fetchAndFilterConvs\
-                        (fetchedConvIds, count, relation, items, myId, myOrgId)
-            convIds.extend(filteredConvIds)
-            deleted.update(deletedIds)
+                # Unless we are forced to fetch count number of items, we only
+                # iterate till we fetch atleast half of them
+                if (not forceCount and len(convIds) > (count/2)) or\
+                        len(results) < fetchCount:
+                    break
 
-            if len(results) < fetchCount:
-                break
+                # If we need more items, we start fetching from where we
+                # left in the previous iteration.
+                fetchStart = keysFromFeed[-1]
 
-        if len(keysFromFeed) > count:   # We have more items than count
-            nextPageStart = utils.encodeKey(keysFromFeed[count])
-            convIds = convIds[0:count]
-        elif len(results) == fetchCount:   # We got duplicate items in feed
-            nextPageStart = utils.encodeKey(keysFromFeed[-1])
-            convIds = convIds[0:-1]
-    else:
-        (convIds, deletedIds) = yield fetchAndFilterConvs(convIds, count,
-                                                relation, items, myId, myOrgId)
-        if len(convIds) > count:
-            nextPageStart = utils.encodeKey(convIds[count])
-            convIds = convIds[0:count]
-        if deletedIds:
-            data["deleted"] = deletedIds
+            # If DB fetch got as many items as I requested
+            # there may be additional items present in the feed
+            # So, we cut one item from what we return and start the
+            # next page from there.
+            if len(results) == fetchCount:
+                lastConvId = convIds[-1]
+                for key in reversed(keysFromFeed):
+                    if key in itemsFromFeed and itemsFromFeed[key] == lastConvId:
+                        nextPageStart = utils.encodeKey(key)
 
-    # We don't have any conversations to display!
-    if not convIds:
-        defer.returnValue({"conversations": []})
-
-    # Delete any convs that don't exist anymore from the feeds
-    cleanup_d = []
-    if deleted:
-        if cleanFn:
-            d1 = cleanFn(list(deleted))
         else:
-            deleteKeys = []
+            (convIds, deletedIds) = yield utils.fetchAndFilterConvs(convIds,
+                                                relation, items, myId, myOrgId)
+            # NOTE: Unlike the above case where we fetch convIds from
+            #       database (where we set the nextPageStart to a key),
+            #       here we set nextPageStart to the convId.
+            if len(convIds) > count:
+                nextPageStart = utils.encodeKey(convIds[count])
+                convIds = convIds[0:count]
+
+            # Since convIds were directly passed to us, we would also
+            # return the list of convIds deleted back to the caller.
+            if deletedIds:
+                data["deleted"] = deletedIds
+
+        # We don't have any conversations to display!
+        if not convIds:
+            defer.returnValue({"conversations": []})
+
+        # Delete any convs that were deleted from the feeds and
+        # any duplicates that were marked for deletion
+        cleanup_d = []
+        if deleted:
             for key, value in itemsFromFeed.items():
                 if value in deleted:
                     deleteKeys.append(key)
 
-            d1 = db.batch_remove({'feed': [feedId]}, names=deleteKeys)
+            if cleanFn:
+                d1 = cleanFn(list(deleteKeys))
+            else:
+                d1 = db.batch_remove({feedSource: [feedId]}, names=deleteKeys)
 
-        d2 = db.batch_remove({'feedItems': [feedId]}, names=list(deleted))
-        cleanup_d = [d1, d2]
+            d2 = db.batch_remove({'feedItems': [feedId]}, names=list(deleted))
+            cleanup_d = [d1, d2]
 
-    # We now have a filtered list of conversations that can be displayed
-    # Let's wait till all the feed items have been fetched and processed
-    yield defer.DeferredList(feedItems_d)
+        # We now have a filtered list of conversations that can be displayed
+        # Let's wait till all the feed items have been fetched and processed
+        yield defer.DeferredList(feedItems_d)
 
-    # Fetch the required entities, tags and items to finish the job!
-    items_d = db.multiget_slice(toFetchItems, "items", ["meta" ,"attachments"])
+        # Fetch the remaining items (comments on the actual conversations)
+        items_d = db.multiget_slice(toFetchItems, "items", ["meta" ,"attachments"])
 
-    for convId in convIds:
-        conv = items[convId]
-        toFetchEntities.add(conv["meta"]["owner"])
-        if "target" in conv["meta"]:
-            toFetchEntities.update(conv["meta"]["target"].split(','))
-        toFetchTags.update(conv.get("tags",{}).keys())
-
-    tags_d = db.get_slice(myOrgId, "orgTags", toFetchTags) \
-                                if toFetchTags else defer.succeed([])
-
-    myLikes_d = db.multiget(toFetchItems.union(convIds), "itemLikes", myId)
-
-    # Extra data that is required to render special items
-    # We already fetched the conversation items, plugins merely
-    # add more data to the already fetched items
-    data["items"] = items
-    for convId in convIds:
-        itemType = items[convId]["meta"]["type"]
-        if itemType in plugins:
-            try:
-                entityIds = yield plugins[itemType].fetchData(data, convId)
-                toFetchEntities.update(entityIds)
-            except Exception, e:
-                log.err(e)
-
-    # Results of previously initiated fetches (items, tags, entities, likes)
-    fetchedItems = yield items_d
-    items.update(utils.multiSuperColumnsToDict(fetchedItems))
-
-    entities_d = db.multiget_slice(toFetchEntities, "entities", ["basic"])
-    fetchedEntities = yield entities_d
-    entities.update(utils.multiSuperColumnsToDict(fetchedEntities))
-
-    fetchedTags = yield tags_d
-    tags.update(utils.supercolumnsToDict(fetchedTags))
-
-    fetchedMyLikes = yield myLikes_d
-    myLikes.update(utils.multiColumnsToDict(fetchedMyLikes))
-
-    # Build the reason string (if required)
-    reasonStr = {}
-    userName = utils.userName
-    itemLink = utils.itemLink
-    if getReason:
+        # Fetch tags on all the conversations that will be displayed
         for convId in convIds:
             conv = items[convId]
-            ownerId = conv["meta"]["owner"]
-            template = reasonTmpl.get(convId, None)
-            if template:
-                template = template[0] if ownerId == myId else template[1]
-                vals = dict([('user'+str(idx), userName(id, entities[id], "conv-user-cause"))\
-                            for idx, id in enumerate(reasonUserIds[convId])])
-                if convId in reasonTagId:
-                    tagId = reasonTagId[convId]
-                    tagname = tags[tagId]["title"]
-                    vals['tagName'] = "<a class='ajax' href='/tags?id=%s'>%s</a>"%(tagId, tagname)
-                vals["owner"] = userName(ownerId, entities[ownerId])
-                vals["itemType"] = itemLink(convId, conv["meta"]["type"])
-                reasonStr[convId] = _(template) % vals
+            toFetchEntities.add(conv["meta"]["owner"])
+            if "target" in conv["meta"]:
+                toFetchEntities.update(conv["meta"]["target"].split(','))
+            toFetchTags.update(conv.get("tags",{}).keys())
 
-    # Make sure that the cleanup has happened too
-    yield defer.DeferredList(cleanup_d)
+        tags_d = db.get_slice(orgId, "orgTags", toFetchTags) \
+                                    if toFetchTags else defer.succeed([])
 
-    data.update({"entities": entities, "responses": responses, "likes": likes,
-                 "myLikes": myLikes, "conversations": convIds, "tags": tags,
-                 "nextPageStart": nextPageStart, "reasonStr": reasonStr,
-                 "reasonUserIds": reasonUserIds, "relations":relation})
-    defer.returnValue(data)
+        # Fetch the list of my likes.
+        # XXX: Latency can be pretty high here becuase many nodes will have to
+        #      be contacted for the information.  Alternative could be to cache
+        #      all likes by a user somewhere.
+        myLikes_d = db.multiget(toFetchItems.union(convIds), "itemLikes", myId)
 
+        # Fetch extra data that is required to render special items
+        # We already fetched the conversation items, plugins merely
+        # add more data to the already fetched items
+        for convId in convIds[:]:
+            itemType = items[convId]["meta"]["type"]
+            if itemType in plugins:
+                try:
+                    entityIds = yield plugins[itemType].fetchData(data, convId)
+                    toFetchEntities.update(entityIds)
+                except Exception, e:
+                    log.err(e)
+                    convIds.remove(convId)
 
-def _feedFilter(request, feedId, itemType, start='', count=10):
-    itemsFromFeed = {}
-    cf = "feed_%s"%(itemType)
+        # Fetch all required entities
+        entities_d = db.multiget_slice(toFetchEntities, "entities", ["basic"])
 
-    @defer.inlineCallbacks
-    def getFn(start='', count=12):
-        items = yield db.get_slice(feedId, cf, start=start,
-                                   count=count, reverse=True)
-        items = utils.columnsToDict(items, ordered=True)
-        itemsFromFeed.update(items)
-        defer.returnValue(items)
+        # Results of previously initiated fetches (items, tags, entities, likes)
+        fetchedItems = yield items_d
+        items.update(utils.multiSuperColumnsToDict(fetchedItems))
 
-    @defer.inlineCallbacks
-    def cleanFn(convIds):
-        deleteKeys = []
-        for key, value in itemsFromFeed.items():
-            if value in deleted:
-                deleteKeys.append(key)
-        yield db.batch_remove({cf: [feedId]}, names=deleteKeys)
+        fetchedTags = yield tags_d
+        tags.update(utils.supercolumnsToDict(fetchedTags))
 
-    return getFeedItems(request, getFn=getFn, cleanFn=cleanFn, start=start)
+        fetchedMyLikes = yield myLikes_d
+        myLikes.update(utils.multiColumnsToDict(fetchedMyLikes))
+
+        fetchedEntities = yield entities_d
+        entities.update(utils.multiSuperColumnsToDict(fetchedEntities))
+
+        # Time to build reason strings (and reason userIds)
+        if getReasons:
+            reasonStr = {}
+            reasonUserIds = {}
+            for convId in convReasonUpdates.keys():
+                updates = convReasonUpdates.get(convId, [])
+                tipe = updates[-1][0]
+                if tipe in cls.plugins:
+                    rstr, ruid = cls.plugins[tipe]\
+                                    .reason(convId, updates, data)
+                    reasonStr[convId] = rstr
+                    reasonUserIds[convId] = ruid
+            data.update({'reasonStr': reasonStr, 'reasonUserIds':reasonUserIds})
+
+        # Wait till the deletions get through :)
+        yield defer.DeferredList(cleanup_d)
+
+        data.update({'nextPageStart': nextPageStart, 'conversations': convIds})
+        defer.returnValue(data)
 
 
 class FeedResource(base.BaseResource):
@@ -579,13 +509,31 @@ class FeedResource(base.BaseResource):
     resources = {}
     _templates = ['feed.mako']
 
+    def paths(self):
+        return  [('GET', '^/ui/share/(?P<typ>[^/]+)$', self.renderShareBlock),
+                 ('GET', '^/(?P<entityId>[^/]*)$',     self.get)]
+
+    def get(self, request, entityId=None):
+        itemType = utils.getRequestArg(request, 'type')
+        start = utils.getRequestArg(request, 'start') or ''
+        more = utils.getRequestArg(request, 'more') or False
+
+        if more:
+            return self._renderMore(request, entityId, start, itemType)
+        else:
+            return self._render(request, entityId, start, itemType)
+
+    def renderShareBlock(self, request, typ):
+        plugin = plugins.get(typ, None)
+        if plugin:
+            plugin.renderShareBlock(request, self._ajax)
+
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _render(self, request):
+    def _render(self, request, entityId, start, itemType):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         itemType = utils.getRequestArg(request, 'type')
-        entityId = utils.getRequestArg(request, 'id')
         start = utils.getRequestArg(request, "start") or ''
 
         landing = not self._ajax
@@ -611,7 +559,6 @@ class FeedResource(base.BaseResource):
                 menuId = "org"
                 feedTitle = _("Company Feed: %s") % entity["basic"]["name"]
             elif entityType == 'group':
-                log.info("group-feed should be handled by groups resource")
                 request.redirect("/group?id=%s"%(entityId))
                 defer.returnValue(None)
             else:
@@ -642,13 +589,11 @@ class FeedResource(base.BaseResource):
             t.renderScriptBlock(request, "feed.mako", "share_block",
                                 landing, "#share-block", "set",
                                 handlers=handlers, **args)
-            yield self._renderShareBlock(request, "status")
+            yield self.renderShareBlock(request, "status")
 
-        if itemType and itemType in plugins and plugins[itemType].hasIndex:
-            feedItems = yield _feedFilter(request, feedId, itemType, start)
-        else:
-            feedItems = yield getFeedItems(request, feedId=feedId, start=start)
-
+        feedItems = yield Feed.get(request.getSession(IAuthInfo),
+                                   feedId=feedId, start=start,
+                                   itemType=itemType)
         args.update(feedItems)
         args['itemType'] = itemType
 
@@ -687,24 +632,19 @@ class FeedResource(base.BaseResource):
         if not script:
             t.render(request, "feed.mako", **args)
 
-
     # The client has scripts and this is an ajax request
     @defer.inlineCallbacks
-    def _renderMore(self, request):
+    def _renderMore(self, request, entityId, start, itemType):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
 
-        entityId = utils.getRequestArg(request, "id")
-        start = utils.getRequestArg(request, "start") or ""
-        itemType = utils.getRequestArg(request, 'type')
         entity = yield db.get_slice(entityId, "entities", ["basic"])
         entity = utils.supercolumnsToDict(entity)
         if entity and entity["basic"].get("type", '') == "group":
             errors.InvalidRequest("group feed will not be fetched.")
 
-        if itemType and itemType in plugins and plugins[itemType].hasIndex:
-            feedItems = yield _feedFilter(request, entityId, itemType, start)
-        else:
-            feedItems = yield getFeedItems(request, feedId=entityId, start=start)
+        feedItems = yield Feed.get(request.getSession(IAuthInfo),
+                                   feedId=entityId, start=start,
+                                   itemType=itemType)
         args.update(feedItems)
         args["feedId"] = entityId
         args['itemType'] = itemType
@@ -713,15 +653,6 @@ class FeedResource(base.BaseResource):
         t.renderScriptBlock(request, "feed.mako", "feed", False,
                             "#next-load-wrapper", "replace", True,
                             handlers={"onload": onload}, **args)
-
-
-    @profile
-    @defer.inlineCallbacks
-    @dump_args
-    def _renderShareBlock(self, request, typ):
-        plugin = plugins.get(typ, None)
-        if plugin:
-            yield plugin.renderShareBlock(request, self._ajax)
 
     @defer.inlineCallbacks
     def _renderChooseAudience(self, request):
@@ -732,21 +663,3 @@ class FeedResource(base.BaseResource):
                             "#custom-audience-dlg", "set", True,
                             handlers={"onload": onload}, **args)
 
-
-    @profile
-    @dump_args
-    def render_GET(self, request):
-        segmentCount = len(request.postpath)
-        d = None
-
-        if segmentCount == 0 or (segmentCount==1 and request.postpath[0]==''):
-            d = self._render(request)
-        elif segmentCount == 1 and request.postpath[0] == "more":
-            d = self._renderMore(request)
-        elif segmentCount == 1 and request.postpath[0] == "audience":
-            d = self._renderChooseAudience(request)
-        elif segmentCount == 2 and request.postpath[0] == "share":
-            if self._ajax:
-                d = self._renderShareBlock(request, request.postpath[1])
-
-        return self._epilogue(request, d)
