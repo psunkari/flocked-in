@@ -66,8 +66,8 @@ class ProfileResource(base.BaseResource):
                 convId = col.column.value.split(":")[2]
                 if convId not in tmpIds and convId not in convs:
                     tmpIds.append(convId)
-            (filteredConvs, deletedConvs) = yield feed.fetchAndFilterConvs\
-                        (tmpIds, toFetchCount, relation, items, myId, myOrgId)
+            (filteredConvs, deletedConvs) = yield utils.fetchAndFilterConvs\
+                                        (tmpIds, relation, items, myId, myOrgId)
             for col in cols[0:count]:
                 convId = col.column.value.split(":")[2]
                 if len(convs) == count or len(fetchedUserItem) == count*2:

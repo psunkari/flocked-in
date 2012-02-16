@@ -501,7 +501,7 @@ class SearchResource(base.BaseResource):
                     convItems.append((itemId, itemId, position))
                     convs.add(item.get('id'))
             if convs:
-                filteredConvs, deleted  = yield feed.fetchAndFilterConvs(convs, count, relation, items, myId, myOrgId)
+                filteredConvs, deleted  = yield utils.fetchAndFilterConvs(convs, relation, items, myId, myOrgId)
                 for itemId, convId, position in convItems:
                     if convId in filteredConvs and itemId not in toFetchItems:
                         toFetchItems.append(itemId)
