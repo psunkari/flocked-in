@@ -546,16 +546,17 @@ class ItemResource(base.BaseResource):
         if plugin and hasattr(plugin, 'renderFeedSideBlock'):
             #TODO: Determine the blockType
             if target:
-                blockType = "group"
+                entityId = target.split(',')[0]
                 args["groupId"] = target.split(',')[0]
             else:
                 #No better way to find out if this item was created from the
                 # user's feed page or from the company feed page
                 referer = request.getHeader('referer')
-                blockType = "user"
+                entityId = myId
 
+            request.write("$('#feed-side-block-container').empty();")
             yield plugins["event"].renderFeedSideBlock(request, landing,
-                                                         blockType, args)
+                                                         entityId, args)
 
     @profile
     @defer.inlineCallbacks
@@ -1133,16 +1134,17 @@ class ItemResource(base.BaseResource):
         if plugin and hasattr(plugin, 'renderFeedSideBlock') and not comment:
             #TODO: Determine the blockType
             if target:
-                blockType = "group"
+                entityId = target.split(',')[0]
                 args["groupId"] = target.split(',')[0]
             else:
                 #No better way to find out if this item was created from the
                 # user's feed page or from the company feed page
                 referer = request.getHeader('referer')
-                blockType = "user"
+                entityId = myId
 
+            request.write("$('#feed-side-block-container').empty();")
             yield plugins["event"].renderFeedSideBlock(request, landing,
-                                                         blockType, args)
+                                                         entityId, args)
 
     @defer.inlineCallbacks
     def _renderReportDialog(self, request):

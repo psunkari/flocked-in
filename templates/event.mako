@@ -9,7 +9,6 @@
                                 MINUTELY, SECONDLY, MO, TU, WE, TH, FR, SA, SU
 %>
 <!DOCTYPE HTML>
-
 <%inherit file="base.mako"/>
 <%namespace name="item" file="item.mako"/>
 
@@ -37,8 +36,8 @@
   </div>
 </%def>
 
-<%def name="event_layout(convId, classes='')">
-  <div id="conv-${convId}" class="conv-item ${classes}">
+<%def name="event_layout(convId, isConcise)">
+  <div id="conv-${convId}" class="conv-item">
       <%
         convMeta = items[convId]['meta']
         utc = pytz.utc
@@ -51,17 +50,19 @@
         iamOwner = myId == items[convId]["meta"]["owner"]
 
       %>
-    ##<div class="conv-data">
       <%
         convType = convMeta["type"]
         convOwner = convMeta["owner"]
+        if isConcise:
+            convClass = "agenda-root"
+        else:
+            convClass = "conv-root"
       %>
-      <div id="conv-root-${convId}" class="conv-root">
+      <div id="conv-root-${convId}" class="${convClass}">
         <div class="conv-summary">
           <%self.conv_root(convId, hasReason)%>
         </div>
       </div>
-    ##</div>
     <div class="event-details">
       <div class="event-people-attending">
         <%
@@ -183,7 +184,7 @@
 <%def name="events()">
     %if conversations:
       %for convId in conversations:
-        <%event_layout(convId, "concise")%>
+        <%event_layout(convId, True)%>
       %endfor
     %endif
 </%def>
@@ -223,7 +224,6 @@
                 %endfor
             </select>
         <input type="hidden" name="startTime" id="startTime" required=""/>
-        ##<button class="event-time-button" type='button' onclick="$$.events.showTimePicker('starttime')">&#9650;</button>
       </div>
     </div>
     <span><strong>to</strong></span>
@@ -254,7 +254,6 @@
                 %endfor
             </select>
         <input type="hidden" id="endTime" name="endTime" required=""/>
-        ##<button class="event-time-button" type='button' onclick="$$.events.showTimePicker('endtime')">&#9650;</button>
       </div>
     </div>
     <div style="display:inline-block;width:12em">
@@ -262,9 +261,6 @@
         <input type="text" id="enddate"/>
         <input type="hidden" id="endDate" name="endDate" required=""/>
       </div>
-    </div>
-    <div style="display:inline-block">
-      ##${timezone(me['basic']['timezone'])}
     </div>
     <div style="display:inline-block;float:right;padding: 4px 0px">
         <input type="checkbox" name="allDay" id="allDay" style="vertical-align: middle"/>
@@ -281,6 +277,8 @@
       <textarea name="desc" placeholder="${_('Write something about your event')}"></textarea>
   </div>
   <div class="input-wrap">
+    <input type="text" disabled="disabled" value="${_('Invite people to this event')}"
+           id="placeholder-hidden" style="position: absolute;top: -9999px;left: -9999px"/>
     <input type="text" id="event-invitee" name="invitee[]"
            placeholder="${_('Invite people to this event')}"/>
   </div>
@@ -347,13 +345,15 @@
       target = [x for x in target if x in relations.groups]
 
   %>
-  <div class="conv-reason">
-    %if not target:
-      ${utils.userName(owner, entities[owner], "conv-user-cause")}
-    %else:
-      ${utils.userName(owner, entities[owner], "conv-user-cause")}  &#9656; ${utils.groupName(target[0], entities[target[0]])}
-    %endif
-  </div>
+  %if not isConcise:
+    <div class="conv-reason">
+      %if not target:
+        ${utils.userName(owner, entities[owner], "conv-user-cause")}
+      %else:
+        ${utils.userName(owner, entities[owner], "conv-user-cause")}  &#9656; ${utils.groupName(target[0], entities[target[0]])}
+      %endif
+    </div>
+  %endif
   <div class="item-title has-icon">
     <span class="event-date-icon">
       <div>
@@ -365,10 +365,9 @@
 
     <div class="item-title-text event-title-text">
       <a href="/item?id=${convId}">${title}</a>
-      ##<span>${start_dt}</span>
     </div>
 
-    <div class="event-contents">
+    <div class="${'agenda-contents' if isConcise else 'event-contents'}">
       %if not allDay:
         <span class="event-duration-text">${event_start}</span>
         % if sameDay:
@@ -384,27 +383,31 @@
           <span class="event-duration-text">-- ${event_end}</span>
         % endif
       %endif
-      <div class="event-description">${desc|normalize}</div>
+      %if not isConcise:
+        <div class="event-description">${desc|normalize}</div>
+      %endif
       %if location.strip() != "" and not isConcise:
         <div><b>Venue</b> ${location}</div>
       %endif
-      <div class="item-subactions">
-        % if response == "yes":
-          <span id="event-rsvp-status-${convId}">${_("You are attending")}</span>
-        % elif response == "no":
-          <span id="event-rsvp-status-${convId}">${_("You are not attending")}</span>
-        % elif response == "maybe":
-          <span id="event-rsvp-status-${convId}">${_("You may attend")}</span>
-        %else:
-          <span id="event-rsvp-status-${convId}">${_("You have not responded to this event")}</span>
-        %endif
-        <button class="button-link" onclick="$$.ui.showPopup(event)">${_("RSVP to this event")}</button>
-        <ul class="acl-menu" style="display:none;">
-            <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'yes')">${_("Yes, I will attend")}</a></li>
-            <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'no')">${_("No")}</a></li>
-            <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'maybe')">${_("Maybe")}</a></li>
-        </ul>
-      </div>
+      %if not isConcise:
+        <div class="item-subactions">
+          % if response == "yes":
+            <span id="event-rsvp-status-${convId}">${_("You are attending")}</span>
+          % elif response == "no":
+            <span id="event-rsvp-status-${convId}">${_("You are not attending")}</span>
+          % elif response == "maybe":
+            <span id="event-rsvp-status-${convId}">${_("You may attend")}</span>
+          %else:
+            <span id="event-rsvp-status-${convId}">${_("You have not responded to this event")}</span>
+          %endif
+          <button class="button-link" onclick="$$.ui.showPopup(event)">${_("RSVP to this event")}</button>
+          <ul class="acl-menu" style="display:none;">
+              <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'yes')">${_("Yes, I will attend")}</a></li>
+              <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'no')">${_("No")}</a></li>
+              <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'maybe')">${_("Maybe")}</a></li>
+          </ul>
+        </div>
+      %endif
     </div>
   </div>
 </%def>

@@ -217,6 +217,11 @@ input::-moz-focus-inner {
   font-size: 0.9em;
   opacity: 0.5;
 }
+.ui-autocomplete {
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 20px;
+}
 
 
 /*

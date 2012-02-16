@@ -664,7 +664,10 @@ class FeedResource(base.BaseResource):
                     args["entities"][entity] = entities[entity]
 
         if script:
-            onload = "(function(obj){$$.convs.load(obj);})(this);"
+            onload = """
+                        (function(obj){$$.convs.load(obj);})(this);
+                        $('#feed-side-block-container').empty();
+                     """
             t.renderScriptBlock(request, "feed.mako", "feed", landing,
                                 "#user-feed", "set", True,
                                 handlers={"onload": onload}, **args)
@@ -674,9 +677,9 @@ class FeedResource(base.BaseResource):
             for pluginType in plugins:
                 plugin = plugins[pluginType]
                 if hasattr(plugin, 'renderFeedSideBlock'):
-                    blockType = "org" if entityId else "user"
+                    if not entityId: entityId = myId
                     yield plugin.renderFeedSideBlock(request, landing,
-                                                                 blockType, args)
+                                                                 entityId, args)
 
         if script and landing:
             request.write("</body></html>")

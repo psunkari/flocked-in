@@ -238,7 +238,7 @@ class Poll(object):
 
 
     @defer.inlineCallbacks
-    def delete(self, itemId):
+    def delete(self, myId, itemId, conv):
         yield db.get_slice(itemId, "entities")
 
     _ajaxResource = None

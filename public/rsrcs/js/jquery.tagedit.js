@@ -41,6 +41,10 @@
 *      deletedElementTitle: 'This Element will be deleted.',
 *      breakEditLinkTitle: 'Cancel'
 *  }
+*  Abhishek:
+*  1. Accepts the width of the placeholder text and the maxwidth.
+*  2. Unset the placeholder if a valid tag has been entered and sets it back if
+*   all tags have been removed.
 */
 
 (function($) {
@@ -75,7 +79,9 @@
 				deleteConfirmation: 'Are you sure to delete this entry?',
 				deletedElementTitle: 'This Element will be deleted.',
 				breakEditLinkTitle: 'Cancel'
-			}
+			},
+			placeHolderWidth: 15,
+                        maxWidth: 2000
 		}, options || {});
 
 		// no action if there are no elements
@@ -99,7 +105,8 @@
 		var baseNameRegexp = new RegExp("^(.*)\\[([0-9]*?("+options.deletedPostfix+"|"+options.addedPostfix+")?)?\]$", "i");
 
 		var baseName = elements.eq(0).attr('name').match(baseNameRegexp);
-		var basePlaceholderText = elements.eq(0).attr('placeholder') || "";
+		options.placeHolderText = elements.eq(0).attr('placeholder') || "";
+
 		if(baseName && baseName.length == 4) {
 			baseName = baseName[1];
 		}
@@ -150,7 +157,7 @@
 			// put an input field at the End
 			// Put an empty element at the end
 			html = '<li class="tagedit-listelement tagedit-listelement-new">';
-			html += '<input type="text" name="'+baseName+'[]" value="" class="tagedit-input tagedit-input-disabled" dir="'+options.direction+'" placeholder="'+ basePlaceholderText +'"/>';
+			html += '<input type="text" name="'+baseName+'[]" value="" class="tagedit-input tagedit-input-disabled" dir="'+options.direction+'" placeholder="'+ options.placeHolderText +'"/>';
 			html += '</li>';
 			html += '</ul>';
 
@@ -159,7 +166,7 @@
 				// Set function on the input
 				.find('.tagedit-input')
 					.each(function() {
-						$(this).autoGrowInput({comfortZone: 30, minWidth: 180, maxWidth: 20000});
+						$(this).autoGrowInput({comfortZone: 15, minWidth: options.placeHolderWidth, maxWidth: options.maxWidth});
 
 						// Event ist triggert in case of choosing an item from the autocomplete, or finish the input
 						$(this).bind('transformToTag', function(event, id) {
@@ -185,9 +192,9 @@
 									html += '</li>';
 
 									$(this).parent().before(html);
+									// Hide the placeholder if a tag was added
+									$(this).attr('placeholder', '');
 								}
-							}else {
-								$$.alerts.info($(this).val() + " has already been added");
 							}
 							$(this).val('');
 
@@ -204,8 +211,16 @@
 								case 8: // BACKSPACE
 									if($(this).val().length == 0) {
 										// delete Last Tag
+                                                                                var self = this;
 										var elementToRemove = elements.find('li.tagedit-listelement-old').last();
-										elementToRemove.fadeOut(options.animSpeed, function() {elementToRemove.remove();})
+										elementToRemove.fadeOut(options.animSpeed, function() {
+                                                                                    elementToRemove.remove();
+                                                                                    if (elements.find('li.tagedit-listelement-old').length == 0) {
+                                                                                        $(self).attr('placeholder', options.placeHolderText);
+                                                                                    }else {
+                                                                                        $(self).attr('placeholder', '');
+                                                                                    }
+                                                                                })
 										event.preventDefault();
 										return false;
 									}
@@ -248,7 +263,10 @@
 							else {
 								// Delete entry after a timeout
 								var input = $(this);
-								$(this).data('blurtimer', window.setTimeout(function() {input.val('');}, 500));
+								$(this).data('blurtimer', window.setTimeout(function() {
+									input.val('');
+									$(this).attr('placeholder', options.placeHolderText);
+								}, 500));
 							}
 						})
 						.focus(function() {
@@ -261,11 +279,18 @@
 					})
 				.end()
 				.click(function(event) {
+                                        var self = this;
 					switch(event.target.tagName) {
 						case 'A':
 							$(event.target).parent().fadeOut(options.animSpeed, function() {
 								$(event.target).parent().remove();
-								});
+                                                                if ($(self).find('li.tagedit-listelement-old').length == 0) {
+                                                                    console.log()
+                                                                    $(self).find('.tagedit-listelement-new .tagedit-input').attr('placeholder', options.placeHolderText);
+                                                                }else {
+                                                                    $(self).find('.tagedit-listelement-new .tagedit-input').attr('placeholder', '');
+                                                                }
+                                                        });
 							break;
 						case 'INPUT':
 						case 'SPAN':
@@ -358,7 +383,7 @@
 				.end()
 				.find(':text')
 					.focus()
-					.autoGrowInput({comfortZone: 30, minWidth: 30, maxWidth: 20000})
+					.autoGrowInput({comfortZone: 10, minWidth: 15, maxWidth: 20000})
 					.keypress(function(event) {
 						switch(event.keyCode) {
 							case 13: // RETURN

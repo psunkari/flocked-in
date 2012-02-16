@@ -673,27 +673,29 @@ class Event(object):
 
 
     @defer.inlineCallbacks
-    def renderFeedSideBlock(self, request, landing, blockType, args):
+    def renderFeedSideBlock(self, request, landing, entityId, args):
         authinfo = request.getSession(IAuthInfo)
         myId = authinfo.username
         myOrgId = authinfo.organization
+        groupId = args["groupId"] if "groupId" in args else None
 
-        if blockType == "org":
+        if entityId == myOrgId:
             args["title"] = _("Company Wide Events")
             yield event.fetchMatchingEvents(request, args, myOrgId)
             t.renderScriptBlock(request, "event.mako", "side_agenda",
-                                   landing, "#agenda", "set", **args)
-        elif blockType == "group":
+                                   landing, "#feed-side-block-container", "append", **args)
+        elif entityId == myId:
+            args["title"] = _("My Upcoming Events")
+            yield event.fetchMatchingEvents(request, args, myId)
+            t.renderScriptBlock(request, "event.mako", "side_agenda",
+                                   landing, "#feed-side-block-container", "append", **args)
+        elif entityId == groupId:
             args["title"] = _("Group Agenda")
             groupId = args["groupId"]
             yield event.fetchMatchingEvents(request, args, groupId)
             t.renderScriptBlock(request, "event.mako", "side_agenda",
-                                   landing, "#group-agenda", "set", **args)
-        else:
-            args["title"] = _("My Upcoming Events")
-            yield event.fetchMatchingEvents(request, args, myId)
-            t.renderScriptBlock(request, "event.mako", "side_agenda",
-                                   landing, "#agenda", "set", **args)
+                                   landing, "#feed-side-block-container", "append", **args)
+
         #XXX: What if too many expired events come up in the search.
 
     @defer.inlineCallbacks
