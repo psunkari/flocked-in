@@ -156,8 +156,8 @@
     <form id="add-group-form" action="/ajax/groups/create" method="post" enctype="multipart/form-data">
       <ul class="dlgform">
         <li class="form-row">
-            <label class="styled-label" for="name">${_('Group Name')}</label>
-            <input type="text" id="groupname" name="name" required
+            <label class="styled-label" for="groupName">${_('Group Name')}</label>
+            <input type="text" id="groupName" name="name" required
                    title="${_('Group Name')}"/>
         </li>
         <li class="form-row">
@@ -171,7 +171,7 @@
         </li>
         <li class="form-row">
             <label class="styled-label" for="dp">${_("Group Logo")}</label>
-            <input type="file" id="dp" size="15" name="dp" accept="image/jpx, image/png, image/gif"/>
+            <input type="file" id="dp" size="13" name="dp"/>
       </ul>
       <input id="add-group-form-submit" type="submit" style="display:none;"/>
       %if myKey:

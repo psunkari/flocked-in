@@ -216,20 +216,20 @@
     <form id="add-user-form" class="ajax" action="/admin/add" method="POST" enctype="multipart/form-data" autocomplete="off">
       <ul class="dlgform">
         <li class="form-row">
-          <label class="styled-label" for="name">${_("Display Name")}</label>
-          <input type="text" name="name" required="" title="${_("Display Name")}"/>
+          <label class="styled-label" for="displayName">${_("Display Name")}</label>
+          <input type="text" id="displayName" name="name" required title="${_("Display Name")}"/>
         </li>
         <li class="form-row">
           <label class="styled-label" for="email">${_("Email Address")}</label>
-          <input type="email" name="email" required="" title="${_("Email Address")}"/>
+          <input type="email" id="email" name="email" required title="${_("Email Address")}"/>
         </li>
         <li class="form-row">
           <label class="styled-label" for="jobTitle">${_("Job Title")}</label>
-          <input type="text" name="jobTitle" required="" title="${_("Job Title")}"/>
+          <input type="text" id="jobTitle" name="jobTitle" required title="${_("Job Title")}"/>
         </li>
         <li class="form-row">
           <label class="styled-label" for="timezone">${_("Timezone")}</label>
-          <select name="timezone" class="single-row">
+          <select id="timezone" name="timezone" class="single-row">
             %for timezone in common_timezones:
               %if timezone == myTimezone:
                 <option value = "${timezone}" selected="">${timezone}</option>
@@ -240,8 +240,8 @@
           </select>
         </li>
         <li class="form-row">
-          <label class="styled-label" for="passwd">${_("Password")}</label>
-          <input type="password" name="passwd" required="" title="${_("Password")}"/>
+          <label class="styled-label" for="password">${_("Password")}</label>
+          <input type="password" id="password" name="passwd" required title="${_("Password")}"/>
         </li>
       </ul>
       <input id="add-user-form-submit" type="submit" style="display:none;" />
@@ -269,7 +269,7 @@
         </li>
         <li class="form-row">
           <label class="styled-label" for="data">${_("Upload File")}</label>
-          <input type="file" name="data" accept="csv" size="15" required=""/>
+          <input type="file" name="data" accept="csv" size="13" required/>
         </li>
       </ul>
       <input id="add-users-form-submit" type="submit" style="display:none;" />

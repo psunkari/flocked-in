@@ -214,7 +214,7 @@
           <input type="text" id="msgcompose-subject" name="subject" value="${subject}" required/>
       </li>
       <li class="form-row">
-          <label class="dlgform-label" for="year">${_('Message')}</label>
+          <label class="dlgform-label" for="msgcompose-body">${_('Message')}</label>
           <textarea id="msgcompose-body" name="body" style="height:100px;">${body}</textarea>
       </li>
       <li>
