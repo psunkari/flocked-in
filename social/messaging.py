@@ -179,8 +179,7 @@ class MessagingResource(base.BaseResource):
 
         Location = conn.generate_url(600, 'GET', bucket,
                                      '%s/%s/%s' %(myOrgId, owner, url),
-                                     response_headers=headers,
-                                     force_http=True)
+                                     response_headers=headers)
 
         request.setResponseCode(307)
         request.setHeader('Location', Location)
