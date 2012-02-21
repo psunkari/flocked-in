@@ -95,7 +95,8 @@ class EventResource(base.BaseResource):
             d = yield db.batch_insert(convId, "items", updateConv)
 
             yield event.inviteUsers(request, starttimeUUID, endtimeUUID,
-                                        convId, myId, myOrgId, new_invitees)
+                                        convId, conv["meta"]["owner"],
+                                        myOrgId, new_invitees)
             request.write("""$$.alerts.info('%s');""" \
                             %("%d people invited to this event" %len(new_invitees)))
             #XXX: Push to the invited user's feed.
@@ -246,16 +247,26 @@ class EventResource(base.BaseResource):
         view = utils.getRequestArg(request, 'view') or "agenda"
         authinfo = request.getSession(IAuthInfo)
         myOrgId = authinfo.organization
+        start = utils.getRequestArg(request, 'start') or ""
 
         #Check if entity Id is my Org or a group that I have access to.
         if entityId != myId and entityId != myOrgId:
             yield utils.getValidEntityId(request, "id", "group")
+
+        if view == "invitations":
+            entityId = "%s:%s" %(myId, "I")
 
         if page.isdigit():
             page = int(page)
         else:
             page = 1
         count = constants.EVENTS_PER_PAGE
+
+        try:
+            start = datetime.datetime.strptime(start, "%Y-%m-%d")
+        except ValueError:
+            start = None
+        print "start is %s" % (str(start))
 
         args.update({'view':view})
         args.update({'page':page, 'entityId': entityId})
@@ -267,23 +278,22 @@ class EventResource(base.BaseResource):
             t.renderScriptBlock(request, "event.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-        yield event.fetchMatchingEvents(request, args, entityId, count=count)
+        yield event.fetchMatchingEvents(request, args, entityId, count=count,
+                                        start=start)
 
         if script:
             if page == 1:
+
                 onload = """
                          $$.menu.selectItem('events');
-                         """
+                         $$.events.prepareAgendaDatePicker('%s')
+                         """ % (args["start"])
                 t.renderScriptBlock(request, 'event.mako', "render_events", landing,
                                     "#center", "set", True,
                                     handlers={"onload": onload}, **args)
             else:
                 t.renderScriptBlock(request, "event.mako", "events",
                                     landing, "#next-page-loader", "replace", **args)
-
-    @defer.inlineCallbacks
-    def _invitations(self, request):
-        pass
 
 
     @profile
@@ -560,6 +570,11 @@ class Event(object):
             yield db.batch_remove({'userAgenda': [attendee]},
                                     names=user_tuids[attendee])
 
+        log.debug("userAgenda Invitation Removal")
+        for attendee in user_tuids:
+            yield db.batch_remove({'userAgenda': ['%s:%s' %(attendee, 'I')]},
+                                    names=user_tuids[attendee])
+
         log.debug("eventResponses Removal", convId)
         #Delete the event's entry in eventResponses
         yield db.remove(convId, "eventResponses")
@@ -570,12 +585,16 @@ class Event(object):
             yield db.batch_remove({'userAgendaMap': ["%s:%s"%(attendee, convId)]},
                                     names=user_tuids[attendee])
 
+        #TODO: Also remove references if any of this event in the invitations
+        # column
+
     @defer.inlineCallbacks
-    def inviteUsers(self, request, starttimeUUID, endtimeUUID, convId, myId,
+    def inviteUsers(self, request, starttimeUUID, endtimeUUID, convId, ownerId,
                      myOrgId, invitees, acl=None):
         deferreds = []
         toNotify = {}
         toRemove = {'latest':[]}
+
         #TODO:Send notifications to each one of these people
         for invitee in invitees:
             #Add to the user's agenda
@@ -586,10 +605,16 @@ class Event(object):
             d4 = db.insert("%s:%s" %(invitee, convId), "userAgendaMap", "",
                           endtimeUUID)
             deferreds.extend([d1, d3, d2, d4])
-            if invitee == myId:
+            if invitee == ownerId:
                 # The organizer auto accepts an event
-                d = db.insert(convId, "eventResponses", "", "yes:%s" %(myId))
+                d = db.insert(convId, "eventResponses", "", "yes:%s" %(ownerId))
                 deferreds.append(d)
+
+            # Add to an additional column for invited users(not the owner)
+            if invitee != ownerId:
+                d5 = db.insert("%s:%s" % (invitee, "I"), "userAgenda", convId, starttimeUUID)
+                d6 = db.insert("%s:%s" % (invitee, "I"), "userAgenda", convId, endtimeUUID)
+                deferreds.extend([d5, d6])
 
         if acl:
             # Based on the ACL, if company or groups were included, then add an
@@ -691,29 +716,33 @@ class Event(object):
         #XXX: What if too many expired events come up in the search.
 
     @defer.inlineCallbacks
-    def fetchMatchingEvents(self, request, args, entityId, count=5):
+    def fetchMatchingEvents(self, request, args, entityId, count=5, start=None):
         """Find matching events for the user, org or group for a given time
         range. Events are sorted by their start time and then by their end time.
 
         """
-        # since we store times in UTC, find out the utc time for the user's
-        # 00:00 hours instead of utc 00:00.
-        my_tz = timezone(args["me"]["basic"]["timezone"])
-        utc_now = datetime.datetime.now(pytz.utc)
-        mytz_now = utc_now.astimezone(my_tz)
         myId = args["myId"]
         convs = []
         invitations = []
         toFetchEntities = set()
+        my_tz = timezone(args["me"]["basic"]["timezone"])
 
-        page = args.get("page", 1)
+        if not start:
+            # since we store times in UTC, find out the utc time for the user's
+            # 00:00 hours instead of utc 00:00.
+            utc_now = datetime.datetime.now(pytz.utc)
+            mytz_now = utc_now.astimezone(my_tz)
+            mytz_start = mytz_now+relativedelta(hour=0, minute=0, second=0)
+        else:
+            mytz_start = start.replace(tzinfo=my_tz)
 
-        mytz_start = mytz_now+relativedelta(hour=0, minute=0, second=0)
+        args["start"] = mytz_start.strftime("%Y-%m-%d")
         print mytz_start.strftime('%a %b %d, %I:%M %p %Z')
         timestamp = calendar.timegm(mytz_start.utctimetuple())
         timeUUID = utils.uuid1(timestamp=timestamp)
         start = timeUUID.bytes
 
+        page = args.get("page", 1)
         print "page number is %d" %page
 
         cols = yield db.get_slice(entityId, "userAgenda", start=start,
@@ -731,7 +760,7 @@ class Event(object):
         sorted_event_ids = [x[0] for x in sorted_time_tuples]
         events_in_this_page = sorted_event_ids[(page-1)*count:page*count]
 
-        if len(events_in_this_page) == count:
+        if len(events_in_this_page) >= count:
             nextPage = page + 1
             args.update({'nextPage': nextPage})
         else:

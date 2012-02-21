@@ -1431,7 +1431,8 @@ var events = {
     },
     prepareDateTimePickers: function(){
         var currentTime = new Date();
-        // Set the Display Strings
+
+        // Instantiate Date pickers
         $('#startdate').datepicker({ minDate: currentTime,
             dateFormat:'D, d M yy',
             onSelect: function (selectedDate){
@@ -1440,9 +1441,9 @@ var events = {
                             instance.settings.dateFormat ||
                             $.datepicker._defaults.dateFormat,
                             selectedDate, instance.settings );
+
                 $('#enddate').datepicker( "option", 'minDate', date );
-                var seconds = $( "#starttime" ).data('timepicker').parseTimeString($('#starttime-picker').val())
-                events.setWidgetDateTime("starttime", seconds);
+                events.updateHiddenDateTimes();
             }
         });
         $('#startdate').change(function() {
@@ -1453,8 +1454,7 @@ var events = {
                         $.datepicker._defaults.dateFormat,
                         selectedDate, instance.settings );
             $('#enddate').datepicker( "option", 'minDate', date );
-            var seconds = $( "#starttime" ).data('timepicker').parseTimeString($('#starttime-picker').val())
-            events.setWidgetDateTime("starttime", seconds);
+            events.updateHiddenDateTimes();
         });
         $('#enddate').datepicker({ minDate: currentTime,
             dateFormat:'D, d M yy',
@@ -1464,9 +1464,9 @@ var events = {
                             instance.settings.dateFormat ||
                             $.datepicker._defaults.dateFormat,
                             selectedDate, instance.settings );
+
                 $('#startdate').datepicker( "option", 'maxDate', date );
-                var seconds = $( "#endtime" ).data('timepicker').parseTimeString($('#endtime-picker').val())
-                events.setWidgetDateTime("endtime", seconds);
+                events.updateHiddenDateTimes();
             }
         });
         $('#enddate').change(function() {
@@ -1477,32 +1477,38 @@ var events = {
                         $.datepicker._defaults.dateFormat,
                         selectedDate, instance.settings );
             $('#startdate').datepicker( "option", 'maxDate', date );
-            var seconds = $( "#endtime" ).data('timepicker').parseTimeString($('#endtime-picker').val())
-            events.setWidgetDateTime("endtime", seconds);
+            events.updateHiddenDateTimes();
         });
+
+        //Set Initial dates for both the pickers
         $('#startdate').datepicker('setDate', currentTime);
         var preSetEndDateTime = new Date();
         preSetEndDateTime.setHours(currentTime.getHours() + 1);
         $('#enddate').datepicker('setDate', preSetEndDateTime);
 
+        //Selecting all day toggles the time pickers
         $("#allDay").change(function(){
             $('.time-picker').toggle()
         })
+
+        //Instantiate time pickers
         $( "#starttime" ).timepicker({'currentTime':currentTime.getTime(),
                                      'appendTo':$('#starttime').parents('.time-picker')});
         $( "#endtime" ).timepicker({'currentTime':preSetEndDateTime.getTime(),
                                      'appendTo':$('#endtime').parents('.time-picker')});
-        var seconds = $( "#starttime" ).data('timepicker').parseTimeString($('#starttime-picker').val())
-        events.setWidgetDateTime("starttime", seconds);
-        var seconds = $( "#endtime" ).data('timepicker').parseTimeString($('#endtime-picker').val())
-        events.setWidgetDateTime("endtime", seconds);
-
         $( "#starttime" ).bind( "timepickerselected", function(event, ui) {
             events.setWidgetDateTime('starttime', ui.item.timestamp);
         });
         $( "#endtime" ).bind( "timepickerselected", function(event, ui) {
             events.setWidgetDateTime('endtime', ui.item.timestamp);
         });
+
+        //Set the hidden datetime values
+        var seconds = $( "#starttime" ).data('timepicker').parseTimeString($('#starttime-picker').val())
+        events.setWidgetDateTime("starttime", seconds);
+        var seconds = $( "#endtime" ).data('timepicker').parseTimeString($('#endtime-picker').val())
+        events.setWidgetDateTime("endtime", seconds);
+
     },
     autoFillUsers: function(){
         $('#placeholder-hidden').autoGrowInput({comfortZone: 15, minWidth: 1, maxWidth: 20000});
@@ -1534,12 +1540,33 @@ var events = {
         datestamp.setSeconds(0)
         var timestamp = datestamp.getTime()/1000 + parseInt(seconds, 10)
         $((id == 'starttime')?'#startDate':'#endDate').val(timestamp*1000);
+        console.info("Date selected by " + id + " is " + new Date(timestamp*1000).toString())
     },
-    showAgendaDatePicker: function() {
-        $( "#datepicker" ).datepicker({
+    updateHiddenDateTimes: function() {
+        var seconds = $( "#endtime" ).data('timepicker').parseTimeString($('#endtime-picker').val())
+        events.setWidgetDateTime("endtime", seconds);
+
+        var seconds = $( "#starttime" ).data('timepicker').parseTimeString($('#starttime-picker').val())
+        events.setWidgetDateTime("starttime", seconds);
+    },
+    prepareAgendaDatePicker: function(start_date) {
+        var start = new Date(start_date);
+
+        $( "#agenda-start" ).datepicker({
                 showOn: "button",
-                buttonImage: "/rsrcs/img/calendar.gif",
-                buttonImageOnly: true
+                buttonImage: "rsrcs/img/calendar.gif",
+                buttonImageOnly: true,
+                dateFormat:'D, d M yy',
+                altField: '#agenda-start-date',
+                altFormat: 'yy-mm-dd'
+        });
+        $( "#agenda-start" ).datepicker('setDate', start);
+        $('#agenda-start').change(function() {
+            console.info("Bimbo " + $('#agenda-start-date').val());
+            var view = $('#agenda-view').val(),
+                start = $('#agenda-start-date').val(),
+                uri = '/event?start='+start+'&view='+view
+            $$.fetchUri(uri);
         });
     }
 };

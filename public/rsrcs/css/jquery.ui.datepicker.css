@@ -68,3 +68,9 @@
     width: 200px; /*must have*/
     height: 200px; /*must have*/
 }
+
+.ui-datepicker-trigger {
+    cursor: pointer;
+    display: table-cell;
+    vertical-align: middle;
+}

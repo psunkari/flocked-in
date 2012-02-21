@@ -151,8 +151,6 @@
 <%def name="render_events()">
   <div class="center-contents">
     <div class="viewbar">
-      <%print entityId%>
-      %if entityId == myId:
         <ul class="h-links view-options">
           %for item, display in [('agenda', _('Agenda')), ('invitations', _('Invitations'))]:
             %if view == item:
@@ -162,18 +160,18 @@
             %endif
           %endfor
         </ul>
-      %else:
-        <ul class="h-links view-options">
-          <li class="selected">${_("Agenda")}</li>
-        </ul>
-      %endif
+        <div class="input-wrap" style="float: right;width: 12em;border: none">
+            <input id="agenda-start" type="text" style="width: 10em" disabled="disabled"/>
+            <input type="hidden" id="agenda-start-date" />
+            <input type="hidden" id="agenda-view" value="${view}" />
+        </div>
     </div>
     <div class="paged-container" id="events-container">
       <%events()%>
       <div id="next-page-loader">
         %if nextPage:
           <div id="next-load-wrapper" class="busy-indicator">
-            <a id="next-page-load" class="ajax" data-ref="/event?page=${nextPage}">${_("Fetch more events")}</a>
+            <a id="next-page-load" class="ajax" data-ref="/event?page=${nextPage}&view=${view}">${_("Fetch more events")}</a>
           </div>
         %endif
       </div>
@@ -186,6 +184,10 @@
       %for convId in conversations:
         <%event_layout(convId, True)%>
       %endfor
+    %else:
+        %if not nextPage:
+            <div id="empty-message" >${_("No Events")}</div>
+        %endif
     %endif
 </%def>
 
@@ -350,13 +352,13 @@
 
   %>
   %if not isConcise:
-    <div class="conv-reason">
-      %if not target:
-        ${utils.userName(owner, entities[owner], "conv-user-cause")}
-      %else:
-        ${utils.userName(owner, entities[owner], "conv-user-cause")}  &#9656; ${utils.groupName(target[0], entities[target[0]])}
-      %endif
-    </div>
+    %if not target:
+      ${utils.userName(owner, entities[owner], "conv-user-cause")}
+    %else:
+      ${utils.userName(owner, entities[owner], "conv-user-cause")}
+        <span class="conv-target">&#9656;</span>
+      ${utils.groupName(target[0], entities[target[0]])}
+    %endif
   %endif
   <div class="item-title has-icon">
     <span class="event-date-icon">
@@ -367,7 +369,7 @@
       </div>
     </span>
 
-    <div class="item-title-text event-title-text">
+    <div class="event-title-text">
       <a href="/item?id=${convId}">${title}</a>
     </div>
 
