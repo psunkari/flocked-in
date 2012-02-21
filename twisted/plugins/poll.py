@@ -201,7 +201,7 @@ class Poll(object):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def create(self, request, myId, myOrgId, richText=False):
+    def create(self, request, myId, myOrgId, convId, richText=False):
         snippet, comment = utils.getTextWithSnippet(request, "comment",
                                         constants.POST_PREVIEW_LENGTH,
                                         richText=richText)
@@ -238,7 +238,7 @@ class Poll(object):
 
 
     @defer.inlineCallbacks
-    def delete(self, itemId):
+    def delete(self, myId, itemId, conv):
         yield db.get_slice(itemId, "entities")
 
     _ajaxResource = None

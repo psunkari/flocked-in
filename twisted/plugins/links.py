@@ -1,4 +1,3 @@
-import embedly
 import urllib
 import re
 from lxml               import etree
@@ -58,7 +57,7 @@ class Links(object):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def create(self, request, myId, myOrgId, richText=False):
+    def create(self, request, myId, myOrgId, convId, richText=False):
         snippet, comment = utils.getTextWithSnippet(request, "comment",
                                         constants.POST_PREVIEW_LENGTH, richText=richText)
         url = utils.getRequestArg(request, "url", sanitize=False)
@@ -107,8 +106,8 @@ class Links(object):
         defer.returnValue((item, attachments))
 
     @defer.inlineCallbacks
-    def delete(self, itemId):
-        yield db.get_slice(itemId, "entities")
+    def delete(self, myId, convId, conv):
+        yield db.get_slice(convId, "entities")
 
     def getResource(self, isAjax):
         return None

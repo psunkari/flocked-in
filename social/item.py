@@ -32,7 +32,8 @@ def _createNewItem(request, myId, myOrgId, richText=False):
 
     plugin = plugins[convType]
     convId = utils.getUniqueKey()
-    conv, attachments = yield plugin.create(request, myId, myOrgId, richText)
+    conv, attachments = yield plugin.create(request, myId, myOrgId,
+                                            convId, richText)
 
     #
     # Check if this item contains any keywords that admins are interested in.
@@ -507,6 +508,8 @@ class ItemResource(base.BaseResource):
                                     landing, '#conv-likes-wrapper-%s' % convId, 'set',
                                     args=[convId, numLikes, iLike, [x.column.name for x in likes]],
                                     entities= args['entities'])
+        if plugin and hasattr(plugin, 'renderItemSideBlock'):
+            plugin.renderItemSideBlock(request, landing, args)
 
         if script and landing:
             request.write("</body></html>")
@@ -520,6 +523,7 @@ class ItemResource(base.BaseResource):
     @dump_args
     def _new(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        landing = not self._ajax
 
         convId, conv, keywords = yield _createNewItem(request, myId, args['orgId'])
         if keywords:
@@ -528,11 +532,17 @@ class ItemResource(base.BaseResource):
             return
 
         entities = {myId: args['me']}
+        toFetchEntities = []
+        convType = utils.getRequestArg(request, "type")
+        plugin = plugins[convType]
+        entityIds = yield plugin.fetchData(args, convId)
+        toFetchEntities.extend(entityIds)
+
         target = conv['meta'].get('target', None)
         if target:
-            toFetchEntities = set(target.split(','))
-            cols = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
-            entities.update(utils.multiSuperColumnsToDict(cols))
+            toFetchEntities.extend(target.split(','))
+        cols = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
+        entities.update(utils.multiSuperColumnsToDict(cols))
 
         relation = Relation(myId, [])
         yield relation.initGroupsList()
@@ -548,6 +558,20 @@ class ItemResource(base.BaseResource):
         defaultType = plugins.keys()[0]
         plugins[defaultType].renderShareBlock(request, True)
 
+        if plugin and hasattr(plugin, 'renderFeedSideBlock'):
+            #TODO: Determine the blockType
+            if target:
+                entityId = target.split(',')[0]
+                args["groupId"] = target.split(',')[0]
+            else:
+                #No better way to find out if this item was created from the
+                # user's feed page or from the company feed page
+                referer = request.getHeader('referer')
+                entityId = myId
+
+            request.write("$('#feed-side-block-container').empty();")
+            yield plugins["event"].renderFeedSideBlock(request, landing,
+                                                         entityId, args)
 
     @profile
     @defer.inlineCallbacks
@@ -1038,6 +1062,9 @@ class ItemResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _remove(self, request):
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        landing = not self._ajax
+
         (itemId, item) = yield utils.getValidItemId(request, 'id', columns=['tags'])
         convId = item["meta"].get("parent", itemId)
         itemOwnerId = item["meta"]["owner"]
@@ -1083,12 +1110,14 @@ class ItemResource(base.BaseResource):
         convACL = conv["meta"]["acl"]
         timestamp = str(int(time.time()))
         itemUUID = item["meta"]["uuid"]
+        plugin = plugins[convType]
 
         if delete:
             # The conversation is lazy deleted.
             # If it is the comment being deleted, rollback all feed updates
             # that were made due to this comment and likes on this comment.
             d = deleteItem(request, itemId, item, conv)
+            yield plugin.delete(myId, convId, conv)
             deferreds.append(d)
 
         else:
@@ -1115,6 +1144,22 @@ class ItemResource(base.BaseResource):
         # Update the user interface
         request.write("$$.convs.remove('%s', '%s');"%(convId,itemId))
 
+        target = conv['meta'].get('target', None)
+
+        if plugin and hasattr(plugin, 'renderFeedSideBlock') and not comment:
+            #TODO: Determine the blockType
+            if target:
+                entityId = target.split(',')[0]
+                args["groupId"] = target.split(',')[0]
+            else:
+                #No better way to find out if this item was created from the
+                # user's feed page or from the company feed page
+                referer = request.getHeader('referer')
+                entityId = myId
+
+            request.write("$('#feed-side-block-container').empty();")
+            yield plugins["event"].renderFeedSideBlock(request, landing,
+                                                         entityId, args)
 
     @defer.inlineCallbacks
     def _renderReportDialog(self, request):

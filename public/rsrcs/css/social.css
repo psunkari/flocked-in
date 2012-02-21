@@ -172,6 +172,17 @@ a:hover, a:active, a:focus {
     height: 23px;
 }
 
+#sharebar .tagedit-list, #item-subactions .tagedit-list {
+    margin-bottom: 0;
+    margin-top: 0;
+    padding-top: 6px;
+    padding-left:8px;
+}
+
+#sharebar .tagedit-listelement > input {
+    margin-top: 2px;
+}
+
 
 /*
  * Page Layout - Header.
@@ -1267,6 +1278,10 @@ abbr.timestamp {
     padding: 8px 0 0;
 }
 
+#item-subactions {
+    margin-bottom: 10px;
+}
+
 
 /*
  * Edit profile & Style for a generic form.
@@ -2049,17 +2064,20 @@ abbr.timestamp {
 
 .event-date-icon {
     position: absolute;
-    width:3em;
+    width: 3.5em;
+    height: 3.5em;
     text-shadow: none !important;
-    -moz-border-bottom-colors: none;
-    -moz-border-image: none;
-    -moz-border-left-colors: none;
-    -moz-border-right-colors: none;
-    -moz-border-top-colors: none;
-    background: -moz-linear-gradient(center top , #FAFAFA, #E3E3E3) repeat scroll 0 0 transparent;
-    border-color: #E3E3E3 #BBBBBB #909090;
-    border-radius: 3px 3px 3px 3px;
-    -moz-border-radius: 3px 3px 3px 3px;
+    background-color: #F9F9F9;
+    background-repeat: scroll;
+    background-position: 0 0;
+    background-image: -webkit-gradient(linear, center, top, from(#F9F9F9), to(#E3E3E3));
+    background-image: -webkit-linear-gradient(top, #F9F9F9, #E3E3E3);
+    background-image: -moz-linear-gradient(top, #F9F9F9, #E3E3E3);
+    background-image: -ms-linear-gradient(top, #F9F9F9, #E3E3E3);
+    background-image: -o-linear-gradient(top, #F9F9F9, #E3E3E3);
+    background-image: linear-gradient(to bottom, #F9F9F9, #E3E3E3);
+    border-color: #CCCCCC #BBBBBB #A0A0A0;
+    border-radius: 3px;
     border-style: solid;
     border-width: 1px;
     box-shadow: 1px 1px 2px #E3E3E3;
@@ -2083,15 +2101,74 @@ abbr.timestamp {
 
 .event-date-day {
     font-size:18px;
+    padding-top: 2px;
 }
 
 .event-contents {
     padding-left: 45px !important;
+    font-size: 12px;
 }
 
 .event-description {
     margin: 4px 0;
     color:#808080;
+}
+
+.event-title-text {
+    padding-left: 45px !important;
+    font-weight: bold;
+    overflow: hidden;
+    max-width: 25em;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.event-duration-text {
+    font-size: 13px;
+}
+
+.event-agenda-link {
+    display: inline-block !important;
+}
+
+.event-agenda-link-expired {
+    display: inline-block !important;
+    color: #888888 !important;
+}
+
+.event-agenda-due-in {
+    display: inline-block;
+    float: right;
+}
+
+.agenda-root {
+    float: left;
+}
+
+.agenda-contents {
+    padding-left: 45px;
+}
+
+.agenda-contents .event-duration-text {
+    font-size: 11px;
+}
+
+.event-details {
+    float: right;
+    position: relative;
+}
+
+.event-details  > div {
+    padding: 2px 4px;
+    text-align: right;
+}
+
+.event-details .button-link {
+    padding: 0px;
+}
+
+#sharebar .time-picker .ui-autocomplete {
+  max-height: 140px;
 }
 
 

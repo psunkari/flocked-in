@@ -40,7 +40,7 @@ class Feedback(object):
 
 
     @defer.inlineCallbacks
-    def delete(self, itemId):
+    def delete(self, myId, itemId, conv):
         log.debug("plugin:delete", itemId)
         yield db.get_slice(itemId, "entities")
 

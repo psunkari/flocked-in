@@ -1247,12 +1247,22 @@ class GroupFeedResource(base.BaseResource):
                                    $('#group_invitee').attr('value', ui.item.uid)
                                }
                           });
+                          $('#feed-side-block-container').empty();
                          """
                 t.renderScriptBlock(request, "group-feed.mako", "groupLinks",
                                     landing, "#group-links", "set",
                                     handlers={"onload":onload}, **args)
+
             t.renderScriptBlock(request, "group-feed.mako", "groupAdmins",
                                 landing, "#group-admins", "set", True, **args)
+
+            if isMember:
+                for pluginType in plugins:
+                    plugin = plugins[pluginType]
+                    if hasattr(plugin, 'renderFeedSideBlock'):
+                        yield plugins["event"].renderFeedSideBlock(request,
+                                                        landing, groupId, args)
+
         else:
             t.render(request, "group-feed.mako", **args)
 

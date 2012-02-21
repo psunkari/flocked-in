@@ -21,6 +21,7 @@
       ${navMenuItem("/feed/", _("News Feed"), "feed")}
       ${navMenuItem("/notifications", _("Notifications"), "notifications")}
       ${navMenuItem("/messages", _("Messages"), "messages")}
+      ${navMenuItem("/event", _("Events"), "events")}
       ${navMenuItem("/people", _("People"), "people")}
       ${navMenuItem("/feed/%s" % orgKey, _("Company Feed"), "org")}
       ${navMenuItem("/groups", _("Groups"), "groups")}
@@ -67,6 +68,7 @@
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/screen-size.css"/>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/widgets.css"/>
   <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/messaging.css"/>
+  <link rel="stylesheet" type="text/css" media="screen" href="/rsrcs/css/jquery.ui.datepicker.css"/>
   <link rel="shortcut icon" href="/rsrcs/img/favicon.ico" type="image/x-icon" />
 
 %if script:
@@ -170,7 +172,6 @@
   </script>
   <script type="text/javascript" src="/rsrcs/js/jquery-1.6.4.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.js"></script>
-  <script type="text/javascript" src="/rsrcs/js/jquery.ui.menu.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.autocomplete.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.address-1.4.js?tracker=null"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.autogrow-textarea.js"></script>
@@ -179,6 +180,8 @@
   <script type="text/javascript" src="/rsrcs/js/jquery.html5form-1.3.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.autoGrowInput.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.tagedit.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/jquery.ui.datepicker.js"></script>
+  <script type="text/javascript" src="/rsrcs/js/jquery.ui.timepicker.js"></script>
   <script type="text/javascript" src="/rsrcs/js/Cometd.js"></script>
   <script type="text/javascript" src="/rsrcs/js/ReloadExtension.js"></script>
   <script type="text/javascript" src="/rsrcs/js/json2.js"></script>
