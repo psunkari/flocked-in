@@ -485,7 +485,12 @@ def decodeKey(key):
         return key
 
     length = len(key) - 2
-    return base64.urlsafe_b64decode(key[2:] + ((length % 4) * '='))
+    try:
+        decoded_key = base64.urlsafe_b64decode(key[2:] + ((length % 4) * '='))
+    except TypeError:
+        raise errors.InvalidRequest(_("Invalid Key"))
+    else:
+        return decoded_key
 
 
 # Return a count of unseen notifications a user has.
@@ -1010,5 +1015,3 @@ def cleanupChat(sessionId, userId, orgId):
     status = presence.PresenceStates.OFFLINE
     yield presence.updateAndPublishStatus(userId, orgId, sessionId, status)
     yield presence.clearChannels(userId, sessionId)
-
-
