@@ -1,15 +1,15 @@
 
 .tagedit-list { padding: 5px 5px 0 5px; overflow: auto; min-height: 25px; }
-.tagedit-listelement {list-style-type: none; float: left; margin: 0 5px 5px 0; padding: 0; color: #333; line-height: normal}
+.tagedit-listelement {list-style-type: none; float: left; margin: 0 5px 5px 0; padding: 0; color: #333333; line-height: normal}
 
  /* New Item input */
-.tagedit-input {border: 0; height: 100%; padding: 2px 5px; width: 15px; background: #fff;}
+.tagedit-input {border: 0; height: 100%; padding: 2px 5px; width: 15px; background: #FFFFFF;}
 .tagedit-input:focus {outline: none;}
 .tagedit-input.tagedit-input-disabled {display: inline;}
 
  /* Item that is put to the List */
-.tagedit-listelement-old {background: #DEE7F8; border: 1px solid #CAD8F3; padding: 2px 0 2px 8px; -moz-border-radius: 2px; -webkit-border-radius: 2px; border-radius: 2px;}
-.tagedit-listelement-old:hover {background-color: #D6E4FF;}
+.tagedit-listelement-old {background: #F1F2F0; border: 1px solid #E0D7CF; padding: 2px 0 2px 8px; -moz-border-radius: 2px; -webkit-border-radius: 2px; border-radius: 2px;}
+.tagedit-listelement-old:hover {background-color: #E0D7CF;}
 .tagedit-listelement-old a.tagedit-close,
 .tagedit-listelement-old a.tagedit-break,
 .tagedit-listelement-old a.tagedit-delete,
@@ -19,7 +19,7 @@
 .tagedit-listelement-old a.tagedit-delete {background-image: url(/rsrcs/img/te-delete.png); margin: 0 5px 0 2px; background-position: right center;}
 
  /* Items that are edited */
-.tagedit-listelement-edit input.tagedit-edit-input {border: 0; background: transparent; font-size: 11px; color: #666; padding: 0;}
+.tagedit-listelement-edit input.tagedit-edit-input {border: 0; background: transparent; font-size: 11px; color: #808080; padding: 0;}
 .tagedit-listelement-edit input:focus {outline: none;}
 .tagedit-listelement-edit a.tagedit-break {border: 0; margin-left: 0;}
 .tagedit-listelement-edit a.tagedit-close,
