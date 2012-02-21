@@ -394,6 +394,7 @@ class Feed(object):
                 for key in reversed(keysFromFeed):
                     if key in itemsFromFeed and itemsFromFeed[key] == lastConvId:
                         nextPageStart = utils.encodeKey(key)
+                convIds = convIds[:-1]
 
         else:
             (convIds, deletedIds) = yield utils.fetchAndFilterConvs(convIds,
