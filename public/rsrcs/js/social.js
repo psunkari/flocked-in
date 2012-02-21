@@ -485,6 +485,13 @@ var publisher = {
 
         // Auto expand textareas
         $('#sharebar textarea').autogrow();
+
+        $('#share-form').submit(function() {
+            if ($('#sharebar-attach-wrapper').hasClass('busy')) {
+                $$.alerts.info("Please wait while your files are being uploaded")
+                return false
+            }
+        })
     }
 };
 
@@ -935,6 +942,13 @@ var files = {
 
     init: function(id){
         var self = this;
+
+        $("#"+id).submit(function() {
+            //Since the form is by itself never used to submit. So, always
+            // cancel all submits. Actual submits are performed by the iframe
+            // plugin.
+            return false
+        })
 
         $("#"+id+" :file").change(function() {
             var form = $(this.form), d, mimeType = null, filename = null;
