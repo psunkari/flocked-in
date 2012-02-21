@@ -747,7 +747,9 @@ class MessagingResource(base.BaseResource):
             raise errors.MessageAccessDenied(convId)
 
         cols = yield db.multiget_slice(newMembers, "entities", ['basic'])
-        newMembers = set([userId for userId in cols if cols[userId]])
+        people = utils.multiSuperColumnsToDict(cols)
+        newMembers = set([userId for userId in people if people[userId] and \
+                          people[userId]["basic"]["org"] == orgId])
         newMembers = newMembers - participants
 
         mailNotificants = participants - set([myId])
@@ -804,7 +806,9 @@ class MessagingResource(base.BaseResource):
             raise errors.MessageAccessDenied(convId)
 
         cols = yield db.multiget_slice(members, "entities", ['basic'])
-        members = set([userId for userId in cols if cols[userId]])
+        people = utils.multiSuperColumnsToDict(cols)
+        members = set([userId for userId in people if people[userId] and \
+                          people[userId]["basic"]["org"] == orgId])
         members = members.intersection(participants)
 
         if len(members) == len(participants):
