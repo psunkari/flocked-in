@@ -1,4 +1,4 @@
-<%! from social import utils, _, __, plugins %>
+<%! from social import utils, _, __, plugins, location_tz_map%>
 <%! from pytz import common_timezones %>
 <!DOCTYPE HTML>
 
@@ -230,11 +230,14 @@
         <li class="form-row">
           <label class="styled-label" for="timezone">${_("Timezone")}</label>
           <select id="timezone" name="timezone" class="single-row">
-            %for timezone in common_timezones:
-              %if timezone == myTimezone:
-                <option value = "${timezone}" selected="">${timezone}</option>
+            %for i, country_name in enumerate(location_tz_map):
+              %if i == 7:
+                <option value="" disabled="disabled">-----------------------------------------------</option>
+              %endif
+              %if location_tz_map[country_name] == myTimezone:
+                <option value="${location_tz_map[country_name]}" selected=''>${country_name}</option>
               %else:
-                <option value = "${timezone}" >${timezone}</option>
+                <option value="${location_tz_map[country_name]}">${country_name}</option>
               %endif
             %endfor
           </select>
