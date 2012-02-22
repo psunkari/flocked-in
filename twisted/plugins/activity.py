@@ -53,8 +53,8 @@ class Activity(object):
         raise Exception("Activity item cannot be created from share block")
 
     @defer.inlineCallbacks
-    def delete(self, itemId):
-        yield db.get_slice(itemId, "entities")
+    def delete(self, myId, convId, conv):
+        yield db.get_slice(convId, "entities")
 
 
     def getResource(self, isAjax):

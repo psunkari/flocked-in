@@ -156,7 +156,7 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(userItems)
 
     # Index of posts by type
-    for itemType in ['status', 'link', 'question', 'poll']:
+    for itemType in ['status', 'link', 'question', 'event', 'poll']:
         columnFamily = "userItems_" + str(itemType)
         userItemsType = CfDef(KEYSPACE, columnFamily, 'Standard',
                               'TimeUUIDType', None,
@@ -173,7 +173,7 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(feedItems)
 
     # Index of feed by type
-    for itemType in ['status', 'link', 'question', 'poll']:
+    for itemType in ['status', 'link', 'question', 'event', 'poll']:
         columnFamily = "feed_" + str(itemType)
         feedType = CfDef(KEYSPACE, columnFamily, 'Standard', 'TimeUUIDType',
                          None, 'Feed of %s items'%(itemType))
@@ -189,22 +189,17 @@ def createColumnFamilies(client):
     yield client.system_add_column_family(votes)
 
     # Events
-    userEventResponse = CfDef(KEYSPACE, 'userEventResponse', 'Standard',
-                              'UTF8Type', None,
-                              'List of responses of users for events')
-    eventInvitations = CfDef(KEYSPACE, "eventInvitations", "Super", "UTF8Type",
-                             "TimeUUIDType", "")
-    eventResponses = CfDef(KEYSPACE, 'eventResponses', 'Super', 'UTF8Type',
-                           'UTF8Type', '')
-    userEvents = CfDef(KEYSPACE, "userEvents", "Standard",
-                       "TimeUUIDType", None, "")
-    userEventInvitations = CfDef(KEYSPACE, "userEventInvitations", "Standard",
-                                 "TimeUUIDType", None, "")
-    yield client.system_add_column_family(userEventResponse)
-    yield client.system_add_column_family(eventInvitations)
+    userAgenda = CfDef(KEYSPACE, "userAgenda", "Standard", "TimeUUIDType",
+                             None, "Time sorted list of events for a user")
+    yield client.system_add_column_family(userAgenda)
+
+    userAgendaMap = CfDef(KEYSPACE, "userAgendaMap", "Standard", "TimeUUIDType",
+                             None, "Reverse map of user:event to agenda entry")
+    yield client.system_add_column_family(userAgendaMap)
+
+    eventResponses = CfDef(KEYSPACE, "eventResponses", "Standard", "UTF8Type",
+                            None, "List of RSVP responses to an event")
     yield client.system_add_column_family(eventResponses)
-    yield client.system_add_column_family(userEvents)
-    yield client.system_add_column_family(userEventInvitations)
 
     # Notifications
     notifications = CfDef(KEYSPACE, 'notifications', 'Standard', 'TimeUUIDType', None,
@@ -662,9 +657,7 @@ def truncateColumnFamilies(client):
                "items", "itemLikes", "itemResponses", "userItems", "feed",
                "userItems_status", "userItems_link", "userItems_poll",
                "feed_status", "feed_link","feed_poll", "feedItems",
-               "domainOrgMap", "userVotes", "votes", 'userEvents',
-               'eventResponses', "userEventInvitations", "userEventResponse",
-               'eventInvitations',"notifications", "notificationItems",
+               "domainOrgMap", "userVotes", "votes", "notifications", "notificationItems",
                "nameIndex", "displayNameIndex", "orgTags", "tagItems",
                "tagFollowers", "orgTagsByName", "messages",
                "blockedUsers", "deletedConvs", "feed_question", 'userItems_question',
@@ -674,8 +667,9 @@ def truncateColumnFamilies(client):
                "files", "tmp_files", "item_files", "invitationsSent",
                "user_files", "suggestions", "apps", "appsByOwner", "oAuthData",
                "userSessionsMap", "deletedUsers", "orgPresetTags",
-               "keywords", "keywordItems", "originalKeywords", "presence",
-               "chatParticipants", "chatLogs", "chatArchiveList",
+               "feed_event", "userItems_event", "userAgenda", "eventResponses",
+               "keywords", "keywordItems", "originalKeywords", "userAgendaMap",
+               "presence", "chatParticipants", "chatLogs", "chatArchiveList",
                "channelSubscribers", "sessionChannelsMap"]:
 
         log.msg("Truncating: %s" % cf)

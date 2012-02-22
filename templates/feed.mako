@@ -31,6 +31,7 @@
                 ${self._suggestions()}
             %endif
         </div>
+        <div id="feed-side-block-container"></div>
       </div>
       <div id="center">
         %if script:

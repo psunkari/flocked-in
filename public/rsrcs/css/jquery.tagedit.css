@@ -5,7 +5,7 @@
  /* New Item input */
 .tagedit-input {border: 0; height: 100%; padding: 2px 5px; width: 15px; background: #FFFFFF;}
 .tagedit-input:focus {outline: none;}
-.tagedit-input.tagedit-input-disabled {display: none;}
+.tagedit-input.tagedit-input-disabled {display: inline;}
 
  /* Item that is put to the List */
 .tagedit-listelement-old {background: #F1F2F0; border: 1px solid #E0D7CF; padding: 2px 0 2px 8px; -moz-border-radius: 2px; -webkit-border-radius: 2px; border-radius: 2px;}
