@@ -195,7 +195,7 @@
             else:
               doy = dom = dod = None
           %>
-          <label class="styled-label" for ="bday">${_('Date of Birth')}</label>
+          <label class="styled-label" for="bday">${_('Date of Birth')}</label>
           ${self.selectDay("dob_day", "Day", dod)}
           ${self.selectMonth("dob_mon", "Month", dom)}
           ${self.selectYear("dob_year", "Year", doy)}
@@ -361,7 +361,7 @@
             <%
               companies = me.get('companies', {})
               for companyId in companies.keys():
-                companyItem(companyId, companies[companyId])
+                self.companyItem(companyId, companies[companyId])
             %>
             %if not companies:
               <div id="company-empty-msg" class="company-empty-msg">
@@ -399,15 +399,17 @@
 </%def>
 
 
-<%def name="selectMonth(name, label=None, selected=None)">
+<%def name="selectMonth(name, label=None, selected=None, required=False)">
   <%
     months = [_("January"), _("February"), _("March"), _("April"),
                 _("May"), _("June"), _("July"), _("August"),
                 _("September"), _("October"), _("November"), _("December")]
   %>
-  <select name="${name}" class="inline-select">
+  <select name="${name}" class="inline-select" ${'required' if required else ''}>
     %if label:
       <option value="">${label}</option>
+    %else:
+      <option value="">${_("Month")}</option>
     %endif
     %for m in range(1, 13):
       <% value = "%02d" %m %>
@@ -424,6 +426,8 @@
   <select name="${name}" class="inline-select">
     %if label:
       <option value="">${label}</option>
+    %else:
+      <option value="">${_("Day")}</option>
     %endif
     %for d in range(1, 32):
       <% value = "%d" %d %>
@@ -436,10 +440,12 @@
   </select>
 </%def>
 
-<%def name="selectYear(name, label=None, selected=None, years=None, id=None)">
-  <select name="${name}" class="inline-select" id="${id}">
+<%def name="selectYear(name, label=None, selected=None, years=None, id=None, required=False)">
+  <select name="${name}" class="inline-select" id="${id}" ${'required' if required else ''}>
     %if label:
       <option value="">${label}</option>
+    %else:
+      <option value="">${_("Year")}</option>
     %endif
     <%
       if not years:
@@ -569,7 +575,7 @@
           </li>
           <li class="form-row">
               <label class="dlgform-label" for="year">${_('Graduating Year')}</label>
-              ${self.selectYear("year", selected=year)}
+              ${self.selectYear("year", selected=year, required=True)}
           </li>
           %if schoolId:
             <input type="hidden" name="id" value="${utils.encodeKey(schoolId)}"/>
@@ -617,13 +623,13 @@
           </li>
           <li class="form-row">
               <label class="dlgform-label">${_('Starting from')}</label>
-              ${self.selectMonth("startmonth", selected=start[4:])}
-              ${self.selectYear("startyear", selected=start[:4])}
+              ${self.selectMonth("startmonth", selected=start[4:], required=True)}
+              ${self.selectYear("startyear", selected=start[:4], required=True)}
           </li>
           <li class="form-row">
               <label class="dlgform-label">${_('Till')}</label>
-              ${self.selectMonth("endmonth", '-', selected=end[4:])}
-              ${self.selectYear("endyear", '--', selected=end[:4])}
+              ${self.selectMonth("endmonth", selected=end[4:], required=True)}
+              ${self.selectYear("endyear", selected=end[:4], required=True)}
           </li>
           %if companyId:
             <input type="hidden" name="id" value="${utils.encodeKey(companyId)}"/>

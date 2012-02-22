@@ -442,7 +442,7 @@ def addSampleData(client):
                                     '1996:Hraward Business School': 'Graduation'
                                 },
                                 'companies': {
-                                    '2007:2003:Example Technology Services': 'Chief Financial Officer'
+                                    '200710:200304:Example Technology Services': 'Chief Financial Officer'
                                 },
                                 'contact': {
                                     'phone': '+11234567890',
@@ -509,7 +509,7 @@ def addSampleData(client):
                                     '2008:Mocha Frappe Institute of Technology': 'Graduation'
                                 },
                                 'companies': {
-                                    '2010:2008:JohnDoe Corp': 'Chief Executive Officer'
+                                    '201010:200806:JohnDoe Corp': 'Chief Executive Officer'
                                 },
                                 'contact': {
                                     'phone': '+11234567890'
