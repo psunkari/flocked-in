@@ -1554,7 +1554,6 @@ var events = {
         datestamp.setSeconds(0)
         var timestamp = datestamp.getTime()/1000 + parseInt(seconds, 10)
         $((id == 'starttime')?'#startDate':'#endDate').val(timestamp*1000);
-        console.info("Date selected by " + id + " is " + new Date(timestamp*1000).toString())
     },
     updateHiddenDateTimes: function() {
         var seconds = $( "#endtime" ).data('timepicker').parseTimeString($('#endtime-picker').val())
@@ -1576,7 +1575,6 @@ var events = {
         });
         $( "#agenda-start" ).datepicker('setDate', start);
         $('#agenda-start').change(function() {
-            console.info("Bimbo " + $('#agenda-start-date').val());
             var view = $('#agenda-view').val(),
                 start = $('#agenda-start-date').val(),
                 uri = '/event?start='+start+'&view='+view

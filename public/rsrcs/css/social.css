@@ -2171,6 +2171,24 @@ abbr.timestamp {
   max-height: 140px;
 }
 
+.event-show-more-attendees {
+    float:right;
+    margin-right:10px;
+}
+
+#agenda-start-wrapper {
+    float: right;
+    width: 12em;
+    border: none;
+}
+
+#agenda-start {
+    width: 10em;
+}
+
+#agenda-start + .ui-datepicker-trigger {
+    display: inline-block;
+}
 
 /*
  * Styling for preferences
