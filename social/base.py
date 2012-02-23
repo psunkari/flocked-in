@@ -283,6 +283,9 @@ class Entity(object):
     def get(self, name, default=None):
         return self._data.get(name, default)
 
+    def isEmpty(self):
+        return self._data == {}
+
 
 class EntitySet(object):
     def __init__(self, ids):
