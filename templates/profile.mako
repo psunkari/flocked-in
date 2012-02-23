@@ -92,8 +92,8 @@
   <div class="sidebar-chunk">
     <div class="sidebar-title">${_("Following")}</div>
     <ul class="v-links">
-    %for user in subscriptions:
-      <li><a class="ajax" href="/profile?id=${user}">${rawUserData[user]['name']}</a></li>
+    %for userId in subscriptions:
+      <li><a class="ajax" href="/profile?id=${userId}">${entities[userId].basic['name']}</a></li>
     %endfor
     </ul>
   </div>
@@ -105,8 +105,8 @@
   <div class="sidebar-chunk">
     <div class="sidebar-title">${_("Followers")}</div>
     <ul class="v-links">
-    %for user in followers:
-      <li><a class="ajax" href="/profile?id=${user}">${rawUserData[user]['name']}</a></li>
+    %for userId in followers:
+      <li><a class="ajax" href="/profile?id=${userId}">${entities[userId].basic['name']}</a></li>
     %endfor
     </ul>
   </div>
@@ -118,8 +118,8 @@
   <div class="sidebar-chunk">
     <div class="sidebar-title">${_("Groups")}</div>
     <ul class="v-links">
-    %for group in userGroups:
-      <li><a class="ajax" href="/group?id=${group}">${rawGroupData[group]['name']}</a></li>
+    %for groupId in userGroups:
+      <li><a class="ajax" href="/group?id=${groupId}">${entities[groupId].basic['name']}</a></li>
     %endfor
     </ul>
   </div>
@@ -156,7 +156,7 @@
       <div id="useravatar" class="avatar" style="background-image:url('${avatarURI}')"></div>
     %endif
     <div id="title">
-      <span class="middle title">${user['basic']['name']}</span>
+      <span class="middle title">${user.basic['name']}</span>
       <ul id="user-actions-${userId}" class="middle user-actions h-links">
         ${user_actions(userId, True, True)}
       </ul>
@@ -165,20 +165,20 @@
   <div id="userprofile">
     <div id="summary-block">
       <div class="subtitle">
-        %if (user['basic'].has_key('firstname') and user['basic'].has_key('lastname')):
-          <span>${user['basic']['firstname']} ${user['basic']['lastname']}</span>,
+        %if (user.basic.has_key('firstname') and user.basic.has_key('lastname')):
+          <span>${user.basic['firstname']} ${user.basic['lastname']}</span>,
         %endif
-        <span>${user['basic']['jobTitle']}</span>
+        <span>${user.basic['jobTitle']}</span>
       </div>
       <div id="summary-work-contact" class="summary-line">
-        <span class="summary-item"><a href="${'mailto:' + user['basic']['emailId']}">${user['basic']['emailId']}</a></span>
+        <span class="summary-item"><a href="${'mailto:' + user.basic['emailId']}">${user.basic['emailId']}</a></span>
         %if user.get('contact', {}).has_key('phone'):
           <span class="summary-icon landline-icon"></span>
-          <span class="summary-item" title="${_('Work Phone')}">${user['contact']['phone']}</span>
+          <span class="summary-item" title="${_('Work Phone')}">${user.contact['phone']}</span>
         %endif
         %if user.get('contact',{}).has_key('mobile'):
           <span class="summary-icon mobile-icon"></span>
-          <span class="summary-item" title="${_('Work Mobile')}">${user['contact']['mobile']}</span>
+          <span class="summary-item" title="${_('Work Mobile')}">${user.contact['mobile']}</span>
         %endif
       </div>
     </div>
@@ -286,7 +286,7 @@
     %endif
     </div>
     <div class="pinfo-contents">
-        %for item in user['expertise'].keys():
+        %for item in user.expertise.keys():
           <span class="tag">${item}</span>
         %endfor
     </div>
@@ -331,22 +331,22 @@
   <div class="pinfo-contents">
       <div id="summary-personal-contact" class="summary-line">
       %if user.get('personal', {}).has_key('email'):
-        <span class="summary-item pinfo-inlineval" title="${_('Personal Email')}">${user['personal']['email']}</span>
+        <span class="summary-item pinfo-inlineval" title="${_('Personal Email')}">${user.personal['email']}</span>
       %endif
       %if user.get('personal', {}).has_key('phone'):
         <span class="summary-icon landline-icon"/>
-        <span class="summary-item pinfo-inlineval" title="${_('Personal Phone')}">${user['personal']['phone']}</span>
+        <span class="summary-item pinfo-inlineval" title="${_('Personal Phone')}">${user.personal['phone']}</span>
       %endif
       %if user.get('personal', {}).has_key('mobile'):
         <span class="summary-icon mobile-icon"/>
-        <span class="summary-item pinfo-inlineval" title="${_('Personal Mobile')}">${user['personal']['mobile']}</span>
+        <span class="summary-item pinfo-inlineval" title="${_('Personal Mobile')}">${user.personal['mobile']}</span>
       %endif
       </div>
 
       %if user.get('personal', {}).has_key('birthday'):
         <div id="summary-born" class="summary-line">
           <%
-            stamp = user['personal']['birthday']  ## YYYYMMDD
+            stamp = user.personal['birthday']  ## YYYYMMDD
             formatmap = {"year": stamp[0:4], "month": utils.monthName(int(stamp[4:6])), "day": stamp[6:]}
           %>
           ${'<span class="summary-item">' + _('Born on <span class="pinfo-inlineval">%(month)s %(day)s, %(year)s</span>') % formatmap + '</span>'}
@@ -355,7 +355,7 @@
 
       %if user.get('personal', {}).has_key('currentCity'):
         <div id="summary-personal-location" class="summary-line">
-          <span class="summary-item">${ _('Currently residing in <span class="pinfo-inlineval">%s</span>') % user['personal']['currentCity'] }</span>
+          <span class="summary-item">${ _('Currently residing in <span class="pinfo-inlineval">%s</span>') % user.personal['currentCity'] }</span>
         </div>
       %endif
   </div>
@@ -387,7 +387,7 @@
 <%def name="content_activity()">
   <%
     block = []
-    tzone = me["basic"]["timezone"]
+    tzone = me.basic["timezone"]
     for key in userItems:
       try:
         rtype, itemId, convId, convType, convOwnerId, commentSnippet = key

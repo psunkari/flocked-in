@@ -191,7 +191,7 @@ class SettingsResource(base.BaseResource):
             request.write('$$.alerts.error("%s");' % _("New password should be different from current password"))
             defer.returnValue(None)
 
-        emailId = args["me"]["basic"]["emailId"]
+        emailId = args["me"].basic["emailId"]
         col = yield db.get(emailId, "userAuth", "passwordHash")
         storedPass= col.column.value
 
@@ -215,7 +215,8 @@ class SettingsResource(base.BaseResource):
         to_remove = []
 
         me = yield db.get_slice(myId, 'entities')
-        me = utils.supercolumnsToDict(me)
+        me = base.Entity(myId)
+        yield me.fetchData([])
         dob_day = utils.getRequestArg(request, "dob_day") or None
         dob_mon = utils.getRequestArg(request, "dob_mon") or None
         dob_year = utils.getRequestArg(request, "dob_year") or None
@@ -278,8 +279,8 @@ class SettingsResource(base.BaseResource):
         myId = request.getSession(IAuthInfo).username
         orgId = request.getSession(IAuthInfo).organization
 
-        me = yield db.get_slice(myId, 'entities')
-        me = utils.supercolumnsToDict(me)
+        me = base.Entity(myId)
+        yield me.fetchData([])
         data = {}
         to_remove = []
 
@@ -331,8 +332,8 @@ class SettingsResource(base.BaseResource):
         to_remove = []
         basicUpdatedInfo, basicUpdated = {}, False
 
-        me = yield db.get_slice(myId, 'entities')
-        me = utils.supercolumnsToDict(me)
+        me = base.Entity(myId)
+        yield me.fetchData([])
 
         # Check if any basic information is being updated.
         for cn in ("jobTitle", "name", "firstname", "lastname", "timezone"):
@@ -346,7 +347,7 @@ class SettingsResource(base.BaseResource):
             elif cn in ["firstname", "lastname"]:
                 to_remove.append(cn)
                 basicUpdatedInfo[cn] = ""
-            if me['basic'].get(cn, None) != userInfo['basic'].get(cn, None):
+            if me.basic.get(cn, None) != userInfo['basic'].get(cn, None):
                 basicUpdated = True
 
         # Update name indicies of organization.
@@ -357,11 +358,11 @@ class SettingsResource(base.BaseResource):
         for field in ["name", "lastname", "firstname"]:
             if field in basicUpdatedInfo:
                 newNameParts.extend(basicUpdatedInfo[field].split())
-                oldNameParts.extend(me['basic'].get(field, '').split())
+                oldNameParts.extend(me.basic.get(field, '').split())
                 if field == 'name':
                     d1 = utils.updateDisplayNameIndex(myId, nameIndexKeys,
                                                       basicUpdatedInfo[field],
-                                                      me["basic"].get(field, None))
+                                                      me.basic.get(field, None))
                     nameIndicesDeferreds.append(d1)
         d = utils.updateNameIndex(myId, nameIndexKeys,
                                   " ".join(newNameParts),
@@ -378,7 +379,7 @@ class SettingsResource(base.BaseResource):
             basicUpdated = True
         if userInfo["basic"]:
             yield db.batch_insert(myId, "entities", userInfo)
-            me['basic'].update(userInfo['basic'])
+            me.basic.update(userInfo['basic'])
             yield search.solr.updatePeopleIndex(myId, me, orgId)
 
         if to_remove:
@@ -441,8 +442,9 @@ class SettingsResource(base.BaseResource):
         detail = utils.getRequestArg(request, "dt") or "basic"
         args["detail"] = detail
 
-        me = yield db.get_slice(myId, "entities")
-        me = utils.supercolumnsToDict(me, ordered=True)
+        #getBasicArgs fetches basic user info. fetch all data.
+        me = base.Entity(myId)
+        yield me.fetchData([])
         args['me'] = me
 
         if script and landing:
@@ -511,8 +513,8 @@ class SettingsResource(base.BaseResource):
 
         # Check Basic
         requiredFields = ["jobTitle", "timezone"]
-        jobTitle = args["me"].get("basic", {}).get("jobTitle", None)
-        myTimezone = args["me"].get("basic", {}).get("timezone", None)
+        jobTitle = args["me"].basic.get("jobTitle", None)
+        myTimezone = args["me"].basic.get("timezone", None)
         suggestedSections["basic"] = []
         if jobTitle is None:
             suggestedSections["basic"].append("Add a job title")
@@ -739,8 +741,8 @@ class SettingsResource(base.BaseResource):
         else:
             yield db.remove(myId, "entities", utils.decodeKey(expertise), "expertise")
 
-        me = yield db.get_slice(myId, "entities")
-        me = utils.supercolumnsToDict(me, True)
+        me = base.Entity(myId)
+        yield me.fetchData([])
         expertise = me.get('expertise')
 
         onload = "$('#expertise-textbox').val('');"
