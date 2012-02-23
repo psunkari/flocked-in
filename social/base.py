@@ -46,7 +46,7 @@ class RESTfulResource(resource.Resource):
         Keyword arguments:
         @request: Request whose path will be matched
         """
-        filterf = lambda t:t[0] in (request.method, 'ALL')
+        filterf = lambda t: t[0] in (request.method, 'ALL')
         path = "/" + "/".join(request.postpath) if request.postpath else ''
         for m, r, cb in ifilter(filterf, self._registry):
             result = r.search(path)
@@ -96,22 +96,19 @@ class BaseResource(RESTfulResource):
     def _getBasicArgs(self, request):
         auth = yield defer.maybeDeferred(request.getSession, IAuthInfo)
         myId = auth.username
-        orgKey = auth.organization
+        orgId = auth.organization
         isOrgAdmin = auth.isAdmin
 
-        script = False if request.args.has_key('_ns') or\
+        script = False if '_ns' in request.args or\
                           request.getCookie('_ns') else True
-        appchange = True if request.args.has_key('_fp') and self._ajax or\
+        appchange = True if '_fp' in request.args and self._ajax or\
                             not self._ajax and script else False
 
-        cols = yield db.multiget_slice([myId, orgKey], "entities", ["basic"])
-        cols = utils.multiSuperColumnsToDict(cols)
-
-        me = cols.get(myId, None)
-        org = cols.get(orgKey, None)
-        args = {"myKey": myId, "orgKey": orgKey, "me": me,
-                "isOrgAdmin": isOrgAdmin, "ajax": self._ajax,
-                "script": script, "org": org, "myId": myId, "orgId": orgKey}
+        entities = EntitySet([myId, orgId])
+        yield entities.fetchData()
+        args = {"me": entities[myId], "isOrgAdmin": isOrgAdmin,
+                "ajax": self._ajax, "script": script, "org": entities[orgId],
+                "myId": myId, "orgId": orgId}
 
         if appchange:
             latest = yield utils.getLatestCounts(request, False)
@@ -166,6 +163,7 @@ class BaseResource(RESTfulResource):
 
     def _epilogue(self, request, deferred=None):
         d = deferred if deferred else defer.fail(errors.NotFoundError())
+
         def closeConnection(x=None):
             if not request._disconnected:
                 request.finish()
@@ -224,7 +222,6 @@ class APIBaseResource(RESTfulResource):
         responseObj = {'error': errorBrief, 'error_description': fullErrorStr}
         request.write(json.dumps(responseObj))
 
-
     def _epilogue(self, request, deferred=None):
         d = deferred if deferred else defer.fail(errors.NotFoundError())
 
@@ -238,10 +235,117 @@ class APIBaseResource(RESTfulResource):
         d.addBoth(closeConnection)
         return server.NOT_DONE_YET
 
-
     def _success(self, request, httpCode, responseObj):
         request.setResponseCode(httpCode, http.RESPONSES[httpCode])
         request.setHeader('content-type', 'application/json')
         request.write(json.dumps(responseObj))
 
 
+class Entity(object):
+
+    def __init__(self, entityId, data=None):
+        self.id = entityId
+        self._data = {} if not data else data
+
+    @defer.inlineCallbacks
+    def fetchData(self, columns=None):
+        if columns == None:
+            columns = ['basic']
+        if columns == []:
+            data = yield db.get_slice(self.id, "entities")
+        else:
+            data = yield db.get_slice(self.id, "entities", columns)
+        data = utils.supercolumnsToDict(data)
+        self._data = data
+
+    def update(self, data):
+        for supercolumn in data:
+            if supercolumn not in self._data:
+                self._data[supercolumn] = {}
+            self._data[supercolumn].update(data[supercolumn])
+
+    @defer.inlineCallbacks
+    def save(self):
+        yield db.batch_insert(self.id, 'entities', self._data)
+
+    def __getattr__(self, name):
+        return self._data.get(name, {})
+
+    def __contains__(self, name):
+        return name in self._data
+
+    def keys(self):
+        return self._data.keys()
+
+    def has_key(self, name):
+        return name in self._data
+
+    def get(self, name, default=None):
+        return self._data.get(name, default)
+
+
+class EntitySet(object):
+    def __init__(self, ids):
+        if isinstance(ids, list) or isinstance(ids, set):
+            self.ids = list(ids)
+            self.data = {}
+        elif isinstance(ids, dict):
+            self.ids = ids.keys()
+            self.data = ids
+        elif isinstance(ids, Entity):
+            entity = ids
+            self.ids = [entity.id]
+            self.data = {entity.id: entity}
+        else:
+            raise Exception('Invalid')
+
+    @defer.inlineCallbacks
+    def fetchData(self, columns=None):
+        if not columns:
+            columns = ['basic']
+        entities = yield db.multiget_slice(self.ids, "entities", columns)
+        entities = utils.multiSuperColumnsToDict(entities)
+        for entityId in entities:
+            entity = Entity(entityId, entities[entityId])
+            self.data[entityId] = entity
+
+    def __getitem__(self, entityId):
+        return self.data[entityId]
+
+    def __setitem__(self, entityId, entity):
+        if entityId not in self.ids:
+            self.ids.append(entityId)
+        self.data[entityId] = entity
+
+    def __delitem__(self, entityId):
+        del self.data[entityId]
+        self.ids.remove(entityId)
+
+    def __contains__(self, entityId):
+        return entityId in self.data
+
+    def keys(self):
+        return self.data.keys()
+
+    def values(self):
+        return self.data.values()
+
+    def items(self):
+        return self.data.items()
+
+    def has_key(self, entityId):
+        return entityId in self.data
+
+    def get(self, entityId, default=None):
+        return self.data.get(entityId, default)
+
+    def update(self, values):
+        if isinstance(values, dict):
+            for eid in values:
+                if eid not in self.ids:
+                    self.ids.append(eid)
+                self.data[eid] = values[eid]
+        elif isinstance(values, Entity):
+            if  values.id not in self.ids:
+                self.ids.append(values.id)
+            self.data[values.id] = values
