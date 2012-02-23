@@ -1,15 +1,14 @@
 import uuid
-import pickle
 import re
-import pytz, time, datetime
+import time
 import mimetypes
-from base64     import urlsafe_b64encode, urlsafe_b64decode
-from email.header import Header
+from base64             import urlsafe_b64decode
+from email.header       import Header
 
 import boto
 from telephus.cassandra import ttypes
-from txaws.credentials import AWSCredentials
-from txaws.s3 import client as s3Client
+from txaws.credentials  import AWSCredentials
+from txaws.s3           import client as s3Client
 from boto.s3.connection import S3Connection
 from boto.s3.connection import VHostCallingFormat, SubdomainCallingFormat
 
@@ -35,20 +34,18 @@ class MessagingResource(base.BaseResource):
         attach_meta = {}
         for attachmentId in attachments:
             timeuuid, fid, name, size, ftype = attachments[attachmentId]
-            val = "%s:%s:%s:%s" %(utils.encodeKey(timeuuid), name, size, ftype)
+            val = "%s:%s:%s:%s" % (utils.encodeKey(timeuuid), name, size, ftype)
             attach_meta[attachmentId] = val
 
         return attach_meta
 
-
     def _indexMessage(self, convId, messageId, myOrgId, meta, attachments, body):
-        meta['type']="message"
+        meta['type'] = "message"
         meta['body'] = body
         meta['parent'] = convId
         meta['timestamp'] = meta['date_epoch']
-        meta = {"meta":meta}
+        meta = {"meta": meta}
         search.solr.updateMessageIndex(messageId, meta, myOrgId)
-
 
     @profile
     @defer.inlineCallbacks
@@ -70,7 +67,6 @@ class MessagingResource(base.BaseResource):
         if tmpFileIds:
             attachments = yield utils._upload_files(myId, tmpFileIds)
         defer.returnValue((attachments))
-
 
     @profile
     @defer.inlineCallbacks
@@ -131,7 +127,6 @@ class MessagingResource(base.BaseResource):
         url = files['meta']['uri']
         defer.returnValue([owner, url, filetype, size, name])
 
-
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -161,9 +156,9 @@ class MessagingResource(base.BaseResource):
         else:
             filename = filename.encode('string_escape')
 
-        headers={'response-content-type':fileType,
-                 'response-content-disposition':'attachment;filename=\"%s\"'%filename,
-                 'response-expires':'0'}
+        headers = {'response-content-type': fileType,
+                 'response-content-disposition': 'attachment;filename=\"%s\"' % filename,
+                 'response-expires': '0'}
 
         SKey = config.get('CloudFiles', 'SecretKey')
         AKey = config.get('CloudFiles', 'AccessKey')
@@ -178,12 +173,11 @@ class MessagingResource(base.BaseResource):
                             calling_format=calling_format)
 
         Location = conn.generate_url(600, 'GET', bucket,
-                                     '%s/%s/%s' %(myOrgId, owner, url),
+                                     '%s/%s/%s' % (myOrgId, owner, url),
                                      response_headers=headers)
 
         request.setResponseCode(307)
         request.setHeader('Location', Location)
-
 
     def _parseComposerArgs(self, request):
         """Parse the request object for common conversation related fields.
@@ -206,7 +200,8 @@ class MessagingResource(base.BaseResource):
             body = body.decode('utf-8').encode('utf-8', "replace")
         parent = utils.getRequestArg(request, "parent")
         subject = utils.getRequestArg(request, "subject") or ''
-        if subject: subject.decode('utf-8').encode('utf-8', "replace")
+        if subject:
+            subject.decode('utf-8').encode('utf-8', "replace")
 
         recipients = utils.getRequestArg(request, "recipients", sanitize=False)
         if recipients:
@@ -219,10 +214,10 @@ class MessagingResource(base.BaseResource):
             for arg in arg_keys:
                 if arg.startswith("recipient["):
                     rcpt = arg.replace("recipient[", "").replace("-a]", "")
-                    if rcpt != "":recipients.append(rcpt)
+                    if rcpt != "":
+                        recipients.append(rcpt)
 
         return recipients, body, subject, parent
-
 
     def _fetchSnippet(self, body):
         #XXX:obviously we need a better regex than matching ":wrote"
@@ -235,7 +230,6 @@ class MessagingResource(base.BaseResource):
             else:
                 continue
         return snippet
-
 
     @profile
     @defer.inlineCallbacks
@@ -257,13 +251,13 @@ class MessagingResource(base.BaseResource):
         convFolderMap = {}
         userFolderMap = {}
         toNotify = {}
-        toRemove = {'latest':[]}
+        toRemove = {'latest': []}
         conv = yield db.get_slice(convId, "mConversations", ['meta'])
         conv = utils.supercolumnsToDict(conv)
 
         oldTimeUUID = conv['meta']['uuid']
-        unread = "u:%s"%(convId)
-        read = "r:%s"%(convId)
+        unread = "u:%s" % (convId)
+        read = "r:%s" % (convId)
 
         cols = yield db.get_slice(convId, 'mConvFolders', recipients)
         cols = utils.supercolumnsToDict(cols)
@@ -272,7 +266,7 @@ class MessagingResource(base.BaseResource):
             # for a new message, mConvFolders will be empty
             # so recipient may not necessarily be present in cols
             if recipient != owner:
-                toNotify[recipient]= {'latest': {'messages':{timeUUID: convId}}}
+                toNotify[recipient] = {'latest': {'messages': {timeUUID: convId}}}
             toRemove['latest'].append(recipient)
 
             for folder in cols.get(recipient, []):
@@ -285,16 +279,15 @@ class MessagingResource(base.BaseResource):
                     yield db.remove(convId, 'mConvFolders', folder, recipient)
             if deliverToInbox:
                 val = unread if recipient != owner else read
-                convFolderMap[recipient] = {'mAllConversations':{timeUUID:val}}
-                userFolderMap[recipient]= {'mAllConversations':''}
+                convFolderMap[recipient] = {'mAllConversations': {timeUUID: val}}
+                userFolderMap[recipient] = {'mAllConversations': ''}
                 if recipient != owner:
-                    convFolderMap[recipient]['mUnreadConversations'] = {timeUUID:unread}
+                    convFolderMap[recipient]['mUnreadConversations'] = {timeUUID: unread}
                     userFolderMap[recipient]['mUnreadConversations'] = ''
 
             else:
                 val = unread if recipient != owner else read
-                convFolderMap[recipient] = {'mDeletedConversations':{timeUUID:val}}
-
+                convFolderMap[recipient] = {'mDeletedConversations': {timeUUID: val}}
 
         yield db.batch_mutate(convFolderMap)
         yield db.batch_insert(convId, "mConvFolders", userFolderMap)
@@ -302,7 +295,6 @@ class MessagingResource(base.BaseResource):
             yield db.batch_remove(toRemove, names=[oldTimeUUID], supercolumn="messages")
         if toNotify:
             yield db.batch_mutate(toNotify)
-
 
     @profile
     @defer.inlineCallbacks
@@ -316,15 +308,13 @@ class MessagingResource(base.BaseResource):
 
         """
         messageId = utils.getUniqueKey()
-        meta =  { "owner": ownerId,
-                 "timestamp": str(int(time.time())),
-                 'date_epoch': str(epoch),
-                 "body": body,
-                 "uuid": timeUUID
-                }
-        yield db.batch_insert(messageId, "messages", {'meta':meta})
+        meta = {"owner": ownerId,
+                "timestamp": str(int(time.time())),
+                'date_epoch': str(epoch),
+                "body": body,
+                "uuid": timeUUID}
+        yield db.batch_insert(messageId, "messages", {'meta': meta})
         defer.returnValue(messageId)
-
 
     @profile
     @defer.inlineCallbacks
@@ -337,14 +327,13 @@ class MessagingResource(base.BaseResource):
         mConversations
 
         """
-        participants = dict ([(userId, '') for userId in participants])
+        participants = dict([(userId, '') for userId in participants])
         convId = utils.getUniqueKey()
         attach_meta = self._formatAttachMeta(attachments)
         yield db.batch_insert(convId, "mConversations", {"meta": meta,
                                                 "participants": participants,
-                                                "attachments":attach_meta})
+                                                "attachments": attach_meta})
         defer.returnValue(convId)
-
 
     @profile
     @defer.inlineCallbacks
@@ -366,7 +355,7 @@ class MessagingResource(base.BaseResource):
         """
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
-        myOrgId = args['orgKey']
+        myOrgId = args['orgId']
 
         convId = utils.getRequestArg(request, 'id')
         recipients, body, subject, convId = self._parseComposerArgs(request)
@@ -386,7 +375,7 @@ class MessagingResource(base.BaseResource):
 
         timeUUID = uuid.uuid1().bytes
         snippet = self._fetchSnippet(body)
-        meta = {'uuid': timeUUID, 'date_epoch': str(epoch), "snippet":snippet}
+        meta = {'uuid': timeUUID, 'date_epoch': str(epoch), "snippet": snippet}
 
         attachments = yield self._handleAttachments(request)
         attach_meta = self._formatAttachMeta(attachments)
@@ -395,14 +384,14 @@ class MessagingResource(base.BaseResource):
         yield self._deliverMessage(convId, participants, timeUUID, myId)
         yield db.insert(convId, "mConvMessages", messageId, timeUUID)
         yield db.batch_insert(convId, "mConversations",
-                              {'meta':meta, 'attachments':attach_meta})
+                              {'meta': meta, 'attachments': attach_meta})
 
         # Currently, we don't support searching for private messages
         # self._indexMessage(convId, messageId, myOrgId, meta, attachments, body)
 
         for file, file_meta in attachments.iteritems():
-            timeuuid, fid, name, size, ftype  = file_meta
-            val = "%s:%s:%s:%s:%s" %(utils.encodeKey(timeuuid), fid, name, size, ftype)
+            timeuuid, fid, name, size, ftype = file_meta
+            val = "%s:%s:%s:%s:%s" % (utils.encodeKey(timeuuid), fid, name, size, ftype)
             yield db.insert(convId, "item_files", val, timeuuid, file)
 
         #XXX:We currently only fetch the message we inserted. Later we may fetch
@@ -415,23 +404,23 @@ class MessagingResource(base.BaseResource):
         messages = utils.multiSuperColumnsToDict(messages)
         participants.update([messages[mid]['meta']['owner'] for mid in messages])
 
-        people = yield db.multiget_slice(participants, "entities", ['basic'])
-        people = utils.multiSuperColumnsToDict(people)
+        people = base.EntitySet(participants)
+        yield people.fetchData()
 
         value = myId
         data = {"entities": people}
-        data["entities"].update({args['orgKey']: args["org"]})
-        data["orgId"] = args["orgKey"]
+        data["entities"].update({args['orgId']: args["org"]})
+        data["orgId"] = args["orgId"]
         data["convId"] = convId
         data["message"] = body
         data["subject"] = subject
-        data["_fromName"] = people[value]['basic']['name']
+        data["_fromName"] = people[value].basic['name']
 
         users = participants - set([myId])
         if users:
             yield notifications.notify(users, ":MR", value, timeUUID, **data)
 
-        args.update({"people":people})
+        args.update({"people": people})
         args.update({"messageIds": mids})
         args.update({'messages': messages})
         if script:
@@ -442,18 +431,17 @@ class MessagingResource(base.BaseResource):
             t.renderScriptBlock(request, "message.mako",
                                 "render_conversation_messages", landing,
                                 ".conversation-messages-wrapper", "append", True,
-                                handlers={"onload":onload}, **args)
+                                handlers={"onload": onload}, **args)
 
         #Update the right side bar with any attachments the user uploaded
-        args.update({"conv":conv})
-        participants = set(conv['participants'])
-        people = yield db.multiget_slice(participants, "entities", ['basic'])
-        people = utils.multiSuperColumnsToDict(people)
+        args.update({"conv": conv})
+        people = base.EntitySet(set(conv['participants']))
+        yield people.fetchData()
 
-        args.update({"people":people})
-        args.update({"conv":conv})
-        args.update({"id":convId})
-        args.update({"view":"message"})
+        args.update({"people": people})
+        args.update({"conv": conv})
+        args.update({"id": convId})
+        args.update({"view": "message"})
         if script:
             onload = """
                      $('#conversation_add_member').autocomplete({
@@ -466,12 +454,11 @@ class MessagingResource(base.BaseResource):
                      """
             t.renderScriptBlock(request, "message.mako", "right",
                                 landing, ".right-contents", "set", True,
-                                handlers={"onload":onload}, **args)
+                                handlers={"onload": onload}, **args)
 
         else:
             request.redirect('/messages')
             request.finish()
-
 
     @profile
     @defer.inlineCallbacks
@@ -492,7 +479,7 @@ class MessagingResource(base.BaseResource):
         """
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
-        myOrgId = args['orgKey']
+        myOrgId = args['orgId']
         epoch = int(time.time())
 
         recipients, body, subject, parent = self._parseComposerArgs(request)
@@ -504,9 +491,9 @@ class MessagingResource(base.BaseResource):
         if not subject and not body:
             raise errors.MissingParams(['Both subject and message'])
 
-        cols = yield db.multiget_slice(recipients, "entities", ['basic'])
-        recipients = utils.multiSuperColumnsToDict(cols)
-        recipients = set([userId for userId in recipients if recipients[userId]])
+        recipients = base.EntitySet(recipients)
+        yield recipients.fetchData()
+        recipients = set([userId for userId in recipients.keys() if not recipients[userId].isEmpty()])
         if not recipients:
             raise errors.MissingParams(['Recipients'])
 
@@ -516,7 +503,7 @@ class MessagingResource(base.BaseResource):
         timeUUID = uuid.uuid1().bytes
         snippet = self._fetchSnippet(body)
         meta = {'uuid': timeUUID, 'date_epoch': str(epoch), "snippet": snippet,
-                'subject':subject, "owner":myId,
+                'subject': subject, "owner": myId,
                 "timestamp": str(int(time.time()))}
         attachments = yield self._handleAttachments(request)
 
@@ -526,30 +513,29 @@ class MessagingResource(base.BaseResource):
         yield db.insert(convId, "mConvMessages", messageId, timeUUID)
 
         for file, file_meta in attachments.iteritems():
-            timeuuid, fid, name, size, ftype  = file_meta
-            val = "%s:%s:%s:%s:%s" %(utils.encodeKey(timeuuid), fid, name, size, ftype)
+            timeuuid, fid, name, size, ftype = file_meta
+            val = "%s:%s:%s:%s:%s" % (utils.encodeKey(timeuuid), fid, name, size, ftype)
             yield db.insert(convId, "item_files", val, timeuuid, file)
         self._indexMessage(convId, messageId, myOrgId, meta, attachments, body)
 
         #XXX: Is this a duplicate batch insert?
         #yield db.batch_insert(convId, "mConversations", {'meta':meta})
-        people = yield db.multiget_slice(participants, "entities", ["basic"])
-        people = utils.multiSuperColumnsToDict(people)
+        people = base.EntitySet(participants)
+        yield people.fetchData()
         value = myId
         data = {"entities": people}
-        data["entities"].update({args['orgKey']: args["org"]})
-        data["orgId"] = args["orgKey"]
+        data["entities"].update({args['orgId']: args["org"]})
+        data["orgId"] = args["orgId"]
         data["convId"] = convId
         data["message"] = body
         data["subject"] = subject
-        data["_fromName"] = people[value]['basic']['name']
+        data["_fromName"] = people[value].basic['name']
         users = set(participants) - set([myId])
         if users:
             yield notifications.notify(users, ":NM", myId, timeUUID, **data)
 
         if script:
             request.write("$$.dialog.close('msgcompose-dlg', true);$$.fetchUri('/messages');")
-
 
     @defer.inlineCallbacks
     def _composeMessage(self, request):
@@ -567,7 +553,6 @@ class MessagingResource(base.BaseResource):
         else:
             yield self._createConversation(request)
 
-
     @profile
     @defer.inlineCallbacks
     @dump_args
@@ -581,7 +566,7 @@ class MessagingResource(base.BaseResource):
             the page that needs to be rendered.
 
         """
-        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
         filterType = utils.getRequestArg(request, 'type')
         folder = self._folders[filterType] if filterType in self._folders else\
@@ -604,7 +589,7 @@ class MessagingResource(base.BaseResource):
         nextPageStart = ''
         prevPageStart = ''
 
-        cols = yield db.get_slice(myKey, folder, reverse=True, start=start, count=fetchCount)
+        cols = yield db.get_slice(myId, folder, reverse=True, start=start, count=fetchCount)
         for col in cols:
             x, convId = col.column.value.split(':')
             convs.append(convId)
@@ -615,14 +600,13 @@ class MessagingResource(base.BaseResource):
             convs = convs[:count]
 
         ###XXX: try to avoid extra fetch
-        cols = yield db.get_slice(myKey, folder, count=fetchCount, start=start)
-        if cols and len(cols)>1 and start:
+        cols = yield db.get_slice(myId, folder, count=fetchCount, start=start)
+        if cols and len(cols) > 1 and start:
             prevPageStart = utils.encodeKey(cols[-1].column.name)
-
 
         cols = yield db.multiget_slice(convs, 'mConversations')
         conversations = utils.multiSuperColumnsToDict(cols)
-        m={}
+        m = {}
         for convId in conversations:
             if not conversations[convId]:
                 continue
@@ -632,15 +616,14 @@ class MessagingResource(base.BaseResource):
             conversations[convId]['read'] = str(int(convId not in unread))
             messageCount = yield db.get_count(convId, "mConvMessages")
             conversations[convId]['count'] = messageCount
-            m[convId]=conversations[convId]
+            m[convId] = conversations[convId]
 
-        users = yield db.multiget_slice(users, 'entities', ['basic'])
-        users = utils.multiSuperColumnsToDict(users)
+        users = base.EntitySet(users)
+        yield users.fetchData()
 
-
-        args.update({"view":"messages"})
-        args.update({"messages":m})
-        args.update({"people":users})
+        args.update({"view": "messages"})
+        args.update({"messages": m})
+        args.update({"people": users})
         args.update({"mids": convs})
         args.update({"menuId": "messages"})
 
@@ -652,14 +635,13 @@ class MessagingResource(base.BaseResource):
             onload = """
                      $$.menu.selectItem('%s');
                      $('#mainbar .contents').removeClass("has-right");
-                     """ %args["menuId"]
+                     """ % args["menuId"]
             t.renderScriptBlock(request, "message.mako", "render_conversations", landing,
                                 ".center-contents", "set", True,
                                 handlers={"onload": onload}, **args)
             yield utils.render_LatestCounts(request, landing)
         else:
             t.render(request, "message.mako", **args)
-
 
     @profile
     @defer.inlineCallbacks
@@ -692,13 +674,13 @@ class MessagingResource(base.BaseResource):
         cols = yield db.get_slice(convId, "mConversations")
         conv = utils.supercolumnsToDict(cols)
         participants = set(conv['participants'])
-        people = yield db.multiget_slice(participants, "entities", ['basic'])
-        people = utils.multiSuperColumnsToDict(people)
+        people = base.EntitySet(participants)
+        yield people.fetchData()
 
-        args.update({"people":people})
-        args.update({"conv":conv})
-        args.update({"id":convId})
-        args.update({"view":"message"})
+        args.update({"people": people})
+        args.update({"conv": conv})
+        args.update({"id": convId})
+        args.update({"view": "message"})
         if script:
             onload = """
                      $('#conversation_add_member').autocomplete({
@@ -711,8 +693,7 @@ class MessagingResource(base.BaseResource):
                      """
             t.renderScriptBlock(request, "message.mako", "right",
                                 landing, ".right-contents", "set", True,
-                                handlers={"onload":onload}, **args)
-
+                                handlers={"onload": onload}, **args)
 
     @profile
     @defer.inlineCallbacks
@@ -739,37 +720,39 @@ class MessagingResource(base.BaseResource):
         conv = yield db.get_slice(convId, "mConversations")
         conv = utils.supercolumnsToDict(conv)
         subject = conv['meta'].get('subject', None)
-        participants =  set(conv.get('participants', {}).keys())
+        participants = set(conv.get('participants', {}).keys())
         if not conv:
             raise errors.InvalidMessage(convId)
         if myId not in participants:
             raise errors.MessageAccessDenied(convId)
 
-        cols = yield db.multiget_slice(newMembers, "entities", ['basic'])
-        people = utils.multiSuperColumnsToDict(cols)
-        newMembers = set([userId for userId in people if people[userId] and \
-                          people[userId]["basic"]["org"] == orgId])
+        #cols = yield db.multiget_slice(newMembers, "entities", ['basic'])
+        #people = utils.multiSuperColumnsToDict(cols)
+        people = base.EntitySet(newMembers)
+        yield people.fetchData()
+        newMembers = set([userId for userId in people.keys() \
+                            if people[userId].basic and \
+                               people[userId].basic["org"] == orgId])
         newMembers = newMembers - participants
 
         mailNotificants = participants - set([myId])
         toFetchEntities = mailNotificants.union([myId, orgId]).union(newMembers)
-        entities = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
-        entities = utils.multiSuperColumnsToDict(entities)
+        entities = base.EntitySet(toFetchEntities)
+        yield entities.fetchData()
         data = {"entities": entities}
         data["orgId"] = orgId
         data["convId"] = convId
         data["subject"] = subject
-        data["_fromName"] = entities[myId]['basic']['name']
+        data["_fromName"] = entities[myId].basic['name']
         if newMembers:
             data["message"] = conv["meta"]["snippet"]
             newMembers = dict([(userId, '') for userId in newMembers])
-            yield db.batch_insert(convId, "mConversations", {'participants':newMembers})
+            yield db.batch_insert(convId, "mConversations", {'participants': newMembers})
             yield self._deliverMessage(convId, newMembers, conv['meta']['uuid'], conv['meta']['owner'])
             yield notifications.notify(newMembers, ":NM", myId, **data)
         if mailNotificants and newMembers:
             data["addedMembers"] = newMembers
             yield notifications.notify(mailNotificants, ":MA", myId, **data)
-
 
     @profile
     @defer.inlineCallbacks
@@ -815,7 +798,7 @@ class MessagingResource(base.BaseResource):
 
         deferreds = []
         if members:
-            d =  db.batch_remove({"mConversations":[convId]},
+            d = db.batch_remove({"mConversations": [convId]},
                                     names=members,
                                     supercolumn='participants')
             deferreds.append(d)
@@ -828,25 +811,24 @@ class MessagingResource(base.BaseResource):
                     d = db.remove(recipient, cf, conv['meta']['uuid'])
                     deferreds.append(d)
             #update latest- messages-count
-            deferreds.append(db.batch_remove({"latest":members},
+            deferreds.append(db.batch_remove({"latest": members},
                                              names=[conv['meta']['uuid']],
                                              supercolumn='messages'))
             if deferreds:
                 yield deferreds
 
-        mailNotificants = set(participants) - members -set([myId])
+        mailNotificants = set(participants) - members - set([myId])
         if mailNotificants and members:
             toFetchEntities = mailNotificants.union([myId, orgId]).union(members)
-            entities = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
-            entities = utils.multiSuperColumnsToDict(entities)
+            entities = base.EntitySet(toFetchEntities)
+            yield entities.fetchData()
             data = {"entities": entities}
             data["orgId"] = orgId
             data["convId"] = convId
             data["removedMembers"] = members
             data["subject"] = subject
-            data["_fromName"] = entities[myId]['basic']['name']
+            data["_fromName"] = entities[myId].basic['name']
             yield notifications.notify(mailNotificants, ":MA", myId, **data)
-
 
     @profile
     @defer.inlineCallbacks
@@ -889,11 +871,16 @@ class MessagingResource(base.BaseResource):
         inbox = utils.getRequestArg(request, "inbox") or None
         view = utils.getRequestArg(request, "view") or "messages"
 
-        if trash:action = "trash"
-        elif archive:action = "archive"
-        elif unread:action = "unread"
-        elif inbox:action = "inbox"
-        else:action = utils.getRequestArg(request, "action")
+        if trash:
+            action = "trash"
+        elif archive:
+            action = "archive"
+        elif unread:
+            action = "unread"
+        elif inbox:
+            action = "inbox"
+        else:
+            action = utils.getRequestArg(request, "action")
 
         if convIds:
             #Move the conversations based on action and update the CFs.
@@ -921,13 +908,13 @@ class MessagingResource(base.BaseResource):
                     for folder in cols[myId]:
                         if folder in self._folders:
                             folder = self._folders[folder]
-                        yield db.insert(myId, folder, "r:%s"%(convId), timeUUID)
+                        yield db.insert(myId, folder, "r:%s" % (convId), timeUUID)
                 count = yield utils.render_LatestCounts(request)
 
         #XXX:Actions are not supported in non js mode so this check is unncessary.
         if not self._ajax:
             #Not all actions on message(s) happen over ajax, for them do a redirect
-            request.redirect("/messages?type=%s" %filterType)
+            request.redirect("/messages?type=%s" % filterType)
             request.finish()
         elif self._ajax and len(convIds) > 0:
             #Update the UI based on the actions and folder view.
@@ -936,13 +923,13 @@ class MessagingResource(base.BaseResource):
             # archive view, we can simply remove the conv.
             if action in ["inbox", "archive", "trash"]:
                 if filterType != "unread":
-                    request.write("$('%s').remove();" %','.join(['#thread-%s' %convId for convId in convIds]))
+                    request.write("$('%s').remove();" % ','.join(['#thread-%s' % convId for convId in convIds]))
                 if view == "message":
-                    reason = _("Message moved to %s" %(action.capitalize()))
+                    reason = _("Message moved to %s" % (action.capitalize()))
                     if action == "archive":
                         reason = _("Message archived")
 
-                    request.write("""$$.fetchUri('/messages?type=%s');$$.alerts.info("%s");""" %(filterType, _(reason)))
+                    request.write("""$$.fetchUri('/messages?type=%s');$$.alerts.info("%s");""" % (filterType, _(reason)))
             elif action == "unread":
                 query_template = """
                               $('#thread-%s').removeClass('row-read').addClass('row-unread');
@@ -953,7 +940,7 @@ class MessagingResource(base.BaseResource):
                 query = "".join([query_template % (convId, convId, convId, convId, convId, filterType) for convId in convIds])
 
                 if view == "message":
-                    request.write("""$$.fetchUri('/messages');$$.alerts.info("%s");""" %("Message marked as unread"))
+                    request.write("""$$.fetchUri('/messages');$$.alerts.info("%s");""" % ("Message marked as unread"))
                 else:
                     request.write(query)
             elif action == "read":
@@ -968,8 +955,7 @@ class MessagingResource(base.BaseResource):
                     query = "".join([query_template % (convId, convId, convId, convId, convId, filterType) for convId in convIds])
                     request.write(query)
                 else:
-                    request.write("$('%s').remove()" %','.join(['#thread-%s' %convId for convId in convIds]))
-
+                    request.write("$('%s').remove()" % ','.join(['#thread-%s' % convId for convId in convIds]))
 
     @profile
     @defer.inlineCallbacks
@@ -1000,30 +986,29 @@ class MessagingResource(base.BaseResource):
                 raise errors.MessageAccessDenied(convId)
 
             timeUUID = conv['meta']['uuid']
-            val = "%s:%s"%( 'u' if toFolder == 'unread' else 'r', convId)
+            val = "%s:%s" % ('u' if toFolder == 'unread' else 'r', convId)
 
             cols = yield db.get_slice(convId, 'mConvFolders', [myId])
             cols = utils.supercolumnsToDict(cols)
             for folder in cols[myId]:
                 cf = self._folders[folder] if folder in self._folders else folder
-                if toFolder!='unread':
-                    if folder!= 'mUnreadConversations':
+                if toFolder != 'unread':
+                    if folder != 'mUnreadConversations':
                         col = yield db.get(myId, cf, timeUUID)
                         val = col.column.value
                         yield db.remove(myId, cf, timeUUID)
                         yield db.remove(convId, "mConvFolders", cf, myId)
                 else:
-                        yield db.insert(myId, cf, "u:%s"%(convId), timeUUID)
+                    yield db.insert(myId, cf, "u:%s" % (convId), timeUUID)
 
             if toFolder == 'unread':
-                val = "u:%s"%(convId)
+                val = "u:%s" % (convId)
                 yield db.insert(convId, 'mConvFolders', '', 'mUnreadConversations', myId)
                 yield db.insert(myId, 'mUnreadConversations', val, timeUUID)
             else:
                 folder = self._folders[toFolder]
                 yield db.insert(myId, folder, val, timeUUID)
                 yield db.insert(convId, 'mConvFolders', '', folder, myId)
-
 
     @profile
     @defer.inlineCallbacks
@@ -1068,30 +1053,30 @@ class MessagingResource(base.BaseResource):
         for folder in cols[myId]:
             if folder in self._folders:
                 folder = self._folders[folder]
-            d = db.insert(myId, folder, "r:%s"%(convId), timeUUID)
+            d = db.insert(myId, folder, "r:%s" % (convId), timeUUID)
             deferreds.append(d)
 
-        inFolders =  cols[myId].keys()
+        inFolders = cols[myId].keys()
         #FIX: make sure that there will be an entry of convId in mConvFolders
         cols = yield db.get_slice(convId, "mConvMessages")
         mids = [col.column.value for col in cols]
         messages = yield db.multiget_slice(mids, "messages", ["meta"])
         messages = utils.multiSuperColumnsToDict(messages)
 
-        participants.update([messages[mid]['meta']['owner'] for mid in messages])
-        people = yield db.multiget_slice(participants, "entities", ['basic'])
-        people = utils.multiSuperColumnsToDict(people)
         s = yield defer.DeferredList(deferreds)
+        participants.update([messages[mid]['meta']['owner'] for mid in messages])
+        people = base.EntitySet(participants)
+        yield people.fetchData()
 
-        args.update({"people":people})
-        args.update({"conv":conv})
+        args.update({"people": people})
+        args.update({"conv": conv})
         args.update({"messageIds": mids})
         args.update({'messages': messages})
-        args.update({"id":convId})
-        args.update({"flags":{}})
-        args.update({"view":"message"})
+        args.update({"id": convId})
+        args.update({"flags": {}})
+        args.update({"view": "message"})
         args.update({"menuId": "messages"})
-        args.update({"inFolders":inFolders})
+        args.update({"inFolders": inFolders})
 
         if script:
             onload = """
@@ -1102,7 +1087,7 @@ class MessagingResource(base.BaseResource):
                      """
             t.renderScriptBlock(request, "message.mako", "render_conversation",
                                 landing, ".center-contents", "set", True,
-                                handlers={"onload":onload}, **args)
+                                handlers={"onload": onload}, **args)
 
             onload = """
                      $$.files.init('msgreply-attach');
@@ -1116,11 +1101,10 @@ class MessagingResource(base.BaseResource):
                     """
             t.renderScriptBlock(request, "message.mako", "right",
                                 landing, ".right-contents", "set", True,
-                                handlers={"onload":onload}, **args)
+                                handlers={"onload": onload}, **args)
             yield utils.render_LatestCounts(request, landing)
         else:
             t.render(request, "message.mako", **args)
-
 
     def _renderComposer(self, request):
         """Render the New Message Composer.
@@ -1138,10 +1122,9 @@ class MessagingResource(base.BaseResource):
         onload = "$$.messaging.initComposer();"
         t.renderScriptBlock(request, "message.mako", "composerDialog",
                             False, "#msgcompose-dlg", "set", True,
-                            handlers={"onload":onload},
+                            handlers={"onload": onload},
                             args=[rcpts, subject, body])
         return True
-
 
     def render_GET(self, request):
         segmentCount = len(request.postpath)
@@ -1156,7 +1139,6 @@ class MessagingResource(base.BaseResource):
         elif segmentCount == 1 and request.postpath[0] == "files":
             d = self._renderFile(request)
         return self._epilogue(request, d)
-
 
     def render_POST(self, request):
         segmentCount = len(request.postpath)
