@@ -29,11 +29,12 @@ def _update_suggestions(request, relation=None):
     authinfo = request.getSession(IAuthInfo)
     myId = authinfo.username
     orgId = authinfo.organization
-    weights = {'group': { 'follower': 15, 'subscription': 40, 'group': 30},
-               'follower': { 'follower': 9, 'subscription': 24, 'group': 15},
-               'subscription': { 'follower': 24, 'subscription': 64, 'group': 40}}
+    weights = {'group': {'follower': 15, 'subscription': 40, 'group': 30},
+               'follower': {'follower': 9, 'subscription': 24, 'group': 15},
+               'subscription': {'follower': 24, 'subscription': 64, 'group': 40}}
     defaultWeight = 1
     people = {}
+
     @defer.inlineCallbacks
     def _compute_weights(userIds, myGroups, type):
         followers = yield db.multiget_slice(userIds, "followers", count=50)
@@ -81,7 +82,7 @@ def _update_suggestions(request, relation=None):
             suggestions.setdefault(people[userId], []).append(userId)
 
     yield db.remove(myId, "suggestions")
-    weights_userIds_map ={}
+    weights_userIds_map = {}
     format = '>l'
     for weight in suggestions:
         key = struct.pack(format, weight)
@@ -95,7 +96,7 @@ def get_suggestions(request, count, mini=False):
     authinfo = request.getSession(IAuthInfo)
     myId = authinfo.username
 
-    SUGGESTIONS_UPDATE_FREQUENCY = 3 * 86400 # 5days
+    SUGGESTIONS_UPDATE_FREQUENCY = 3 * 86400  # 5days
     MAX_INVALID_SUGGESTIONS = 3
     now = time.time()
 
@@ -117,7 +118,7 @@ def get_suggestions(request, count, mini=False):
                 if isValidSuggestion(myId, userId, relation):
                     validSuggestions.append(userId)
                 else:
-                    invalidCount +=1
+                    invalidCount += 1
         defer.returnValue((validSuggestions, invalidCount, FORCE_UPDATE))
 
     validSuggestions, invalidCount, FORCE_UPDATE = yield _get_suggestions(myId, relation)
@@ -127,7 +128,7 @@ def get_suggestions(request, count, mini=False):
 
     no_of_samples = count*2
     population = count*5
-    if mini and len(validSuggestions)>= no_of_samples:
+    if mini and len(validSuggestions) >= no_of_samples:
         suggestions = random.sample(validSuggestions[:population], no_of_samples)
     else:
         suggestions = validSuggestions[:]
@@ -135,11 +136,10 @@ def get_suggestions(request, count, mini=False):
     if FORCE_UPDATE or invalidCount > MAX_INVALID_SUGGESTIONS:
         _update_suggestions(request, relation)
 
-    entities = {}
+    entities = base.EntitySet(suggestions[:count])
     if suggestions:
         suggestions = suggestions[:count]
-        entities = yield db.multiget_slice(suggestions, "entities", ['basic'])
-        entities = utils.multiSuperColumnsToDict(entities)
+        yield entities.fetchData()
     defer.returnValue((suggestions, entities))
 
 
@@ -147,8 +147,8 @@ def get_suggestions(request, count, mini=False):
 def _sendInvitations(myOrgUsers, otherOrgUsers, me, myId, myOrg):
     rootUrl = config.get('General', 'URL')
     brandName = config.get('Branding', 'Name')
-    senderName = me["basic"]["name"]
-    senderOrgName = myOrg["basic"]["name"]
+    senderName = me.basic["name"]
+    senderOrgName = myOrg.basic["name"]
     senderAvatarUrl = utils.userAvatar(myId, me, "medium")
     sentUsers = []
     blockedUsers = []
@@ -163,10 +163,10 @@ def _sendInvitations(myOrgUsers, otherOrgUsers, me, myId, myOrg):
                    "%(senderName)s has invited you to try %(brandName)s.\n"\
                    "To activate your account please visit: %(activationUrl)s.\n\n"
 
-    signature =  "Flocked.in Team.\n\n\n\n"\
-                 "--\n"\
-                 "To block invitations from %(senderName)s visit %(blockSenderUrl)s\n"\
-                 "To block all invitations from %(brandName)s visit %(blockAllUrl)s"
+    signature = "Flocked.in Team.\n\n\n\n"\
+                "--\n"\
+                "To block invitations from %(senderName)s visit %(blockSenderUrl)s\n"\
+                "To block all invitations from %(brandName)s visit %(blockAllUrl)s"
 
     blockSenderTmpl = "%(rootUrl)s/signup/blockSender?email=%(emailId)s&token=%(token)s"
     blockAllTmpl = "%(rootUrl)s/signup/blockAll?email=%(emailId)s&token=%(token)s"
@@ -232,9 +232,8 @@ def invite(request, rawEmailIds):
 
     myId = authinfo.username
     myOrgId = authinfo.organization
-    entities = yield db.multiget_slice([myId, myOrgId], "entities",
-                                       ["basic", "domains"])
-    entities = utils.multiSuperColumnsToDict(entities)
+    entities = base.EntitySet([myId, myOrgId])
+    yield entities.fetchData(['basic', 'domains'])
     myOrgDomains = set(entities[myOrgId].get('domains').keys())
     myOrgIsWhite = len(myOrgDomains.intersection(whitelist))
 
@@ -244,7 +243,7 @@ def invite(request, rawEmailIds):
         try:
             localpart, domainpart = emailId.split('@')
             if domainpart in blacklist:
-                log.info("%s is blacklisted" %(domainpart))
+                log.info("%s is blacklisted" % (domainpart))
                 pass
             elif domainpart in myOrgDomains:
                 myOrgUsers.append(emailId)
@@ -299,13 +298,13 @@ def getPeople(myId, entityId, orgId, start='',
                                 = yield fn(entityId, start, toFetchCount)
         toFetchUsers = userIds
 
-    usersDeferred = db.multiget_slice(toFetchUsers, "entities", ["basic"])
+    entities = base.EntitySet(toFetchUsers)
+    usersDeferred = entities.fetchData()
     relation = Relation(myId, userIds)
     results = yield defer.DeferredList([usersDeferred,
                                         relation.initSubscriptionsList()])
-    users = utils.multiSuperColumnsToDict(results[0][1])
 
-    defer.returnValue((users, relation, userIds,\
+    defer.returnValue((entities, relation, userIds,\
                        blockedUsers, nextPageStart, prevPageStart))
 
 
@@ -332,77 +331,6 @@ def _getInvitationsSent(userId, start='', count=PEOPLE_PER_PAGE):
     defer.returnValue((emailIds, prevPageStart, nextPageStart))
 
 
-@defer.inlineCallbacks
-def _getPendingConnections(userId, start='', count=PEOPLE_PER_PAGE, entityType='user'):
-    toFetchCount = count + 1
-    toFetchStart = start if start else INCOMING_REQUEST
-    prevPageStart = None
-    nextPageStart = None
-    blockedUsers = []
-    entityIds = []
-    entities = {}
-    tmp_count = 0
-
-    while len(entities) < toFetchCount:
-        cols = yield db.get_slice(userId, "pendingConnections",
-                                  start=toFetchStart,
-                                  count=toFetchCount)
-        if cols:
-            toFetchStart = cols[-1].column.name
-        #TOFIX: len(col.column.name.split(':')) == 2 is not necessary
-        ids = [col.column.name.split(':')[1] for col in cols if len(col.column.name.split(':')) ==2 and col.column.name.split(':')[0] == INCOMING_REQUEST]
-        if ids:
-            tmp_entities = yield db.multiget_slice(ids, "entities", ["basic"])
-            tmp_entities = utils.multiSuperColumnsToDict(tmp_entities)
-            for entityId in ids:
-                if tmp_entities[entityId]['basic']['type'] == entityType and \
-                   entityId not in entityIds:
-                    entities[entityId] = tmp_entities[entityId]
-                    entityIds.append(entityId)
-                    tmp_count +=1
-                if tmp_count == toFetchCount:
-                    break
-
-        if len(cols) < toFetchCount:
-            break
-
-    if len(entities) == toFetchCount:
-        nextPageStart = utils.encodeKey(":".join([INCOMING_REQUEST, entityIds[-1]]))
-        entityIds = entityIds[0:count]
-    relation = Relation(userId, entityIds)
-    relation_d =  defer.DeferredList([relation.initPendingList(),
-                                      relation.initSubscriptionsList()])
-
-    if start:
-        tmp_count = 0
-        toFetchStart = start
-        tmp_ids = []
-        while tmp_count < toFetchCount:
-            cols = yield db.get_slice(userId, "pendingConnections",
-                                     start=toFetchStart, count=toFetchCount,
-                                     reverse=True)
-            if cols:
-                toFetchStart = cols[-1].column.name
-            ids = [col.column.name.split(':', 1)[1] for col in cols if len(col.column.name.split(':')) == 2 and col.column.name.split(':')[0] == INCOMING_REQUEST]
-            if ids:
-                tmp_entities = yield db.multiget_slice(ids, "entities", ["basic"])
-                tmp_entities = utils.multiSuperColumnsToDict(tmp_entities)
-                for entityId in ids:
-                    if tmp_entities[entityId]['basic']['type'] == entityType and \
-                       entityId not in tmp_ids:
-                        tmp_count +=1
-                        tmp_ids.append(entityId)
-                    if tmp_count == toFetchCount:
-                        prevPageStart = utils.encodeKey(':'.join([INCOMING_REQUEST, entityId]))
-                        break
-            if len(cols) < toFetchCount:
-                break
-    yield relation_d
-
-    defer.returnValue((entities, relation, entityIds,\
-                       blockedUsers, nextPageStart, prevPageStart))
-
-
 class PeopleResource(base.BaseResource):
     isLeaf = True
     _templates = ['people.mako', 'emails.mako']
@@ -414,7 +342,7 @@ class PeopleResource(base.BaseResource):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
 
-        orgId = args["orgKey"]
+        orgId = args["orgId"]
         args["entities"] = {}
         args["menuId"] = "people"
 
@@ -476,7 +404,7 @@ class PeopleResource(base.BaseResource):
         if not src:
             src = "sidebar" if len(rawEmailIds) == 1 else "people"
         if src == "sidebar" and self._ajax:
-            request.write("$('#invite-others').val('');" )
+            request.write("$('#invite-others').val('');")
         elif src == "sidebar":
             request.redirect('/feed/')
         elif src == "people" and self._ajax:
@@ -485,27 +413,25 @@ class PeopleResource(base.BaseResource):
             request.redirect('/people')
         if not stats and self._ajax:
             request.write("$$.alerts.error('%s');" \
-                            %(_("Use company email addresses only.")))
+                            % (_("Use company email addresses only.")))
         elif stats and self._ajax:
             if len(stats[0]) == 1:
-                request.write("$$.alerts.info('%s');" %_("Invitation sent"))
+                request.write("$$.alerts.info('%s');" % _("Invitation sent"))
                 request.write("$$.dialog.close('invitepeople-dlg', true);")
-            elif len(stats[0]) >1:
-                request.write("$$.alerts.info('%s');" %_("Invitations sent"))
+            elif len(stats[0]) > 1:
+                request.write("$$.alerts.info('%s');" % _("Invitations sent"))
                 request.write("$$.dialog.close('invitepeople-dlg', true);")
             else:
                 #TODO: when user tries to send invitations to existing members,
                 #      show these members as add-as-friend/follow list
                 request.write("$$.alerts.info('%s');\
                                $$.dialog.close('invitepeople-dlg', true);" \
-                               %_("Invitations sent"))
-
+                               % _("Invitations sent"))
 
     def _renderInvitePeople(self, request):
         t.renderScriptBlock(request, "people.mako", "invitePeople",
                             False, "#invitepeople-dlg", "set")
         return True
-
 
     @defer.inlineCallbacks
     def _renderSuggestions(self, request):
@@ -513,7 +439,6 @@ class PeopleResource(base.BaseResource):
         myId = authinfo.username
         suggestions, entities = yield get_suggestions(request, PEOPLE_PER_PAGE, True)
         #render suggestions
-
 
     @profile
     @dump_args
