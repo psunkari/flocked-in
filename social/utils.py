@@ -13,6 +13,7 @@ from lxml                import etree
 from email.mime.text     import MIMEText
 from email.MIMEMultipart import MIMEMultipart
 from functools           import wraps
+from formencode          import validators
 
 try:
     import cPickle as pickle
@@ -37,7 +38,7 @@ from social.logging     import profile, dump_args, log
 def hashpass(text):
     nounce = uuid.uuid4().hex
     m = hashlib.md5()
-    m.update(nounce+text)
+    m.update(nounce + text)
     return nounce + m.hexdigest()
 
 
@@ -45,7 +46,7 @@ def checkpass(text, saved):
     if len(saved) == 64:
         nounce, hashed = nounce, hashed = saved[:32], saved[32:]
         m = hashlib.md5()
-        m.update(nounce+text)
+        m.update(nounce + text)
         return m.hexdigest() == hashed
     elif len(saved) == 32:  # Old, unsecure password storage.
         m = hashlib.md5()
@@ -61,7 +62,7 @@ def supercolumnsToDict(supercolumns, ordered=False, timestamps=False):
         retval[name] = OrderedDict() if ordered else {}
         if timestamps:
             for col in item.super_column.columns:
-                retval[name][col.name] = col.timestamp/1e6
+                retval[name][col.name] = col.timestamp / 1e6
         else:
             for col in item.super_column.columns:
                 retval[name][col.name] = col.value
@@ -71,7 +72,7 @@ def supercolumnsToDict(supercolumns, ordered=False, timestamps=False):
 def multiSuperColumnsToDict(superColumnsMap, ordered=False, timestamps=False):
     retval = OrderedDict() if ordered else {}
     for key in superColumnsMap:
-        columns =  superColumnsMap[key]
+        columns = superColumnsMap[key]
         retval[key] = supercolumnsToDict(columns, ordered=ordered,
                                          timestamps=timestamps)
     return retval
@@ -90,30 +91,33 @@ def columnsToDict(columns, ordered=False, timestamps=False):
     retval = OrderedDict() if ordered else {}
     if timestamps:
         for item in columns:
-            retval[item.column.name] = item.column.timestamp/1e6
+            retval[item.column.name] = item.column.timestamp / 1e6
     else:
         for item in columns:
             retval[item.column.name] = item.column.value
     return retval
 
 
-def getRequestArg(request, arg, sanitize=True, multiValued=False):
+def getString(value, sanitize, multiValued):
     def _sanitize(text):
-        escape_entities = {':':"&#58;"}
+        escape_entities = {':': "&#58;"}
         text = text.decode('utf-8', 'replace').encode('utf-8')
         return sanitizer.escape(text, escape_entities).strip()
 
-    if request.args.has_key(arg):
-        if not multiValued:
-            if sanitize:
-                return _sanitize(request.args[arg][0])
-            else:
-                return request.args[arg][0]
-        if sanitize:
-            return [_sanitize(value) for value in request.args[arg]]
-        else:
-            return request.args[arg]
+    value = value[:1] if not multiValued else value
+    if sanitize:
+        value = [_sanitize(x) for x in value]
+    return value if multiValued else value[0]
 
+
+def getRequestArg(request, arg, sanitize=True, multiValued=False):
+    def _sanitize(text):
+        escape_entities = {':': "&#58;"}
+        text = text.decode('utf-8', 'replace').encode('utf-8')
+        return sanitizer.escape(text, escape_entities).strip()
+
+    if arg in request.args:
+        return getString(request.args[arg], sanitize, multiValued)
     else:
         return None
 
@@ -163,7 +167,8 @@ def getValidEntityId(request, arg, type="user", columns=None):
 
 
 @defer.inlineCallbacks
-def getValidItemId(request, arg, type=None, columns=None, itemId=None, myOrgId=None, myId=None):
+def getValidItemId(request, arg, type=None, columns=None,
+                   itemId=None, myOrgId=None, myId=None):
     if not itemId:
         itemId = getRequestArg(request, arg, sanitize=False)
     itemType = type if type else "item"
@@ -286,7 +291,7 @@ def getUniqueKey():
 
 
 @defer.inlineCallbacks
-def createNewItem(request, itemType, ownerId, ownerOrgId,
+def createNewItem(request, itemType, owner,
                   acl=None, subType=None, groupIds=None, richText=False):
     if not acl:
         acl = getRequestArg(request, "acl", sanitize=False)
@@ -294,32 +299,34 @@ def createNewItem(request, itemType, ownerId, ownerOrgId,
     try:
         acl = json.loads(acl)
         orgs = acl.get("accept", {}).get("orgs", [])
-        if len(orgs) > 1 or (len(orgs) == 1 and orgs[0] != ownerOrgId):
-            raise errors.PermissionDenied(_('Cannot grant access to other orgs on this item'))
+        if len(orgs) > 1 or (len(orgs) == 1 and orgs[0] != owner.basic['org']):
+            msg = "Cannot grant access to other orgs on this item"
+            raise errors.PermissionDenied(_(msg))
     except:
-        acl = {"accept":{"orgs":[ownerOrgId]}}
+        acl = {"accept": {"orgs": [owner.basic['org']]}}
 
     accept_groups = acl.get('accept', {}).get('groups', [])
     deny_groups = acl.get('deny', {}).get('groups', [])
     groups = [x for x in accept_groups if x not in deny_groups]
     if groups:
-        relation = Relation(ownerId, [])
+        relation = Relation(owner.id, [])
         yield relation.initGroupsList()
         if not all([x in relation.groups for x in groups]):
-            raise errors.PermissionDenied(_("Only group members can post to a group"))
+            msg = "Only group members can post to a group"
+            raise errors.PermissionDenied(_(msg))
 
     acl = pickle.dumps(acl)
     item = {
         "meta": {
             "acl": acl,
-            "org": ownerOrgId,
+            "org": owner.basic['org'],
             "type": itemType,
             "uuid": uuid.uuid1().bytes,
-            "owner": ownerId,
+            "owner": owner.id,
             "timestamp": str(int(time.time())),
             "richText": str(richText)
         },
-        "followers": {ownerId: ''}
+        "followers": {owner.id: ''}
     }
     if subType:
         item["meta"]["subType"] = subType
@@ -329,14 +336,14 @@ def createNewItem(request, itemType, ownerId, ownerOrgId,
     tmpFileIds = getRequestArg(request, 'fId', False, True)
     attachments = {}
     if tmpFileIds:
-        attachments = yield _upload_files(ownerId, tmpFileIds)
+        attachments = yield _upload_files(owner.id, tmpFileIds)
         if attachments:
             item["attachments"] = {}
             for attachmentId in attachments:
                 timeuuid, fid, name, size, ftype = attachments[attachmentId]
-                val = "%s:%s:%s:%s" %(encodeKey(timeuuid), name, size, ftype)
+                val = "%s:%s:%s:%s" % (encodeKey(timeuuid), name, size, ftype)
                 item["attachments"][attachmentId] = val
-    defer.returnValue ((item, attachments))
+    defer.returnValue(item)
 
 
 @defer.inlineCallbacks
@@ -349,7 +356,7 @@ def _upload_files(owner, tmp_fileIds):
             attachmentId = tmpFileId
             timeuuid = uuid.uuid1().bytes
             location, name, size, ftype = cols[tmpFileId]['fileId'].split(':')
-            meta = {"meta": {"uri": location, "name":name, "fileType":ftype}}
+            meta = {"meta": {"uri": location, "name": name, "fileType": ftype}}
             yield db.batch_insert(tmpFileId, "files", meta)
             yield db.remove(tmpFileId, "tmp_files")
             attachments[attachmentId] = (timeuuid, tmpFileId, name, size, ftype)
@@ -542,12 +549,14 @@ def render_LatestCounts(request, landing=False, returnJson=False):
 #
 # Date and time formating utilities (format based on localizations)
 #
+
+
 def monthName(num, long=False):
     short = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     full = ['January', 'February', 'March', 'April', 'May', 'June',
             'July', 'August', 'September', 'October', 'November', 'December']
-    return full[num-1] if long else short[num-1]
+    return full[num - 1] if long else short[num - 1]
 
 
 def weekName(num, long=False):
@@ -562,6 +571,7 @@ def itemLink(itemId, itemType, classes=None):
            "<a class='ajax' href='/item?id=%s'>%s</a></span>"\
            % (itemId, _(itemType))
 
+
 def itemReportLink(itemId, itemType, classes=None):
     return "<span class='item %s'>" % (classes if classes else "") +\
            "<a class='ajax' href='/item/report?id=%s'>%s</a></span>"\
@@ -569,52 +579,56 @@ def itemReportLink(itemId, itemType, classes=None):
 
 
 def userName(id, user, classes=None):
-    return "<span class='user%s'>" % (' '+classes if classes else "") +\
+    return "<span class='user%s'>" % (' ' + classes if classes else "") +\
            "<a class='ajax' href='/profile?id=%s'>%s</a></span>"\
-           % (id, user["basic"]["name"])
+           % (id, user.basic["name"])
 
 
-def groupName(id, user, classes=None, element='span'):
+def groupName(id, group, classes=None, element='span'):
     if element == 'div':
-        classes= classes if classes else ''
+        classes = classes if classes else ''
         return "<div class='%s'><a class='ajax' href='/group?id=%s'>%s</a></div>"\
-               % (classes, id, user["basic"]["name"])
+               % (classes, id, group.basic["name"])
     else:
         return "<span><a class='ajax' href='/group?id=%s'>%s</a></span>"\
-           % (id, user["basic"]["name"])
+           % (id, group.basic["name"])
 
 
 # These paths are replaced during deployment where a CDN will be used.
-avatar_f_l="/rsrcs/img/avatar_f_l.png"
-avatar_f_m="/rsrcs/img/avatar_f_m.png"
-avatar_f_s="/rsrcs/img/avatar_f_s.png"
-avatar_m_l="/rsrcs/img/avatar_m_l.png"
-avatar_m_m="/rsrcs/img/avatar_m_m.png"
-avatar_m_s="/rsrcs/img/avatar_m_s.png"
-def userAvatar(id, userInfo, size=None):
+avatar_f_l = "/rsrcs/img/avatar_f_l.png"
+avatar_f_m = "/rsrcs/img/avatar_f_m.png"
+avatar_f_s = "/rsrcs/img/avatar_f_s.png"
+avatar_m_l = "/rsrcs/img/avatar_m_l.png"
+avatar_m_m = "/rsrcs/img/avatar_m_m.png"
+avatar_m_s = "/rsrcs/img/avatar_m_s.png"
+
+
+def userAvatar(id, user, size=None):
     size = size[0] if (size and len(size) != 0) else "m"
-    avatar = userInfo.get("basic", {}).get("avatar", None)
-    sex = userInfo.get("basic", {}).get("sex", "M").lower()
+    avatar = user.basic.get("avatar", None)
+
+    gender = user.basic.get("sex", "M").lower()
     if avatar:
         imgType, itemId = avatar.split(":")
         url = "/avatar/%s_%s.%s" % (size, itemId, imgType)
         url = cdnHost + url if cdnHost else rootUrl + url
     else:
-        sex = "m" if sex != "f" else "f"
-        url = globals().get("avatar_%s_%s" % (sex, size))
+        gender = "m" if gender != "f" else "f"
+        url = globals().get("avatar_%s_%s" % (gender, size))
         if not url.startswith('http'):
             url = rootUrl + url
-
     return url
 
 
 # These paths are replaced during deployment where a CDN will be used.
-avatar_g_l="/rsrcs/img/avatar_g_l.png"
-avatar_g_m="/rsrcs/img/avatar_g_m.png"
-avatar_g_s="/rsrcs/img/avatar_g_s.png"
-def groupAvatar(id, groupInfo, size=None):
+avatar_g_l = "/rsrcs/img/avatar_g_l.png"
+avatar_g_m = "/rsrcs/img/avatar_g_m.png"
+avatar_g_s = "/rsrcs/img/avatar_g_s.png"
+
+
+def groupAvatar(id, group, size=None):
     size = size[0] if (size and len(size) != 0) else "m"
-    avatar = groupInfo.get("basic", {}).get("avatar", None)
+    avatar = group.basic.get('avatar', None)
     if avatar:
         imgType, itemId = avatar.split(":")
         url = "/avatar/%s_%s.%s" % (size, itemId, imgType)
@@ -627,9 +641,9 @@ def groupAvatar(id, groupInfo, size=None):
     return url
 
 
-def companyLogo(orgInfo, size=None):
+def companyLogo(org, size=None):
     size = size[0] if (size and len(size) != 0) else "m"
-    logo = orgInfo.get("basic", {}).get("logo", None)
+    logo = org.basic.get("logo", None)
     if logo:
         imgType, itemId = logo.split(":")
         return "/avatar/%s_%s.%s" % (size, itemId, imgType)
@@ -642,30 +656,35 @@ _urlRegEx = _urlRegEx % regex.sub(r'([-\\\]])', r'\\\1', string.punctuation)
 _urlRegEx = regex.compile(_urlRegEx)
 _newLineRegEx = r'\r\n|\n'
 _newLineRegEx = regex.compile(_newLineRegEx)
+
+
 def normalizeText(text, richText=False):
     if not text:
         return text
     if richText:
-        text = sanitizer.unescape(text, {'&#58;':':'})
+        text = sanitizer.unescape(text, {'&#58;': ':'})
         return markdown.markdown(text.decode('utf-8', 'replace'), safe_mode='escape')
     global _urlRegEx
+
     def addAnchor(m):
         if (m.group(2) == "www."):
-            return '<a class="c-link" target="_blank" href="http://%s">%s</a>'%(m.group(0), m.group(0))
+            return '<a class="c-link" target="_blank" href="http://%s">%s</a>' % (m.group(0), m.group(0))
         elif (m.group(2).startswith("http")):
-            return '<a class="c-link" target="_blank" href="%s">%s</a>'%(m.group(0), m.group(0))
+            return '<a class="c-link" target="_blank" href="%s">%s</a>' % (m.group(0), m.group(0))
         else:
             return m.group(0)
 
     urlReplaced = _urlRegEx.sub(addAnchor, text)
     return _newLineRegEx.sub('<br/>', urlReplaced).strip().lstrip().replace("\r\n", "<br/>")
 
+
 def richTextToHtml(text):
-    text = sanitizer.unescape(text, {'&#58;':':'})
+    text = sanitizer.unescape(text, {'&#58;': ':'})
     return markdown.markdown(text.decode('utf8', 'replace'), safe_mode='escape').encode('utf8', 'replace')
 
+
 def richTextToText(text):
-    text = sanitizer.unescape(text, {'&#58;':':'})
+    text = sanitizer.unescape(text, {'&#58;': ':'})
     tree = etree.fromstring(markdown.markdown(text.decode('utf8', 'replace'), safe_mode='escape').encode('utf8', 'replace'))
     return etree.tostring(tree, method='text', encoding='utf8')
 
@@ -691,21 +710,23 @@ def simpleTimestamp(timestamp, timezone='Asia/Kolkata'):
         if delta.seconds < 60:
             formatted = _("a few seconds ago")
         elif delta.seconds < 3600:
-            formatted = _("%s minutes ago") % (delta.seconds/60)
+            formatted = _("%s minutes ago") % (delta.seconds / 60)
         elif delta.seconds < 7200:
             formatted = _("about one hour ago")
         else:
-            formatted = _("%s hours ago") % (delta.seconds/3600)
+            formatted = _("%s hours ago") % (delta.seconds / 3600)
     else:
         if current.year == ts.year:
             formatted = _("%(month)s %(date)s at %(12hour)s:%(minutes)02d%(ampm)s") % params
         else:
             formatted = _("%(month)s %(date)s, %(year)s at %(12hour)s:%(minutes)02d%(ampm)s") % params
 
-    return "<abbr class='timestamp' title='%s' data-ts='%s'>%s</abbr>" %(tooltip, timestamp, formatted)
+    return "<abbr class='timestamp' title='%s' data-ts='%s'>%s</abbr>" % (tooltip, timestamp, formatted)
 
 
-_snippetRE = regex.compile(r'(.*)\s', regex.U|regex.S|regex.M)
+_snippetRE = regex.compile(r'(.*)\s', regex.U | regex.S | regex.M)
+
+
 def toSnippet(text, maxlen, richText=False):
     unitext = text if type(text) == unicode or not text\
                    else text.decode('utf-8', 'replace')
@@ -730,14 +751,14 @@ def uuid1(node=None, clock_seq=None, timestamp=None):
         nanoseconds = int(time.time() * 1e9)
         # 0x01b21dd213814000 is the number of 100-ns intervals between the
         # UUID epoch 1582-10-15 00:00:00 and the Unix epoch 1970-01-01 00:00:00.
-        timestamp = int(nanoseconds//100) + 0x01b21dd213814000L
+        timestamp = int(nanoseconds / 100) + 0x01b21dd213814000L
     else:
-        nanoseconds = int(timestamp*1e9)
-        timestamp = int(nanoseconds/100) + 0x01b21dd213814000L
+        nanoseconds = int(timestamp * 1e9)
+        timestamp = int(nanoseconds / 100) + 0x01b21dd213814000L
 
     if clock_seq is None:
         import random
-        clock_seq = random.randrange(1<<14L) # instead of stable storage
+        clock_seq = random.randrange(1 << 14L)  # instead of stable storage
     time_low = timestamp & 0xffffffffL
     time_mid = (timestamp >> 32L) & 0xffffL
     time_hi_version = (timestamp >> 48L) & 0x0fffL
@@ -758,11 +779,11 @@ def existingUser(emailId):
 
 
 @defer.inlineCallbacks
-def addUser(emailId, displayName, passwd, orgId, jobTitle = None, timezone=None):
+def addUser(emailId, displayName, passwd, orgId, jobTitle=None, timezone=None):
     userId = getUniqueKey()
 
-    userInfo = {'basic': {'name': displayName, 'org':orgId,
-                          'type': 'user', 'emailId':emailId}}
+    userInfo = {'basic': {'name': displayName, 'org': orgId,
+                          'type': 'user', 'emailId': emailId}}
     userAuthInfo = {"passwordHash": hashpass(passwd), "org": orgId, "user": userId}
 
     if jobTitle:
@@ -810,7 +831,7 @@ def removeUser(request, userId, orgAdminId, userInfo=None, orgAdminInfo=None):
     cols = columnsToDict(cols)
     for clientId in cols:
         yield db.remove(orgId, "appsByOwner", clientId)
-    yield db.remove(userId, "appsByOwner" )
+    yield db.remove(userId, "appsByOwner")
     yield db.remove(userId, "entities", super_column="apps")
 
     sessionIds = yield db.get_slice(userId, "userSessionsMap")
@@ -828,15 +849,14 @@ def removeUser(request, userId, orgAdminId, userInfo=None, orgAdminInfo=None):
         name, groupId = group.column.name.split(':')
         yield db.remove(groupId, "followers", userId)
         yield db.remove(groupId, "groupMembers", userId)
-        if len(groupAdmins[groupId].get('admins', {}))==1 and userId in groupAdmins[groupId]['admins']:
+        if len(groupAdmins[groupId].get('admins', {})) == 1 and userId in groupAdmins[groupId]['admins']:
             yield db.insert(groupId, "entities", '', orgAdminId, 'admins')
             cols = yield db.get_slice(groupId, "groupMembers", [orgAdminId])
             if not cols:
                 itemId = getUniqueKey()
-                acl = {"accept":{"groups":[groupId]}}
-                item, attachments = yield createNewItem(request, "activity",
-                                                      userId, orgId, acl,
-                                                      "groupJoin")
+                acl = {"accept": {"groups": [groupId]}}
+                item = yield createNewItem(request, "activity", userId,
+                                            orgId, acl, "groupJoin")
                 item["meta"]["target"] = groupId
                 yield db.batch_insert(itemId, "items", item)
                 yield db.insert(groupId, "followers", "", orgAdminId)
@@ -844,7 +864,6 @@ def removeUser(request, userId, orgAdminId, userInfo=None, orgAdminInfo=None):
                 yield db.insert(orgAdminId, "entityGroupsMap", "", group.column.name)
                 yield db.insert(orgAdminId, "entities",  name, groupId, 'adminOfGroups')
                 yield updateDisplayNameIndex(orgAdminId, [groupId], orgAdminInfo['basic']['name'], None)
-
 
         yield db.remove(groupId, "entities", userId, "admins")
 
@@ -890,7 +909,7 @@ def updateDisplayNameIndex(userId, targetIds, newName, oldName):
 
     for targetId in targetIds:
         if oldName or newName:
-            muts[targetId] = {'displayNameIndex':{}}
+            muts[targetId] = {'displayNameIndex': {}}
         if oldName:
             colName = oldName.lower() + ":" + userId
             muts[targetId]['displayNameIndex'][colName] = None
@@ -908,8 +927,8 @@ def updateNameIndex(userId, targetIds, newName, oldName):
     muts = {}
     for targetId in targetIds:
         if oldName or newName:
-            muts[targetId] = {'nameIndex':{}}
-        if oldName :
+            muts[targetId] = {'nameIndex': {}}
+        if oldName:
             for part in oldName.split():
                 colName = part.lower() + ":" + userId
                 muts[targetId]['nameIndex'][colName] = None
@@ -927,7 +946,7 @@ def updateNameIndex(userId, targetIds, newName, oldName):
 def sendmail(toAddr, subject, textPart, htmlPart=None,
              fromAddr='noreply@flocked.in', fromName='Flocked-in'):
     if textPart:
-        textPart = sanitizer.unescape(textPart, {'&#58;':':'})
+        textPart = sanitizer.unescape(textPart, {'&#58;': ':'})
     if htmlPart:
         msg = MIMEMultipart('alternative')
         msg.preamble = 'This is a multi-part message in MIME format.'
@@ -940,7 +959,7 @@ def sendmail(toAddr, subject, textPart, htmlPart=None,
     else:
         msg = MIMEText(textPart, _charset='utf8')
 
-    msg['Subject'] = sanitizer.unescape(subject, {'&#58;':':'})
+    msg['Subject'] = sanitizer.unescape(subject, {'&#58;': ':'})
     msg['From'] = "%s <%s>" % (fromName, fromAddr)
     msg['To'] = toAddr
     try:
@@ -957,6 +976,7 @@ def sendmail(toAddr, subject, textPart, htmlPart=None,
 
 SUFFIXES = {1000: ['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
             1024: ['KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB']}
+
 
 def approximate_size(size, a_kilobyte_is_1024_bytes=False):
     '''Convert a file size to human-readable form.
@@ -977,6 +997,7 @@ def approximate_size(size, a_kilobyte_is_1024_bytes=False):
 
     raise ValueError('number too large')
 
+
 def uniqify(lst):
     new_list = []
     for x in lst:
@@ -987,6 +1008,8 @@ def uniqify(lst):
 
 _withHyphensRegex = regex.compile('(?|[^\w\-]|_)*')
 _withoutHyphensRegex = regex.compile('(?|\W|_)*')
+
+
 def tokenize(sentences):
     withHyphens = set([x.lower() for x in regex.split(_withHyphensRegex, sentences) if x])
     withoutHyphens = set([x.lower() for x in regex.split(_withoutHyphensRegex, sentences) if x])
