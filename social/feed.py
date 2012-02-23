@@ -398,7 +398,7 @@ class Feed(object):
 
         else:
             (convIds, deletedIds) = yield utils.fetchAndFilterConvs(convIds,
-                                                relation, items, myId, myOrgId)
+                                                relation, items, myId, orgId)
             # NOTE: Unlike the above case where we fetch convIds from
             #       database (where we set the nextPageStart to a key),
             #       here we set nextPageStart to the convId.
