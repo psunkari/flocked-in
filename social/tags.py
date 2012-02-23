@@ -8,7 +8,7 @@ from twisted.web        import server
 
 from social             import db, utils, _, __, base, plugins
 from social             import constants, errors, template as t
-from social.feed        import Feed
+from social.core        import feed
 from social.isocial     import IAuthInfo
 from social.relations   import Relation
 from social.logging     import profile, dump_args, log
@@ -69,7 +69,7 @@ class TagsResource(base.BaseResource):
                     deleteKeys.append(key)
             yield db.batch_remove({'tagItems': [tagId]}, names=deleteKeys)
 
-        return Feed.get(request.getSession(IAuthInfo), getFn=getter,
+        return feed.get(request.getSession(IAuthInfo), getFn=getter,
                         cleanFn=cleaner, start=start, count=count,
                         getReasons=False)
 
