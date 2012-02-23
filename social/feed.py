@@ -398,7 +398,7 @@ class Feed(object):
 
         else:
             (convIds, deletedIds) = yield utils.fetchAndFilterConvs(convIds,
-                                                relation, items, myId, myOrgId)
+                                                relation, items, myId, orgId)
             # NOTE: Unlike the above case where we fetch convIds from
             #       database (where we set the nextPageStart to a key),
             #       here we set nextPageStart to the convId.
@@ -469,7 +469,8 @@ class Feed(object):
                     convIds.remove(convId)
 
         # Fetch all required entities
-        entities_d = db.multiget_slice(toFetchEntities, "entities", ["basic"])
+        entities = base.EntitySet(toFetchEntities)
+        entities_d = entities.fetchData()
 
         # Results of previously initiated fetches (items, tags, entities, likes)
         fetchedItems = yield items_d
@@ -481,8 +482,7 @@ class Feed(object):
         fetchedMyLikes = yield myLikes_d
         myLikes.update(utils.multiColumnsToDict(fetchedMyLikes))
 
-        fetchedEntities = yield entities_d
-        entities.update(utils.multiSuperColumnsToDict(fetchedEntities))
+        yield entities_d
 
         # Time to build reason strings (and reason userIds)
         if getReasons:
@@ -501,7 +501,8 @@ class Feed(object):
         # Wait till the deletions get through :)
         yield defer.DeferredList(cleanup_d)
 
-        data.update({'nextPageStart': nextPageStart, 'conversations': convIds})
+        data.update({'nextPageStart': nextPageStart,
+                     'conversations': convIds, 'entities': entities})
         defer.returnValue(data)
 
 
@@ -538,33 +539,33 @@ class FeedResource(base.BaseResource):
         start = utils.getRequestArg(request, "start") or ''
 
         landing = not self._ajax
-        myOrgId = args["orgKey"]
+        myOrgId = args["orgId"]
 
         feedTitle = _("News Feed")
         menuId = "feed"
 
         if entityId:
-            entity = yield db.get_slice(entityId, "entities", ["basic", "admins"])
-            if not entity:
+            entity = base.Entity(entityId)
+            yield entity.fetchData(['basic', 'admins'])
+
+            if not entity.basic:
                 raise errors.InvalidEntity("feed", entityId)
 
-            entity = utils.supercolumnsToDict(entity)
-            entityType = entity["basic"]['type']
+            entityType = entity.basic['type']
 
-            orgId = entity['basic']["org"] if entity['basic']["type"] != "org" else entityId
+            orgId = entity.basic["org"] if entityType != "org" else entityId
 
             if myOrgId != orgId:
                 raise errors.EntityAccessDenied("organization", entityId)
 
             if entityType == 'org':
                 menuId = "org"
-                feedTitle = _("Company Feed: %s") % entity["basic"]["name"]
+                feedTitle = _("Company Feed: %s") % entity.basic["name"]
             elif entityType == 'group':
                 request.redirect("/group?id=%s"%(entityId))
                 defer.returnValue(None)
-            else:
-                if entityId != myId:
-                    raise errors.EntityAccessDenied("user", entityId)
+            elif entityId != myId:
+                raise errors.EntityAccessDenied("user", entityId)
 
         feedId = entityId or myId
         args["feedTitle"] = feedTitle
@@ -605,9 +606,9 @@ class FeedResource(base.BaseResource):
         if "entities" not in args:
             args["entities"] = entities
         else:
-            for entity in entities:
-                if entity not in args["entities"]:
-                    args["entities"][entity] = entities[entity]
+            for entityId in entities.keys():
+                if entityId not in args["entities"].keys():
+                    args["entities"][entityId] = entities[entityId]
 
         if script:
             onload = """
@@ -638,9 +639,9 @@ class FeedResource(base.BaseResource):
     def _renderMore(self, request, entityId, start, itemType):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
 
-        entity = yield db.get_slice(entityId, "entities", ["basic"])
-        entity = utils.supercolumnsToDict(entity)
-        if entity and entity["basic"].get("type", '') == "group":
+        entity = base.Entity(entityId)
+        yield entity.fetchData()
+        if entity.basic and entity.basic.get("type", '') == "group":
             errors.InvalidRequest("group feed will not be fetched.")
 
         feedItems = yield Feed.get(request.getSession(IAuthInfo),

@@ -62,7 +62,7 @@
     <div class="sidebar-title">${_("Invite people")}</div>
     <form id="invite-form" method="post" action="/people/invite" class="ajax" autocomplete="off" >
       <div class="input-wrap">
-        <% domain = me["basic"]["emailId"].split('@')[1] %>
+        <% domain = me.basic["emailId"].split('@')[1] %>
         <input type="email" name="email" id="invite-others" placeholder="someone@${domain}" required title="${_('Email')}"/>
       </div>
       <input type="hidden" name="from" value="sidebar"/>
@@ -75,13 +75,13 @@
 <%def name="groupLinks()">
   %if groupId:
     <div class="sidebar-chunk">
-    %if myKey in groupAdmins:
+    %if myId in groupAdmins:
       <div class="sidebar-title">${_("Manage")}</div>
     %else:
       <div class="sidebar-title">${_("Group")}</div>
     %endif
       <ul class="v-links">
-        %if myKey in groupAdmins:
+        %if myId in groupAdmins:
           <li><a class="ajax" href="/groups/pending?id=${groupId}">${_('Pending Requests')}</a></li>
         %endif
         <li><a class="ajax" href="/groups/members?id=${groupId}">${_('Members List')}</a></li>
@@ -91,7 +91,7 @@
       <div class="sidebar-title">${_("Invite your colleague to this group")}</div>
       <div class="invite-input-block">
         <form method="post" action="/groups/invite" class="ajax" autocomplete="off">
-          <input type="hidden" name="invitee" id="group_invitee"/>
+          <input type="hidden" name="user" id="group_invitee"/>
           <input type="hidden" value = ${groupId} name="id" />
           <div class="input-wrap">
             <input type="text" id="group_add_invitee" placeHolder="${_("Your colleague&#39;s name")}"/>
@@ -117,7 +117,7 @@
       </button>
       <ul id="${id}-menu" class="acl-menu" style="display:none;">
         <li>
-          <a class="acl-item" data-acl="org:${orgKey}">
+          <a class="acl-item" data-acl="org:${orgId}">
             <span class="acl-title">${_("Company")}</span>
             <div class="acltip">${_("Sent to your followers and company's feed")}</div>
           </a>
@@ -155,7 +155,7 @@
       <div id="sharebar-attach-uploaded" class="uploaded-filelist"></div>
       <div id="sharebar-actions-wrapper">
         <ul id="sharebar-actions" class="h-links">
-          <li>${acl_button("sharebar-acl", '{"accept":{"orgs":["%s"]}}'%orgKey, "Company", "Sent to your followers and company's feed")}</li>
+          <li>${acl_button("sharebar-acl", '{"accept":{"orgs":["%s"]}}'%orgId, "Company", "Sent to your followers and company's feed")}</li>
           <li>${widgets.button("sharebar-submit", "submit", "default", "Share", "Share")}</li>
         </ul>
         <span class="clear" style="display:block"></span>
@@ -252,7 +252,7 @@
             </div>
             <div class="users-details" style="margin-left:36px">
               <div class="user-details-name">${utils.userName(userId, entities[userId])}</div>
-              <div class="user-details-title">${entities[userId]["basic"].get("jobTitle", '')}</div>
+              <div class="user-details-title">${entities[userId].basic.get("jobTitle", '')}</div>
               <div >
                 <ul id="user-actions-${userId}" class="middle user-actions h-links">
                   <li><button class="button" onclick="$.post('/ajax/profile/follow', 'id=${userId}')"><span class="button-text" style="font-size:11px;">${_("Follow")}</span></button></li>
