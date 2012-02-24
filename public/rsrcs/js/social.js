@@ -168,7 +168,9 @@ _initAjaxRequests: function _initAjaxRequests() {
         // Prevent accidental resubmission by disabling the
         // form till we get a response from the server.
         $this.attr("disabled", true);
-        $inputs = $this.find(":input").attr("disabled", true);
+        // Do not collect inputs that were already disabled. So that
+        // reenabling the form inputs wont disturb the form elements in anyway.
+        $inputs = $this.find(':input:not(:disabled)').attr("disabled", true);
         enabler = function() {
             $inputs.removeAttr("disabled");
             $this.removeAttr("disabled");
