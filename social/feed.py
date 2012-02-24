@@ -6,7 +6,7 @@ from twisted.web        import server
 
 from social             import db, utils, base, plugins, _, __, errors, people
 from social             import template as t
-from social.core        import feed
+from social.core        import Feed
 from social.isocial     import IAuthInfo, IFeedUpdateType
 from social.relations   import Relation
 from social.constants   import INFINITY, MAXFEEDITEMS, MAXFEEDITEMSBYTYPE
@@ -293,7 +293,7 @@ class FeedResource(base.BaseResource):
                                 handlers=handlers, **args)
             yield self.renderShareBlock(request, "status")
 
-        feedItems = yield feed.get(request.getSession(IAuthInfo),
+        feedItems = yield Feed.get(request.getSession(IAuthInfo),
                                    feedId=feedId, start=start,
                                    itemType=itemType)
         args.update(feedItems)
@@ -344,7 +344,7 @@ class FeedResource(base.BaseResource):
         if entity and entity["basic"].get("type", '') == "group":
             errors.InvalidRequest("group feed will not be fetched.")
 
-        feedItems = yield feed.get(request.getSession(IAuthInfo),
+        feedItems = yield Feed.get(request.getSession(IAuthInfo),
                                    feedId=entityId, start=start,
                                    itemType=itemType)
         args.update(feedItems)

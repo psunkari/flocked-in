@@ -9,7 +9,7 @@ except:
 
 from social             import base, db, utils, errors, feed, people, _, plugins
 from social             import notifications, template as t
-from social.core        import feed
+from social.core        import Feed
 from social.constants   import PEOPLE_PER_PAGE
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
@@ -227,7 +227,7 @@ class GroupsResource(base.BaseResource):
                                     landing, "#group-actions-%s" %(groupId),
                                     "set", handlers = handlers, **args)
                 if access == 'open' and _pg == '/group':
-                    feedItems = yield feed.get(request.getSession(IAuthInfo), feedId=groupId)
+                    feedItems = yield Feed.get(request.getSession(IAuthInfo), feedId=groupId)
                     args.update(feedItems)
                     onload = "(function(obj){$$.convs.load(obj);})(this);"
                     t.renderScriptBlock(request, "group-feed.mako", "feed",
@@ -1218,7 +1218,7 @@ class GroupFeedResource(base.BaseResource):
             yield self._renderShareBlock(request, "status")
 
         if isMember:
-            feedItems = yield feed.get(request.getSession(IAuthInfo),
+            feedItems = yield Feed.get(request.getSession(IAuthInfo),
                                        feedId=groupId, start=start,
                                        itemType=itemType)
             args.update(feedItems)
@@ -1286,7 +1286,7 @@ class GroupFeedResource(base.BaseResource):
         groupId, group = yield utils.getValidEntityId(request, 'id', 'group', ["admins"])
         isMember = yield db.get_count(groupId, "groupMembers", start=myId, finish=myId)
         if isMember:
-            feedItems = yield feed.get(request.getSession(IAuthInfo),
+            feedItems = yield Feed.get(request.getSession(IAuthInfo),
                                        feedId=entityId, start=start,
                                        itemType=itemType)
             args.update(feedItems)
