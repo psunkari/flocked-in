@@ -2,9 +2,10 @@ import re
 import formencode
 from formencode         import validators,  ForEach, compound, api
 from twisted.internet   import defer
-from social             import utils, errors, _, db, constants, base
+from social             import utils, errors, _, db, constants, base, plugins
 from social.isocial     import IAuthInfo
 from social.relations   import Relation
+
 
 class Invalid(api.Invalid):
     def  __init__(self, msg, value, state, error_list=None,
@@ -183,20 +184,22 @@ class Entity(validators.FancyValidator):
     @defer.inlineCallbacks
     def _to_python(self, entityId, state):
         if not entityId:
-            raise api.Invalid('Missing %s-id' %(self.entityType), entityId, state)
+            raise api.Invalid('Missing %s-id' % (self.entityType),
+                              entityId, state)
         columns = ['basic']
-        if self.columns :
+        if self.columns:
             columns.extend(self.columns)
         entity = base.Entity(entityId)
         yield entity.fetchData(columns=columns)
 
         if not entity.basic:
-            raise api.Invalid('Invalid %s-id'%(self.entityType), entityId, state)
-
+            raise api.Invalid('Invalid %s-id' % (self.entityType),
+                              entityId, state)
 
         if self.entityType != entity.basic["type"]:
-            raise api.Invalid('Invalid %s-id'%(self.entityType), entityId, state)
-        if self.source!= 'api':
+            raise api.Invalid('Invalid %s-id' % (self.entityType),
+                              entityId, state)
+        if self.source != 'api':
             request = state.request
             orgId = request.getSession(IAuthInfo).organization
         org = entity.basic["org"] if entity.basic["type"] != "org" else entityId
@@ -214,14 +217,15 @@ class TagString(validators.FancyValidator):
 
         decoded = tagName.decode('utf-8', 'replace')
         if len(decoded) > 50:
-            raise api.Invalid(_('Tag cannot be more than 50 characters long'), tagName, state)
+            raise api.Invalid(_('Tag cannot be more than 50 characters long'),
+                              tagName, state)
         if '_' in decoded or not re.match(self._regex, decoded):
             raise api.Invalid(_('Tag can only include numerals, alphabet and hyphens (-)'), tagName, state)
         return decoded
 
 
 class Tag(validators.FancyValidator):
-    source=None
+    source = None
 
     @defer.inlineCallbacks
     def _to_python(self, tagId, state):
@@ -259,11 +263,39 @@ class TextWithSnippet(validators.FancyValidator):
 
 class SocialString(validators.FancyValidator):
     multivalued = False
-    sanitize=True
-    if_missing=None
+    sanitize = True
+    if_missing = None
 
     def _to_python(self, value, state):
         return utils.getString(value, self.sanitize, self.multivalued)
+
+
+class ValidConvType(validators.FancyValidator):
+    def _to_python(self, value, state):
+        if value not in plugins:
+            raise api.Invalid('Unsupported item type', value, state)
+        return value
+
+
+class URL(validators.FancyValidator):
+    add_http = True
+
+    def _to_python(self, value, state):
+        try:
+            return validators.URL(add_http=self.add_http).to_python(value)
+        except api.Invalid:
+            raise api.Invalid('Invalid Url', value, state)
+
+
+class PollOptions(validators.FancyValidator):
+    def _to_python(self, value, state):
+        options = SocialString(multivalued=True).to_python(value)
+        options = [x for x in options if x]
+        options = utils.uniqify(options)
+        if len(options) < 2:
+            raise api.Invalid('Poll should have atleast two options',
+                              value, state)
+        return options
 
 
 class SocialSchema(Schema):
@@ -294,8 +326,22 @@ class ValidateTagId(SocialSchema):
     tag = compound.Pipe(SocialString(if_missing=None), Tag())
     id = Item(arg='id', columns=['tags'])
 
+
+class NewItem(SocialSchema):
+    type = compound.Pipe(SocialString(if_missing=None),
+                         ValidConvType())
+
+
+class ItemResponses(SocialSchema):
+    id = Item(arg='id', columns=['tags'])
+    start = SocialString(if_missing='')
+    nc = compound.Pipe(SocialString(if_missing='0'),
+                      validators.Int())
+
+
 class State(object):
     pass
+
 
 class Validate(object):
     def __init__(self, schema):
@@ -303,7 +349,7 @@ class Validate(object):
 
     def __call__(self, func):
         @defer.inlineCallbacks
-        def wrapper(cls, request, **kwargs):
+        def wrapper(cls, request, *args, **kwargs):
             state = State()
             state.request = request
             deferreds = []
@@ -324,7 +370,11 @@ class Validate(object):
             if error_dict:
                 #XXX: raise proper execptions.
                 raise errors.MissingParams(error_dict.keys())
-            d = func(cls, request, data)
+            kwargs['data'] = data
+            d = func(cls, request, *args, **kwargs)
             if isinstance(d, defer.Deferred):
-                yield d
+                retval = yield d
+                defer.returnValue(retval)
+            else:
+                defer.returnValue(d)
         return wrapper
