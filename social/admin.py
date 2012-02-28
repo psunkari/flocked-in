@@ -3,12 +3,13 @@ import regex
 from csv import reader
 import json
 
+from formencode         import compound
 from telephus.cassandra import ttypes
 from twisted.web        import server
 from twisted.internet   import defer
 from nltk.corpus        import stopwords
 
-from social             import base, db, utils, people, errors
+from social             import base, db, utils, people, errors, validators
 from social             import tags, plugins, location_tz_map, _
 from social             import template as t
 from social.item        import deleteItem
@@ -16,7 +17,18 @@ from social.isocial     import IAuthInfo
 from social.constants   import PEOPLE_PER_PAGE
 from social.settings    import saveAvatarItem
 from social.logging     import log
+from social.validators  import SocialString, SocialSchema, Validate
 
+
+class ValidateUser(SocialSchema):
+    id = compound.Pipe(SocialString(if_missing=''),
+                       validators.Entity(entityType='user', columns=['basic']))
+
+
+class ValidateDelete(SocialSchema):
+    id = compound.Pipe(SocialString(if_missing=''),
+                       validators.Entity(entityType='user', columns=['basic']))
+    deleted = SocialString(if_missing='')
 
 timezones = location_tz_map.values()
 def validTimezone(timezone):
@@ -38,7 +50,7 @@ class Admin(base.BaseResource):
                     continue
                 try:
                     domain = email.split("@")[1]
-                    if domain not in org['domains']:
+                    if domain not in org.domains:
                         invalidLines.append(str(i+1))
                 except IndexError:
                     invalidLines.append(str(i+1))
@@ -53,8 +65,8 @@ class Admin(base.BaseResource):
         authInfo = request.getSession(IAuthInfo)
         myId = authInfo.username
         orgId = authInfo.organization
-        cols =  yield db.get_slice(orgId, "entities", ['basic', 'domains'])
-        org = utils.supercolumnsToDict(cols)
+        org = base.Entity(orgId)
+        yield org.fetchData(['basic', 'domains'])
 
         # File upload
         dataFmt = utils.getRequestArg(request, 'format')
@@ -99,7 +111,7 @@ class Admin(base.BaseResource):
             errorFields = []
             try:
                 domain = emailId.split("@")[1]
-                if domain not in org['domains']:
+                if domain not in org.domains:
                     errorFields = ['Email']
             except IndexError:
                 errorFields = ['Email']
@@ -147,86 +159,90 @@ class Admin(base.BaseResource):
         request.write(response)
 
 
+    @Validate(ValidateUser)
     @defer.inlineCallbacks
-    def _blockUser(self, request):
+    def _blockUser(self, request, data=None):
         authInfo = request.getSession(IAuthInfo)
         myId = authInfo.username
         orgId = authInfo.organization
-        userId, user = yield utils.getValidEntityId(request, "id")
+        user = data['id']
 
         # Admin cannot block himself.
-        if userId == myId:
+        if user.id == myId:
             raise errors.InvalidRequest(_("You cannot block yourself."))
 
-        emailId = user.get("basic", {}).get("emailId", None)
+        emailId = user.basic.get("emailId", None)
         yield db.insert(emailId, "userAuth", 'True', "isBlocked")
-        yield db.insert(orgId, "blockedUsers", '', userId)
+        yield db.insert(orgId, "blockedUsers", '', user.id)
         t.renderScriptBlock(request, "admin.mako", "admin_actions",
-                                False, "#user-actions-%s" %(userId),
-                                "set", args=[userId, 'blocked'])
+                                False, "#user-actions-%s" % (user.id),
+                                "set", args=[user.id, 'blocked'])
 
 
+    @Validate(ValidateUser)
     @defer.inlineCallbacks
-    def _unblockUser(self, request):
+    def _unblockUser(self, request, data=None):
         authInfo = request.getSession(IAuthInfo)
         myId = authInfo.username
         orgId = authInfo.organization
 
-        userId, user = yield utils.getValidEntityId(request, "id")
-        emailId = user.get("basic", {}).get("emailId", None)
+        user = data['id']
+        emailId = user.basic.get("emailId", None)
 
         yield db.remove(emailId, "userAuth", "isBlocked")
-        yield db.remove(orgId, "blockedUsers", userId)
+        yield db.remove(orgId, "blockedUsers", user.id)
         t.renderScriptBlock(request, "admin.mako", "admin_actions",
-                                False, "#user-actions-%s" %(userId),
-                                "set", args=[userId, 'unblocked'])
+                                False, "#user-actions-%s" % (user.id),
+                                "set", args=[user.id, 'unblocked'])
 
 
+    @Validate(ValidateDelete)
     @defer.inlineCallbacks
-    def _deleteUser(self, request):
+    def _deleteUser(self, request, data=None):
         authInfo = request.getSession(IAuthInfo)
         myId = authInfo.username
         orgId = authInfo.organization
-        userId, user = yield utils.getValidEntityId(request, "id")
-        delete = utils.getRequestArg(request, 'deleted') == 'deleted'
+        user = data['id']
+        delete = data['deleted'] == 'deleted'
 
         # Admin cannot block himself.
-        if userId == myId:
+        if user.id == myId:
             raise errors.InvalidRequest(_("You are the only administrator, you can not delete yourself"))
 
         if delete:
-            yield utils.removeUser(request, userId, myId, user)
+            yield utils.removeUser(request, user.id, myId, user)
             t.renderScriptBlock(request, "admin.mako", "admin_actions",
-                                    False, "#user-actions-%s" %(userId),
-                                    "set", args=[userId, 'deleted'])
+                                    False, "#user-actions-%s" %(user.id),
+                                    "set", args=[user.id, 'deleted'])
 
 
+    @Validate(ValidateUser)
     @defer.inlineCallbacks
-    def _renderDeleteUser(self, request):
+    def _renderDeleteUser(self, request, data=None):
         authInfo = request.getSession(IAuthInfo)
         myId = authInfo.username
         orgId = authInfo.organization
-        userId, user = yield utils.getValidEntityId(request, "id")
+        user = data['id']
 
         # Admin cannot block himself.
-        if userId == myId:
+        if user.id == myId:
             error_str = "You are the only administrator, you can not delete yourself"
             request.write("$$.dialog.close('removeuser-dlg');\
                             $$.alerts.error('%s')" % error_str)
         else:
             orgAdminNewGroups = []
             affectedGroups = []
-            groups = yield db.get_slice(userId, "entityGroupsMap")
+            groups = yield db.get_slice(user.id, "entityGroupsMap")
             groupIds = [x.column.name.split(':')[1] for x in groups]
             groupAdmins = yield db.multiget_slice(groupIds, "entities", ['admins'])
             groupAdmins = utils.multiSuperColumnsToDict(groupAdmins)
             for group in groups:
                 name, groupId = group.column.name.split(':')
-                if len(groupAdmins[groupId].get('admins', {}))==1 and userId in groupAdmins[groupId]['admins']:
+                if len(groupAdmins[groupId].get('admins', {}))==1 and user.id in groupAdmins[groupId]['admins']:
                     orgAdminNewGroups.append((groupId, name))
                 affectedGroups.append((groupId, name))
 
-            apiKeys = yield db.get_slice(userId, "entities", ['apikeys'])
+            apiKeys = yield db.get_slice(user.id, "entities", ['apikeys'])
             apiKeys = utils.supercolumnsToDict(apiKeys)
             if apiKeys.get('apikeys', {}).keys():
                 apps = yield db.multiget_slice(apiKeys['apikeys'].keys(), "apps", ['meta'])
@@ -234,13 +250,11 @@ class Admin(base.BaseResource):
             else :
                 apps = {}
 
-            cols = yield db.multiget_slice([userId], "entities", ["basic"])
-            entities = utils.multiSuperColumnsToDict(cols)
-
+            entities = base.EntitySet(user)
             args = {'affectedGroups': affectedGroups}
             args['orgAdminNewGroups'] = orgAdminNewGroups
             args['apps'] = apps
-            args['userId'] = userId
+            args['userId'] = user.id
             args["entities"] = entities
             t.renderScriptBlock(request, 'admin.mako', "confirm_remove_user",
                                     False, "#removeuser-dlg", "set", **args)
@@ -248,8 +262,8 @@ class Admin(base.BaseResource):
 
     @defer.inlineCallbacks
     def _updateOrgInfo(self, request):
-        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        orgId = args["orgKey"]
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        orgId = args["orgId"]
 
         name = utils.getRequestArg(request, "name")
         dp = utils.getRequestArg(request, "dp", sanitize=False)
@@ -265,7 +279,7 @@ class Admin(base.BaseResource):
             if "basic" not in orgInfo:
                 orgInfo["basic"] = {}
             orgInfo["basic"]["name"] = name
-            args['org']['basic']['name'] = name
+            args['org'].basic['name'] = name
             orgDetails["name"] = name
         if orgInfo:
             yield db.batch_insert(orgId, "entities", orgInfo)
@@ -290,7 +304,7 @@ class Admin(base.BaseResource):
     @defer.inlineCallbacks
     def _renderOrgInfo(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
-        orgId = args["orgKey"]
+        orgId = args["orgId"]
         landing = not self._ajax
 
         args['title'] = "Update Company Info"
@@ -303,12 +317,7 @@ class Admin(base.BaseResource):
             t.renderScriptBlock(request, "admin.mako", "layout",
                                     landing, "#mainbar", "set", **args)
 
-        orgInfo = yield db.get_slice(orgId, "entities", ['basic'])
-        orgInfo = utils.supercolumnsToDict(orgInfo)
-
-        args["orgInfo"]= orgInfo
         args["viewType"] = "org"
-
         if script:
             handlers = {'onload': "$$.ui.bindFormSubmit('#orginfo-form');"}
             t.renderScriptBlock(request, "admin.mako", "orgInfo",
@@ -324,7 +333,7 @@ class Admin(base.BaseResource):
 
     @defer.inlineCallbacks
     def _renderAddUsers(self, request):
-        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
 
         args["title"] = "Add Users"
@@ -348,8 +357,8 @@ class Admin(base.BaseResource):
 
     @defer.inlineCallbacks
     def _listBlockedUsers(self, request):
-        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        orgId = args["orgKey"]
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        orgId = args["orgId"]
         landing = not self._ajax
         start = utils.getRequestArg(request, 'start') or ''
         start = utils.decodeKey(start)
@@ -380,8 +389,9 @@ class Admin(base.BaseResource):
             if len(cols) > 1:
                 prevPageStart = utils.decodeKey(cols[-1].column.name)
 
-        cols = yield db.multiget_slice(blockedUsers, "entities", ["basic"])
-        entities = utils.multiSuperColumnsToDict(cols)
+        entities = base.EntitySet(blockedUsers)
+        yield entities.fetchData()
+
 
         args["entities"] = entities
         args['nextPageStart'] = nextPageStart
@@ -401,8 +411,8 @@ class Admin(base.BaseResource):
 
     @defer.inlineCallbacks
     def _listAllUsers(self, request):
-        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        orgId = args["orgKey"]
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        orgId = args["orgId"]
         landing = not self._ajax
 
         start = utils.getRequestArg(request, 'start') or ''
@@ -418,7 +428,7 @@ class Admin(base.BaseResource):
             t.renderScriptBlock(request, "admin.mako", "layout",
                                     landing, "#mainbar", "set", **args)
         users, relations, userIds,blockedUsers,\
-            nextPageStart, prevPageStart = yield people.getPeople(myKey, orgId, orgId, start=start)
+            nextPageStart, prevPageStart = yield people.getPeople(myId, orgId, orgId, start=start)
 
         args["entities"] = users
         args["relations"] = relations
@@ -536,7 +546,7 @@ class Admin(base.BaseResource):
         dd = db.batch_remove({'keywordItems': [myOrgId+':'+keyword]},
                              names=deleted) if deleted else defer.succeed([])
 
-        args.update({'items': items, 'myKey': myId})
+        args.update({'items': items, 'myId': myId})
         toFetchEntities = set()
         extraDataDeferreds = []
         for itemId in itemIds:
@@ -562,9 +572,8 @@ class Admin(base.BaseResource):
 
         fetchedEntities = {}
         if toFetchEntities:
-            fetchedEntities = yield db.multiget_slice(toFetchEntities,
-                                                      "entities", ["basic"])
-            fetchedEntities = utils.multiSuperColumnsToDict(fetchedEntities)
+            fetchedEntities = base.EntitySet(toFetchEntities)
+            yield fetchedEntities.fetchData()
 
         yield dd
         args.update({'entities': fetchedEntities,
@@ -628,8 +637,8 @@ class Admin(base.BaseResource):
 
     @defer.inlineCallbacks
     def _renderKeywordManagement(self, request):
-        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        orgId = args["orgKey"]
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        orgId = args["orgId"]
         landing = not self._ajax
 
         args["title"] = "Keyword Monitoring"
@@ -721,8 +730,8 @@ class Admin(base.BaseResource):
 
     @defer.inlineCallbacks
     def _listPresetTags(self, request):
-        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
-        orgId = args["orgKey"]
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        orgId = args["orgId"]
         landing = not self._ajax
 
         args['title'] = 'Preset Tags'
