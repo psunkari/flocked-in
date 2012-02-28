@@ -11,7 +11,7 @@ try:
 except:
     import pickle
 
-from twisted.web                import client
+from twisted.web                import client, resource
 from twisted.web.iweb           import IBodyProducer
 from twisted.internet           import protocol, reactor, defer
 from twisted.web.http           import PotentialDataLoss
@@ -96,37 +96,37 @@ class Solr(object):
 
 
     def updatePeopleIndex(self, myId, me, orgId):
-        mailId = me['basic']['emailId']
+        mailId = me.basic['emailId']
         fields = [self.elementMaker.field(myId, {"name":"id"}),
                   self.elementMaker.field(orgId, {"name":"org"}),
                   self.elementMaker.field('people', {"name":"_type"}),
                   self.elementMaker.field(mailId, {'name':'email'}) ]
 
         for field in ['name', 'lastname', 'firstname', 'jobTitle']:
-            if field in me['basic']:
-                fields.append(self.elementMaker.field(_toUnicodeOrText(me['basic'][field]), {'name': field}))
+            if field in me.basic:
+                fields.append(self.elementMaker.field(_toUnicodeOrText(me.basic[field]), {'name': field}))
 
         for field in ['phone', 'mobile']:
-            if field in me.get('contact', {}):
-                fields.append(self.elementMaker.field(_toUnicodeOrText(me['contact'][field]), {'name': field}))
+            if field in me.contact:
+                fields.append(self.elementMaker.field(_toUnicodeOrText(me.contact[field]), {'name': field}))
 
         for field in ['email', 'phone', 'mobile', 'currentCity']:
-            if field in me.get('personal', {}):
-                fields.append(self.elementMaker.field(_toUnicodeOrText(me['personal'][field]), {'name': field}))
+            if field in me.personal:
+                fields.append(self.elementMaker.field(_toUnicodeOrText(me.personal[field]), {'name': field}))
 
         schools = set()
-        for school in me.get('schools', {}).keys():
+        for school in me.schools.keys():
             year, name = school.split(':', 1)
             schools.add(name)
         fields.extend([self.elementMaker.field(_toUnicodeOrText(x), {'name': 'school'}) for x in schools])
 
         companies = set()
-        for company in me.get('companies', {}).keys():
+        for company in me.companies.keys():
             end, start, name = company.split(':', 2)
             companies.add(name)
         fields.extend([self.elementMaker.field(_toUnicodeOrText(x), {'name': 'company'}) for x in companies])
 
-        skills = ','.join(me.get('expertise', {}).keys())
+        skills = ','.join(me.expertise.keys())
         if skills:
             fields.append(self.elementMaker.field(_toUnicodeOrText(skills), {'name': 'expertise'}))
 
@@ -400,13 +400,10 @@ class SearchResource(base.BaseResource):
             deferreds.append(d)
 
         yield defer.DeferredList(deferreds)
-        entities = {}
+        entities = base.EntitySet(toFetchEntities)
         args['entities'] = entities
         if toFetchEntities:
-            fetchedEntities = yield db.multiget_slice(toFetchEntities,
-                                                      "entities", ["basic"])
-            fetchedEntities = utils.multiSuperColumnsToDict(fetchedEntities)
-            entities.update(fetchedEntities)
+            yield entities.fetchData()
 
         tags = {}
         args['tags'] = tags
@@ -468,7 +465,7 @@ class SearchResource(base.BaseResource):
                                   relation.initFollowersList()])
         regex = re.compile("(.*?)([^\s]*\s*[^\s]*\s*[^\s]*\s*)(<em class='highlight'>.*<\/em>)(\s*[^\s]*\s*[^\s]*\s*[^\s]*)(.*)")
 
-        res = yield solr.search(term, args['orgKey'], count, toFetchStart, filters={'itemType': 'people'})
+        res = yield solr.search(term, args['orgId'], count, toFetchStart, filters={'itemType': 'people'})
         docs = res.data.get('response', {}).get('docs', [])
         for item in docs:
             entityId = item['id']
@@ -476,7 +473,7 @@ class SearchResource(base.BaseResource):
             toFetchEntities.add(entityId)
 
         while 1:
-            res = yield solr.search(term, args['orgKey'], count, toFetchStart)
+            res = yield solr.search(term, args['orgId'], count, toFetchStart)
             messages = []
             convItems = []
             numMatched = res.data.get('response', {}).get('numFound', 0)
