@@ -27,10 +27,10 @@
        ${navMenuItem("/group?id=%s"%(groupId), _("Back to Group"), "back")}
     </ul>
     <ul id="mymenu" class="v-links sidemenu">
-      %if myId in entities[groupId]['admins']:
-        ${navMenuItem("/groupsettings?id=%s"%(groupId), _("Settings"), "settings")}
+      %if myId in entities[groupId].admins:
+        ${navMenuItem("/groups/edit?id=%s"%(groupId), _("Settings"), "settings")}
         ${navMenuItem("/groups/members?id=%s"%(groupId), _("Manage Members"), "members")}
-        %if entities[groupId]['basic']['access'] != 'open':
+        %if entities[groupId].basic['access'] != 'open':
           ${navMenuItem("/groups/pending?id=%s"%(groupId), _("Pending Requests"), "pending")}
           ${navMenuItem("/groups/banned?id=%s"%(groupId), _("Banned Members"), "banned")}
         %endif
@@ -101,12 +101,12 @@
 
 <%def name="edit_group()">
   <%
-    groupName = entities[groupId]["basic"].get("name", 'Group Name').replace('"', "&quot;")
-    desc = entities[groupId]["basic"].get("desc", '')
-    access = entities[groupId]["basic"].get("access", '')
+    groupName = entities[groupId].basic.get("name", 'Group Name').replace('"', "&quot;")
+    desc = entities[groupId].basic.get("desc", '')
+    access = entities[groupId].basic.get("access", '')
   %>
 
-  <form id="group-form" action="/ajax/groupsettings/edit" method="post" enctype="multipart/form-data">
+  <form id="group-form" action="/ajax/groups/edit" method="post" enctype="multipart/form-data">
     <ul class="styledform">
       <li class="form-row">
           <label class="styled-label" for="name">${_('Group Name')}</label>

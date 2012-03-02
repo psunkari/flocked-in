@@ -91,11 +91,11 @@
   </div>
   <div class="users-details">
     <%
-      groupName = entities[groupId]["basic"].get("name", "-")
-      groupDesc = entities[groupId]["basic"].get("desc", None)
+      groupName = entities[groupId].basic.get("name", "-")
+      groupDesc = entities[groupId].basic.get("desc", None)
     %>
     ${utils.groupName(groupId, entities[groupId], "user-details-name", "div")}
-    <div class="group-details-title">${entities[groupId]["basic"]["access"].capitalize()}</div>
+    <div class="group-details-title">${entities[groupId].basic["access"].capitalize()}</div>
     %if groupDesc:
         <div class="group-details-desc">&nbsp;&ndash;&nbsp;${groupDesc}</div>
     %else:
@@ -174,8 +174,8 @@
             <input type="file" id="dp" size="13" name="dp"/>
       </ul>
       <input id="add-group-form-submit" type="submit" style="display:none;"/>
-      %if myKey:
-        <input type="hidden" value = ${myKey} name="id" />
+      %if myId:
+        <input type="hidden" value = ${myId} name="id" />
       %endif
     </form>
   </div>
@@ -221,7 +221,7 @@
     <button class="button" onclick="$.post('/ajax/groups/unblock', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Unblock")}</span></button>
   %elif action == 'show_manage':
     <button class="button" onclick="$.post('/ajax/groups/remove', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Remove")}</span></button>
-    %if userId not in entities[groupId]['admins']:
+    %if (type(entities[groupId]) != dict and userId not in entities[groupId].admins) or (type(entities[groupId]) == dict and userId not in entities[groupId]['admins']):
       <button class="button" onclick="$.post('/ajax/groups/makeadmin', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Make Admin")}</span></button>
     %else:
       <button class="button" onclick="$.post('/ajax/groups/removeadmin', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Remove Admin")}</span></button>
@@ -270,7 +270,7 @@
   </div>
   <div class="users-details">
     <div class="user-details-name">${utils.userName(userId, entities[userId])}</div>
-    <div class="user-details-title">${entities[userId]["basic"].get("jobTitle", '')}</div>
+    <div class="user-details-title">${entities[userId].basic.get("jobTitle", '')}</div>
     % if groupId and showGroupName:
       <div class="user-details-name">${_("Group:")} ${utils.groupName(groupId, entities[groupId])}</div>
     %endif
