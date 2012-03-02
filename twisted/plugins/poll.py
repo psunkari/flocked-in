@@ -1,5 +1,4 @@
 import time
-import uuid
 from ordereddict        import OrderedDict
 
 from zope.interface     import implements
@@ -7,11 +6,17 @@ from twisted.plugin     import IPlugin
 from twisted.internet   import defer
 from twisted.web        import server
 
-from social             import db, constants, utils, base, errors, _
+from social             import db, constants, utils, base, errors, _, validators
 from social             import template as t
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
 from social.logging     import profile, dump_args, log
+
+
+class PollValidator(validators.SocialSchema):
+    comment = validators.TextWithSnippet()
+    options = validators.PollOptions()
+    showResults = validators.SocialString(if_missing='True')
 
 
 class PollResource(base.BaseResource):
@@ -47,14 +52,14 @@ class PollResource(base.BaseResource):
         voteCount = yield db.get_count(convId, "votes", vote)
         optionCounts[vote] = str(voteCount)
 
-        yield db.batch_insert(convId, "items", {"counts":optionCounts})
+        yield db.batch_insert(convId, "items", {"counts": optionCounts})
         yield self._results(request)
 
     @profile
     @defer.inlineCallbacks
     @dump_args
     def _results(self, request):
-        convId, conv = yield utils.getValidItemId(request, "id", "poll");
+        convId, conv = yield utils.getValidItemId(request, "id", "poll")
 
         data = {}
         userId = request.getSession(IAuthInfo).username
@@ -65,14 +70,14 @@ class PollResource(base.BaseResource):
                                 else False
 
         t.renderScriptBlock(request, "poll.mako", 'poll_results',
-                            False, '#poll-contents-%s'%convId, 'set',
+                            False, '#poll-contents-%s' % convId, 'set',
                             args=[convId, voted], **data)
 
     @profile
     @defer.inlineCallbacks
     @dump_args
     def _change(self, request):
-        convId, conv = yield utils.getValidItemId(request, "id", "poll");
+        convId, conv = yield utils.getValidItemId(request, "id", "poll")
 
         data = {}
         userId = request.getSession(IAuthInfo).username
@@ -83,7 +88,7 @@ class PollResource(base.BaseResource):
                                 else False
 
         t.renderScriptBlock(request, "poll.mako", 'poll_options',
-                            False, '#poll-contents-%s'%convId, 'set',
+                            False, '#poll-contents-%s' % convId, 'set',
                             args=[convId, voted], **data)
 
     @defer.inlineCallbacks
@@ -92,7 +97,7 @@ class PollResource(base.BaseResource):
 
         option = utils.getRequestArg(request, "option")
         if not option or option not in item.get("options", {}):
-            raise errors.MissingParams([_('Option')]);
+            raise errors.MissingParams([_('Option')])
 
         votes = yield db.get_slice(convId, "votes", [option])
         votes = utils.supercolumnsToDict(votes)
@@ -110,8 +115,7 @@ class PollResource(base.BaseResource):
             args['entities'] = people
 
         t.renderScriptBlock(request, "item.mako", "userListDialog", False,
-                            "#poll-users-%s-%s"%(option, convId), "set", **args)
-
+                            "#poll-users-%s-%s" % (option, convId), "set", **args)
 
     @profile
     @dump_args
@@ -123,7 +127,6 @@ class PollResource(base.BaseResource):
             d = self._vote(request)
 
         return self._epilogue(request, d)
-
 
     @profile
     @dump_args
@@ -146,8 +149,8 @@ class Poll(object):
     itemType = "poll"
     position = 5
     hasIndex = True
-    indexFields = {'options':{'template':'poll_option_%s','type':'keyvals'}}
-    monitoredFields = {'meta':['poll_options', 'comment']}
+    indexFields = {'options': {'template': 'poll_option_%s', 'type': 'keyvals'}}
+    monitoredFields = {'meta': ['poll_options', 'comment']}
 
     def renderShareBlock(self, request, isAjax):
         t.renderScriptBlock(request, "poll.mako", "share_poll",
@@ -155,27 +158,25 @@ class Poll(object):
                             attrs={"publisherName": "poll"},
                             handlers={"onload": "(function(obj){$$.publisher.load(obj);$('#share-poll-options').delegate('.input-wrap:last-child','focus',function(event){$(event.target.parentNode).clone().appendTo('#share-poll-options').find('input:text').blur();});})(this);"})
 
-
     def rootHTML(self, convId, isQuoted, args):
         if "convId" in args:
             return t.getBlock("poll.mako", "poll_root", **args)
         else:
             return t.getBlock("poll.mako", "poll_root", args=[convId, isQuoted], **args)
 
-
     @profile
     @defer.inlineCallbacks
     @dump_args
     def fetchData(self, args, convId=None, userId=None, columns=[]):
         convId = convId or args["convId"]
-        myId = userId or args.get("myKey", None)
+        myId = userId or args.get("myId", None)
 
         conv = yield db.get_slice(convId, "items",
                                   ['options', 'counts'].extend(columns))
         conv = utils.supercolumnsToDict(conv, True)
         conv.update(args.get("items", {}).get(convId, {}))
 
-        options = conv["options"] if conv.has_key("options") else None
+        options = conv["options"] if "options" in conv else None
         if not options:
             raise errors.InvalidRequest("The poll does not have any options")
 
@@ -197,45 +198,29 @@ class Poll(object):
 
         defer.returnValue(set())
 
-
     @profile
+    @validators.Validate(PollValidator)
     @defer.inlineCallbacks
     @dump_args
-    def create(self, request, myId, myOrgId, convId, richText=False):
-        snippet, comment = utils.getTextWithSnippet(request, "comment",
-                                        constants.POST_PREVIEW_LENGTH,
-                                        richText=richText)
-        end = utils.getRequestArg(request, "end")
-        start = utils.getRequestArg(request, "start")
-        options = utils.getRequestArg(request, "options", multiValued=True)
-        showResults = utils.getRequestArg(request, "show") or 'True'
-        options = [option for option in options if option]
+    def create(self, request, me, convId, richText=False, data=None):
+        comment, snippet = data['comment']
+        options = data['options']
+        showResults = data['showResults']
 
-        if not comment:
-            raise errors.MissingParams([_('Question')])
-        if len(options) < 2 :
-            raise errors.MissingParams([_('Add atleast two options to choose from')])
-
-        item, attachments = yield utils.createNewItem(request, self.itemType, myId, myOrgId, richText=richText)
+        item = yield utils.createNewItem(request, self.itemType, me, richText=richText)
 
         meta = {"comment": comment, "showResults": showResults}
         if snippet:
             meta["snippet"] = snippet
 
-        if start:
-            meta["poll_start"] = start
-        if end:
-            meta["poll_end"] = end
-
         pollOptions = " ".join(options)
-        meta["poll_options"] = pollOptions  # XXX: Required for keyword monitoring
+        meta["poll_options"] = pollOptions  # XXX:Required for keyword monitoring
 
-        options = OrderedDict([('%02d'%(x), options[x]) for x in range(len(options))])
+        options = OrderedDict([('%02d' % (x), options[x]) for x in range(len(options))])
         item["options"] = options
         item["meta"].update(meta)
 
-        defer.returnValue((item, attachments))
-
+        defer.returnValue(item)
 
     @defer.inlineCallbacks
     def delete(self, myId, itemId, conv):
@@ -243,6 +228,7 @@ class Poll(object):
 
     _ajaxResource = None
     _resource = None
+
     def getResource(self, isAjax):
         if isAjax:
             if not self._ajaxResource:
