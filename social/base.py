@@ -352,3 +352,11 @@ class EntitySet(object):
             if  values.id not in self.ids:
                 self.ids.append(values.id)
             self.data[values.id] = values
+        elif isinstance(values, EntitySet):
+            entities = values
+            for entityId in entities.ids:
+                if entityId not in self.ids:
+                    self.ids.append(entityId)
+                entity = entities.get(entityId, {})
+                if entity:
+                    self.data[entityId] = entity
