@@ -802,19 +802,24 @@ def addUser(emailId, displayName, passwd, orgId, jobTitle=None, timezone=None):
 
 
 @defer.inlineCallbacks
-def removeUser(request, userId, orgAdminId, userInfo=None, orgAdminInfo=None):
-    if not userInfo:
-        cols = yield db.get_slice(userId, "entities", ["basic"])
-        userInfo = supercolumnsToDict(cols)
+def removeUser(request, userId, orgAdminId, user=None, orgAdminInfo=None):
+    import base
+    if not user:
+        #cols = yield db.get_slice(userId, "entities", ["basic"])
+        #userInfo = supercolumnsToDict(cols)
+        user = base.Entity(userId)
+        yield user.fetchData()
     if not orgAdminInfo:
-        cols = yield db.get_slice(orgAdminId, "entities", ["basic"])
-        orgAdminInfo = supercolumnsToDict(cols)
+        #cols = yield db.get_slice(orgAdminId, "entities", ["basic"])
+        #orgAdminInfo = supercolumnsToDict(cols)
+        org = base.Entity(userId)
+        yield org.fetchData()
 
-    emailId = userInfo["basic"].get("emailId", None)
-    displayName = userInfo["basic"].get("name", None)
-    firstname = userInfo['basic'].get('firstname', None)
-    lastname = userInfo['basic'].get('lastname', None)
-    orgId = userInfo["basic"]["org"]
+    emailId = user.basic.get("emailId", None)
+    displayName = user.basic.get("name", None)
+    firstname = user.basic.get('firstname', None)
+    lastname = user.basic.get('lastname', None)
+    orgId = user.basic["org"]
 
     cols = yield db.get_slice(userId, "entities", ['apikeys', 'apps'])
     apps_apiKeys = supercolumnsToDict(cols)
@@ -863,7 +868,7 @@ def removeUser(request, userId, orgAdminId, userInfo=None, orgAdminInfo=None):
                 yield db.insert(groupId, "groupMembers", itemId, orgAdminId)
                 yield db.insert(orgAdminId, "entityGroupsMap", "", group.column.name)
                 yield db.insert(orgAdminId, "entities",  name, groupId, 'adminOfGroups')
-                yield updateDisplayNameIndex(orgAdminId, [groupId], orgAdminInfo['basic']['name'], None)
+                yield updateDisplayNameIndex(orgAdminId, [groupId], org.basic['name'], None)
 
         yield db.remove(groupId, "entities", userId, "admins")
 
