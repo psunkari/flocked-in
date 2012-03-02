@@ -256,11 +256,6 @@
     likeStr = None
     template = None
     other = count
-    print convId, count, iLike, users, '--------------------------'
-    print entities
-    print entities.ids
-    print entities.keys()
-    print '--------------------'
 
     def linkifyLikes(txt):
       return '<a class="ajax" onclick="$$.convs.showItemLikes(\'%s\')">%s</a>' % (convId, txt)
