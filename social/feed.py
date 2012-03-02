@@ -245,27 +245,27 @@ class FeedResource(base.BaseResource):
         menuId = "feed"
 
         if entityId:
-            entity = yield db.get_slice(entityId, "entities", ["basic", "admins"])
-            if not entity:
+            entity = base.Entity(entityId)
+            yield entity.fetchData(['basic', 'admins'])
+
+            if not entity.basic:
                 raise errors.InvalidEntity("feed", entityId)
 
-            entity = utils.supercolumnsToDict(entity)
-            entityType = entity["basic"]['type']
+            entityType = entity.basic['type']
 
-            orgId = entity['basic']["org"] if entity['basic']["type"] != "org" else entityId
+            orgId = entity.basic["org"] if entityType != "org" else entityId
 
             if myOrgId != orgId:
                 raise errors.EntityAccessDenied("organization", entityId)
 
             if entityType == 'org':
                 menuId = "org"
-                feedTitle = _("Company Feed: %s") % entity["basic"]["name"]
+                feedTitle = _("Company Feed: %s") % entity.basic["name"]
             elif entityType == 'group':
                 request.redirect("/group?id=%s"%(entityId))
                 defer.returnValue(None)
-            else:
-                if entityId != myId:
-                    raise errors.EntityAccessDenied("user", entityId)
+            elif entityId != myId:
+                raise errors.EntityAccessDenied("user", entityId)
 
         feedId = entityId or myId
         args["feedTitle"] = feedTitle
@@ -306,9 +306,9 @@ class FeedResource(base.BaseResource):
         if "entities" not in args:
             args["entities"] = entities
         else:
-            for entity in entities:
-                if entity not in args["entities"]:
-                    args["entities"][entity] = entities[entity]
+            for entityId in entities.keys():
+                if entityId not in args["entities"].keys():
+                    args["entities"][entityId] = entities[entityId]
 
         if script:
             onload = """
@@ -339,9 +339,9 @@ class FeedResource(base.BaseResource):
     def _renderMore(self, request, entityId, start, itemType):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
 
-        entity = yield db.get_slice(entityId, "entities", ["basic"])
-        entity = utils.supercolumnsToDict(entity)
-        if entity and entity["basic"].get("type", '') == "group":
+        entity = base.Entity(entityId)
+        yield entity.fetchData()
+        if entity.basic and entity.basic.get("type", '') == "group":
             errors.InvalidRequest("group feed will not be fetched.")
 
         feedItems = yield Feed.get(request.getSession(IAuthInfo),

@@ -14,7 +14,6 @@ from social.base            import APIBaseResource
 from social.isocial         import IAuthInfo
 
 
-
 class PrivateResource(APIBaseResource):
     requireAuth = False
     isLeaf = True
@@ -28,11 +27,10 @@ class PrivateResource(APIBaseResource):
         try:
             session = yield defer.maybeDeferred(request.site.getSession, sessionId)
             session = session.getComponent(IAuthInfo)
-            self._success(request, 200, {'user':session.username,
-                                         'org':session.organization})
+            self._success(request, 200, {'user': session.username,
+                                         'org': session.organization})
         except ttypes.NotFoundException:
             raise errors.NotFoundError()
-
 
     @defer.inlineCallbacks
     def disconnect(self, request):
@@ -46,7 +44,6 @@ class PrivateResource(APIBaseResource):
         orgId = session.getComponent(IAuthInfo).organization
         yield utils.cleanupChat(sessionId, userId, orgId)
         self._success(request, 200, {})
-
 
     @defer.inlineCallbacks
     def isAuthorized(self, request):
@@ -65,7 +62,6 @@ class PrivateResource(APIBaseResource):
             raise errors.InvalidRequest()
         nullString, channelId = channelId.split('/chat/')
 
-
         channels = yield db.get_slice(channelId, "channelSubscribers")
         channels = utils.columnsToDict(channels)
         if not channels:
@@ -75,7 +71,6 @@ class PrivateResource(APIBaseResource):
         else:
             self._success(request, 200, {"reason": "OK"})
 
-
     def render_GET(self, request):
         d = None
         segmentCount = len(request.postpath)
@@ -84,6 +79,6 @@ class PrivateResource(APIBaseResource):
             d = self._validateSession(request)
         elif segmentCount == 1 and request.postpath[0] == "disconnect":
             d = self.disconnect(request)
-        elif segmentCount ==1 and request.postpath[0] == "is-authorized":
+        elif segmentCount == 1 and request.postpath[0] == "is-authorized":
             d = self.isAuthorized(request)
         return self._epilogue(request, d)

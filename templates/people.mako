@@ -91,7 +91,7 @@
   </div>
   <div class="users-details">
     <div class="user-details-name">${utils.userName(userId, entities[userId])}</div>
-    <div class="user-details-title">${entities[userId]["basic"].get("jobTitle", '')}</div>
+    <div class="user-details-title">${entities[userId].basic.get("jobTitle", '')}</div>
     <div class="user-details-actions">
       <ul id="user-actions-${userId}" class="middle user-actions h-links">
         ## XXX: showBlocked should not be the basis for displaying admin actions.

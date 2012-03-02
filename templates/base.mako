@@ -23,7 +23,7 @@
       ${navMenuItem("/messages", _("Messages"), "messages")}
       ${navMenuItem("/event", _("Events"), "events")}
       ${navMenuItem("/people", _("People"), "people")}
-      ${navMenuItem("/feed/%s" % orgKey, _("Company Feed"), "org")}
+      ${navMenuItem("/feed/%s" % orgId, _("Company Feed"), "org")}
       ${navMenuItem("/groups", _("Groups"), "groups")}
       ${navMenuItem("/files/list", _("Files"), "files")}
       ${navMenuItem("/tags/list", _("Tags"), "tags")}
@@ -109,18 +109,18 @@
   </div>
   <div id="topbar">
     <div id="top" class="contents">
-      <% avatarURI = utils.userAvatar(myKey, me) %>
+      <% avatarURI = utils.userAvatar(myId, me) %>
       %if avatarURI:
         <div class="avatar" id="avatar" style="background-image:url('${avatarURI}')"></div>
       %endif
       <div id="sitelogo">
-        <a id="sitelogo-link" href="/" title="${org['basic']['name']}">
-          %if org and org.has_key('basic'):
+        <a id="sitelogo-link" href="/" title="${org.basic['name']}">
+          %if org and org.basic:
             <% logoURI = utils.companyLogo(org) %>
             %if logoURI:
-              <img id="sitelogo-img" src="${logoURI}" alt="${org['basic']['name']}"/>
+              <img id="sitelogo-img" src="${logoURI}" alt="${org.basic['name']}"/>
             %else:
-              <span id="sitename">${org['basic']['name']}</span>
+              <span id="sitename">${org.basic['name']}</span>
             %endif
           %endif
         </a>
@@ -137,9 +137,9 @@
   <div id="menubar">
     <div id="menu" class="contents">
       <%
-        name = me['basic']['name']
-        if me['basic'].has_key('jobTitle'):
-          title = me['basic']['jobTitle']
+        name = me.basic['name']
+        if me.basic.has_key('jobTitle'):
+          title = me.basic['jobTitle']
           name = _('%(name)s, %(title)s') % locals()
       %>
       <div id="name">${name}</div>
@@ -148,7 +148,7 @@
         %if isOrgAdmin:
           <a href="/admin" class="ajax">${_("Admin")}</a>
         %endif
-        <a href="/profile?id=${myKey}" class="ajax">${_("My Profile")}</a>
+        <a href="/profile?id=${myId}" class="ajax">${_("My Profile")}</a>
         <a href="/signout">${_("Sign out")}</a>
       </div>
     </div>
@@ -167,7 +167,7 @@
       var social_config = {
           cometdURL: "${config.get('Cometd', 'Url')}",
           orgId: "${orgId}",
-          myId : "${myKey}"
+          myId : "${myId}"
       }
   </script>
   <script type="text/javascript" src="/rsrcs/js/jquery-1.6.4.js"></script>

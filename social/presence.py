@@ -10,24 +10,25 @@ from telephus.cassandra     import ttypes
 from twisted.internet       import defer
 from twisted.web            import resource, server, http
 
-from social                 import _, __, db, utils,  errors
-from social.base            import BaseResource
+from social                 import _, __, db, utils,  errors, base
 from social.isocial         import IAuthInfo
 from social.logging         import log
 from social                 import template as t
 from social.comet           import comet
 
+
 class PresenceStates:
-    OFFLINE   = 'offline'
-    X_AWAY    = 'x-away'
-    AWAY      = 'away'
-    BUSY      = 'busy'
+    AWAY = 'away'
+    BUSY = 'busy'
+    X_AWAY = 'x-away'
+    OFFLINE = 'offline'
     AVAILABLE = 'available'
-    ORDERED   = [OFFLINE, X_AWAY, AWAY, BUSY, AVAILABLE]
+    ORDERED = [OFFLINE, X_AWAY, AWAY, BUSY, AVAILABLE]
+
 
 @defer.inlineCallbacks
 def clearChannels(userId, sessionId):
-    key = "%s:%s"%(userId, sessionId)
+    key = "%s:%s" % (userId, sessionId)
     cols = yield db.get_slice(key, "sessionChannelsMap")
     channels = utils.columnsToDict(cols).keys()
     for channelId in channels:
@@ -56,13 +57,13 @@ def updateAndPublishStatus(userId, orgId, sessionId, status, user=None):
 
     if oldPublishedStatus != newPublishedStatus:
         if not user:
-            user = yield db.get_slice(userId, "entities", ['basic'])
-            user = utils.supercolumnsToDict(user)
+            user = base.Entity(userId)
+            yield user.fetchData()
         data = {"userId": userId, 'status': newPublishedStatus,
-                'name': user['basic']['name'],
-                'title': user['basic']['jobTitle'],
+                'name': user.basic['name'],
+                'title': user.basic['jobTitle'],
                 'avatar': utils.userAvatar(userId, user, 's')}
-        yield comet.publish('/presence/'+orgId, data)
+        yield comet.publish('/presence/' + orgId, data)
 
 
 def getMostAvailablePresence(states):
@@ -74,7 +75,7 @@ def getMostAvailablePresence(states):
     return PresenceStates.ORDERED[mostAvailable]
 
 
-class PresenceResource(BaseResource):
+class PresenceResource(base.BaseResource):
     isLeaf = True
 
     @defer.inlineCallbacks
@@ -91,7 +92,6 @@ class PresenceResource(BaseResource):
         yield updateAndPublishStatus(myId, orgId, sessionId, status)
         if status == PresenceStates.OFFLINE:
             yield clearChannels(myId, sessionId)
-
 
     @defer.inlineCallbacks
     def _getPresence(self, request):
@@ -115,18 +115,17 @@ class PresenceResource(BaseResource):
             return
 
         userIds = cols.keys()
-        cols = yield db.multiget_slice(userIds, "entities", super_column='basic')
-        entities = utils.multiColumnsToDict(cols)
-        for entityId in entities:
+        entities = base.EntitySet(userIds)
+        yield entities.fetchData()
+        for entityId in entities.keys():
             entity = entities[entityId]
-            _data = {"userId": entityId, "name": entity['name'],
+            _data = {"userId": entityId, "name": entity.basic['name'],
                      "status": presence.get(entityId, PresenceStates.OFFLINE),
-                     "title": entity["jobTitle"],
-                     "avatar": utils.userAvatar(entityId, {"basic": entity}, 's')}
+                     "title": entity.basic["jobTitle"],
+                     "avatar": utils.userAvatar(entityId,  entity, 's')}
             data.append(_data)
 
         request.write(json.dumps(data))
-
 
     def render_POST(self, request):
         segmentCount = len(request.postpath)
@@ -136,12 +135,11 @@ class PresenceResource(BaseResource):
 
         return self._epilogue(request, d)
 
-
     def render_GET(self, request):
         segmentCount = len(request.postpath)
 
         d = None
-        if segmentCount ==0:
+        if segmentCount == 0:
             d = self._getPresence(request)
 
         return self._epilogue(request, d)

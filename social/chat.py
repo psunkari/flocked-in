@@ -29,7 +29,7 @@ class ChatResource(base.BaseResource):
         comment = utils.getRequestArg(request, 'message')
         channelId = utils.getRequestArg(request, 'room')
 
-        if not comment: # Ignore empty comment
+        if not comment:  # Ignore empty comment
             return
 
         authInfo = request.getSession(IAuthInfo)
@@ -38,24 +38,24 @@ class ChatResource(base.BaseResource):
         timeuuid = uuid.uuid1().bytes
 
         recipientId, recipient = yield utils.getValidEntityId(request, 'to')
-        cols = yield db.get_slice(myId, "entities", super_column='basic')
-        myDetails = utils.columnsToDict(cols)
-        myName = myDetails["name"]
-        myAvatar = utils.userAvatar(myId, {"basic": myDetails}, 's')
+        me = base.Entity(myId)
+        yield me.fetchData()
+        myName = me.basic['name']
+        myAvatar = utils.userAvatar(myId, me, 's')
 
         chatId = utils.getUniqueKey()
         sessionId = request.getCookie('session')
         try:
             col = yield db.get(orgId, 'presence', sessionId, myId)
         except ttypes.NotFoundException:
-            self.setResponseCodeAndWrite(request, 200, {'error':  'You are currently offline'})
+            self.setResponseCodeAndWrite(request, 200, {'error': 'You are currently offline'})
             return
 
         cols = yield db.get_slice(orgId, "presence", super_column=recipientId)
         recipientStatus = getMostAvailablePresence(
                                 utils.columnsToDict(cols).values())
         if recipientStatus == PresenceStates.OFFLINE:
-            self.setResponseCodeAndWrite(request, 200, {'error':  'Cannot send message. User is currently offline'})
+            self.setResponseCodeAndWrite(request, 200, {'error': 'Cannot send message. User is currently offline'})
             return
 
         message = {"from": myName, "to": recipientId, "message": comment,
@@ -70,36 +70,36 @@ class ChatResource(base.BaseResource):
                                       for x in channelSubscribers])
 
             if myId not in channelSubscribers:
-                self.setResponseCodeAndWrite(request, 200, {'error':  'Access denied'})
+                self.setResponseCodeAndWrite(request, 200, {'error': 'Access denied'})
                 return
             yield db.insert(channelId, 'channelSubscribers', '', '%s:%s'\
-                            %(myId, sessionId))
-            yield db.insert("%s:%s" %(myId, sessionId), "sessionChannelsMap",
+                            % (myId, sessionId))
+            yield db.insert("%s:%s" % (myId, sessionId), "sessionChannelsMap",
                             '', channelId)
 
             data["room"] = channelId
 
-            startKey = '%s:'%recipientId
+            startKey = '%s:' % recipientId
             cols = yield db.get_slice(channelId, "channelSubscribers",
                                       start=startKey, count=1)
             count = len([col for col in cols \
                          if col.column.name.startswith(startKey)])
             try:
-                yield comet.publish('/chat/%s'%(channelId), message)
+                yield comet.publish('/chat/%s' % (channelId), message)
                 if not count:
-                    yield comet.publish('/notify/%s'%(recipientId), data)
+                    yield comet.publish('/notify/%s' % (recipientId), data)
             except Exception, e:
-                self.setResponseCodeAndWrite(request, 200, {'error':  'The message could not be sent!'})
+                self.setResponseCodeAndWrite(request, 200, {'error': 'The message could not be sent!'})
                 return
 
         else:
             channelId = utils.getUniqueKey()
             data['room'] = channelId
             try:
-                yield comet.publish('/notify/%s' %(myId), data)
-                yield comet.publish('/notify/%s' %(recipientId), data)
+                yield comet.publish('/notify/%s' % (myId), data)
+                yield comet.publish('/notify/%s' % (recipientId), data)
             except Exception, e:
-                self.setResponseCodeAndWrite(request, 200, {'error':  'The message could not be sent!'})
+                self.setResponseCodeAndWrite(request, 200, {'error': 'The message could not be sent!'})
                 return
 
             yield db.insert(channelId, 'channelSubscribers', '', myId)
@@ -125,12 +125,11 @@ class ChatResource(base.BaseResource):
             for userId in channelSubscribers:
                 yield db.insert(chatId, "chatParticipants", '', userId)
         for userId in channelSubscribers:
-            yield db.insert(chatId, "chatLogs", '%s:%s'%(myId, comment),
+            yield db.insert(chatId, "chatLogs", '%s:%s' % (myId, comment),
                             timeuuid)
             yield db.insert(userId, "chatArchiveList", chatId, timeuuid)
             if oldTimeuuid:
                 yield db.remove(userId, "chatArchiveList", oldTimeuuid)
-
 
     @defer.inlineCallbacks
     def _getMyStatus(self, request):
@@ -148,7 +147,6 @@ class ChatResource(base.BaseResource):
 
         request.write(json.dumps({"status": status}))
 
-
     def render_GET(self, request):
         segmentCount = len(request.postpath)
         d = None
@@ -161,7 +159,6 @@ class ChatResource(base.BaseResource):
 
         return self._epilogue(request, d)
 
-
     def render_POST(self, request):
         segmentCount = len(request.postpath)
         d = None
@@ -169,6 +166,7 @@ class ChatResource(base.BaseResource):
         if segmentCount == 0:
             d = self._postChat(request)
         return self._epilogue(request, d)
+
 
 class ChatArchivesResource(base.BaseResource):
 
@@ -196,13 +194,13 @@ class ChatArchivesResource(base.BaseResource):
         prevPageStart = ''
         nextPageStart = ''
         cols = yield db.get_slice(myId, "chatArchiveList", start=start,
-                                  count=count+1, reverse=True)
+                                  count=count + 1, reverse=True)
         chatIds = [col.column.value for col in cols]
-        if len(cols) == count+1:
+        if len(cols) == count + 1:
             chatIds = chatIds[:count]
             nextPageStart = utils.encodeKey(cols[-1].column.name)
         cols = yield db.get_slice(myId, "chatArchiveList", start=start,
-                                  count=count+1)
+                                  count=count + 1)
         if len(cols) > 1 and start:
             prevPageStart = utils.encodeKey(cols[-1].column.name)
         if chatIds:
@@ -212,16 +210,15 @@ class ChatArchivesResource(base.BaseResource):
                 chats[chatId] = []
                 for col in cols[chatId]:
                     entityId, comment = col.column.value.split(':', 1)
-                    chats[chatId] = (entityId, comment, col.column.timestamp/1e6)
-        #chats = utils.multiColumnsToDict(chats, True)
+                    chats[chatId] = (entityId, comment, col.column.timestamp / 1e6)
         participants = yield db.multiget_slice(chatIds, "chatParticipants")
         participants = utils.multiColumnsToDict(participants)
         entityIds = set([])
         for chatId in participants:
             entityIds.update(participants[chatId])
-        entities = yield db.multiget_slice(entityIds, "entities", ['basic'])
-        entities = utils.multiSuperColumnsToDict(entities)
-        entities[myId] = args['me']
+        entities = base.EntitySet(entityIds)
+        yield entities.fetchData()
+        entities.update(args['me'])
         args.update({'chatParticipants': participants,
                       'entities': entities,
                       'chats': chats,
@@ -243,7 +240,6 @@ class ChatArchivesResource(base.BaseResource):
         orgId = args['orgId']
         landing = not self._ajax
 
-
         if script and landing:
             t.render(request, "chat.mako", **args)
 
@@ -252,7 +248,7 @@ class ChatArchivesResource(base.BaseResource):
                                 landing, "#mainbar", "set", **args)
 
         chatId = utils.getRequestArg(request, 'id')
-        start= utils.getRequestArg(request, 'start') or ''
+        start = utils.getRequestArg(request, 'start') or ''
         start = utils.decodeKey(start)
         count = 25
         if not chatId:
@@ -266,23 +262,23 @@ class ChatArchivesResource(base.BaseResource):
 
         entityIds = set()
         chatLogs = []
-        nextPageStart=''
+        nextPageStart = ''
 
-        cols = yield db.get_slice(chatId, "chatLogs", start=start, count=count+1)
+        cols = yield db.get_slice(chatId, "chatLogs", start=start, count=count + 1)
         for col in cols:
-            timestamp = col.column.timestamp/1e6
+            timestamp = col.column.timestamp / 1e6
             entityId, comment = col.column.value.split(':', 1)
             entityIds.add(entityId)
             chatLogs.append((entityId, comment, timestamp))
 
-        if len(cols) == count+1:
+        if len(cols) == count + 1:
             nextPageStart = utils.encodeKey(cols[-1].column.name)
             chatLogs = chatLogs[:count]
 
-        entities = yield db.multiget_slice(chatParticipants, "entities", ['basic'])
-        entities = utils.multiSuperColumnsToDict(entities)
-        entities[myId] = args['me']
-        title = "Chat with " + ",".join([entities[x]['basic']['name'] \
+        entities = base.EntitySet(chatParticipants)
+        yield entities.fetchData()
+        entities.update(args['me'])
+        title = "Chat with " + ",".join([entities[x].basic['name'] \
                                          for x in chatParticipants if x != myId])
         args.update({"chatLogs": chatLogs, "chatId": chatId,
                      "entities": entities, "nextPageStart": nextPageStart,
@@ -300,7 +296,6 @@ class ChatArchivesResource(base.BaseResource):
         else:
             t.renderScriptBlock(request, "chat.mako", "chat",
                                 landing, "#next-page-loader", "replace", **args)
-
 
     def render_GET(self, request):
         segmentCount = len(request.postpath)

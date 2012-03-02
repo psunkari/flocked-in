@@ -194,7 +194,7 @@
                   parentMeta = items[parentId]['meta']
                   parentType = parentMeta.get('type', 'status')
                   parentOwnerId = parentMeta['owner']
-                  parentOwnerName = entities[parentOwnerId]['basic']['name']
+                  parentOwnerName = entities[parentOwnerId].basic['name']
             %>
             %if parentId:
               ${_("%(ownerName)s, in reply to <a class='ajax' href='/item?id=%(parentId)s'>%(parentOwnerName)s's %(parentType)s</a>") % locals()}
@@ -215,7 +215,7 @@
               timestamp = int(itemMeta['timestamp'])
               likesCount = int(itemMeta.get('likesCount', '0'))
               commentsCount = int(itemMeta.get('responseCount', '0'))
-              myTimezone = me['basic'].get("timezone", None)
+              myTimezone = me.basic.get("timezone", None)
             %>
             ${utils.simpleTimestamp(timestamp, myTimezone)}
             %if likesCount:
@@ -298,7 +298,7 @@
     rTypeClasses = {"status": "comment", "question": "answer", "L": "like"}
     simpleTimestamp = utils.simpleTimestamp
     rTypeClass = "comment"
-    tzone = me['basic']['timezone']
+    tzone = me.basic['timezone']
   %>
   %if people and fromSidebar :
     ${listUsers()}
@@ -383,7 +383,7 @@
   </div>
   <div class="users-details">
     <div class="user-details-name">${utils.userName(userId, entities[userId])}</div>
-    <div class="user-details-title">${entities[userId]["basic"].get("jobTitle", '')}</div>
+    <div class="user-details-title">${entities[userId].basic.get("jobTitle", '')}</div>
   </div>
 </%def>
 

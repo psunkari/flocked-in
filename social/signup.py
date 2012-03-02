@@ -1,17 +1,12 @@
-import PythonMagick
-import imghdr
 import time
 from datetime           import datetime
 
 
 from twisted.internet   import defer
-from twisted.web        import server, resource, static
-from twisted.mail.smtp  import sendmail
+from twisted.web        import server, static
 from twisted.cred.error import Unauthorized
 from telephus.cassandra import ttypes
-from email.mime.text    import MIMEText
 
-import social.constants as constants
 from social.base        import BaseResource
 from social             import utils, db, config, people, errors, _
 from social             import notifications, blacklist, template as t
@@ -39,11 +34,11 @@ class DomainBlacklisted(errors.BaseError):
 @profile
 @defer.inlineCallbacks
 @dump_args
-def getOrgKey(domain):
+def getOrgId(domain):
     cols = yield db.get_slice(domain, "domainOrgMap")
     cols = utils.columnsToDict(cols)
-    orgKey = cols.keys()[0] if cols else None
-    defer.returnValue(orgKey)
+    orgId = cols.keys()[0] if cols else None
+    defer.returnValue(orgId)
 
 
 @defer.inlineCallbacks
@@ -57,12 +52,12 @@ def _sendmailResetPassword(email, token):
            "This link is valid for 24hours only.\n"\
            "If you did not request this email there is no need for further action\n"
 
-    resetPasswdUrl = "%(rootUrl)s/password/resetPassword?email=%(email)s&token=%(token)s"%(locals())
+    resetPasswdUrl = "%(rootUrl)s/password/resetPassword?email=%(email)s&token=%(token)s" % (locals())
     args = {"brandName": brandName, "rootUrl": rootUrl,
-            "resetPasswdUrl": resetPasswdUrl, "email":email}
-    subject = "[%(brandName)s] Reset Password requested for %(email)s" %(locals())
+            "resetPasswdUrl": resetPasswdUrl, "email": email}
+    subject = "[%(brandName)s] Reset Password requested for %(email)s" % (locals())
     htmlBody = t.getBlock("emails.mako", "forgotPasswd", **args)
-    textBody = body %(locals())
+    textBody = body % (locals())
     yield utils.sendmail(email, subject, textBody, htmlBody)
 
 
@@ -77,8 +72,8 @@ def _getResetPasswordTokens(email):
         if col.column.name.startswith('resetPasswdToken'):
             tokens.append(col.column.value)
             deleteTokens.append(col.column.name)
-            if col.column.timestamp/1e6 < leastTimestamp :
-                leastTimestamp = col.column.timestamp/1e6
+            if col.column.timestamp / 1e6 < leastTimestamp:
+                leastTimestamp = col.column.timestamp / 1e6
         else:
             validEmail = True
     defer.returnValue((validEmail, tokens, deleteTokens, leastTimestamp))
@@ -97,13 +92,13 @@ def _sendSignupInvitation(emailId):
     brandName = config.get('Branding', 'Name')
     signature = "Flocked-in Team.\n\n\n\n"
 
-    myOrgId = yield getOrgKey(domain)
+    myOrgId = yield getOrgId(domain)
     if myOrgId:
         entities = yield db.get_slice(myOrgId, "entities", ["basic"])
-        myOrg =  utils.supercolumnsToDict(entities)
+        myOrg = utils.supercolumnsToDict(entities)
         orgName = myOrg['basic']['name']
     else:
-        orgName =  domain
+        orgName = domain
 
     existing = yield db.get_slice(emailId, "userAuth", ["user"])
     existing = utils.columnsToDict(existing)
@@ -114,7 +109,7 @@ def _sendSignupInvitation(emailId):
         textBody = (body + signature) % locals()
         htmlBody = t.getBlock("emails.mako", "accountExists", **locals())
     else:
-        subject = "Welcome to %s" %(brandName)
+        subject = "Welcome to %s" % (brandName)
         body = "Please click the following link to join %(orgName)s network on %(brandName)s\n"\
                "%(activationUrl)s\n\n"
         activationTmpl = "%(rootUrl)s/signup?email=%(emailId)s&token=%(token)s"
@@ -144,7 +139,8 @@ class SignupResource(BaseResource):
         try:
             yield db.get(emailId, "userAuth", "user")
             defer.returnValue(None)
-        except: pass
+        except:
+            pass
         try:
             local, domain = emailId.split('@')
             sender = yield db.get(domain, "invitations", token, emailId)
@@ -171,7 +167,6 @@ class SignupResource(BaseResource):
         args = {'emailId': emailId, 'token': token, 'view': 'userinfo'}
         t.render(request, "signup.mako", **args)
 
-
     # Results of first step in signup - basic user information
     @defer.inlineCallbacks
     def _signupGotUserData(self, request):
@@ -188,7 +183,6 @@ class SignupResource(BaseResource):
 
         yield self._addUser(request)
 
-
     # Results of second step in signup - invite co-workers
     @defer.inlineCallbacks
     def _signupInviteCoworkers(self, request):
@@ -199,7 +193,6 @@ class SignupResource(BaseResource):
         rawEmailIds = utils.getRequestArg(request, 'email', multiValued=True) or []
         stats = yield people.invite(request, rawEmailIds)
         request.redirect('/feed')
-
 
     @defer.inlineCallbacks
     def _signup(self, request):
@@ -217,7 +210,6 @@ class SignupResource(BaseResource):
             self.invalidEmailPage.render_GET(request)
 
         defer.returnValue(None)
-
 
     @profile
     @defer.inlineCallbacks
@@ -238,17 +230,18 @@ class SignupResource(BaseResource):
         if passwd != pwdrepeat:
             raise PasswordsNoMatch()
 
-        args = {'emailId': emailId, 'view':'invite'}
+        args = {'emailId': emailId, 'view': 'invite'}
 
         existingUser = yield existingUser
         if not existingUser:
             authinfo = yield defer.maybeDeferred(request.getSession, IAuthInfo)
-            orgId = yield getOrgKey(domain)
+            orgId = yield getOrgId(domain)
             if not orgId:
                 orgId = utils.getUniqueKey()
-                domains = {domain:''}
-                basic = {"name":domain, "type":"org"}
-                yield db.batch_insert(orgId, "entities", {"basic":basic,"domains":domains})
+                domains = {domain: ''}
+                basic = {"name": domain, "type": "org"}
+                yield db.batch_insert(orgId, "entities", {"basic": basic,
+                                                          "domains": domains})
                 yield db.insert(domain, "domainOrgMap", '', orgId)
 
             userId = yield utils.addUser(emailId, displayName, passwd,
@@ -263,7 +256,7 @@ class SignupResource(BaseResource):
 
             userIds = cols.get(emailId, {}).values()
             if userIds:
-                db.batch_remove({'invitationsSent':userIds}, names=[emailId])
+                db.batch_remove({'invitationsSent': userIds}, names=[emailId])
 
             yield db.remove(domain, "invitations", super_column=emailId)
             t.render(request, "signup.mako", **args)
@@ -274,7 +267,7 @@ class SignupResource(BaseResource):
             otherInvitees = [x for x in userIds
                              if x not in (acceptedInvitationSender, emailId)]
 
-            cols = yield db.multiget_slice(userIds+[orgId, userId], "entities", ["basic"])
+            cols = yield db.multiget_slice(userIds + [orgId, userId], "entities", ["basic"])
             entities = utils.multiSuperColumnsToDict(cols)
             data = {"entities": entities, 'orgId': orgId}
 
@@ -282,7 +275,6 @@ class SignupResource(BaseResource):
             yield notifications.notify(otherInvitees, ":NU", userId, **data)
         else:
             raise InvalidRegistration("A user with this e-mail already exists! Already registered?")
-
 
     @defer.inlineCallbacks
     def _block(self, request, blockType):
@@ -318,7 +310,7 @@ class SignupResource(BaseResource):
         validEmail, tokens, deleteTokens, leastTimestamp = yield _getResetPasswordTokens(email)
         if validEmail:
             if token not in tokens:
-                raise PermissionDenied("Invalid token. <a href='/password/resend?email=%s'>Click here</a> to reset password"%(email))
+                raise PermissionDenied("Invalid token. <a href='/password/resend?email=%s'>Click here</a> to reset password" % (email))
             yield db.insert(email, "userAuth", utils.hashpass(passwd), 'passwordHash')
             yield db.batch_remove({"userAuth": [email]}, names=deleteTokens)
         request.redirect('/signin')
@@ -335,12 +327,12 @@ class SignupResource(BaseResource):
         validEmail, tokens, deleteTokens, leastTimestamp = yield _getResetPasswordTokens(email)
         if len(tokens) >= 10:
             delta = datetime.fromtimestamp(leastTimestamp + 86399) - datetime.fromtimestamp(now)
-            hours = 1 + delta.seconds/3600
-            raise PermissionDenied('We detected ususual activity from your account.<br/>  Click the link sent to your emailId to reset password or wait for %s hours before you retry'%(hours))
+            hours = 1 + delta.seconds / 3600
+            raise PermissionDenied('We detected ususual activity from your account.<br/>  Click the link sent to your emailId to reset password or wait for %s hours before you retry' % (hours))
 
         if validEmail:
             token = utils.getRandomKey()
-            yield db.insert(email, "userAuth", token, 'resetPasswdToken:%s'%(token), ttl=86400)
+            yield db.insert(email, "userAuth", token, 'resetPasswdToken:%s' % (token), ttl=86400)
             yield _sendmailResetPassword(email, token)
 
         args = {"view": "forgotPassword-post"}
@@ -349,7 +341,7 @@ class SignupResource(BaseResource):
     @defer.inlineCallbacks
     def renderForgotPassword(self, request):
         args = {"view": "forgotPassword"}
-        t.render(request, "signup.mako",  **args)
+        t.render(request, "signup.mako", **args)
 
     @defer.inlineCallbacks
     def renderResetPassword(self, request):
@@ -362,9 +354,9 @@ class SignupResource(BaseResource):
         validEmail, tokens, deleteTokens, leastTimestamp = yield _getResetPasswordTokens(email)
         # XXX: If not validEmail, send invite to the user
         if not validEmail or token not in tokens:
-            raise PermissionDenied("Invalid token. <a href='/password/resend?email=%s'>Click here</a> to reset password"%(email))
+            raise PermissionDenied("Invalid token. <a href='/password/resend?email=%s'>Click here</a> to reset password" % (email))
         args = {"view": "resetPassword", "email": email, "token": token}
-        t.render(request, "signup.mako",  **args)
+        t.render(request, "signup.mako", **args)
 
     @defer.inlineCallbacks
     def _verifyProfile(self, request):
@@ -376,7 +368,7 @@ class SignupResource(BaseResource):
 
         cols = yield db.get_slice(email, "userAuth", ["reactivateToken", "isFlagged"])
         cols = utils.columnsToDict(cols)
-        if cols.has_key("isFlagged"):
+        if "isFlagged" in cols:
             storedToken = cols.get("reactivateToken", None)
             if storedToken == token:
                 yield db.batch_remove({"userAuth": [email]},
@@ -414,7 +406,6 @@ class SignupResource(BaseResource):
                     d = self._block(request, "all")
         return self._epilogue(request, d)
 
-
     @profile
     @dump_args
     def render_POST(self, request):
@@ -429,6 +420,7 @@ class SignupResource(BaseResource):
         # It will take care of calling request.finish asyncly
         if segmentCount == 1 and request.postpath[0] == "signup":
             d = self._signup(request)
+
             def errback(err):
                 log.err(err)
                 request.setResponseCode(500)
@@ -443,7 +435,7 @@ class SignupResource(BaseResource):
                 elif action == 'forgotPassword':
                     d = self.request_resetPassword(request)
             else:
-                if action == 'invite' :
+                if action == 'invite':
                     d = self._signupInviteCoworkers(request)
                 elif action == 'create':
                     d = self._signupGotUserData(request)

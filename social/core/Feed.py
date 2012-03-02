@@ -2,7 +2,7 @@
 from twisted.internet   import defer
 from twisted.plugin     import getPlugins
 
-from social             import db, errors, utils, plugins
+from social             import db, errors, utils, plugins, base
 from social.relations   import Relation
 from social.isocial     import IAuthInfo, IFeedUpdateType
 
@@ -38,7 +38,7 @@ def get(auth, feedId=None, feedItemsId=None, convIds=None,
     toFetchTags = set()     #
 
     items = {}              # Fetched items, entities and tags
-    entities = {}           #
+    entities = base.EntitySet([])#
     tags = {}               #
 
     deleted = []            # List of items that were deleted
@@ -269,7 +269,8 @@ def get(auth, feedId=None, feedItemsId=None, convIds=None,
                 convIds.remove(convId)
 
     # Fetch all required entities
-    entities_d = db.multiget_slice(toFetchEntities, "entities", ["basic"])
+    entities = base.EntitySet(toFetchEntities)
+    entities_d = entities.fetchData()
 
     # Results of previously initiated fetches (items, tags, entities, likes)
     fetchedItems = yield items_d
@@ -281,8 +282,11 @@ def get(auth, feedId=None, feedItemsId=None, convIds=None,
     fetchedMyLikes = yield myLikes_d
     myLikes.update(utils.multiColumnsToDict(fetchedMyLikes))
 
-    fetchedEntities = yield entities_d
-    entities.update(utils.multiSuperColumnsToDict(fetchedEntities))
+    #fetchedEntities = yield entities_d
+    #entities.update(utils.multiSuperColumnsToDict(fetchedEntities))
+    yield entities_d
+    data['entities'].update(entities)
+
 
     # Time to build reason strings (and reason userIds)
     if getReasons:

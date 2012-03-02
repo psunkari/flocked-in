@@ -35,6 +35,7 @@ from social.logging     import dump_args, profile, log
 # Currently we only have a e-mail handler.
 notificationHandlers = []
 
+
 def notify(userIds, notifyId, value, timeUUID=None, **kwargs):
     if not userIds:
         return defer.succeed([])
@@ -47,6 +48,7 @@ def notify(userIds, notifyId, value, timeUUID=None, **kwargs):
     if notifyIdParts[0] or notifyIdParts[1] not in ["GR", "NM", "MR", "MA"]:
         d1 = db.multiget_slice(userIds, "notificationItems",
                                super_column=notifyId, count=3, reverse=True)
+
         def deleteOlderNotifications(results):
             mutations = {}
             timestamp = int(time.time() * 1e6)
@@ -76,7 +78,6 @@ def notify(userIds, notifyId, value, timeUUID=None, **kwargs):
                                  'latest': {'notifications': colmap},
                                  'notificationItems': {notifyId: {timeUUID: value}}}
         deferreds.append(db.batch_mutate(mutations))
-
 
     if notifyIdParts[0]:
         convId, convType, convOwner, notifyType = notifyIdParts
@@ -200,17 +201,17 @@ class NotificationByMail(object):
         # Local variables used to render strings
         me = kwargs["me"]
         myId = kwargs["myId"]
-        senderName = me["basic"]["name"]
+        senderName = me.basic["name"]
         convOwnerId = kwargs["convOwnerId"]
         entities = kwargs.get("entities", {})
-        convOwnerName = entities[convOwnerId]["basic"]["name"]
+        convOwnerName = entities[convOwnerId].basic["name"]
         stringCache = {}
 
         # Filter out users who don't need notification
         def needsNotifyCheck(userId):
-            attr = 'notifyMyItem'+notifyType if convOwnerId == userId\
-                                         else 'notifyItem'+notifyType
-            user = entities[userId]['basic']
+            attr = 'notifyMyItem' + notifyType if convOwnerId == userId\
+                                               else 'notifyItem' + notifyType
+            user = entities[userId].basic
             return settings.getNotifyPref(user.get("notify", ''),
                             getattr(settings, attr), settings.notifyByMail)
         users = [x for x in recipients if needsNotifyCheck(x)]
@@ -218,7 +219,7 @@ class NotificationByMail(object):
         # Actually send the mail notification.
         def sendNotificationMail(followerId, data):
             toOwner = True if followerId == convOwnerId else False
-            follower = entities[followerId]['basic']
+            follower = entities[followerId].basic
             mailId = follower.get('emailId', None)
             if not mailId:
                 return defer.succeed(None)
@@ -233,7 +234,7 @@ class NotificationByMail(object):
                 if 'comment_html' in data:
                     data['comment'] = data['comment_html']
                 h = t.getBlock("emails.mako",
-                             "notifyOwner"+notifyType, **data)
+                             "notifyOwner" + notifyType, **data)
                 return utils.sendmail(mailId, s, b, h)
 
             # Sending to user other than conversation owner
@@ -245,8 +246,8 @@ class NotificationByMail(object):
                 b = b % data
                 if 'comment_html' in data:
                     data['comment'] = data['comment_html']
-                h = t.getBlock("emails.mako", "notifyOther"+notifyType, **data)
-                stringCache.update({'subject':s, 'text':b, 'html':h})
+                h = t.getBlock("emails.mako", "notifyOther" + notifyType, **data)
+                stringCache.update({'subject': s, 'text': b, 'html': h})
 
             return utils.sendmail(mailId, stringCache['subject'],
                                   stringCache['text'], stringCache['html'])
@@ -274,7 +275,6 @@ class NotificationByMail(object):
 
         yield defer.DeferredList(deferreds)
 
-
     # Sends the same message to all the recipients
     @defer.inlineCallbacks
     def notifyOtherUpdate(self, recipients, notifyId, value, **kwargs):
@@ -286,12 +286,12 @@ class NotificationByMail(object):
 
         entities = kwargs['entities']
         data = kwargs.copy()
-        senderName = entities[value]['basic']['name']
+        senderName = entities[value].basic['name']
         senderAvatarUrl = utils.userAvatar(value, entities[value], 'medium')
 
         if 'orgId' in data:
             orgId = data['orgId']
-            data['networkName'] = entities[orgId]['basic']['name']
+            data['networkName'] = entities[orgId].basic['name']
 
         data.update({'rootUrl': rootUrl, 'brandName': brandName,
                      'senderId': value, 'senderName': senderName,
@@ -299,24 +299,24 @@ class NotificationByMail(object):
 
         if notifyType in ['NM', 'MR', 'MA']:
             convId = data['convId']
-            convUrl = "%s/messages/thread?id=%s" %(rootUrl, convId)
+            convUrl = "%s/messages/thread?id=%s" % (rootUrl, convId)
             data.update({"convUrl": convUrl})
         elif notifyType == "KW":
             keyword = notifyIdParts[2]
-            keywordUrl = "%s/admin/keyword-matches?keyword=%s" %(rootUrl, keyword)
-            data.update({"keyword":keyword, "keywordUrl":keywordUrl})
+            keywordUrl = "%s/admin/keyword-matches?keyword=%s" % (rootUrl, keyword)
+            data.update({"keyword": keyword, "keywordUrl": keywordUrl})
 
         subject = self._otherNotifySubject[notifyType] % data
         body = self._otherNotifyBody[notifyType] + self._signature
         body = body % data
-        html = t.getBlock("emails.mako", "notify"+notifyType, **data)
+        html = t.getBlock("emails.mako", "notify" + notifyType, **data)
 
         # Sent the mail if recipient prefers to get it.
         deferreds = []
-        prefAttr = getattr(settings, 'notify'+notifyType)
+        prefAttr = getattr(settings, 'notify' + notifyType)
         prefMedium = settings.notifyByMail
         for userId in recipients:
-            user = entities[userId]['basic']
+            user = entities[userId].basic
             mailId = user.get('emailId', None)
             sendMail = settings.getNotifyPref(user.get("notify", ''),
                                               prefAttr, prefMedium)
@@ -328,7 +328,6 @@ class NotificationByMail(object):
         yield defer.DeferredList(deferreds)
 
 notificationHandlers.append(NotificationByMail())
-
 
 
 #
@@ -348,7 +347,7 @@ class NotificationsResource(base.BaseResource):
                         3: ["%(user0)s, %(user1)s and 1 other commented on your %(itemType)s",
                             "%(user0)s, %(user1)s and 1 other commented on %(owner)s's %(itemType)s"],
                         4: ["%(user0)s, %(user1)s and %(count)s others commented on your %(itemType)s",
-                            "%(user0)s, %(user1)s and %(count)s others commented on %(owner)s's %(itemType)s"] }
+                            "%(user0)s, %(user1)s and %(count)s others commented on %(owner)s's %(itemType)s"]}
 
     _answerTemplate = {1: ["%(user0)s answered your %(itemType)s",
                            "%(user0)s answered %(owner)s's %(itemType)s"],
@@ -357,7 +356,7 @@ class NotificationsResource(base.BaseResource):
                        3: ["%(user0)s, %(user1)s and 1 other answered your %(itemType)s",
                            "%(user0)s, %(user1)s and 1 other answered %(owner)s's %(itemType)s"],
                        4: ["%(user0)s, %(user1)s and %(count)s others answered your %(itemType)s",
-                           "%(user0)s, %(user1)s and %(count)s others answered %(owner)s's %(itemType)s"] }
+                           "%(user0)s, %(user1)s and %(count)s others answered %(owner)s's %(itemType)s"]}
 
     _likesTemplate = {1: ["%(user0)s liked your %(itemType)s",
                           "%(user0)s liked %(owner)s's %(itemType)s"],
@@ -462,7 +461,7 @@ class NotificationsResource(base.BaseResource):
                 if value not in notifyIds:
                     fetchedNotifyIds.append(value)
                     keysFromStore.append(col.column.name)
-                    timestamps[value] = col.column.timestamp/1e6
+                    timestamps[value] = col.column.timestamp / 1e6
 
             if not keysFromStore:
                 break
@@ -517,10 +516,9 @@ class NotificationsResource(base.BaseResource):
                     notifyValues[notifyId].append(update.value)
 
         # Fetch the required entities
-        fetchedEntities = yield db.multiget_slice(toFetchEntities,
-                                                  "entities", ["basic"])
-        entities.update(utils.multiSuperColumnsToDict(fetchedEntities))
-        myOrg = entities.get(myOrgId, {'basic': {'name':''}})
+        entities = base.EntitySet(toFetchEntities)
+        yield entities.fetchData()
+        myOrg = entities.get(myOrgId)
 
         # Build strings to notify actions on conversations
         def buildConvStr(notifyId):
@@ -530,7 +528,7 @@ class NotificationsResource(base.BaseResource):
             notifyUsers[notifyId] = userIds
             noOfUsers = len(userIds)
 
-            vals = dict([('user'+str(idx), utils.userName(uid, entities[uid]))\
+            vals = dict([('user' + str(idx), utils.userName(uid, entities[uid]))\
                             for idx, uid in enumerate(userIds[0:2])])
 
             vals["count"] = noOfUsers - 2
@@ -573,21 +571,21 @@ class NotificationsResource(base.BaseResource):
 
             pfx = 'group' if x == 'GA' else 'user'
             if x == 'GA':
-                vals = dict([(pfx+str(idx), utils.groupName(uid, entities[uid]))\
+                vals = dict([(pfx + str(idx), utils.groupName(uid, entities[uid]))\
                             for idx, uid in enumerate(userIds[0:2])])
             else:
-                vals = dict([(pfx+str(idx), utils.userName(uid, entities[uid]))\
+                vals = dict([(pfx + str(idx), utils.userName(uid, entities[uid]))\
                             for idx, uid in enumerate(userIds[0:2])])
             if x == 'GI':
                 groupId = notifyId.split(':')[2]
                 vals.update({'group0': utils.groupName(groupId, entities[groupId])})
             elif x == 'KW':
                 keyword = notifyId.split(':')[2]
-                vals.update({'keyword': '<a class="ajax" href="/admin/keyword-matches?keyword=%s">%s</a>'%(keyword, keyword)})
+                vals.update({'keyword': '<a class="ajax" href="/admin/keyword-matches?keyword=%s">%s</a>' % (keyword, keyword)})
 
             vals["count"] = noOfUsers - 2
             vals["brandName"] = brandName
-            vals["networkName"] = myOrg['basic']['name']
+            vals["networkName"] = myOrg.basic['name']
 
             if noOfUsers > 4:
                 noOfUsers = 4
@@ -625,7 +623,6 @@ class NotificationsResource(base.BaseResource):
                 "timestamps": timestamps,
                 "nextPageStart": nextPageStart}
         defer.returnValue(args)
-
 
     @profile
     @defer.inlineCallbacks
@@ -665,7 +662,6 @@ class NotificationsResource(base.BaseResource):
                                     landing, "#notifications", "set", **args)
             yield utils.render_LatestCounts(request, landing)
 
-
     @profile
     @dump_args
     def render_GET(self, request):
@@ -677,4 +673,3 @@ class NotificationsResource(base.BaseResource):
             d = utils.getLatestCounts(request)
             d.addCallback(lambda x: request.write('$$.menu.counts(%s);' % x))
         return self._epilogue(request, d)
-

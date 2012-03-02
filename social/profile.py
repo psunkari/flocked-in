@@ -51,7 +51,7 @@ class ProfileResource(base.BaseResource):
         timestamps = {}
         items = {}
         nextPageStart = None
-        args = {'myKey': myId}
+        args = {'myId': myId}
 
         relation = Relation(myId, [])
         yield relation.initGroupsList()
@@ -143,12 +143,12 @@ class ProfileResource(base.BaseResource):
             if success:
                 toFetchEntities.update(ret)
 
-        fetchedEntities = yield db.multiget(toFetchEntities, "entities", "basic")
-        entities = utils.multiSuperColumnsToDict(fetchedEntities)
+        entities = base.EntitySet(toFetchEntities)
+        yield entities.fetchData()
 
         tags = {}
         if toFetchTags:
-            userOrgId = entities[userId]["basic"]["org"]
+            userOrgId = entities[userId].basic["org"]
             fetchedTags = yield db.get_slice(userOrgId, "orgTags", toFetchTags)
             tags = utils.supercolumnsToDict(fetchedTags)
 
@@ -159,7 +159,7 @@ class ProfileResource(base.BaseResource):
                 "tags": tags, "myLikes": myLikes, "userItems": userItems,
                 "responses": responses, "nextPageStart": nextPageStart,
                 "timestamps": timestamps }
-        del args['myKey']
+        del args['myId']
         args.update(data)
         defer.returnValue(args)
 
@@ -170,11 +170,10 @@ class ProfileResource(base.BaseResource):
     def _follow(self, myId, targetId):
         d1 = db.insert(myId, "subscriptions", "", targetId)
         d2 = db.insert(targetId, "followers", "", myId)
-
-        d3 = db.multiget_slice([myId, targetId], "entities", ["basic"])
-        def notifyFollow(cols):
-            users = utils.multiSuperColumnsToDict(cols)
-            data = {'entities': users}
+        entities = base.EntitySet([myId, targetId])
+        d3 = entities.fetchData()
+        def notifyFollow(res):
+            data = {'entities': entities}
             return notifications.notify([targetId], ":NF", myId, **data)
         d3.addCallback(notifyFollow)
 
@@ -187,7 +186,6 @@ class ProfileResource(base.BaseResource):
     def _unfollow(self, myId, targetId):
         d1 = db.remove(myId, "subscriptions", targetId)
         d2 = db.remove(targetId, "followers", myId)
-        log.info(targetId, myId)
         yield defer.DeferredList([d1, d2])
 
 
@@ -195,10 +193,11 @@ class ProfileResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _reportUser(self, request, myId, targetId):
-        cols = yield db.multiget_slice([myId, targetId], "entities", ["basic"])
-        users = utils.multiSuperColumnsToDict(cols)
-        reportedBy = users[myId]["basic"]["name"]
-        email = users[targetId]["basic"]["emailId"]
+
+        entities = base.EntitySet([myId, targetId])
+        yield entities.fetchData()
+        reportedBy = entities[myId].basic["name"]
+        email = entities[targetId].basic["emailId"]
         rootUrl = config.get('General', 'URL')
         brandName = config.get('Branding', 'Name')
         authinfo = request.getSession(IAuthInfo)
@@ -252,10 +251,10 @@ class ProfileResource(base.BaseResource):
         # XXX: We should use getValidEntityId to fetch the entire user
         # info instead of another call to the database.
         request.addCookie('cu', userId, path="/ajax/profile")
-        cols = yield db.get_slice(userId, "entities")
-        if cols:
-            user = utils.supercolumnsToDict(cols)
-            args["user"] = user
+        user = base.Entity(userId)
+        yield user.fetchData([])
+        if user._data:
+            args['user'] = user
 
         detail = utils.getRequestArg(request, "dt") or "activity"
         args["detail"] = detail
@@ -339,13 +338,6 @@ class ProfileResource(base.BaseResource):
         # user groups and common items.
         entitiesToFetch = followers.union(subscriptions)\
                                    .difference(fetchedEntities)
-        cols = yield db.multiget_slice(entitiesToFetch,
-                                       "entities", super_column="basic")
-        rawUserData = {}
-        for key, data in cols.items():
-            if len(data) > 0:
-                rawUserData[key] = utils.columnsToDict(data)
-        args["rawUserData"] = rawUserData
 
         # List the user's groups (and look for groups common with me)
         cols = yield db.multiget_slice([myId, userId], "entityGroupsMap")
@@ -358,13 +350,13 @@ class ProfileResource(base.BaseResource):
         args["commonGroups"] = commonGroups
 
         groupsToFetch = commonGroups.union(userGroups)
-        cols = yield db.multiget_slice(groupsToFetch, "entities",
-                                       super_column="basic")
-        rawGroupData = {}
-        for key, data in cols.items():
-            if len(data) > 0:
-                rawGroupData[key] = utils.columnsToDict(data)
-        args["rawGroupData"] = rawGroupData
+        entitiesToFetch = entitiesToFetch.union(groupsToFetch)
+        entities = base.EntitySet(entitiesToFetch)
+        yield entities.fetchData()
+        for entityId, entity in entities.items():
+            if not entity._data:
+               del entities[entityId]
+        args["entities"] = entities
 
         if script:
             t.renderScriptBlock(request, "profile.mako", "user_subscriptions",
