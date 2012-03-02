@@ -1,19 +1,9 @@
-import time
-import uuid
 import datetime
 import pytz
 import calendar
 import json
-import re
 from pytz import timezone
-from twisted.internet   import defer
-from telephus.cassandra import ttypes
-from dateutil.relativedelta import relativedelta, weekday, MO, TU, WE, TH, \
-                                        FR, SA, SU
-#
-#from dateutil.rrule import rrule, rruleset, rrulestr, \
-#                                YEARLY, MONTHLY, WEEKLY, DAILY, HOURLY, \
-#                                MINUTELY, SECONDLY, MO, TU, WE, TH, FR, SA, SU
+from dateutil.relativedelta import relativedelta
 try:
     import cPickle as pickle
 except:
@@ -23,7 +13,6 @@ from operator import itemgetter, attrgetter
 from zope.interface     import implements
 from twisted.plugin     import IPlugin
 from twisted.internet   import defer
-from twisted.web        import server
 
 from social             import db, utils, base, errors, _
 from social             import template as t
@@ -77,7 +66,8 @@ class EventResource(base.BaseResource):
             for invitee in invitees:
                 relation = Relation(invitee, [])
                 yield relation.initGroupsList()
-                withinAcl = utils.checkAcl(invitee, myOrgId, False, relation, conv["meta"])
+                withinAcl = utils.checkAcl(invitee, myOrgId, False,
+                                           relation, conv["meta"])
                 if withinAcl:
                     new_invitees.append(invitee)
 
@@ -101,15 +91,20 @@ class EventResource(base.BaseResource):
                             %("%d people invited to this event" %len(new_invitees)))
             #XXX: Push to the invited user's feed.
         else:
-            request.write("""$$.alerts.info('%s');""" \
-                            %("Invited persons are already on the invitation list"))
+            if not invitees:
+                request.write("""$$.alerts.info('%s');""" \
+                                %("Invited persons are already on the invitation list"))
+            else:
+                request.write("""$$.alerts.info('%s');""" \
+                                %("Invited persons do not have access to this event"))
 
         request.write("$('#item-subactions .tagedit-listelement-old').remove();")
 
 
     @defer.inlineCallbacks
     def _attendance(self, request):
-        itemId, item = yield utils.getValidItemId(request, "id", columns=["invitees"])
+        itemId, item = yield utils.getValidItemId(request, "id",
+                                                  columns=["invitees"])
         list_type = utils.getRequestArg(request, 'type') or "yes"
         user_list = []
 
@@ -120,7 +115,8 @@ class EventResource(base.BaseResource):
                 resp = rsvp.split(":")[0]
                 uid = rsvp.split(":")[1]
                 if resp == list_type:
-                    if uid in item["invitees"] and item["invitees"][uid] == list_type:
+                    if uid in item["invitees"] and \
+                      item["invitees"][uid] == list_type:
                         user_list.insert(0, uid)
                     else:
                         user_list.append(uid)
@@ -129,7 +125,8 @@ class EventResource(base.BaseResource):
 
             entities = {}
             owner = item["meta"].get("owner")
-            cols = yield db.multiget_slice(invited+[owner], "entities", ["basic"])
+            cols = yield db.multiget_slice(invited+[owner], "entities",
+                                           ["basic"])
             entities = utils.multiSuperColumnsToDict(cols)
 
             args = {"users": invited, "entities": entities}
@@ -156,7 +153,8 @@ class EventResource(base.BaseResource):
         if not response or response not in ('yes', 'maybe', 'no'):
             raise errors.InvalidRequest()
 
-        convId, conv = yield utils.getValidItemId(request, "id", columns=["invitees"])
+        convId, conv = yield utils.getValidItemId(request, "id",
+                                                  columns=["invitees"])
 
         if not conv:
             raise errors.MissingParams([_("Event ID")])
@@ -217,8 +215,10 @@ class EventResource(base.BaseResource):
             elif response == "maybe":
                 rsp = _("You may attend")
 
-            request.write("$('#event-rsvp-status-%s').text('%s');" %(convId, rsp))
-            request.write("$('#conv-%s .event-join-decline').text('%s');" %(convId, rsp))
+            request.write("$('#event-rsvp-status-%s').text('%s');"
+                                                            %(convId, rsp))
+            request.write("$('#conv-%s .event-join-decline').text('%s');"
+                                                            %(convId, rsp))
 
         if deferreds:
             res = yield defer.DeferredList(deferreds)
@@ -268,7 +268,7 @@ class EventResource(base.BaseResource):
             start = None
         print "start is %s" % (str(start))
 
-        args.update({'view':view})
+        args.update({'view':view, 'menuId': 'events'})
         args.update({'page':page, 'entityId': entityId})
 
         if script and landing:
@@ -282,18 +282,15 @@ class EventResource(base.BaseResource):
                                         start=start)
 
         if script:
-            if page == 1:
-
-                onload = """
-                         $$.menu.selectItem('events');
-                         $$.events.prepareAgendaDatePicker('%s')
-                         """ % (args["start"])
-                t.renderScriptBlock(request, 'event.mako', "render_events", landing,
-                                    "#center", "set", True,
-                                    handlers={"onload": onload}, **args)
-            else:
-                t.renderScriptBlock(request, "event.mako", "events",
-                                    landing, "#next-page-loader", "replace", **args)
+            onload = """
+                     $$.menu.selectItem('events');
+                     $$.events.prepareAgendaDatePicker('%s')
+                     """ % (args["start"])
+            t.renderScriptBlock(request, 'event.mako', "render_events",
+                                landing, ".center-contents", "set", True,
+                                handlers={"onload": onload}, **args)
+        else:
+            t.render(request, "event.mako", **args)
 
 
     @profile
@@ -333,7 +330,7 @@ class Event(object):
     disabled = False
     hasIndex = True
     indexFields = {'meta': set(['event_desc', 'event_location', 'event_title'])}
-    monitorFields = {}
+    monitorFields = {'meta': set(['event_desc', 'event_location', 'event_title'])}
 
     @profile
     @defer.inlineCallbacks
@@ -348,10 +345,10 @@ class Event(object):
             desc = conv["meta"]["desc"]
             titleSnippet = utils.toSnippet(desc, 80)
         noOfRequesters = len(set(requesters))
-        reasons = {1: "%s invited you to the event: %s ",
-                   2: "%s and %s invited you to the event: %s ",
-                   3: "%s, %s and 1 other invited you to the event: %s ",
-                   4: "%s, %s and %s others invited you to the event: %s "}
+        reasons = {1: "%s invited you to the event: %s",
+                   2: "%s and %s invited you to the event: %s",
+                   3: "%s, %s and 1 other invited you to the event: %s",
+                   4: "%s, %s and %s others invited you to the event: %s"}
         vals = []
         for userId in requesters:
             userName = utils.userName(userId, users[userId])
@@ -366,19 +363,15 @@ class Event(object):
 
 
     def renderShareBlock(self, request, isAjax):
-        authinfo = request.getSession(IAuthInfo)
-        myId = authinfo.username
-        orgId = authinfo.organization
-
-        templateFile = "event.mako"
-        renderDef = "share_event"
 
         onload = """
-                (function(obj){$$.publisher.load(obj)})(this);
-                $$.events.prepareDateTimePickers();
-                $$.events.autoFillUsers();
+                (function(obj){
+                    $$.publisher.load(obj);
+                    $$.events.prepareDateTimePickers();
+                    $$.events.autoFillUsers();
+                })(this);
                 """
-        t.renderScriptBlock(request, templateFile, renderDef,
+        t.renderScriptBlock(request, "event.mako", "share_event",
                                 not isAjax, "#sharebar", "set", True,
                                 attrs={"publisherName": "event"},
                                 handlers={"onload": onload})
@@ -388,7 +381,8 @@ class Event(object):
         if "convId" in args:
             return t.getBlock("event.mako", "event_root", **args)
         else:
-            return t.getBlock("event.mako", "event_root", args=[convId, isQuoted], **args)
+            return t.getBlock("event.mako", "event_root",
+                              args=[convId, isQuoted], **args)
 
 
     @profile
@@ -397,40 +391,43 @@ class Event(object):
     def fetchData(self, args, convId=None):
         convId = convId or args["convId"]
         myId = args["myKey"]
-        my_response = ""
-        responses = {}
-        yes_people, no_people, maybe_people = [], [], []
+        myResponse = ""
+        userResponses = {}
+        yesPeople, noPeople, maybePeople = [], [], []
 
-        #List of invited people
-        invitees = yield db.multiget_slice([convId], "items", ["invitees"])
-        invitees = utils.multiSuperColumnsToDict(invitees)
-        args.setdefault("invited_people", {})[convId] = invitees[convId]["invitees"]
+        # List of invited people
+        invitees = yield db.get_slice(convId, "items", ["invitees"])
+        invitees = utils.supercolumnsToDict(invitees)
+        args.setdefault("invitedPeople", {})[convId] = \
+                                                    invitees["invitees"]
 
-        #Status of others
+        # Status of others
         cols = yield db.get_slice(convId, "eventResponses")
         res = utils.columnsToDict(cols).keys()
         for x in res:
             resp, userId = x.split(":")
-            responses[userId] = resp
-            {'yes':lambda id: yes_people.append(id),
-             'no':lambda id: no_people.append(id),
-             'maybe':lambda id: maybe_people.append(id)}[resp](userId)
+            userResponses[userId] = resp
+            if resp == "yes":
+                yesPeople.append(userId)
+            elif resp == "no":
+                noPeople.append(userId)
+            elif resp == "maybe":
+                maybePeople.append(userId)
 
-        args.setdefault("responses", {})[convId] = responses
-        args.setdefault("yes_people", {})[convId] = yes_people
-        args.setdefault("no_people", {})[convId] = no_people
-        args.setdefault("maybe_people", {})[convId] = maybe_people
+        args.setdefault("userResponses", {})[convId] = userResponses
+        args.setdefault("yesPeople", {})[convId] = yesPeople
+        args.setdefault("noPeople", {})[convId] = noPeople
+        args.setdefault("maybePeople", {})[convId] = maybePeople
 
-        args.setdefault("my_response", {})[convId] = responses[myId] if myId in responses else ""
+        args.setdefault("myResponse", {})[convId] = userResponses[myId] \
+                                            if myId in userResponses else ""
 
-        defer.returnValue(invitees[convId]["invitees"].keys()+yes_people+no_people+maybe_people)
+        defer.returnValue(invitees["invitees"].keys()+\
+                            yesPeople+noPeople+maybePeople)
 
 
-    @profile
     @defer.inlineCallbacks
-    @dump_args
     def create(self, request, myId, myOrgId, convId, richText=False):
-
         startDate = utils.getRequestArg(request, 'startDate')
         endDate = utils.getRequestArg(request, 'endDate')
         title = utils.getRequestArg(request, 'title')
@@ -439,6 +436,18 @@ class Event(object):
         allDay = utils.getRequestArg(request, "allDay")
         acl = utils.getRequestArg(request, "acl", sanitize=False)
         isPrivate = utils.getRequestArg(request, "isPrivate")
+
+        if not ((title or desc) and startDate and endDate):
+            raise errors.MissingParams([_('Title'), _('Start date'), _('End date')])
+
+        if startDate.isdigit() and endDate.isdigit():
+            startDate = int(startDate)/1000
+            endDate = int(endDate)/1000
+        else:
+            raise error.InvalidRequest("Invalid start or end dates")
+
+        if endDate < startDate:
+            raise errors.InvalidRequest("Event end date is set in the past")
 
         # Parse invitees from the tag edit plugin values
         arg_keys = request.args.keys()
@@ -451,40 +460,8 @@ class Event(object):
         # The owner is always invited to the event
         invitees.append(myId)
 
-        if not ((title or desc) and startDate and endDate):
-            raise errors.MissingParams([_('Title, Start date and End date are required to create an event')])
+        meta = {"event_startTime": str(startDate), "event_endTime": str(endDate)}
 
-        utc = pytz.utc
-        startDate = datetime.datetime.utcfromtimestamp(float(startDate)/1000).replace(tzinfo=utc)
-        endDate = datetime.datetime.utcfromtimestamp(float(endDate)/1000).replace(tzinfo=utc)
-
-        if endDate < startDate:
-            raise errors.InvalidRequest("Event end date is set in the past")
-
-        if not allDay:
-            startDateTime = datetime.datetime(startDate.year, startDate.month,
-                                              startDate.day, startDate.hour,
-                                              startDate.minute, startDate.second).\
-                                                replace(tzinfo=utc)
-            endDateTime = datetime.datetime(endDate.year, endDate.month,
-                                              endDate.day, endDate.hour,
-                                              endDate.minute, endDate.second).\
-                                                replace(tzinfo=utc)
-
-        else:
-            startDateTime = datetime.datetime(startDate.year, startDate.month,
-                                              startDate.day, 0, 0, 0).\
-                                                replace(tzinfo=utc)
-            endDateTime = datetime.datetime(endDate.year, endDate.month,
-                                              endDate.day, 23,
-                                              59, 59).replace(tzinfo=utc)
-
-        meta = {"event_startTime": str(
-                                        calendar.timegm(
-                                            startDateTime.utctimetuple())),
-                "event_endTime": str(calendar.timegm(
-                                        endDateTime.utctimetuple()))
-                }
         if title:
             meta["event_title"] = title
         if desc:
@@ -496,12 +473,12 @@ class Event(object):
         else:
             meta["event_allDay"] = '0'
 
-        #Check if the invited user ids are valid
+        # Check if the invited user ids are valid
         res = yield db.multiget_slice(invitees, "entities", ['basic'])
         res = utils.multiSuperColumnsToDict(res)
         invitees = [x for x in res.keys() if res[x]["basic"]["org"] == myOrgId]
 
-        #Modify the received ACL to include those who were invited including
+        # Modify the received ACL to include those who were invited including
         # the owner of this item.
         acl = json.loads(acl)
         acl.setdefault("accept", {})
@@ -516,18 +493,15 @@ class Event(object):
         item["meta"].update(meta)
         item["invitees"] = dict([(x, myId) for x in invitees])
 
-        starttime = int(meta["event_startTime"])
-        starttimeUUID = utils.uuid1(timestamp=starttime)
+        starttimeUUID = utils.uuid1(timestamp=startDate)
         starttimeUUID = starttimeUUID.bytes
 
-        endtime = int(meta["event_endTime"])
-        endtimeUUID = utils.uuid1(timestamp=endtime)
+        endtimeUUID = utils.uuid1(timestamp=endDate)
         endtimeUUID = endtimeUUID.bytes
 
         yield self.inviteUsers(request, starttimeUUID, endtimeUUID, convId,
                                     myId, myOrgId, invitees, acl)
 
-        # XXX: We should find a way to make things like this work.
         defer.returnValue((item, attachments))
 
 
@@ -536,7 +510,7 @@ class Event(object):
         log.debug("plugin:delete", convId)
         user_tuids = {}
 
-        #Get the list of every user who responded to this event
+        # Get the list of every user who responded to this event
         res = yield db.get_slice(convId, "eventResponses")
         attendees = [x.column.name.split(":", 1)[1] for x in res]
 
@@ -544,17 +518,19 @@ class Event(object):
         res = yield db.get_slice(convId, "items", ['invitees'])
         res = utils.supercolumnsToDict(res)
         attendees.extend(res["invitees"].keys())
+        invitedPeople = res["invitees"].keys()
 
         log.debug("Maps", ["%s:%s"%(uId, convId) for \
                                        uId in attendees])
 
+        # Get the Org and GroupIds if any.
         convMeta = conv["meta"]
-        res = yield utils.expandAcl(myId, convMeta["org"], convMeta["acl"], convId)
-        attendees.extend(res)
+        groupIds = convMeta["target"].split(",") if "target" in convMeta else []
+        attendees.extend(groupIds+[convMeta["org"]])
 
         log.debug("Attendees", attendees)
 
-        #Get the timeuuids that were inserted for this user
+        # Get the timeuuids that were inserted for this user
         res = yield db.multiget_slice(["%s:%s"%(uId, convId) for \
                                        uId in attendees], "userAgendaMap")
         res = utils.multiColumnsToDict(res)
@@ -562,31 +538,32 @@ class Event(object):
         for k, v in res.iteritems():
             uid = k.split(":", 1)[0]
             tuids = v.keys()
-            user_tuids[uid] = tuids
+            if tuids:
+                user_tuids[uid] = tuids
 
         log.debug("userAgenda Removal", user_tuids)
-        #Delete their entries in the user's list of event entries
+        # Delete their entries in the user's list of event entries
         for attendee in user_tuids:
             yield db.batch_remove({'userAgenda': [attendee]},
                                     names=user_tuids[attendee])
 
-        log.debug("userAgenda Invitation Removal")
-        for attendee in user_tuids:
+        # Delete invitation entries for invited people
+        invited_tuids = dict([[x, user_tuids[x]] for x in invitedPeople])
+        log.debug("userAgenda Invitation Removal", invited_tuids)
+        for attendee in invited_tuids:
             yield db.batch_remove({'userAgenda': ['%s:%s' %(attendee, 'I')]},
-                                    names=user_tuids[attendee])
+                                    names=invited_tuids[attendee])
 
         log.debug("eventResponses Removal", convId)
-        #Delete the event's entry in eventResponses
+        # Delete the event's entry in eventResponses
         yield db.remove(convId, "eventResponses")
 
         log.debug("userAgendaMap Removal", user_tuids)
-        #Delete their entries in userAgendaMap
+        # Delete their entries in userAgendaMap
         for attendee in user_tuids:
             yield db.batch_remove({'userAgendaMap': ["%s:%s"%(attendee, convId)]},
                                     names=user_tuids[attendee])
 
-        #TODO: Also remove references if any of this event in the invitations
-        # column
 
     @defer.inlineCallbacks
     def inviteUsers(self, request, starttimeUUID, endtimeUUID, convId, ownerId,
@@ -594,17 +571,12 @@ class Event(object):
         deferreds = []
         toNotify = {}
         toRemove = {'latest':[]}
+        entitiesToUpdate = []
 
         #TODO:Send notifications to each one of these people
         for invitee in invitees:
-            #Add to the user's agenda
-            d1 = db.insert(invitee, "userAgenda", convId, starttimeUUID)
-            d2 = db.insert(invitee, "userAgenda", convId, endtimeUUID)
-            d3 = db.insert("%s:%s" %(invitee, convId), "userAgendaMap", "",
-                          starttimeUUID)
-            d4 = db.insert("%s:%s" %(invitee, convId), "userAgendaMap", "",
-                          endtimeUUID)
-            deferreds.extend([d1, d3, d2, d4])
+            # Add to each user's agenda
+            entitiesToUpdate.append(invitee)
             if invitee == ownerId:
                 # The organizer auto accepts an event
                 d = db.insert(convId, "eventResponses", "", "yes:%s" %(ownerId))
@@ -612,31 +584,43 @@ class Event(object):
 
             # Add to an additional column for invited users(not the owner)
             if invitee != ownerId:
-                d5 = db.insert("%s:%s" % (invitee, "I"), "userAgenda", convId, starttimeUUID)
-                d6 = db.insert("%s:%s" % (invitee, "I"), "userAgenda", convId, endtimeUUID)
-                deferreds.extend([d5, d6])
+                d1 = db.insert("%s:I" % (invitee), "userAgenda",
+                               convId, starttimeUUID)
+                d2 = db.insert("%s:I" % (invitee), "userAgenda",
+                               convId, endtimeUUID)
+                deferreds.extend([d1, d2])
 
         if acl:
             # Based on the ACL, if company or groups were included, then add an
-            # Extra entry for the company aganda and group agenda.
+            # Extra entry for the company agenda and group agenda.
+            # FIXME: Praveen: technically acl can have a dont-allow list.
+            # we dont want to add event to entities in dont-allow list.
             acl = json.loads(acl)
             extra_entities = []
             if "groups" in acl["accept"]:
-                res = yield db.multiget_slice(acl["accept"]["groups"], "entities", ['basic'])
-                res = utils.multiSuperColumnsToDict(res)
-                extra_entities.extend([x for x in res.keys() if res[x]['basic']['type'] == 'group'])
+                res = yield db.multiget_slice(acl["accept"]["groups"],
+                                              "entities", ['basic'])
+                groups = utils.multiSuperColumnsToDict(res)
+                for groupId, group in groups.iteritems():
+                    #Check if group is really a group and belongs to the same
+                    # org that I belong to.
+                    if group["basic"]["type"] == 'group' and \
+                      group["basic"]["org"] == myOrgId:
+                        extra_entities.append(groupId)
+
             if "orgs" in acl["accept"]:
                 extra_entities.extend([myOrgId])
 
-            for invitee in extra_entities:
-                #Add to the entity's agenda
-                d1 = db.insert(invitee, "userAgenda", convId, starttimeUUID)
-                d2 = db.insert(invitee, "userAgenda", convId, endtimeUUID)
-                d3 = db.insert("%s:%s" %(invitee, convId), "userAgendaMap", "",
-                              starttimeUUID)
-                d4 = db.insert("%s:%s" %(invitee, convId), "userAgendaMap", "",
-                              endtimeUUID)
-                deferreds.extend([d1, d3, d2, d4])
+            entitiesToUpdate.extend(extra_entities)
+
+        for invitee in entitiesToUpdate:
+            d1 = db.insert(invitee, "userAgenda", convId, starttimeUUID)
+            d2 = db.insert(invitee, "userAgenda", convId, endtimeUUID)
+            d3 = db.insert("%s:%s" %(invitee, convId), "userAgendaMap", "",
+                          starttimeUUID)
+            d4 = db.insert("%s:%s" %(invitee, convId), "userAgendaMap", "",
+                          endtimeUUID)
+            deferreds.extend([d1, d3, d2, d4])
 
         if deferreds:
             res = yield defer.DeferredList(deferreds)
@@ -660,8 +644,10 @@ class Event(object):
         my_tz = timezone(args["me"]['basic']['timezone'])
         owner_tz = timezone(args["entities"][owner]['basic']['timezone'])
         utc = pytz.utc
-        startdatetime = datetime.datetime.utcfromtimestamp(float(start)).replace(tzinfo=utc)
-        enddatetime = datetime.datetime.utcfromtimestamp(float(end)).replace(tzinfo=utc)
+        startdatetime = datetime.datetime.utcfromtimestamp(float(start)).\
+                                                            replace(tzinfo=utc)
+        enddatetime = datetime.datetime.utcfromtimestamp(float(end)).\
+                                                            replace(tzinfo=utc)
 
         utc_dt = utc.normalize(startdatetime)
         #In my timezone
@@ -700,18 +686,21 @@ class Event(object):
             args["title"] = _("Company Wide Events")
             yield event.fetchMatchingEvents(request, args, myOrgId)
             t.renderScriptBlock(request, "event.mako", "side_agenda",
-                                   landing, "#feed-side-block-container", "append", **args)
+                                   landing, "#feed-side-block-container",
+                                   "append", **args)
         elif entityId == myId:
             args["title"] = _("My Upcoming Events")
             yield event.fetchMatchingEvents(request, args, myId)
             t.renderScriptBlock(request, "event.mako", "side_agenda",
-                                   landing, "#feed-side-block-container", "append", **args)
+                                   landing, "#feed-side-block-container",
+                                   "append", **args)
         elif entityId == groupId:
             args["title"] = _("Group Agenda")
             groupId = args["groupId"]
             yield event.fetchMatchingEvents(request, args, groupId)
             t.renderScriptBlock(request, "event.mako", "side_agenda",
-                                   landing, "#feed-side-block-container", "append", **args)
+                                   landing, "#feed-side-block-container",
+                                   "append", **args)
 
         #XXX: What if too many expired events come up in the search.
 
@@ -760,12 +749,14 @@ class Event(object):
         sorted_event_ids = [x[0] for x in sorted_time_tuples]
         events_in_this_page = sorted_event_ids[(page-1)*count:page*count]
 
+        print events_in_this_page
         if len(events_in_this_page) >= count:
             nextPage = page + 1
             args.update({'nextPage': nextPage})
         else:
-            args.update({'nextPage': ''})
+            args.update({'nextPage': 0})
 
+        args["prevPage"] = page - 1
         args["items"] = matched_events
         args["conversations"] = events_in_this_page
 
@@ -783,7 +774,8 @@ class Event(object):
             if target:
                 toFetchEntities.update(target.split(','))
 
-        entities = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
+        entities = yield db.multiget_slice(toFetchEntities, "entities",
+                                           ["basic"])
         entities = utils.multiSuperColumnsToDict(entities)
         args["entities"] = entities
         args["relations"] = relation

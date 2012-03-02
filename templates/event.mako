@@ -27,9 +27,11 @@
         <div class="right-contents"></div>
       </div>
       <div id="center">
+        <div class="center-contents">
             %if not script:
                 <%self.render_events()%>
             %endif
+        </div>
       </div>
       <div class="clear"></div>
     </div>
@@ -67,18 +69,18 @@
       <div class="event-people-attending">
         <%
           reason = ""
-          if myId in yes_people[convId]:
-              if len(yes_people[convId]) == 2:
-                  other_person_id = list(set(yes_people[convId]) - set([myId]))[0]
+          if myId in yesPeople[convId]:
+              if len(yesPeople[convId]) == 2:
+                  other_person_id = list(set(yesPeople[convId]) - set([myId]))[0]
                   if present:
                     reason = _("You and %s are attending this event") % (utils.userName(other_person_id, entities[other_person_id]))
                   else:
                     reason = _("You and %s went to this event") % (utils.userName(other_person_id, entities[other_person_id]))
-              elif len(yes_people[convId]) > 2:
+              elif len(yesPeople[convId]) > 2:
                   if present:
-                    reason = _("You and %d others are attending this event") % (len(yes_people[convId]) - 1)
+                    reason = _("You and %d others are attending this event") % (len(yesPeople[convId]) - 1)
                   else:
-                    reason = _("You and %d others went to this event") % (len(yes_people[convId]) - 1)
+                    reason = _("You and %d others went to this event") % (len(yesPeople[convId]) - 1)
               else:
                   if present:
                     reason = _("You are attending this event")
@@ -86,23 +88,23 @@
                     reason = _("You went to this event")
           else:
               if present:
-                  if len(yes_people[convId]) == 1:
-                    reason = "%s is attending" % (utils.userName(yes_people[convId][0],
-                                                  entities[yes_people[convId][0]]))
-                  elif len(yes_people[convId]) == 2:
-                    reason = "%s and %s are attending" % (utils.userName(yes_people[convId][0], entities[yes_people[convId][0]]),
-                                                        utils.userName(yes_people[convId][1], entities[yes_people[convId][1]]))
-                  elif len(yes_people[convId]) == 3:
-                    reason = "%s, %s and %s are attending" % (utils.userName(yes_people[convId][0], entities[yes_people[convId][0]]),
-                                                        utils.userName(yes_people[convId][1], entities[yes_people[convId][1]]),
-                                                        utils.userName(yes_people[convId][2], entities[yes_people[convId][2]]))
-                  elif len(yes_people[convId]) > 3:
-                    reason = "%s, %s and %d others are attending" % (utils.userName(yes_people[convId][0], entities[yes_people[convId][0]]),
-                                                        utils.userName(yes_people[convId][1], entities[yes_people[convId][1]]),
-                                                        len(yes_people[convId]) - 3)
+                  if len(yesPeople[convId]) == 1:
+                    reason = "%s is attending" % (utils.userName(yesPeople[convId][0],
+                                                  entities[yesPeople[convId][0]]))
+                  elif len(yesPeople[convId]) == 2:
+                    reason = "%s and %s are attending" % (utils.userName(yesPeople[convId][0], entities[yesPeople[convId][0]]),
+                                                        utils.userName(yesPeople[convId][1], entities[yesPeople[convId][1]]))
+                  elif len(yesPeople[convId]) == 3:
+                    reason = "%s, %s and %s are attending" % (utils.userName(yesPeople[convId][0], entities[yesPeople[convId][0]]),
+                                                        utils.userName(yesPeople[convId][1], entities[yesPeople[convId][1]]),
+                                                        utils.userName(yesPeople[convId][2], entities[yesPeople[convId][2]]))
+                  elif len(yesPeople[convId]) > 3:
+                    reason = "%s, %s and %d others are attending" % (utils.userName(yesPeople[convId][0], entities[yesPeople[convId][0]]),
+                                                        utils.userName(yesPeople[convId][1], entities[yesPeople[convId][1]]),
+                                                        len(yesPeople[convId]) - 3)
               else:
-                  if len(yes_people[convId]) > 1:
-                    reason = "%d people went to this event" % (len(yes_people[convId]))
+                  if len(yesPeople[convId]) > 1:
+                    reason = "%d people went to this event" % (len(yesPeople[convId]))
                   else:
                     reason = ""
         %>
@@ -112,12 +114,12 @@
         <%
           reason = ""
           if not iamOwner:
-            if myId in invited_people[convId]:
-                invited_by = invited_people[convId][myId]
+            if myId in invitedPeople[convId]:
+                invited_by = invitedPeople[convId][myId]
                 reason = _("%s invited you to this event") % (utils.userName(invited_by, entities[invited_by]))
             else:
-                if len(invited_people[convId]) > 1:
-                    reason = _("You invited %d people to this event") % (len(invited_people[convId]) - 1)
+                if len(invitedPeople[convId]) > 1:
+                    reason = _("You invited %d people to this event") % (len(invitedPeople[convId]) - 1)
                 else:
                     reason = _("You have not invited anyone to this event")
           else:
@@ -131,7 +133,7 @@
       </div>
       <div class="event-join-decline">
         %if present:
-          %if my_response[convId] != "yes":
+          %if myResponse[convId] != "yes":
             <button class="button-link" onclick="$$.events.RSVP('${convId}', 'yes')">${_("Join")}</button>&nbsp;&#183;
             <button class="button-link" onclick="$$.events.RSVP('${convId}', 'no')">${_("Decline")}</button>
           %endif
@@ -149,34 +151,28 @@
 </%def>
 
 <%def name="render_events()">
-  <div class="center-contents">
-    <div class="viewbar">
-        <ul class="h-links view-options">
-          %for item, display in [('agenda', _('Agenda')), ('invitations', _('Invitations'))]:
-            %if view == item:
-              <li class="selected">${_(display)}</li>
-            %else:
-              <li><a href="/event?view=${item}" class="ajax">${_(display)}</a></li>
-            %endif
-          %endfor
-        </ul>
-        <div class="input-wrap" style="float: right;width: 12em;border: none">
-            <input id="agenda-start" type="text" style="width: 10em" disabled="disabled"/>
-            <input type="hidden" id="agenda-start-date" />
-            <input type="hidden" id="agenda-view" value="${view}" />
-        </div>
-    </div>
-    <div class="paged-container" id="events-container">
-      <%events()%>
-      <div id="next-page-loader">
-        %if nextPage:
-          <div id="next-load-wrapper" class="busy-indicator">
-            <a id="next-page-load" class="ajax" data-ref="/event?page=${nextPage}&view=${view}">${_("Fetch more events")}</a>
-          </div>
+<div class="viewbar">
+    <ul class="h-links view-options">
+      %for item, display in [('agenda', _('Agenda')), ('invitations', _('Invitations'))]:
+        %if view == item:
+          <li class="selected">${_(display)}</li>
+        %else:
+          <li><a href="/event?view=${item}" class="ajax">${_(display)}</a></li>
         %endif
-      </div>
+      %endfor
+    </ul>
+    <div class="input-wrap" id="agenda-start-wrapper">
+        <input id="agenda-start" type="text" disabled/>
+        <input type="hidden" id="agenda-start-date" />
+        <input type="hidden" id="agenda-view" value="${view}" />
     </div>
-  </div>
+</div>
+<div class="paged-container" id="events-container">
+  <%events()%>
+</div>
+<div class="pagingbar">
+    <%paging()%>
+</div>
 </%def>
 
 <%def name="events()">
@@ -185,10 +181,27 @@
         <%event_layout(convId, True)%>
       %endfor
     %else:
-        %if not nextPage:
-            <div id="empty-message" >${_("No Events")}</div>
-        %endif
+        <div id="empty-message" >${_("No Events")}</div>
     %endif
+</%def>
+
+<%def name="paging()">
+  <ul class="h-links">
+    %if prevPage:
+      <li class="button">
+        <a class="ajax" data-ref="/event?page=${prevPage}&view=${view}&start=${start}">${_("&#9666; Previous")}</a>
+      </li>
+    %else:
+      <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
+    %endif
+    %if nextPage:
+      <li class="button">
+        <a class="ajax" data-ref="/event?page=${nextPage}&view=${view}&start=${start}">${_("Next &#9656;")}</a>
+      </li>
+    %else:
+      <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
+    %endif
+  </ul>
 </%def>
 
 <%def name="share_event()">
@@ -196,13 +209,13 @@
     <textarea type="text" name="title" placeholder="${_('Title of your event?')}" required=""></textarea>
   </div>
   <div>
-    <div style="display:inline-block;width:12em">
+    <div class="date-picker-wrapper">
       <div class="input-wrap">
         <input type="text" id="startdate"/>
         <input type="hidden" name="startDate" id="startDate" required=""/>
       </div>
     </div>
-    <div style="display:inline-block;width:9em" class="time-picker">
+    <div class="time-picker">
       <div class="input-wrap">
             <select id="starttime">
                 <%
@@ -231,7 +244,7 @@
       </div>
     </div>
     <span><strong>to</strong></span>
-    <div style="display:inline-block;width:9em" class="time-picker">
+    <div class="time-picker">
       <div class="input-wrap">
             <select id="endtime">
                 <%
@@ -262,20 +275,21 @@
         <input type="hidden" id="endTime" name="endTime" required=""/>
       </div>
     </div>
-    <div style="display:inline-block;width:12em">
+    <div class="date-picker-wrapper">
       <div class="input-wrap">
         <input type="text" id="enddate"/>
         <input type="hidden" id="endDate" name="endDate" required=""/>
       </div>
     </div>
-    <div style="display:inline-block;float:right;padding: 4px 0px">
+    <div id="allDay-wrapper">
         <input type="checkbox" name="allDay" id="allDay" style="vertical-align: middle"/>
         <label for="allDay">${_("All day")}</label>
     </div>
   </div>
-  <div style="margin-bottom: 4px">
-    <div class="alert-info" style="padding: 4px;text-align: center">Your timezone is not in order</div>
-  </div>
+  ##TODO:Yet to find a good way of determining the timezone differences between browser and profile
+  ##<div style="margin-bottom: 4px">
+    ##<div class="alert-info" style="padding: 4px;text-align: center">Your timezone is not in order</div>
+  ##</div>
   <div class="input-wrap">
     <textarea type="text" name="location" placeholder="${_('Where is the event being hosted?')}"></textarea>
   </div>
@@ -293,7 +307,7 @@
 
 <%def name="event_root(convId, isQuoted=False, isConcise=False)">
   <%
-    response = my_response[convId]
+    response = myResponse[convId]
     conv = items[convId]
     convMeta = conv["meta"]
     title = convMeta.get("event_title", '')
@@ -314,10 +328,6 @@
     #In my timezone
     start_dt = my_tz.normalize(startdatetime.astimezone(my_tz))
     end_dt = my_tz.normalize(enddatetime.astimezone(my_tz))
-
-    #In owner's timezone
-    owner_start_dt = owner_tz.normalize(startdatetime.astimezone(owner_tz))
-    owner_end_dt = owner_tz.normalize(enddatetime.astimezone(owner_tz))
 
     # Determine if start date and end date are on the same day
     if start_dt.date() == end_dt.date():
@@ -423,9 +433,9 @@
     <div class="sidebar-title">${_("About this event")}</div>
     <div class="conversation-people-add-wrapper">
       <ul class="v-links">
-        %if myId != items[convId]["meta"]["owner"] and myId in invited_people[convId]:
+        %if myId != items[convId]["meta"]["owner"] and myId in invitedPeople[convId]:
           <%
-            invited_by = invited_people[convId][myId]
+            invited_by = invitedPeople[convId][myId]
           %>
           <li>
             <span>${entities[invited_by]["basic"]["name"]}</span>&nbsp;<span>${_("invited you to this event")} &nbsp; </span>
@@ -458,7 +468,7 @@
 </%def>
 
 <%def name="event_actions()">
-  %if myId in invited_people[convId].keys():
+  %if myId in invitedPeople[convId].keys():
     <div class="sidebar-chunk">
       <div class="sidebar-title">${_("Invite Someone")}</div>
       <div class="conversation-people-add-wrapper">
@@ -480,13 +490,13 @@
     iamOwner = myId == items[convId]["meta"]["owner"]
   %>
   <div class="sidebar-chunk">
-    <div class="sidebar-title">${_("Who are attending (%d)") % (len(yes_people[convId]))}</div>
-    %if yes_people[convId]:
+    <div class="sidebar-title">${_("Who are attending (%d)") % (len(yesPeople[convId]))}</div>
+    %if yesPeople[convId]:
       <div class="conversation-attachments-wrapper">
         <ul class="v-links peoplemenu">
-          %for u in yes_people[convId]:
+          %for u in yesPeople[convId][:3]:
             <li>
-              %if u in invited_people[convId].keys():
+              %if u in invitedPeople[convId].keys():
                 <strong>
                   ${utils.userName(u, entities[u])}
                 </strong>
@@ -497,21 +507,21 @@
           %endfor
         </ul>
       </div>
-      %if len(yes_people[convId]) > 4:
-        <div style="float:right; margin-right:10px"><a class="ajax" onclick="$$.events.showEventAttendance('${convId}', 'yes')">and ${len(yes_people[convId]) - 4} more</a></div>
+      %if len(yesPeople[convId]) > 4:
+        <div class="event-show-more-attendees"><a class="ajax" onclick="$$.events.showEventAttendance('${convId}', 'yes')">and ${len(yesPeople[convId]) - 4} more</a></div>
       %endif
     %else:
       <p> No one has accepted your invite yet!</p>
     %endif
   </div>
-  %if maybe_people[convId] and iamOwner:
+  %if maybePeople[convId] and iamOwner:
     <div class="sidebar-chunk">
-      <div class="sidebar-title">${_("Who may attend (%d)") % (len(maybe_people[convId]))}</div>
+      <div class="sidebar-title">${_("Who may attend (%d)") % (len(maybePeople[convId]))}</div>
       <div class="conversation-attachments-wrapper">
         <ul class="v-links peoplemenu">
-          %for u in maybe_people[convId]:
+          %for u in maybePeople[convId][:3]:
             <li>
-              %if u in invited_people[convId].keys():
+              %if u in invitedPeople[convId].keys():
                 <strong>
                   ${utils.userName(u, entities[u])}
                 </strong>
@@ -522,19 +532,19 @@
           %endfor
         </ul>
       </div>
-      %if len(maybe_people[convId]) > 4:
-        <div style="float:right; margin-right:10px"><a class="ajax" onclick="$$.events.showEventAttendance('${convId}', 'maybe')">and ${len(maybe_people[convId]) - 4} more</a></div>
+      %if len(maybePeople[convId]) > 4:
+        <div class="event-show-more-attendees"><a class="ajax" onclick="$$.events.showEventAttendance('${convId}', 'maybe')">and ${len(maybePeople[convId]) - 4} more</a></div>
       %endif
     </div>
   %endif
-  %if no_people[convId] and iamOwner:
+  %if noPeople[convId] and iamOwner:
     <div class="sidebar-chunk">
-      <div class="sidebar-title">${_("Who are not attending (%d)") % (len(no_people[convId]))}</div>
+      <div class="sidebar-title">${_("Who are not attending (%d)") % (len(noPeople[convId]))}</div>
       <div class="conversation-attachments-wrapper">
         <ul class="v-links peoplemenu">
-          %for u in no_people[convId]:
+          %for u in noPeople[convId][:3]:
             <li>
-              %if u in invited_people[convId].keys():
+              %if u in invitedPeople[convId].keys():
                 <strong>
                   ${utils.userName(u, entities[u])}
                 </strong>
@@ -545,8 +555,8 @@
           %endfor
         </ul>
       </div>
-      %if len(no_people[convId]) > 4:
-        <div style="float:right; margin-right:10px;"><a class="ajax" onclick="$$.events.showEventAttendance('${convId}', 'no')">and ${len(no_people[convId]) - 4} more</a></div>
+      %if len(noPeople[convId]) > 4:
+        <div class="event-show-more-attendees"><a class="ajax" onclick="$$.events.showEventAttendance('${convId}', 'no')">and ${len(noPeople[convId]) - 4} more</a></div>
       %endif
     </div>
   %endif
