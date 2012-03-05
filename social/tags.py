@@ -14,6 +14,35 @@ from social.relations   import Relation
 from social.logging     import profile, dump_args, log
 
 
+@defer.inlineCallbacks
+@dump_args
+def _ensureTag(tagName, myId,  orgId, presetTag=False):
+    try:
+        tagName = tagName.lower()
+        c = yield db.get(orgId, "orgTagsByName", tagName)
+        tagId = c.column.value
+        c = yield db.get_slice(orgId, "orgTags", super_column=tagId)
+        tag = utils.columnsToDict(c)
+        if presetTag and not tag.get('isPreset', '') == 'True':
+            yield db.insert(orgId, "orgPresetTags", tagId, tagName)
+
+            yield db.insert(orgId, "orgTags", 'True', 'isPreset', tagId)
+            tag['isPreset'] = 'True'
+    except ttypes.NotFoundException:
+        tagId = utils.getUniqueKey()
+        tag = {"title": tagName, 'createdBy': myId}
+        if presetTag:
+            tag['isPreset'] = 'True'
+        tagName = tagName.lower()
+        yield db.batch_insert(orgId, "orgTags", {tagId: tag})
+        yield db.insert(orgId, "orgTagsByName", tagId, tagName)
+        if presetTag:
+            yield db.insert(orgId, "orgPresetTags", tagId, tagName)
+
+    defer.returnValue((tagId, tag))
+
+
+
 @profile
 @defer.inlineCallbacks
 @dump_args
@@ -22,27 +51,7 @@ def ensureTag(request, tagName, orgId=None, presetTag=False):
     myId = authInfo.username
     myOrgId = authInfo.organization if not orgId else orgId
 
-    try:
-        tagName = tagName.lower()
-        c = yield db.get(myOrgId, "orgTagsByName", tagName)
-        tagId = c.column.value
-        c = yield db.get_slice(myOrgId, "orgTags", super_column=tagId)
-        tag = utils.columnsToDict(c)
-        if presetTag and not tag.get('isPreset', '') == 'True':
-            yield db.insert(myOrgId, "orgPresetTags", tagId, tagName)
-            yield db.insert(myOrgId, "orgTags", 'True', 'isPreset', tagId)
-            tag['isPreset'] = 'True'
-    except ttypes.NotFoundException:
-        tagId = utils.getUniqueKey()
-        tag = {"title": tagName, 'createdBy': myId}
-        if presetTag:
-            tag['isPreset'] = 'True'
-        tagName = tagName.lower()
-        yield db.batch_insert(myOrgId, "orgTags", {tagId: tag})
-        yield db.insert(myOrgId, "orgTagsByName", tagId, tagName)
-        if presetTag:
-            yield db.insert(myOrgId, "orgPresetTags", tagId, tagName)
-
+    tagId, tag = yield _ensureTag(tagName, myId, orgId, presetTag)
     defer.returnValue((tagId, tag))
 
 
@@ -77,9 +86,9 @@ class TagsResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _render(self, request):
-        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
-        myOrgId = args["orgKey"]
+        myOrgId = args["orgId"]
 
         (tagId, tagInfo) = yield utils.getValidTagId(request, 'id')
         args["tags"] = tagInfo
@@ -95,7 +104,7 @@ class TagsResource(base.BaseResource):
                                 landing, "#mainbar", "set", **args)
 
         try:
-            yield db.get(tagId, "tagFollowers", myKey)
+            yield db.get(tagId, "tagFollowers", myId)
             args["tagFollowing"] = True
         except ttypes.NotFoundException:
             pass
@@ -123,7 +132,7 @@ class TagsResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _renderMore(self, request):
-        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
         (tagId, tagInfo) = yield utils.getValidTagId(request, 'id')
         start = utils.getRequestArg(request, 'start') or ""
 
@@ -140,7 +149,7 @@ class TagsResource(base.BaseResource):
     def _listTags(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
-        myOrgId = args["orgKey"]
+        myOrgId = args["orgId"]
 
         start = utils.getRequestArg(request, 'start') or ''
         nextPageStart = ''
