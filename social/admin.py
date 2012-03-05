@@ -12,7 +12,7 @@ from nltk.corpus        import stopwords
 from social             import base, db, utils, people, errors, validators
 from social             import tags, plugins, location_tz_map, _
 from social             import template as t
-from social.core.item   import deleteItem
+from social.item        import deleteItem
 from social.isocial     import IAuthInfo
 from social.constants   import PEOPLE_PER_PAGE
 from social.settings    import saveAvatarItem

@@ -29,17 +29,17 @@ class EventResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _inviteUsers(self, request, convId=None):
-        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
         orgId = args['orgId']
 
         if not convId:
             convId = utils.getRequestArg(request, 'id')
         acl = utils.getRequestArg(request, 'acl', False)
-        invitees = yield utils.expandAcl(myId, orgId, pickle.dumps(json.loads(acl)), convId)
+        invitees = yield utils.expandAcl(myKey, orgId, pickle.dumps(json.loads(acl)), convId)
         #invitees = utils.getRequestArg(request, 'invitees')
         #invitees = invitees.split(',') if invitees else None
-        #myId = request.getSession(IAuthInfo).username
+        #myKey = request.getSession(IAuthInfo).username
         #
         #
         if not convId or not invitees:
@@ -73,7 +73,7 @@ class EventResource(base.BaseResource):
                 yield db.batch_insert(convId, "eventInvitations", {userKey:{timeUUID:''}})
                 yield db.insert(userKey, "userEventInvitations", convId, timeUUID)
                 yield db.insert(userKey, "notifications", convId, timeUUID)
-                value = ":".join([responseType, myId, convId, convType, convOwner])
+                value = ":".join([responseType, myKey, convId, convType, convOwner])
                 yield db.batch_insert(userKey, "notificationItems", {convId:{timeUUID:value}})
 
     @defer.inlineCallbacks
@@ -100,12 +100,12 @@ class EventResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _rsvp(self, request):
-        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
 
         convId = utils.getRequestArg(request, 'id')
         response = utils.getRequestArg(request, 'response')
-        myId = request.getSession(IAuthInfo).username
+        myKey = request.getSession(IAuthInfo).username
         optionCounts = {}
 
         if not response or response not in ('yes', 'maybe', 'no'):
@@ -125,7 +125,7 @@ class EventResource(base.BaseResource):
         timeUUID = timeUUID.bytes
         prevResponse, responseUUID = None, None
 
-        cols = yield db.get_slice(myId, "userEventResponse", [convId])
+        cols = yield db.get_slice(myKey, "userEventResponse", [convId])
         if cols:
             prevResponse, responseUUID = cols[0].column.value.split(":")
 
@@ -133,24 +133,24 @@ class EventResource(base.BaseResource):
             return
 
         if prevResponse:
-            yield db.remove(convId, "eventResponses", myId, prevResponse)
+            yield db.remove(convId, "eventResponses", myKey, prevResponse)
             prevOptionCount = yield db.get_count(convId, "eventResponses", prevResponse)
             optionCounts[prevResponse] = str(prevOptionCount)
-            yield db.remove(myId, "userEvents", responseUUID)
+            yield db.remove(myKey, "userEvents", responseUUID)
 
         if not prevResponse:
             invitations = yield  db.get_slice(convId, "eventInvitations",
-                                              super_column =myId)
+                                              super_column =myKey)
             for invitation in invitations:
                 tuuid = invitation.column.name
-                yield db.remove(myId, "userEventInvitations", tuuid)
-            yield db.remove(convId, "eventInvitations", super_column=myId)
+                yield db.remove(myKey, "userEventInvitations", tuuid)
+            yield db.remove(convId, "eventInvitations", super_column=myKey)
 
-        yield db.insert(myId, "userEventResponse", response+":"+timeUUID, convId)
-        yield db.insert(convId, "eventResponses",  '', myId, response)
+        yield db.insert(myKey, "userEventResponse", response+":"+timeUUID, convId)
+        yield db.insert(convId, "eventResponses",  '', myKey, response)
 
         if response in ("yes", "maybe"):
-            yield db.insert(myId, "userEvents", convId, timeUUID)
+            yield db.insert(myKey, "userEvents", convId, timeUUID)
 
         responseCount = yield db.get_count(convId, "eventResponses", response)
         optionCounts[response] = str(responseCount)
@@ -174,7 +174,7 @@ class EventResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _events(self, request):
-        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
         landing = not self._ajax
         convs = []
         invitations = []
@@ -187,8 +187,8 @@ class EventResource(base.BaseResource):
             t.renderScriptBlock(request, "event.mako", "layout",
                                 landing, "#mainbar", "set", **args)
 
-        myEvents = yield db.get_slice(myId, "userEvents", reverse=True)
-        myInvitations = yield db.get_slice(myId, "userEventInvitations", reverse=True)
+        myEvents = yield db.get_slice(myKey, "userEvents", reverse=True)
+        myInvitations = yield db.get_slice(myKey, "userEventInvitations", reverse=True)
 
         for item in myEvents:
             convs.append(item.column.value)
@@ -202,7 +202,7 @@ class EventResource(base.BaseResource):
         myResponses = {}
 
         if convs:
-            responses = yield db.get_slice(myId, "userEventResponse", convs )
+            responses = yield db.get_slice(myKey, "userEventResponse", convs )
             for item in responses:
                 convId = item.column.name
                 value = item.column.value.split(":")[0]
@@ -322,7 +322,7 @@ class Event(object):
     @dump_args
     def fetchData(self, args, convId=None):
         convId = convId or args["convId"]
-        myId = args["myId"]
+        myKey = args["myKey"]
 
         conv = yield db.get_slice(convId, "items", ["rsvp"])
         if not conv:
@@ -330,7 +330,7 @@ class Event(object):
         conv = utils.supercolumnsToDict(conv)
         conv.update(args.get("items", {}).get(convId, {}))
 
-        myResponse = yield db.get_slice(myId, "userEventResponse", [convId])
+        myResponse = yield db.get_slice(myKey, "userEventResponse", [convId])
         myResponse = myResponse[0].column.value.split(":")[0] if myResponse else ''
 
         startTime = conv['meta'].get('start', None)
@@ -349,7 +349,7 @@ class Event(object):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def create(self, request, me, convId, richText=False):
+    def create(self, request, myId, myOrgId, richText=False):
         startDate = utils.getRequestArg(request, 'startDate')
         startTime = utils.getRequestArg(request, 'startTime')
         endDate = utils.getRequestArg(request, 'endDate') or startDate
@@ -376,7 +376,7 @@ class Event(object):
                                           endDate.day, endTime.hour,
                                           endTime.minute, endTime.second).replace(tzinfo=utc)
 
-        item = yield utils.createNewItem(request, self.itemType, me, richText=richText)
+        item, attachments = yield utils.createNewItem(request, self.itemType, myId, myOrgId, richText=richText)
 
         rsvps = dict([('yes', '0'), ('maybe', '0'), ('no', '0')])
         meta = {"event_startTime": str(calendar.timegm(startDateTime.utctimetuple()))}
@@ -399,7 +399,7 @@ class Event(object):
         # XXX: We should find a way to make things like this work.
         #event = self.getResource(False)
         #yield event._inviteUsers(request, convId)
-        defer.returnValue(item)
+        defer.returnValue((item, attachments))
 
 
     @defer.inlineCallbacks
