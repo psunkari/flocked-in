@@ -66,7 +66,7 @@
   <%
     def getTimestamp(tuuid):
       timestamp = (uuid.UUID(bytes=tuuid).time - 0x01b21dd213814000)/1e7
-      return utils.simpleTimestamp(timestamp, me['basic']['timezone'])
+      return utils.simpleTimestamp(timestamp, me.basic['timezone'])
 
     files, hasPrevPage, nextPageStart, toFetchEntities = userfiles if userfiles else ('', '', '', '')
   %>
