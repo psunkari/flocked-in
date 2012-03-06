@@ -100,7 +100,7 @@
                   parentMeta = items[parentId]['meta']
                   parentType = parentMeta.get('type', 'status')
                   parentOwnerId = parentMeta['owner']
-                  parentOwnerName = entities[parentOwnerId]['basic']['name']
+                  parentOwnerName = entities[parentOwnerId].basic['name']
             %>
             %if parentId:
               ${_("%(ownerName)s, in reply to <a class='ajax' href='/item?id=%(parentId)s'>%(parentOwnerName)s's %(parentType)s</a>") % locals()}
@@ -119,7 +119,7 @@
           <div id="item-footer-${itemId}" class="conv-footer busy-indicator">
             <%
               timestamp = int(itemMeta['timestamp'])
-              myTimezone = me['basic'].get("timezone", None)
+              myTimezone = me.basic.get("timezone", None)
             %>
             ${utils.simpleTimestamp(timestamp, myTimezone)}
 &#183;<button class="ajaxpost button-link" title="Ignore"
