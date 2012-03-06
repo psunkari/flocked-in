@@ -44,7 +44,7 @@
 
     numOthers = len(others)
     def userName(userId):
-      return entities[userId]["basic"]["name"]
+      return entities[userId].basic["name"]
 
     if numOthers > 2:
       return _("Chat with %s, %s and %d others") % (userName(others[0]), userName(others[1]), numOthers-1)
@@ -80,7 +80,7 @@
   <%
     entityId, comment, timestamp = chatLog
     others = [x for x in participants if x != myId]
-    username = entities[entityId]['basic']['name']
+    username = entities[entityId].basic['name']
     if others and entityId == myId:
       entityId = others[-1]
       username = "me"
@@ -95,7 +95,7 @@
       <div class="conversation-row-headers">
         <span class="conversation-row-people">${formatPeopleInConversation(participants, myId, entities)}</span>
         <span class="conversation-row-time">
-          &ndash;&nbsp; ${utils.simpleTimestamp(timestamp, entities[myId]["basic"]["timezone"])}
+          &ndash;&nbsp; ${utils.simpleTimestamp(timestamp, entities[myId].basic["timezone"])}
         </span>
       </div>
       <div class="conversation-row-subject-wrapper" style="max-width:100% !important">
@@ -131,11 +131,11 @@
               <div class="chat-message-header">
                 <div class="chat-summary">
                   <div class="user chat-sender">
-                    <a href="/profile?id=${entityId}" class="ajax">${entities[entityId]["basic"]["name"]}:</a>
+                    <a href="/profile?id=${entityId}" class="ajax">${entities[entityId].basic["name"]}:</a>
                   </div>
                   <span class="conversation-message-message">${comment}</span>
                 </div>
-                <div class="time-label chat-time">${utils.simpleTimestamp(float(timestamp), entities[myId]["basic"]["timezone"])}</div>
+                <div class="time-label chat-time">${utils.simpleTimestamp(float(timestamp), entities[myId].basic["timezone"])}</div>
               </div>
             </div>
             <%
