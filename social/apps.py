@@ -142,9 +142,9 @@ class ApplicationResource(base.BaseResource):
         if script:
             self.setTitle(request, client['meta']['name'])
 
-        authorId = client['meta']['author']
-        author = db.get_slice(authorId, 'entities', ['basic'])
-        args['entities'] = {authorId: author}
+        author = base.Entity(client['meta']['author'])
+        yield author.fetchData()
+        args['entities'] = base.EntitySet(author)
 
         if script:
             t.renderScriptBlock(request, "apps.mako", "appDetails",
@@ -188,8 +188,8 @@ class ApplicationResource(base.BaseResource):
         clients = utils.multiSuperColumnsToDict(clients)
 
         toFetchEntities = set([x.author for x in clients if 'author' in x])
-        entities = yield db.multiget_slice(toFetchEntities, "entities", ["basic"])
-        entities = utils.multiSuperColumnsToDict(entities)
+        entities = base.EntitySet(toFetchEntities)
+        yield entities.fetchData()
 
         args.update({'entities': entities, 'clients': clients, 'apps': appIds})
         if script:
