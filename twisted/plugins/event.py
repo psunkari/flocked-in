@@ -462,6 +462,66 @@ class Event(object):
 
 
     @defer.inlineCallbacks
+    def delete(self, myId, convId, conv):
+        log.debug("plugin:delete", convId)
+        user_tuids = {}
+
+        # Get the list of every user who responded to this event
+        res = yield db.get_slice(convId, "eventResponses")
+        attendees = [x.column.name.split(":", 1)[1] for x in res]
+
+        # Add all the invited people of the item
+        res = yield db.get_slice(convId, "items", ['invitees'])
+        res = utils.supercolumnsToDict(res)
+        attendees.extend(res["invitees"].keys())
+        invitedPeople = res["invitees"].keys()
+
+        log.debug("Maps", ["%s:%s"%(uId, convId) for \
+                                       uId in attendees])
+
+        # Get the Org and GroupIds if any.
+        convMeta = conv["meta"]
+        groupIds = convMeta["target"].split(",") if "target" in convMeta else []
+        attendees.extend(groupIds+[convMeta["org"]])
+
+        log.debug("Attendees", attendees)
+
+        # Get the timeuuids that were inserted for this user
+        res = yield db.multiget_slice(["%s:%s"%(uId, convId) for \
+                                       uId in attendees], "userAgendaMap")
+        res = utils.multiColumnsToDict(res)
+
+        for k, v in res.iteritems():
+            uid = k.split(":", 1)[0]
+            tuids = v.keys()
+            if tuids:
+                user_tuids[uid] = tuids
+
+        log.debug("userAgenda Removal", user_tuids)
+        # Delete their entries in the user's list of event entries
+        for attendee in user_tuids:
+            yield db.batch_remove({'userAgenda': [attendee]},
+                                    names=user_tuids[attendee])
+
+        # Delete invitation entries for invited people
+        invited_tuids = dict([[x, user_tuids[x]] for x in invitedPeople])
+        log.debug("userAgenda Invitation Removal", invited_tuids)
+        for attendee in invited_tuids:
+            yield db.batch_remove({'userAgenda': ['%s:%s' %(attendee, 'I')]},
+                                    names=invited_tuids[attendee])
+
+        log.debug("eventResponses Removal", convId)
+        # Delete the event's entry in eventResponses
+        yield db.remove(convId, "eventResponses")
+
+        log.debug("userAgendaMap Removal", user_tuids)
+        # Delete their entries in userAgendaMap
+        for attendee in user_tuids:
+            yield db.batch_remove({'userAgendaMap': ["%s:%s"%(attendee, convId)]},
+                                    names=user_tuids[attendee])
+
+
+    @defer.inlineCallbacks
     def inviteUsers(self, request, starttimeUUID, endtimeUUID, convId, ownerId,
                      myOrgId, invitees, acl=None):
         deferreds = []
