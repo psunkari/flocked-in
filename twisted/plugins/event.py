@@ -29,147 +29,211 @@ class EventResource(base.BaseResource):
     @profile
     @defer.inlineCallbacks
     @dump_args
-    def _inviteUsers(self, request, convId=None):
-        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+    def _invite(self, request, convId=None):
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
-        orgId = args['orgId']
+        myOrgId = args['orgId']
+        convId, conv = yield utils.getValidItemId(request, "id", columns=["invitees"])
 
-        if not convId:
-            convId = utils.getRequestArg(request, 'id')
-        acl = utils.getRequestArg(request, 'acl', False)
-        invitees = yield utils.expandAcl(myKey, orgId, pickle.dumps(json.loads(acl)), convId)
-        #invitees = utils.getRequestArg(request, 'invitees')
-        #invitees = invitees.split(',') if invitees else None
-        #myKey = request.getSession(IAuthInfo).username
-        #
-        #
-        if not convId or not invitees:
-            raise errors.MissingParams()
+        # Parse invitees from the tag edit plugin values
+        arg_keys = request.args.keys()
+        invitees, new_invitees = [], []
+        for arg in arg_keys:
+            if arg.startswith("invitee[") and arg.endswith("-a]"):
+                rcpt = arg.replace("invitee[", "").replace("-a]", "")
+                if rcpt != "":
+                    invitees.append(rcpt)
 
-        conv = yield db.get_slice(convId, "items")
-        conv = utils.supercolumnsToDict(conv)
+        if myId not in conv["invitees"].keys():
+            raise errors.invalidRequest(_("Only those who are invited can invite others"))
 
-        if not conv:
-            raise errors.MissingParams()
+        res = yield db.multiget_slice(invitees, "entities", ['basic'])
+        res = utils.multiSuperColumnsToDict(res)
+        invitees = [x for x in res.keys() if res[x]["basic"]["org"] == myOrgId]
+        invitees = [x for x in invitees if x not in conv["invitees"].keys()]
+        relation = Relation(myId, [])
 
-        if (conv["meta"].has_key("type") and conv["meta"]["type"] != "event"):
-            raise errors.InvalidRequest()
+        updateConv = {"meta":{}, "invitees":{}}
+        if myId == conv["meta"]["owner"]:
+            #If invited by owner, add the invitees to the ACL
+            acl = conv["meta"]["acl"]
+            acl = pickle.loads(acl)
+            acl.setdefault("accept", {}).setdefault("users", [])
+            acl["accept"]["users"].extend(invitees)
+            updateConv["meta"]["acl"] = pickle.dumps(acl)
+            new_invitees.extend(invitees)
+        else:
+            for invitee in invitees:
+                relation = Relation(invitee, [])
+                yield relation.initGroupsList()
+                withinAcl = utils.checkAcl(invitee, myOrgId, False,
+                                           relation, conv["meta"])
+                if withinAcl:
+                    new_invitees.append(invitee)
 
-        convType = conv["meta"]["type"]
-        convOwner = conv["meta"]["owner"]
-        starttime = int(conv["meta"]["startTime"])
-        timeUUID = utils.uuid1(timestamp=starttime)
-        timeUUID = timeUUID.bytes
-        responseType = "I"
+        if new_invitees:
+            convMeta = conv["meta"]
+            starttime = int(convMeta["event_startTime"])
+            starttimeUUID = utils.uuid1(timestamp=starttime)
+            starttimeUUID = starttimeUUID.bytes
 
-        responses = yield db.get_slice(convId, "eventResponses")
-        responses = utils.supercolumnsToDict(responses)
-        attendees = responses.get("yes", {}).keys() + \
-                     responses.get("maybe", {}).keys() + \
-                     responses.get("no", {}).keys()
+            endtime = int(convMeta["event_endTime"])
+            endtimeUUID = utils.uuid1(timestamp=endtime)
+            endtimeUUID = endtimeUUID.bytes
 
-        #Check if invitees are valid keys
-        for userKey in invitees:
-            if userKey not in attendees:
-                yield db.batch_insert(convId, "eventInvitations", {userKey:{timeUUID:''}})
-                yield db.insert(userKey, "userEventInvitations", convId, timeUUID)
-                yield db.insert(userKey, "notifications", convId, timeUUID)
-                value = ":".join([responseType, myKey, convId, convType, convOwner])
-                yield db.batch_insert(userKey, "notificationItems", {convId:{timeUUID:value}})
+            updateConv["invitees"] = dict([(x, myId) for x in new_invitees])
+            d = yield db.batch_insert(convId, "items", updateConv)
+
+            yield event.inviteUsers(request, starttimeUUID, endtimeUUID,
+                                        convId, conv["meta"]["owner"],
+                                        myOrgId, new_invitees)
+            request.write("""$$.alerts.info('%s');""" \
+                            %("%d people invited to this event" %len(new_invitees)))
+            #XXX: Push to the invited user's feed.
+        else:
+            if not invitees:
+                request.write("""$$.alerts.info('%s');""" \
+                                %("Invited persons are already on the invitation list"))
+            else:
+                request.write("""$$.alerts.info('%s');""" \
+                                %("Invited persons do not have access to this event"))
+
+        request.write("$('#item-subactions .tagedit-listelement-old').remove();")
+
 
     @defer.inlineCallbacks
-    def _invitees(self, request):
-        itemId, item = yield utils.getValidItemId(request, "id")
+    def _attendance(self, request):
+        itemId, item = yield utils.getValidItemId(request, "id",
+                                                  columns=["invitees"])
+        list_type = utils.getRequestArg(request, 'type') or "yes"
+        user_list = []
 
-        if itemId:
-            response = yield db.get_slice(itemId, "eventInvitations")
-            response = utils.supercolumnsToDict(response)
-            invitees = response.keys()
+        if itemId and list_type in ["yes", "no", "maybe"]:
+            cols = yield db.get_slice(itemId, "eventResponses")
+            res = utils.columnsToDict(cols)
+            for rsvp in res.keys():
+                resp = rsvp.split(":")[0]
+                uid = rsvp.split(":")[1]
+                if resp == list_type:
+                    if uid in item["invitees"] and \
+                      item["invitees"][uid] == list_type:
+                        user_list.insert(0, uid)
+                    else:
+                        user_list.append(uid)
+
+            invited = user_list
 
             entities = {}
             owner = item["meta"].get("owner")
-            cols = yield db.multiget_slice(invitees+[owner], "entities", ["basic"])
+            cols = yield db.multiget_slice(invited+[owner], "entities",
+                                           ["basic"])
             entities = utils.multiSuperColumnsToDict(cols)
 
-            args = {"users": invitees, "entities": entities}
-            args['title'] = _("People invited to this event ")
+            args = {"users": invited, "entities": entities}
+            args['title'] = {"yes":_("People attending this event"),
+                             "no": _("People not attending this event"),
+                             "maybe": _("People who may attend this event")
+                             }[list_type]
 
             t.renderScriptBlock(request, "item.mako", "userListDialog", False,
-                                "#invitee-dlg-%s"%(itemId), "set", **args)
+                                    "#invitee-dlg-%s"%(itemId), "set", **args)
+
 
     @profile
     @defer.inlineCallbacks
     @dump_args
     def _rsvp(self, request):
-        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
 
-        convId = utils.getRequestArg(request, 'id')
         response = utils.getRequestArg(request, 'response')
-        myKey = request.getSession(IAuthInfo).username
-        optionCounts = {}
+        deferreds = []
+        prevResponse = ""
 
         if not response or response not in ('yes', 'maybe', 'no'):
             raise errors.InvalidRequest()
 
-        item = yield db.get_slice(convId, "items")
-        item = utils.supercolumnsToDict(item)
+        convId, conv = yield utils.getValidItemId(request, "id",
+                                                  columns=["invitees"])
 
-        if not item  :
-            raise errors.MissingParams()
+        if not conv:
+            raise errors.MissingParams([_("Event ID")])
 
-        if (item["meta"].has_key("type") and item["meta"]["type"] != "event"):
-            raise errors.InvalidRequest()
+        if ("type" in conv["meta"] and conv["meta"]["type"] != "event"):
+            raise errors.InvalidRequest("Not a valid event")
 
-        starttime = int(item["meta"]["startTime"])
-        timeUUID = utils.uuid1(timestamp=starttime)
-        timeUUID = timeUUID.bytes
-        prevResponse, responseUUID = None, None
-
-        cols = yield db.get_slice(myKey, "userEventResponse", [convId])
+        #Find out if already stored response is the same as this one. Saves
+        # quite a few queries
+        rsvp_names = ["%s:%s" %(x, myId) for x in ['yes', 'no', 'maybe']]
+        cols = yield db.get_slice(convId, "eventResponses", names=rsvp_names)
         if cols:
-            prevResponse, responseUUID = cols[0].column.value.split(":")
+            prevResponse = cols[0].column.name.split(":", 1)[0]
 
         if prevResponse == response:
-            return
+            defer.returnValue(0)
 
-        if prevResponse:
-            yield db.remove(convId, "eventResponses", myKey, prevResponse)
-            prevOptionCount = yield db.get_count(convId, "eventResponses", prevResponse)
-            optionCounts[prevResponse] = str(prevOptionCount)
-            yield db.remove(myKey, "userEvents", responseUUID)
+        starttime = int(conv["meta"]["event_startTime"])
+        endtime = int(conv["meta"]["event_endTime"])
+        starttimeUUID = utils.uuid1(timestamp=starttime)
+        starttimeUUID = starttimeUUID.bytes
+        endtimeUUID = utils.uuid1(timestamp=endtime)
+        endtimeUUID = endtimeUUID.bytes
 
-        if not prevResponse:
-            invitations = yield  db.get_slice(convId, "eventInvitations",
-                                              super_column =myKey)
-            for invitation in invitations:
-                tuuid = invitation.column.name
-                yield db.remove(myKey, "userEventInvitations", tuuid)
-            yield db.remove(convId, "eventInvitations", super_column=myKey)
+        #If I was invited, then update the invited status in convs scf
+        #if myId in conv["invitees"].keys():
+        #    conv["invitees"] = {myId: response}
+            #d = db.batch_insert(convId, "items", conv)
+            #deferreds.append(d)
 
-        yield db.insert(myKey, "userEventResponse", response+":"+timeUUID, convId)
-        yield db.insert(convId, "eventResponses",  '', myKey, response)
+        #Now insert the event in the user's agenda list if the user has
+        # never responded to this event or the user is not in the invited list.
+        #In the second case the agenda was already updated when creating the
+        # event
+        if prevResponse == "" and myId not in conv["invitees"].keys():
+            d1 = db.insert(myId, "userAgenda", convId, starttimeUUID)
+            d2 = db.insert(myId, "userAgenda", convId, endtimeUUID)
+            d3 = db.insert("%s:%s" %(myId, convId), "userAgendaMap", "",
+                          starttimeUUID)
+            d4 = db.insert("%s:%s" %(myId, convId), "userAgendaMap", "",
+                          endtimeUUID)
+            deferreds.extend([d1, d3, d2, d4])
 
-        if response in ("yes", "maybe"):
-            yield db.insert(myKey, "userEvents", convId, timeUUID)
+        #Remove any old responses to this event by this user.
+        yield db.batch_remove({'eventResponses': [convId]}, names=rsvp_names)
 
-        responseCount = yield db.get_count(convId, "eventResponses", response)
-        optionCounts[response] = str(responseCount)
-
-        yield db.batch_insert(convId, "items", {"rsvp":optionCounts})
+        #Now insert the user's new response.
+        d = db.insert(convId, "eventResponses", "", "%s:%s" %(response, myId))
+        deferreds.append(d)
 
         if script:
-            #Update the inline status of your rsvp
+            #Update the inline status of the rsvp status
             if response == "yes":
-              rsp = _("You are attending")
+                rsp = _("You are attending")
             elif response == "no":
-              rsp = _("You are not attending")
+                rsp = _("You are not attending")
             elif response == "maybe":
-              rsp = _("You may attend")
+                rsp = _("You may attend")
 
-            request.write("$('#event-rsvp-status-%s').text('%s')" %(convId, rsp))
-            #TODO:Update the sidebar listing of people attending this event
+            request.write("$('#event-rsvp-status-%s').text('%s');"
+                                                            %(convId, rsp))
+            request.write("$('#conv-%s .event-join-decline').text('%s');"
+                                                            %(convId, rsp))
 
+        if deferreds:
+            res = yield defer.DeferredList(deferreds)
+
+        if script:
+            args.update({"items":{convId:conv}, "convId":convId})
+            entityIds = yield event.fetchData(args, convId)
+            entities = yield db.multiget_slice(entityIds, "entities", ["basic"])
+            entities = utils.multiSuperColumnsToDict(entities)
+            args["entities"] = entities
+
+            t.renderScriptBlock(request, "event.mako", "event_meta",
+                                landing, "#item-meta", "set", **args)
+
+        #TODO:Once a user who has not been invited responds, add the item to his
+        # feed.
 
     @profile
     @defer.inlineCallbacks
