@@ -1,21 +1,23 @@
-import time
-import uuid
 import datetime
 import pytz
 import calendar
 import json
+from pytz import timezone
+from dateutil.relativedelta import relativedelta
 try:
     import cPickle as pickle
 except:
     import pickle
+from operator import itemgetter, attrgetter
 
 from zope.interface     import implements
 from twisted.plugin     import IPlugin
 from twisted.internet   import defer
-from twisted.web        import server
 
 from social             import db, utils, base, errors, _
 from social             import template as t
+from social             import constants
+from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.isocial     import IItemType
 from social.logging     import dump_args, profile, log
@@ -23,7 +25,6 @@ from social.logging     import dump_args, profile, log
 
 class EventResource(base.BaseResource):
     isLeaf = True
-    _templates = ['event.mako', 'item.mako']
 
     @profile
     @defer.inlineCallbacks
@@ -239,10 +240,11 @@ class EventResource(base.BaseResource):
 
         if segmentCount == 1 and request.postpath[0] == 'rsvp':
             d = self._rsvp(request)
-        if segmentCount == 1 and request.postpath[0] == "invitee":
-            d = self._inviteUsers(request)
+        if segmentCount == 1 and request.postpath[0] == "invite":
+            d = self._invite(request)
 
         return self._epilogue(request, d)
+
 
     @profile
     @dump_args
@@ -253,21 +255,20 @@ class EventResource(base.BaseResource):
 
         if segmentCount == 0:
             d = self._events(request)
-        if segmentCount == 1 and request.postpath[0] == "invitee":
-            d = self._invitees(request)
+        if segmentCount == 1 and request.postpath[0] == "attendance":
+            d = self._attendance(request)
 
         return self._epilogue(request, d)
 
-#TODO: event Invitations.
-#TODO: listing invitations chronologically.
+
 class Event(object):
     implements(IPlugin, IItemType)
     itemType = "event"
     position = 4
-    disabled = True
+    disabled = False
     hasIndex = True
-    indexFields = {'meta':set(['event_desc','event_location','event_title'])}
-    monitorFields = {}
+    indexFields = {'meta': set(['event_desc', 'event_location', 'event_title'])}
+    monitorFields = {'meta': set(['event_desc', 'event_location', 'event_title'])}
 
     @profile
     @defer.inlineCallbacks
@@ -282,10 +283,10 @@ class Event(object):
             desc = conv["meta"]["desc"]
             titleSnippet = utils.toSnippet(desc, 80)
         noOfRequesters = len(set(requesters))
-        reasons = { 1: "%s invited you to the event: %s ",
-                    2: "%s and %s invited you to the event: %s ",
-                    3: "%s, %s and 1 other invited you to the event: %s ",
-                    4: "%s, %s and %s others invited you to the event: %s "}
+        reasons = {1: "%s invited you to the event: %s",
+                   2: "%s and %s invited you to the event: %s",
+                   3: "%s, %s and 1 other invited you to the event: %s",
+                   4: "%s, %s and %s others invited you to the event: %s"}
         vals = []
         for userId in requesters:
             userName = utils.userName(userId, users[userId])
@@ -299,22 +300,44 @@ class Event(object):
         defer.returnValue(_(reasons[noOfRequesters])%(tuple(vals)))
 
 
+    @defer.inlineCallbacks
     def renderShareBlock(self, request, isAjax):
+        authinfo = request.getSession(IAuthInfo)
+        myId = authinfo.username
+        orgId = authinfo.organization
+
+        cols = yield db.multiget_slice([myId, orgId], "entities", ["basic"])
+        cols = utils.multiSuperColumnsToDict(cols)
+
+        me = cols.get(myId, None)
+        org = cols.get(orgId, None)
+        args = {"myId": myId, "orgId": orgId, "me": me, "org": org}
+
+        my_tz = timezone(me["basic"]["timezone"])
+        utc_now = datetime.datetime.now(pytz.utc)
+        mytz_now = utc_now.astimezone(my_tz)
+        tzoffset = int(mytz_now.utcoffset().total_seconds())
+        args.update({"my_tz": my_tz, "utc_now":utc_now, "mytz_now":mytz_now})
+
         onload = """
-                (function(obj){$$.publisher.load(obj)})(this);
-                $$.events.prepareDateTimePickers();
+                (function(obj){
+                    $$.publisher.load(obj);
+                    $$.events.prepareDateTimePickers();
+                    $$.events.autoFillUsers();
+                })(this);
                 """
         t.renderScriptBlock(request, "event.mako", "share_event",
-                            not isAjax, "#sharebar", "set", True,
-                            attrs={"publisherName": "event"},
-                            handlers={"onload": onload})
+                                not isAjax, "#sharebar", "set", True,
+                                attrs={"publisherName": "event"},
+                                handlers={"onload": onload}, **args)
 
 
     def rootHTML(self, convId, isQuoted, args):
         if "convId" in args:
             return t.getBlock("event.mako", "event_root", **args)
         else:
-            return t.getBlock("event.mako", "event_root", args=[convId, isQuoted], **args)
+            return t.getBlock("event.mako", "event_root",
+                              args=[convId, isQuoted], **args)
 
 
     @profile
@@ -322,70 +345,83 @@ class Event(object):
     @dump_args
     def fetchData(self, args, convId=None):
         convId = convId or args["convId"]
-        myKey = args["myKey"]
+        myId = args["myId"]
+        myResponse = ""
+        userResponses = {}
+        yesPeople, noPeople, maybePeople = [], [], []
 
-        conv = yield db.get_slice(convId, "items", ["rsvp"])
-        if not conv:
-            raise errors.InvalidRequest()
-        conv = utils.supercolumnsToDict(conv)
-        conv.update(args.get("items", {}).get(convId, {}))
+        # List of invited people
+        invitees = yield db.get_slice(convId, "items", ["invitees"])
+        invitees = utils.supercolumnsToDict(invitees)
+        args.setdefault("invitedPeople", {})[convId] = \
+                                                    invitees["invitees"]
 
-        myResponse = yield db.get_slice(myKey, "userEventResponse", [convId])
-        myResponse = myResponse[0].column.value.split(":")[0] if myResponse else ''
+        # Status of others
+        cols = yield db.get_slice(convId, "eventResponses")
+        res = utils.columnsToDict(cols).keys()
+        for x in res:
+            resp, userId = x.split(":")
+            userResponses[userId] = resp
+            if resp == "yes":
+                yesPeople.append(userId)
+            elif resp == "no":
+                noPeople.append(userId)
+            elif resp == "maybe":
+                maybePeople.append(userId)
 
-        startTime = conv['meta'].get('start', None)
-        endTime = conv['meta'].get('end', None)
+        args.setdefault("userResponses", {})[convId] = userResponses
+        args.setdefault("yesPeople", {})[convId] = yesPeople
+        args.setdefault("noPeople", {})[convId] = noPeople
+        args.setdefault("maybePeople", {})[convId] = maybePeople
 
-        args.setdefault("items", {})[convId] = conv
-        args.setdefault("myResponse", {})[convId] = myResponse
+        args.setdefault("myResponse", {})[convId] = userResponses[myId] \
+                                            if myId in userResponses else ""
 
-        response = yield db.get_slice(convId, "eventInvitations")
-        response = utils.supercolumnsToDict(response)
-        invitees = response.keys()
-        args.setdefault("invitees", {})[convId] = invitees
-        defer.returnValue(set(invitees))
+        defer.returnValue(invitees["invitees"].keys()+\
+                            yesPeople+noPeople+maybePeople)
 
 
     @profile
     @defer.inlineCallbacks
-    @dump_args
-    def create(self, request, myId, myOrgId, richText=False):
+    def create(self, request, myId, myOrgId, convId, richText=False):
         startDate = utils.getRequestArg(request, 'startDate')
-        startTime = utils.getRequestArg(request, 'startTime')
-        endDate = utils.getRequestArg(request, 'endDate') or startDate
-        endTime = utils.getRequestArg(request, 'endTime') #or all day event
+        endDate = utils.getRequestArg(request, 'endDate')
         title = utils.getRequestArg(request, 'title')
         desc = utils.getRequestArg(request, 'desc')
         location = utils.getRequestArg(request, 'location')
         allDay = utils.getRequestArg(request, "allDay")
+        acl = utils.getRequestArg(request, "acl", sanitize=False)
+        isPrivate = utils.getRequestArg(request, "isPrivate")
 
-        if not ((title or desc) and startTime and startDate):
-            raise errors.InvalidRequest()
+        if not ((title or desc) and startDate and endDate):
+            raise errors.MissingParams([_('Title'), _('Start date'), _('End date')])
 
-        #TODO input sanitization
-        utc = pytz.utc
-        startDate = datetime.datetime.utcfromtimestamp(float(startDate)/1000).replace(tzinfo=utc)
-        endDate = datetime.datetime.utcfromtimestamp(float(endDate)/1000).replace(tzinfo=utc)
-        startTime = datetime.datetime.utcfromtimestamp(float(startTime)/1000).replace(tzinfo=utc)
-        endTime = datetime.datetime.utcfromtimestamp(float(endTime)/1000).replace(tzinfo=utc)
+        if startDate.isdigit() and endDate.isdigit():
+            startDate = int(startDate)/1000
+            endDate = int(endDate)/1000
+        else:
+            raise error.InvalidRequest("Invalid start or end dates")
 
-        startDateTime = datetime.datetime(startDate.year, startDate.month,
-                                          startDate.day, startTime.hour,
-                                          startTime.minute, startTime.second).replace(tzinfo=utc)
-        endDateTime = datetime.datetime(endDate.year, endDate.month,
-                                          endDate.day, endTime.hour,
-                                          endTime.minute, endTime.second).replace(tzinfo=utc)
+        if endDate < startDate:
+            raise errors.InvalidRequest("Event end date is set in the past")
 
-        item, attachments = yield utils.createNewItem(request, self.itemType, myId, myOrgId, richText=richText)
+        # Parse invitees from the tag edit plugin values
+        arg_keys = request.args.keys()
+        invitees = []
+        for arg in arg_keys:
+            if arg.startswith("invitee[") and arg.endswith("-a]"):
+                rcpt = arg.replace("invitee[", "").replace("-a]", "")
+                if rcpt != "":
+                    invitees.append(rcpt)
+        # The owner is always invited to the event
+        invitees.append(myId)
 
-        rsvps = dict([('yes', '0'), ('maybe', '0'), ('no', '0')])
-        meta = {"event_startTime": str(calendar.timegm(startDateTime.utctimetuple()))}
+        meta = {"event_startTime": str(startDate), "event_endTime": str(endDate)}
+
         if title:
             meta["event_title"] = title
         if desc:
             meta["event_desc"] = desc
-        if endTime:
-            meta["event_endTime"] = str(calendar.timegm(endDateTime.utctimetuple()))
         if location:
             meta["event_location"] = location
         if allDay:
@@ -393,19 +429,147 @@ class Event(object):
         else:
             meta["event_allDay"] = '0'
 
-        item["meta"].update(meta)
-        item["rsvps"] = rsvps
+        # Check if the invited user ids are valid
+        res = yield db.multiget_slice(invitees, "entities", ['basic'])
+        res = utils.multiSuperColumnsToDict(res)
+        invitees = [x for x in res.keys() if res[x]["basic"]["org"] == myOrgId]
 
-        # XXX: We should find a way to make things like this work.
-        #event = self.getResource(False)
-        #yield event._inviteUsers(request, convId)
+        # Modify the received ACL to include those who were invited including
+        # the owner of this item.
+        acl = json.loads(acl)
+        acl.setdefault("accept", {})
+        acl["accept"].setdefault("users", [])
+        acl["accept"]["users"].extend(invitees)
+        acl = json.dumps(acl)
+        item, attachments = yield utils.createNewItem(request, self.itemType,
+                                                      myId, myOrgId,
+                                                      richText=richText,
+                                                      acl=acl)
+
+        item["meta"].update(meta)
+        item["invitees"] = dict([(x, myId) for x in invitees])
+
+        starttimeUUID = utils.uuid1(timestamp=startDate)
+        starttimeUUID = starttimeUUID.bytes
+
+        endtimeUUID = utils.uuid1(timestamp=endDate)
+        endtimeUUID = endtimeUUID.bytes
+
+        yield self.inviteUsers(request, starttimeUUID, endtimeUUID, convId,
+                                    myId, myOrgId, invitees, acl)
+
         defer.returnValue((item, attachments))
 
 
     @defer.inlineCallbacks
-    def delete(self, itemId):
-        log.debug("plugin:delete", itemId)
-        yield db.get_slice(itemId, "entities")
+    def inviteUsers(self, request, starttimeUUID, endtimeUUID, convId, ownerId,
+                     myOrgId, invitees, acl=None):
+        deferreds = []
+        toNotify = {}
+        toRemove = {'latest':[]}
+        entitiesToUpdate = []
+
+        #TODO:Send notifications to each one of these people
+        for invitee in invitees:
+            # Add to each user's agenda
+            entitiesToUpdate.append(invitee)
+            if invitee == ownerId:
+                # The organizer auto accepts an event
+                d = db.insert(convId, "eventResponses", "", "yes:%s" %(ownerId))
+                deferreds.append(d)
+
+            # Add to an additional column for invited users(not the owner)
+            if invitee != ownerId:
+                d1 = db.insert("%s:I" % (invitee), "userAgenda",
+                               convId, starttimeUUID)
+                d2 = db.insert("%s:I" % (invitee), "userAgenda",
+                               convId, endtimeUUID)
+                deferreds.extend([d1, d2])
+
+        if acl:
+            # Based on the ACL, if company or groups were included, then add an
+            # Extra entry for the company agenda and group agenda.
+            # FIXME: Praveen: technically acl can have a dont-allow list.
+            # we dont want to add event to entities in dont-allow list.
+            acl = json.loads(acl)
+            extra_entities = []
+            if "groups" in acl["accept"]:
+                res = yield db.multiget_slice(acl["accept"]["groups"],
+                                              "entities", ['basic'])
+                groups = utils.multiSuperColumnsToDict(res)
+                for groupId, group in groups.iteritems():
+                    #Check if group is really a group and belongs to the same
+                    # org that I belong to.
+                    if group["basic"]["type"] == 'group' and \
+                      group["basic"]["org"] == myOrgId:
+                        extra_entities.append(groupId)
+
+            if "orgs" in acl["accept"]:
+                extra_entities.extend([myOrgId])
+
+            entitiesToUpdate.extend(extra_entities)
+
+        for invitee in entitiesToUpdate:
+            d1 = db.insert(invitee, "userAgenda", convId, starttimeUUID)
+            d2 = db.insert(invitee, "userAgenda", convId, endtimeUUID)
+            d3 = db.insert("%s:%s" %(invitee, convId), "userAgendaMap", "",
+                          starttimeUUID)
+            d4 = db.insert("%s:%s" %(invitee, convId), "userAgendaMap", "",
+                          endtimeUUID)
+            deferreds.extend([d1, d3, d2, d4])
+
+        if deferreds:
+            res = yield defer.DeferredList(deferreds)
+
+        defer.returnValue([])
+
+
+    def renderItemSideBlock(self, request, landing, args):
+
+        convId = args["convId"]
+        conv = args["items"][convId]
+        convMeta = conv["meta"]
+        title = convMeta.get("event_title", '')
+        location = convMeta.get("event_location", '')
+        desc = convMeta.get("event_desc", "")
+        start = convMeta.get("event_startTime")
+        end   = convMeta.get("event_endTime")
+        owner = convMeta["owner"]
+        ownerName = args["entities"][owner]["basic"]["name"]
+
+        my_tz = timezone(args["me"]['basic']['timezone'])
+        owner_tz = timezone(args["entities"][owner]['basic']['timezone'])
+        utc = pytz.utc
+        startdatetime = datetime.datetime.utcfromtimestamp(float(start)).\
+                                                            replace(tzinfo=utc)
+        enddatetime = datetime.datetime.utcfromtimestamp(float(end)).\
+                                                            replace(tzinfo=utc)
+
+        utc_dt = utc.normalize(startdatetime)
+        #In my timezone
+        start_dt = my_tz.normalize(startdatetime.astimezone(my_tz))
+        end_dt = my_tz.normalize(enddatetime.astimezone(my_tz))
+
+        #In owner's timezone
+        owner_start_dt = owner_tz.normalize(startdatetime.astimezone(owner_tz))
+        owner_end_dt = owner_tz.normalize(enddatetime.astimezone(owner_tz))
+
+        args.update({"start_dt":start_dt, "end_dt":end_dt,
+                     "owner_start_dt":owner_start_dt,
+                     "owner_end_dt":owner_end_dt})
+
+        t.renderScriptBlock(request, "event.mako", "event_meta", landing,
+                                "#item-meta", "set", **args)
+        t.renderScriptBlock(request, "event.mako", "event_me", landing,
+                                "#item-me", "set", **args)
+
+        onload = """
+                $$.events.autoFillUsers();
+                """
+        t.renderScriptBlock(request, "event.mako", "event_actions", landing,
+                                "#item-subactions", "set", True,
+                                handlers={"onload": onload}, **args)
+
 
     _ajaxResource = None
     _resource = None

@@ -2192,6 +2192,30 @@ abbr.timestamp {
     display: inline-block;
 }
 
+.time-picker {
+    display:inline-block;
+    width:9em;
+}
+
+.date-picker-wrapper {
+    display:inline-block;
+    width:12em;
+}
+
+#allDay-wrapper {
+    display:inline-block;
+    float:right;
+    padding: 4px 0px;
+}
+
+#allDay {
+    vertical-align: middle;
+}
+
+#feed-side-block-container .v-links {
+    margin-right: 20px;
+}
+
 /*
  * Styling for preferences
  */
