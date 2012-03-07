@@ -172,7 +172,6 @@ class EventResource(base.BaseResource):
         if prevResponse == response:
             defer.returnValue(0)
 
-        print ("Setting New RSVP")
         starttime = int(conv["meta"]["event_startTime"])
         endtime = int(conv["meta"]["event_endTime"])
         starttimeUUID = utils.uuid1(timestamp=starttime)
@@ -266,7 +265,6 @@ class EventResource(base.BaseResource):
             start = datetime.datetime.strptime(start, "%Y-%m-%d")
         except ValueError:
             start = None
-        print "start is %s" % (str(start))
 
         args.update({'view':view, 'menuId': 'events'})
         args.update({'page':page, 'entityId': entityId})
@@ -362,7 +360,24 @@ class Event(object):
         defer.returnValue(_(reasons[noOfRequesters])%(tuple(vals)))
 
 
+    @defer.inlineCallbacks
     def renderShareBlock(self, request, isAjax):
+        authinfo = request.getSession(IAuthInfo)
+        myId = authinfo.username
+        orgId = authinfo.organization
+
+        cols = yield db.multiget_slice([myId, orgId], "entities", ["basic"])
+        cols = utils.multiSuperColumnsToDict(cols)
+
+        me = cols.get(myId, None)
+        org = cols.get(orgId, None)
+        args = {"myId": myId, "orgId": orgId, "me": me, "org": org}
+
+        my_tz = timezone(me["basic"]["timezone"])
+        utc_now = datetime.datetime.now(pytz.utc)
+        mytz_now = utc_now.astimezone(my_tz)
+        tzoffset = int(mytz_now.utcoffset().total_seconds())
+        args.update({"my_tz": my_tz, "utc_now":utc_now, "mytz_now":mytz_now})
 
         onload = """
                 (function(obj){
@@ -374,7 +389,7 @@ class Event(object):
         t.renderScriptBlock(request, "event.mako", "share_event",
                                 not isAjax, "#sharebar", "set", True,
                                 attrs={"publisherName": "event"},
-                                handlers={"onload": onload})
+                                handlers={"onload": onload}, **args)
 
 
     def rootHTML(self, convId, isQuoted, args):
@@ -390,7 +405,7 @@ class Event(object):
     @dump_args
     def fetchData(self, args, convId=None):
         convId = convId or args["convId"]
-        myId = args["myKey"]
+        myId = args["myId"]
         myResponse = ""
         userResponses = {}
         yesPeople, noPeople, maybePeople = [], [], []
@@ -726,13 +741,11 @@ class Event(object):
             mytz_start = start.replace(tzinfo=my_tz)
 
         args["start"] = mytz_start.strftime("%Y-%m-%d")
-        print mytz_start.strftime('%a %b %d, %I:%M %p %Z')
         timestamp = calendar.timegm(mytz_start.utctimetuple())
         timeUUID = utils.uuid1(timestamp=timestamp)
         start = timeUUID.bytes
 
         page = args.get("page", 1)
-        print "page number is %d" %page
 
         cols = yield db.get_slice(entityId, "userAgenda", start=start,
                                       count=(page*count)*2)
@@ -749,7 +762,6 @@ class Event(object):
         sorted_event_ids = [x[0] for x in sorted_time_tuples]
         events_in_this_page = sorted_event_ids[(page-1)*count:page*count]
 
-        print events_in_this_page
         if len(events_in_this_page) >= count:
             nextPage = page + 1
             args.update({'nextPage': nextPage})

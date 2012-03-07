@@ -75,17 +75,17 @@
                   if present:
                     reason = _("You and %s are attending this event") % (utils.userName(other_person_id, entities[other_person_id]))
                   else:
-                    reason = _("You and %s went to this event") % (utils.userName(other_person_id, entities[other_person_id]))
+                    reason = _("You and %s attended this event") % (utils.userName(other_person_id, entities[other_person_id]))
               elif len(yesPeople[convId]) > 2:
                   if present:
                     reason = _("You and %d others are attending this event") % (len(yesPeople[convId]) - 1)
                   else:
-                    reason = _("You and %d others went to this event") % (len(yesPeople[convId]) - 1)
+                    reason = _("You and %d others attended this event") % (len(yesPeople[convId]) - 1)
               else:
                   if present:
                     reason = _("You are attending this event")
                   else:
-                    reason = _("You went to this event")
+                    reason = _("You attended this event")
           else:
               if present:
                   if len(yesPeople[convId]) == 1:
@@ -104,7 +104,7 @@
                                                         len(yesPeople[convId]) - 3)
               else:
                   if len(yesPeople[convId]) > 1:
-                    reason = "%d people went to this event" % (len(yesPeople[convId]))
+                    reason = "%d people attended this event" % (len(yesPeople[convId]))
                   else:
                     reason = ""
         %>
@@ -127,7 +127,6 @@
               if target:
                   groupId = target.split(',')[0]
                   reason = _("Anyone in %s can attend this event") % (utils.groupName(groupId, entities[groupId]))
-              else:pass
         %>
         <span>${reason}</span>
       </div>
@@ -219,11 +218,6 @@
       <div class="input-wrap">
             <select id="starttime">
                 <%
-                    #my_tz = timezone(me["basic"]["timezone"])
-                    ##TODO: me is not available after latest change in feed.py
-                    my_tz = timezone("Asia/Kolkata")
-                    utc_now = datetime.datetime.now(pytz.utc)
-                    mytz_now = utc_now.astimezone(my_tz)
                     hoursNow = mytz_now.hour
                 %>
                 %for slot in range(0, 48):
@@ -248,11 +242,6 @@
       <div class="input-wrap">
             <select id="endtime">
                 <%
-                    #my_tz = timezone(me["basic"]["timezone"])
-                    ##TODO: me is not available after latest change in feed.py
-                    my_tz = timezone("Asia/Kolkata")
-                    utc_now = datetime.datetime.now(pytz.utc)
-                    mytz_now = utc_now.astimezone(my_tz)
                     if mytz_now.hour < 23:
                         hoursNow = mytz_now.hour + 1
                     else:
@@ -282,7 +271,7 @@
       </div>
     </div>
     <div id="allDay-wrapper">
-        <input type="checkbox" name="allDay" id="allDay" style="vertical-align: middle"/>
+        <input type="checkbox" name="allDay" id="allDay"/>
         <label for="allDay">${_("All day")}</label>
     </div>
   </div>
@@ -485,28 +474,32 @@
   %endif
 </%def>
 
+<%def name="render_attendance(attendeeList, invitedPeople)">
+  <div class="conversation-attachments-wrapper">
+    <ul class="v-links peoplemenu">
+      %for u in attendeeList[convId][:3]:
+        <li>
+          %if u in invitedPeople[convId].keys():
+            <strong>
+              ${utils.userName(u, entities[u])}
+            </strong>
+          %else:
+            ${utils.userName(u, entities[u])}
+          %endif
+        </li>
+      %endfor
+    </ul>
+  </div>
+</%def>
+
 <%def name="event_meta()">
   <%
     iamOwner = myId == items[convId]["meta"]["owner"]
   %>
   <div class="sidebar-chunk">
     <div class="sidebar-title">${_("Who are attending (%d)") % (len(yesPeople[convId]))}</div>
+    <%self.render_attendance(yesPeople, invitedPeople)%>
     %if yesPeople[convId]:
-      <div class="conversation-attachments-wrapper">
-        <ul class="v-links peoplemenu">
-          %for u in yesPeople[convId][:3]:
-            <li>
-              %if u in invitedPeople[convId].keys():
-                <strong>
-                  ${utils.userName(u, entities[u])}
-                </strong>
-              %else:
-                ${utils.userName(u, entities[u])}
-              %endif
-            </li>
-          %endfor
-        </ul>
-      </div>
       %if len(yesPeople[convId]) > 4:
         <div class="event-show-more-attendees"><a class="ajax" onclick="$$.events.showEventAttendance('${convId}', 'yes')">and ${len(yesPeople[convId]) - 4} more</a></div>
       %endif
@@ -517,21 +510,7 @@
   %if maybePeople[convId] and iamOwner:
     <div class="sidebar-chunk">
       <div class="sidebar-title">${_("Who may attend (%d)") % (len(maybePeople[convId]))}</div>
-      <div class="conversation-attachments-wrapper">
-        <ul class="v-links peoplemenu">
-          %for u in maybePeople[convId][:3]:
-            <li>
-              %if u in invitedPeople[convId].keys():
-                <strong>
-                  ${utils.userName(u, entities[u])}
-                </strong>
-              %else:
-                ${utils.userName(u, entities[u])}
-              %endif
-            </li>
-          %endfor
-        </ul>
-      </div>
+      <%self.render_attendance(maybePeople, invitedPeople)%>
       %if len(maybePeople[convId]) > 4:
         <div class="event-show-more-attendees"><a class="ajax" onclick="$$.events.showEventAttendance('${convId}', 'maybe')">and ${len(maybePeople[convId]) - 4} more</a></div>
       %endif
@@ -540,21 +519,7 @@
   %if noPeople[convId] and iamOwner:
     <div class="sidebar-chunk">
       <div class="sidebar-title">${_("Who are not attending (%d)") % (len(noPeople[convId]))}</div>
-      <div class="conversation-attachments-wrapper">
-        <ul class="v-links peoplemenu">
-          %for u in noPeople[convId][:3]:
-            <li>
-              %if u in invitedPeople[convId].keys():
-                <strong>
-                  ${utils.userName(u, entities[u])}
-                </strong>
-              %else:
-                ${utils.userName(u, entities[u])}
-              %endif
-            </li>
-          %endfor
-        </ul>
-      </div>
+      <%self.render_attendance(noPeople, invitedPeople)%>
       %if len(noPeople[convId]) > 4:
         <div class="event-show-more-attendees"><a class="ajax" onclick="$$.events.showEventAttendance('${convId}', 'no')">and ${len(noPeople[convId]) - 4} more</a></div>
       %endif
@@ -565,7 +530,7 @@
 <%def name="side_agenda()">
   <div class="sidebar-chunk">
     <div class="sidebar-title">${title}</div>
-    <ul class="v-links" style="margin-right: 20px;">
+    <ul class="v-links">
       %for convId in conversations:
         <li>
           <a class="event-agenda-link${'-expired' if expired else ''}" href="/item?id=${convId}">${items[convId]['meta']['event_title']}</a>

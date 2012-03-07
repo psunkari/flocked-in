@@ -225,10 +225,11 @@ class FeedResource(base.BaseResource):
         else:
             return self._render(request, entityId, start, itemType)
 
+    @defer.inlineCallbacks
     def renderShareBlock(self, request, typ):
         plugin = plugins.get(typ, None)
         if plugin:
-            plugin.renderShareBlock(request, self._ajax)
+            yield plugin.renderShareBlock(request, self._ajax)
 
     @profile
     @defer.inlineCallbacks

@@ -2208,6 +2208,14 @@ abbr.timestamp {
     padding: 4px 0px;
 }
 
+#allDay {
+    vertical-align: middle;
+}
+
+#feed-side-block-container .v-links {
+    margin-right: 20px;
+}
+
 /*
  * Styling for preferences
  */
