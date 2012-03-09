@@ -376,7 +376,6 @@ class Event(object):
         my_tz = timezone(me["basic"]["timezone"])
         utc_now = datetime.datetime.now(pytz.utc)
         mytz_now = utc_now.astimezone(my_tz)
-        tzoffset = int(mytz_now.utcoffset().total_seconds())
         args.update({"my_tz": my_tz, "utc_now":utc_now, "mytz_now":mytz_now})
 
         onload = """
