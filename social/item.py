@@ -551,25 +551,27 @@ class ItemResource(base.BaseResource):
         myId = authInfo.username
         orgId = authInfo.organization
         convId = item['meta']['parent'] if 'parent' in item['meta'] else itemId
-        yield Item.delete(itemId, item, myId, orgId)
+        conv = yield Item.delete(itemId, item, myId, orgId)
         request.write("$$.convs.remove('%s', '%s');" % (convId, itemId))
 
-        #target = conv['meta'].get('target', None)
-
-        #if plugin and hasattr(plugin, 'renderFeedSideBlock') and not comment:
-        #    #TODO: Determine the blockType
-        #    if target:
-        #        entityId = target.split(',')[0]
-        #        args["groupId"] = target.split(',')[0]
-        #    else:
-        #        #No better way to find out if this item was created from the
-        #        # user's feed page or from the company feed page
-        #        referer = request.getHeader('referer')
-        #        entityId = myId
-
-        #   request.write("$('#feed-side-block-container').empty();")
-        #    yield plugins["event"].renderFeedSideBlock(request, landing,
-        #                                                entityId, args)
+        target = conv['meta'].get('target', None)
+        comment = (itemId != convId)
+        plugin = plugins[conv['meta']['type']]
+        if plugin and hasattr(plugin, 'renderFeedSideBlock') and not comment:
+            #TODO: Determine the blockType
+            args = {}
+            landing = not self._ajax
+            if target:
+                entityId = target.split(',')[0]
+                args["groupId"] = target.split(',')[0]
+            else:
+                #No better way to find out if this item was created from the
+                # user's feed page or from the company feed page
+                referer = request.getHeader('referer')
+                entityId = myId
+            request.write("$('#feed-side-block-container').empty();")
+            yield plugins["event"].renderFeedSideBlock(request, landing,
+                                                        entityId, args)
 
     @defer.inlineCallbacks
     def _renderReportDialog(self, request):
