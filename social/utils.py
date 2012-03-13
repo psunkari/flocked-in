@@ -24,6 +24,7 @@ from ordereddict        import OrderedDict
 from dateutil.tz        import gettz
 from telephus.cassandra import ttypes
 
+from zope.interface     import implements
 from twisted.internet   import defer, threads
 from twisted.mail       import smtp
 from nltk.corpus        import stopwords
@@ -1043,3 +1044,7 @@ def cleanupChat(sessionId, userId, orgId):
     status = presence.PresenceStates.OFFLINE
     yield presence.updateAndPublishStatus(userId, orgId, sessionId, status)
     yield presence.clearChannels(userId, sessionId)
+
+class AuthInfo(object):
+    implements(IAuthInfo)
+

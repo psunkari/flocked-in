@@ -860,8 +860,12 @@ class APIItemResource(base.APIBaseResource):
     @defer.inlineCallbacks
     def _newItem(self, request):
         token = self._ensureAccessScope(request, 'post-item')
-        token.organization = token.org
-        convId, conv, keywords = yield Item.new(request, token, richText=True)
+        authInfo = utils.AuthInfo()
+        authInfo.username = token.user
+        authInfo.organization = token.org
+        convType = 'status'
+
+        convId, conv, keywords = yield Item.new(request, authInfo, convType, richText=True)
         if keywords:
             raise errors.InvalidRequest(_('Matching keywords found(%s). Set reportOK=1.') % ', '.join(keywords))
         else:
@@ -873,7 +877,7 @@ class APIItemResource(base.APIBaseResource):
         convId = request.postpath[0]
         orgId = token.org
         userId = token.user
-        convId, conv = utils.getValidItemId(request, '', itemId=convId,  myOrgId=orgId, myId=userId)
+        convId, conv = yield utils.getValidItemId(request, '', itemId=convId,  myOrgId=orgId, myId=userId)
 
         snippet, comment = utils.getTextWithSnippet(request, "comment",
                                                 constants.COMMENT_PREVIEW_LENGTH,
