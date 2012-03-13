@@ -5,6 +5,7 @@ from twisted.plugin     import getPlugins
 from social             import db, errors, utils, plugins, base
 from social.relations   import Relation
 from social.isocial     import IAuthInfo, IFeedUpdateType
+from social.logging     import log
 
 
 _feedUpdatePlugins =  dict()
@@ -198,7 +199,7 @@ def get(auth, feedId=None, feedItemsId=None, convIds=None,
 
     else:
         (convIds, deletedIds) = yield utils.fetchAndFilterConvs(convIds,
-                                            relation, items, myId, myOrgId)
+                                            relation, items, myId, orgId)
         # NOTE: Unlike the above case where we fetch convIds from
         #       database (where we set the nextPageStart to a key),
         #       here we set nextPageStart to the convId.
