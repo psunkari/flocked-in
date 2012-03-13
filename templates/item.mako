@@ -102,7 +102,7 @@
         convOwner = convMeta["owner"]
       %>
       <div id="conv-root-${convId}" class="conv-root">
-        ${self._item_other_actions(convId, convOwner==myKey, convType)}
+        ${self._item_other_actions(convId, convOwner==myId, convType)}
         %if hasReason:
           <span class="conv-reason">${reasonStr[convId]}</span>
           <div class="conv-summary conv-quote">
@@ -193,7 +193,7 @@
     timestamp = int(meta['timestamp'])
     likesCount = 0 if hasLikes else int(meta.get('likesCount', '0'))
     commentsCount = 0 if hasComments else int(meta.get('responseCount', '0'))
-    myTimezone = me['basic'].get("timezone", None)
+    myTimezone = me.basic.get("timezone", None)
   %>
   ${utils.simpleTimestamp(timestamp, myTimezone)}\
   ## If none of my subscriptions liked it, show the count of likes (onclick show the likes)
@@ -232,7 +232,7 @@
     meta = items[itemId]['meta']
     timestamp = int(meta['timestamp'])
     likesCount = int(meta.get('likesCount', "0"))
-    myTimezone = me['basic'].get("timezone", None)
+    myTimezone = me.basic.get("timezone", None)
   %>
   ${utils.simpleTimestamp(timestamp, myTimezone)}
   %if likesCount > 0:
@@ -262,7 +262,7 @@
 
     if iLike:
       try:
-        users.remove(myKey)
+        users.remove(myId)
       except: pass
       other -= (1 + len(users[:2]))
       if other <= 0:
@@ -525,17 +525,17 @@
   %>
   %if not isQuoted:
     <span class="conv-user-cause" style="color:#3366CC">
-      ${", ".join([user["basic"]["name"], user["basic"].get('jobTitle', None)])}
+      ${", ".join([user.basic["name"], user.basic.get('jobTitle', None)])}
     </span>
-    (${userOrg["basic"]["name"]})
+    (${userOrg.basic["name"]})
   %endif
   <div class="item-title">
     <div>
       %if isQuoted:
         <span class="conv-user-cause" style="color:#3366CC">
-          ${", ".join([user["basic"]["name"], user["basic"].get('jobTitle', None)])}
+          ${", ".join([user.basic["name"], user.basic.get('jobTitle', None)])}
         </span>
-        (${userOrg["basic"]["name"]})<br/>
+        (${userOrg.basic["name"]})<br/>
       %endif
       <%
         comment = meta.get('comment', '')
@@ -660,7 +660,7 @@
     %for uid in users:
       <%
         userMeta = entities[uid]
-        jobTitle = userMeta["basic"].get("jobTitle", "")
+        jobTitle = userMeta.basic.get("jobTitle", "")
       %>
       <div class="ui-listitem">
         <div class="ui-list-icon"><img src="${userAvatar(uid, userMeta, 'small')}"/></div>

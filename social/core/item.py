@@ -8,6 +8,7 @@ from social                 import constants, search, errors, notifications, _
 # Expects all the basic arguments as well as some information
 # about the comments and  to be available in kwargs.
 
+
 @defer.inlineCallbacks
 def _notify(notifyType, convId, timeUUID, **kwargs):
     deferreds = []
@@ -19,7 +20,8 @@ def _notify(notifyType, convId, timeUUID, **kwargs):
 
     # List of people who will get the notification about current action
     if notifyType == "C":
-        followers = yield db.get_slice(convId, "items", super_column="followers")
+        followers = yield db.get_slice(convId, "items",
+                                       super_column="followers")
         toFetchEntities = recipients = [x.column.name for x in followers]
     elif notifyType == "LC":
         recipients = [kwargs["itemOwnerId"]]
@@ -35,20 +37,14 @@ def _notify(notifyType, convId, timeUUID, **kwargs):
     recipients = [userId for userId in recipients if userId != myId]
 
     # Get all data that is required to send offline notifications
-    # XXX: Entities generally contains a map of userId => {Basic: Data}
-    #      In this case it will contain userId => data directly.
-    #notify_d = db.multiget_slice(toFetchEntities, "entities", ["basic"]) \
-    #                    if recipients else defer.succeed([])
-    entities = base.EntitySet(toFetchEntities) if recipients else defer.succeed([])
-    notify_d = entities.fetchData()
+    entities = base.EntitySet(toFetchEntities)
+    notify_d = entities.fetchData() if recipients else defer.succeed([])
 
     def _gotEntities(cols):
-        #entities = utils.multiSuperColumnsToDict(cols)
         if 'entities' in kwargs:
             kwargs['entities'].update(entities)
         else:
             kwargs['entities'] = entities
-        #kwargs.setdefault('entities', {}).update(entities)
 
     def _sendNotifications(ignored):
         return notifications.notify(recipients, notifyId,
@@ -69,8 +65,6 @@ def like(itemId, item, myId, orgId, me=None):
         pass
 
     if not me:
-        #me = yield db.get_slice(myId, 'entities', ['basic'])
-        #me = utils.supercolumnsToDict(me)
         me = base.Entity(myId)
         yield me.fetchData()
     itemOwnerId = item["meta"]["owner"]
@@ -191,11 +185,8 @@ def unlike(itemId, item, myId, orgId):
 
 
 @defer.inlineCallbacks
-def _comment(convId, conv, comment, snippet, myId, orgId, richText, review):
-
+def _comment(convId, conv, comment, snippet, myId, orgId, richText, reviewed):
     convType = conv["meta"].get("type", "status")
-    #me = yield db.get_slice(myId, "entities", ['basic'])
-    #me = utils.supercolumnsToDict(me)
 
     # 1. Create the new item
     timeUUID = uuid.uuid1().bytes
@@ -208,18 +199,13 @@ def _comment(convId, conv, comment, snippet, myId, orgId, richText, review):
         meta['snippet'] = snippet
 
     # 1.5. Check if the comment matches any of the keywords
-    #entities = yield db.multiget_slice([orgId, myId], "entities",
-    #                                   ['basic', 'admins'])
-    #entities = utils.multiSuperColumnsToDict(entities)
     entities = base.EntitySet([myId, orgId])
     yield entities.fetchData(['basic', 'admins'])
-    #orgAdmins = entities.get(orgId, {}).get('admins', {}).keys()
     orgAdmins = entities[orgId].admins.keys()
     if orgAdmins:
         matchedKeywords = yield utils.watchForKeywords(orgId, comment)
         if matchedKeywords:
-            #reviewOK = utils.getRequestArg(request, '_review') == "1"
-            if review:
+            if reviewed:
                 # Add item to list of items that matched this keyword
                 # and notify the administrators about it.
                 for keyword in matchedKeywords:
@@ -282,7 +268,6 @@ def _comment(convId, conv, comment, snippet, myId, orgId, richText, review):
 
 @defer.inlineCallbacks
 def tag(itemId, item, tagName, myId, orgId):
-
     if "parent" in item["meta"]:
         raise errors.InvalidRequest(_("Tag cannot be applied on a comment"))
 
@@ -359,7 +344,6 @@ def untag(itemId, item, tagId, tag, myId, orgId):
 
 @defer.inlineCallbacks
 def removeFromFeed(itemId, item, myId, orgId):
-
     convId = item["meta"].get("parent", itemId)
     itemOwnerId = item["meta"]["owner"]
     if itemId != convId:
@@ -403,7 +387,6 @@ def removeFromFeed(itemId, item, myId, orgId):
 
 @defer.inlineCallbacks
 def delete(itemId, item, myId, orgId):
-
     convId = item["meta"].get("parent", itemId)
     itemOwnerId = item["meta"]["owner"]
 
@@ -481,9 +464,9 @@ def new(request, authInfo, convType, richText=False):
     yield db.batch_insert(convId, "items", conv)
     attachments = conv.get("attachments", {})
     for attachmentId in attachments:
-        timeuuid, fid, name, size, ftype = attachments[attachmentId]
-        val = "%s:%s:%s:%s:%s" % (utils.encodeKey(timeuuid), fid, name, size, ftype)
-        yield db.insert(convId, "item_files", val, timeuuid, attachmentId)
+        encodedTimeUUID, name, size, ftype = attachments[attachmentId].split(':')
+        val = "%s:%s:%s:%s:%s" % (encodedTimeUUID, attachmentId, name, size, ftype)
+        yield db.insert(convId, "item_files", val, utils.decodeKey(encodedTimeUUID), attachmentId)
 
     yield files.pushfileinfo(myId, orgId, convId, conv)
     search.solr.updateItemIndex(convId, conv, orgId)
@@ -517,7 +500,6 @@ def new(request, authInfo, convType, richText=False):
 
 @defer.inlineCallbacks
 def likes(itemId, item):
-
     itemLikes = yield db.get_slice(itemId, "itemLikes")
 
     users = [col.column.name for col in itemLikes]
@@ -582,7 +564,6 @@ def responses(myId, itemId, item, start=''):
     if missingIds:
         yield _cleanupMissingComments(itemId, missingIds, itemResponses)
 
-
     ret = {'items': fetchedItems, 'entities': entities,
             'myLikes': myLikes, 'responses': {itemId: responseKeys}}
     if nextPageStart:
@@ -590,10 +571,8 @@ def responses(myId, itemId, item, start=''):
     defer.returnValue(ret)
 
 
-
 @defer.inlineCallbacks
 def deleteItem(itemId, userId, orgId, item=None, conv=None,):
-
     if not item:
         item = yield db.get_slice(itemId, "items", ["meta", "tags"])
         item = utils.supercolumnsToDict(item)
@@ -663,4 +642,3 @@ def deleteItem(itemId, userId, orgId, item=None, conv=None,):
         deferreds.append(d)
 
     yield defer.DeferredList(deferreds)
-
