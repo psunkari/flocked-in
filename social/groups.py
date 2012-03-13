@@ -129,7 +129,7 @@ class GroupsResource(base.BaseResource):
         entities = base.EntitySet([myId, orgId])
         yield entities.fetchData()
         entities.update(group)
-        args = {'entities': entities}
+        args = {'entities': entities, "me": entities[myId]}
 
         isNewMember, pendingRequests = yield Group.subscribe(request, group, entities[myId], entities[orgId])
         if isNewMember or pendingRequests:
