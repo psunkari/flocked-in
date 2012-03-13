@@ -37,7 +37,7 @@
     userAvatar = utils.userAvatar
     groupAvatar = utils.groupAvatar
     simpleTimestamp = utils.simpleTimestamp
-    myTz = me['basic']['timezone']
+    myTz = me.basic['timezone']
   %>
   %if notifications:
     %for notifyId in notifications:
@@ -49,7 +49,7 @@
             %for entityId in reversed(notifyUsers[notifyId][:2]):
               <%
                  entity = entities[entityId]
-                 entityType = entity["basic"]["type"]
+                 entityType = entity.basic["type"]
                  if entityType == "user":
                     avatarURI = userAvatar(entityId, entity, "small")
                  elif entityType == "group":

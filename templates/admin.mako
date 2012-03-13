@@ -95,7 +95,7 @@
   </div>
   <div class="users-details">
     <div class="user-details-name">${utils.userName(userId, entities[userId])}</div>
-    <div class="user-details-title">${entities[userId]["basic"].get("jobTitle", '')}</div>
+    <div class="user-details-title">${entities[userId].basic.get("jobTitle", '')}</div>
     <div class="user-details-actions">
       <ul id="user-actions-${userId}" class="middle user-actions h-links">
         ${admin_actions(userId, 'blocked')}
@@ -112,7 +112,7 @@
         counter = 0
         firstRow = True
       %>
-      %for userId in entities:
+      %for userId in entities.keys():
         %if counter % 2 == 0:
           %if firstRow:
             <div class="users-row users-row-first">
@@ -282,7 +282,7 @@
 
 <%def name="orgInfo()">
   <%
-    name = org.get("basic", {}).get("name", '')
+    name = org.basic.get("name", '')
   %>
   <form id='orginfo-form' class='ajax' action="/admin/org" method="POST" enctype="multipart/form-data">
     <ul class="styledform">
@@ -315,7 +315,7 @@
 </%def>
 
 <%def name="confirm_remove_user()">
-  <div class='ui-dlg-title'>${_('Remove user ')} &ndash; ${entities[userId]["basic"]["name"]}</div>
+  <div class='ui-dlg-title'>${_('Remove user ')} &ndash; ${entities[userId].basic["name"]}</div>
   <div class="dlgform ui-dlg-center" style="font-size: 12px;max-height:250px;">
     <p style="margin:0px">
       User removal is an irreversible process. Instead you can <strong>Block</strong> a user to disable login to the network temporarily.

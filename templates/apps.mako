@@ -54,7 +54,7 @@
             <div class="tl-avatar"></div>
             <div class="tl-details">
               <div class="tl-name"><a href="/apps?id=${appId}" class="ajax">${client['name']}</a></div>
-              <div class="tl-title">${utils.simpleTimestamp(apikeys[appId], me['basic']['timezone'])}</div>
+              <div class="tl-title">${utils.simpleTimestamp(apikeys[appId], me.basic['timezone'])}</div>
               <div class="tl-toolbox"><button
                   class="button-link ajaxpost" title="Revoke access to ${client['name']}"
                   data-ref="/apps/revoke?id=${appId}">Revoke</button></div>

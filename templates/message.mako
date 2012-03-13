@@ -54,7 +54,7 @@
 
     numOthers = len(others)
     def userName(userId):
-      return people[userId]["basic"]["name"]
+      return people[userId].basic["name"]
 
     if numOthers > 2:
       return _("%s, %s and %d others") % (userName(owner), userName(others[0]), numOthers-1)
@@ -98,7 +98,7 @@
       <div class="conversation-row-headers">
         <span class="conversation-row-people">${formatPeopleInConversation(conv, people)}</span>
         <span class="conversation-row-time">
-          &ndash;&nbsp; ${utils.simpleTimestamp(float(conv['meta']["date_epoch"]), people[myKey]["basic"]["timezone"])}
+          &ndash;&nbsp; ${utils.simpleTimestamp(float(conv['meta']["date_epoch"]), people[myId].basic["timezone"])}
         </span>
       </div>
       <div class="conversation-row-subject-wrapper">
@@ -161,11 +161,11 @@
           <div class="conversation-message-headers">
             <div class="user conversation-message-headers-sender">
               <a href="/profile?id=${messages[mid]['meta']['owner']}" class="ajax">
-                ${people[messages[mid]['meta']['owner']]["basic"]["name"]}
+                ${people[messages[mid]['meta']['owner']].basic["name"]}
               </a>
             </div>
             <nobr class="time-label conversation-message-headers-time">
-              ${utils.simpleTimestamp(float(messages[mid]["meta"]["date_epoch"]), people[myKey]["basic"]["timezone"])}
+              ${utils.simpleTimestamp(float(messages[mid]["meta"]["date_epoch"]), people[myId].basic["timezone"])}
             </nobr>
           </div>
           <div class="conversation-message-message">
@@ -181,7 +181,7 @@
   <form id="message-reply-form" method="post" class="ajax" action="/messages/write">
     <div class="conversation-composer">
       <div class="conv-avatar">
-          ${getAvatarImg(utils.userAvatar(myKey, people[myKey]))}
+          ${getAvatarImg(utils.userAvatar(myId, people[myId]))}
       </div>
       <div class="input-wrap conversation-reply-wrapper">
           <textarea class="conversation-reply" name="body" placeholder="${_('Quickly reply to this message')}" required title="${_('Reply')}"></textarea>
@@ -345,17 +345,17 @@
                       ${getAvatarImg(utils.userAvatar(conv, people[person], "s"), "s")}
                     </div>
                     <div class="conversation-people-profile">
-                      <a href="/profile?id=${person}">${people[person]["basic"]["name"]}</a>
+                      <a href="/profile?id=${person}">${people[person].basic["name"]}</a>
                     </div>
                     <%
-                        if (person == myKey) or (person == conv["meta"]["owner"]):
+                        if (person == myId) or (person == conv["meta"]["owner"]):
                             showDelete = False
                         else:
                             showDelete = True
                     %>
                     %if showDelete:
                         <div class="conversation-people-remove" class="busy-indicator"
-                             title="${_('Remove %s from this conversation') % people[person]["basic"]["name"]}">
+                             title="${_('Remove %s from this conversation') % people[person].basic['name']}">
                           <div class="messaging-icon messaging-delete-icon"
                                onclick="$.post('/ajax/messages/members', 'action=remove&parent=${id}&recipients=${person}')">&nbsp;</div>
                         </div>

@@ -3,15 +3,23 @@ import urllib
 import re
 from lxml               import etree
 
+from formencode         import compound
 from zope.interface     import implements
 from twisted.internet   import defer, threads
 from twisted.plugin     import IPlugin
 from twisted.web        import client
 
-from social             import db, utils, errors, _, config, constants
+from social             import db, utils, errors, _, config, constants, validators
 from social             import template as t
 from social.isocial     import IItemType, IAuthInfo
 from social.logging     import profile, dump_args, log
+
+
+class LinkValidator(validators.SocialSchema):
+    #url = compound.Pipe(validators.SocialString(sanitize=False),
+    #                    validators.URL())
+    url = compound.All(validators=[validators.URL(), validators.SocialString(sanitize=False)])
+    comment = validators.TextWithSnippet(ignore_null=True)
 
 
 def _sanitize(text, maxlen=0):
@@ -56,29 +64,16 @@ class Links(object):
 
 
     @profile
+    @validators.Validate(LinkValidator)
     @defer.inlineCallbacks
     @dump_args
-    def create(self, request, myId, myOrgId, convId, richText=False):
-        snippet, comment = utils.getTextWithSnippet(request, "comment",
-                                        constants.POST_PREVIEW_LENGTH, richText=richText)
-        url = utils.getRequestArg(request, "url", sanitize=False)
-
-        if not url:
-            raise errors.MissingParams([_('URL to be shared')])
-
-        if len(url.split()) >1:
-            match = utils._urlRegEx.search(url)
-            if match:
-                url = match.group()
-            else:
-                raise errors.InvalidRequest(_("Invalid URL '%s'")%(url))
-
-        if len(url.split("://")) == 1:
-            url = "http://" + url
+    def create(self, request, me, convId, richText=False, data=None):
+        url = data['url']
+        comment, snippet = data['comment']
 
         summary, title, image, embed = yield self._summary(url)
 
-        item, attachments = yield utils.createNewItem(request, self.itemType, myId, myOrgId, richText=richText)
+        item = yield utils.createNewItem(request, self.itemType, me, richText=richText)
         meta = {"comment": comment}
         if snippet:
             meta['snippet'] = snippet
@@ -104,7 +99,7 @@ class Links(object):
                 meta["link_embedWidth"] = str(embedWidth)
         item["meta"].update(meta)
 
-        defer.returnValue((item, attachments))
+        defer.returnValue(item)
 
     @defer.inlineCallbacks
     def delete(self, myId, convId, conv):

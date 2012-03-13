@@ -141,8 +141,8 @@
       %if emailId and emailId[0]:
         <input type="hidden" value=${emailId[0]} name="emailId"/>
       %endif
-      % if myKey:
-        <input type="hidden" value=${myKey} name="id"/>
+      % if myId:
+        <input type="hidden" value=${myId} name="id"/>
       %endif
     </ul>
     <div class="styledform-buttons">
@@ -225,8 +225,8 @@
     %if emailId and emailId[0]:
       <input type="hidden" value = ${emailId[0]} name="emailId" />
     %endif
-    %if myKey:
-      <input type="hidden" value = ${myKey} name="id" />
+    %if myId:
+      <input type="hidden" value = ${myId} name="id" />
     %endif
     <div class="styledform-buttons">
         <input type="submit" class="button default" name="userInfo_submit" value="${_('Save')}"/>
@@ -311,7 +311,7 @@
 <%def name="editWork()">
   <%
     contact = me.get('contact', {})
-    emailId = me['basic']['emailId']
+    emailId = me.basic['emailId']
   %>
   <div id="contacts">
     <form class="ajax" id="settings-form" action="/settings/work" method="post" enctype="multipart/form-data">
@@ -465,7 +465,7 @@
 
 <%def name="filterNotifications()">
   <%
-    notify = me['basic'].get('notify', '')
+    notify = me.basic.get('notify', '')
     labels = [_('Someone adds you as a friend'),
               _('Your friend request is accepted'),
               _('Someone started following you'),

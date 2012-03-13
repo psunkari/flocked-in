@@ -1,9 +1,4 @@
-import os
-import hashlib
-import uuid
 import json
-import cgi
-import traceback
 import mimetypes
 from base64         import urlsafe_b64encode, urlsafe_b64decode
 from email.header   import Header
@@ -13,22 +8,19 @@ except:
     import pickle
 
 import boto
-from telephus.cassandra import ttypes
-from txaws.credentials import AWSCredentials
-from txaws.s3 import client as s3Client
-from boto.s3.connection import S3Connection
-from boto.s3.connection import VHostCallingFormat, SubdomainCallingFormat
+from telephus.cassandra     import ttypes
+from txaws.credentials      import AWSCredentials
+from txaws.s3               import client as s3Client
+from boto.s3.connection     import S3Connection
+from boto.s3.connection     import VHostCallingFormat, SubdomainCallingFormat
 
-from zope.interface     import implements
-from twisted.plugin     import IPlugin
-from twisted.internet   import defer, threads
-from twisted.web        import static, server
+from twisted.internet       import defer, threads
 
-from social             import db, utils, errors, base, feed, _, config
-from social             import constants, template as t
-from social.relations   import Relation
-from social.isocial     import IItemType, IAuthInfo
-from social.logging     import log, profile, dump_args
+from social                 import db, utils, errors, base,  _, config
+from social                 import constants, template as t
+from social.relations       import Relation
+from social.isocial         import IAuthInfo
+from social.logging         import profile, dump_args
 
 
 @defer.inlineCallbacks
@@ -41,19 +33,21 @@ def pushfileinfo(myId, orgId, convId, conv):
     allowedOrgs = acl.get('accept', {}).get('orgs', [])
     ownerId = conv['meta']['owner']
 
-    entities = [myId]
-    entities.extend(groups)
-    entities.extend(allowedOrgs)
-    entities_ = yield utils.expandAcl(myId, orgId, conv['meta']['acl'], convId, ownerId, True)
-    entities.extend(entities_)
+    entityIds = [myId]
+    entityIds.extend(groups)
+    entityIds.extend(allowedOrgs)
+    entityIds_ = yield utils.expandAcl(myId, orgId, conv['meta']['acl'], convId, ownerId, True)
+    entityIds.extend(entityIds_)
 
     for attachmentId in conv.get('attachments', {}):
-        tuuid, name, size, ftype =conv['attachments'][attachmentId].split(':')
+        tuuid, name, size, ftype = conv['attachments'][attachmentId].split(':')
         tuuid = utils.decodeKey(tuuid)
-        value = '%s:%s:%s:%s' %(attachmentId, name, convId, ownerId)
+        value = '%s:%s:%s:%s' % (attachmentId, name, convId, ownerId)
+        #TODO: use batch remove/batch mutate
         yield db.insert(myId, "user_files", value, tuuid)
-        for entityId in entities:
+        for entityId in entityIds:
             yield db.insert(entityId, "entityFeed_files", value, tuuid)
+
 
 @defer.inlineCallbacks
 def deleteFileInfo(myId, orgId, convId, conv):
@@ -65,22 +59,21 @@ def deleteFileInfo(myId, orgId, convId, conv):
     allowedOrgs = acl.get('accept', {}).get('orgs', [])
     ownerId = conv['meta']['owner']
 
-    entities = [myId]
-    entities.extend(groups)
-    entities.extend(allowedOrgs)
-    entities_ = yield utils.expandAcl(myId, orgId, conv['meta']['acl'], convId, ownerId, True)
-    entities.extend(entities_)
+    entityIds = [myId]
+    entityIds.extend(groups)
+    entityIds.extend(allowedOrgs)
+    entityIds_ = yield utils.expandAcl(myId, orgId, conv['meta']['acl'], convId, ownerId, True)
+    entityIds.extend(entityIds_)
     deferreds = []
     for attachmentId in conv.get('attachments', {}):
-        tuuid, name, size, ftype =conv['attachments'][attachmentId].split(':')
+        tuuid, name, size, ftype = conv['attachments'][attachmentId].split(':')
         tuuid = utils.decodeKey(tuuid)
         deferreds.append(db.remove(myId, "user_files", tuuid))
-        for entityId in entities:
+        #TODO: use batch remove/batch mutate
+        for entityId in entityIds:
             deferreds.append(db.remove(entityId, "entityFeed_files", tuuid))
     if deferreds:
         yield defer.DeferredList(deferreds)
-
-
 
 @profile
 @defer.inlineCallbacks
@@ -149,9 +142,9 @@ def userFiles(myId, entityId, myOrgId, start='', end='', fromFeed=True):
 
     if end:
         # We have enough items to have another page before this.
-        if len(accessibleFiles) > count+1:
+        if len(accessibleFiles) > count + 1:
             hasPrevPage = True
-            accessibleFiles = accessibleFiles[:count+1]
+            accessibleFiles = accessibleFiles[:count + 1]
 
         # Revert the list to get most recent items first.
         accessibleFiles.reverse()
@@ -168,7 +161,6 @@ def userFiles(myId, entityId, myOrgId, start='', end='', fromFeed=True):
         accessibleFiles = accessibleFiles[:count]
 
     defer.returnValue((accessibleFiles, hasPrevPage, nextPageStart, toFetchEntities))
-
 
 
 class FilesResource(base.BaseResource):
@@ -204,7 +196,6 @@ class FilesResource(base.BaseResource):
                 files.append([itemId, attachmentId, tuuid, name, size, ftype])
         ##TODO: use some widget to list the files
         request.write(json.dumps(files))
-
 
     @defer.inlineCallbacks
     def _getFileInfo(self, request):
@@ -242,7 +233,6 @@ class FilesResource(base.BaseResource):
         url = files['meta']['uri']
         defer.returnValue([owner, url, fileType, size, name])
 
-
     @defer.inlineCallbacks
     def _renderFile(self, request):
         fileInfo = yield self._getFileInfo(request)
@@ -259,9 +249,9 @@ class FilesResource(base.BaseResource):
         else:
             filename = filename.encode('string_escape')
 
-        headers={'response-content-type':fileType,
-                 'response-content-disposition':'attachment;filename=\"%s\"'%filename,
-                 'response-expires':'0'}
+        headers = {'response-content-type': fileType,
+                   'response-content-disposition': 'attachment;filename=\"%s\"' % filename,
+                   'response-expires': '0'}
 
         SKey = config.get('CloudFiles', 'SecretKey')
         AKey = config.get('CloudFiles', 'AccessKey')
@@ -276,24 +266,22 @@ class FilesResource(base.BaseResource):
                             calling_format=calling_format)
 
         Location = conn.generate_url(600, 'GET', bucket,
-                                     '%s/%s/%s' %(myOrgId, owner, url),
+                                     '%s/%s/%s' % (myOrgId, owner, url),
                                      response_headers=headers)
 
         request.setResponseCode(307)
         request.setHeader('Location', Location)
 
-
     @defer.inlineCallbacks
     def _s3Update(self, request):
         pass
-
 
     @defer.inlineCallbacks
     def _S3FormData(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
 
         landing = not self._ajax
-        myOrgId = args["orgKey"]
+        myOrgId = args["orgId"]
 
         SKey = config.get('CloudFiles', 'SecretKey')
         AKey = config.get('CloudFiles', 'AccessKey')
@@ -320,17 +308,17 @@ class FilesResource(base.BaseResource):
 
         filename = urlsafe_b64encode(filename)
         fileId = utils.getUniqueKey()
-        key = '%s/%s/%s' %(myOrgId, myId, fileId)
-        attachment_filename = 'attachment;filename=\"%s\"' %(filename)
-        x_conds = ['{"x-amz-meta-uid":"%s"}' %myId,
-                   '{"x-amz-meta-filename":"%s"}' %filename,
-                   '{"x-amz-meta-fileId":"%s"}' %fileId,
-                   '{"content-type":"%s"}' %mime]
+        key = '%s/%s/%s' % (myOrgId, myId, fileId)
+        attachment_filename = 'attachment;filename=\"%s\"' % (filename)
+        x_conds = ['{"x-amz-meta-uid":"%s"}' % myId,
+                   '{"x-amz-meta-filename":"%s"}' % filename,
+                   '{"x-amz-meta-fileId":"%s"}' % fileId,
+                   '{"content-type":"%s"}' % mime]
 
-        x_fields = [{"name":"x-amz-meta-uid","value":"%s" %myId},
-                    {"name":"x-amz-meta-filename","value":"%s" %filename},
-                    {"name":"content-type","value":"%s" %mime},
-                    {"name":"x-amz-meta-fileId","value":"%s" %fileId}]
+        x_fields = [{"name":"x-amz-meta-uid", "value":"%s" % myId},
+                    {"name":"x-amz-meta-filename", "value":"%s" % filename},
+                    {"name":"content-type", "value":"%s" % mime},
+                    {"name":"x-amz-meta-fileId", "value":"%s" % fileId}]
 
         max_content_length = constants.MAX_FILE_SIZE
         x_conds.append('["content-length-range", 0, %i]' % max_content_length)
@@ -342,13 +330,12 @@ class FilesResource(base.BaseResource):
                                   fields=x_fields,
                                   conditions=x_conds,
                                   success_action_redirect=redirect_url)
-        request.write(json.dumps([form_data]));
+        request.write(json.dumps([form_data]))
         defer.returnValue(0)
 
-
     def _enqueueMessage(self, bucket, key, filename, content_type):
-        SKey =  config.get('CloudFiles', 'SecretKey')
-        AKey =  config.get('CloudFiles', 'AccessKey')
+        SKey = config.get('CloudFiles', 'SecretKey')
+        AKey = config.get('CloudFiles', 'AccessKey')
 
         thumbnailsBucket = config.get('CloudFiles', 'ThumbnailsBucket')
         thumbnailsQueue = config.get('CloudFiles', 'ThumbnailsQueue')
@@ -360,14 +347,13 @@ class FilesResource(base.BaseResource):
 
         data = {'bucket': bucket, 'filename': filename,
                  'key': key, 'content-type': content_type}
-        message = queue.new_message(body= json.dumps(data))
+        message = queue.new_message(body=json.dumps(data))
         queue.write(message)
-
 
     @defer.inlineCallbacks
     def _uploadDone(self, request):
-        SKey =  config.get('CloudFiles', 'SecretKey')
-        AKey =  config.get('CloudFiles', 'AccessKey')
+        SKey = config.get('CloudFiles', 'SecretKey')
+        AKey = config.get('CloudFiles', 'AccessKey')
 
         creds = AWSCredentials(AKey, SKey)
         client = s3Client.S3Client(creds)
@@ -381,7 +367,7 @@ class FilesResource(base.BaseResource):
         size = file_info['content-length'][0]
         fileType = file_info['content-type'][0]
         fileId = file_info['x-amz-meta-fileid'][0]
-        val = "%s:%s:%s:%s"%(fileId, name, size, fileType)
+        val = "%s:%s:%s:%s" % (fileId, name, size, fileType)
         filename = urlsafe_b64decode(name)
         tmp_files_info[fileId] = [fileId, filename, size, fileType]
 
@@ -397,21 +383,20 @@ class FilesResource(base.BaseResource):
                    """ % (json.dumps(tmp_files_info))
         request.write(response)
 
-
     @defer.inlineCallbacks
     def _removeTempFile(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
-        myOrgId = args["orgKey"]
+        myOrgId = args["orgId"]
 
-        SKey =  config.get('CloudFiles', 'SecretKey')
-        AKey =  config.get('CloudFiles', 'AccessKey')
+        SKey = config.get('CloudFiles', 'SecretKey')
+        AKey = config.get('CloudFiles', 'AccessKey')
         bucket = config.get('CloudFiles', 'Bucket')
         creds = AWSCredentials(AKey, SKey)
 
         client = s3Client.S3Client(creds)
         fileId = utils.getRequestArg(request, "id")
-        key = "%s/%s/%s" %(myOrgId, myId, fileId)
+        key = "%s/%s/%s" % (myOrgId, myId, fileId)
 
         #Check if the file is not in the "files" CF. In other words, it is not
         # attached to an existing item. Also check if I am the owner of the
@@ -431,12 +416,11 @@ class FilesResource(base.BaseResource):
             else:
                 raise errors.InvalidRequest()
 
-
     @defer.inlineCallbacks
     def _renderFileList(self, request):
         appchange, script, args, myId = yield self._getBasicArgs(request)
         landing = not self._ajax
-        myOrgId = args["orgKey"]
+        myOrgId = args["orgId"]
 
         start = utils.getRequestArg(request, "start") or ''
         start = utils.decodeKey(start)
@@ -454,7 +438,6 @@ class FilesResource(base.BaseResource):
             t.renderScriptBlock(request, "files.mako", 'layout',
                                 landing, "#mainbar", "set", **args)
 
-
         args['viewType'] = viewType
         entityId = myId if viewType in ['myFiles', 'myFeedFiles'] else myOrgId
         fromFeed = viewType != 'myFiles'
@@ -466,8 +449,8 @@ class FilesResource(base.BaseResource):
         files = yield userFiles(myId, entityId, args['orgId'], start, end, fromFeed)
 
         toFetchEntities = files[3]
-        entities = yield db.multiget_slice(toFetchEntities, "entities", ['basic'])
-        entities = utils.multiSuperColumnsToDict(entities)
+        entities = base.EntitySet(toFetchEntities)
+        yield entities.fetchData()
         args['entities'] = entities
         args['userfiles'] = files
 
@@ -487,11 +470,10 @@ class FilesResource(base.BaseResource):
             d = self._renderFile(request)
         elif  segmentCount == 1 and request.postpath[0] == "update":
             d = self._uploadDone(request)
-        elif segmentCount ==1 and request.postpath[0] == 'list':
+        elif segmentCount == 1 and request.postpath[0] == 'list':
             d = self._renderFileList(request)
 
         return self._epilogue(request, d)
-
 
     def render_POST(self, request):
         d = None

@@ -1,17 +1,11 @@
 
 import json
-try:
-    import cPickle as pickle
-except:
-    import pickle
 from operator               import itemgetter
 
-from telephus.cassandra     import ttypes
 from twisted.internet       import defer
-from twisted.web            import resource, server, http
+from twisted.web            import resource, http
 
-from social                 import _, __, db, utils
-from social.base            import BaseResource
+from social                 import db, utils, base
 from social.isocial         import IAuthInfo
 from social.logging         import log
 
@@ -22,7 +16,7 @@ def _getFinishTerm(term):
     return finish.encode('utf-8')
 
 
-class AutoCompleteResource(BaseResource):
+class AutoCompleteResource(base.BaseResource):
     isLeaf = True
     _template = "<div><div class='ui-ac-icon'><img src='%(icon)s'/></div>" +\
                 "<div class='ui-ac-title'>%(title)s</div>" +\
@@ -49,9 +43,7 @@ class AutoCompleteResource(BaseResource):
             request.write("[]")
             return
 
-        authInfo = request.getSession(IAuthInfo)
-        userId = authInfo.username
-        orgId = authInfo.organization
+        orgId = request.getSession(IAuthInfo).organization
         finish = _getFinishTerm(term)
 
         # Fetch list of tags and names that match the given term
@@ -81,7 +73,6 @@ class AutoCompleteResource(BaseResource):
                 groups.append(groupId)
                 toFetchEntities.add(groupId)
 
-
         # List of tags that match the given term
         tags = []
         matchedTags = yield d1
@@ -97,8 +88,8 @@ class AutoCompleteResource(BaseResource):
         # Fetch the required entities
         entities = {}
         if toFetchEntities:
-            results = yield db.multiget(toFetchEntities, "entities", "basic")
-            entities.update(utils.multiSuperColumnsToDict(results))
+            entities = base.EntitySet(toFetchEntities)
+            yield entities.fetchData()
 
         output = []
         template = self._template
@@ -107,41 +98,38 @@ class AutoCompleteResource(BaseResource):
 
         for uid in users:
             if uid in entities:
-                name = entities[uid]["basic"]["name"]
+                name = entities[uid].basic["name"]
                 data = {"icon": avatar(uid, entities[uid], "s"), "title": name,
-                        "meta": entities[uid]["basic"].get("jobTitle", "")}
+                        "meta": entities[uid].basic.get("jobTitle", "")}
                 output.append({"value": name,
-                               "label": template%data,
-                               "href": "/profile?id=%s"%uid})
+                               "label": template % data,
+                               "href": "/profile?id=%s" % uid})
 
         for groupId in groups:
             if groupId in entities:
-                name = entities[groupId]['basic']['name']
+                name = entities[groupId].basic['name']
                 data = {"icon": groupAvatar(groupId, entities[groupId], "s"),
-                        "title": name, 'meta':'&nbsp;'}
+                        "title": name, 'meta': '&nbsp;'}
                 output.append({"value": name,
-                               "label": template%data,
-                               "href": "/group?id=%s"%groupId})
+                               "label": template % data,
+                               "href": "/group?id=%s" % groupId})
 
         for tag in tags:
             title = tag["title"]
             data = {"icon": "/rsrcs/img/tag-small.png", "title": title,
                     "meta": '&nbsp;'}
             output.append({"value": title,
-                           "label": template%data,
-                           "href": "/tags?id=%s"%tag["id"]})
+                           "label": template % data,
+                           "href": "/tags?id=%s" % tag["id"]})
 
         request.write(json.dumps(output))
-
 
     @defer.inlineCallbacks
     def _tags(self, request, term):
         if len(term) < 2:
             request.write("[]")
             return
-        authInfo = request.getSession(IAuthInfo)
-        userId = authInfo.username
-        orgId = authInfo.organization
+        orgId = request.getSession(IAuthInfo).organization
         finish = _getFinishTerm(term)
         itemId = utils.getRequestArg(request, "itemId")
         if not itemId:
@@ -150,8 +138,8 @@ class AutoCompleteResource(BaseResource):
 
         toFetchTags = set()
 
-        d1 = db.get_slice(orgId, "orgTagsByName",
-                          start=term, finish=finish, count=10)
+        d1 = db.get_slice(orgId, "orgTagsByName", start=term,
+                          finish=finish, count=10)
         tags = []
         matchedTags = yield d1
         matchedTags = [match.column.value for match in matchedTags]
@@ -166,15 +154,12 @@ class AutoCompleteResource(BaseResource):
         output = []
         template = self._singleLineTemplate
         for tag in tags:
-            title = tag["title"]
-            data = {"title": title,
-                    "meta": ''}
-            output.append({"value": title,
-                           "label": template%data,
-                           "href": "/tags?id=%s"%tag["id"]})
+            data = {"title": tag['title'], "meta": ''}
+            output.append({"value": tag['title'],
+                           "label": template % data,
+                           "href": "/tags?id=%s" % tag["id"]})
 
         request.write(json.dumps(output))
-
 
     @defer.inlineCallbacks
     def _users(self, request, term):
@@ -182,9 +167,7 @@ class AutoCompleteResource(BaseResource):
             request.write("[]")
             return
 
-        authInfo = request.getSession(IAuthInfo)
-        userId = authInfo.username
-        orgId = authInfo.organization
+        orgId = request.getSession(IAuthInfo).organization
         finish = _getFinishTerm(term)
 
         # List of matching names in the company
@@ -205,8 +188,8 @@ class AutoCompleteResource(BaseResource):
         # Fetch the required entities
         entities = {}
         if toFetchEntities:
-            results = yield db.multiget(toFetchEntities, "entities", "basic")
-            entities.update(utils.multiSuperColumnsToDict(results))
+            entities = base.EntitySet(toFetchEntities)
+            yield entities.fetchData()
 
         output = []
         template = self._template
@@ -214,19 +197,17 @@ class AutoCompleteResource(BaseResource):
 
         for uid in users:
             if uid in entities:
-                name = entities[uid]["basic"]["name"]
+                name = entities[uid].basic["name"]
                 data = {"icon": avatar(uid, entities[uid], "s"), "title": name,
-                        "meta": entities[uid]["basic"].get("jobTitle", "")}
-                output.append({"value": name, "uid":uid,
-                               "label": template%data})
+                        "meta": entities[uid].basic.get("jobTitle", "")}
+                output.append({"value": name, "uid": uid,
+                               "label": template % data})
 
         request.write(json.dumps(output))
-
 
     @defer.inlineCallbacks
     def _groups(self, request, term):
         pass
-
 
     @defer.inlineCallbacks
     def _myGroups(self, request):
@@ -236,14 +217,13 @@ class AutoCompleteResource(BaseResource):
 
         groups = {}
         if groupIds:
-            results = yield db.multiget_slice(groupIds, "entities",
-                        ["name", "allowExternalUsers"], super_column="basic")
-            groups.update(utils.multiColumnsToDict(results))
+            groups = base.EntitySet(groupIds)
+            yield groups.fetchData()
 
         output = []
         for id in groupIds:
-            obj = {"id": id, "name": groups[id]["name"],
-                   "external": True if groups[id].get("allowExternalusers", "closed") == "open" else False}
+            obj = {"id": id, "name": groups[id].basic["name"],
+                   "external": True if groups[id].basic.get("allowExternalusers", "closed") == "open" else False}
             output.append(obj)
 
         request.write(json.dumps(output))
@@ -273,8 +253,8 @@ class AutoCompleteResource(BaseResource):
         # Fetch the required entities
         entities = {}
         if toFetchEntities:
-            results = yield db.multiget(toFetchEntities, "entities", "basic")
-            entities.update(utils.multiSuperColumnsToDict(results))
+            entities = base.EntitySet(toFetchEntities)
+            yield entities.fetchData()
 
         output = []
         template = self._dlgLinetemplate
@@ -282,31 +262,31 @@ class AutoCompleteResource(BaseResource):
 
         for uid in users:
             if uid in entities:
-                name = entities[uid]["basic"]["name"]
+                name = entities[uid].basic["name"]
                 data = {"icon": avatar(uid, entities[uid], "s"), "title": name,
-                        "meta": entities[uid]["basic"].get("jobTitle", "")}
-                output.append({"label": template%data,
+                        "meta": entities[uid].basic.get("jobTitle", "")}
+                output.append({"label": template % data,
                                "type": "user",
-                               "value": uid,})
+                               "value": uid})
 
         cols = yield db.get_slice(myId, "entityGroupsMap", start=term.lower(),
-                                 finish = finish.lower(), count=10)
+                                  finish=finish.lower(), count=10)
         groupIds = [x.column.name.split(':', 1)[1] for x in cols]
         avatar = utils.groupAvatar
         groups = {}
 
         if groupIds:
-            results = yield db.multiget_slice(groupIds, "entities",["basic"])
-            groups.update(utils.multiSuperColumnsToDict(results))
+            groups = base.EntitySet(groupIds)
+            yield groups.fetchData()
 
         for groupId in groupIds:
-            data = {"icon": avatar(groupId, groups[groupId], "s"), "title": groups[groupId]["basic"]["name"],
-                    "meta": groups[groupId]["basic"].get("desc", "&nbsp;")}
-            obj = {"value": groupId, "label": template%data, "type":"group"}
+            data = {"icon": avatar(groupId, groups[groupId], "s"),
+                    "title": groups[groupId].basic["name"],
+                    "meta": groups[groupId].basic.get("desc", "&nbsp;")}
+            obj = {"value": groupId, "label": template % data, "type": "group"}
             output.append(obj)
 
         request.write(json.dumps(output))
-
 
     def render_GET(self, request):
         if len(request.postpath) == 0:

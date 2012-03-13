@@ -44,7 +44,7 @@
 </%def>
 
 <%def name="group_actions(groupId)">
-  %if entities and ('GI:%s'%(groupId) in pendingConnections and entities[groupId]["basic"]["access"]=="open"):
+  %if entities and ('GI:%s'%(groupId) in pendingConnections and entities[groupId].basic["access"]=="open"):
     <button class="acl-button button" onclick="$$.ui.showPopup(event)">${_("Respond to Group Invitation")}</button>
     <ul class="acl-menu" style="display:none;">
         <li>
@@ -60,7 +60,7 @@
     <button class="button default" onclick="$.post('/ajax/groups/subscribe', 'id=${groupId}')"><span class="button-text">${('Join')}</span></button>
   %else:
     <button class="button" onclick="$.post('/ajax/groups/unsubscribe', 'id=${groupId}')"><span class="button-text">${('Leave')}</span></button>
-    %if myId in groupFollowers[groupId]:
+    %if me.id in groupFollowers[groupId]:
       <button class="button" onclick="$.post('/ajax/groups/unfollow', 'id=${groupId}')"><span class="button-text">${('Stop Following')}</span></button>
     %else:
       <button class="button default" onclick="$.post('/ajax/groups/follow', 'id=${groupId}')"><span class="button-text">${('Follow')}</span></button>
@@ -75,7 +75,7 @@
       <div id="useravatar" class="avatar" style="background-image:url('${avatarURI}')"></div>
     %endif
     <div id="title">
-      <span class="middle title" id="group-name">${entities[groupId]['basic']['name']}</span>
+      <span class="middle title" id="group-name">${entities[groupId].basic['name']}</span>
       <ul id="group-actions-${groupId}" class="middle user-actions h-links">
         ${self.group_actions(groupId)}
       </ul>
@@ -84,10 +84,10 @@
   <div id='userprofile'>
     <div class="summary-block">
       <div class='subtitle summary-line' >
-        <span id="group-type">${_(entities[groupId]['basic']['access'].capitalize())} ${_("Group")}</span>
+        <span id="group-type">${_(entities[groupId].basic['access'].capitalize())} ${_("Group")}</span>
       </div>
-      %if entities[groupId]['basic'].has_key('desc'):
-        <span class="summary-item" id="group-desc">${entities[groupId]['basic']['desc']}</span>
+      %if entities[groupId].basic.has_key('desc'):
+        <span class="summary-item" id="group-desc">${entities[groupId].basic['desc']}</span>
       %endif
       <div id="group-share-block"></div>
     </div>
@@ -98,19 +98,20 @@
 </%def>
 
 <%def name="groupLinks()">
+
   %if groupId:
     <div class="sidebar-chunk">
-      %if myKey in entities[groupId].get("admins", {}):
+      %if myId in getattr(entities[groupId], "admins", {}):
         <div class="sidebar-title">${_("Manage Group")}</div>
       %else:
         <div class="sidebar-title">${_("Group")}</div>
       %endif
       <ul class="v-links">
-        %if myKey in entities[groupId].get("admins", {}):
-          %if entities[groupId]['basic']['access'] == 'closed':
+        %if myId in getattr(entities[groupId], "admins", {}):
+          %if entities[groupId].basic['access'] == 'closed':
             <li><a class="ajax" href="/groups/pending?id=${groupId}">${_('Pending Requests')}</a></li>
           %endif
-          <li><a class="ajax" href="/groupsettings?id=${groupId}">${_('Edit Group Settings')}</a></li>
+          <li><a class="ajax" href="/groups/edit?id=${groupId}">${_('Edit Group Settings')}</a></li>
           <li><a class="ajax" href="/groups/members?id=${groupId}&managed=manage">${_('Manage Members')}</a></li>
         %else:
           <li><a class="ajax" href="/groups/members?id=${groupId}">${_('Members')}</a></li>
@@ -173,8 +174,8 @@
   <div class="sidebar-chunk">
     <div class="sidebar-title">${_("Administrators")}</div>
       <ul class="v-links">
-        % if entities[groupId]["admins"]:
-          % for admin in entities[groupId]["admins"].keys()[:4]:
+        % if getattr(entities[groupId], 'admins', {}):
+          % for admin in entities[groupId].admins.keys()[:4]:
             <li>${utils.userName(admin, entities[admin])}</li>
           %endfor
         %endif

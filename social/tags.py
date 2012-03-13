@@ -1,17 +1,40 @@
 
-import uuid
-from email.utils        import formatdate
-
 from telephus.cassandra import ttypes
 from twisted.internet   import defer
-from twisted.web        import server
 
-from social             import db, utils, _, __, base, plugins
+from social             import db, utils, _, base
 from social             import constants, errors, template as t
 from social.core        import Feed
 from social.isocial     import IAuthInfo
-from social.relations   import Relation
 from social.logging     import profile, dump_args, log
+
+
+@defer.inlineCallbacks
+@dump_args
+def _ensureTag(tagName, myId, orgId, presetTag=False):
+    try:
+        tagName = tagName.lower()
+        c = yield db.get(orgId, "orgTagsByName", tagName)
+        tagId = c.column.value
+        c = yield db.get_slice(orgId, "orgTags", super_column=tagId)
+        tag = utils.columnsToDict(c)
+        if presetTag and not tag.get('isPreset', '') == 'True':
+            yield db.insert(orgId, "orgPresetTags", tagId, tagName)
+
+            yield db.insert(orgId, "orgTags", 'True', 'isPreset', tagId)
+            tag['isPreset'] = 'True'
+    except ttypes.NotFoundException:
+        tagId = utils.getUniqueKey()
+        tag = {"title": tagName, 'createdBy': myId}
+        if presetTag:
+            tag['isPreset'] = 'True'
+        tagName = tagName.lower()
+        yield db.batch_insert(orgId, "orgTags", {tagId: tag})
+        yield db.insert(orgId, "orgTagsByName", tagId, tagName)
+        if presetTag:
+            yield db.insert(orgId, "orgPresetTags", tagId, tagName)
+
+    defer.returnValue((tagId, tag))
 
 
 @profile
@@ -20,29 +43,9 @@ from social.logging     import profile, dump_args, log
 def ensureTag(request, tagName, orgId=None, presetTag=False):
     authInfo = request.getSession(IAuthInfo)
     myId = authInfo.username
-    myOrgId = authInfo.organization if not orgId else orgId
+    orgId = authInfo.organization if not orgId else orgId
 
-    try:
-        tagName = tagName.lower()
-        c = yield db.get(myOrgId, "orgTagsByName", tagName)
-        tagId = c.column.value
-        c = yield db.get_slice(myOrgId, "orgTags", super_column=tagId)
-        tag = utils.columnsToDict(c)
-        if presetTag and not tag.get('isPreset', '') == 'True':
-            yield db.insert(myOrgId, "orgPresetTags", tagId, tagName)
-            yield db.insert(myOrgId, "orgTags", 'True', 'isPreset', tagId)
-            tag['isPreset'] = 'True'
-    except ttypes.NotFoundException:
-        tagId = utils.getUniqueKey()
-        tag = {"title": tagName, 'createdBy': myId}
-        if presetTag:
-            tag['isPreset'] = 'True'
-        tagName = tagName.lower()
-        yield db.batch_insert(myOrgId, "orgTags", {tagId: tag})
-        yield db.insert(myOrgId, "orgTagsByName", tagId, tagName)
-        if presetTag:
-            yield db.insert(myOrgId, "orgPresetTags", tagId, tagName)
-
+    tagId, tag = yield _ensureTag(tagName, myId, orgId, presetTag)
     defer.returnValue((tagId, tag))
 
 
@@ -77,9 +80,8 @@ class TagsResource(base.BaseResource):
     @defer.inlineCallbacks
     @dump_args
     def _render(self, request):
-        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
-        myOrgId = args["orgKey"]
 
         (tagId, tagInfo) = yield utils.getValidTagId(request, 'id')
         args["tags"] = tagInfo
@@ -95,7 +97,7 @@ class TagsResource(base.BaseResource):
                                 landing, "#mainbar", "set", **args)
 
         try:
-            yield db.get(tagId, "tagFollowers", myKey)
+            yield db.get(tagId, "tagFollowers", myId)
             args["tagFollowing"] = True
         except ttypes.NotFoundException:
             pass
@@ -120,10 +122,9 @@ class TagsResource(base.BaseResource):
         if not script:
             t.render(request, "tags.mako", **args)
 
-
     @defer.inlineCallbacks
     def _renderMore(self, request):
-        (appchange, script, args, myKey) = yield self._getBasicArgs(request)
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
         (tagId, tagInfo) = yield utils.getValidTagId(request, 'id')
         start = utils.getRequestArg(request, 'start') or ""
 
@@ -140,7 +141,7 @@ class TagsResource(base.BaseResource):
     def _listTags(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
-        myOrgId = args["orgKey"]
+        myOrgId = args["orgId"]
 
         start = utils.getRequestArg(request, 'start') or ''
         nextPageStart = ''
@@ -159,9 +160,10 @@ class TagsResource(base.BaseResource):
 
         if script:
             t.renderScriptBlock(request, "tags.mako", "header",
-                                landing, "#tags-header", "set", **args )
+                                landing, "#tags-header", "set", **args)
 
-        tagsByName = yield db.get_slice(myOrgId, "orgTagsByName", start=start, count=toFetchCount)
+        tagsByName = yield db.get_slice(myOrgId, "orgTagsByName",
+                                        start=start, count=toFetchCount)
         tagIds = [x.column.value for x in tagsByName]
 
         if len(tagsByName) > count:
@@ -224,7 +226,7 @@ class TagsResource(base.BaseResource):
 
         args = {'tags': tag}
         args['tagsFollowing'] = [tagId]
-        tag[tagId]['followersCount']= count
+        tag[tagId]['followersCount'] = count
         fromListTags = (utils.getRequestArg(request, '_pg') == '/tags/list')
         if fromListTags:
             t.renderScriptBlock(request, "tags.mako", "_displayTag",
@@ -232,8 +234,8 @@ class TagsResource(base.BaseResource):
                                 args=[tagId], **args)
         else:
             t.renderScriptBlock(request, 'tags.mako', "tag_actions", False,
-                                "#tag-actions-%s" %(tagId), "set",
-                                args= [tagId, True, False])
+                                "#tag-actions-%s" % (tagId), "set",
+                                args=[tagId, True, False])
 
     @defer.inlineCallbacks
     def _unfollow(self, request):
@@ -250,7 +252,7 @@ class TagsResource(base.BaseResource):
         yield db.remove(tagId, 'tagFollowers', myId)
         yield db.insert(orgId, "orgTags", str(count), "followersCount", tagId)
 
-        tag[tagId]['followersCount']= count
+        tag[tagId]['followersCount'] = count
         args = {'tags': tag}
         args['tagsFollowing'] = []
         fromListTags = (utils.getRequestArg(request, '_pg') == '/tags/list')
@@ -260,9 +262,8 @@ class TagsResource(base.BaseResource):
                                 args=[tagId], **args)
         else:
             t.renderScriptBlock(request, 'tags.mako', "tag_actions", False,
-                                "#tag-actions-%s" %(tagId), "set",
-                                args= [tagId, False, False])
-
+                                "#tag-actions-%s" % (tagId), "set",
+                                args=[tagId, False, False])
 
     @profile
     @dump_args
@@ -280,7 +281,6 @@ class TagsResource(base.BaseResource):
 
         return self._epilogue(request, d)
 
-
     @profile
     @dump_args
     def render_POST(self, request):
@@ -293,4 +293,3 @@ class TagsResource(base.BaseResource):
         elif action == 'unfollow':
             d = self._unfollow(request)
         return self._epilogue(request, d)
-
