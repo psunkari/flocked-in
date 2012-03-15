@@ -225,7 +225,6 @@ class FilesResource(base.BaseResource):
 
         item = yield db.get_slice(itemId, "items", ["meta"])
         item = utils.supercolumnsToDict(item)
-        owner = item["meta"]["owner"]
 
         version = utils.decodeKey(version)
         fileId, fileType, name = None, 'text/plain', 'file'
@@ -240,6 +239,7 @@ class FilesResource(base.BaseResource):
         files = utils.supercolumnsToDict(files)
 
         url = files['meta']['uri']
+        owner = files["meta"]["owner"]
         defer.returnValue([owner, url, fileType, size, name])
 
 
