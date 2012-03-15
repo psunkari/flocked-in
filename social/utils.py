@@ -349,7 +349,8 @@ def _upload_files(owner, tmp_fileIds):
             attachmentId = tmpFileId
             timeuuid = uuid.uuid1().bytes
             location, name, size, ftype = cols[tmpFileId]['fileId'].split(':')
-            meta = {"meta": {"uri": location, "name":name, "fileType":ftype}}
+            meta = {"meta": {"uri": location, "name":name, "fileType":ftype,
+                             "owner": owner}}
             yield db.batch_insert(tmpFileId, "files", meta)
             yield db.remove(tmpFileId, "tmp_files")
             attachments[attachmentId] = (timeuuid, tmpFileId, name, size, ftype)
