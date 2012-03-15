@@ -1,5 +1,6 @@
 
-<%! from social import utils, _, __%>
+<%! from social import utils, _, __, brandName, rootUrl %>
+
 <%def name="header()">
   <%
     logoSrc = '/rsrcs/img/flocked-in-small.png'
@@ -38,7 +39,7 @@
 
 ## Invite someone to flocked.in
 <%def name="invite()">
-  ${header()}
+  <% header() %>
               <td valign="top" align="right" style="width:48px;" rowspan="2">
                 <img src="${senderAvatarUrl}" alt="">
               </td>
@@ -80,7 +81,7 @@
 
 
 <%def name="signup()">
-  ${header()}
+  <% header() %>
               <td style="font-size: 14px;">
                 Thanks for signing up for ${brandName}.<br/>
                 Just one more step left to complete the registration. Click below:
@@ -105,18 +106,18 @@
 
 
 <%def name="accountExists()">
-  ${header()}
+  <% header() %>
   <td style="font-size: 14px;">
     You already have an account on ${brandName}.<br/><br/>
     <a href="${rootUrl}/signin" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">Sign-in to ${brandName}</div></a>
   </td>
-  ${footer(text=False)}
+  <% footer(text=False) %>
 </%def>
 
 
 ## Forgot password email
 <%def name="forgotPasswd()">
-  ${header()}
+  <% header() %>
   <td style="font-size: 14px;">
     A request was received to reset the password for ${email} on <a href="${rootUrl}">${brandName}</a>.
     To change your password please click the button below:<br/><br/>
@@ -128,22 +129,22 @@
     This link is valid for 24 hours only.<br/>
     If you did not request this email there is no need for further action<br/>
   </td>
-  ${footer(text=False)}
+  <% footer(text=False) %>
 </%def>
 
 ## Apply tag on an item that I shared
 <%def name="notifyOwnerT()">
-  ${header()}
+  <% header() %>
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
   <td style="font-size: 14px;">
   </td>
-  ${footer()}
+  <% footer() %>
 </%def>
 
 <%def name="notifyOwnerC()">
-  ${header()}
+  <% header() %>
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
@@ -154,11 +155,11 @@
     <br/><br/>
     <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View conversation</div></a>
   </td>
-  ${footer()}
+  <% footer() %>
 </%def>
 
 <%def name="notifyOtherC()">
-  ${header()}
+  <% header() %>
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
@@ -169,11 +170,11 @@
     <br/><br/>
     <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View conversation</div></a>
   </td>
-  ${footer()}
+  <% footer() %>
 </%def>
 
 <%def name="notifyOwnerL()">
-  ${header()}
+  <% header() %>
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
@@ -182,11 +183,11 @@
     <br/><br/>
     <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View conversation</div></a>
   </td>
-  ${footer()}
+  <% footer() %>
 </%def>
 
 <%def name="notifyOwnerLC()">
-  ${header()}
+  <% header() %>
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
@@ -195,11 +196,11 @@
     <br/><br/>
     <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View conversation</div></a>
   </td>
-  ${footer()}
+  <% footer() %>
 </%def>
 
 <%def name="notifyOtherLC()">
-  ${header()}
+  <% header() %>
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
@@ -208,11 +209,11 @@
     <br/><br/>
     <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View conversation</div></a>
   </td>
-  ${footer()}
+  <% footer() %>
 </%def>
 
 <%def name="notifyOwnerFC()">
-  ${header()}
+  <% header() %>
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
@@ -221,11 +222,11 @@
     <br/><br/>
     <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View report</div></a>
   </td>
-  ${footer()}
+  <% footer() %>
 </%def>
 
 <%def name="notifyOwnerRFC()">
-  ${header()}
+  <% header() %>
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
@@ -234,11 +235,11 @@
     <br/><br/>
     <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View report</div></a>
   </td>
-  ${footer()}
+  <% footer() %>
 </%def>
 
 <%def name="notifyOtherRFC()">
-  ${header()}
+  <% header() %>
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
@@ -247,11 +248,11 @@
     <br/><br/>
     <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View report</div></a>
   </td>
-  ${footer()}
+  <% footer() %>
 </%def>
 
 <%def name="notifyOwnerUFC()">
-  ${header()}
+  <% header() %>
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
@@ -260,11 +261,11 @@
     <br/><br/>
     <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View report</div></a>
   </td>
-  ${footer()}
+  <% footer() %>
 </%def>
 
 <%def name="notifyNF()">
-  ${header()}
+  <% header() %>
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
@@ -272,11 +273,11 @@
     <b>${senderName}</b> started following you on ${brandName}.<br/>
     Visit <a href="${rootUrl}/profile?id=${senderId}">${senderName}'s profile</a> to follow ${senderName}.<br/>
   </td>
-  ${footer()}
+  <% footer() %>
 </%def>
 
 <%def name="notifyIA()">
-  ${header()}
+  <% header() %>
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
@@ -284,11 +285,11 @@
     <b>${senderName}</b> accepted your invitation to join ${brandName}.<br/>
     Visit <a href="${rootUrl}/profile?id=${senderId}">${senderName}'s profile</a> to follow ${senderName}.
   </td>
-  ${footer()}
+  <% footer() %>
 </%def>
 
 <%def name="notifyNU()">
-  ${header()}
+  <% header() %>
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
@@ -296,11 +297,11 @@
     <b>${senderName}</b> just joined ${brandName}.<br/>
     Visit <a href="${rootUrl}/profile?id=${senderId}">${senderName}'s profile</a> to follow ${senderName}.
   </td>
-  ${footer()}
+  <% footer() %>
 </%def>
 
 <%def name="notifyGA()">
-  ${header()}
+  <% header() %>
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
@@ -308,12 +309,12 @@
     Your request to join <b>${senderName}</b> was accepted by an administrator.<br/>
     Visit <a href="${rootUrl}/groups">${rootUrl}/groups</a> to see a list of all your groups.
   </td>
-  ${footer()}
+  <% footer() %>
 </%def>
 
 ## Group Request
 <%def name="notifyGR()">
-  ${header()}
+  <% header() %>
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
@@ -324,12 +325,12 @@
     <br/>
     You can also visit <a href="${rootUrl}/groups">${rootUrl}/groups</a> to manage all your groups.
   </td>
-  ${footer()}
+  <% footer() %>
 </%def>
 
 ## Group Invite
 <%def name="notifyGI()">
-  ${header()}
+  <% header() %>
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
@@ -337,12 +338,12 @@
     ${senderName} invited you to join <b>${groupName}</b> group.<br/>
     Visit <a href="${rootUrl}/groups?type=invitations">${rootUrl}/groups?type=invitations</a> to accept the invitation.
   </td>
-  ${footer()}
+  <% footer() %>
 </%def>
 
 ## New private conversation
 <%def name="notifyNM()">
-  ${header()}
+  <% header() %>
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
@@ -351,12 +352,12 @@
     <br/><br/>
     <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View Full Conversation</div></a>
   </td>
-  ${footer()}
+  <% footer() %>
 </%def>
 
 ## Conversation Reply
 <%def name="notifyMR()">
-  ${header()}
+  <% header() %>
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
@@ -365,12 +366,12 @@
     <br/><br/>
     <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View Full Conversation</div></a>
   </td>
-  ${footer()}
+  <% footer() %>
 </%def>
 
 ## Message access change
 <%def name="notifyMA()">
-  ${header()}
+  <% header() %>
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
@@ -385,12 +386,12 @@
     <br/><br/>
       <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View Full Conversation</div></a>
   </td>
-  ${footer()}
+  <% footer() %>
 </%def>
 
 ## Keyword match
 <%def name="notifyKW()">
-  ${header()}
+  <% header() %>
   <td valign="top" align="right" style="width:48px;" rowspan="2">
     <img src="${senderAvatarUrl}" alt="">
   </td>
@@ -399,7 +400,7 @@
     <br/><br/>
       <a href="${keywordUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View Matching Conversations</div></a>
   </td>
-  ${footer()}
+  <% footer() %>
 </%def>
 
 <%def name="html_stats()">
@@ -424,7 +425,7 @@
 </%def>
 
 <%def name="reportUser()">
-  ${header()}
+  <% header() %>
   <td style="font-size: 14px;">
     ${reportedBy} has flagged your account for verification.
     Please click the button to verify your account:
@@ -435,5 +436,5 @@
     <a href="${reactivateUrl}">${reactivateUrl}</a>
     <br/><br/>
   </td>
-  ${footer(text=False)}
+  <% footer(text=False) %>
 </%def>

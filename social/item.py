@@ -40,8 +40,8 @@ def _createNewItem(request, myId, myOrgId, richText=False):
     #
     entities = yield db.multiget_slice([myOrgId, myId], "entities", ['basic', 'admins'])
     entities = utils.multiSuperColumnsToDict(entities)
-    orgAdmins = entities.get(myOrgId, {}).get('admins', {}).keys()
-    if orgAdmins:
+    orgAdminIds = entities.get(myOrgId, {}).get('admins', {}).keys()
+    if orgAdminIds:
         text = ''
         monitoredFields = getattr(plugin, 'monitoredFields', {})
         for superColumnName in monitoredFields:
@@ -53,12 +53,16 @@ def _createNewItem(request, myId, myOrgId, richText=False):
         if matchedKeywords:
             reviewOK = utils.getRequestArg(request, "_review") == "1"
             if reviewOK:
+                orgAdmins = yield db.multiget_slice(orgAdminIds,
+                                                    "entities", ["basic"])
+                entities.update(utils.multiSuperColumnsToDict(orgAdmins))
+
                 # Add conv to list of items that matched this keyword
                 # and notify the administrators about it.
                 for keyword in matchedKeywords:
                     yield db.insert(myOrgId+":"+keyword, "keywordItems", convId,
                                     conv['meta']['uuid'])
-                    yield notifications.notify(orgAdmins, ':KW:'+keyword,
+                    yield notifications.notify(orgAdminIds, ':KW:'+keyword,
                                                myId, entities=entities)
             else:
                 # This item contains a few keywords that are being monitored
@@ -133,18 +137,22 @@ def _comment(request, myId, orgId, convId=None, richText=False):
     entities = yield db.multiget_slice([orgId, myId], "entities",
                                        ['basic', 'admins'])
     entities = utils.multiSuperColumnsToDict(entities)
-    orgAdmins = entities.get(orgId, {}).get('admins', {}).keys()
-    if orgAdmins:
+    orgAdminIds = entities.get(orgId, {}).get('admins', {}).keys()
+    if orgAdminIds:
         matchedKeywords = yield utils.watchForKeywords(orgId, comment)
         if matchedKeywords:
             reviewOK = utils.getRequestArg(request, '_review') == "1"
             if reviewOK:
+                orgAdmins = yield db.multiget_slice(orgAdminIds,
+                                                    "entities", ["basic"])
+                entities.update(utils.multiSuperColumnsToDict(orgAdmins))
+
                 # Add item to list of items that matched this keyword
                 # and notify the administrators about it.
                 for keyword in matchedKeywords:
                     yield db.insert(orgId+":"+keyword, "keywordItems",
                                     itemId+":"+convId, timeUUID)
-                    yield notifications.notify(orgAdmins, ':KW:'+keyword,
+                    yield notifications.notify(orgAdminIds, ':KW:'+keyword,
                                                myId, entities=entities)
 
             else:

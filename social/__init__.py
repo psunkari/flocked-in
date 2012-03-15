@@ -22,6 +22,7 @@ config.read(['etc/devel.cfg','etc/production.cfg'])
 cdnHost = config.get("General", "CDNHost")
 secureProxy = config.get("General", "SecureProxy")
 rootUrl = config.get("General", "URL")
+brandName = config.get("Branding", "Name")
 
 
 #
@@ -95,4 +96,4 @@ for countryId in countries:
 
 
 __all__ = [config, db, plugins, whitelist, location_tz_map,
-           blacklist, cdnHost, secureProxy, _, __]
+           blacklist, cdnHost, secureProxy, _, __, rootUrl, brandName]

@@ -51,6 +51,32 @@ class IFeedUpdateType(Interface):
         """
 
 
+class INotificationType(Interface):
+    notificationType = Attribute("Type of notification")
+    notifyOnWeb = Attribute("Are notifications shown in /notifications?")
+
+    def render(parts, value, toOwner=False, getTitle=True,
+               getBody=True, data=None):
+        """Render the notification as text.  The returned value is a tuple
+        containing one short summary and descriptive text and HTML. Short
+        summary can be used as a mail subject or sent over SMS. The description
+        is meant to be used as body of the email etc;
+        """
+
+    def fetchAggregationData(parts, values):
+        """Fetch any data that is required for display of aggregation.
+        Returns a tuple containing @userIds of entities whose avatars will
+        be displayed with the notification, entityIds to be fetched and any
+        other data that must be passed to @aggregation
+        """
+
+    def aggregation(parts, values, data=None, fetched=None):
+        """Aggregation is a rendering of one or more similar notifications
+        in a single sentence.  Used for on-screen display in the
+        notifications screen/popup.
+        """
+
+
 class IAuthInfo(Interface):
     username = Attribute("User key")
     organization = Attribute("Key of the user's organization")
