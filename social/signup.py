@@ -191,7 +191,7 @@ class SignupResource(base.BaseResource):
 
         rawEmailIds = utils.getRequestArg(request, 'email', multiValued=True) or []
         stats = yield people.invite(request, rawEmailIds)
-        request.redirect('/feed')
+        request.redirect('/feed/')
 
     @defer.inlineCallbacks
     def _signup(self, request):
