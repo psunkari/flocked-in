@@ -7,8 +7,7 @@ from twisted.web        import server, static
 from twisted.cred.error import Unauthorized
 from telephus.cassandra import ttypes
 
-from social.base        import BaseResource
-from social             import utils, db, config, people, errors, _
+from social             import utils, db, config, people, errors, _, base
 from social             import notifications, blacklist, template as t
 from social.isocial     import IAuthInfo
 from social.logging     import dump_args, profile, log
@@ -124,7 +123,7 @@ def _sendSignupInvitation(emailId):
     yield utils.sendmail(emailId, subject, textBody, htmlBody)
 
 
-class SignupResource(BaseResource):
+class SignupResource(base.BaseResource):
     isLeaf = True
     requireAuth = False
     thanksPage = None
@@ -267,8 +266,8 @@ class SignupResource(BaseResource):
             otherInvitees = [x for x in userIds
                              if x not in (acceptedInvitationSender, emailId)]
 
-            cols = yield db.multiget_slice(userIds + [orgId, userId], "entities", ["basic"])
-            entities = utils.multiSuperColumnsToDict(cols)
+            entities = base.EntitySet(userIds + [orgId, userId])
+            yield entities.fetchData()
             data = {"entities": entities, 'orgId': orgId}
 
             yield notifications.notify([acceptedInvitationSender], ":IA", userId, **data)
