@@ -171,6 +171,14 @@ class Admin(base.BaseResource):
         emailId = user.basic.get("emailId", None)
         yield db.insert(emailId, "userAuth", 'True', "isBlocked")
         yield db.insert(orgId, "blockedUsers", '', user.id)
+
+        sessionIds = yield db.get_slice(user.id, "userSessionsMap")
+        sessionIds = utils.columnsToDict(sessionIds)
+        for sessionId in sessionIds:
+            yield db.remove(sessionId, "sessions")
+            yield utils.cleanupChat(sessionId, user.id, orgId)
+        yield db.remove(user.id, "userSessionsMap")
+
         t.renderScriptBlock(request, "admin.mako", "admin_actions",
                                 False, "#user-actions-%s" % (user.id),
                                 "set", args=[user.id, 'blocked'])
