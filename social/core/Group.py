@@ -73,7 +73,6 @@ def _addMember(request, group, user):
 
 @defer.inlineCallbacks
 def follow(group, user):
-
     try:
         cols = yield db.get(group.id, "groupMembers", user.id)
         yield db.insert(group.id, "followers", "", user.id)
@@ -103,7 +102,6 @@ def subscribe(request, group, user, org):
     pendingRequests = {}
     try:
         cols = yield db.get(group.id, "groupMembers", user.id)
-        defer.returnValue((isNewMember, pendingRequests))
     except ttypes.NotFoundException:
         if group.basic['access'] == "open":
             yield _addMember(request, group, user)
@@ -111,8 +109,10 @@ def subscribe(request, group, user, org):
             isNewMember = True
         else:
             # Add to pending connections
-            yield db.insert(user.id, "pendingConnections", '', "GO:%s" % (group.id))
-            yield db.insert(group.id, "pendingConnections", '', "GI:%s" % (user.id))
+            yield db.insert(user.id, "pendingConnections",
+                            '', "GO:%s" % (group.id))
+            yield db.insert(group.id, "pendingConnections",
+                            '', "GI:%s" % (user.id))
 
             yield _notify(group, user)
             pendingRequests["GO:%s" % (group.id)] = user.id
@@ -128,13 +128,12 @@ def subscribe(request, group, user, org):
 
 @defer.inlineCallbacks
 def unsubscribe(request, group, user):
-
     try:
         yield db.get(group.id, "groupMembers", user.id)
     except ttypes.NotFoundException:
         raise errors.InvalidRequest(_("You are not a member of the group"))
 
-    if len(getattr(group, 'admins', {})) == 1 and user.id in group.admins:
+    if len(getattr(group, 'admins', {}).keys()) == 1 and user.id in group.admins:
         raise errors.InvalidRequest(_("You are the only administrator of this group"))
 
     colname = _entityGroupMapColName(group)
@@ -144,15 +143,17 @@ def unsubscribe(request, group, user):
     itemId = utils.getUniqueKey()
     acl = {"accept": {"groups": [group.id]}}
     _acl = pickle.dumps(acl)
-    item = yield utils.createNewItem(request, itemType, user, acl, "groupLeave")
+    item = yield utils.createNewItem(request, itemType, user,
+                                     acl, "groupLeave")
     item["meta"]["target"] = group.id
 
     d1 = db.remove(group.id, "followers", user.id)
     d2 = db.remove(user.id, "entityGroupsMap", colname)
     d3 = db.batch_insert(itemId, 'items', item)
     d4 = db.remove(group.id, "groupMembers", user.id)
-    d5 = feed.pushToOthersFeed(user.id, user.basic['org'], item["meta"]["uuid"], itemId,
-                               itemId, _acl, responseType, itemType, user.id,
+    d5 = feed.pushToOthersFeed(user.id, user.basic['org'],
+                               item["meta"]["uuid"], itemId, itemId, _acl,
+                               responseType, itemType, user.id,
                                promoteActor=False)
     d6 = utils.updateDisplayNameIndex(user.id, [group.id], None,
                                       user.basic['name'])
@@ -167,43 +168,40 @@ def unsubscribe(request, group, user):
 
 @defer.inlineCallbacks
 def block(group, user, me):
+    if me.id not in group.admins:
+        raise errors.PermissionDenied('Access Denied')
 
-    if me.id in group.admins:
-        if me.id == user.id and me.id in group.admins:
-            raise errors.InvalidRequest(_("An administrator cannot ban himself/herself from the group"))
-        try:
-            yield db.get(group.id, "pendingConnections", "GI:%s" % (user.id))
-            yield _removeFromPending(group, user)
-            # Add user to blocked users
-            yield db.insert(group.id, "blockedUsers", '', user.id)
-            defer.returnValue(True)
+    if me.id == user.id:
+        raise errors.InvalidRequest(_("An administrator cannot ban himself/herself from the group"))
+    try:
+        yield db.get(group.id, "pendingConnections", "GI:%s" % (user.id))
+        yield _removeFromPending(group, user)
+        # Add user to blocked users
+        yield db.insert(group.id, "blockedUsers", '', user.id)
+        defer.returnValue(True)
 
-        except ttypes.NotFoundException:
-            # If the users is already a member, remove the user from the group
-            colname = _entityGroupMapColName(group)
-            yield db.remove(group.id, "groupMembers", user.id)
-            yield db.remove(group.id, "followers", user.id)
-            yield db.remove(user.id, "entityGroupsMap", colname)
-            # Add user to blocked users
-            yield db.insert(group.id, "blockedUsers", '', user.id)
-            defer.returnValue(False)
-    else:
-        raise errors.InvalidRequest('Access Denied')
+    except ttypes.NotFoundException:
+        # If the users is already a member, remove the user from the group
+        colname = _entityGroupMapColName(group)
+        yield db.remove(group.id, "groupMembers", user.id)
+        yield db.remove(group.id, "followers", user.id)
+        yield db.remove(user.id, "entityGroupsMap", colname)
+        # Add user to blocked users
+        yield db.insert(group.id, "blockedUsers", '', user.id)
+        defer.returnValue(False)
 
 
 @defer.inlineCallbacks
 def unblock(group, user, me):
-
     if me.id not in group.admins:
-        raise errors.InvalidRequest('Access Denied')
+        raise errors.PermissionDenied('Access Denied')
     yield db.remove(group.id, "blockedUsers", user.id)
 
 
 @defer.inlineCallbacks
 def rejectRequest(group, user, me):
-
     if me.id not in group.admins:
-        raise errors.InvalidRequest('Access Denied')
+        raise errors.PermissionDenied('Access Denied')
 
     try:
         yield db.get(group.id, "pendingConnections", "GI:%s" % (user.id))
@@ -216,9 +214,8 @@ def rejectRequest(group, user, me):
 
 @defer.inlineCallbacks
 def approveRequest(request, group, user, me):
-
     if me.id not in group.admins:
-        raise errors.InvalidRequest('Access Denied')
+        raise errors.PermissionDenied('Access Denied')
 
     try:
         yield db.get(group.id, "pendingConnections", "GI:%s" % (user.id))
@@ -246,9 +243,8 @@ def cancelRequest(group, me):
 
 @defer.inlineCallbacks
 def removeUser(group, user, me):
-
     if me.id not in group.admins:
-        raise errors.InvalidRequest('Access Denied')
+        raise errors.PermissionDenied('Access Denied')
 
     if len(getattr(group, 'admins', {})) == 1 and me.id == user.id:
         raise errors.InvalidRequest(_("You are currently the only administrator of this group"))
@@ -281,9 +277,8 @@ def removeUser(group, user, me):
 
 @defer.inlineCallbacks
 def makeAdmin(request, group, user, me):
-
     if me.id not in group.admins:
-        raise errors.InvalidRequest(_('You are not an administrator of the group'))
+        raise errors.PermissionDenied(_('You are not an administrator of the group'))
 
     cols = yield db.get_slice(group.id, "groupMembers", [user.id])
     if not cols:
@@ -319,8 +314,8 @@ def makeAdmin(request, group, user, me):
 @defer.inlineCallbacks
 def removeAdmin(group, user, me):
     if me.id not in group.admins:
-        raise errors.InvalidRequest(_('You are not an administrator of the group'))
-    if me.id == user.id and len(group.admins) == 1:
+        raise errors.PermissionDenied(_('You are not an administrator of the group'))
+    if me.id == user.id and len(group.admins.keys()) == 1:
         raise errors.InvalidRequest(_('You are currently the only administrator of this group'))
 
     cols = yield db.get_slice(group.id, "groupMembers", [user.id])
@@ -336,7 +331,6 @@ def removeAdmin(group, user, me):
 
 @defer.inlineCallbacks
 def create(request, me, name, access, description, displayPic):
-
     if not name:
         raise errors.MissingParams([_("Group name")])
 
@@ -411,10 +405,9 @@ def edit(me, group, name, access, desc, displayPic):
 
 @defer.inlineCallbacks
 def getMembers(group, me, start=''):
-
     cols = yield db.get_slice(group.id, "groupMembers", [me.id])
     if not cols:
-        raise errors.InvalidRequest(_("Access Denied"))
+        raise errors.PermissionDenied(_("Access Denied"))
 
     users, relation, userIds, blockedUsers, nextPageStart,\
         prevPageStart = yield people.getPeople(me.id, group.id,
@@ -424,9 +417,8 @@ def getMembers(group, me, start=''):
 
 @defer.inlineCallbacks
 def getBlockedMembers(group, me, start='', count=PEOPLE_PER_PAGE):
-
     if me.id not in group.admins:
-        raise errors.InvalidRequest(_("Access Denied"))
+        raise errors.PermissionDenied(_("Access Denied"))
 
     nextPageStart = ''
     prevPageStart = ''
@@ -455,13 +447,12 @@ def getBlockedMembers(group, me, start='', count=PEOPLE_PER_PAGE):
 
 @defer.inlineCallbacks
 def getPendingRequests(group, me, start, count=PEOPLE_PER_PAGE):
-
     toFetchCount = count + 1
     nextPageStart = None
     prevPageStart = None
 
     if me.id not in group.admins:
-        raise errors.InvalidRequest('Access Denied')
+        raise errors.PermissionDenied('Access Denied')
 
     cols = yield db.get_slice(group.id, "pendingConnections",
                               start=start, count=toFetchCount)
@@ -483,7 +474,7 @@ def getPendingRequests(group, me, start, count=PEOPLE_PER_PAGE):
 
 
 @defer.inlineCallbacks
-def getAllInviations(me, start, count=PEOPLE_PER_PAGE):
+def getAllInvitations(me, start, count=PEOPLE_PER_PAGE):
     if not start:
         start = 'GI'
     toFetchCount = count + 1
@@ -542,7 +533,6 @@ def invite(group, me, user):
 
 @defer.inlineCallbacks
 def getGroupRequests(me, start='', count=PEOPLE_PER_PAGE):
-
     userIds = []
     entities = {}
     nextPageStart = None
@@ -634,7 +624,6 @@ def getGroupRequests(me, start='', count=PEOPLE_PER_PAGE):
 
 @defer.inlineCallbacks
 def getGroups(me, entity, start, count=PEOPLE_PER_PAGE):
-
     toFetchCount = count + 1
     groups = {}
     groupIds = []

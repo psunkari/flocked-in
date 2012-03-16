@@ -8,9 +8,9 @@ from social.core        import Feed
 from social.isocial     import IAuthInfo
 from social.logging     import profile, dump_args
 from social.validators  import Validate, SocialSchema, Entity, SocialString
-from social.core        import groups as Group
+from social.core        import Group
 
-class GroupAdmin(SocialSchema):
+class EntityGroup(SocialSchema):
     id = compound.Pipe(SocialString(if_missing=''),
                        Entity(entityType='group', columns=['admins']))
 
@@ -63,7 +63,7 @@ class GroupsResource(base.BaseResource):
                   'group-settings.mako', 'feed.mako']
 
     @profile
-    @Validate(GroupAdmin)
+    @Validate(EntityGroup)
     @defer.inlineCallbacks
     @dump_args
     def _follow(self, request, data=None):
@@ -80,7 +80,7 @@ class GroupsResource(base.BaseResource):
                                 "set", **args)
 
     @profile
-    @Validate(GroupAdmin)
+    @Validate(EntityGroup)
     @defer.inlineCallbacks
     @dump_args
     def _unfollow(self, request, data=None):
@@ -96,7 +96,7 @@ class GroupsResource(base.BaseResource):
                                 False, "#group-actions-%s" % (group.id),
                                 "set", **args)
 
-    @Validate(GroupAdmin)
+    @Validate(EntityGroup)
     @defer.inlineCallbacks
     def _cancelGroupInvitation(self, request, data=None):
         myId = request.getSession(IAuthInfo).username
@@ -114,7 +114,7 @@ class GroupsResource(base.BaseResource):
                                 "set", **args)
 
     @profile
-    @Validate(GroupAdmin)
+    @Validate(EntityGroup)
     @defer.inlineCallbacks
     @dump_args
     def _subscribe(self, request, data=None):
@@ -238,7 +238,7 @@ class GroupsResource(base.BaseResource):
                             "set", args=[group.id, user.id, "unblock"])
 
     @profile
-    @Validate(GroupAdmin)
+    @Validate(EntityGroup)
     @defer.inlineCallbacks
     @dump_args
     def _unsubscribe(self, request, data=None):
@@ -401,7 +401,6 @@ class GroupsResource(base.BaseResource):
 
         args["menuId"] = "groups"
         args['viewType'] = viewType
-        alert_mesg = ''
 
         cols = yield db.get_slice(myId, "entities", super_column='adminOfGroups')
         managedGroupIds = [col.column.name for col in cols]
@@ -448,7 +447,7 @@ class GroupsResource(base.BaseResource):
             args.update(data)
             args['tab'] = 'pending'
         elif viewType == 'invitations':
-            data = yield Group.getAllInviations(me, start)
+            data = yield Group.getAllInvitations(me, start)
             args.update(data)
 
         if script:
@@ -622,7 +621,7 @@ class GroupsResource(base.BaseResource):
         return True
 
     @profile
-    @Validate(GroupAdmin)
+    @Validate(EntityGroup)
     @defer.inlineCallbacks
     @dump_args
     def _renderEditGroup(self, request, data=None):
@@ -742,8 +741,8 @@ class GroupFeedResource(base.BaseResource):
         isMember = yield db.get_count(group.id, "groupMembers", start=myId, finish=myId)
         isFollower = yield db.get_count(group.id, "followers", start=myId, finish=myId)
         columns = ["GI:%s" % (group.id), "GO:%s" % (group.id)]
-        pendingConnections = yield db.get_slice(myId, "pendingConnections", ["GI:%s" % (group.id), "GO:%s" % (group.id)])
-        pendingConnections = utils.columnsToDict(pendingConnections)
+        cols = yield db.get_slice(myId, "pendingConnections",  columns)
+        pendingConnections = utils.columnsToDict(cols)
 
         args["menuId"] = "groups"
         args["groupId"] = group.id
