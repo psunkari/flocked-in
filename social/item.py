@@ -12,6 +12,7 @@ from social             import base, db, utils, feed, config
 from social             import plugins, constants, tags, search
 from social             import notifications, _, errors, files
 from social             import template as t
+from social.core        import Feed
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.logging     import profile, dump_args, log
@@ -90,11 +91,10 @@ def _createNewItem(request, myId, myOrgId, richText=False):
     responseType = 'I'
 
     # Push to feeds
-    d1 = feed.pushToFeed(myId, timeUUID, convId, None,
-                         responseType, convType, myId, myId)
-    d2 = feed.pushToOthersFeed(myId, myOrgId, timeUUID, convId, None, convACL,
-                               responseType, convType, myId)
-    deferreds.extend([d1, d2])
+    feedUpdateVal = "I:%s:%s" % (myId, convId)
+    d = Feed.push(myId, myOrgId, convId,
+                  conv, timeUUID, feedUpdateVal, promoteActor=True)
+    deferreds.append(d)
 
     # Save in user items.
     userItemValue = ":".join([responseType, convId, convId, convType, myId, ''])
@@ -189,15 +189,9 @@ def _comment(request, myId, orgId, convId=None, richText=False):
     if plugins.has_key(convType) and plugins[convType].hasIndex:
         yield db.insert(myId, "userItems_"+convType, userItemValue, timeUUID)
 
-    # 5. Update my feed.
-    yield feed.pushToFeed(myId, timeUUID, itemId, convId, responseType,
-                          convType, convOwnerId, myId, promote=False)
-
-    # 6. Push to other's feeds
-    convACL = conv["meta"].get("acl", "company")
-    yield feed.pushToOthersFeed(myId, orgId, timeUUID, itemId, convId, convACL,
-                                responseType, convType, convOwnerId,
-                                promoteActor=False)
+    # 5. Update feeds.
+    feedItemVal = "%s:%s:%s" % (responseType, myId, itemId)
+    yield Feed.push(myId, orgId, convId, conv, timeUUID, feedItemVal)
 
     yield _notify("C", convId, timeUUID, convType=convType,
                       convOwnerId=convOwnerId, myId=myId, me=me,
@@ -640,21 +634,17 @@ class ItemResource(base.BaseResource):
             # 2. add user to the followers list of parent item
             yield db.insert(convId, "items", "", myId, "followers")
 
-            # 3. update user's feed, feedItems, feed_*
+            # 3. update useritems
             userItemValue = ":".join([responseType, itemId, convId, convType,
                                       convOwnerId, commentSnippet])
             yield db.insert(myId, "userItems", userItemValue, timeUUID)
             if plugins.has_key(convType) and plugins[convType].hasIndex:
                 yield db.insert(myId, "userItems_"+convType, userItemValue, timeUUID)
 
-            yield feed.pushToFeed(myId, timeUUID, itemId, convId, responseType,
-                                  convType, convOwnerId, myId,
-                                  entities=extraEntities, promote=False)
-
-            # 4. update feed, feedItems, feed_* of user's followers
-            yield feed.pushToOthersFeed(myId, orgId, timeUUID, itemId, convId, convACL,
-                                        responseType, convType, convOwnerId,
-                                        entities=extraEntities, promoteActor=False)
+            # 4. update feeds
+            feedItemVal = "%s:%s:%s:%s" % (responseType, myId, itemId,
+                                           ','.join(extraEntities))
+            yield Feed.push(myId, orgId, convId, conv, timeUUID, feedItemVal)
 
         if itemId != convId:
             itemOwnerId = item["meta"]["owner"]
@@ -1008,17 +998,12 @@ class ItemResource(base.BaseResource):
                             handlers={"onload": "(function(){$('input:text', '#addtag-form-%s').val('');})();" % itemId},
                             args=[itemId, tagId, tag["title"]])
 
-        convACL = item["meta"]["acl"]
-        convType = item["meta"]["type"]
-        timeUUID = uuid.uuid1().bytes
-        convOwnerId = item["meta"]["owner"]
-        responseType = "T"
         if followers:
-            yield feed.pushToOthersFeed(myId, orgId, timeUUID, itemId, itemId,
-                                convACL, responseType, convType, convOwnerId,
-                                others=followers, tagId=tagId, promoteActor=False)
-
-        #TODO: Send notification to the owner of conv
+            timeUUID = uuid.uuid1().bytes
+            feedUpdateVal = "T:%s:%s::%s" % (myId, itemId, tagId)
+            yield Feed.push(myId, orgId, itemId, item, timeUUID,
+                            feedUpdateVal, feeds=followers)
+        # TODO: Send notification to the owner of conv
 
 
     @profile

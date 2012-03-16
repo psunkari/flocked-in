@@ -1,8 +1,25 @@
+#!/usr/bin/env python
+#
+# Feed.py: All handling of user and company feeds. This file exposes
+#          function that can be used to retrieve and update a feed.
+#
+# NOTE:
+# When a user posts an item, likes an item or does any other action - the
+# update is cached in all the follower's feeds.  This approach decreases the
+# amount of time needed to process a feed for display.  However, when there
+# are a very high number of followers to a user, the amount of time taken to
+# add items to everyone's feeds can be really high.
+#
+
+import time
 
 from twisted.internet   import defer
 from twisted.plugin     import getPlugins
+from twisted.python     import log
+from telephus.cassandra import ttypes
 
 from social             import db, errors, utils, plugins
+from social.constants   import MAXFEEDITEMS, MAXFEEDITEMSBYTYPE
 from social.relations   import Relation
 from social.isocial     import IAuthInfo, IFeedUpdateType
 
@@ -11,6 +28,151 @@ _feedUpdatePlugins =  dict()
 for plg in getPlugins(IFeedUpdateType):
     if not hasattr(plg, "disabled") or not plg.disabled:
         _feedUpdatePlugins[plg.updateType] = plg
+
+
+
+
+@defer.inlineCallbacks
+def push(userId, orgId, convId, conv, timeUUID, updateVal,
+         feeds=None, promote=True, promoteActor=False):
+    """Push an item update to feeds. This function adds an update to
+    feedItems and if necessary promotes the conversation to the top of
+    the feed.
+
+    Keyword params:
+    @userId - Id of the actor
+    @orgId - orgId of the actor
+    @convId - Id of the conversation which got updated
+    @conv - The conversation that got updated
+    @timeUUID - UUID1 that represents this update
+    @updateVal - Value that is stored in feedItems
+    @feeds - List of feeds that must be updated
+    @promote - Promote the item up the conversation?
+    @promoteActor - When promote is True, should this update promote
+        the conversation even on the actor's feed.
+
+    """
+    meta = conv['meta']
+    convType = meta['type']
+
+    if not feeds:
+        feeds = yield utils.expandAcl(userId, orgId, meta['acl'],
+                                      convId, meta['owner'])
+        feeds.add(userId)
+
+    userFeedItems = yield db.multiget_slice(feeds, "feedItems",
+                                            super_column=convId, reverse=True)
+
+    # XXX: Assumes that updateVal is of the following format
+    #      <updateType>:<actorId>:<plugin specifics>
+    def _updateFeedItems(userId, promoteToUser):
+        userUpdatesOfType = []      # Items in feed of type that promote
+        userUpdateIds = []          # TimeUUIDs of all updates that promote
+        allUpdatesOfType = []       # All items in feed by type
+        oldest = None               # Most relevant item for removal
+        oldFeedKeys = []
+
+        updateType = updateVal.split(':', 1)[0]
+        cur = userFeedItems.get(userId, [])
+        for x in cur:
+            uid = x.column.name
+            val = x.column.value.split(':')
+            if uid == timeUUID:    # We already know this update!!!
+                defer.returnValue(None)
+
+            rtype = val[0]
+            if rtype not in ('!', 'I'):
+                if rtype == updateType:
+                    allUpdatesOfType.append(uid)
+                    if val[1] == userId:
+                        userUpdateIds.append(uid)
+                        userUpdatesOfType.append(uid)
+                oldest = uid
+            oldFeedKeys.append(uid)
+
+        curUpdateCount = len(cur)
+        curUpdateCountForType = len(allUpdatesOfType)
+
+        if curUpdateCountForType == MAXFEEDITEMSBYTYPE:
+            # If this update isn't promoting the conversation up the feed,
+            # we ought to make sure that we don't remove an item that is the
+            # reason for the current position of conversation in the feed.
+            if not promoteToUser and \
+                    (len(userUpdatesOfType) == MAXFEEDITEMSBYTYPE or \
+                     (allUpdatesOfType[-1] not in userUpdatesOfType and \
+                      len(userUpdatesOfType) == MAXFEEDITEMSBYTYPE - 1)):
+                oldest = userUpdatesOfType[-2]
+            else:
+                oldest = allUpdatesOfType[-1]
+
+        if not promoteToUser and \
+                (len(userUpdateIds) == MAXFEEDITEMS - 1 or \
+                 (oldest not in userUpdateIds and\
+                  len(userUpdateIds) == MAXFEEDITEMS - 2)):
+            oldest = userUpdateIds[-2]
+
+        feedItemToRemove = oldest if curUpdateCountForType == MAXFEEDITEMSBYTYPE\
+                                      or curUpdateCount == MAXFEEDITEMS\
+                                  else None
+        insertConv = True if curUpdateCount == 0 and updateType != 'I' else False
+
+        return oldFeedKeys, feedItemToRemove, insertConv
+
+    # Fetch list of changes to feedItems
+    removeFeedKeys = {}
+    removeFeedItems = {}
+    insertDummyConvs = []
+    for feedId in feeds:
+        promoteToUser = promote and (feedId != userId or promoteActor)
+        (oldFeedKeys, feedItemToRemove, insertConv) = \
+                                    _updateFeedItems(feedId, promoteToUser)
+        if oldFeedKeys and promoteToUser:
+            removeFeedKeys[feedId] = oldFeedKeys
+        if feedItemToRemove:
+            removeFeedItems[feedId] = [feedItemToRemove]
+        if insertConv:
+            insertDummyConvs.append(feedId)
+
+    # Update feedItems
+    feedItemsMutations = {}
+    feedItemsRemovalMutations = {}
+    timestamp = int(time.time() * 1e6)
+    for feedId in feeds:
+        mutations = {}
+        keys = removeFeedKeys.get(feedId, None)
+        if keys:
+            predicate = ttypes.SlicePredicate(column_names=keys)
+            deletion = ttypes.Deletion(timestamp, predicate=predicate)
+            mutations['feed'] = [deletion]
+
+        if feedId in insertDummyConvs:
+            dummyValue = ':'.join(['!', meta['owner'], convId])
+            mutations['feedItems'] = {convId: {meta['uuid']: dummyValue,
+                                               timeUUID: updateVal}}
+        else:
+            mutations['feedItems'] = {convId: {timeUUID: updateVal}}
+
+        feedItemsMutations[feedId] = mutations
+
+        feedItemKey = removeFeedItems.get(feedId, None)
+        if feedItemKey:
+            predicate = ttypes.SlicePredicate(column_names=[feedItemKey])
+            deletion = ttypes.Deletion(timestamp, convId, predicate=predicate)
+            feedItemsRemovalMutations[feedId] = {'feedItems': [deletion]}
+
+    # Promote items in all feeds
+    feedMutations = {}
+    for feedId in feeds:
+        promoteToUser = promote and (feedId != userId or promoteActor)
+        if promoteToUser:
+            mutations = {'feed': {timeUUID: convId}}
+            if convType in plugins and plugins[convType].hasIndex:
+                mutations['feed_%s' % convType] = {timeUUID: convId}
+            feedMutations[feedId] = mutations
+
+    yield db.batch_mutate(feedItemsMutations)
+    yield db.batch_mutate(feedItemsRemovalMutations)
+    yield db.batch_mutate(feedMutations)
 
 
 @defer.inlineCallbacks
@@ -32,6 +194,7 @@ def get(auth, feedId=None, feedItemsId=None, convIds=None,
     @count - Number of items to fetch
     @getReasons - Add reason strings to the returned dictionary
     @forceCount - Try hard to get atleast count items from the feed
+
     """
     toFetchItems = set()    # Items and entities that need to be fetched
     toFetchEntities = set() #
