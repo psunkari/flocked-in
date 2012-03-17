@@ -253,7 +253,7 @@ def _comment(convId, conv, comment, snippet, myId, orgId, richText, reviewed):
                           convType, convOwnerId, myId, promote=False)
 
     # 6. Push to other's feeds
-    convACL = conv["meta"].get("acl", "company")
+    convACL = conv["meta"]["acl"]
     yield feed.pushToOthersFeed(myId, orgId, timeUUID, itemId, convId, convACL,
                                 responseType, convType, convOwnerId,
                                 promoteActor=False)
@@ -419,6 +419,7 @@ def delete(itemId, item, myId, orgId):
     deferreds.append(d)
 
     yield defer.DeferredList(deferreds)
+    defer.returnValue(conv)
 
 
 @defer.inlineCallbacks
@@ -504,7 +505,7 @@ def likes(itemId, item):
 
     users = [col.column.name for col in itemLikes]
     if len(users) <= 0:
-        raise errors.InvalidRequest(_("Currently, no one likes the item"))
+        defer.returnValue(({}, []))
 
     entities = base.EntitySet(users + [item['meta']['owner']])
     yield entities.fetchData()

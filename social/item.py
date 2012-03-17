@@ -439,6 +439,8 @@ class ItemResource(base.BaseResource):
         itemId, item = data['id']
         entities, users = yield Item.likes(itemId, item)
         args = {"users": users, "entities": entities}
+        if not users:
+            raise errors.InvalidRequest(_("Currently, no one likes the item"))
         itemType = item['meta'].get('type', 'comment')
         ownerId = item["meta"]["owner"]
         args['title'] = _("People who like %s's %s") %\
