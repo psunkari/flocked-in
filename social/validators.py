@@ -2,15 +2,17 @@ import re
 import formencode
 from formencode         import validators,  ForEach, compound, api
 from twisted.internet   import defer
-from social             import utils, errors, _, db, constants, base
+from social             import utils, errors, _, db, constants, base, plugins
 from social.isocial     import IAuthInfo
 from social.relations   import Relation
+
 
 class Invalid(api.Invalid):
     def  __init__(self, msg, value, state, error_list=None,
                   error_dict=None, data=None):
         self.data = data
-        super(Invalid, self).__init__(msg, value, state, error_list, error_dict)
+        super(Invalid, self).__init__(msg, value, state,
+                                      error_list, error_dict)
 
 
 class Schema(formencode.Schema):
@@ -56,8 +58,8 @@ class Schema(formencode.Schema):
                 except ValueError:
                     if not self.allow_extra_fields:
                         raise Invalid(
-                            self.message('notExpected', state, name=repr(name)),
-                            value_dict, state, data=new)
+                           self.message('notExpected', state, name=repr(name)),
+                           value_dict, state, data=new)
                     else:
                         if not self.filter_extra_fields:
                             new[name] = value
@@ -82,8 +84,8 @@ class Schema(formencode.Schema):
                         try:
                             message = validator.message('missing', state)
                         except KeyError:
-                            message = self.message('missingValue', state)
-                        errors[name] = api.Invalid(message, None, state)
+                            message = name
+                        errors[name] = MissingParam(str(message), None, state)
                     else:
                         try:
                             new[name] = validator.to_python(self.if_key_missing, state)
@@ -121,6 +123,59 @@ class Schema(formencode.Schema):
                 state.full_dict = previous_full_dict
 
 
+class ItemAccessDenied(api.Invalid):
+    severity = 1
+
+    def raiseError(self):
+        raise errors.ItemAccessDenied(self.msg, self.value)
+
+
+class EntityAccessDenied(api.Invalid):
+    severity = 1
+
+    def raiseError(self):
+        raise errors.EntityAccessDenied(self.msg, self.value)
+
+
+class InvalidRequest(api.Invalid):
+    severity = 1
+
+    def raiseError(self):
+        raise errors.InvalidRequest(self.msg)
+
+
+class InvalidItem(api.Invalid):
+    severity = 2
+
+    def raiseError(self):
+        raise errors.InvalidItem(self.msg, self.value)
+
+
+class InvalidItemType(api.Invalid):
+    severity = 2
+
+    def raiseError(self):
+        raise errors.BaseError(self.msg, 400)
+
+
+class InvalidEntity(api.Invalid):
+    severity = 2
+
+    def raiseError(self):
+        raise errors.InvalidEntity(self.msg, self.value)
+
+
+class InvalidTag(api.Invalid):
+    severity = 2
+
+    def raiseError(self):
+        raise errors.InvalidTag(self.value)
+
+
+class MissingParam(api.Invalid):
+    severity = 3
+
+
 class Item(validators.FancyValidator):
     columns = ['meta']
     itemType = None
@@ -130,19 +185,21 @@ class Item(validators.FancyValidator):
 
     @defer.inlineCallbacks
     def _to_python(self, itemId, state):
-        if not itemId:
-            raise api.Invalid('Missing conversation id', itemId, state)
+        itemType = self.itemType if self.itemType else 'item'
+        if not itemId or not itemId[0]:
+            raise MissingParam('%s-id' % (itemType), itemId, state)
         itemId = itemId[0]
+
         columns = set(['meta']).update(self.columns)
         item = yield db.get_slice(itemId, "items", columns)
         if not item:
-            raise api.Invalid('Invalid conversation', itemId, state)
+            raise InvalidItem(itemType, itemId, state)
 
         item = utils.supercolumnsToDict(item)
         meta = item["meta"]
 
         if self.itemType and meta["type"] != self.itemType:
-            raise api.Invalid('Requested item does not exist', itemId, state)
+            raise InvalidItem(itemType, itemId, state)
 
         parentId = meta.get("parent", None)
         if parentId:
@@ -158,7 +215,7 @@ class Item(validators.FancyValidator):
         deleted = deleted or meta.get('state', None) == 'deleted'
 
         if deleted:
-            raise api.Invalid('Invalid Item', itemId, state)
+            raise InvalidItem(itemType, itemId, state)
 
         if self.source != 'api':
             request = state.request
@@ -171,7 +228,7 @@ class Item(validators.FancyValidator):
         relation = Relation(myId, [])
         yield relation.initGroupsList()
         if not utils.checkAcl(myId, orgId, isOrgAdmin, relation, parent['meta']):
-            raise api.Invalid('Requested item does not exist', itemId, state)
+            raise ItemAccessDenied(itemType, itemId, state)
         defer.returnValue((itemId, item))
 
 
@@ -183,25 +240,22 @@ class Entity(validators.FancyValidator):
     @defer.inlineCallbacks
     def _to_python(self, entityId, state):
         if not entityId:
-            raise api.Invalid('Missing %s-id' %(self.entityType), entityId, state)
+            raise InvalidEntity(self.entityType, entityId, state)
         columns = ['basic']
-        if self.columns :
+        if self.columns:
             columns.extend(self.columns)
         entity = base.Entity(entityId)
         yield entity.fetchData(columns=columns)
 
-        if not entity.basic:
-            raise api.Invalid('Invalid %s-id'%(self.entityType), entityId, state)
+        if not entity.basic or self.entityType != entity.basic['type']:
+            raise InvalidEntity(self.entityType, entityId, state)
 
-
-        if self.entityType != entity.basic["type"]:
-            raise api.Invalid('Invalid %s-id'%(self.entityType), entityId, state)
-        if self.source!= 'api':
+        if self.source != 'api':
             request = state.request
             orgId = request.getSession(IAuthInfo).organization
         org = entity.basic["org"] if entity.basic["type"] != "org" else entityId
         if orgId != org:
-            raise api.Invalid('Access Denied', entityId, state)
+            raise EntityAccessDenied(entity.basic['type'], entityId, state)
         defer.returnValue(entity)
 
 
@@ -210,30 +264,30 @@ class TagString(validators.FancyValidator):
 
     def _to_python(self, tagName, state):
         if not tagName:
-            raise api.Invalid('Tag missing', tagName, state)
+            raise MissingParam('Tag', tagName, state)
 
         decoded = tagName.decode('utf-8', 'replace')
         if len(decoded) > 50:
-            raise api.Invalid(_('Tag cannot be more than 50 characters long'), tagName, state)
+            raise InvalidRequest('Tag cannot be more than 50 characters long',
+                                  tagName, state)
         if '_' in decoded or not re.match(self._regex, decoded):
-            raise api.Invalid(_('Tag can only include numerals, alphabet and hyphens (-)'), tagName, state)
+            raise InvalidRequest('Tag can only include numerals, alphabet and hyphens (-)', tagName, state)
         return decoded
 
 
 class Tag(validators.FancyValidator):
-    source=None
+    source = None
 
     @defer.inlineCallbacks
     def _to_python(self, tagId, state):
-
         if not tagId:
-            raise api.Invalid('Missing tagId', tagId, state)
+            raise MissingParam('Tag-id', tagId, state)
         if self.source != 'api':
             request = state.request
             orgId = request.getSession(IAuthInfo).organization
         tag = yield db.get_slice(orgId, "orgTags", [tagId])
         if not tag:
-            raise api.Invalid('Invalid tag', tagId, state)
+            raise InvalidTag(tagId)
 
         tag = utils.supercolumnsToDict(tag)
         defer.returnValue((tagId, tag))
@@ -253,22 +307,57 @@ class TextWithSnippet(validators.FancyValidator):
                                                     self.snippet_length,
                                                     richText=self.richText)
         if not comment and not self.ignore_null:
-            raise api.Invalid('Comment missing', value, state)
+            raise MissingParam(self.missingType, value, state)
         return (comment, snippet)
 
 
 class SocialString(validators.FancyValidator):
     multivalued = False
-    sanitize=True
-    if_missing=None
+    sanitize = True
 
     def _to_python(self, value, state):
         return utils.getString(value, self.sanitize, self.multivalued)
 
 
+class ValidConvType(validators.FancyValidator):
+    def _to_python(self, value, state):
+        if value not in plugins:
+            #raise api.Invalid('Unsupported item type', value, state)
+            raise InvalidItemType('Unsupported item type', value, state)
+        return value
+
+
+class URL(validators.FancyValidator):
+    add_http = True
+    not_empty = True
+    messages = {'empty': _('url'),
+                'missing': _('url')}
+
+    def _to_python(self, value, state):
+        if not value:
+            raise MissingParam('url', value, state)
+        try:
+            return validators.URL(add_http=self.add_http).to_python(value)
+        except api.Invalid:
+            raise InvalidRequest('Invalid Url', value, state)
+
+        raise InvalidRequest('Invalid Url', value, state)
+
+class PollOptions(validators.FancyValidator):
+    def _to_python(self, value, state):
+        options = SocialString(multivalued=True).to_python(value)
+        options = [x for x in options if x]
+        options = utils.uniqify(options)
+        if not options:
+            raise MissingParam('options', value, state)
+        if len(options) < 2:
+            raise MissingParam('2nd option', value, state)
+        return options
+
+
 class SocialSchema(Schema):
-    _pg = SocialString()
-    _tk = SocialString()
+    _pg = SocialString(if_missing='')
+    _tk = SocialString(if_missing='')
     allow_extra_fields = True
 
 
@@ -294,8 +383,42 @@ class ValidateTagId(SocialSchema):
     tag = compound.Pipe(SocialString(if_missing=None), Tag())
     id = Item(arg='id', columns=['tags'])
 
+
+class NewItem(SocialSchema):
+    type = compound.Pipe(SocialString(if_missing=None),
+                         ValidConvType())
+
+
+class ItemResponses(SocialSchema):
+    id = Item(arg='id', columns=['tags'])
+    start = SocialString(if_missing='')
+    nc = compound.Pipe(SocialString(if_missing='0'),
+                      validators.Int())
+
+
 class State(object):
     pass
+
+
+def raise_errors(errors_dict):
+    items = sorted(errors_dict.items(), key=lambda x: getattr(x[1], 'severity', 3))
+
+    highest_severity = getattr(items[0][1], 'severity', 3)
+    errors_ = [items[0]]
+    for name, error in items[1:]:
+        if getattr(error, 'severity', 3) == highest_severity:
+            errors_.append((name, error))
+    missing_params = []
+    for name, error in errors_:
+        severity = getattr(error, 'severity', 3)
+        if severity in (1, 2):
+            error.raiseError()
+        elif severity == 3:
+            if isinstance(error, (MissingParam, api.Invalid)):
+                missing_params.append(error.msg.encode('utf8', 'replace'))
+    if missing_params:
+        raise errors.MissingParams(missing_params)
+
 
 class Validate(object):
     def __init__(self, schema):
@@ -303,7 +426,7 @@ class Validate(object):
 
     def __call__(self, func):
         @defer.inlineCallbacks
-        def wrapper(cls, request, **kwargs):
+        def wrapper(cls, request, *args, **kwargs):
             state = State()
             state.request = request
             deferreds = []
@@ -322,9 +445,12 @@ class Validate(object):
                     except api.Invalid as e:
                         error_dict[key] = e
             if error_dict:
-                #XXX: raise proper execptions.
-                raise errors.MissingParams(error_dict.keys())
-            d = func(cls, request, data)
+                raise_errors(error_dict)
+            kwargs['data'] = data
+            d = func(cls, request, *args, **kwargs)
             if isinstance(d, defer.Deferred):
-                yield d
+                retval = yield d
+                defer.returnValue(retval)
+            else:
+                defer.returnValue(d)
         return wrapper
