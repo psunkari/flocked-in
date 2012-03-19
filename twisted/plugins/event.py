@@ -47,9 +47,9 @@ class EventResource(base.BaseResource):
         if myId not in conv["invitees"].keys():
             raise errors.invalidRequest(_("Only those who are invited can invite others"))
 
-        res = yield db.multiget_slice(invitees, "entities", ['basic'])
-        res = utils.multiSuperColumnsToDict(res)
-        invitees = [x for x in res.keys() if res[x]["basic"]["org"] == myOrgId]
+        res = base.EntitySet(invitees)
+        yield res.fetchData()
+        invitees = [x for x in res.keys() if res[x].basic["org"] == myOrgId]
         invitees = [x for x in invitees if x not in conv["invitees"].keys()]
         relation = Relation(myId, [])
 
@@ -85,8 +85,8 @@ class EventResource(base.BaseResource):
             d = yield db.batch_insert(convId, "items", updateConv)
 
             yield event.inviteUsers(request, starttimeUUID, endtimeUUID,
-                                        convId, conv["meta"]["owner"],
-                                        myOrgId, new_invitees)
+                                    convId, conv["meta"]["owner"],
+                                    myOrgId, new_invitees)
             request.write("""$$.alerts.info('%s');""" \
                             %("%d people invited to this event" %len(new_invitees)))
             #XXX: Push to the invited user's feed.
@@ -122,12 +122,10 @@ class EventResource(base.BaseResource):
                         user_list.append(uid)
 
             invited = user_list
-
-            entities = {}
             owner = item["meta"].get("owner")
-            cols = yield db.multiget_slice(invited+[owner], "entities",
-                                           ["basic"])
-            entities = utils.multiSuperColumnsToDict(cols)
+
+            entities = base.EntitySet(invited+[owner])
+            yield entities.fetchData()
 
             args = {"users": invited, "entities": entities}
             args['title'] = {"yes":_("People attending this event"),
@@ -225,8 +223,8 @@ class EventResource(base.BaseResource):
         if script:
             args.update({"items":{convId:conv}, "convId":convId})
             entityIds = yield event.fetchData(args, convId)
-            entities = yield db.multiget_slice(entityIds, "entities", ["basic"])
-            entities = utils.multiSuperColumnsToDict(entities)
+            entities = base.EntitySet(entityIds)
+            yield entities.fetchData()
             args["entities"] = entities
 
             t.renderScriptBlock(request, "event.mako", "event_meta",
@@ -366,14 +364,14 @@ class Event(object):
         myId = authinfo.username
         orgId = authinfo.organization
 
-        cols = yield db.multiget_slice([myId, orgId], "entities", ["basic"])
-        cols = utils.multiSuperColumnsToDict(cols)
+        entities = base.EntitySet([myId, orgId])
+        yield entities.fetchData()
 
-        me = cols.get(myId, None)
-        org = cols.get(orgId, None)
+        me = entities[myId]
+        org = entities[orgId]
         args = {"myId": myId, "orgId": orgId, "me": me, "org": org}
 
-        my_tz = timezone(me["basic"]["timezone"])
+        my_tz = timezone(me.basic["timezone"])
         utc_now = datetime.datetime.now(pytz.utc)
         mytz_now = utc_now.astimezone(my_tz)
         args.update({"my_tz": my_tz, "utc_now":utc_now, "mytz_now":mytz_now})
@@ -442,7 +440,7 @@ class Event(object):
 
     @profile
     @defer.inlineCallbacks
-    def create(self, request, myId, myOrgId, convId, richText=False):
+    def create(self, request, me, convId, richText=False):
         startDate = utils.getRequestArg(request, 'startDate')
         endDate = utils.getRequestArg(request, 'endDate')
         title = utils.getRequestArg(request, 'title')
@@ -459,7 +457,7 @@ class Event(object):
             startDate = int(startDate)/1000
             endDate = int(endDate)/1000
         else:
-            raise error.InvalidRequest("Invalid start or end dates")
+            raise errors.InvalidRequest("Invalid start or end dates")
 
         if endDate < startDate:
             raise errors.InvalidRequest("Event end date is set in the past")
@@ -473,7 +471,7 @@ class Event(object):
                 if rcpt != "":
                     invitees.append(rcpt)
         # The owner is always invited to the event
-        invitees.append(myId)
+        invitees.append(me.id)
 
         meta = {"event_startTime": str(startDate), "event_endTime": str(endDate)}
 
@@ -489,9 +487,9 @@ class Event(object):
             meta["event_allDay"] = '0'
 
         # Check if the invited user ids are valid
-        res = yield db.multiget_slice(invitees, "entities", ['basic'])
-        res = utils.multiSuperColumnsToDict(res)
-        invitees = [x for x in res.keys() if res[x]["basic"]["org"] == myOrgId]
+        res = base.EntitySet(invitees)
+        yield res.fetchData()
+        invitees = [x for x in res.keys() if res[x].basic["org"] == me.basic['org']]
 
         # Modify the received ACL to include those who were invited including
         # the owner of this item.
@@ -500,13 +498,11 @@ class Event(object):
         acl["accept"].setdefault("users", [])
         acl["accept"]["users"].extend(invitees)
         acl = json.dumps(acl)
-        item, attachments = yield utils.createNewItem(request, self.itemType,
-                                                      myId, myOrgId,
-                                                      richText=richText,
-                                                      acl=acl)
+        item = yield utils.createNewItem(request, self.itemType, me,
+                                         richText=richText, acl=acl)
 
         item["meta"].update(meta)
-        item["invitees"] = dict([(x, myId) for x in invitees])
+        item["invitees"] = dict([(x, me.id) for x in invitees])
 
         starttimeUUID = utils.uuid1(timestamp=startDate)
         starttimeUUID = starttimeUUID.bytes
@@ -515,9 +511,8 @@ class Event(object):
         endtimeUUID = endtimeUUID.bytes
 
         yield self.inviteUsers(request, starttimeUUID, endtimeUUID, convId,
-                                    myId, myOrgId, invitees, acl)
-
-        defer.returnValue((item, attachments))
+                               me.id, me.basic['org'], invitees, acl)
+        defer.returnValue(item)
 
 
     @defer.inlineCallbacks
@@ -613,14 +608,13 @@ class Event(object):
             acl = json.loads(acl)
             extra_entities = []
             if "groups" in acl["accept"]:
-                res = yield db.multiget_slice(acl["accept"]["groups"],
-                                              "entities", ['basic'])
-                groups = utils.multiSuperColumnsToDict(res)
-                for groupId, group in groups.iteritems():
+                groups = base.EntitySet(acl['accept']['groups'])
+                yield groups.fetchData()
+                for groupId, group in groups.items():
                     #Check if group is really a group and belongs to the same
                     # org that I belong to.
-                    if group["basic"]["type"] == 'group' and \
-                      group["basic"]["org"] == myOrgId:
+                    if group.basic["type"] == 'group' and \
+                      group.basic["org"] == myOrgId:
                         extra_entities.append(groupId)
 
             if "orgs" in acl["accept"]:
@@ -654,10 +648,10 @@ class Event(object):
         start = convMeta.get("event_startTime")
         end   = convMeta.get("event_endTime")
         owner = convMeta["owner"]
-        ownerName = args["entities"][owner]["basic"]["name"]
+        ownerName = args["entities"][owner].basic["name"]
 
-        my_tz = timezone(args["me"]['basic']['timezone'])
-        owner_tz = timezone(args["entities"][owner]['basic']['timezone'])
+        my_tz = timezone(args["me"].basic['timezone'])
+        owner_tz = timezone(args["entities"][owner].basic['timezone'])
         utc = pytz.utc
         startdatetime = datetime.datetime.utcfromtimestamp(float(start)).\
                                                             replace(tzinfo=utc)
@@ -729,7 +723,7 @@ class Event(object):
         convs = []
         invitations = []
         toFetchEntities = set()
-        my_tz = timezone(args["me"]["basic"]["timezone"])
+        my_tz = timezone(args["me"].basic["timezone"])
 
         if not start:
             # since we store times in UTC, find out the utc time for the user's
@@ -786,9 +780,8 @@ class Event(object):
             if target:
                 toFetchEntities.update(target.split(','))
 
-        entities = yield db.multiget_slice(toFetchEntities, "entities",
-                                           ["basic"])
-        entities = utils.multiSuperColumnsToDict(entities)
+        entities = base.EntitySet(toFetchEntities)
+        yield entities.fetchData()
         args["entities"] = entities
         args["relations"] = relation
 

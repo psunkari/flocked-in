@@ -305,10 +305,10 @@
     start = convMeta.get("event_startTime")
     end   = convMeta.get("event_endTime")
     owner = convMeta["owner"]
-    ownerName = entities[owner]["basic"]["name"]
+    ownerName = entities[owner].basic["name"]
 
-    my_tz = timezone(me['basic']['timezone'])
-    owner_tz = timezone(entities[owner]['basic']['timezone'])
+    my_tz = timezone(me.basic['timezone'])
+    owner_tz = timezone(entities[owner].basic['timezone'])
     utc = pytz.utc
     startdatetime = datetime.datetime.utcfromtimestamp(float(start)).replace(tzinfo=utc)
     enddatetime = datetime.datetime.utcfromtimestamp(float(end)).replace(tzinfo=utc)
@@ -427,7 +427,7 @@
             invited_by = invitedPeople[convId][myId]
           %>
           <li>
-            <span>${entities[invited_by]["basic"]["name"]}</span>&nbsp;<span>${_("invited you to this event")} &nbsp; </span>
+            <span>${entities[invited_by].basic["name"]}</span>&nbsp;<span>${_("invited you to this event")} &nbsp; </span>
           </li>
         %endif
         <li>
