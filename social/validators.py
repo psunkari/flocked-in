@@ -240,7 +240,7 @@ class Entity(validators.FancyValidator):
     @defer.inlineCallbacks
     def _to_python(self, entityId, state):
         if not entityId:
-            raise InvalidEntity(self.entityType, entityId, state)
+            raise MissingParam('%s-id' % (self.entityType), entityId, state)
         columns = ['basic']
         if self.columns:
             columns.extend(self.columns)
