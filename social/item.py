@@ -7,6 +7,7 @@ from twisted.internet   import defer
 
 from social             import base, db, utils, plugins, constants, _, errors
 from social             import template as t
+from social.core        import Feed
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.logging     import profile, dump_args
@@ -17,7 +18,6 @@ from social.core        import item as Item
 
 class RemoveItem(validators.SocialSchema):
     id = validators.Item(arg='id', columns=['tags'])
-
 
 
 class ItemResource(base.BaseResource):

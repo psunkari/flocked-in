@@ -110,7 +110,6 @@ class MessagingResource(base.BaseResource):
             raise errors.InvalidAttachment(itemId, attachmentId, version)
 
         fileId, filetype, name = None, 'text/plain', 'file'
-        owner = item["meta"]["owner"]
         try:
             cols = yield db.get(itemId, "item_files", version, attachmentId)
         except ttypes.NotFoundException:
@@ -125,6 +124,7 @@ class MessagingResource(base.BaseResource):
         files = utils.supercolumnsToDict(files)
 
         url = files['meta']['uri']
+        owner = files["meta"]["owner"]
         defer.returnValue([owner, url, filetype, size, name])
 
     @profile

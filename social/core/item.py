@@ -4,6 +4,7 @@ from telephus.cassandra     import ttypes
 from twisted.internet       import defer
 from social                 import db, base, utils, feed, plugins, tags, files
 from social                 import constants, search, errors, notifications, _
+from social.core            import Feed
 
 # Expects all the basic arguments as well as some information
 # about the comments and  to be available in kwargs.
@@ -111,14 +112,10 @@ def like(itemId, item, myId, orgId, me=None):
         if convType in plugins and plugins[convType].hasIndex:
             yield db.insert(me.id, "userItems_" + convType, userItemValue, timeUUID)
 
-        yield feed.pushToFeed(me.id, timeUUID, itemId, convId, responseType,
-                              convType, convOwnerId, me.id,
-                              entities=extraEntities, promote=False)
-
-        # 4. update feed, feedItems, feed_* of user's followers
-        yield feed.pushToOthersFeed(me.id, me.basic['org'], timeUUID, itemId, convId, convACL,
-                                    responseType, convType, convOwnerId,
-                                    entities=extraEntities, promoteActor=False)
+        # 4. update feeds
+        feedItemVal = "%s:%s:%s:%s" % (responseType, myId, itemId,
+                                       ','.join(extraEntities))
+        yield Feed.push(myId, orgId, convId, conv, timeUUID, feedItemVal)
         if itemId != convId:
             if me.id != itemOwnerId:
                 yield _notify("LC", convId, timeUUID, convType=convType,
@@ -249,14 +246,8 @@ def _comment(convId, conv, comment, snippet, myId, orgId, richText, reviewed):
         yield db.insert(myId, "userItems_" + convType, userItemValue, timeUUID)
 
     # 5. Update my feed.
-    yield feed.pushToFeed(myId, timeUUID, itemId, convId, responseType,
-                          convType, convOwnerId, myId, promote=False)
-
-    # 6. Push to other's feeds
-    convACL = conv["meta"]["acl"]
-    yield feed.pushToOthersFeed(myId, orgId, timeUUID, itemId, convId, convACL,
-                                responseType, convType, convOwnerId,
-                                promoteActor=False)
+    feedItemVal = "%s:%s:%s" % (responseType, myId, itemId)
+    yield Feed.push(myId, orgId, convId, conv, timeUUID, feedItemVal)
 
     yield _notify("C", convId, timeUUID, convType=convType,
                   convOwnerId=convOwnerId, myId=myId, me=entities[myId],
@@ -289,15 +280,11 @@ def tag(itemId, item, tagName, myId, orgId):
     followers = utils.columnsToDict(result[2][1]).keys()
 
     if followers:
-        convACL = item["meta"]["acl"]
-        convType = item["meta"]["type"]
         timeUUID = uuid.uuid1().bytes
-        convOwnerId = item["meta"]["owner"]
-        responseType = "T"
+        feedUpdateVal = "T:%s:%s::%s" % (myId, itemId, tagId)
+        yield Feed.push(myId, orgId, itemId, item, timeUUID,
+                        feedUpdateVal, feeds=followers)
 
-        yield feed.pushToOthersFeed(myId, orgId, timeUUID, itemId, itemId,
-                            convACL, responseType, convType, convOwnerId,
-                            others=followers, tagId=tagId, promoteActor=False)
     defer.returnValue((tagId, tag))
 
     #TODO: Send notification to the owner of conv
@@ -481,11 +468,10 @@ def new(request, authInfo, convType, richText=False):
     responseType = 'I'
 
     # Push to feeds
-    d1 = feed.pushToFeed(myId, timeUUID, convId, None,
-                         responseType, convType, myId, myId)
-    d2 = feed.pushToOthersFeed(myId, orgId, timeUUID, convId, None, convACL,
-                               responseType, convType, myId)
-    deferreds.extend([d1, d2])
+    feedUpdateVal = "I:%s:%s" % (myId, convId)
+    d = Feed.push(myId, orgId, convId, conv, timeUUID,
+                  feedUpdateVal, promoteActor=True)
+    deferreds.append(d)
 
     # Save in user items.
     userItemValue = ":".join([responseType, convId, convId, convType, myId, ''])

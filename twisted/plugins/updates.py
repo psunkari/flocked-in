@@ -94,12 +94,15 @@ class LikeUpdate(object):
         return (items, entities)
 
     def reason(self, convId, updates, data):
-        likedItemId = updates[0][2]
-
         entities = data['entities']
         meta = data['items'][convId]['meta']
         ownerId = meta['owner']
         myId = data['myId']
+
+        likedItemId = updates[0][2]
+        for update in updates:
+            if update[1] != myId:
+                likedItemId = update[2]
 
         uname = lambda x: utils.userName(x, entities[x], "conv-user-cause")
         users = utils.uniqify([x[1] for x in reversed(updates) \
