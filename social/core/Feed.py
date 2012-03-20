@@ -30,8 +30,6 @@ for plg in getPlugins(IFeedUpdateType):
         _feedUpdatePlugins[plg.updateType] = plg
 
 
-
-
 @defer.inlineCallbacks
 def push(userId, orgId, convId, conv, timeUUID, updateVal,
          feeds=None, promote=True, promoteActor=False):
@@ -173,6 +171,98 @@ def push(userId, orgId, convId, conv, timeUUID, updateVal,
     yield db.batch_mutate(feedItemsMutations)
     yield db.batch_mutate(feedItemsRemovalMutations)
     yield db.batch_mutate(feedMutations)
+
+
+@defer.inlineCallbacks
+def unpush(userId, orgId, convId, conv, updateVal, feeds=None):
+    meta = conv['meta']
+    convType = meta['type']
+
+    if not feeds:
+        feeds = yield utils.expandAcl(userId, orgId, meta['acl'],
+                                      convId, meta['owner'])
+        feeds.add(userId)
+
+    userFeedItems = yield db.multiget_slice(feeds, "feedItems",
+                                            super_column=convId, reverse=True)
+    updateType = updateVal.split(':', 1)[0]
+    if updateType == 'T':
+        updateValParts = updateVal.split(':')
+
+    hasIndex = False
+    if convType in plugins and plugins[convType].hasIndex:
+        hasIndex = True
+        indexColFamily = 'feed_' + convType
+
+    timestamp = int(time.time() * 1e6)
+    removeMutations = {}
+    insertMutations = {}
+    for feedId in feeds:
+        cols = userFeedItems[feedId]
+        if not cols:
+            continue
+
+        updatesCount = len(cols)
+        latest, second, pseudoFeedTime = None, None, None
+        for col in cols:
+            timeUUID = col.column.name
+            val = col.column.value
+            valUpdateType =  val.split(":", 1)[0]
+            if valUpdateType != '!':
+                if latest and not second:
+                    second = timeUUID
+                if not latest:
+                    latest = timeUUID
+            elif updatesCount == 2 and valUpdateType == "!":
+                pseudoFeedTime = timeUUID
+
+        for col in cols:
+            timeUUID = col.column.name
+            val = col.column.value
+            valParts = val.split(':')
+
+            if (updateType == 'T' and val.startswith('T:') and
+                    len(valParts) == 5 and updateValParts[2] == valParts[2] and
+                    updateValParts[4] == valParts[4]) or (val == updateVal):
+                removals = {}
+
+                # Remove the update from feedItems.  If this is the only
+                # update then remove the entire super column
+                if not pseudoFeedTime:
+                    predicate = ttypes.SlicePredicate(column_names=[timeUUID])
+                    superCol = convId
+                else:
+                    predicate = ttypes.SlicePredicate(column_names=[convId])
+                    superCol = None
+
+                feedItemsDeletion = ttypes.Deletion(timestamp, superCol, predicate)
+                removals['feedItems'] = [feedItemsDeletion]
+
+                # If this is the latest update, remove conv from it's
+                # current position in feed and feed indexes.
+                feedRemoveKeys = []
+                if latest == timeUUID:
+                    feedRemoveKeys.append(timeUUID)
+
+                if pseudoFeedTime:
+                    feedRemoveKeys.append(pseudoFeedTime)
+
+                if feedRemoveKeys:
+                    feedPredicate = ttypes.SlicePredicate(column_names=feedRemoveKeys)
+                    feedDeletion = ttypes.Deletion(timestamp, predicate=feedPredicate)
+                    removals['feed'] = [feedDeletion]
+                    if hasIndex:
+                        removals[indexColFamily] = [feedDeletion]
+
+                # Reposition feed to the next most recent update
+                if latest == timeUUID and second:
+                    insertMutations[feedId] = {'feed': {second: convId}}
+
+                removeMutations[feedId] = removals
+                break
+
+        yield db.batch_mutate(insertMutations)
+        yield db.batch_mutate(removeMutations)
 
 
 @defer.inlineCallbacks

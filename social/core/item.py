@@ -166,12 +166,8 @@ def unlike(itemId, item, myId, orgId):
     # Ignore if i am owner of the item
     if myId != item["meta"]["owner"]:
         # 3. delete from user's feed, feedItems, feed_*
-        yield feed.deleteFromFeed(myId, itemId, convId,
-                                  convType, myId, responseType)
-
-        # 4. delete from feed, feedItems, feed_* of user's followers
-        yield feed.deleteFromOthersFeed(myId, orgId, itemId, convId, convType,
-                                        convACL, convOwnerId, responseType)
+        likeUpdateVal = "L:%s:%s:%s" % (myId, itemId, item['meta']['owner'])
+        yield Feed.unpush(myId, orgId, convId, conv, likeUpdateVal)
 
         # FIX: if user updates more than one item at exactly same time,
         #      one of the updates will overwrite the other. Fix it.
@@ -314,19 +310,10 @@ def untag(itemId, item, tagId, tag, myId, orgId):
     result = yield defer.DeferredList([d1, d2, d3])
     followers = utils.columnsToDict(result[2][1]).keys()
 
-    convId = itemId
-    convACL = item["meta"]["acl"]
-    convType = item["meta"]["type"]
-    convOwnerId = item["meta"]["owner"]
-    responseType = 'T'
 
-    yield feed.deleteFromFeed(myId, itemId, convId, convType,
-                              myId, responseType, tagId=tagId)
-
-    if followers:
-        yield feed.deleteFromOthersFeed(myId, orgId, itemId, convId, convType,
-                                        convACL, convOwnerId, responseType,
-                                        others=followers, tagId=tagId)
+    feedUpdateVal = "T:%s:%s::%s" % (myId, itemId, tagId)
+    yield Feed.unpush(myId, orgId, itemId, item,
+                      feedUpdateVal, followers + [myId])
 
 
 @defer.inlineCallbacks
@@ -610,9 +597,9 @@ def deleteItem(itemId, userId, orgId, item=None, conv=None,):
             likes = utils.columnsToDict(result)
             removeLikeDeferreds = []
             for actorId, likeUUID in likes.items():
+                likeUpdateVal = "L:%s:%s:%s" % (actorId, itemId, itemOwnerId)
                 d1 = feed.deleteUserFeed(actorId, convType, likeUUID)
-                d2 = feed.deleteFeed(actorId, orgId, itemId, convId, convType,
-                            convACL, convOwnerId, 'L', deleteAll=True)
+                d2 = Feed.unpush(actorId, orgId, convId, conv, likeUpdateVal)
                 removeLikeDeferreds.extend([d1, d2])
             return defer.DeferredList(removeLikeDeferreds)
         d.addCallback(removeLikeFromFeeds)
@@ -623,9 +610,9 @@ def deleteItem(itemId, userId, orgId, item=None, conv=None,):
         deferreds.append(d)
 
         # Rollback updates done to comment owner's follower's feeds.
-        responseType = "Q" if convType == "question" else 'C'
-        d = feed.deleteFeed(itemOwnerId, orgId, itemId, convId, convType,
-                            convACL, convOwnerId, responseType, deleteAll=True)
+        responseUpdateVal = "Q:%s:%s" if convType == "question" else "C:%s:%s"
+        responseUpdateVal = responseUpdateVal % (itemOwnerId, itemId)
+        d = Feed.unpush(itemOwnerId, orgId, convId, conv, responseUpdateVal)
         deferreds.append(d)
 
     yield defer.DeferredList(deferreds)
