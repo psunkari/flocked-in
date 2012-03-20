@@ -13,6 +13,8 @@ from social.constants   import INFINITY, MAXFEEDITEMS, MAXFEEDITEMSBYTYPE
 from social.constants   import SUGGESTION_PER_PAGE
 from social.logging     import profile, dump_args, log
 
+
+# XXX: This should probably move to profile.py
 @defer.inlineCallbacks
 def deleteUserFeed(userId, itemType, tuuid):
     yield db.remove(userId, "userItems", tuuid)
@@ -20,82 +22,9 @@ def deleteUserFeed(userId, itemType, tuuid):
         yield db.remove(userId, "userItems_"+itemType, tuuid)
 
 
-@defer.inlineCallbacks
-def deleteFeed(userId, orgId, itemId, convId, itemType, acl, convOwner,
-               responseType, others=None, tagId='', deleteAll=False):
-    #
-    # Wrapper around deleteFromFeed and deleteFromOthersFeed
-    #
-    yield deleteFromFeed(userId, itemId, convId, itemType,
-                         userId, responseType, tagId )
-    if deleteAll:
-        yield deleteFromOthersFeed(userId, orgId, itemId, convId, itemType, acl,
-                                   convOwner, responseType, others, tagId)
-
-
-@profile
-@defer.inlineCallbacks
-@dump_args
-def deleteFromFeed(userId, itemId, convId, itemType,
-                   itemOwner, responseType, tagId=''):
-    # fix: itemOwner is either the person who owns the item
-    #       or person who liked the item. RENAME the variable.
-    cols = yield db.get_slice(userId, "feedItems",
-                              super_column=convId, reverse=True)
-
-    noOfItems = len(cols)
-    latest, second, pseudoFeedTime = None, None, None
-    for col in cols:
-        tuuid = col.column.name
-        val = col.column.value
-        rtype, poster, key =  val.split(":")[0:3]
-        if latest and not second and rtype != "!":
-            second = tuuid
-        if not latest and rtype != "!":
-            latest = tuuid
-        if noOfItems == 2 and rtype == "!":
-            pseudoFeedTime = tuuid
-
-    cols = utils.columnsToDict(cols)
-
-    for tuuid, val in cols.items():
-        vals = val.split(":")
-        rtype, poster, key =  val.split(":")[0:3]
-        tag = ''
-        if len(vals) == 5 and vals[4]:
-            tag = vals[4]
-        if rtype == responseType and \
-            (rtype == "T" or poster == itemOwner) and \
-            key == itemId and tagId == tag:
-            # anyone can untag
-
-            yield db.remove(userId, "feedItems", tuuid, convId)
-            if latest == tuuid:
-                yield db.remove(userId, "feed", tuuid)
-                if second:
-                    yield db.insert(userId, "feed", convId, second)
-            if pseudoFeedTime:
-                yield db.remove(userId, "feedItems", super_column=convId)
-                yield db.remove(userId, "feed", pseudoFeedTime)
-            if plugins.has_key(itemType) and plugins[itemType].hasIndex:
-                yield db.remove(userId, "feed_"+itemType, tuuid)
-
-            break
-
-
-@profile
-@defer.inlineCallbacks
-@dump_args
-def deleteFromOthersFeed(userId, orgId, itemId, convId, itemType, acl,
-                         convOwner, responseType, others=None, tagId=''):
-    if not others:
-        others = yield utils.expandAcl(userId, orgId, acl, convId, convOwner)
-
-    for key in others:
-        yield deleteFromFeed(key, itemId, convId, itemType,
-                             userId, responseType, tagId=tagId)
-
-
+# XXX: These push functions are still here because the groups.py
+# depends on them.  Any new code must use core/Feed.py for these
+# actions.
 @profile
 @defer.inlineCallbacks
 @dump_args
@@ -357,7 +286,7 @@ class FeedResource(base.BaseResource):
                             "#next-load-wrapper", "replace", True,
                             handlers={"onload": onload}, **args)
 
-    @defer.inlineCallbacks
+    # XXX: Not being used currently
     def _renderChooseAudience(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
 
