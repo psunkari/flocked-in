@@ -71,7 +71,9 @@ def like(itemId, item, myId, orgId, me=None):
     itemOwnerId = item["meta"]["owner"]
     extraEntities = [itemOwnerId]
     convId = item["meta"].get("parent", itemId)
-    if convId:
+
+    if convId != itemId:
+        #get parent's meta data
         conv = yield db.get(convId, "items", super_column="meta")
         conv = utils.supercolumnsToDict([conv])
         commentText = item["meta"]["comment"]
