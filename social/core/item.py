@@ -410,8 +410,8 @@ def new(request, authInfo, convType, richText=False):
     plugin = plugins[convType]
     convId = utils.getUniqueKey()
     conv = yield plugin.create(request, entities[myId], convId, richText)
-    orgAdmins = entities[orgId].admins.keys()
-    if orgAdmins:
+    orgAdminIds = entities[orgId].admins.keys()
+    if orgAdminIds:
         text = ''
         monitoredFields = getattr(plugin, 'monitoredFields', {})
         for superColumnName in monitoredFields:
@@ -425,10 +425,13 @@ def new(request, authInfo, convType, richText=False):
             if reviewOK:
                 # Add conv to list of items that matched this keyword
                 # and notify the administrators about it.
+                orgAdmins = base.EntitySet(orgAdminIds)
+                yield orgAdmins.fetchData()
+                entities.update(orgAdmins)
                 for keyword in matchedKeywords:
                     yield db.insert(orgId + ":" + keyword, "keywordItems",
                                     convId, conv['meta']['uuid'])
-                    yield notifications.notify(orgAdmins, ':KW:' + keyword,
+                    yield notifications.notify(orgAdminIds, ':KW:' + keyword,
                                                myId, entities=entities)
             else:
                 # This item contains a few keywords that are being monitored
