@@ -87,7 +87,7 @@
     <div class="conv-data">
       <%
         hasReason = reasonStr and reasonStr.has_key(convId)
-        hasKnownComments = responses and len(responses.get(convId, {}))
+        hasKnownComments = responses and len(responses.get(convId, []))
         hasTags = items[convId].get("tags", {})
 
         likesCount = int(items[convId]["meta"].get("likesCount", "0"))
@@ -328,7 +328,7 @@
 
 
 <%def name="conv_comments_only(convId)">
-  <% responsesToShow = responses.get(convId, {}) if responses else [] %>
+  <% responsesToShow = responses.get(convId, []) if responses else [] %>
   %for responseId in responsesToShow:
     ${self.conv_comment(convId, responseId)}
   %endfor
@@ -338,7 +338,7 @@
 <%def name="conv_comments(convId, isItemView=False)">
   <%
     responseCount = int(items[convId]["meta"].get("responseCount", "0"))
-    responsesToShow = responses.get(convId, {}) if responses else []
+    responsesToShow = responses.get(convId, []) if responses else []
   %>
   <div id="comments-header-${convId}">
     %if responsesToShow:
@@ -359,7 +359,7 @@
       <textarea class="comment-input" name="comment" placeholder="${_('Leave a response...')}" required title="${_('Comment')}"></textarea>
     </div>
     <input type="hidden" name="parent" value=${convId}></input>
-    <% nc = len(responses.get(convId, {})) if responses else 0 %>
+    <% nc = len(responses.get(convId, [])) if responses else 0 %>
     <input type="hidden" name="nc" value=${nc}></input>
     %if isItemView and oldest:
       %if oldest:
