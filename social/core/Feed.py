@@ -550,8 +550,8 @@ def get(auth, feedId=None, feedItemsId=None, convIds=None,
     if getReasons:
         reasonStr = {}
         reasonUserIds = {}
-        for convId in convReasonUpdates.keys():
-            updates = convReasonUpdates.get(convId, [])
+        for convId in convIds:
+            updates = convReasonUpdates[convId]
             tipe = updates[-1][0]
             if tipe in _feedUpdatePlugins:
                 rstr, ruid = _feedUpdatePlugins[tipe]\
