@@ -162,14 +162,17 @@
 
 
 <%def name="item_layout(itemId, classes='')">
+  <%
+    itemMeta = items[itemId]['meta']
+    if itemMeta.get('status', None) == 'deleted':
+      return
+
+    ownerId = itemMeta['owner']
+    parentId = itemMeta.get('parent', None)
+    itemType = itemMeta.get('type', 'status') if not parentId else 'comment'
+  %>
   <div id="conv-${itemId}" class="conv-item ${classes}">
     <div class="conv-avatar" id="conv-avatar-${itemId}">
-      <%
-        itemMeta = items[itemId]['meta']
-        ownerId = itemMeta['owner']
-        parentId = itemMeta.get('parent', None)
-        itemType = itemMeta.get('type', 'status') if not parentId else 'comment'
-      %>
       %if itemType != 'feedback':
         <% avatarURI = utils.userAvatar(ownerId, entities[ownerId], "small") %>
         <img src="${avatarURI}" style="max-height: 32px; max-width: 32px;"/>

@@ -529,6 +529,11 @@ def get(auth, feedId=None, feedItemsId=None, convIds=None,
     fetchedItems = yield items_d
     items.update(utils.multiSuperColumnsToDict(fetchedItems))
 
+    # Filter out any deleted comments from the fetched items.
+    for itemId, itemVal in items.items():
+        if itemVal.get('meta', {}).get('state', None) == 'deleted':
+            del items[itemId]
+
     fetchedTags = yield tags_d
     tags.update(utils.supercolumnsToDict(fetchedTags))
 
