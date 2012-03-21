@@ -20,6 +20,8 @@ class _SimpleNotification(object):
             args['senderAvatarUrl'] = utils.userAvatar(value,
                                                        data['entities'][value],
                                                        "medium")
+            args['senderId'] = value
+            args['senderName'] = data['entities'][value].basic['name']
             body = self._template[1] % args
             html = t.getBlock("emails.mako", self._template[2], **args)
 
