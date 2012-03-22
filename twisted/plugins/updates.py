@@ -45,10 +45,8 @@ class CommentUpdate(object):
         ownerId = meta['owner']
         myId = data['myId']
 
-        print convId, '################', ownerId in entities, updates
         uname = lambda x: utils.userName(x, entities[x], "conv-user-cause")
         users = utils.uniqify([x[1] for x in reversed(updates) if x[1] != myId])
-        print convId, users
         vals = dict([('u'+str(i), uname(x)) for i,x in enumerate(users)])
         vals.update({'owner':uname(ownerId),
                      'type':utils.itemLink(convId, meta['type'])})
