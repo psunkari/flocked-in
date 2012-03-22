@@ -154,7 +154,7 @@ def push(userId, orgId, convId, conv, timeUUID, updateVal,
 
         feedItemKey = removeFeedItems.get(feedId, None)
         if feedItemKey:
-            predicate = ttypes.SlicePredicate(column_names=[feedItemKey])
+            predicate = ttypes.SlicePredicate(column_names=feedItemKey)
             deletion = ttypes.Deletion(timestamp, convId, predicate=predicate)
             feedItemsRemovalMutations[feedId] = {'feedItems': [deletion]}
 
