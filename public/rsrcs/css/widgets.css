@@ -110,10 +110,13 @@ input::-moz-focus-inner {
 .default > .button-content {
     padding: 0 12px;
 }
-.button:hover, .button:focus {
+.button:focus {
+    border-color: #3366cc;
+}
+.button:hover {
     -moz-transition: box-shadow 0.2s ease-in-out 0s;
     -webkit-transition: box-shadow 0.2s ease-in-out 0s;
-    box-shadow: -1px -2px rgba(0,0,0,0.1) inset, 0 0 20px rgba(255,255,255,0.4) inset;
+    box-shadow: -1px -2px rgba(0,0,0,0.1) inset, 0 0 20px rgba(0,0,0,0.2) inset;
 }
 .button:active {
     -moz-transition: none;
