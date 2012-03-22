@@ -6,6 +6,8 @@ try:
     import cPickle as pickle
 except:
     import pickle
+import re
+import HTMLParser
 
 import boto
 from telephus.cassandra     import ttypes
@@ -241,16 +243,22 @@ class FilesResource(base.BaseResource):
         myOrgId = authinfo.organization
 
         filename = urlsafe_b64decode(name)
-        try:
-            filename.decode('ascii')
-        except UnicodeDecodeError:
-            filename = filename.decode('utf-8').encode('utf-8')
-            filename = str(Header(filename, "UTF-8")).encode('string_escape')
-        else:
-            filename = filename.encode('string_escape')
+        # Windows does not allow the following chars in a filename, so replace
+        #  them with an underscore.
+        # http://msdn.microsoft.com/en-us/library/aa365247%28v=vs.85%29.aspx
+        # First convert to a unicode object as filenames may have a mix of
+        #  html entity chars, unicode chars, control chars etc. Then unescape
+        #  all html enitity chars, then do a regex replace for chars we don't
+        #  to have.
+        filename = filename.decode('utf-8')
+        filename = HTMLParser.HTMLParser().unescape(filename)
+        bad_filename_re = r"""[<>:"/\\|?*]"""
+        filename = re.sub(bad_filename_re, '_', filename, 0)
+        filename = filename.encode('utf-8')
+        filename = str(Header(filename, "UTF-8"))
 
         headers = {'response-content-type': fileType,
-                   'response-content-disposition': 'attachment;filename=\"%s\"' % filename,
+                   'response-content-disposition': 'attachment; filename=\"%s\"' % filename,
                    'response-expires': '0'}
 
         SKey = config.get('CloudFiles', 'SecretKey')
