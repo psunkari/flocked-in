@@ -287,10 +287,10 @@
       <textarea name="desc" placeholder="${_('Write something about your event')}"></textarea>
   </div>
   <div class="input-wrap">
-    <input type="text" disabled="disabled" value="${_('Invite people to this event')}"
+    <input type="text" disabled="disabled" value="${_('Invite people')}"
            id="placeholder-hidden" style="position: absolute;top: -9999px;left: -9999px"/>
     <input type="text" id="event-invitee" name="invitee[]"
-           placeholder="${_('Invite people to this event')}"/>
+           placeholder="${_('Invite people')}"/>
   </div>
   <input type="hidden" name="type" value="event"/>
 </%def>
@@ -398,15 +398,19 @@
       %if not isConcise:
         <div class="item-subactions">
           % if response == "yes":
-            <span id="event-rsvp-status-${convId}">${_("You are attending")}</span>
+            <span id="event-rsvp-status-${convId}">${_("You are attending.")}</span>
           % elif response == "no":
-            <span id="event-rsvp-status-${convId}">${_("You are not attending")}</span>
+            <span id="event-rsvp-status-${convId}">${_("You are not attending.")}</span>
           % elif response == "maybe":
-            <span id="event-rsvp-status-${convId}">${_("You may attend")}</span>
+            <span id="event-rsvp-status-${convId}">${_("You may attend.")}</span>
           %else:
-            <span id="event-rsvp-status-${convId}">${_("You have not responded to this event")}</span>
+            <span id="event-rsvp-status-${convId}">${_("You have not responded to this event.")}</span>
           %endif
-          <button class="button-link" onclick="$$.ui.showPopup(event)">${_("RSVP to this event")}</button>
+          % if response:
+            <button class="button-link" onclick="$$.ui.showPopup(event)">${_("Change RSVP")}</button>
+          % else:
+            <button class="button-link" onclick="$$.ui.showPopup(event)">${_("RSVP now")}</button>
+          % endif
           <ul class="acl-menu" style="display:none;">
               <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'yes')">${_("Yes, I will attend")}</a></li>
               <li><a class="acl-item" onclick="$$.events.RSVP('${convId}', 'no')">${_("No")}</a></li>
