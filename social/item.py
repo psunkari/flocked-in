@@ -547,6 +547,7 @@ class ItemResource(base.BaseResource):
     @Validate(RemoveItem)
     @defer.inlineCallbacks
     def _delete(self, request, data=None):
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
         itemId, item = data['id']
 
         authInfo = request.getSession(IAuthInfo)
@@ -561,7 +562,6 @@ class ItemResource(base.BaseResource):
         plugin = plugins[conv['meta']['type']]
         if plugin and hasattr(plugin, 'renderFeedSideBlock') and not comment:
             #TODO: Determine the blockType
-            args = {}
             landing = not self._ajax
             if target:
                 entityId = target.split(',')[0]

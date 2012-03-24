@@ -4,27 +4,65 @@ import calendar
 import json
 from pytz import timezone
 from dateutil.relativedelta import relativedelta
+import uuid
 try:
     import cPickle as pickle
 except:
     import pickle
 from operator import itemgetter, attrgetter
 
+from telephus.cassandra import ttypes
 from zope.interface     import implements
 from twisted.plugin     import IPlugin
 from twisted.internet   import defer
 
-from social             import db, utils, base, errors, _
+from social             import db, utils, base, errors, _, constants
 from social             import template as t
-from social             import constants
+from social             import rootUrl
 from social.relations   import Relation
-from social.isocial     import IAuthInfo
-from social.isocial     import IItemType
+from social.isocial     import IAuthInfo, IItemType, IFeedUpdateType
+from social.isocial     import INotificationType
 from social.logging     import dump_args, profile, log
 
+# Taken from social.item
+@defer.inlineCallbacks
+def _notify(notifyType, convId, timeUUID, **kwargs):
+    deferreds = []
+    convOwnerId = kwargs["convOwnerId"]
+    convType = kwargs["convType"]
+    myId = kwargs["myId"]
+    toFetchEntities = set()
+    notifyId = ":".join([convId, convType, convOwnerId, notifyType])
+
+    # List of people who will get the notification about current action
+    if notifyType == "EI":
+        recipients = kwargs["new_invitees"]
+    else:
+        recipients = [convOwnerId]
+
+    toFetchEntities = set(recipients + [myId, convOwnerId])
+    recipients = [userId for userId in recipients if userId != myId]
+
+    from social import notifications
+
+    entities = base.EntitySet(toFetchEntities)
+    notify_d = entities.fetchData() if recipients else defer.succeed([])
+
+    def _gotEntities(cols):
+        kwargs.setdefault('entities', {}).update(entities)
+        kwargs["me"] = entities[myId]
+    def _sendNotifications(ignored):
+        return notifications.notify(recipients, notifyId,
+                                    myId, timeUUID, **kwargs)
+    notify_d.addCallback(_gotEntities)
+    notify_d.addCallback(_sendNotifications)
+
+    deferreds.append(notify_d)
+    yield defer.DeferredList(deferreds)
 
 class EventResource(base.BaseResource):
     isLeaf = True
+    _templates = ['event.mako']
 
     @profile
     @defer.inlineCallbacks
@@ -85,11 +123,10 @@ class EventResource(base.BaseResource):
             d = yield db.batch_insert(convId, "items", updateConv)
 
             yield event.inviteUsers(request, starttimeUUID, endtimeUUID,
-                                    convId, conv["meta"]["owner"],
+                                    convId, conv["meta"], myId,
                                     myOrgId, new_invitees)
             request.write("""$$.alerts.info('%s');""" \
                             %("%d people invited to this event" %len(new_invitees)))
-            #XXX: Push to the invited user's feed.
         else:
             if not invitees:
                 request.write("""$$.alerts.info('%s');""" \
@@ -143,6 +180,7 @@ class EventResource(base.BaseResource):
     def _rsvp(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         landing = not self._ajax
+        orgId = args['orgId']
 
         response = utils.getRequestArg(request, 'response')
         deferreds = []
@@ -176,12 +214,6 @@ class EventResource(base.BaseResource):
         starttimeUUID = starttimeUUID.bytes
         endtimeUUID = utils.uuid1(timestamp=endtime)
         endtimeUUID = endtimeUUID.bytes
-
-        #If I was invited, then update the invited status in convs scf
-        #if myId in conv["invitees"].keys():
-        #    conv["invitees"] = {myId: response}
-            #d = db.batch_insert(convId, "items", conv)
-            #deferreds.append(d)
 
         #Now insert the event in the user's agenda list if the user has
         # never responded to this event or the user is not in the invited list.
@@ -230,8 +262,60 @@ class EventResource(base.BaseResource):
             t.renderScriptBlock(request, "event.mako", "event_meta",
                                 landing, "#item-meta", "set", **args)
 
-        #TODO:Once a user who has not been invited responds, add the item to his
-        # feed.
+        # Push Feed Updates
+        responseType = "E"
+        convMeta = conv["meta"]
+        convType = convMeta["type"]
+        convOwnerId = convMeta["owner"]
+        commentSnippet = convMeta["event_title"]
+        itemId = convId
+        convACL = convMeta["acl"]
+        extraEntities = [convMeta["owner"]]
+        # Importing social.feed at the beginning of the module leads to
+        # a cyclic dependency as feed in turn imports plugins.
+        from social.core import Feed
+
+        if response == "yes":
+            timeUUID = uuid.uuid1().bytes
+
+            # Add user to the followers list of parent item
+            yield db.insert(convId, "items", "", myId, "followers")
+
+            # Update user's feed, feedItems, feed_*
+            userItemValue = ":".join([responseType, itemId, convId, convType,
+                                      convOwnerId, commentSnippet])
+            yield db.insert(myId, "userItems", userItemValue, timeUUID)
+            yield db.insert(myId, "userItems_event", userItemValue, timeUUID)
+
+            # Push to feed
+            feedItemVal = "%s:%s:%s:%s" % (responseType, myId, itemId,
+                                            ','.join(extraEntities))
+            yield Feed.push(myId, orgId, convId, conv, timeUUID, feedItemVal)
+        elif prevResponse != "":
+            rsvpTimeUUID = None
+            cols = yield db.get_slice(myId, "userItems")
+            cols = utils.columnsToDict(cols)
+            for k, v in cols.iteritems():
+                if v.startswith("E"):
+                    rsvpTimeUUID = k
+
+            if rsvpTimeUUID:
+                # Remove update if user changes RSVP to no/maybe from yes.
+                # Do not update if user had RSVPed to this event.
+                feedUpdateVal = "%s:%s:%s:%s" % (responseType, myId, itemId,
+                                                 convOwnerId)
+                yield Feed.unpush(myId, orgId, convId, conv, feedUpdateVal)
+
+                # FIX: if user updates more than one item at exactly same time,
+                #      one of the updates will overwrite the other. Fix it.
+                yield db.remove(myId, "userItems", rsvpTimeUUID)
+                yield db.remove(myId, "userItems_event", rsvpTimeUUID)
+
+        if myId != convOwnerId and response == "yes":
+            timeUUID = uuid.uuid1().bytes
+            yield _notify("EA", convId, timeUUID, convType=convType,
+                              convOwnerId=convOwnerId, myId=myId, me=args["me"])
+
 
     @profile
     @defer.inlineCallbacks
@@ -327,35 +411,6 @@ class Event(object):
     hasIndex = True
     indexFields = {'meta': set(['event_desc', 'event_location', 'event_title'])}
     monitorFields = {'meta': set(['event_desc', 'event_location', 'event_title'])}
-
-    @profile
-    @defer.inlineCallbacks
-    @dump_args
-    def getReason(self, convId, requesters, users):
-        conv = yield db.get_slice(convId, "items", ["meta"])
-        conv = utils.supercolumnsToDict(conv)
-
-        title = conv["meta"].get("title", None)
-        titleSnippet = utils.toSnippet(title, 80)
-        if not title:
-            desc = conv["meta"]["desc"]
-            titleSnippet = utils.toSnippet(desc, 80)
-        noOfRequesters = len(set(requesters))
-        reasons = {1: "%s invited you to the event: %s",
-                   2: "%s and %s invited you to the event: %s",
-                   3: "%s, %s and 1 other invited you to the event: %s",
-                   4: "%s, %s and %s others invited you to the event: %s"}
-        vals = []
-        for userId in requesters:
-            userName = utils.userName(userId, users[userId])
-            if userName not in vals:
-                vals.append(userName)
-                if len(vals) == noOfRequesters or len(vals) == 2:
-                    break
-        if noOfRequesters > 3:
-            vals.append(noOfRequesters-3)
-        vals.append(utils.itemLink(convId, titleSnippet))
-        defer.returnValue(_(reasons[noOfRequesters])%(tuple(vals)))
 
 
     @defer.inlineCallbacks
@@ -511,7 +566,8 @@ class Event(object):
         endtimeUUID = endtimeUUID.bytes
 
         yield self.inviteUsers(request, starttimeUUID, endtimeUUID, convId,
-                               me.id, me.basic['org'], invitees, acl)
+                                        item["meta"], me.id, me.basic['org'],
+                                                                invitees, acl)
         defer.returnValue(item)
 
 
@@ -576,29 +632,36 @@ class Event(object):
 
 
     @defer.inlineCallbacks
-    def inviteUsers(self, request, starttimeUUID, endtimeUUID, convId, ownerId,
-                     myOrgId, invitees, acl=None):
+    def inviteUsers(self, request, starttimeUUID, endtimeUUID, convId, convMeta,
+                     myId, myOrgId, invitees, acl=None):
         deferreds = []
         toNotify = {}
         toRemove = {'latest':[]}
         entitiesToUpdate = []
+        convOwnerId = convMeta["owner"]
 
-        #TODO:Send notifications to each one of these people
         for invitee in invitees:
             # Add to each user's agenda
             entitiesToUpdate.append(invitee)
-            if invitee == ownerId:
+            if invitee == convOwnerId:
                 # The organizer auto accepts an event
-                d = db.insert(convId, "eventResponses", "", "yes:%s" %(ownerId))
+                d = db.insert(convId, "eventResponses", "", "yes:%s" %(convOwnerId))
                 deferreds.append(d)
 
             # Add to an additional column for invited users(not the owner)
-            if invitee != ownerId:
+            if invitee != convOwnerId:
                 d1 = db.insert("%s:I" % (invitee), "userAgenda",
                                convId, starttimeUUID)
                 d2 = db.insert("%s:I" % (invitee), "userAgenda",
                                convId, endtimeUUID)
                 deferreds.extend([d1, d2])
+
+        # Send notifications to each of the invited people
+        timeUUID = uuid.uuid1().bytes
+        convType = "event"
+        yield _notify("EI", convId, timeUUID, convType=convType,
+                          convOwnerId=convOwnerId, myId=myId,
+                          convMeta=convMeta, new_invitees=invitees)
 
         if acl:
             # Based on the ACL, if company or groups were included, then add an
@@ -788,7 +851,6 @@ class Event(object):
 
     _ajaxResource = None
     _resource = None
-
     def getResource(self, isAjax):
         if isAjax:
             if not self._ajaxResource:
@@ -800,4 +862,235 @@ class Event(object):
             return self._resource
 
 
+class EventUpdate(object):
+    implements(IPlugin, IFeedUpdateType)
+    updateType = "E"
+    templates = [
+        ["%(u0)s is attending your %(type)s",
+         "%(u0)s is attending %(owner)s's %(type)s"],
+        ["%(u0)s and %(u1)s are attending your %(type)s",
+         "%(u0)s and %(u1)s are attending %(owner)s's %(type)s"],
+        ["%(u0)s, %(u1)s and %(u2)s are attending your %(type)s",
+         "%(u0)s, %(u1)s and %(u2)s are attending %(owner)s's %(type)s"]]
+
+    def parse(self, convId, updates):
+        items = []
+        entities = []
+        for update in updates:
+            if len(update) >= 3:
+                (x, user, item) = update[0:3]
+                entities.append(user)
+        return (items, entities)
+
+    def reason(self, convId, updates, data):
+        entities = data['entities']
+        meta = data['items'][convId]['meta']
+        ownerId = meta['owner']
+        myId = data['myId']
+        yesPeople = data['yesPeople']
+
+        uname = lambda x: utils.userName(x, entities[x], "conv-user-cause")
+        if convId in yesPeople:
+            users = yesPeople[convId]
+        else:
+            return ('', [])
+        if ownerId in users:
+            users.remove(ownerId)
+        users = users[0:3]
+
+        vals = dict([('u'+str(i), uname(x)) for i,x in enumerate(users)])
+        vals.update({'owner':uname(ownerId),
+                     'type':utils.itemLink(convId, meta['type'])})
+
+        if not users:
+            return ('', [])
+
+        template = self.templates[len(users)-1][1] if ownerId != myId\
+                    else self.templates[len(users)-1][0]
+
+        return (template % vals, users)
+
+
+class EventNotification(object):
+    implements(IPlugin, INotificationType)
+    notifyOnWeb = True
+
+    # Notification of a person being invited to an event.
+    _toOthers_EI = [
+        "%(senderName)s invited you to an event",
+        "Hi,\n\n"\
+        "%(senderName)s has invited you to an event.\n"\
+        "See the event at %(convUrl)s",
+        "notifyOtherEI"
+    ]
+
+    _aggregation_EI = [
+        ["%(invitedBy)s invited you to an %(itemType)s",
+         "%(invitedBy)s invited you to %(owner)s's %(itemType)s"],
+    ]
+
+    # Notification of an event being RSVPed
+    _toOwner_EA = [
+        "%(senderName)s is attending your event",
+        "Hi,\n\n"\
+        "%(senderName)s is attending your event.\n"\
+        "See the full event at %(convUrl)s",
+        "notifyOwnerEA"
+    ]
+
+    # Aggregation of all attendees
+    _aggregation_EA = [
+        ["%(user0)s is attending your %(itemType)s",
+         "%(user0)s is attending %(owner)s's %(itemType)s"],
+        ["%(user0)s and %(user1)s are attending your %(itemType)s",
+         "%(user0)s and %(user1)s are attending %(owner)s's %(itemType)s"],
+        ["%(user0)s, %(user1)s and 1 other are attending your %(itemType)s",
+         "%(user0)s, %(user1)s and 1 other are attending %(owner)s's %(itemType)s"],
+        ["%(user0)s, %(user1)s and %(count)s others are attending your %(itemType)s",
+         "%(user0)s, %(user1)s and %(count)s others are attending %(owner)s's %(itemType)s"]
+    ]
+
+    def __init__(self, notificationType):
+        self.notificationType = notificationType
+
+    def render(self, parts, value, toOwner=False, getTitle=True, getBody=True,
+                                                                    data=None):
+        convId, convType, convOwnerId, notifyType = parts
+        convTitle, convLocation, convTime = "", "", ""
+        if "convMeta" in data:
+            convMeta = data["convMeta"]
+            me = data['me']
+            entities = data['entities']
+
+            convTitle = convMeta["event_title"]
+            convLocation = convMeta.get("event_location", "")
+            start = convMeta["event_startTime"]
+            end   = convMeta["event_endTime"]
+            owner = convMeta["owner"]
+            ownerName = entities[owner].basic["name"]
+
+            my_tz = timezone(me.basic['timezone'])
+            owner_tz = timezone(entities[owner].basic['timezone'])
+            utc = pytz.utc
+            startdatetime = datetime.datetime.utcfromtimestamp(float(start)).replace(tzinfo=utc)
+            enddatetime = datetime.datetime.utcfromtimestamp(float(end)).replace(tzinfo=utc)
+
+            utc_dt = utc.normalize(startdatetime)
+            start_dt = my_tz.normalize(startdatetime.astimezone(my_tz))
+            end_dt = my_tz.normalize(enddatetime.astimezone(my_tz))
+
+            if start_dt.date() == end_dt.date():
+                sameDay = True
+            else:
+                sameDay = False
+
+            allDay = True if convMeta.get("event_allDay", "0") == "1" else False
+
+            if not allDay:
+                event_start_fmt = "%a %b %d, %I:%M %p"
+            else:
+                event_start_fmt = "%a %b %d"
+            event_start = start_dt.strftime(event_start_fmt)
+
+            if allDay:
+                event_end_fmt = "%a %b %d"
+            elif sameDay:
+                event_end_fmt = "%I:%M %p"
+            else:
+                event_end_fmt = "%a %b %d, %I:%M %p"
+            event_end = end_dt.strftime(event_end_fmt)
+
+            if not allDay:
+                convTime += event_start
+                if sameDay:
+                    convTime += " to %s" % (event_end)
+                else:
+                    convTime += " -- %s" % (event_end)
+            else:
+                convTime += event_start
+                if sameDay:
+                    convTime += _("All Day")
+                else:
+                    convTime += " -- %s" % (event_end)
+
+        if notifyType == "EI":
+            templates = self._toOthers_EI
+        else:
+            templates = self._toOwner_EA
+
+        title, body, html = '', '', ''
+        senderName = data['me'].basic['name']
+        convOwnerName = data['entities'][convOwnerId].basic['name']
+
+        if getTitle:
+            title = templates[0] % locals()
+
+        if getBody:
+            senderAvatarUrl = utils.userAvatar(data['myId'], data['me'], "medium")
+            convUrl = "%s/item?id=%s" % (rootUrl, convId)
+            body = templates[1] % locals()
+
+            vals = locals().copy()
+            del vals['self']
+            html = t.getBlock("event.mako", templates[2], **vals)
+
+        return (title, body, html)
+
+    @defer.inlineCallbacks
+    def fetchAggregationData(self, parts, values):
+        notifyType = parts[3] if parts[0] else parts[1]
+        convId = parts[0]
+        args = {}
+        entityIds = set()
+
+        if notifyType == "EI":
+            invitees = yield db.get_slice(convId, "items", ["invitees"])
+            invitees = utils.supercolumnsToDict(invitees)
+            args.setdefault("invitedPeople", {})[convId] = \
+                                                        invitees["invitees"]
+            # XXX: Since myId is not available here, it's not possible
+            # to pick the entity here who invited me.
+            entityIds.update(invitees["invitees"].keys())
+
+        entityIds.update([x.split(':')[0] for x in values])
+        defer.returnValue([entityIds, entityIds, args])
+
+    def aggregation(self, parts, values, data=None, fetched=None):
+        convId, convType, convOwnerId, notifyType = parts
+        myId = data['myId']
+        entities = data['entities']
+        userCount = len(values)
+
+        if notifyType == "EI":
+            templates = self._aggregation_EI
+        else:
+            templates = self._aggregation_EA
+        templatePair = templates[3 if userCount > 4 else userCount - 1]
+
+        vals = dict([('user'+str(idx), utils.userName(uid, entities[uid]))\
+                      for idx, uid in enumerate(values[0:2])])
+        vals['count'] = userCount - 2
+        vals['itemType'] = utils.itemLink(convId, convType)
+
+        if notifyType == "EI":
+            invitedBy = fetched["invitedPeople"][convId][myId]
+            vals['invitedBy'] = utils.userName(invitedBy, entities[invitedBy])
+            vals['owner'] = utils.userName(convOwnerId, entities[convOwnerId])
+            if convOwnerId == invitedBy:
+                notifyStr = templatePair[0] % vals
+            else:
+                notifyStr = templatePair[1] % vals
+        else:
+            if convOwnerId == data['myId']:
+                notifyStr = templatePair[0] % vals
+            else:
+                vals['owner'] = utils.userName(convOwnerId, entities[convOwnerId])
+                notifyStr = templatePair[1] % vals
+
+        return notifyStr
+
+
 event = Event()
+eventUpdates = EventUpdate()
+eventInviteNotify = EventNotification("EI")
+eventAttendNotify = EventNotification("EA")

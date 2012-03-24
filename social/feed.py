@@ -236,9 +236,9 @@ class FeedResource(base.BaseResource):
         if "entities" not in args:
             args["entities"] = entities
         else:
-            for entityId in entities.keys():
-                if entityId not in args["entities"].keys():
-                    args["entities"][entityId] = entities[entityId]
+            for entity in entities.keys():
+                if entity not in args["entities"].keys():
+                    args["entities"][entity] = entities[entity]
 
         if script:
             onload = """
@@ -294,4 +294,3 @@ class FeedResource(base.BaseResource):
         t.renderScriptBlock(request, "feed.mako", "customAudience", False,
                             "#custom-audience-dlg", "set", True,
                             handlers={"onload": onload}, **args)
-

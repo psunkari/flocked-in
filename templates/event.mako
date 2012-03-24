@@ -11,6 +11,7 @@
 <!DOCTYPE HTML>
 <%inherit file="base.mako"/>
 <%namespace name="item" file="item.mako"/>
+<%namespace name="emails" file="emails.mako"/>
 
 <%def name="layout()">
   <div class="contents has-left">
@@ -150,7 +151,7 @@
 </%def>
 
 <%def name="render_events()">
-<div class="viewbar">
+  <div class="viewbar">
     <ul class="h-links view-options">
       %for item, display in [('agenda', _('Agenda')), ('invitations', _('Invitations'))]:
         %if view == item:
@@ -161,17 +162,17 @@
       %endfor
     </ul>
     <div class="input-wrap" id="agenda-start-wrapper">
-        <input id="agenda-start" type="text" disabled/>
-        <input type="hidden" id="agenda-start-date" />
-        <input type="hidden" id="agenda-view" value="${view}" />
+      <input id="agenda-start" type="text" disabled/>
+      <input type="hidden" id="agenda-start-date" />
+      <input type="hidden" id="agenda-view" value="${view}" />
     </div>
-</div>
-<div class="paged-container" id="events-container">
-  <%events()%>
-</div>
-<div class="pagingbar">
+  </div>
+  <div class="paged-container" id="events-container">
+    <%events()%>
+  </div>
+  <div class="pagingbar">
     <%paging()%>
-</div>
+  </div>
 </%def>
 
 <%def name="events()">
@@ -477,7 +478,7 @@
 <%def name="render_attendance(attendeeList, invitedPeople)">
   <div class="conversation-attachments-wrapper">
     <ul class="v-links peoplemenu">
-      %for u in attendeeList[convId][:3]:
+      %for u in attendeeList[convId][:4]:
         <li>
           %if u in invitedPeople[convId].keys():
             <strong>
@@ -580,3 +581,35 @@
     else:
         return eventDueInStr
 %>
+
+<%def name="notifyOtherEI()">
+  <% emails.header() %>
+  <td valign="top" align="right" style="width:48px;" rowspan="2">
+    <img src="${senderAvatarUrl}" alt="">
+  </td>
+  <td style="font-size: 14px;">
+    <b>${senderName}</b> has invited you to ${convTitle}.
+    <br/><br/>
+    ${convTime}
+    <br/>
+    % if convLocation != "":
+        <b>Venue</b> -- ${convLocation}
+    %endif
+    <br/><br/>
+    <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View event</div></a>
+  </td>
+  <% emails.footer() %>
+</%def>
+
+<%def name="notifyOwnerEA()">
+  <% emails.header() %>
+  <td valign="top" align="right" style="width:48px;" rowspan="2">
+    <img src="${senderAvatarUrl}" alt="">
+  </td>
+  <td style="font-size: 14px;">
+    <b>${senderName}</b> is attending your ${convType}.
+    <br/><br/>
+    <a href="${convUrl}" style="text-decoration:none!important;"><div style="display:inline-block;padding:6px 12px;border-radius:4px;background:#3D85C6;text-shadow:1px 1px 2px rgba(0,0,0,0.4);color:white;font-weight:bold;">View event</div></a>
+  </td>
+  <% emails.footer() %>
+</%def>

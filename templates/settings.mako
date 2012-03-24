@@ -490,7 +490,10 @@
               _('Recipients of a conversation were changed'),
 
               _('Someone flagged your item for review'),
-              _('Owner updated an item that you flagged for review')]
+              _('Owner updated an item that you flagged for review'),
+              _('User posted an item that matched a banned keyword'),
+              _('Someone invites you to an event'),
+              _('Someone is attending your event')]
   %>
   <form class="ajax" id="settings-form" action="/settings/notify" method="post"  enctype="multipart/form-data">
     <table id='notify-setup' valign='middle' role='display'>
