@@ -361,6 +361,8 @@ class NotificationsResource(base.BaseResource):
                 t.renderScriptBlock(request, "notifications.mako", "content",
                                     landing, "#notifications", "set", **args)
             yield utils.render_LatestCounts(request, landing)
+        else:
+            t.render(request, "notifications.mako", **args)
 
     @profile
     @dump_args

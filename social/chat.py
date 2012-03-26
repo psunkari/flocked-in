@@ -225,14 +225,18 @@ class ChatArchivesResource(base.BaseResource):
                       'chatIds': chatIds,
                       'nextPageStart': nextPageStart,
                       'prevPageStart': prevPageStart,
+                      'view': 'list',
                       'menuId': 'chats'})
 
-        onload = """
-                     $$.menu.selectItem('chats');
-                 """
-        t.renderScriptBlock(request, "chat.mako", "chatList",
-                            landing, '.center-contents', "set", True,
-                            handlers={"onload": onload}, **args)
+        if script:
+            onload = """
+                         $$.menu.selectItem('chats');
+                     """
+            t.renderScriptBlock(request, "chat.mako", "chatList",
+                                landing, '.center-contents', "set", True,
+                                handlers={"onload": onload}, **args)
+        else:
+            t.render(request, "chat.mako", **args)
 
     @defer.inlineCallbacks
     def _renderChat(self, request):
@@ -282,20 +286,23 @@ class ChatArchivesResource(base.BaseResource):
                                          for x in chatParticipants if x != myId])
         args.update({"chatLogs": chatLogs, "chatId": chatId,
                      "entities": entities, "nextPageStart": nextPageStart,
-                     "menuId": "chats"})
+                     "menuId": "chats", "view": "log"})
 
-        if not start:
-            onload = """
-                     $$.menu.selectItem('chats');
-                     """
-            t.renderScriptBlock(request, 'chat.mako', "chat_title", landing,
-                                "#title", "set", True,
-                                handlers={"onload": onload}, chatTitle=title)
-            t.renderScriptBlock(request, "chat.mako", "chat",
-                                landing, ".center-contents", "set", **args)
+        if script:
+            if not start:
+                onload = """
+                         $$.menu.selectItem('chats');
+                         """
+                t.renderScriptBlock(request, 'chat.mako', "chat_title", landing,
+                                    "#title", "set", True,
+                                    handlers={"onload": onload}, chatTitle=title)
+                t.renderScriptBlock(request, "chat.mako", "chat",
+                                    landing, ".center-contents", "set", **args)
+            else:
+                t.renderScriptBlock(request, "chat.mako", "chat",
+                                    landing, "#next-page-loader", "replace", **args)
         else:
-            t.renderScriptBlock(request, "chat.mako", "chat",
-                                landing, "#next-page-loader", "replace", **args)
+            t.render(request, "chat.mako", **args)
 
     def render_GET(self, request):
         segmentCount = len(request.postpath)

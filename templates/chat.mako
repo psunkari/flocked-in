@@ -25,7 +25,11 @@
         <div class="right-contents"></div>
       </div>
       <div id="center">
-        <div class="center-contents"></div>
+        <div class="center-contents">
+          %if not script:
+            <% self.center() %>
+          %endif
+        </div>
       </div>
       <div class="clear"></div>
     </div>
@@ -186,10 +190,10 @@
 
 <%def name="center()">
   %if view == "list":
-    ${render_chatList()}
+    <% self.chatList() %>
   %elif view == "log":
-  <div class="conversation-wrapper">
-    ${render_chat()}
-  </div>
+    <div class="conversation-wrapper">
+      <% render_chat() %>
+    </div>
   %endif
 </%def>
