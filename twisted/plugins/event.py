@@ -27,7 +27,6 @@ from social.logging     import dump_args, profile, log
 # Taken from social.item
 @defer.inlineCallbacks
 def _notify(notifyType, convId, timeUUID, **kwargs):
-    deferreds = []
     convOwnerId = kwargs["convOwnerId"]
     convType = kwargs["convType"]
     myId = kwargs["myId"]
@@ -46,19 +45,20 @@ def _notify(notifyType, convId, timeUUID, **kwargs):
     from social import notifications
 
     entities = base.EntitySet(toFetchEntities)
-    notify_d = entities.fetchData() if recipients else defer.succeed([])
+    if recipients:
+        def _gotEntities(cols):
+            kwargs.setdefault('entities', {}).update(entities)
+            kwargs["me"] = entities[myId]
+        def _sendNotifications(ignored):
+            return notifications.notify(recipients, notifyId,
+                                        myId, timeUUID, **kwargs)
 
-    def _gotEntities(cols):
-        kwargs.setdefault('entities', {}).update(entities)
-        kwargs["me"] = entities[myId]
-    def _sendNotifications(ignored):
-        return notifications.notify(recipients, notifyId,
-                                    myId, timeUUID, **kwargs)
-    notify_d.addCallback(_gotEntities)
-    notify_d.addCallback(_sendNotifications)
+        notify_d = entities.fetchData()
+        notify_d.addCallback(_gotEntities)
+        notify_d.addCallback(_sendNotifications)
 
-    deferreds.append(notify_d)
-    yield defer.DeferredList(deferreds)
+        yield notify_d
+
 
 class EventResource(base.BaseResource):
     isLeaf = True
