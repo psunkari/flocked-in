@@ -18,22 +18,42 @@ from social import config, db, utils
 
 KEYSPACE = config.get("Cassandra", "Keyspace")
 
-def _getAllFiles(conn, bucket):
-    bucket = conn.get_bucket(bucket)
-    files = []
-    for key in bucket.list():
-        files.append(key.name)
 
-    return files
+@defer.inlineCallbacks
+def createCF():
+    # Create column families for Events
+    yield db.system_drop_column_family("userAgenda")
+    userAgenda = ttypes.CfDef(KEYSPACE, "userAgenda", "Standard", "TimeUUIDType",
+                              None, "Time sorted list of events for a user")
+    yield db.system_add_column_family(userAgenda)
+
+    yield db.system_drop_column_family("userAgendaMap")
+    userAgendaMap = ttypes.CfDef(KEYSPACE, "userAgendaMap", "Standard", "TimeUUIDType",
+                                 None, "Reverse map of user:event to agenda entry")
+    yield db.system_add_column_family(userAgendaMap)
+
+    db.system_drop_column_family("eventResponses")
+    eventResponses = ttypes.CfDef(KEYSPACE, "eventResponses", "Standard", "UTF8Type",
+                                  None, "List of RSVP responses to an event")
+    yield db.system_add_column_family(eventResponses)
+
+
 
 @defer.inlineCallbacks
 def updateData():
-    SKey = config.get('CloudFiles', 'SecretKey')
-    AKey = config.get('CloudFiles', 'AccessKey')
-    bucket = config.get('CloudFiles', 'Bucket')
+    def _getAllFiles():
+        SKey = config.get('CloudFiles', 'SecretKey')
+        AKey = config.get('CloudFiles', 'AccessKey')
+        bucket = config.get('CloudFiles', 'Bucket')
+        conn = S3Connection(AKey, SKey)
 
-    conn = S3Connection(AKey, SKey)
-    files = yield threads.deferToThread(_getAllFiles, conn, bucket)
+        bucket = conn.get_bucket(bucket)
+        files = []
+        for key in bucket.list():
+            files.append(key.name)
+        return files
+
+    files = yield threads.deferToThread(_getAllFiles, bucket)
 
     S3fileIds = [x.split("/")[2] for x in files]
     log.msg("Fetched %d files" %(len(S3fileIds)))
@@ -59,16 +79,20 @@ def updateData():
     log.msg(updated_file_meta)
     yield db.batch_mutate(updated_file_meta)
 
+
 def main():
     parser = optparse.OptionParser()
+    parser.add_option('-c', '--create', dest="create", action="store_true")
     parser.add_option('-d', '--update-data', dest='update', action="store_true")
     options, args = parser.parse_args()
 
-    if options.update:
+    if options.create or options.update:
         log.startLogging(sys.stdout)
         db.startService()
 
-        if options.update:
+        if options.create:
+            d = createCF()
+        elif options.update:
             d = updateData()
 
         def finish(x):
