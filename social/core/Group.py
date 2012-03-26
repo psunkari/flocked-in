@@ -13,16 +13,19 @@ from social.constants   import PEOPLE_PER_PAGE
 
 @defer.inlineCallbacks
 def _notify(group, user):
+    ""
     timeUUID = uuid.uuid1().bytes
     yield db.insert(group.id, "latest", user.id, timeUUID, "groups")
 
 
 def _entityGroupMapColName(group):
+    "return the string used as column-name in EntityGroup column family"
     return "%s:%s" % (group.basic['name'].lower(), group.id)
 
 
 @defer.inlineCallbacks
 def _removeFromPending(group, user):
+    ""
     yield db.remove(group.id, "pendingConnections", "GI:%s" % (user.id))
     yield db.remove(user.id, "pendingConnections", "GO:%s" % (group.id))
     #also remove any group invites
@@ -37,6 +40,16 @@ def _removeFromPending(group, user):
 
 @defer.inlineCallbacks
 def _addMember(request, group, user):
+    """Add a new member to the group.
+    Add user to group followers, create a group-join activity item and push
+    item to group, group-followers feed. Update user groups with new group.
+
+    Keyword params:
+    @group: entity object of the group
+    @user: entity object of the user
+    @request:
+
+    """
     deferreds = []
     itemType = "activity"
     relation = Relation(user.id, [])
@@ -73,8 +86,14 @@ def _addMember(request, group, user):
 
 @defer.inlineCallbacks
 def follow(group, user):
+    """Add @user to @group followers
+
+    Keyword params:
+    @group: entity object of group
+    @user: entity object of user
+    """
     try:
-        cols = yield db.get(group.id, "groupMembers", user.id)
+        yield db.get(group.id, "groupMembers", user.id)
         yield db.insert(group.id, "followers", "", user.id)
         defer.returnValue(True)
     except ttypes.NotFoundException:
@@ -83,8 +102,14 @@ def follow(group, user):
 
 @defer.inlineCallbacks
 def unfollow(group, user):
+    """Remove @user from @group followers
+
+    Keyword params:
+    @group: entity object of group
+    @user: entity object of user
+    """
     try:
-        cols = yield db.get(group.id, "groupMembers", user.id)
+        yield db.get(group.id, "groupMembers", user.id)
         yield db.remove(group.id, "followers", user.id)
         defer.returnValue(True)
     except ttypes.NotFoundException:
@@ -93,10 +118,20 @@ def unfollow(group, user):
 
 @defer.inlineCallbacks
 def subscribe(request, group, user, org):
+    """Open group: add user to the group.
+    Closed group: add a pending request, send a notification to group-admins.
+    Raise an exception if user is blocked from joining the group.
+
+    Keyword params:
+    @org: org object
+    @user: user object
+    @group: group object
+    @request:
+
+    """
     cols = yield db.get_slice(group.id, "blockedUsers", [user.id])
     if cols:
-        PermissionDenied = errors.PermissionDenied
-        raise PermissionDenied(_("You are banned from joining the group."))
+        raise errors.PermissionDenied(_("You are banned from joining the group."))
 
     isNewMember = False
     pendingRequests = {}
@@ -128,12 +163,27 @@ def subscribe(request, group, user, org):
 
 @defer.inlineCallbacks
 def unsubscribe(request, group, user):
+    """Unsubscribe @user from @group.
+    Remove the user from group-followers, group from user-groups,
+    create a group-leave activity item and push item to group-followers
+    and group feed. Remove the group from user display name indices.
+
+    Raises an error if user is not member of group or when
+    user is the only administrator of the group.
+
+    keyword params:
+    @user: entity object of user
+    @group: entity object of the group
+    @request:
+
+    """
     try:
         yield db.get(group.id, "groupMembers", user.id)
     except ttypes.NotFoundException:
         raise errors.InvalidRequest(_("You are not a member of the group"))
 
-    if len(getattr(group, 'admins', {}).keys()) == 1 and user.id in group.admins:
+    if len(getattr(group, 'admins', {}).keys()) == 1 \
+       and user.id in group.admins:
         raise errors.InvalidRequest(_("You are the only administrator of this group"))
 
     colname = _entityGroupMapColName(group)
@@ -168,6 +218,13 @@ def unsubscribe(request, group, user):
 
 @defer.inlineCallbacks
 def block(group, user, me):
+    """Block user from joining a group/ sending further group-join requests.
+
+    Keyword params:
+    @me: entity object with my info
+    @user: entity object of the user
+    @group: entity object of the group
+    """
     if me.id not in group.admins:
         raise errors.PermissionDenied('Access Denied')
 
@@ -193,6 +250,13 @@ def block(group, user, me):
 
 @defer.inlineCallbacks
 def unblock(group, user, me):
+    """Unblock a blocked user.
+
+    Keyword params:
+    @me: entity object with my info
+    @user: entity object of the user
+    @group: entity object of the group
+    """
     if me.id not in group.admins:
         raise errors.PermissionDenied('Access Denied')
     yield db.remove(group.id, "blockedUsers", user.id)
@@ -200,6 +264,14 @@ def unblock(group, user, me):
 
 @defer.inlineCallbacks
 def rejectRequest(group, user, me):
+    """reject user's group-join request.
+    Only group-admin can perform this action.
+
+    Keyword params:
+    @me:
+    @user: user object
+    @group: group object
+    """
     if me.id not in group.admins:
         raise errors.PermissionDenied('Access Denied')
 
@@ -214,6 +286,15 @@ def rejectRequest(group, user, me):
 
 @defer.inlineCallbacks
 def approveRequest(request, group, user, me):
+    """accept a group-join request. Add the user to group-members.
+    Only group-admin can perform this action.
+
+    Keyword params:
+    @me:
+    @user: user object
+    @group: group object
+    @request:
+    """
     if me.id not in group.admins:
         raise errors.PermissionDenied('Access Denied')
 
@@ -235,7 +316,14 @@ def approveRequest(request, group, user, me):
 
 @defer.inlineCallbacks
 def cancelRequest(group, me):
-    cols = yield db.get_slice(me.id, "pendingConnections", ["GI:%s" % (group.id)])
+    """cancel a join-group request
+
+    Keyword params:
+    @me:
+    @group: group object
+    """
+    cols = yield db.get_slice(me.id, "pendingConnections",
+                              ["GI:%s" % (group.id)])
     if cols:
         yield _removeFromPending(group, me)
         defer.returnValue(True)
@@ -243,6 +331,14 @@ def cancelRequest(group, me):
 
 @defer.inlineCallbacks
 def removeUser(group, user, me):
+    """Remove user from the group.
+    Only group-admin can perform this action.
+
+    Keyword params
+    @me:
+    @user: user object
+    @group: group object
+    """
     if me.id not in group.admins:
         raise errors.PermissionDenied('Access Denied')
 
@@ -277,12 +373,21 @@ def removeUser(group, user, me):
 
 @defer.inlineCallbacks
 def makeAdmin(request, group, user, me):
+    """make user admin of the group.
+    Only an group-administrator can make an group-member and administrator.
+
+    Keyword params:
+    @request:
+    @me:
+    @user: user object
+    @group: group object
+    """
     if me.id not in group.admins:
         raise errors.PermissionDenied(_('You are not an administrator of the group'))
 
     cols = yield db.get_slice(group.id, "groupMembers", [user.id])
     if not cols:
-        raise errors.InvalidRequest(_('Only group members can become adminstrators'))
+        raise errors.InvalidRequest(_('Only group member can become administrator'))
 
     if user.id in group.admins:
         defer.returnValue(None)
@@ -305,18 +410,29 @@ def makeAdmin(request, group, user, me):
     d2 = feed.pushToFeed(group.id, item["meta"]["uuid"], itemId,
                          itemId, responseType, itemType, user.id)
     d3 = feed.pushToOthersFeed(user.id, user.basic['org'],
-                              item["meta"]["uuid"], itemId, itemId, _acl,
-                              responseType, itemType, user.id, promoteActor=False)
+                                item["meta"]["uuid"], itemId, itemId,
+                                _acl, responseType, itemType,
+                                user.id, promoteActor=False)
 
     yield defer.DeferredList([d1, d2, d3])
 
 
 @defer.inlineCallbacks
 def removeAdmin(group, user, me):
+    """strip admin privileges of user.
+    Throw an error if @me is not group-admin or is the only admin and
+    trying to removing self.
+    Raise an exception when user is not a group-memeber or not a group-admin.
+
+    Keyword params:
+    @me:
+    @user: user object
+    @group: group object
+    """
     if me.id not in group.admins:
         raise errors.PermissionDenied(_('You are not an administrator of the group'))
     if me.id == user.id and len(group.admins.keys()) == 1:
-        raise errors.InvalidRequest(_('You are currently the only administrator of this group'))
+        raise errors.InvalidRequest(_('You are the only administrator of the group'))
 
     cols = yield db.get_slice(group.id, "groupMembers", [user.id])
     if not cols:
@@ -331,6 +447,18 @@ def removeAdmin(group, user, me):
 
 @defer.inlineCallbacks
 def create(request, me, name, access, description, displayPic):
+    """create a new group.
+    add creator to the group members. make create administrator of the group.
+    Note: No two groups in an organization should have same name.
+
+    Keyword params:
+    @request:
+    @me:
+    @name: name of the group.
+    @access: group access type (open/closed).
+    @description: description of the group.
+    @displayPic: profile pic of the group.
+    """
     if not name:
         raise errors.MissingParams([_("Group name")])
 
@@ -362,11 +490,24 @@ def create(request, me, name, access, description, displayPic):
 
 @defer.inlineCallbacks
 def edit(me, group, name, access, desc, displayPic):
+    """update group meta info.
+    Only group-admin can edit group meta info.
+
+    Keyword params:
+    @me:
+    @group:
+    @name: name of the group.
+    @access: group access type (open/closed).
+    @desc: description of the group.
+    @displayPic: profile pic of the group.
+
+    """
     if me.id not in group.admins:
-        raise errors.PermissionDenied('You should be an administrator to edit group meta data')
+        raise errors.PermissionDenied('Only administrator can edit group meta data')
     if name:
         start = name.lower() + ':'
-        cols = yield db.get_slice(me.basic['org'], "entityGroupsMap", start=start, count=1)
+        cols = yield db.get_slice(me.basic['org'], "entityGroupsMap",
+                                  start=start, count=1)
         for col in cols:
             name_, groupId_ = col.column.name.split(':')
             if name_ == name.lower() and groupId_ != group.id:
@@ -405,29 +546,49 @@ def edit(me, group, name, access, desc, displayPic):
 
 @defer.inlineCallbacks
 def getMembers(group, me, start=''):
+    """get the member of the group starting with @start
+    Only group-memeber can access the members list.
+
+    Keyword params:
+    @me:
+    @group: group object
+    @start: fetch users from start.
+    """
     cols = yield db.get_slice(group.id, "groupMembers", [me.id])
     if not cols:
         raise errors.PermissionDenied(_("Access Denied"))
 
-    users, relation, userIds, blockedUsers, nextPageStart,\
+    users, relation, userIds, blockedUsers, nextPageStart, \
         prevPageStart = yield people.getPeople(me.id, group.id,
-                                            me.basic['org'], start=start)
-    defer.returnValue((users, relation, userIds, blockedUsers, nextPageStart, prevPageStart))
+                                               me.basic['org'], start=start)
+    defer.returnValue((users, relation, userIds, blockedUsers,
+                       nextPageStart, prevPageStart))
 
 
 @defer.inlineCallbacks
 def getBlockedMembers(group, me, start='', count=PEOPLE_PER_PAGE):
+    """get users blocked from a group.
+    Only group-admins can view blocked users.
+
+    Keyword params:
+    @me:
+    @group: group object
+    @start: fetch users from @start
+    @count: no.of users to be fetched.
+    """
     if me.id not in group.admins:
         raise errors.PermissionDenied(_("Access Denied"))
 
     nextPageStart = ''
     prevPageStart = ''
     toFetchCount = count + 1
-    cols = yield db.get_slice(group.id, "blockedUsers", start=start, count=toFetchCount)
+    cols = yield db.get_slice(group.id, "blockedUsers", start=start,
+                                count=toFetchCount)
     blockedUsers = [col.column.name for col in cols]
 
     if start:
-        prevCols = yield db.get_slice(group.id, "blockedUsers", start=start, reverse=True, count=toFetchCount)
+        prevCols = yield db.get_slice(group.id, "blockedUsers", start=start,
+                                      reverse=True, count=toFetchCount)
         if len(prevCols) > 1:
             prevPageStart = utils.encodeKey(prevCols[-1].column.name)
 
@@ -446,7 +607,16 @@ def getBlockedMembers(group, me, start='', count=PEOPLE_PER_PAGE):
 
 
 @defer.inlineCallbacks
-def getPendingRequests(group, me, start, count=PEOPLE_PER_PAGE):
+def getPendingRequests(group, me, start='', count=PEOPLE_PER_PAGE):
+    """get the list of users who want to join the group.
+    Only admin can view pending group requests.
+
+    Keyword params:
+    @me:
+    @group: group object
+    @start: start fetching from @start
+    @count: no.of pending requests to fetch.
+    """
     toFetchCount = count + 1
     nextPageStart = None
     prevPageStart = None
@@ -474,7 +644,14 @@ def getPendingRequests(group, me, start, count=PEOPLE_PER_PAGE):
 
 
 @defer.inlineCallbacks
-def getAllInvitations(me, start, count=PEOPLE_PER_PAGE):
+def getAllInvitations(me, start='', count=PEOPLE_PER_PAGE):
+    """get all group invitations sent to @me starting from @start.
+
+    Keyword params:
+    @me:
+    @start: fetch invitations starting from @start.
+    @count: no.of invitations to be fetched.
+    """
     if not start:
         start = 'GI'
     toFetchCount = count + 1
@@ -509,6 +686,15 @@ def getAllInvitations(me, start, count=PEOPLE_PER_PAGE):
 
 @defer.inlineCallbacks
 def invite(group, me, user):
+    """Invite an user to join a group.
+    Only group-member can invite others to the group. Ignore if invited user
+    is already a member of the group.
+
+    Keyword params:
+    @me:
+    @user: user object
+    @group: group object
+    """
     try:
         yield db.get(group.id, "groupMembers", me.id)
     except ttypes.NotFoundException as e:
@@ -520,19 +706,29 @@ def invite(group, me, user):
         try:
             yield db.get(user.id, "pendingConnections", "GO:%s" % (group.id))
         except ttypes.NotFoundException:
-            cols = yield db.get_slice(user.id, "pendingConnections", ["GI:%s" % (group.id)])
+            cols = yield db.get_slice(user.id, "pendingConnections",
+                                      ["GI:%s" % (group.id)])
             invited_by = set()
             if cols:
                 invited_by.update(cols[0].column.value.split(','))
             invited_by.add(me.id)
-            yield db.insert(user.id, "pendingConnections", ",".join(invited_by), "GI:%s" % (group.id))
+            yield db.insert(user.id, "pendingConnections",
+                            ",".join(invited_by), "GI:%s" % (group.id))
             data = {"entities": {group.id: group, user.id: user, me.id: me},
                     "groupName": group.basic["name"]}
-            yield notifications.notify([user.id], ":GI:%s" % (group.id), me.id, **data)
+            yield notifications.notify([user.id], ":GI:%s" % (group.id),
+                                        me.id, **data)
 
 
 @defer.inlineCallbacks
 def getGroupRequests(me, start='', count=PEOPLE_PER_PAGE):
+    """get the list of users who want to join groups @me administers.
+
+    Keyword params:
+    @me:
+    @start: start fetching from @start
+    @count: no.of users/requests to fetch
+    """
     userIds = []
     entities = {}
     nextPageStart = None
@@ -623,7 +819,16 @@ def getGroupRequests(me, start='', count=PEOPLE_PER_PAGE):
 
 
 @defer.inlineCallbacks
-def getGroups(me, entity, start, count=PEOPLE_PER_PAGE):
+def getGroups(me, entity, start='', count=PEOPLE_PER_PAGE):
+    """get the groups of entity. (either groups of an organization
+    or groups of an user)
+
+    keyword params:
+    @me:
+    @entity: org/user
+    start: fetch group from @start
+    count: no.of groups to fetch.
+    """
     toFetchCount = count + 1
     groups = {}
     groupIds = []
@@ -658,7 +863,8 @@ def getGroups(me, entity, start, count=PEOPLE_PER_PAGE):
     if toFetchGroups:
         groups = base.EntitySet(toFetchGroups)
         yield groups.fetchData()
-        groupFollowers = yield db.multiget_slice(toFetchGroups, "followers", names=[me.id])
+        groupFollowers = yield db.multiget_slice(toFetchGroups, "followers",
+                                                 names=[me.id])
         groupFollowers = utils.multiColumnsToDict(groupFollowers)
         columns = reduce(lambda x, y: x + y, [["GO:%s" % (x), "GI:%s" % (x)] for x in toFetchGroups])
         cols = yield db.get_slice(me.id, 'pendingConnections', columns)
@@ -673,6 +879,13 @@ def getGroups(me, entity, start, count=PEOPLE_PER_PAGE):
 
 @defer.inlineCallbacks
 def getManagedGroups(me, start, count=PEOPLE_PER_PAGE):
+    """get all groups managed by me
+
+    Keyword params:
+    @me:
+    @start: get groups from @start.
+    @count: no.of groups to be fetched.
+    """
     groups = {}
     groupIds = []
     myGroupsIds = []
