@@ -435,8 +435,8 @@ def getBlockedMembers(group, me, start='', count=PEOPLE_PER_PAGE):
         blockedUsers = blockedUsers[:PEOPLE_PER_PAGE]
         nextPageStart = utils.encodeKey(blockedUsers[-1])
 
-    entities = base.EntitySet(blockedUsers) if blockedUsers else {}
-    if entities:
+    entities = base.EntitySet(blockedUsers)
+    if blockedUsers:
         yield entities.fetchData()
 
     data = {"userIds": blockedUsers, "entities": entities,
