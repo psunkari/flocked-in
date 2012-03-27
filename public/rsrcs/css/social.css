@@ -1284,6 +1284,9 @@ abbr.timestamp {
     margin-bottom: 10px;
 }
 
+#item-subactions .tagedit-list {
+    min-height: inherit;
+}
 
 /*
  * Edit profile & Style for a generic form.
