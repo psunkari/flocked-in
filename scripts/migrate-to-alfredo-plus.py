@@ -22,17 +22,23 @@ KEYSPACE = config.get("Cassandra", "Keyspace")
 @defer.inlineCallbacks
 def createCF():
     # Create column families for Events
-    yield db.system_drop_column_family("userAgenda")
+    try:
+        yield db.system_drop_column_family("userAgenda")
+    except: pass
     userAgenda = ttypes.CfDef(KEYSPACE, "userAgenda", "Standard", "TimeUUIDType",
                               None, "Time sorted list of events for a user")
     yield db.system_add_column_family(userAgenda)
 
-    yield db.system_drop_column_family("userAgendaMap")
+    try:
+        yield db.system_drop_column_family("userAgendaMap")
+    except: pass
     userAgendaMap = ttypes.CfDef(KEYSPACE, "userAgendaMap", "Standard", "TimeUUIDType",
                                  None, "Reverse map of user:event to agenda entry")
     yield db.system_add_column_family(userAgendaMap)
 
-    db.system_drop_column_family("eventResponses")
+    try:
+        yield db.system_drop_column_family("eventResponses")
+    except: pass
     eventResponses = ttypes.CfDef(KEYSPACE, "eventResponses", "Standard", "UTF8Type",
                                   None, "List of RSVP responses to an event")
     yield db.system_add_column_family(eventResponses)
