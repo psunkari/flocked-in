@@ -63,7 +63,7 @@ class INotificationType(Interface):
         is meant to be used as body of the email etc;
         """
 
-    def fetchAggregationData(parts, values):
+    def fetchAggregationData(myId, orgId, parts, values):
         """Fetch any data that is required for display of aggregation.
         Returns a tuple containing @userIds of entities whose avatars will
         be displayed with the notification, entityIds to be fetched and any

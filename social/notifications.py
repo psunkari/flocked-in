@@ -291,7 +291,7 @@ class NotificationsResource(base.BaseResource):
 
             values = [update.value for update in updates]
             userIds, entityIds, pluginData = \
-                    yield plugin.fetchAggregationData(parts, values)
+                yield plugin.fetchAggregationData(myId, myOrgId, parts, values)
 
             notifyValues[notifyId] = utils.uniqify(values)
             notifyParts[notifyId] = parts

@@ -37,7 +37,7 @@ class _SimpleNotification(object):
 
         return self._render(parts, value, getTitle, getBody, data, args)
 
-    def fetchAggregationData(self, parts, values):
+    def fetchAggregationData(self, myId, orgId, parts, values):
         return (values, values, {})
 
     def aggregation(self, parts, values, data=None, fetched=None):
@@ -207,7 +207,7 @@ class GroupNotification(_SimpleNotification):
                     'groupName': data['groupName']}
         return self._render(parts, value, getTitle, getBody, data, args)
 
-    def fetchAggregationData(self, parts, values):
+    def fetchAggregationData(self, myId, orgId, parts, values):
         if self.notificationType == "GI":
             return (values, values + [parts[2]], {})
         else:

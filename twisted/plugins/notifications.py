@@ -109,7 +109,7 @@ class CommentNotification(object):
 
         return (title, body, html)
 
-    def fetchAggregationData(self, parts, values):
+    def fetchAggregationData(self, myId, orgId, parts, values):
         entityIds = [x.split(':')[0] for x in values]
         return (entityIds, entityIds + [parts[2]], {})
 
@@ -249,7 +249,7 @@ class LikeNotification(object):
 
         return (title, body, html)
 
-    def fetchAggregationData(self, parts, values):
+    def fetchAggregationData(self, myId, orgId, parts, values):
         entityIds = [x.split(':')[0] for x in values]
         return (entityIds, entityIds + [parts[2]], {})
 

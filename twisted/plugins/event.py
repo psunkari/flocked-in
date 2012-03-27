@@ -925,8 +925,8 @@ class EventNotification(object):
     ]
 
     _aggregation_EI = [
-        ["%(invitedBy)s invited you to an %(itemType)s",
-         "%(invitedBy)s invited you to %(owner)s's %(itemType)s"],
+        ["%(user0)s invited you to an %(itemType)s",
+         "%(user0)s invited you to %(owner)s's %(itemType)s"],
     ]
 
     # Notification of an event being RSVPed
@@ -1036,35 +1036,18 @@ class EventNotification(object):
 
         return (title, body, html)
 
-    @defer.inlineCallbacks
-    def fetchAggregationData(self, parts, values):
-        notifyType = parts[3] if parts[0] else parts[1]
-        convId = parts[0]
-        args = {}
-        entityIds = set()
-
-        if notifyType == "EI":
-            invitees = yield db.get_slice(convId, "items", ["invitees"])
-            invitees = utils.supercolumnsToDict(invitees)
-            args.setdefault("invitedPeople", {})[convId] = \
-                                                        invitees["invitees"]
-            # XXX: Since myId is not available here, it's not possible
-            # to pick the entity here who invited me.
-            entityIds.update(invitees["invitees"].keys())
-
-        entityIds.update([x.split(':')[0] for x in values])
-        defer.returnValue([entityIds, entityIds, args])
+    def fetchAggregationData(self, myId, orgId, parts, values):
+        entityIds = [x.split(':')[0] for x in values]
+        return (entityIds, entityIds, {})
 
     def aggregation(self, parts, values, data=None, fetched=None):
         convId, convType, convOwnerId, notifyType = parts
-        myId = data['myId']
+
         entities = data['entities']
         userCount = len(values)
 
-        if notifyType == "EI":
-            templates = self._aggregation_EI
-        else:
-            templates = self._aggregation_EA
+        templates = self._aggregation_EI if notifyType == "EI"\
+                                         else self._aggregation_EA
         templatePair = templates[3 if userCount > 4 else userCount - 1]
 
         vals = dict([('user'+str(idx), utils.userName(uid, entities[uid]))\
@@ -1073,12 +1056,10 @@ class EventNotification(object):
         vals['itemType'] = utils.itemLink(convId, convType)
 
         if notifyType == "EI":
-            invitedBy = fetched["invitedPeople"][convId][myId]
-            vals['invitedBy'] = utils.userName(invitedBy, entities[invitedBy])
-            vals['owner'] = utils.userName(convOwnerId, entities[convOwnerId])
-            if convOwnerId == invitedBy:
+            if convOwnerId == values[0]:
                 notifyStr = templatePair[0] % vals
             else:
+                vals['owner'] = utils.userName(convOwnerId, entities[convOwnerId])
                 notifyStr = templatePair[1] % vals
         else:
             if convOwnerId == data['myId']:
