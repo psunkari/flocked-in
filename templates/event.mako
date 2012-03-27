@@ -443,12 +443,16 @@
                 elif delta == -1:
                     reason = _("This event has passed")
                 else:
-                    if delta.days:
-                        eventDueInStr = "%s days" %delta.days
+                    if delta.years:
+                      eventDueInStr = "%s %s" %(delta.years, 'year' if delta.years==1 else 'year')
+                    elif delta.months:
+                      eventDueInStr = "%s %s" %(delta.months, 'month' if delta.months==1 else 'months')
+                    elif delta.days:
+                        eventDueInStr = "%s %s" %(delta.days, 'day' if delta.days==1 else 'days')
                     elif delta.hours:
-                        eventDueInStr = "%s hours" %delta.hours
+                        eventDueInStr = "%s %s" %(delta.hours, 'hour' if delta.hours==1 else 'hours')
                     elif delta.minutes:
-                        eventDueInStr = "%s minutes" %delta.minutes
+                        eventDueInStr = "%s %s" %(delta.minutes, 'min' if delta.minutes==1 else 'mins')
                     else:
                         eventDueInStr = "a few moments"
 
@@ -537,7 +541,7 @@
     <div class="sidebar-title">${title}</div>
     <ul class="v-links">
       %for convId in conversations:
-        <li>
+        <li class='event-agenda-block'>
           <a class="event-agenda-link${'-expired' if expired else ''}" href="/item?id=${convId}">${items[convId]['meta']['event_title']}</a>
           <span class="event-agenda-due-in">${eventDueIn(items, convId)}</span>
         </li>
@@ -562,16 +566,20 @@
         eventDueInStr = "Over"
     elif now > start and now < end:
         inProgress = True
-        eventDueInStr = "In progress"
+        eventDueInStr = "in progress"
     else:
       delta = relativedelta(start, now)
-
-      if delta.days:
-          eventDueInStr = "%sd" %delta.days
+      eventDueInStr = 'in '
+      if delta.years:
+        eventDueInStr += '%s %s'%(delta.years, 'yr' if delta.years==1 else 'yrs')
+      elif delta.months:
+        eventDueInStr += '%s %s'%(delta.months, 'month' if delta.months==1 else 'months')
+      elif delta.days:
+          eventDueInStr += "%s %s" %(delta.days, 'day' if delta.days==1 else 'days')
       elif delta.hours:
-          eventDueInStr = "%sh" %delta.hours
+          eventDueInStr += "%s %s" %(delta.hours, 'hour' if delta.hours==1 else 'hours')
       elif delta.minutes:
-          eventDueInStr = "%sm" %delta.minutes
+          eventDueInStr += "%s %s" %(delta.minutes, 'min' if delta.minutes==1 else 'mins')
       else:
           eventDueInStr = "now"
 

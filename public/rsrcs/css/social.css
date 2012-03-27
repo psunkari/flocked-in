@@ -2140,9 +2140,11 @@ abbr.timestamp {
 
 .event-agenda-due-in {
     display: inline-block;
-    float: right;
+    color:#909090
 }
-
+.event-agenda-block {
+    clear: both;
+}
 .agenda-root {
     float: left;
 }
