@@ -391,7 +391,7 @@
                      name = urlsafe_b64decode(name)
                   %>
                   <li>
-                      <a href='/messages/files?id=${id}&fid=${file}&ver=${tuuid}'>${name|h}</a>
+                      <a href='/messages/files?id=${id}&fid=${file}&ver=${tuuid}'>${name}</a>
                   </li>
                 %endfor
               </ul>
