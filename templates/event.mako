@@ -435,7 +435,7 @@
                     reason = _("This event has passed")
                 else:
                     if delta.years:
-                      eventDueInStr = "%s %s" %(delta.years, 'year' if delta.years==1 else 'year')
+                      eventDueInStr = "%s %s" %(delta.years, 'year' if delta.years==1 else 'years')
                     elif delta.months:
                       eventDueInStr = "%s %s" %(delta.months, 'month' if delta.months==1 else 'months')
                     elif delta.days:
@@ -443,7 +443,7 @@
                     elif delta.hours:
                         eventDueInStr = "%s %s" %(delta.hours, 'hour' if delta.hours==1 else 'hours')
                     elif delta.minutes:
-                        eventDueInStr = "%s %s" %(delta.minutes, 'min' if delta.minutes==1 else 'mins')
+                        eventDueInStr = "%s %s" %(delta.minutes, 'minute' if delta.minutes==1 else 'minutes')
                     else:
                         eventDueInStr = "a few moments"
 
@@ -560,9 +560,10 @@
         eventDueInStr = "in progress"
     else:
       delta = relativedelta(start, now)
-      eventDueInStr = 'in '
+      eventDueInStr = ''
+
       if delta.years:
-        eventDueInStr += '%s %s'%(delta.years, 'yr' if delta.years==1 else 'yrs')
+        eventDueInStr += '%s %s'%(delta.years, 'year' if delta.years==1 else 'years')
       elif delta.months:
         eventDueInStr += '%s %s'%(delta.months, 'month' if delta.months==1 else 'months')
       elif delta.days:
@@ -570,7 +571,7 @@
       elif delta.hours:
           eventDueInStr += "%s %s" %(delta.hours, 'hour' if delta.hours==1 else 'hours')
       elif delta.minutes:
-          eventDueInStr += "%s %s" %(delta.minutes, 'min' if delta.minutes==1 else 'mins')
+          eventDueInStr += "%s %s" %(delta.minutes, 'minute' if delta.minutes==1 else 'minutes')
       else:
           eventDueInStr = "now"
 
