@@ -53,7 +53,7 @@ def updateData():
             files.append(key.name)
         return files
 
-    files = yield threads.deferToThread(_getAllFiles, bucket)
+    files = yield threads.deferToThread(_getAllFiles)
 
     S3fileIds = [x.split("/")[2] for x in files]
     log.msg("Fetched %d files" %(len(S3fileIds)))
