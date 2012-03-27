@@ -217,51 +217,42 @@
     </div>
     <div class="time-picker">
       <div class="input-wrap">
-            <select id="starttime">
-                <%
-                    hoursNow = mytz_now.hour
-                %>
-                %for slot in range(0, 48):
-                    <%
-                        seconds = 1800 * slot
-                        ampm = "PM" if slot > 24 else "AM"
-                        hours = "%02d" % ((slot/2) % 12)
-                        minutes = "30" if (slot % 2) else "00"
-                        if hoursNow == (slot/2) and minutes != "30":
-                            selected=True
-                        else:
-                            selected=False
-                    %>
-                    <option value="${seconds}" ${'selected' if selected else ''}>${hours}:${minutes} ${ampm}</option>
-                %endfor
-            </select>
+        <select id="starttime">
+          <%
+            defaultStartHour = mytz_now.hour + 1
+          %>
+          %for slot in range(0, 48):
+            <%
+              seconds = 1800 * slot
+              ampm = "PM" if slot > 24 else "AM"
+              hours = (slot / 2) % 12 if slot > 25 else slot / 2
+              minutes = "30" if (slot % 2) else "00"
+              selected = True if (defaultStartHour == slot / 2 and not slot % 2) else False
+            %>
+            <option value="${seconds}" ${'selected' if selected else ''}>${hours}:${minutes} ${ampm}</option>
+          %endfor
+        </select>
         <input type="hidden" name="startTime" id="startTime" required=""/>
       </div>
     </div>
-    <span><strong>to</strong></span>
+    <span><strong>&mdash;</strong></span>
     <div class="time-picker">
       <div class="input-wrap">
-            <select id="endtime">
-                <%
-                    if mytz_now.hour < 23:
-                        hoursNow = mytz_now.hour + 1
-                    else:
-                        hoursNow = 0
-                %>
-                %for slot in range(0, 48):
-                    <%
-                        seconds = 1800 * slot
-                        ampm = "PM" if slot > 24 else "AM"
-                        hours = "%02d" % ((slot/2) % 12)
-                        minutes = "30" if (slot % 2) else "00"
-                        if hoursNow == (slot/2) and minutes != "30":
-                            selected=True
-                        else:
-                            selected=False
-                    %>
-                    <option value="${seconds}" ${'selected' if selected else ''}>${hours}:${minutes} ${ampm}</option>
-                %endfor
-            </select>
+        <select id="endtime">
+          <%
+            defaultEndHour = mytz_now.hour + 2 if mytz_now.hour < 22 else 0
+          %>
+          %for slot in range(0, 48):
+            <%
+              seconds = 1800 * slot
+              ampm = "PM" if slot > 24 else "AM"
+              hours = (slot / 2) % 12 if slot > 25 else slot / 2
+              minutes = "30" if (slot % 2) else "00"
+              selected = True if (defaultEndHour == slot / 2 and not slot % 2) else False
+            %>
+            <option value="${seconds}" ${'selected' if selected else ''}>${hours}:${minutes} ${ampm}</option>
+          %endfor
+        </select>
         <input type="hidden" id="endTime" name="endTime" required=""/>
       </div>
     </div>
