@@ -2,6 +2,7 @@ import uuid
 import time
 import json
 import cPickle as pickle
+import re
 
 from twisted.internet   import defer
 
@@ -15,6 +16,7 @@ from social.validators  import ValidateComment, Validate, ValidateItem
 from social             import validators
 from social.core        import item as Item
 
+feedPathObj = re.compile(r"/feed/(?P<entityId>[^/]*)$")
 
 class RemoveItem(validators.SocialSchema):
     id = validators.Item(arg='id', columns=['tags'])
@@ -256,19 +258,20 @@ class ItemResource(base.BaseResource):
         defaultType = plugins.keys()[0]
         plugins[defaultType].renderShareBlock(request, True)
         if plugin and hasattr(plugin, 'renderFeedSideBlock'):
-            #TODO: Determine the blockType
-            if target:
-                entityId = target.split(',')[0]
-                args["groupId"] = target.split(',')[0]
+            entityId = myId
+            referer = request.getHeader('referer')
+            matchObj = feedPathObj.search(referer)
+            if matchObj:
+                matchedStr = matchObj.group('entityId')
+                if matchedStr != "":
+                    entityId = matchedStr
             else:
-                #No better way to find out if this item was created from the
-                # user's feed page or from the company feed page
-                referer = request.getHeader('referer')
-                entityId = myId
+                if target:
+                    entityId = target.split(',')[0]
+                    args["groupId"] = target.split(',')[0]
 
             request.write("$('#feed-side-block-container').empty();")
-            yield plugins["event"].renderFeedSideBlock(request, landing,
-                                                         entityId, args)
+            yield plugin.renderFeedSideBlock(request, landing, entityId, args)
 
     @profile
     @Validate(ValidateItem)
@@ -549,10 +552,11 @@ class ItemResource(base.BaseResource):
     def _delete(self, request, data=None):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         itemId, item = data['id']
-
+        landing = not self._ajax
         authInfo = request.getSession(IAuthInfo)
         myId = authInfo.username
         orgId = authInfo.organization
+
         convId = item['meta']['parent'] if 'parent' in item['meta'] else itemId
         conv = yield Item.delete(itemId, item, myId, orgId)
         request.write("$$.convs.remove('%s', '%s');" % (convId, itemId))
@@ -561,19 +565,20 @@ class ItemResource(base.BaseResource):
         comment = (itemId != convId)
         plugin = plugins[conv['meta']['type']]
         if plugin and hasattr(plugin, 'renderFeedSideBlock') and not comment:
-            #TODO: Determine the blockType
-            landing = not self._ajax
-            if target:
-                entityId = target.split(',')[0]
-                args["groupId"] = target.split(',')[0]
+            entityId = myId
+            referer = request.getHeader('referer')
+            matchObj = feedPathObj.search(referer)
+            if matchObj:
+                matchedStr = matchObj.group('entityId')
+                if matchedStr != "":
+                    entityId = matchedStr
             else:
-                #No better way to find out if this item was created from the
-                # user's feed page or from the company feed page
-                referer = request.getHeader('referer')
-                entityId = myId
+                if target:
+                    entityId = target.split(',')[0]
+                    args["groupId"] = target.split(',')[0]
+
             request.write("$('#feed-side-block-container').empty();")
-            yield plugins["event"].renderFeedSideBlock(request, landing,
-                                                        entityId, args)
+            yield plugin.renderFeedSideBlock(request, landing, entityId, args)
 
     @defer.inlineCallbacks
     def _renderReportDialog(self, request):
