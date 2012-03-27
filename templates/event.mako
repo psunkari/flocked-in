@@ -340,9 +340,8 @@
     if target:
       target = target.split(',')
       target = [x for x in target if x in relations.groups]
-
   %>
-  %if not isConcise:
+  %if not isConcise and not isQuoted:
     %if not target:
       ${utils.userName(owner, entities[owner], "conv-user-cause")}
     %else:
@@ -380,7 +379,7 @@
           <span class="event-duration-text">-- ${event_end}</span>
         % endif
       %endif
-      %if not isConcise:
+      %if not isConcise and desc:
         <div class="event-description">${desc|normalize}</div>
       %endif
       %if location.strip() != "" and not isConcise:

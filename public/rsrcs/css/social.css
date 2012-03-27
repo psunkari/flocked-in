@@ -2123,9 +2123,9 @@ abbr.timestamp {
     padding-left: 45px !important;
     font-weight: bold;
     overflow: hidden;
-    max-width: 25em;
     white-space: nowrap;
     text-overflow: ellipsis;
+    margin: 5px 0 3px;
 }
 
 .event-duration-text {
