@@ -807,21 +807,19 @@ def addUser(emailId, displayName, passwd, orgId, jobTitle=None, timezone=None):
 def removeUser(request, userId, orgAdminId, user=None, orgAdminInfo=None):
     import base
     if not user:
-        #cols = yield db.get_slice(userId, "entities", ["basic"])
-        #userInfo = supercolumnsToDict(cols)
         user = base.Entity(userId)
         yield user.fetchData()
     if not orgAdminInfo:
-        #cols = yield db.get_slice(orgAdminId, "entities", ["basic"])
-        #orgAdminInfo = supercolumnsToDict(cols)
-        org = base.Entity(userId)
-        yield org.fetchData()
+        orgAdmin = base.Entity(orgAdminId)
+        yield orgAdmin.fetchData()
 
     emailId = user.basic.get("emailId", None)
     displayName = user.basic.get("name", None)
     firstname = user.basic.get('firstname', None)
     lastname = user.basic.get('lastname', None)
     orgId = user.basic["org"]
+    org = base.Entity(orgId)
+    yield org.fetchData()
 
     cols = yield db.get_slice(userId, "entities", ['apikeys', 'apps'])
     apps_apiKeys = supercolumnsToDict(cols)
@@ -862,15 +860,20 @@ def removeUser(request, userId, orgAdminId, user=None, orgAdminInfo=None):
             if not cols:
                 itemId = getUniqueKey()
                 acl = {"accept": {"groups": [groupId]}}
-                item = yield createNewItem(request, "activity", userId,
-                                            orgId, acl, "groupJoin")
+                yield db.insert(orgAdminId, "entityGroupsMap", "", group.column.name)
+                yield db.insert(groupId, "groupMembers", itemId, orgAdminId)
+                #only group members can post to a group so, item should be
+                #created only after adding orgAdmin to the group.
+                item = yield createNewItem(request, "activity", orgAdmin,
+                                            acl, "groupJoin")
                 item["meta"]["target"] = groupId
                 yield db.batch_insert(itemId, "items", item)
                 yield db.insert(groupId, "followers", "", orgAdminId)
-                yield db.insert(groupId, "groupMembers", itemId, orgAdminId)
-                yield db.insert(orgAdminId, "entityGroupsMap", "", group.column.name)
                 yield db.insert(orgAdminId, "entities",  name, groupId, 'adminOfGroups')
                 yield updateDisplayNameIndex(orgAdminId, [groupId], org.basic['name'], None)
+                #TODO: push to group-feed
+                #XXX: call Group.addMember ?
+
 
         yield db.remove(groupId, "entities", userId, "admins")
 
