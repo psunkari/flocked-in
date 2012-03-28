@@ -48,9 +48,10 @@ class _SimpleNotification(object):
         vals = dict([('user' + str(idx), utils.userName(uid, entities[uid]))\
                      for idx, uid in enumerate(userIds[0:2])])
         vals.update({'count': noOfUsers - 2, 'brandName': brandName})
-        if 'org' in data:
-            vals.update({'orgId': data['orgId'],
-                         'networkName': data['org']['basic']['name']})
+        if 'orgId' in data:
+            orgId = data['orgId']
+            vals.update({'orgId': orgId,
+                         'networkName': entities[orgId].basic['name']})
 
         return self._aggregation[3 if noOfUsers > 4 else noOfUsers - 1] % vals
 
