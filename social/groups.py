@@ -383,6 +383,10 @@ class GroupsResource(base.BaseResource):
             raise e
 
         if updated:
+            if name != group.basic['name']:
+                t.renderScriptBlock(request, 'groups.mako', 'titlebar', False,
+                                    "#titlebar",  'set', isIframe=True,
+                                    **{'heading': name})
             request.write("<script>parent.$$.alerts.info('updated successful');</script>")
 
     @defer.inlineCallbacks
@@ -635,7 +639,7 @@ class GroupsResource(base.BaseResource):
         args["menuId"] = "settings"
         args["groupId"] = group.id
         args["entities"] = base.EntitySet(group)
-        args["heading"] = group['basic']['name']
+        args["heading"] = group.basic['name']
 
         if myId not in group.admins:
             raise errors.PermissionDenied('You should be an administrator to edit group meta data')

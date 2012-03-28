@@ -66,7 +66,7 @@ def renderDef(request, path, dfn, *args, **data):
 
 def renderScriptBlock(request, path, dfn, wrapInTags=False, parent=None,
                       method=None, last=False, css=None, scripts=None,
-                      handlers=None, attrs={}, args=[], **data):
+                      handlers=None, attrs={}, args=[], isIframe=False, **data):
     template = _getTemplate(path, dfn)
     text = template.render(*args, **data)
     text = _spaceRE.sub(r'\1', text)
@@ -84,8 +84,12 @@ def renderScriptBlock(request, path, dfn, wrapInTags=False, parent=None,
         for id, url in scripts:
             map["js"].append(id)
             map["resources"]["id"] = url
-
-    fmt = "<script>$$.load(%s);</script>\n" if wrapInTags else "$$.load(%s);\n"
+    if isIframe:
+        fmt = "<script>parent.$$.load(%s);</script>\n"
+    elif wrapInTags:
+        fmt = "<script>$$.load(%s);</script>\n"
+    else:
+        fmt = "$$.load(%s);\n"
     text = fmt % json.dumps(map)
     request.write(text)
 
