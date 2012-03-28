@@ -56,7 +56,8 @@ def updateData():
         bucket = conn.get_bucket(bucket)
         files = []
         for key in bucket.list():
-            files.append(key.name)
+            if not key.name.endswith('/'):
+                files.append(key.name)
         return files
 
     files = yield threads.deferToThread(_getAllFiles)
