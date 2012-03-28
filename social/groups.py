@@ -506,12 +506,14 @@ class GroupsResource(base.BaseResource):
                      "heading": group.basic['name']})
 
         if script:
-            t.renderScriptBlock(request, "groups.mako", "titlebar",
+            t.renderScriptBlock(request, "group-settings.mako", "titlebar",
                                 landing, "#titlebar", "set", **args)
-            t.renderScriptBlock(request, "groups.mako", "displayUsers",
+            t.renderScriptBlock(request, "group-settings.mako", "displayUsers",
                                 landing, "#groups-wrapper", "set", **args)
-            t.renderScriptBlock(request, "groups.mako", "paging",
+            t.renderScriptBlock(request, "group-settings.mako", "paging",
                                 landing, "#groups-paging", "set", **args)
+        else:
+            t.render(request, "group-settings.mako", **args)
 
     @Validate(GroupMembers)
     @defer.inlineCallbacks
@@ -540,16 +542,17 @@ class GroupsResource(base.BaseResource):
                                     landing, "#mainbar", "set", **args)
 
         data = yield Group.getBlockedMembers(group, me, start)
+        print data.keys()
         args.update(data)
         args['entities'].update(group)
         args["tab"] = "banned"
 
         if script:
-            t.renderScriptBlock(request, "groups.mako", "titlebar",
+            t.renderScriptBlock(request, "group-settings.mako", "titlebar",
                                 landing, "#titlebar", "set", **args)
-            t.renderScriptBlock(request, "groups.mako", "displayUsers",
+            t.renderScriptBlock(request, "group-settings.mako", "displayUsers",
                                 landing, "#groups-wrapper", "set", **args)
-            t.renderScriptBlock(request, "groups.mako", "bannedUsersPaging",
+            t.renderScriptBlock(request, "group-settings.mako", "bannedUsersPaging",
                                 landing, "#groups-paging", "set", **args)
 
     @profile
@@ -585,7 +588,7 @@ class GroupsResource(base.BaseResource):
         if script:
             t.renderScriptBlock(request, "groups.mako", "titlebar",
                                 landing, "#titlebar", "set", **args)
-            t.renderScriptBlock(request, "groups.mako", "displayUsers",
+            t.renderScriptBlock(request, "group-settings.mako", "displayUsers",
                                 landing, "#groups-wrapper", "set", **args)
             t.renderScriptBlock(request, 'groups.mako', "pendingRequestsPaging",
                                 landing, "#groups-paging", "set", **args)
@@ -632,6 +635,7 @@ class GroupsResource(base.BaseResource):
         args["menuId"] = "settings"
         args["groupId"] = group.id
         args["entities"] = base.EntitySet(group)
+        args["heading"] = group['basic']['name']
 
         if myId not in group.admins:
             raise errors.PermissionDenied('You should be an administrator to edit group meta data')
@@ -647,6 +651,8 @@ class GroupsResource(base.BaseResource):
             t.renderScriptBlock(request, "group-settings.mako", "edit_group",
                                 landing, "#center-content", "set", True,
                                 handlers=handlers, **args)
+        else:
+            t.render(request, "group-settings.mako", **args)
 
     @profile
     @dump_args

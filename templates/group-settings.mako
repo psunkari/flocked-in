@@ -6,9 +6,7 @@
 <%namespace name="profile" file="profile.mako"/>
 <%namespace name="people" file="people.mako"/>
 <%namespace name="group_feed" file="group-feed.mako"/>
-
-##
-##
+<%namespace name="groups" file="groups.mako"/>
 
 <%def name="nav_menu()">
   <%
@@ -61,14 +59,20 @@
         <div class="center-contents" id="center-content">
           <div id="groups-wrapper" class="paged-container">
             %if not script:
-              ${self.edit_group()}
+              %if menuId == "members":
+                ${self.displayUsers()}
+              %elif menuId == "settings":
+                ${self.edit_group()}
+              %endif
             %endif
           </div>
-          <div id="groups-paging" class="pagingbar">
-            %if not script:
-              ${self.paging()}
-            %endif
-          </div>
+          %if menuId in ["members", 'banned', 'pending']:
+            <div id="groups-paging" class="pagingbar">
+              %if not script:
+                ${self.paging()}
+              %endif
+            </div>
+          %endif
         </div>
       </div>
       <div class="clear"></div>
@@ -133,4 +137,45 @@
     </div>
     <input type="hidden" value = ${groupId} name="id" />
   </form>
+</%def>
+
+<%def name="displayUsers()">
+  <%
+    counter = 0
+    firstRow = True
+    showUserActions = tab not in ['pending', 'banned', 'manage']
+  %>
+  %for userId in userIds:
+    %if counter % 2 == 0:
+      %if firstRow:
+        <div class="users-row users-row-first">
+        <% firstRow = False %>
+      %else:
+        <div class="users-row">
+      %endif
+    %endif
+    <div class="users-user">${groups._displayUser(userId, groupId, showUserActions=showUserActions)}</div>
+    %if counter % 2 == 1:
+      </div>
+    %endif
+    <% counter += 1 %>
+  %endfor
+  %if counter % 2 == 1:
+    </div>
+  %endif
+</%def>
+
+<%def name="bannedUsersPaging()">
+  <ul class="h-links">
+    %if prevPageStart:
+      <li class="button"><a class="ajax" href="/groups/banned?start=${prevPageStart}&id=${groupId}">${_("&#9666; Previous")}</a></li>
+    %else:
+      <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
+    %endif
+    %if nextPageStart:
+      <li class="button"><a class="ajax" href="/groups/banned?start=${nextPageStart}&id=${groupId}">${_("Next &#9656;")}</a></li>
+    %else:
+      <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
+    %endif
+  </ul>
 </%def>

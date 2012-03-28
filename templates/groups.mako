@@ -7,8 +7,6 @@
 <%namespace name="people" file="people.mako"/>
 <%namespace name="group_feed" file="group-feed.mako"/>
 
-##
-##
 <%def name="layout()">
   <div class="contents has-left">
     <div id="left">
@@ -206,59 +204,20 @@
   %endif
 </%def>
 
-<%def name="groupRequestActions(groupId, userId, action='')">
-  %if action == 'accept':
-    <button class="button disabled"><span class="button-text">${_("Accepted")}</span></button>
-  %elif action == 'reject':
-    <button class="button disabled"><span class="button-text">${_("Rejected")}</span></button>
-  %elif action == 'block':
-    <button class="button disabled"><span class="button-text">${_("Blocked")}</span></button>
-  %elif action == 'unblock':
-    <button class="button disabled"><span class="button-text">${_("Unblocked")}</span></button>
-  %elif action == 'removed':
-    <button class="button disabled"><span class="button-text">${_("Removed")}</span></button>
-  %elif action == 'show_blocked':
-    <button class="button" onclick="$.post('/ajax/groups/unblock', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Unblock")}</span></button>
-  %elif action == 'show_manage':
-    <button class="button" onclick="$.post('/ajax/groups/remove', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Remove")}</span></button>
-    %if (type(entities[groupId]) != dict and userId not in entities[groupId].admins) or (type(entities[groupId]) == dict and userId not in entities[groupId]['admins']):
-      <button class="button" onclick="$.post('/ajax/groups/makeadmin', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Make Admin")}</span></button>
+<%def name="pendingRequestsPaging()">
+  <ul class="h-links">
+    %if prevPageStart:
+      <li class="button"><a class="ajax" href="/groups/pending?start=${prevPageStart}&id=${groupId}">${_("&#9666; Previous")}</a></li>
     %else:
-      <button class="button" onclick="$.post('/ajax/groups/removeadmin', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Remove Admin")}</span></button>
+      <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
     %endif
 
-  %else:
-    <button class="button default" onclick="$.post('/ajax/groups/approve', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Accept")}</span></button>
-    <button class="button" onclick="$.post('/ajax/groups/reject', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Reject")}</span></button>
-    <button class="button" onclick="$.post('/ajax/groups/block', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Block")}</span></button>
-  %endif
-
-</%def>
-
-<%def name="displayUsers()">
-  <%
-    counter = 0
-    firstRow = True
-    showUserActions = tab not in ['pending', 'banned', 'manage']
-  %>
-  %for userId in userIds:
-    %if counter % 2 == 0:
-      %if firstRow:
-        <div class="users-row users-row-first">
-        <% firstRow = False %>
-      %else:
-        <div class="users-row">
-      %endif
+    %if nextPageStart:
+     <li class="button"><a class="ajax" href="/groups/pending?start=${nextPageStart}&id=${groupId}">${_("Next &#9656;")}</a></li>
+    %else:
+      <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
     %endif
-    <div class="users-user">${_displayUser(userId, groupId, showUserActions=showUserActions)}</div>
-    %if counter % 2 == 1:
-      </div>
-    %endif
-    <% counter += 1 %>
-  %endfor
-  %if counter % 2 == 1:
-    </div>
-  %endif
+  </ul>
 </%def>
 
 <%def name="_displayUser(userId, groupId, showGroupName=False, showUserActions=False)">
@@ -294,32 +253,31 @@
   </div>
 </%def>
 
-<%def name="pendingRequestsPaging()">
-  <ul class="h-links">
-    %if prevPageStart:
-      <li class="button"><a class="ajax" href="/groups/pending?start=${prevPageStart}&id=${groupId}">${_("&#9666; Previous")}</a></li>
+<%def name="groupRequestActions(groupId, userId, action='')">
+  %if action == 'accept':
+    <button class="button disabled"><span class="button-text">${_("Accepted")}</span></button>
+  %elif action == 'reject':
+    <button class="button disabled"><span class="button-text">${_("Rejected")}</span></button>
+  %elif action == 'block':
+    <button class="button disabled"><span class="button-text">${_("Blocked")}</span></button>
+  %elif action == 'unblock':
+    <button class="button disabled"><span class="button-text">${_("Unblocked")}</span></button>
+  %elif action == 'removed':
+    <button class="button disabled"><span class="button-text">${_("Removed")}</span></button>
+  %elif action == 'show_blocked':
+    <button class="button" onclick="$.post('/ajax/groups/unblock', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Unblock")}</span></button>
+  %elif action == 'show_manage':
+    <button class="button" onclick="$.post('/ajax/groups/remove', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Remove")}</span></button>
+    %if userId not in entities[groupId].admins:
+      <button class="button" onclick="$.post('/ajax/groups/makeadmin', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Make Admin")}</span></button>
     %else:
-      <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
+      <button class="button" onclick="$.post('/ajax/groups/removeadmin', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Remove Admin")}</span></button>
     %endif
-    %if nextPageStart:
-      <li class="button"><a class="ajax" href="/groups/pending?start=${nextPageStart}&id=${groupId}">${_("Next &#9656;")}</a></li>
-    %else:
-      <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
-    %endif
-  </ul>
-</%def>
 
-<%def name="bannedUsersPaging()">
-  <ul class="h-links">
-    %if prevPageStart:
-      <li class="button"><a class="ajax" href="/groups/banned?start=${prevPageStart}&id=${groupId}">${_("&#9666; Previous")}</a></li>
-    %else:
-      <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
-    %endif
-    %if nextPageStart:
-      <li class="button"><a class="ajax" href="/groups/banned?start=${nextPageStart}&id=${groupId}">${_("Next &#9656;")}</a></li>
-    %else:
-      <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
-    %endif
-  </ul>
+  %else:
+    <button class="button default" onclick="$.post('/ajax/groups/approve', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Accept")}</span></button>
+    <button class="button" onclick="$.post('/ajax/groups/reject', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Reject")}</span></button>
+    <button class="button" onclick="$.post('/ajax/groups/block', 'id=${groupId}&uid=${userId}')"><span class="button-text">${_("Block")}</span></button>
+  %endif
+
 </%def>

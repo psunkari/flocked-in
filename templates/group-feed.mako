@@ -23,8 +23,16 @@
       </div>
       <div id='profile-center-right'>
         <div id="right">
-          <div id ="group-admins"></div>
-          <div id ="group-links" ></div>
+          <div id ="group-admins">
+            %if not script:
+              ${self.groupAdmins()}
+            %endif
+          </div>
+          <div id ="group-links" >
+            %if not script:
+              ${self.groupLinks()}
+            %endif
+          </div>
           <div id ="group-files" ></div>
           <div id ="group-events" ></div>
           <div id ="feed-side-block-container"></div>
@@ -180,6 +188,5 @@
           %endfor
         %endif
       </ul>
-    </div>
   </div>
 </%def>
