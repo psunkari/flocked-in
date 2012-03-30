@@ -384,14 +384,14 @@
             <div class="conversation-attachments-wrapper">
               <% attachments = conv.get("attachments", {}) %>
               <ul class="v-links peoplemenu">
-                %for file, file_meta in attachments.iteritems():
+                %for attachmentId, file_meta in attachments.iteritems():
                   <%
-                     tuuid, name, size, ftype = file_meta.split(':')
+                     name, size, ftype = file_meta.split(':')
                      size = formatFileSize(int(size))
                      name = urlsafe_b64decode(name)
                   %>
                   <li>
-                      <a href='/messages/files?id=${id}&fid=${file}&ver=${tuuid}'>${name|h}</a>
+                      <a href='/messages/files?id=${id}&fid=${attachmentId}'>${name|h}</a>
                   </li>
                 %endfor
               </ul>

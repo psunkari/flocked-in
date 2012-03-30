@@ -158,10 +158,10 @@
   <div class="attachment-list">
     %for fileId in attachments:
       <%
-        tuuid, name, size, ftype = attachments[fileId].split(':')
+        name, size, ftype = attachments[fileId].split(':')
         name = hits[fileId] if fileId in hits else urlsafe_b64decode(name)
         size = formatFileSize(int(size))
-        location = '/files?id=%s&fid=%s&ver=%s'%(convId, fileId, tuuid)
+        location = '/files?id=%s&fid=%s'%(convId, fileId)
       %>
       <div class="attachment-item">
         <span class="icon attach-file-icon"></span>

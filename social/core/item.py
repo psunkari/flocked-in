@@ -442,12 +442,6 @@ def new(request, authInfo, convType, richText=False):
     # Save the new item to database and index it.
     #
     yield db.batch_insert(convId, "items", conv)
-    attachments = conv.get("attachments", {})
-    for attachmentId in attachments:
-        encodedTimeUUID, name, size, ftype = attachments[attachmentId].split(':')
-        val = "%s:%s:%s:%s:%s" % (encodedTimeUUID, attachmentId, name, size, ftype)
-        yield db.insert(convId, "item_files", val, utils.decodeKey(encodedTimeUUID), attachmentId)
-
     yield files.pushfileinfo(myId, orgId, convId, conv)
     search.solr.updateItemIndex(convId, conv, orgId)
 

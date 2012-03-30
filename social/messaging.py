@@ -33,8 +33,8 @@ class MessagingResource(base.BaseResource):
     def _formatAttachMeta(self, attachments):
         attach_meta = {}
         for attachmentId in attachments:
-            timeuuid, fid, name, size, ftype = attachments[attachmentId]
-            val = "%s:%s:%s:%s" % (utils.encodeKey(timeuuid), name, size, ftype)
+            fileId, name, size, ftype = attachments[attachmentId]
+            val = "%s:%s:%s" % (name, size, ftype)
             attach_meta[attachmentId] = val
 
         return attach_meta
@@ -87,10 +87,10 @@ class MessagingResource(base.BaseResource):
         myOrgId = authinfo.organization
         itemId = utils.getRequestArg(request, "id", sanitize=False)
         attachmentId = utils.getRequestArg(request, "fid", sanitize=False)
-        version = utils.getRequestArg(request, "ver", sanitize=False)
+        version = utils.getRequestArg(request, "ver", sanitize=False) or ''
         columns = ["meta", "attachments", "participants"]
 
-        if not (itemId and attachmentId and version):
+        if not (itemId and attachmentId):
             raise errors.MissingParams([])
 
         item = yield db.get_slice(itemId, "mConversations", columns)
@@ -104,21 +104,23 @@ class MessagingResource(base.BaseResource):
         if attachmentId not in item['attachments'].keys():
             raise errors.InvalidAttachment(itemId, attachmentId, version)
 
-        try:
-            version = utils.decodeKey(version)
-        except TypeError:
-            raise errors.InvalidAttachment(itemId, attachmentId, version)
-
         fileId, filetype, name = None, 'text/plain', 'file'
-        try:
-            cols = yield db.get(itemId, "item_files", version, attachmentId)
-        except ttypes.NotFoundException:
-            raise errors.InvalidAttachment(itemId, attachmentId, version)
-        except ttypes.InvalidRequestException:
-            raise errors.InvalidAttachment(itemId, attachmentId, version)
+        if version:
+            version = utils.decodeKey(version)
+            try:
+                cols = yield db.get(attachmentId, "attachmentVersions", version)
+            except ttypes.NotFoundException:
+                raise errors.InvalidAttachment(itemId, attachmentId, version)
+            except ttypes.InvalidRequestException:
+                raise errors.InvalidAttachment(itemId, attachmentId, version)
+            cols = utils.columnsToDict([cols])
+        else:
+            cols = yield db.get_slice(attachmentId, "attachmentVersions", count=1, reverse=True)
+            cols = utils.columnsToDict(cols)
+            version = cols.keys()[0]
 
-        cols = utils.columnsToDict([cols])
-        tuuid, fileId, name, size, filetype = cols[version].split(':')
+
+        fileId, name, size, filetype = cols[version].split(':')
 
         files = yield db.get_slice(fileId, "files", ["meta"])
         files = utils.supercolumnsToDict(files)
@@ -350,7 +352,7 @@ class MessagingResource(base.BaseResource):
         CF Changes:
         mConversations
         mConvMessages
-        item_files
+        attachmentVersions
 
         """
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
@@ -388,11 +390,6 @@ class MessagingResource(base.BaseResource):
 
         # Currently, we don't support searching for private messages
         # self._indexMessage(convId, messageId, myOrgId, meta, attachments, body)
-
-        for file, file_meta in attachments.iteritems():
-            timeuuid, fid, name, size, ftype = file_meta
-            val = "%s:%s:%s:%s:%s" % (utils.encodeKey(timeuuid), fid, name, size, ftype)
-            yield db.insert(convId, "item_files", val, timeuuid, file)
 
         #XXX:We currently only fetch the message we inserted. Later we may fetch
         # all messages delivered since we last rendered the conversation
@@ -474,7 +471,7 @@ class MessagingResource(base.BaseResource):
 
         CF Changes:
         mConvMessages
-        item_files
+        attachmentVersions
 
         """
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
@@ -512,10 +509,6 @@ class MessagingResource(base.BaseResource):
         yield self._deliverMessage(convId, participants, timeUUID, myId)
         yield db.insert(convId, "mConvMessages", messageId, timeUUID)
 
-        for file, file_meta in attachments.iteritems():
-            timeuuid, fid, name, size, ftype = file_meta
-            val = "%s:%s:%s:%s:%s" % (utils.encodeKey(timeuuid), fid, name, size, ftype)
-            yield db.insert(convId, "item_files", val, timeuuid, file)
         self._indexMessage(convId, messageId, myOrgId, meta, attachments, body)
 
         #XXX: Is this a duplicate batch insert?
