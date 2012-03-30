@@ -39,6 +39,11 @@
           ${self.share_block()}
         </div>
         %endif
+        <div id="feed-filter-bar" class="feed-filter-bar">
+          %if not script:
+            ${self.feedFilterBar(itemType)}
+          %endif
+        </div>
         <div id="user-feed" class="center-contents">
           %if not script or tmp_files:
             ${self.feed()}
@@ -54,6 +59,32 @@
 
 <%def name="feed_title()">
   <span class="middle title">${feedTitle}</span>
+</%def>
+
+
+<%def name="feedFilterBar(curItemType)">
+  <%
+    selectedPluginName = 'All Items'
+    if curItemType in plugins and plugins[curItemType].hasIndex:
+      selectedPluginName = plugins[curItemType].displayNames[1]
+  %>
+  <span class="feed-filter" onclick="$$.convs.showFilterMenu(event);">${_('Showing %s') % selectedPluginName} &#9660;</span>
+  <ul style="display:none;">
+    <%
+      sortedItemTypes = sorted(plugins.values(), key=lambda x: x.position)
+      indexed = [(plugin.displayNames[1], plugin.itemType) for plugin in sortedItemTypes if plugin.hasIndex]
+    %>
+    <li><a class="ff-item" data-ff="">
+      <span class="icon feed-icon"></span>
+      ${_('All Items')}
+    </a></li>
+    %for displayName, itemType in indexed:
+      <li><a class="ff-item" data-ff="${itemType}">
+        <span class="icon ${itemType}-icon"></span>
+        ${displayName}
+      </a></li>
+    %endfor
+  </ul>
 </%def>
 
 
@@ -136,7 +167,7 @@
         <li>${_("Share:")}</li>
         <%
           sortedList  = sorted(plugins.values(), key=lambda x: x.position)
-          supported = [(plugin.itemType.capitalize(), plugin.itemType) for plugin in sortedList if plugin.position > 0]
+          supported = [(plugin.displayNames[0], plugin.itemType) for plugin in sortedList if plugin.position > 0]
           itemName, itemType = supported[0]
         %>
         <li><a data-ref="/feed/ui/share/${itemType}" id="publisher-${itemType}" class="ajax selected"><span class="sharebar-icon icon ${itemType}-icon"></span><span class="sharebar-text">${_(itemName)}</span></a></li>

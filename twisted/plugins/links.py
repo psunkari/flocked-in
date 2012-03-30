@@ -45,6 +45,7 @@ class Links(object):
     hasIndex = True
     indexFields = {'meta':set(['link_summary','link_title'])}
     monitoredFields = {'meta':['comment', 'link_summary', 'link_title']}
+    displayNames = ('Link', 'Links')
 
     def renderShareBlock(self, request, isAjax):
         t.renderScriptBlock(request, "feed.mako", "share_link",

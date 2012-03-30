@@ -708,7 +708,62 @@ var convs = {
                 ]
             };
         $$.dialog.create(dialogOptions);
-    }
+    },
+
+    filterFeed: function($target, ui) {
+        var item = ui.item.children("a").first(),
+            type = item.attr("data-ff"),
+            str = item.text(),
+            currentUri = social.parseUri(window.location.href),
+            queryParts = currentUri.query? currentUri.query.split('&'): new Array(),
+            newQueryParts = new Array(),
+            ignore = false, newUri = '';
+
+        for (var i = 0; i < queryParts.length; i++) {
+            var fragmentParts = queryParts[i].split('=');
+            if (fragmentParts[0] !== "type")
+                newQueryParts.push(queryParts[i]);
+            else if (fragmentParts[1] === type)
+                ignore = true;
+        }
+
+        if (!ignore) {
+            newQueryParts.push('type=' + type);
+            newUri = currentUri.path + '?' + newQueryParts.join('&') +
+                     (currentUri.anchor !== undefined? '#' + currentUri.anchor : '');
+            social.fetchUri(newUri);
+        }
+    },
+
+    showFilterMenu: function(event) {
+        var evt = $.event.fix(event),
+            $target = $(evt.target),
+            $menu = $target.next()
+
+        if (!$menu.hasClass("ui-menu")) {
+            $menu.menu({
+                     selected: function(event, ui) {
+                         $(this).hide();
+                         convs.filterFeed($target, ui);
+                     }
+                 })
+                 .css("z-index", 2000);
+        }
+
+        var extras = $menu.outerWidth() - $menu.width();
+        $menu.css("width", $target.outerWidth() - extras);
+
+        $menu.slideDown('fast').position({
+                my: "left top",
+                at: "left top",
+                of: $target
+            }).focus();
+
+        $(document).one("click", function() {$menu.hide();});
+        evt.stopPropagation();
+        evt.preventDefault();
+    },
+
 };
 
 $$.convs = convs;

@@ -809,6 +809,9 @@ class GroupFeedResource(base.BaseResource):
             t.renderScriptBlock(request, "group-feed.mako", "feed", landing,
                                 "#user-feed", "set", True,
                                 handlers={"onload": onload}, **args)
+            t.renderScriptBlock(request, "feed.mako", "feedFilterBar", landing,
+                                "#feed-filter-bar", "set", True,
+                                args=[itemType], **args)
             if isMember:
                 onload = """
                          $('#group_add_invitee').autocomplete({

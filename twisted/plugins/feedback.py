@@ -17,6 +17,7 @@ class Feedback(object):
     itemType = "feedback"
     position = -1
     hasIndex = False
+    displayNames = ('Feedback', 'Feedbacks')
 
     def shareBlockProvider(self):
         raise Exception("No block provider for feedback")

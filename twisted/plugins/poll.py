@@ -151,6 +151,7 @@ class Poll(object):
     hasIndex = True
     indexFields = {'options': {'template': 'poll_option_%s', 'type': 'keyvals'}}
     monitoredFields = {'meta': ['poll_options', 'comment']}
+    displayNames = ('Poll', 'Polls')
 
     def renderShareBlock(self, request, isAjax):
         t.renderScriptBlock(request, "poll.mako", "share_poll",

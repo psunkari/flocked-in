@@ -728,8 +728,6 @@ a:hover, a:active, a:focus {
 
 #share-block {
     padding: 10px;
-    border-bottom: 1px solid #e0d7cf;
-    margin-bottom: 10px;
     position: relative;
 }
 #sharebar-links li {
@@ -1001,7 +999,43 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 }
 
 #user-feed {
-    padding: 10px 10px 20px 20px;
+    padding: 5px 10px 20px 15px;
+}
+
+.feed-filter-bar {
+    border-top: 1px solid #E0D7CF;
+    text-align: right;
+}
+.feed-filter {
+    font-size: 10px;
+    padding: 1px 10px;
+    border-radius: 0 0 3px 3px;
+    min-width: 120px;
+    display: inline-block;
+    margin-top: -1px;
+    margin-right: 10px;
+    color: #808080;
+    cursor: pointer;
+    border: 1px solid #E0D7CF;
+    background-color: #E3E3E3;
+    background: linear-gradient(top, #FAFAFA 0%, #E3E3E3 100%);
+    background: -o-linear-gradient(top, #FAFAFA 0%, #E3E3E3 100%);
+    background: -moz-linear-gradient(top, #FAFAFA 0%, #E3E3E3 100%);
+    background: -webkit-linear-gradient(top, #FAFAFA 0%, #E3E3E3 100%);
+    background: -ms-linear-gradient(top, #FAFAFA 0%, #E3E3E3 100%);
+    background: -webkit-gradient(
+            linear,
+            left top,
+            left bottom,
+            color-stop(0, #FAFAFA),
+            color-stop(1, #E3E3E3)
+    );
+}
+.ff-item {
+    text-align: left;
+    line-height: 16px !important;
+    padding: 3px 5px !important;
+    min-height: 16px;
 }
 
 .conv-item {
@@ -1552,7 +1586,6 @@ abbr.timestamp {
     position: relative;
     width: 570px;
     float: left;
-    border-bottom: 1px solid #e0d7cf;
     margin: 0 -10px 10px;
 }
 

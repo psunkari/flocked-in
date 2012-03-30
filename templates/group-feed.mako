@@ -38,6 +38,11 @@
           <div id ="feed-side-block-container"></div>
         </div>
         <div id="center">
+          <div id='feed-filter-bar' class='feed-filter-bar'>
+            %if not script:
+              ${feed_mako.feedFilterBar(itemType)}
+            %endif
+          </div>
           <div class='center-contents' id="user-feed">
             %if not script or tmp_files:
               ${self.feed()}
@@ -106,7 +111,6 @@
 </%def>
 
 <%def name="groupLinks()">
-
   %if groupId:
     <div class="sidebar-chunk">
       %if myId in getattr(entities[groupId], "admins", {}):

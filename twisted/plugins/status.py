@@ -18,6 +18,7 @@ class Status(object):
     position = 1
     hasIndex = True
     monitoredFields = {'meta': ['comment']}
+    displayNames = ('Status', 'Statuses')
 
     def renderShareBlock(self, request, isAjax):
         t.renderScriptBlock(request, "feed.mako", "share_status",

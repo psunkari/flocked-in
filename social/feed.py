@@ -248,15 +248,19 @@ class FeedResource(base.BaseResource):
             t.renderScriptBlock(request, "feed.mako", "feed", landing,
                                 "#user-feed", "set", True,
                                 handlers={"onload": onload}, **args)
+            t.renderScriptBlock(request, "feed.mako", "feedFilterBar", landing,
+                                "#feed-filter-bar", "set", True,
+                                args=[itemType], **args)
             t.renderScriptBlock(request, "feed.mako", "_suggestions",
                                 landing, "#suggestions", "set", True, **args)
 
             for pluginType in plugins:
                 plugin = plugins[pluginType]
                 if hasattr(plugin, 'renderFeedSideBlock'):
-                    if not entityId: entityId = myId
+                    if not entityId:
+                        entityId = myId
                     yield plugin.renderFeedSideBlock(request, landing,
-                                                                 entityId, args)
+                                                     entityId, args)
 
         if script and landing:
             request.write("</body></html>")

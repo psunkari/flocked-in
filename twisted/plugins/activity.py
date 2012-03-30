@@ -17,6 +17,7 @@ class Activity(object):
     itemType = "activity"
     position = -1
     hasIndex = False
+    displayNames = ('Activity', 'Activities')
 
     @defer.inlineCallbacks
     def getReason(self, convId, requesters, userId):

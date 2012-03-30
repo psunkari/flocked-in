@@ -411,6 +411,7 @@ class Event(object):
     hasIndex = True
     indexFields = {'meta': set(['event_desc', 'event_location', 'event_title'])}
     monitorFields = {'meta': set(['event_desc', 'event_location', 'event_title'])}
+    displayNames = ('Event', 'Events')
 
 
     @defer.inlineCallbacks

@@ -8,6 +8,7 @@ class IItemType(Interface):
     hasIndex = Attribute("Indicates if there are indexes on this type")
     indexFields = Attribute("Fields indexes for text search")
     monitoredFields = Attribute("Fields monitored for keywords")
+    displayNames = Attribute("A tuple of singular and plural display names")
 
     def renderShareBlock(request, isAjax):
         """Render that static block that is used to
