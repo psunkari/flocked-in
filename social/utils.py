@@ -341,9 +341,8 @@ def createNewItem(request, itemType, owner,
         if attachments:
             item["attachments"] = {}
             for attachmentId in attachments:
-                timeuuid, fid, name, size, ftype = attachments[attachmentId]
-                val = "%s:%s:%s:%s" % (encodeKey(timeuuid), name, size, ftype)
-                item["attachments"][attachmentId] = val
+                fileId, name, size, ftype = attachments[attachmentId]
+                item["attachments"][attachmentId] = "%s:%s:%s" % (name, size, ftype)
     defer.returnValue(item)
 
 
@@ -354,14 +353,16 @@ def _upload_files(owner, tmp_fileIds):
         cols = yield db.multiget_slice(tmp_fileIds, "tmp_files", ["fileId"])
         cols = multiColumnsToDict(cols)
         for tmpFileId in cols:
-            attachmentId = tmpFileId
+            attachmentId = getUniqueKey()
             timeuuid = uuid.uuid1().bytes
-            location, name, size, ftype = cols[tmpFileId]['fileId'].split(':')
-            meta = {"meta": {"uri": location, "name":name, "fileType":ftype,
+            val = cols[tmpFileId]['fileId']
+            fileId, name, size, ftype = val.split(':')
+            meta = {"meta": {"uri": tmpFileId, "name":name, "fileType":ftype,
                              "owner": owner}}
             yield db.batch_insert(tmpFileId, "files", meta)
             yield db.remove(tmpFileId, "tmp_files")
-            attachments[attachmentId] = (timeuuid, tmpFileId, name, size, ftype)
+            yield db.insert(attachmentId, "attachmentVersions", val, timeuuid)
+            attachments[attachmentId] = (fileId, name, size, ftype)
     defer.returnValue(attachments)
 
 

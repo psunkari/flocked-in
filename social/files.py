@@ -40,8 +40,9 @@ def pushfileinfo(myId, orgId, convId, conv):
     entityIds.extend(entityIds_)
 
     for attachmentId in conv.get('attachments', {}):
-        tuuid, name, size, ftype = conv['attachments'][attachmentId].split(':')
-        tuuid = utils.decodeKey(tuuid)
+        name, size, ftype = conv['attachments'][attachmentId].split(':')
+        cols = yield db.get_slice(attachmentId, "attachmentVersions", count=1)
+        tuuid = cols[0].column.name
         value = '%s:%s:%s:%s' % (attachmentId, name, convId, ownerId)
         #TODO: use batch remove/batch mutate
         yield db.insert(myId, "user_files", value, tuuid)
@@ -65,9 +66,11 @@ def deleteFileInfo(myId, orgId, convId, conv):
     entityIds_ = yield utils.expandAcl(myId, orgId, conv['meta']['acl'], convId, ownerId, True)
     entityIds.extend(entityIds_)
     deferreds = []
+    attachmentIds = conv.get('attachments', {}).keys()
+
     for attachmentId in conv.get('attachments', {}):
-        tuuid, name, size, ftype = conv['attachments'][attachmentId].split(':')
-        tuuid = utils.decodeKey(tuuid)
+        col = yield db.get_slice(attachmentId, 'attachmentVersions', count=1)
+        tuuid = col[0].column.name
         deferreds.append(db.remove(myId, "user_files", tuuid))
         #TODO: use batch remove/batch mutate
         for entityId in entityIds:
@@ -187,13 +190,13 @@ class FilesResource(base.BaseResource):
 
         #get the latest file
         files = []
-        cols = yield db.get_slice(itemId, "item_files", [attachmentId], reverse=True)
+        cols = yield db.get_slice(attachmentId, "attachmentVersions", reverse=True)
         cols = utils.supercolumnsToDict(cols)
         for attachmentId in cols:
             fileId, ftype, name = None, 'text/plain', 'file'
             for tuuid in cols[attachmentId]:
-                tuuid, fileId, name, size, ftype = cols[attachmentId][tuuid].split(':')
-                files.append([itemId, attachmentId, tuuid, name, size, ftype])
+                fileId, name, size, ftype = cols[attachmentId][tuuid].split(':')
+                files.append([itemId, attachmentId, name, size, ftype])
         ##TODO: use some widget to list the files
         request.write(json.dumps(files))
 
@@ -207,24 +210,26 @@ class FilesResource(base.BaseResource):
         attachmentId = utils.getRequestArg(request, "fid", sanitize=False)
         version = utils.getRequestArg(request, "ver", sanitize=False)
 
-        if not attachmentId or not version:
+        if not attachmentId:
             raise errors.MissingParams()
 
         # Check if the attachmentId belong to item
         if attachmentId not in item['attachments'].keys():
             raise errors.EntityAccessDenied("attachment", attachmentId)
+        if version:
+            version = utils.decodeKey(version)
+            cols = yield db.get(attachmentId, "attachmentVersions", version)
+            cols = utils.columnsToDict([cols])
+        else:
+            cols = yield db.get_slice(attachmentId, 'attachmentVersions', count=1, reverse=True)
+            cols = utils.columnsToDict(cols)
+            version = cols.keys()[0]
 
-        item = yield db.get_slice(itemId, "items", ["meta"])
-        item = utils.supercolumnsToDict(item)
-
-        version = utils.decodeKey(version)
-        fileId, fileType, name = None, 'text/plain', 'file'
-        cols = yield db.get(itemId, "item_files", version, attachmentId)
-        cols = utils.columnsToDict([cols])
-        if not cols or version not in cols:
+        if not cols:
             raise errors.InvalidRequest()
 
-        tuuid, fileId, name, size, fileType = cols[version].split(':')
+        fileId, fileType, name = None, 'text/plain', 'file'
+        fileId, name, size, fileType = cols[version].split(':')
 
         files = yield db.get_slice(fileId, "files", ["meta"])
         files = utils.supercolumnsToDict(files)
