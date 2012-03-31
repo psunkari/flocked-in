@@ -942,6 +942,9 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     float: left;
     margin: 10px 0 0;
 }
+.item-attachments {
+  margin: 15px 0 0 10px;
+}
 
 .uploaded-file,
 .attachment-item {

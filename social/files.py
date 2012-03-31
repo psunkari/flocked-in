@@ -24,7 +24,15 @@ from social.logging         import profile, dump_args
 
 
 @defer.inlineCallbacks
-def pushfileinfo(myId, orgId, convId, conv):
+def pushfileinfo(myId, orgId, itemId, item, conv=None):
+    if 'parent' in item['meta']:
+        if not conv:
+            conv = yield db.get_slice(item['meta']['parent'], "items", ["meta"])
+            conv = utils.supercolumnsToDict(conv)
+        convId = item['meta']['parent']
+    else:
+        convId = itemId
+        conv = item
     acl = pickle.loads(conv['meta']['acl'])
 
     allowedGroups = acl.get('accept', {}).get('groups', [])
@@ -39,11 +47,11 @@ def pushfileinfo(myId, orgId, convId, conv):
     entityIds_ = yield utils.expandAcl(myId, orgId, conv['meta']['acl'], convId, ownerId, True)
     entityIds.extend(entityIds_)
 
-    for attachmentId in conv.get('attachments', {}):
-        name, size, ftype = conv['attachments'][attachmentId].split(':')
+    for attachmentId in item.get('attachments', {}):
+        name, size, ftype = item['attachments'][attachmentId].split(':')
         cols = yield db.get_slice(attachmentId, "attachmentVersions", count=1)
         tuuid = cols[0].column.name
-        value = '%s:%s:%s:%s' % (attachmentId, name, convId, ownerId)
+        value = '%s:%s:%s:%s' % (attachmentId, name, itemId, ownerId)
         #TODO: use batch remove/batch mutate
         yield db.insert(myId, "user_files", value, tuuid)
         for entityId in entityIds:
@@ -51,7 +59,16 @@ def pushfileinfo(myId, orgId, convId, conv):
 
 
 @defer.inlineCallbacks
-def deleteFileInfo(myId, orgId, convId, conv):
+def deleteFileInfo(myId, orgId, itemId, item, conv=None):
+
+    if 'parent' in item['meta']:
+        if not conv:
+            conv = yield db.get_slice(item['meta']['parent'], 'items', ['meta'])
+            conv = utils.supercolumnsToDict(conv)
+        convId = item['meta']['parent']
+    else:
+        conv = item
+        convId = itemId
     acl = pickle.loads(conv['meta']['acl'])
 
     allowedGroups = acl.get('accept', {}).get('groups', [])
@@ -66,9 +83,8 @@ def deleteFileInfo(myId, orgId, convId, conv):
     entityIds_ = yield utils.expandAcl(myId, orgId, conv['meta']['acl'], convId, ownerId, True)
     entityIds.extend(entityIds_)
     deferreds = []
-    attachmentIds = conv.get('attachments', {}).keys()
 
-    for attachmentId in conv.get('attachments', {}):
+    for attachmentId in item.get('attachments', {}):
         col = yield db.get_slice(attachmentId, 'attachmentVersions', count=1)
         tuuid = col[0].column.name
         deferreds.append(db.remove(myId, "user_files", tuuid))
@@ -123,11 +139,21 @@ def userFiles(myId, entityId, myOrgId, start='', end='', fromFeed=True):
         if toFetchItems:
             items = yield db.multiget_slice(toFetchItems, "items", ["meta"])
             items = utils.multiSuperColumnsToDict(items)
-            for itemId in items:
-                acl = items[itemId]['meta']['acl']
-                if utils.checkAcl(myId, myOrgId, False, relation, items[itemId]['meta']):
-                    accessibleItems.append(itemId)
+            toFetchConvIds = [items[itemId]['meta']['parent'] for itemId in items if 'parent' in items[itemId]['meta'] and items[itemId]['meta']['parent'] not in allItems]
+            if toFetchConvIds:
+                convs = yield db.multiget_slice(toFetchConvIds, "items", ["meta"])
+                convs = utils.multiSuperColumnsToDict(convs)
+                allItems.update(convs)
             allItems.update(items)
+            for itemId in items:
+                if 'parent' in items[itemId]['meta']:
+                    convId = items[itemId]['meta']['parent']
+                    acl = allItems[convId]['meta']['acl']
+                else:
+                    acl = items[itemId]['meta']['acl']
+                    convId = itemId
+                if utils.checkAcl(myId, myOrgId, False, relation, allItems[convId]['meta']):
+                    accessibleItems.append(itemId)
 
         for tuuid in files:
             if len(files[tuuid].split(':')) == 4:

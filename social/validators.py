@@ -365,6 +365,7 @@ class ValidateComment(SocialSchema):
     parent = Item(arg='parent')
     comment = TextWithSnippet()
     _review = compound.Pipe(SocialString(if_missing=0), validators.Int())
+    fId = SocialString(if_missing=[], multivalued=True, sanitize=False)
     nc = validators.String()
     allow_extra_fields = True
 

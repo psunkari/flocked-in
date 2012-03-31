@@ -129,7 +129,7 @@
           ${self.conv_comments(convId, isItemView)}
         </div>
         %if script:
-        <div id="comment-form-wrapper-${convId}" class="comment-form-wrapper busy-indicator">
+        <div id="comment-form-wrapper-${convId}" class="comment-form-wrapper busy-indicator" onfocus="$$.files.init('comment-attach-${convId}')">
           ${self.conv_comment_form(convId, isItemView)}
         </div>
         %endif
@@ -147,7 +147,7 @@
 </%def>
 
 
-<%def name="conv_attachments(convId, attachments)">
+<%def name="conv_attachments(convId, attachments, style_class='')">
   <%
     hits = {}
     if highlight and convId in highlight and 'attachment' in highlight[convId]:
@@ -155,7 +155,7 @@
         fileId, name = x.split(':', 1)
         hits[fileId] = name
   %>
-  <div class="attachment-list">
+  <div class="attachment-list ${style_class}">
     %for fileId in attachments:
       <%
         name, size, ftype = attachments[fileId].split(':')
@@ -366,7 +366,12 @@
         <input type="hidden" name="start" value=${oldest}></input>
       %endif
     %endif
+    <div id="comment-attach-${convId}-uploaded" class="uploaded-filelist"></div>
   </form>
+  <div class="file-attach-wrapper">
+    ${widgets.fileUploadButton('comment-attach-%s'%(convId))}
+  </div>
+  <div class="clear"></div>
 </%def>
 
 
@@ -383,6 +388,7 @@
     normalize = utils.normalizeText
   %>
   <div class="conv-comment" id="comment-${commentId}">
+    <a name="${commentId}"> </a>
     <div class="comment-avatar">
       <% avatarURI = utils.userAvatar(userId, entities[userId], "small") %>
       %if avatarURI:
@@ -394,6 +400,11 @@
       <span class="comment-user">${utils.userName(userId, entities[userId])}</span>
       ${_renderText(snippet, comment, _('Expand this comment &#187;'), _('Collapse this comment'), richText)}
     </div>
+    <%
+      attachments = items.get(commentId, {}).get("attachments", {})
+      if attachments:
+        self.conv_attachments(commentId, attachments, 'item-attachments')
+    %>
     <div class="comment-meta" id = "item-footer-${commentId}">
       ${self.item_footer(commentId)}
     </div>
