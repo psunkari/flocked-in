@@ -155,7 +155,7 @@ class ItemResource(base.BaseResource):
         toFetchEntities.update([x.column.name for x in likes])
         entities = base.EntitySet(toFetchEntities)
         d1 = entities.fetchData()
-        d2 = db.multiget_slice(responseKeys, "items", ["meta"])
+        d2 = db.multiget_slice(responseKeys, "items", ["meta", "attachments"])
         d3 = db.multiget_slice(responseKeys + [convId], "itemLikes", [myId])
         d4 = db.get_slice(myOrgId, "orgTags", toFetchTags)\
                                     if toFetchTags else defer.succeed([])
@@ -406,10 +406,11 @@ class ItemResource(base.BaseResource):
         myId = authInfo.username
         orgId = authInfo.organization
         convId, conv = data['parent']
+        fids = data['fId']
         comment, snippet = data['comment']
         review = data['_review']
 
-        itemId, convId, items, keywords = yield Item._comment(convId, conv, comment, snippet, myId, orgId, False, review)
+        itemId, convId, items, keywords = yield Item._comment(convId, conv, comment, snippet, myId, orgId, False, review, fids)
 
         if keywords:
             block = t.getBlock('item.mako', 'requireReviewDlg', keywords=keywords, convId=convId)
@@ -428,10 +429,10 @@ class ItemResource(base.BaseResource):
         t.renderScriptBlock(request, 'item.mako', 'conv_comments_head',
                             False, '#comments-header-%s' % (convId), 'set',
                             args=[convId, responseCount, numShowing, isItemView], **args)
-
+        onload = """(function(){$('.comment-input', '#comment-form-%s').val(''); $('[name=\"nc\"]', '#comment-form-%s').val('%s');})();$('#comment-attach-%s-uploaded').empty()""" % (convId, convId, numShowing, convId)
         t.renderScriptBlock(request, 'item.mako', 'conv_comment', False,
                             '#comments-%s' % convId, 'append', True,
-                            handlers={"onload": "(function(){$('.comment-input', '#comment-form-%s').val(''); $('[name=\"nc\"]', '#comment-form-%s').val('%s');})();" % (convId, convId, numShowing)},
+                            handlers={"onload": onload},
                             args=[convId, itemId], **args)
 
     @profile

@@ -510,9 +510,42 @@ $$.publisher = publisher;
 (function($$, $) { if (!$$.convs) {
 var convs = {
     load: function(obj) {
-        // HTML5 form and Auto expand comment boxes
-        $('.comment-input').autogrow().closest('form').html5form({messages:'en'});
-        $('.conv-tags-input').closest('form').html5form({messages:'en'});
+        $('.init-conv-item').each(function(i) {
+            var $convItem = $(this),
+                convId = $convItem.attr('data-convid'),
+                $commentWrap = $('#comment-form-wrapper-'+convId),
+                $commentInput = $commentWrap.find('.comment-input');
+
+            $commentInput.autogrow();
+            $commentWrap.children('form').html5form({messages:'en'});
+
+            $commentWrap.focusin(function(event) {
+                                   var $attachForm = $('#comment-attach-'+convId);
+
+                                   if ($attachForm.attr('data-inited') !== '1') {
+                                       $$.files.init('comment-attach-'+convId);
+                                       $attachForm.attr('data-inited', '1');
+                                   }
+
+                                   $attachForm.closest('.file-attach-wrapper').css('display', 'block');
+                                   $('#comment-attach-'+convId+'-uploaded').css('display', 'block');
+                                 });
+                        /*
+                         * TODO: Fix this code to hide the attach form correctly.
+                        .focusout(function(event) {
+                                   var $attachForm = $('#comment-attach-'+convId);
+                                       $uploaded = $('#comment-attach-'+convId+'-uploaded');
+
+                                   if ($commentInput.val() == '' && $uploaded.children().length == 0) {
+                                       $attachForm.css('display', 'none');
+                                       $uploaded.css('display', 'none');
+                                   }
+                                 });
+                         */
+
+            $convItem.find('.conv-tags-input').html5form({messages:'en'});
+            $convItem.removeClass('init-conv-item');
+        });
     },
 
     editTags: function(convId, addTag) {
@@ -882,6 +915,14 @@ var ui = {
                 return true;
             }
         }).closest('form').html5form({messages:'en'});
+
+        /*
+        $('#sharebar').live('focusin',function(event){
+          $('#sharebar-actions-wrapper').css('display', 'inline-block');
+          $('#sharebar-attach').css('display', 'block');
+          $('#sharebar-attach-uploaded').css('display', 'block');
+        });
+        */
 
         /* Power up the cometd connections. */
         $$.config = window.social_config;
@@ -1585,7 +1626,7 @@ var events = {
         $('#placeholder-hidden').autoGrowInput({comfortZone: 15, minWidth: 1, maxWidth: 20000});
         $('#event-invitee').tagedit({
             autocompleteURL: '/auto/users',
-            additionalListClass: 'sharebar',
+            additionalListClass: 'sb-inputwrap last',
             breakKeyCodes: [13, 44, 32],
             allowEdit: false,
             allowAdd: false,

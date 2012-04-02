@@ -176,50 +176,42 @@
         %endfor
       </ul>
     </div>
-    <form id="share-form" autocomplete="off" method="post" action="/item/new" class="ajax" >
-      <div id="sharebar">
-            <div class="input-wrap">
+    <div id="sharebar-container">
+      <form id="share-form" autocomplete="off" method="post" action="/item/new" class="ajax" >
+        <div id="sharebar">
             <textarea name="comment" placeholder="${_('What are you working on?')}" required title="${_('Comment')}"></textarea>
-           </div>
-          <input type="hidden" name="type" value="status"/>
+            <input type="hidden" name="type" value="status"/>
+        </div>
+        <div id="sharebar-attach-uploaded" class="uploaded-filelist"></div>
+        <div id="sharebar-actions-wrapper">
+          <ul id="sharebar-actions" class="h-links">
+            <li>${acl_button("sharebar-acl", '{"accept":{"orgs":["%s"]}}'%orgId, "Company", "Sent to your followers and company's feed")}</li>
+            <li>${widgets.button("sharebar-submit", "submit", "default", "Share", "Share")}</li>
+          </ul>
+          <span class="clear" style="display:block"></span>
+        </div>
+      </form>
+      <div class="file-attach-wrapper">
+        ${widgets.fileUploadButton('sharebar-attach')}
       </div>
-      <div id="sharebar-attach-uploaded" class="uploaded-filelist"></div>
-      <div id="sharebar-actions-wrapper">
-        <ul id="sharebar-actions" class="h-links">
-          <li>${acl_button("sharebar-acl", '{"accept":{"orgs":["%s"]}}'%orgId, "Company", "Sent to your followers and company's feed")}</li>
-          <li>${widgets.button("sharebar-submit", "submit", "default", "Share", "Share")}</li>
-        </ul>
-        <span class="clear" style="display:block"></span>
-      </div>
-    </form>
-    <div class="file-attach-wrapper">
-      ${widgets.fileUploadButton('sharebar-attach')}
+      <div class="clear"></div>
     </div>
-    <div class="clear"></div>
   %endif
 </%def>
 
 <%def name="share_status()">
-  <div class="input-wrap">
-    <textarea name="comment" placeholder="${_('What are you working on?')}" required title="${_('Status')}"/>
-  </div>
+  <textarea class="sb-input last" name="comment" placeholder="${_('What are you working on?')}" required title="${_('Status')}"/>
   <input type="hidden" name="type" value="status"/>
 </%def>
 
 <%def name="share_question()">
-  <div class="input-wrap">
-    <textarea name="comment" placeholder="${_('What is your question?')}" required title="${_('Question')}"/>
-  </div>
+  <textarea class="sb-input last" name="comment" placeholder="${_('What is your question?')}" required title="${_('Question')}"/>
   <input type="hidden" name="type" value="question"/>
 </%def>
 
 <%def name="share_link()">
-  <div class="input-wrap">
-    <textarea name="url" placeholder="${_('http://')}" required title="${_('URL')}"/>
-    </div>
-  <div class="input-wrap">
-    <textarea name="comment" placeholder="${_('Say something about the link')}" />
-  </div>
+  <input type="text" class="sb-input" name="url" placeholder="${_('http://')}" required title="${_('URL')}"/>
+  <textarea class="sb-input last" name="comment" placeholder="${_('Say something about the link')}" />
   <input type="hidden" name="type" value="link"/>
 </%def>
 

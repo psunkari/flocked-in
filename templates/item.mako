@@ -50,7 +50,7 @@
 
 
 <%def name="item_lazy_layout(convId)">
-  <div id="conv-${convId}" class="conv-item">
+  <div id="conv-${convId}" data-convid="${convId}" class="conv-item init-conv-item">
     <div class="conv-avatar" id="conv-avatar-${convId}"></div>
     <div class="conv-data">
       <div id="conv-root-${convId}">
@@ -69,7 +69,7 @@
 
 
 <%def name="item_layout(convId, classes='')">
-  <div id="conv-${convId}" class="conv-item ${classes}">
+  <div id="conv-${convId}" data-convid="${convId}" class="conv-item ${classes} init-conv-item">
     <div class="conv-avatar" id="conv-avatar-${convId}">
       <%
         convMeta = items[convId]['meta']
@@ -147,7 +147,7 @@
 </%def>
 
 
-<%def name="conv_attachments(convId, attachments)">
+<%def name="conv_attachments(convId, attachments, style_class='')">
   <%
     hits = {}
     if highlight and convId in highlight and 'attachment' in highlight[convId]:
@@ -155,7 +155,7 @@
         fileId, name = x.split(':', 1)
         hits[fileId] = name
   %>
-  <div class="attachment-list">
+  <div class="attachment-list ${style_class}">
     %for fileId in attachments:
       <%
         name, size, ftype = attachments[fileId].split(':')
@@ -356,7 +356,7 @@
 <%def name="conv_comment_form(convId, isItemView)">
   <form method="post" action="/item/comment" class="ajax" autocomplete="off" id="comment-form-${convId}">
     <div class="input-wrap">
-      <textarea class="comment-input" name="comment" placeholder="${_('Leave a response...')}" required title="${_('Comment')}"></textarea>
+      <textarea class="comment-input" data-convId="${convId}" name="comment" placeholder="${_('Leave a response...')}" required title="${_('Comment')}"></textarea>
     </div>
     <input type="hidden" name="parent" value=${convId}></input>
     <% nc = len(responses.get(convId, [])) if responses else 0 %>
@@ -366,7 +366,12 @@
         <input type="hidden" name="start" value=${oldest}></input>
       %endif
     %endif
+    <div id="comment-attach-${convId}-uploaded" class="uploaded-filelist"></div>
   </form>
+  <div class="file-attach-wrapper">
+    ${widgets.fileUploadButton('comment-attach-%s'%(convId))}
+  </div>
+  <div class="clear"></div>
 </%def>
 
 
@@ -383,6 +388,7 @@
     normalize = utils.normalizeText
   %>
   <div class="conv-comment" id="comment-${commentId}">
+    <a name="${commentId}"> </a>
     <div class="comment-avatar">
       <% avatarURI = utils.userAvatar(userId, entities[userId], "small") %>
       %if avatarURI:
@@ -394,6 +400,11 @@
       <span class="comment-user">${utils.userName(userId, entities[userId])}</span>
       ${_renderText(snippet, comment, _('Expand this comment &#187;'), _('Collapse this comment'), richText)}
     </div>
+    <%
+      attachments = items.get(commentId, {}).get("attachments", {})
+      if attachments:
+        self.conv_attachments(commentId, attachments, 'comment-container')
+    %>
     <div class="comment-meta" id = "item-footer-${commentId}">
       ${self.item_footer(commentId)}
     </div>

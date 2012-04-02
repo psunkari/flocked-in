@@ -180,7 +180,7 @@ def unlike(itemId, item, myId, orgId):
 
 
 @defer.inlineCallbacks
-def _comment(convId, conv, comment, snippet, myId, orgId, richText, reviewed):
+def _comment(convId, conv, comment, snippet, myId, orgId, richText, reviewed, fids=None):
     convType = conv["meta"].get("type", "status")
 
     # 1. Create the new item
@@ -188,6 +188,7 @@ def _comment(convId, conv, comment, snippet, myId, orgId, richText, reviewed):
     meta = {"owner": myId, "parent": convId, "comment": comment,
             "timestamp": str(int(time.time())), "org": orgId,
             "uuid": timeUUID, "richText": str(richText)}
+    item = {'meta':meta}
     followers = {myId: ''}
     itemId = utils.getUniqueKey()
     if snippet:
@@ -215,7 +216,16 @@ def _comment(convId, conv, comment, snippet, myId, orgId, richText, reviewed):
                 defer.returnValue((None, convId, {convId: conv}, matchedKeywords))
 
     # 1.9. Actually store the item
-    yield db.batch_insert(itemId, "items", {'meta': meta})
+    if fids:
+        attachments = yield utils._upload_files(myId, fids)
+        if attachments:
+            item['attachments'] = {}
+        for attachmentId in attachments:
+            fileId, name, size, ftype = attachments[attachmentId]
+            item["attachments"][attachmentId] = "%s:%s:%s" % (name, size, ftype)
+
+    yield db.batch_insert(itemId, "items", item)
+    yield files.pushfileinfo(myId, orgId, itemId, item, conv)
 
     # 2. Update response count and add myself to the followers of conv
     convOwnerId = conv["meta"]["owner"]
@@ -251,7 +261,7 @@ def _comment(convId, conv, comment, snippet, myId, orgId, richText, reviewed):
                   convOwnerId=convOwnerId, myId=myId, me=entities[myId],
                   comment=comment, richText=richText)
     search.solr.updateItemIndex(itemId, {'meta': meta}, orgId, conv=conv)
-    items = {itemId: {'meta': meta}, convId: conv}
+    items = {itemId: item, convId: conv}
     defer.returnValue((itemId, convId, items, None))
 
 
@@ -575,6 +585,12 @@ def deleteItem(itemId, userId, orgId, item=None, conv=None,):
         d1.addCallback(lambda x: files.deleteFileInfo(userId, orgId, itemId, item))
         d2 = plugin.delete(userId, convId, conv)
         deferreds.extend([d1, d2])
+        itemResponses = yield db.get_slice(convId, "itemResponses")
+        itemResponses = utils.columnsToDict(itemResponses)
+        items = yield db.multiget_slice(itemResponses.values(), "items", ["meta", "attachments"])
+        items = utils.multiSuperColumnsToDict(items)
+        for responseId in items:
+            deferreds.append(files.deleteFileInfo(userId, orgId, responseId, items[responseId], conv))
 
     else:
         convType = conv["meta"]["type"]
@@ -587,7 +603,8 @@ def deleteItem(itemId, userId, orgId, item=None, conv=None,):
         d2.addCallback(lambda x: db.insert(convId, 'items', \
                                  str(x), 'responseCount', 'meta'))
         d2.addCallback(lambda x: search.solr.delete(itemId))
-        deferreds.extend([d1, d2])
+        d3 = files.deleteFileInfo(userId, orgId, itemId, item, conv)
+        deferreds.extend([d1, d2, d3])
 
         # Rollback changes to feeds caused by this comment
         d = db.get_slice(itemId, "itemLikes")

@@ -95,7 +95,11 @@
         </td>
         <td class="file-context">
           <div class="file-name">${utils.userName(ownerId, entities[ownerId])}: ${utils.toSnippet(item['meta']['comment'], 200)}</div>
-          <div class="file-meta"><a href='/item?id=${itemId}'>View full ${_(item['meta']['type'])}</a></div>
+          %if 'parent' in item['meta']:
+            <div class="file-meta"><a href="/item?id=${item['meta']['parent']}#${itemId}">View comment</a></div>
+          %else:
+            <div class="file-meta"><a href='/item?id=${itemId}'>View full ${_(item['meta']['type'])}</a></div>
+          %endif
         </td>
         <td class="file-actions"></td>
       </tr>
