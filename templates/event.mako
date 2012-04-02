@@ -205,84 +205,71 @@
 </%def>
 
 <%def name="share_event()">
-  <div class="input-wrap">
-    <textarea type="text" name="title" placeholder="${_('Title of your event?')}" required=""></textarea>
-  </div>
-  <div>
+  <input class="sb-input" type="text" name="title" placeholder="${_('Title of your event?')}" required=""></input>
+  <div class="sb-inputwrap">
+    <label class="sb-input-label">Starts at</label>
     <div class="date-picker-wrapper">
-      <div class="input-wrap">
-        <input type="text" id="startdate"/>
-        <input type="hidden" name="startDate" id="startDate" required=""/>
-      </div>
+      <input class="sb-input" type="text" id="startdate"/>
+      <input type="hidden" name="startDate" id="startDate" required=""/>
     </div>
     <div class="time-picker">
-      <div class="input-wrap">
-        <select id="starttime">
+      <select id="starttime">
+        <%
+          defaultStartHour = mytz_now.hour + 1
+        %>
+        %for slot in range(0, 48):
           <%
-            defaultStartHour = mytz_now.hour + 1
+            seconds = 1800 * slot
+            ampm = "PM" if slot > 24 else "AM"
+            hours = (slot / 2) % 12 if slot > 25 else slot / 2
+            minutes = "30" if (slot % 2) else "00"
+            selected = True if (defaultStartHour == slot / 2 and not slot % 2) else False
           %>
-          %for slot in range(0, 48):
-            <%
-              seconds = 1800 * slot
-              ampm = "PM" if slot > 24 else "AM"
-              hours = (slot / 2) % 12 if slot > 25 else slot / 2
-              minutes = "30" if (slot % 2) else "00"
-              selected = True if (defaultStartHour == slot / 2 and not slot % 2) else False
-            %>
-            <option value="${seconds}" ${'selected' if selected else ''}>${hours}:${minutes} ${ampm}</option>
-          %endfor
-        </select>
-        <input type="hidden" name="startTime" id="startTime" required=""/>
-      </div>
-    </div>
-    <span><strong>&mdash;</strong></span>
-    <div class="time-picker">
-      <div class="input-wrap">
-        <select id="endtime">
-          <%
-            defaultEndHour = mytz_now.hour + 2 if mytz_now.hour < 22 else 0
-          %>
-          %for slot in range(0, 48):
-            <%
-              seconds = 1800 * slot
-              ampm = "PM" if slot > 24 else "AM"
-              hours = (slot / 2) % 12 if slot > 25 else slot / 2
-              minutes = "30" if (slot % 2) else "00"
-              selected = True if (defaultEndHour == slot / 2 and not slot % 2) else False
-            %>
-            <option value="${seconds}" ${'selected' if selected else ''}>${hours}:${minutes} ${ampm}</option>
-          %endfor
-        </select>
-        <input type="hidden" id="endTime" name="endTime" required=""/>
-      </div>
-    </div>
-    <div class="date-picker-wrapper">
-      <div class="input-wrap">
-        <input type="text" id="enddate"/>
-        <input type="hidden" id="endDate" name="endDate" required=""/>
-      </div>
+          <option value="${seconds}" ${'selected' if selected else ''}>${hours}:${minutes} ${ampm}</option>
+        %endfor
+      </select>
+      <input type="hidden" name="startTime" id="startTime" required=""/>
     </div>
     <div id="allDay-wrapper">
-        <input type="checkbox" name="allDay" id="allDay"/>
-        <label for="allDay">${_("All day")}</label>
+      <input type="checkbox" name="allDay" id="allDay"/>
+      <label for="allDay">${_("This is an all day event")}</label>
+    </div>
+  </div>
+  <div class="sb-inputwrap">
+    <label class="sb-input-label">Ends at</label>
+    <div class="date-picker-wrapper">
+      <input type="text" id="enddate" class="sb-input" />
+      <input type="hidden" id="endDate" name="endDate" required=""/>
+    </div>
+    <div class="time-picker">
+      <select id="endtime">
+        <%
+          defaultEndHour = mytz_now.hour + 2 if mytz_now.hour < 22 else 0
+        %>
+        %for slot in range(0, 48):
+          <%
+            seconds = 1800 * slot
+            ampm = "PM" if slot > 24 else "AM"
+            hours = (slot / 2) % 12 if slot > 25 else slot / 2
+            minutes = "30" if (slot % 2) else "00"
+            selected = True if (defaultEndHour == slot / 2 and not slot % 2) else False
+          %>
+          <option value="${seconds}" ${'selected' if selected else ''}>${hours}:${minutes} ${ampm}</option>
+        %endfor
+      </select>
+      <input type="hidden" id="endTime" name="endTime" required=""/>
     </div>
   </div>
   ##TODO:Yet to find a good way of determining the timezone differences between browser and profile
   ##<div style="margin-bottom: 4px">
     ##<div class="alert-info" style="padding: 4px;text-align: center">Your timezone is not in order</div>
   ##</div>
-  <div class="input-wrap">
-    <textarea type="text" name="location" placeholder="${_('Where is the event being hosted?')}"></textarea>
-  </div>
-  <div class="input-wrap">
-      <textarea name="desc" placeholder="${_('Write something about your event')}"></textarea>
-  </div>
-  <div class="input-wrap">
-    <input type="text" disabled="disabled" value="${_('Invite people')}"
-           id="placeholder-hidden" style="position: absolute;top: -9999px;left: -9999px"/>
-    <input type="text" id="event-invitee" name="invitee[]"
-           placeholder="${_('Invite people')}"/>
-  </div>
+  <input class="sb-input" type="text" name="location" placeholder="${_('Where is the event being hosted?')}"/>
+  <textarea class="sb-input" name="desc" placeholder="${_('Write something about your event')}"></textarea>
+  <input type="text" disabled="disabled" value="${_('Invite people')}"
+         id="placeholder-hidden" style="position: absolute;top: -9999px;left: -9999px"/>
+  <input type="text" class="last" id="event-invitee" name="invitee[]"
+         placeholder="${_('Invite people')}"/>
   <input type="hidden" name="type" value="event"/>
 </%def>
 

@@ -157,7 +157,7 @@ class Poll(object):
         t.renderScriptBlock(request, "poll.mako", "share_poll",
                             not isAjax, "#sharebar", "set", True,
                             attrs={"publisherName": "poll"},
-                            handlers={"onload": "(function(obj){$$.publisher.load(obj);$('#share-poll-options').delegate('.input-wrap:last-child','focus',function(event){$(event.target.parentNode).clone().appendTo('#share-poll-options').find('input:text').blur();});})(this);"})
+                            handlers={"onload": "(function(obj){$$.publisher.load(obj);$('#share-poll-options').delegate('.share-poll-option:last-child','focusin',function(event){$(event.target.parentNode).clone().appendTo('#share-poll-options').find('input:text').blur();});})(this);"})
 
     def rootHTML(self, convId, isQuoted, args):
         if "convId" in args:

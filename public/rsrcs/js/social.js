@@ -916,6 +916,14 @@ var ui = {
             }
         }).closest('form').html5form({messages:'en'});
 
+        /*
+        $('#sharebar').live('focusin',function(event){
+          $('#sharebar-actions-wrapper').css('display', 'inline-block');
+          $('#sharebar-attach').css('display', 'block');
+          $('#sharebar-attach-uploaded').css('display', 'block');
+        });
+        */
+
         /* Power up the cometd connections. */
         $$.config = window.social_config;
         $$.comet.init();
@@ -1618,7 +1626,7 @@ var events = {
         $('#placeholder-hidden').autoGrowInput({comfortZone: 15, minWidth: 1, maxWidth: 20000});
         $('#event-invitee').tagedit({
             autocompleteURL: '/auto/users',
-            additionalListClass: 'sharebar',
+            additionalListClass: 'sb-inputwrap last',
             breakKeyCodes: [13, 44, 32],
             allowEdit: false,
             allowAdd: false,

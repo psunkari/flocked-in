@@ -165,7 +165,7 @@ a:hover, a:active, a:focus {
 
 /* Extra styles for sharebar and comment input */
 #sharebar textarea {
-    height: 31px;
+    height: 50px;
     padding: 8px;
 }
 .comment-input {
@@ -176,7 +176,7 @@ a:hover, a:active, a:focus {
     margin-bottom: 0;
     margin-top: 0;
     padding-top: 6px;
-    padding-left:8px;
+    padding-left: 8px;
 }
 
 #sharebar .tagedit-listelement > input {
@@ -731,13 +731,13 @@ a:hover, a:active, a:focus {
     position: relative;
 }
 #sharebar-links li {
-    padding: 5px 5px 5px 0;
+    padding: 5px 0;
     font-weight: bold;
     color: #909090;
 }
 #sharebar-links a {
     display: inline-block;
-    padding: 5px 0px 5px 5px;
+    padding: 5px;
     margin: -5px 10px -5px 0;
     color: #73563d;
     position: relative;
@@ -787,11 +787,13 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     background-position: 0 20px;
 }
 
-#sharebar .input-wrap {
-    margin-bottom: 5px;
+#sharebar-container {
     border-color: #E3E3E3 #909090 #909090 #E3E3E3;
     box-shadow: 1px 1px 0 #E3E3E3;
-    clear: both;
+    padding: 2px;
+    border-width: 1px;
+    border-style: solid;
+    background-color: #FAFAFA;
 }
 #sharebar-actions {
     float: right;
@@ -800,22 +802,80 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
 
 #sharebar-actions-wrapper {
     float: right;
-    display: inline-block;
 }
 
 .sharebar-disabler {
-          position: absolute;
-          top: 0;
-          bottom: 0;
-          width: 100%;
-          height: 100%;
-          z-index: 100;
-          background-color: rgba(255,255,255,0.75);
-          display: none;
-      }
+     position: absolute;
+     top: 0;
+     bottom: 0;
+     width: 100%;
+     height: 100%;
+     z-index: 100;
+     background-color: rgba(255,255,255,0.75);
+     display: none;
+}
 .disabled > .sharebar-disabler {
-          display: block;
-      }
+    display: block;
+}
+
+#sharebar .time-picker .ui-autocomplete {
+  max-height: 140px;
+}
+
+#sharebar {
+    background-color: #FFFFFF;
+}
+
+/* These items are shown when sharebar gets focus 
+#sharebar-attach, #sharebar-actions-wrapper, #sharebar-attach-uploaded {
+    display: none;
+}
+*/
+
+.sb-input, .sb-inputwrap input, .sb-input-label {
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 4px 8px;
+    border: none;
+    background-color: transparent;
+    line-height: 15px;
+    font-size: 12px;
+    outline: 0px;
+    margin: 0px;
+    border-bottom: 1px solid #e0d7cf;
+    height: 31px;
+}
+
+.sb-input:-moz-ui-invalid:not(output),
+.sb-inputwrap input:-moz-ui-invalid:not(output) {
+    box-shadow: none !important;
+}
+
+.sb-inputwrap {
+    border-bottom: 1px solid #e0d7cf;
+    padding: 0px;
+    margin: 0px;
+}
+.sb-inputwrap input {
+    border-width: 0px !important;
+}
+.sb-input-label {
+    color: graytext;
+    padding: 4px 4px 4px 10px;
+    border-width: 0px;
+}
+/*
+.sb-input.last, .sb-inputwrap.last {
+    border-bottom-width: 0px;
+}
+*/
+
+.sb-inputwrap .tagedit-listelement {
+    margin: 0px;
+}
+
 
 /*
  * ACL
@@ -1460,6 +1520,7 @@ abbr.timestamp {
     background-color: transparent !important;
     border-width: 0 !important;
     padding: 0 !important;
+    height: 1.3em !important;
 }
 
 .styledform abbr {
@@ -1727,6 +1788,19 @@ abbr.timestamp {
  * Styling for polls
  */
 
+.share-poll-option {
+    position: relative;
+}
+.poll-option-input {
+    padding-left: 25px;
+}
+.poll-option {
+    position: absolute;
+    background-position: 0 -304px;
+    left: 4px;
+    top: 6px;
+}
+
 .poll-wrapper {
     height: 20px;
     width: 370px;
@@ -1804,16 +1878,6 @@ abbr.timestamp {
     margin-left: 8px;
     line-height: 18px;
     text-shadow: 0 1px 1px #FFFFFF;
-}
-
-#share-poll-options > .input-wrap {
-    padding-left: 25px;
-    position: relative;
-}
-.poll-option {
-    position: absolute;
-    background-position: 0 -304px;
-    left: 4px;
 }
 
 
@@ -2215,10 +2279,6 @@ abbr.timestamp {
     padding: 0px;
 }
 
-#sharebar .time-picker .ui-autocomplete {
-  max-height: 140px;
-}
-
 .event-show-more-attendees {
     float:right;
     margin-right:10px;
@@ -2249,12 +2309,14 @@ abbr.timestamp {
 }
 
 #allDay-wrapper {
-    display:inline-block;
-    float:right;
-    padding: 4px 0px;
+    display: inline-block;
+    padding: 4px 10px;
+    line-height: 22px;
 }
 
 #allDay {
+    height: 16px;
+    width: 16px;
     vertical-align: middle;
 }
 

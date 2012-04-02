@@ -5,21 +5,19 @@
 <%namespace name="item" file="item.mako"/>
 
 <%def name="share_poll()">
-  <div class="input-wrap">
-    <textarea name="comment" placeholder="${_('What would you like to know?')}" required title="${_('Question')}"/>
-  </div>
+  <textarea class="sb-input" name="comment" placeholder="${_('What would you like to know?')}" required title="${_('Question')}"/>
   <div id="share-poll-options">
-    <div class="input-wrap">
+    <div class="share-poll-option">
       <span class="icon poll-option">&nbsp;</span>
-      <input type="text" name="options" placeholder="${_('Add an option')}" required title="${_('Option')}"/>
+      <input class="sb-input poll-option-input" type="text" name="options" placeholder="${_('Add an option')}" required title="${_('Option')}"/>
     </div>
-    <div class="input-wrap">
+    <div class="share-poll-option">
       <span class="icon poll-option">&nbsp;</span>
-      <input type="text" name="options" placeholder="${_('Add an option')}" required title="${_('Option')}"/>
+      <input class="sb-input poll-option-input" type="text" name="options" placeholder="${_('Add an option')}" required title="${_('Option')}"/>
     </div>
-    <div class="input-wrap">
+    <div class="share-poll-option">
       <span class="icon poll-option">&nbsp;</span>
-      <input type="text" name="options" placeholder="${_('Add an option')}"/>
+      <input class="sb-input poll-option-input" type="text" name="options" placeholder="${_('Add an option')}"/>
     </div>
   </div>
   <input type="hidden" name="type" value="poll"/>
