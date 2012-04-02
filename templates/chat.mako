@@ -172,14 +172,14 @@
     <ul class="h-links">
       %if prevPageStart:
         <li class="button">
-          <a class="ajax" href="/chat?start=${prevPageStart}">${_("&#9666; Previous")}</a>
+          <a class="ajax" href="/chats?start=${prevPageStart}">${_("&#9666; Previous")}</a>
         </li>
       %else:
         <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
       %endif
       %if nextPageStart:
         <li class="button">
-          <a class="ajax" href="/chat?&start=${nextPageStart}">${_("Next &#9656;")}</a>
+          <a class="ajax" href="/chats?&start=${nextPageStart}">${_("Next &#9656;")}</a>
         </li>
       %else:
         <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
