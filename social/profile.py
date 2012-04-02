@@ -403,7 +403,7 @@ class ProfileResource(base.BaseResource):
                 return relation.initSubscriptionsList()
 
             isProfile = (utils.getRequestArg(request, "_pg") == "/profile")
-            isFeed =    (utils.getRequestArg(request, "_pg") == "/feed")
+            isFeed =    utils.getRequestArg(request, "_pg").startswith("/feed/")
             isPeople =  (utils.getRequestArg(request, "_pg") == "/people")
             def renderActions(ign):
                 if isFeed:
