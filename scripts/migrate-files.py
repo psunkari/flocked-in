@@ -21,10 +21,6 @@ KEYSPACE = config.get("Cassandra", "Keyspace")
 
 @defer.inlineCallbacks
 def createCF():
-    # Create column families for Events
-    try:
-        yield db.system_drop_column_family("userAgenda")
-    except: pass
     attachmentVersions = ttypes.CfDef(KEYSPACE, "attachmentVersions", "Standard", "TimeUUIDType",
                                       None, "Time sorted list of versions of each attachment")
     yield db.system_add_column_family(attachmentVersions)
