@@ -142,6 +142,10 @@ def createColumnFamilies(client):
                              "List of files that appeared in entity's feed")
     yield client.system_add_column_family(entityFeed_files)
 
+    attachmentVersions = CfDef(KEYSPACE, "attachmentVersions", "Standard", "TimeUUIDType",
+                                None, "Time sorted list of versions of each attachment")
+    yield client.system_add_column_family(attachmentVersions)
+
     itemLikes = CfDef(KEYSPACE, 'itemLikes', 'Standard', 'UTF8Type', None,
                       'List of likes per item')
     yield client.system_add_column_family(itemLikes)
@@ -670,7 +674,8 @@ def truncateColumnFamilies(client):
                "feed_event", "userItems_event", "userAgenda", "eventResponses",
                "keywords", "keywordItems", "originalKeywords", "userAgendaMap",
                "presence", "chatParticipants", "chatLogs", "chatArchiveList",
-               "channelSubscribers", "sessionChannelsMap"]:
+               "channelSubscribers", "sessionChannelsMap", "entityFeed_files",
+               "attachmentVersions"]:
 
         log.msg("Truncating: %s" % cf)
         yield client.truncate(cf)
