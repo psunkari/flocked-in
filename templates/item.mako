@@ -50,7 +50,7 @@
 
 
 <%def name="item_lazy_layout(convId)">
-  <div id="conv-${convId}" class="conv-item">
+  <div id="conv-${convId}" data-convid="${convId}" class="conv-item init-conv-item">
     <div class="conv-avatar" id="conv-avatar-${convId}"></div>
     <div class="conv-data">
       <div id="conv-root-${convId}">
@@ -69,7 +69,7 @@
 
 
 <%def name="item_layout(convId, classes='')">
-  <div id="conv-${convId}" class="conv-item ${classes}">
+  <div id="conv-${convId}" data-convid="${convId}" class="conv-item ${classes} init-conv-item">
     <div class="conv-avatar" id="conv-avatar-${convId}">
       <%
         convMeta = items[convId]['meta']
@@ -129,7 +129,7 @@
           ${self.conv_comments(convId, isItemView)}
         </div>
         %if script:
-        <div id="comment-form-wrapper-${convId}" class="comment-form-wrapper busy-indicator" onfocus="$$.files.init('comment-attach-${convId}')">
+        <div id="comment-form-wrapper-${convId}" class="comment-form-wrapper busy-indicator">
           ${self.conv_comment_form(convId, isItemView)}
         </div>
         %endif
@@ -356,7 +356,7 @@
 <%def name="conv_comment_form(convId, isItemView)">
   <form method="post" action="/item/comment" class="ajax" autocomplete="off" id="comment-form-${convId}">
     <div class="input-wrap">
-      <textarea class="comment-input" name="comment" placeholder="${_('Leave a response...')}" required title="${_('Comment')}"></textarea>
+      <textarea class="comment-input" data-convId="${convId}" name="comment" placeholder="${_('Leave a response...')}" required title="${_('Comment')}"></textarea>
     </div>
     <input type="hidden" name="parent" value=${convId}></input>
     <% nc = len(responses.get(convId, [])) if responses else 0 %>
@@ -403,7 +403,7 @@
     <%
       attachments = items.get(commentId, {}).get("attachments", {})
       if attachments:
-        self.conv_attachments(commentId, attachments, 'item-attachments')
+        self.conv_attachments(commentId, attachments, 'comment-container')
     %>
     <div class="comment-meta" id = "item-footer-${commentId}">
       ${self.item_footer(commentId)}

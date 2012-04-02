@@ -942,8 +942,8 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     float: left;
     margin: 10px 0 0;
 }
-.item-attachments {
-  margin: 15px 0 0 10px;
+.comment-container.attachment-list {
+    margin: 0 !important;
 }
 
 .uploaded-file,
@@ -1116,6 +1116,12 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     border-bottom: 1px solid #E3E3E3;
     margin: 1px 0 0;
     padding: 4px 6px;
+}
+
+/* Made visible when the comment input has focus */
+.comment-form-wrapper .uploaded-filelist,
+.comment-form-wrapper .file-attach-wrapper {
+    display: none;
 }
 
 .conv-tags-input {
