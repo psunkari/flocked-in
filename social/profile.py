@@ -257,10 +257,11 @@ class ProfileResource(base.BaseResource):
             args['user'] = user
 
         detail = utils.getRequestArg(request, "dt") or "activity"
+
         args["detail"] = detail
         args["userId"] = userId
         args["menuId"] = "people"
-        args['entities'] = {myId: args['me'], userId: user}
+        args["entities"] = base.EntitySet({myId:args['me'], userId:user})
 
         # When scripts are enabled, updates are sent to the page as
         # and when we get the required data from the database.
@@ -356,7 +357,7 @@ class ProfileResource(base.BaseResource):
         for entityId, entity in entities.items():
             if not entity._data:
                del entities[entityId]
-        args["entities"] = entities
+        args["entities"].update(entities)
 
         if script:
             t.renderScriptBlock(request, "profile.mako", "user_subscriptions",
