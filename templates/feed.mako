@@ -177,11 +177,8 @@
       </ul>
     </div>
     <div id="sharebar-container">
-      <form id="share-form" autocomplete="off" method="post" action="/item/new" class="ajax" >
-        <div id="sharebar">
-            <textarea name="comment" placeholder="${_('What are you working on?')}" required title="${_('Comment')}"></textarea>
-            <input type="hidden" name="type" value="status"/>
-        </div>
+      <form id="share-form" autocomplete="off" method="post" action="/item/new" class="ajax">
+        <div id="sharebar"><%share_status()%></div>
         <div id="sharebar-attach-uploaded" class="uploaded-filelist"></div>
         <div id="sharebar-actions-wrapper">
           <ul id="sharebar-actions" class="h-links">
@@ -200,18 +197,18 @@
 </%def>
 
 <%def name="share_status()">
-  <textarea class="sb-input last" name="comment" placeholder="${_('What are you working on?')}" required title="${_('Status')}"/>
+  <textarea class="sb-input last" name="comment" placeholder="${_('What are you working on?')}" required title="${_('Status')}"></textarea>
   <input type="hidden" name="type" value="status"/>
 </%def>
 
 <%def name="share_question()">
-  <textarea class="sb-input last" name="comment" placeholder="${_('What is your question?')}" required title="${_('Question')}"/>
+  <textarea class="sb-input last" name="comment" placeholder="${_('What is your question?')}" required title="${_('Question')}"></textarea>
   <input type="hidden" name="type" value="question"/>
 </%def>
 
 <%def name="share_link()">
   <input type="text" class="sb-input" name="url" placeholder="${_('http://')}" required title="${_('URL')}"/>
-  <textarea class="sb-input last" name="comment" placeholder="${_('Say something about the link')}" />
+  <textarea class="sb-input last" name="comment" placeholder="${_('Say something about the link')}"></textarea>
   <input type="hidden" name="type" value="link"/>
 </%def>
 
