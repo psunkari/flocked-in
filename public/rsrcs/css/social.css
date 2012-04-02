@@ -2239,10 +2239,12 @@ abbr.timestamp {
 }
 
 .event-agenda-link {
+    width: 125px;
     display: inline-block !important;
 }
 
 .event-agenda-link-expired {
+    width: 125px;
     display: inline-block !important;
     color: #888888 !important;
 }

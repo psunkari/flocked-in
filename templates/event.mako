@@ -518,9 +518,15 @@
     <div class="sidebar-title">${title}</div>
     <ul class="v-links">
       %for convId in conversations:
+        <%
+            convMeta = items[convId]['meta']
+            utc = pytz.utc
+            start = convMeta.get("event_startTime")
+            end = convMeta.get("event_endTime")
+        %>
         <li class='event-agenda-block'>
           <a class="event-agenda-link${'-expired' if expired else ''}" href="/item?id=${convId}">${items[convId]['meta']['event_title']}</a>
-          <span class="event-agenda-due-in">${eventDueIn(items, convId)}</span>
+          <span class="timetoexpiry event-agenda-due-in" data-ts="${start}" data-endts="${end}">${eventDueIn(items, convId)}</span>
         </li>
       %endfor
     </ul>

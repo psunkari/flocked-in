@@ -281,6 +281,39 @@ _initTimestampUpdates: function _initTimestampUpdates() {
             }
         })
     }, 30000);
+
+    window.setInterval(function() {
+        $('.timetoexpiry').each(function(idx, item) {
+            timestamp = item.getAttribute("data-ts");
+            tooltip = item.getAttribute("title");
+
+            current = new Date();
+            current = current.getTime()/1000;
+            delta = parseInt(timestamp) - current;
+
+            if ($(item).data("endts") !== undefined) {
+                enddelta = parseInt($(item).data("endts")) - current;
+            }
+
+            if (delta <= 0) {
+                item.innerHTML = "in progress";
+                if ($(item).data("endts") && enddelta < 0) {
+                    item.innerHTML = "over";
+                }
+            }
+            else if (delta < 3600) {
+                var minutes = Math.floor(delta/60);
+                if (minutes < 1) {
+                    item.innerHTML = "now";
+                }else{
+                    item.innerHTML = minutes + " minute"+ (minutes==1?"":"s");
+                }
+            }else if ((delta > 3600) && (delta < 86400)) {
+                var hours = Math.floor(delta/3600);
+                item.innerHTML = hours + " hour"+ (hours==1?"":"s");
+            }
+        })
+    }, 30000);
 },
 
 

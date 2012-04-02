@@ -794,7 +794,7 @@ class Event(object):
             # 00:00 hours instead of utc 00:00.
             utc_now = datetime.datetime.now(pytz.utc)
             mytz_now = utc_now.astimezone(my_tz)
-            mytz_start = mytz_now+relativedelta(hour=0, minute=0, second=0)
+            mytz_start = mytz_now
         else:
             mytz_start = start.replace(tzinfo=my_tz)
 
