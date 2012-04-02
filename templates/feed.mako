@@ -235,7 +235,7 @@
   %endif
   %if nextPageStart:
     <% typ_filter = '&type=%s' %(itemType) if itemType else '' %>
-    <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" href="/feed/${feedId}/?start=${nextPageStart}${typ_filter}" data-ref="/feed/${feedId}?start=${nextPageStart}&more=1${typ_filter}">${_("Fetch older posts")}</a></div>
+    <div id="next-load-wrapper" class="busy-indicator"><a id="next-page-load" class="ajax" href="/feed/${feedId}?start=${nextPageStart}${typ_filter}" data-ref="/feed/${feedId}?start=${nextPageStart}&more=1${typ_filter}">${_("Fetch older posts")}</a></div>
   %else:
     <div id="next-load-wrapper">${_("No more posts to show")}</div>
   %endif
