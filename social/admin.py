@@ -259,6 +259,7 @@ class Admin(base.BaseResource):
     def _updateOrgInfo(self, request):
         (appchange, script, args, myId) = yield self._getBasicArgs(request)
         orgId = args["orgId"]
+        org = args['org']
 
         name = utils.getRequestArg(request, "name")
         dp = utils.getRequestArg(request, "dp", sanitize=False)
@@ -268,7 +269,8 @@ class Admin(base.BaseResource):
             avatar = yield saveAvatarItem(orgId, orgId, dp, isLogo=True)
             orgInfo["basic"] = {}
             orgInfo["basic"]["logo"] = avatar
-            orgDetails["logo"] = utils.companyLogo(orgInfo)
+            org.basic['logo'] = avatar
+            orgDetails["logo"] = utils.companyLogo(org)
         if name:
             if "basic" not in orgInfo:
                 orgInfo["basic"] = {}
