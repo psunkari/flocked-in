@@ -32,6 +32,9 @@
       </div>
       <div id="profile-center-right">
         <div id="right">
+          <div id="user-badges">
+            <% self.user_badges() %>
+          </div>
           <div id="user-me">
             %if not script:
               ${self.user_me()}
@@ -82,6 +85,44 @@
 ##
 ## Functions for rendering content
 ##
+
+<%def name="user_badges()">
+  <%
+    recievedBadges = []
+    if userId == 'tDM5JpfaEeCz1EBAhdLyVQ':
+      recievedBadges = [('valueble-employee', 'Valueble Employee', 1, 'Awarded in Dec, 2011<br/><b>For successfully launching the social initiative</b>'),
+                        ('midnight-oil', 'Burning Midnight Oil', 1, 'Awarded in Nov, 2011<br/><b>For all the nights spent on building social</b>'),
+                        ('peer-recommendation', 'Peer Recommendation', 2, 'Feb, 2012 by Sid Hudgens<br/><b>For outstanding help in debugging issues with collaboration server</b>'+\
+                                                                          '<hr style="border: 0px; border-bottom:1px solid #444"/>'+\
+                                                                          'Aug, 2011 by Dudley Smith<br/><b>For helping with sales related documentation</b>'),
+                        ('emergency-marshall', 'Emergency Marshall', 1, 'Feb, 2012<br/><b>On successful completion of fire safety training</b>')]
+
+    if not recievedBadges:
+      return
+  %>
+  <div class="sidebar-chunk">
+    <div class="sidebar-title">${_("Awards and Appreciations")}</div>
+    <ul class="avatar-list">
+    %for badgeName, displayName, number, tooltip in recievedBadges:
+      <li class="has-tooltip">
+        <img src="/rsrcs/img/badges/${badgeName}.png" style="height: 48px; width: 48px; display: inline-block;"/>
+        %if number > 1:
+          <div class="new-count" style="right:-2px; top:-2px;border:1px solid white;">x${number}</div>
+        %endif
+        <div class="tooltip top-right">
+          <span class="tooltip-content"><font color="#FFCC66" style="font-weight:bold;">${displayName}</font><hr style="border:0px; border-bottom:1px solid #777;"/>${tooltip}</span>
+        </div>
+      </li>
+    %endfor
+    </ul>
+    <div class="clear"/>
+    <div style="margin: 0 0 10px 0;padding-left:16px;line-height:16px;position:relative;">
+      <span class="icon poll-option" style="top:1px;left:0;">&nbsp;</span>
+      <a href="#">Say thanks or appreciate user</a>
+    </div>
+  </div>
+</%def>
+
 <%def name="user_me()">
   %if myId != userId:
   %endif
@@ -226,7 +267,7 @@
     <%
       path = "/profile?id=%s&" % userId
     %>
-    %for item, name in [('activity', 'Activity'), ('info', 'More Info'), ('files', 'Files')]:
+    %for item, name in [('activity', 'Activity'), ('goals', 'Goals'), ('files', 'Files'), ('info', 'More Info')]:
       %if detail == item:
         <li><a href="${path}dt=${item}" id="profile-tab-${item}" class="ajax selected">${_(name)}</a></li>
       %else:
@@ -458,6 +499,9 @@
   </div>
 </%def>
 
+<%def name="content_goals()">
+</%def>
+
 <%def name="_filesPagingBar()">
   <%
     files, hasPrevPage, nextPageStart, toFetchEntities = userfiles if userfiles else ('', '', '', '')
@@ -478,11 +522,14 @@
 </%def>
 
 <%def name="content()">
-  %if detail == 'info':
-    ${content_info()}
-  %elif detail == 'activity':
-    ${content_activity()}
-  %elif detail == 'files':
-    ${content_files()}
-  %endif
+  <%
+    if detail == 'info':
+      content_info()
+    elif detail == 'activity':
+      content_activity()
+    elif detail == 'files':
+      content_files()
+    elif detail == 'goals':
+      content_goals()
+  %>
 </%def>
