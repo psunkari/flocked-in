@@ -551,6 +551,12 @@ var convs = {
 
             $commentInput.autogrow();
             $commentWrap.children('form').html5form({messages:'en'});
+            $('#comment-form-'+convId).submit(function() {
+                if ($('#comment-attach-'+convId+'-wrapper').hasClass('busy')) {
+                    $$.alerts.info("Please wait while your files are being uploaded")
+                    return false
+                }
+            })
 
             $commentWrap.focusin(function(event) {
                                    var $attachForm = $('#comment-attach-'+convId);
