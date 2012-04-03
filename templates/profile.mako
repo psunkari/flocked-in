@@ -91,11 +91,23 @@
   %if len(subscriptions) > 0:
   <div class="sidebar-chunk">
     <div class="sidebar-title">${_("Following")}</div>
-    <ul class="v-links">
+    <ul class="avatar-list">
     %for userId in subscriptions:
-      <li><a class="ajax" href="/profile?id=${userId}">${entities[userId].basic['name']}</a></li>
+      <li class="has-tooltip">
+        <%
+          user = entities[userId]
+          avatarUri = utils.userAvatar(userId, user, "s")
+        %>
+        <a href="/profile?id=${userId}">
+          <img src="${avatarUri}" style="height: 32px; width: 32px; display: inline-block;"/>
+        </a>
+        <div class="tooltip top-right">
+          <span class="tooltip-content"><b>${user.basic['name']}</b>, ${user.basic['jobTitle']}</span>
+        </div>
+      </li>
     %endfor
     </ul>
+    <div class="clear"/>
   </div>
   %endif
 </%def>
@@ -104,11 +116,23 @@
   %if len(followers) > 0:
   <div class="sidebar-chunk">
     <div class="sidebar-title">${_("Followers")}</div>
-    <ul class="v-links">
+    <ul class="avatar-list">
     %for userId in followers:
-      <li><a class="ajax" href="/profile?id=${userId}">${entities[userId].basic['name']}</a></li>
+      <li class="has-tooltip">
+        <%
+          user = entities[userId]
+          avatarUri = utils.userAvatar(userId, user, "s")
+        %>
+        <a href="/profile?id=${userId}">
+          <img src="${avatarUri}" style="height: 32px; width: 32px; display: inline-block;"/>
+        </a>
+        <div class="tooltip top-right">
+          <span class="tooltip-content"><b>${user.basic['name']}</b>, ${user.basic['jobTitle']}</span>
+        </div>
+      </li>
     %endfor
     </ul>
+    <div class="clear"/>
   </div>
   %endif
 </%def>
