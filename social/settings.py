@@ -378,7 +378,8 @@ class SettingsResource(base.BaseResource):
         if dp:
             avatar = yield saveAvatarItem(myId, orgId, dp)
             userInfo["basic"]["avatar"] = avatar
-            avatarURI = utils.userAvatar(myId, userInfo)
+            me.basic["avatar"] = avatar
+            avatarURI = utils.userAvatar(myId, me)
             basicUpdatedInfo["avatar"] = avatarURI
             basicUpdated = True
         if userInfo["basic"]:
