@@ -141,11 +141,23 @@
   %if len(userGroups) > 0:
   <div class="sidebar-chunk">
     <div class="sidebar-title">${_("Groups")}</div>
-    <ul class="v-links">
+    <ul class="avatar-list">
     %for groupId in userGroups:
-      <li><a class="ajax" href="/group?id=${groupId}">${entities[groupId].basic['name']}</a></li>
+      <li class="has-tooltip">
+        <%
+          group = entities[groupId]
+          avatarUri = utils.groupAvatar(groupId, group, "s")
+        %>
+        <a href="/group?id=${groupId}">
+          <img src="${avatarUri}" style="height: 32px; width: 32px; display: inline-block;"/>
+        </a>
+        <div class="tooltip top-right">
+          <span class="tooltip-content">${group.basic['name']}</span>
+        </div>
+      </li>
     %endfor
     </ul>
+    <div class="clear"/>
   </div>
   %endif
 </%def>
