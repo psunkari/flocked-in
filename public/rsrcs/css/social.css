@@ -2258,12 +2258,16 @@ abbr.timestamp {
 }
 
 .event-agenda-link {
-    width: 125px;
+    width: 175px;
     display: inline-block !important;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: pre;
+    float: left;
 }
 
 .event-agenda-link-expired {
-    width: 125px;
+    width: 175px;
     display: inline-block !important;
     color: #888888 !important;
 }
