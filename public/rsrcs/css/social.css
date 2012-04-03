@@ -65,22 +65,14 @@ form {
 }
 .avatar-list li {
     float: left;
-    margin: 2px;
+    margin: 4px 2px;
 }
 .avatar-list .tooltip-content {
     white-space: pre;
 }
-/*
 .avatar-list img {
-    filter: url(filters.svg#grayscale);
-    filter: gray;
-    -webkit-filter: grayscale(1);
+    border-radius: 3px;
 }
-.avatar-list img:hover {
-    filter: none;
-    -webkit-filter: grayscale(0);
-}
-*/
 
 
 a:link, a:visited {

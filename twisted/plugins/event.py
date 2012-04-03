@@ -756,19 +756,19 @@ class Event(object):
         groupId = args["groupId"] if "groupId" in args else None
 
         if entityId == myOrgId:
-            args["title"] = _("Company Wide Events")
+            args["title"] = _("Company Events")
             yield event.fetchMatchingEvents(request, args, myOrgId)
             t.renderScriptBlock(request, "event.mako", "side_agenda",
                                    landing, "#feed-side-block-container",
                                    "append", **args)
         elif entityId == myId:
-            args["title"] = _("My Upcoming Events")
+            args["title"] = _("Upcoming Events")
             yield event.fetchMatchingEvents(request, args, myId)
             t.renderScriptBlock(request, "event.mako", "side_agenda",
                                    landing, "#feed-side-block-container",
                                    "append", **args)
         elif entityId == groupId:
-            args["title"] = _("Group Agenda")
+            args["title"] = _("Group Events")
             groupId = args["groupId"]
             yield event.fetchMatchingEvents(request, args, groupId)
             t.renderScriptBlock(request, "event.mako", "side_agenda",
