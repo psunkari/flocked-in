@@ -13,15 +13,15 @@
   <div class="contents has-left">
     <div id="left">
       <div id="nav-menu">
-        ${self.nav_menu()}
+        <%self.nav_menu()%>
       </div>
     </div>
     <div id="center-right">
       <div class="titlebar center-header">
         <span class="middle title">${_('Messages')}</span>
-        %if script:
+        % if script:
             <button onclick="$$.messaging.compose();" class="button title-button">${_('New Message')}</button>
-        %endif
+        % endif
       </div>
       <div id="right">
         <div class="right-contents">
@@ -29,11 +29,11 @@
       </div>
       <div id="center">
         <div class="center-contents">
-          %if view != "compose":
-            %if not script:
-              ${center()}
-            %endif
-          %endif
+          % if view != "compose":
+            % if not script:
+              <%center()%>
+            % endif
+          % endif
         </div>
       </div>
       <div class="clear"></div>
@@ -108,7 +108,7 @@
     </a>
     <div class="conversation-row-cell conversation-row-actions">
       <span>
-        %if filterType != "unread":
+        % if filterType != "unread":
         <%
           readStatus = 'unread' if conv['read']=='0' else 'read'
           readAction = 'read' if conv['read']=='0' else 'unread'
@@ -120,37 +120,37 @@
         <div class="messaging-icon messaging-unread-icon"
              title="${_("Mark this conversation as read")}"
              onclick="$.post('/ajax/messages/thread', 'action=read&selected=${convId}&filterType=${filterType}')">&nbsp;</div>
-        %endif
-        %if filterType != "archive":
+        % endif
+        % if filterType != "archive":
         <div class="messaging-icon messaging-archive-icon"
              title="${_("Archive this conversation")}"
              onclick="$.post('/ajax/messages/thread', 'action=archive&selected=${convId}&filterType=${filterType}')">&nbsp;</div>
-        %endif
-        %if filterType != "trash":
+        % endif
+        % if filterType != "trash":
         <div class="messaging-icon messaging-delete-icon"
              title="${_("Delete this conversation")}"
              onclick="$.post('/ajax/messages/thread', 'action=trash&selected=${convId}&filterType=${filterType}')">&nbsp;</div>
-        %endif
+        % endif
       </span>
     </div>
   </div>
 </%def>
 
 <%def name="render_conversation()">
-    ${toolbar_layout(view)}
+    <%toolbar_layout(view)%>
     <div class="conversation-headline">
         <h2 class="conversation-headline-subject">${conv["meta"]["subject"]}</h2>
     </div>
     <div class="conversation-wrapper">
         <div class="conversation-messages-wrapper">
-            ${render_conversation_messages()}
+            <%render_conversation_messages()%>
         </div>
-        ${render_conversation_reply(convId)}
+        <%render_conversation_reply(convId)%>
     </div>
 </%def>
 
 <%def name="render_conversation_messages()">
-  %for mid in messageIds:
+  % for mid in messageIds:
     <div class="conv-item conversation-message-wrapper" id="conv-${mid}">
       <div class="comment-avatar">
         ${getSenderAvatar(messages[mid], people, "s")}
@@ -164,9 +164,9 @@
                 ${people[messages[mid]['meta']['owner']].basic["name"]}
               </a>
             </span>
-            %if messages[mid]['meta']['owner'] == myId:
+            % if messages[mid]['meta']['owner'] == myId:
                 <span class="conversation-message-headers-actions" onclick="$$.messaging.deleteMessage('${convId}', '${mid}')"></span>
-            %endif
+            % endif
             <nobr class="time-label conversation-message-headers-time">
               ${utils.simpleTimestamp(float(messages[mid]["meta"]["date_epoch"]), people[myId].basic["timezone"])}
             </nobr>
@@ -177,7 +177,7 @@
         </div>
       </div>
     </div>
-  %endfor
+  % endfor
 </%def>
 
 <%def name="render_conversation_reply(convId)">
@@ -197,7 +197,7 @@
     </form>
     </div>
     <div class="file-attach-wrapper conversation-reply-wrapper">
-      ${widgets.fileUploadButton('msgreply-attach')}
+      <%widgets.fileUploadButton('msgreply-attach')%>
     </div>
     <div class="clear"></div>
 </%def>
@@ -207,60 +207,60 @@
   <div class='ui-dlg-title'>${_('New Message')}</div>
   <div class="ui-dlg-center" style="max-height: 300px;">
     <form id="msgcompose-form" action="/messages/write" class="ajax" id="message-form">
-    <ul class="dlgform">
-      <li class="form-row">
-          <label class="dlgform-label" for="msgcompose-rcpts">${_('To')}</label>
-          <input type="text" id="msgcompose-rcpts" name="recipient[]" required autofocus/>
-      </li>
-      <li class="form-row">
-          <label class="dlgform-label" for="msgcompose-subject">${_('Subject')}</label>
-          <input type="text" id="msgcompose-subject" name="subject" value="${subject}" required/>
-      </li>
-      <li class="form-row">
-          <label class="dlgform-label" for="msgcompose-body">${_('Message')}</label>
-          <textarea id="msgcompose-body" name="body" style="height:100px;">${body}</textarea>
-      </li>
-      <li>
-        <div id="msgcompose-attach-uploaded" class="uploaded-filelist"></div>
-      </li>
-      <input id="msgcompose-form-submit" type="submit" style="display:none;" />
-      </form>
-      <div class="file-attach-wrapper">
-        ${widgets.fileUploadButton('msgcompose-attach')}
-      </div>
-      <div class="clear"></div>
-    </ul>
+      <ul class="dlgform">
+        <li class="form-row">
+            <label class="dlgform-label" for="msgcompose-rcpts">${_('To')}</label>
+            <input type="text" id="msgcompose-rcpts" name="recipient[]" required autofocus/>
+        </li>
+        <li class="form-row">
+            <label class="dlgform-label" for="msgcompose-subject">${_('Subject')}</label>
+            <input type="text" id="msgcompose-subject" name="subject" value="${subject}" required/>
+        </li>
+        <li class="form-row">
+            <label class="dlgform-label" for="msgcompose-body">${_('Message')}</label>
+            <textarea id="msgcompose-body" name="body" style="height:100px;">${body}</textarea>
+        </li>
+        <li>
+          <div id="msgcompose-attach-uploaded" class="uploaded-filelist"></div>
+        </li>
+        <input id="msgcompose-form-submit" type="submit" style="display:none;" />
+        </form>
+        <div class="file-attach-wrapper">
+          <%widgets.fileUploadButton('msgcompose-attach')%>
+        </div>
+        <div class="clear"></div>
+      </ul>
   </div>
 </%def>
 
 <%def name="toolbar_layout(view, nextPageStart=None, prevPageStart=None)">
-  %if view == "messages":
+  % if view == "messages":
     <div id="msg-toolbar" class="toolbar">
-          %if script:
-            <input id="thread-selector" type="checkbox" name="select" value="all"
-                   onchange="$('.conversation-row input[name=selected]').attr('checked', this.checked)"/>
-            <input id="toolbarAction" name="action" value="" type="hidden"/>
-          %endif
-          %if filterType == "unread":
-            <input type="submit" name="read" value="${_("Mark as Read")}"
-                   class="button" onclick="$('#toolbarAction').attr('value', 'read')"/>
-          %endif
-          %if filterType != "trash":
-            <input type="submit" name="trash" value="${_("Trash")}"
-                   class="button" onclick="$('#toolbarAction').attr('value', 'trash')"/>
-          %endif
-          %if filterType != "archive" and filterType != "trash":
-            <input type="submit" name="archive" value="${_("Archive")}"
-                   class="button" onclick="$('#toolbarAction').attr('value', 'archive')"/>
-          %endif
-          %if filterType != "unread":
-            <input type="submit" name="unread" value="${_("Mark as Unread")}"
-                   class="button" onclick="$('#toolbarAction').attr('value', 'unread')"/>
-          %endif
-          %if filterType != "all":
-            <input type="submit" name="inbox" value="${_("Move to Inbox")}"
-                   class="button" onclick="$('#toolbarAction').attr('value', 'inbox')"/>
-          %endif
+      % if script:
+        <input id="thread-selector" type="checkbox" name="select" value="all"
+               onchange="$('.conversation-row input[name=selected]').attr('checked', this.checked)"/>
+        <input id="toolbarAction" name="action" value="" type="hidden"/>
+      % endif
+      % if filterType == "unread":
+        <input type="submit" name="read" value="${_("Mark as Read")}"
+               class="button" onclick="$('#toolbarAction').attr('value', 'read')"/>
+      % endif
+      % if filterType != "trash":
+        <input type="submit" name="trash" value="${_("Trash")}"
+               class="button" onclick="$('#toolbarAction').attr('value', 'trash')"/>
+      % endif
+      % if filterType != "archive" and filterType != "trash":
+        <input type="submit" name="archive" value="${_("Archive")}"
+               class="button" onclick="$('#toolbarAction').attr('value', 'archive')"/>
+      % endif
+      % if filterType != "unread":
+        <input type="submit" name="unread" value="${_("Mark as Unread")}"
+               class="button" onclick="$('#toolbarAction').attr('value', 'unread')"/>
+      % endif
+      % if filterType != "all":
+        <input type="submit" name="inbox" value="${_("Move to Inbox")}"
+               class="button" onclick="$('#toolbarAction').attr('value', 'inbox')"/>
+      % endif
     </div>
   %elif view == "message":
     <div id="msg-toolbar" class="toolbar">
@@ -274,164 +274,164 @@
       %>
       <a class="${'ajax' if script else ''} back-link" href="/messages${tail}">Go Back</a>
         <form method="post" action="/messages/thread" class="ajax">
-            <input type="hidden" name="selected" value="${convId}"/>
-            <input id="toolbarAction" name="action" value="" type="hidden"/>
-            %if "mAllConversations" in inFolders:
-              <input type="submit" name="trash" value="${_('Move to Trash')}"
-                     class="button" onclick="$('#toolbarAction').attr('value', 'trash')"/>
-              <input type="submit" name="archive" value="${_('Archive')}"
-                     class="button" onclick="$('#toolbarAction').attr('value', 'archive')"/>
-              <input type="hidden" name="filterType" value="all"/>
-            %elif "mArchivedConversations" in inFolders:
-              <input type="submit" name="trash" value="${_('Move to Trash')}"
-                     class="button" onclick="$('#toolbarAction').attr('value', 'trash')"/>
-              <input type="submit" name="unread" value="${_('Move to Inbox')}"
-                     class="button" onclick="$('#toolbarAction').attr('value', 'inbox')"/>
-              <input type="hidden" name="filterType" value="archive"/>
-            %elif "mDeletedConversations" in inFolders:
-              <input type="submit" name="unread" value="${_('Move to Inbox')}"
-                     class="button" onclick="$('#toolbarAction').attr('value', 'inbox')"/>
-              <input type="hidden" name="filterType" value="trash"/>
-            %endif
-            <input type="submit" name="unread" value="${_('Mark as Unread')}"
-                   class="button" onclick="$('#toolbarAction').attr('value', 'unread')"/>
-            <input type="hidden" name="view" value="message"/>
+          <input type="hidden" name="selected" value="${convId}"/>
+          <input id="toolbarAction" name="action" value="" type="hidden"/>
+          % if "mAllConversations" in inFolders:
+            <input type="submit" name="trash" value="${_('Move to Trash')}"
+                   class="button" onclick="$('#toolbarAction').attr('value', 'trash')"/>
+            <input type="submit" name="archive" value="${_('Archive')}"
+                   class="button" onclick="$('#toolbarAction').attr('value', 'archive')"/>
+            <input type="hidden" name="filterType" value="all"/>
+          %elif "mArchivedConversations" in inFolders:
+            <input type="submit" name="trash" value="${_('Move to Trash')}"
+                   class="button" onclick="$('#toolbarAction').attr('value', 'trash')"/>
+            <input type="submit" name="unread" value="${_('Move to Inbox')}"
+                   class="button" onclick="$('#toolbarAction').attr('value', 'inbox')"/>
+            <input type="hidden" name="filterType" value="archive"/>
+          %elif "mDeletedConversations" in inFolders:
+            <input type="submit" name="unread" value="${_('Move to Inbox')}"
+                   class="button" onclick="$('#toolbarAction').attr('value', 'inbox')"/>
+            <input type="hidden" name="filterType" value="trash"/>
+          % endif
+          <input type="submit" name="unread" value="${_('Mark as Unread')}"
+                 class="button" onclick="$('#toolbarAction').attr('value', 'unread')"/>
+          <input type="hidden" name="view" value="message"/>
         </form>
       <span class="clear" style="display:block"></span>
     </div>
-  %endif
+  % endif
 </%def>
 
 <%def name="render_conversations()">
   <div id="people-view" class="viewbar">
-    ${viewOptions()}
+    <%viewOptions()%>
   </div>
   <div id="threads-wrapper" class="paged-container">
     <form action="/messages/thread" method="post" class="ajax">
-      %if not mids:
+      % if not mids:
         <div id="empty-message" >${_("No messages")}</div>
-      %else:
-        ${toolbar_layout(view, nextPageStart, prevPageStart)}
+      % else:
+        <%toolbar_layout(view, nextPageStart, prevPageStart)%>
         <div class="conversation-layout-container">
-          %for mid in mids:
-            ${render_conversation_row(script, mid, messages[mid])}
-          %endfor
+          % for mid in mids:
+            <%render_conversation_row(script, mid, messages[mid])%>
+          % endfor
         </div>
-      %endif
+      % endif
       <input type="hidden" name="filterType" value="${filterType}"/>
       <input type="hidden" name="view" value="messages"/>
     </form>
   </div>
   <div id="people-paging" class="pagingbar">
-    %if mids:
-      ${paging()}
-    %endif
+    % if mids:
+      <%paging()%>
+    % endif
   </div>
 </%def>
 
 <%def name="center()">
-  %if view == "messages":
-    ${render_conversations()}
-  %elif view == "message":
-    ${render_conversation()}
-  %endif
+  % if view == "messages":
+    <%render_conversations()%>
+  % elif view == "message":
+    <%render_conversation()%>
+  % endif
 </%def>
 
 <%def name="right()">
-    % if view == "message":
-        <div class="sidebar-chunk">
-          <div class="sidebar-title">${_("People in this conversation")}</div>
-          <ul class="v-links peoplemenu">
-            %for person in conv["participants"]:
-                <li>
-                    <div class="conversation-people-avatar">
-                      ${getAvatarImg(utils.userAvatar(conv, people[person], "s"), "s")}
+  % if view == "message":
+    <div class="sidebar-chunk">
+      <div class="sidebar-title">${_("People in this conversation")}</div>
+      <ul class="v-links peoplemenu">
+        % for person in conv["participants"]:
+            <li>
+                <div class="conversation-people-avatar">
+                  ${getAvatarImg(utils.userAvatar(conv, people[person], "s"), "s")}
+                </div>
+                <div class="conversation-people-profile">
+                  <a href="/profile?id=${person}">${people[person].basic["name"]}</a>
+                </div>
+                <%
+                    if (person == myId) or (person == conv["meta"]["owner"]):
+                        showDelete = False
+                    else:
+                        showDelete = True
+                %>
+                % if showDelete:
+                    <div class="conversation-people-remove" class="busy-indicator"
+                         title="${_('Remove %s from this conversation') % people[person].basic['name']}">
+                      <div class="messaging-icon messaging-delete-icon"
+                           onclick="$.post('/ajax/messages/members', 'action=remove&parent=${convId}&recipients=${person}')">&nbsp;</div>
                     </div>
-                    <div class="conversation-people-profile">
-                      <a href="/profile?id=${person}">${people[person].basic["name"]}</a>
-                    </div>
-                    <%
-                        if (person == myId) or (person == conv["meta"]["owner"]):
-                            showDelete = False
-                        else:
-                            showDelete = True
-                    %>
-                    %if showDelete:
-                        <div class="conversation-people-remove" class="busy-indicator"
-                             title="${_('Remove %s from this conversation') % people[person].basic['name']}">
-                          <div class="messaging-icon messaging-delete-icon"
-                               onclick="$.post('/ajax/messages/members', 'action=remove&parent=${convId}&recipients=${person}')">&nbsp;</div>
-                        </div>
-                    %else:
-                        <div class="conversation-people-no-remove">&nbsp;</div>
-                    %endif
-                </li>
-            %endfor
-          </ul>
-        </div>
-        <div class="sidebar-chunk">
-            <div class="sidebar-title">${_("Add your colleague")}</div>
-            <div class="conversation-people-add-wrapper">
-                <form class="ajax" action="/messages/members">
-                    <input type="hidden" name="parent" value="${convId}" />
-                    <input type="hidden" name="action" value="add" />
-                    <input type="hidden" name="recipients" id="conversation_recipients"/>
-                    <div class="input-wrap">
-                        <input type="text" placeHolder="Your friend's name" id="conversation_add_member" required title="${_('Friend name')}"/>
-                    </div>
-                </form>
-            </div>
-        </div>
-        <div class="sidebar-chunk">
-            <div class="sidebar-title">${_("Attached Files")}</div>
-            <div class="conversation-attachments-wrapper">
-              <% attachments = conv.get("attachments", {}) %>
-              <ul class="v-links peoplemenu">
-                %for attachmentId, file_meta in attachments.iteritems():
-                  <%
-                     name, size, ftype = file_meta.split(':')
-                     size = formatFileSize(int(size))
-                     name = urlsafe_b64decode(name)
-                  %>
-                  <li>
-                      <a href='/messages/files?id=${convId}&fid=${attachmentId}'>${name}</a>
-                  </li>
-                %endfor
-              </ul>
-            </div>
-        </div>
-    %else:
-        <span>${view}</span>
-    %endif
+                % else:
+                    <div class="conversation-people-no-remove">&nbsp;</div>
+                % endif
+            </li>
+        % endfor
+      </ul>
+    </div>
+    <div class="sidebar-chunk">
+      <div class="sidebar-title">${_("Add your colleague")}</div>
+      <div class="conversation-people-add-wrapper">
+        <form class="ajax" action="/messages/members">
+          <input type="hidden" name="parent" value="${convId}" />
+          <input type="hidden" name="action" value="add" />
+          <input type="hidden" name="recipients" id="conversation_recipients"/>
+          <div class="input-wrap">
+              <input type="text" placeHolder="Your friend's name" id="conversation_add_member" required title="${_('Friend name')}"/>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="sidebar-chunk">
+      <div class="sidebar-title">${_("Attached Files")}</div>
+      <div class="conversation-attachments-wrapper">
+        <% attachments = conv.get("attachments", {}) %>
+        <ul class="v-links peoplemenu">
+          % for attachmentId, file_meta in attachments.iteritems():
+            <%
+               name, size, ftype = file_meta.split(':')
+               size = formatFileSize(int(size))
+               name = urlsafe_b64decode(name)
+            %>
+            <li>
+                <a href='/messages/files?id=${convId}&fid=${attachmentId}'>${name}</a>
+            </li>
+          % endfor
+        </ul>
+      </div>
+    </div>
+  % else:
+    <span>${view}</span>
+  % endif
 </%def>
 
 <%def name="viewOptions()">
   <ul class="h-links view-options">
-    %for item, display in [('all', _('Inbox')), ('unread', _('Unread')), ('archive', _('Archive')), ('trash', _('Trash'))]:
-      %if filterType == item:
+    % for item, display in [('all', _('Inbox')), ('unread', _('Unread')), ('archive', _('Archive')), ('trash', _('Trash'))]:
+      % if filterType == item:
         <li class="selected">${_(display)}</li>
-      %else:
+      % else:
         <li><a href="/messages?type=${item}" class="ajax">${_(display)}</a></li>
-      %endif
-    %endfor
+      % endif
+    % endfor
   </ul>
 </%def>
 
 <%def name="paging()">
   <ul class="h-links">
-    %if prevPageStart:
+    % if prevPageStart:
       <li class="button">
         <a class="ajax" href="/messages?type=${filterType}&start=${prevPageStart}">${_("&#9666; Previous")}</a>
       </li>
-    %else:
+    % else:
       <li class="button disabled"><a>${_("&#9666; Previous")}</a></li>
-    %endif
-    %if nextPageStart:
+    % endif
+    % if nextPageStart:
       <li class="button">
         <a class="ajax" href="/messages?type=${filterType}&start=${nextPageStart}">${_("Next &#9656;")}</a>
       </li>
-    %else:
+    % else:
       <li class="button disabled"><a>${_("Next &#9656;")}</a></li>
-    %endif
+    % endif
   </ul>
 </%def>

@@ -115,10 +115,10 @@ class MessagingResource(base.BaseResource):
                 raise errors.InvalidAttachment(itemId, attachmentId, version)
             cols = utils.columnsToDict([cols])
         else:
-            cols = yield db.get_slice(attachmentId, "attachmentVersions", count=1, reverse=True)
+            cols = yield db.get_slice(attachmentId, "attachmentVersions",
+                                      count=1, reverse=True)
             cols = utils.columnsToDict(cols)
             version = cols.keys()[0]
-
 
         fileId, name, size, filetype = cols[version].split(':')
 
@@ -281,20 +281,24 @@ class MessagingResource(base.BaseResource):
                     yield db.remove(convId, 'mConvFolders', folder, recipient)
             if deliverToInbox:
                 val = unread if recipient != owner else read
-                convFolderMap[recipient] = {'mAllConversations': {timeUUID: val}}
+                convFolderMap[recipient] = {'mAllConversations':
+                                                            {timeUUID: val}}
                 userFolderMap[recipient] = {'mAllConversations': ''}
                 if recipient != owner:
-                    convFolderMap[recipient]['mUnreadConversations'] = {timeUUID: unread}
+                    convFolderMap[recipient]['mUnreadConversations'] = \
+                        {timeUUID: unread}
                     userFolderMap[recipient]['mUnreadConversations'] = ''
 
             else:
                 val = unread if recipient != owner else read
-                convFolderMap[recipient] = {'mDeletedConversations': {timeUUID: val}}
+                convFolderMap[recipient] = {'mDeletedConversations':
+                                                            {timeUUID: val}}
 
         yield db.batch_mutate(convFolderMap)
         yield db.batch_insert(convId, "mConvFolders", userFolderMap)
         if toRemove['latest'] and oldTimeUUID != timeUUID:
-            yield db.batch_remove(toRemove, names=[oldTimeUUID], supercolumn="messages")
+            yield db.batch_remove(toRemove, names=[oldTimeUUID],
+                                    supercolumn="messages")
         if toNotify:
             yield db.batch_mutate(toNotify)
 
@@ -366,7 +370,8 @@ class MessagingResource(base.BaseResource):
         if not convId:
             raise errors.MissingParams([])
 
-        cols = yield db.get_slice(convId, "mConversations", ['meta', 'participants'])
+        cols = yield db.get_slice(convId, "mConversations",
+                                    ['meta', 'participants'])
         cols = utils.supercolumnsToDict(cols)
         subject = cols['meta'].get('subject', None)
         participants = cols.get('participants', {}).keys()
@@ -417,7 +422,7 @@ class MessagingResource(base.BaseResource):
         if users:
             yield notifications.notify(users, ":MR", value, timeUUID, **data)
 
-        args.update({"convId":convId})
+        args.update({"convId": convId})
         args.update({"people": people})
         args.update({"messageIds": mids})
         args.update({'messages': messages})
@@ -445,7 +450,7 @@ class MessagingResource(base.BaseResource):
                            source: '/auto/users',
                            minLength: 2,
                            select: function( event, ui ) {
-                               $('#conversation_recipients').attr('value', ui.item.uid)
+                               $('#conversation_recipients').attr('value', ui.item.uid);
                            }
                       });
                      """
@@ -490,7 +495,8 @@ class MessagingResource(base.BaseResource):
 
         recipients = base.EntitySet(recipients)
         yield recipients.fetchData()
-        recipients = set([userId for userId in recipients.keys() if not recipients[userId].isEmpty()])
+        recipients = set([userId for userId in recipients.keys() \
+                            if not recipients[userId].isEmpty()])
         if not recipients:
             raise errors.MissingParams(['Recipients'])
 
@@ -582,7 +588,8 @@ class MessagingResource(base.BaseResource):
         nextPageStart = ''
         prevPageStart = ''
 
-        cols = yield db.get_slice(myId, folder, reverse=True, start=start, count=fetchCount)
+        cols = yield db.get_slice(myId, folder, reverse=True, start=start,
+                                    count=fetchCount)
         for col in cols:
             x, convId = col.column.value.split(':')
             convs.append(convId)
@@ -629,9 +636,9 @@ class MessagingResource(base.BaseResource):
                      $$.menu.selectItem('%s');
                      $('#mainbar .contents').removeClass("has-right");
                      """ % args["menuId"]
-            t.renderScriptBlock(request, "message.mako", "render_conversations", landing,
-                                ".center-contents", "set", True,
-                                handlers={"onload": onload}, **args)
+            t.renderScriptBlock(request, "message.mako", "render_conversations",
+                                    landing, ".center-contents", "set", True,
+                                    handlers={"onload": onload}, **args)
             yield utils.render_LatestCounts(request, landing)
         else:
             t.render(request, "message.mako", **args)
@@ -740,8 +747,11 @@ class MessagingResource(base.BaseResource):
         if newMembers:
             data["message"] = conv["meta"]["snippet"]
             newMembers = dict([(userId, '') for userId in newMembers])
-            yield db.batch_insert(convId, "mConversations", {'participants': newMembers})
-            yield self._deliverMessage(convId, newMembers, conv['meta']['uuid'], conv['meta']['owner'])
+            yield db.batch_insert(convId, "mConversations",
+                                    {'participants': newMembers})
+            yield self._deliverMessage(convId, newMembers,
+                                       conv['meta']['uuid'],
+                                       conv['meta']['owner'])
             yield notifications.notify(newMembers, ":NM", myId, **data)
         if mailNotificants and newMembers:
             data["addedMembers"] = newMembers
@@ -800,7 +810,8 @@ class MessagingResource(base.BaseResource):
             cols = utils.supercolumnsToDict(cols)
             for recipient in cols:
                 for folder in cols[recipient]:
-                    cf = self._folders[folder] if folder in self._folders else folder
+                    cf = self._folders[folder] \
+                        if folder in self._folders else folder
                     d = db.remove(recipient, cf, conv['meta']['uuid'])
                     deferreds.append(d)
             #update latest- messages-count
@@ -918,7 +929,7 @@ class MessagingResource(base.BaseResource):
                                   ;$$.alerts.info("%s");""" \
                                     % (filterType, reason))
                 else:
-                    reason = _("Messages moved to %s" %(action.capitalize()))
+                    reason = _("Messages moved to %s" % (action.capitalize()))
                     request.write("""$('#thread-selector').attr('checked', false);
                                   $$.alerts.info("%s");""" % (reason))
 
@@ -1004,7 +1015,8 @@ class MessagingResource(base.BaseResource):
 
             if toFolder == 'unread':
                 val = "u:%s" % (convId)
-                yield db.insert(convId, 'mConvFolders', '', 'mUnreadConversations', myId)
+                yield db.insert(convId, 'mConvFolders', '',
+                                    'mUnreadConversations', myId)
                 yield db.insert(myId, 'mUnreadConversations', val, timeUUID)
             else:
                 folder = self._folders[toFolder]
@@ -1159,8 +1171,7 @@ class MessagingResource(base.BaseResource):
             raise errors.MessageAccessDenied(convId)
         else:
             tId = dict([[col.column.value, col.column.name] \
-                            for col in cols])\
-                                [messageId]
+                            for col in cols])[messageId]
 
         if action == "delete":
             lastId = None
