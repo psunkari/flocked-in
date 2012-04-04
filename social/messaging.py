@@ -876,12 +876,9 @@ class MessagingResource(base.BaseResource):
             action = utils.getRequestArg(request, "action")
 
         if convIds:
-            #Move the conversations based on action and update the CFs.
             if action in self._folders.keys():
                 yield self._moveConversation(request, convIds, action)
             elif action == "read":
-                #Remove it from unreadIndex and mark it as unread in all other
-                # folders
                 cols = yield db.multiget_slice(convIds, "mConversations")
                 convs = utils.multiSuperColumnsToDict(cols)
                 for convId in convs:
@@ -893,7 +890,8 @@ class MessagingResource(base.BaseResource):
                     timeUUID = conv['meta']['uuid']
 
                     yield db.remove(myId, "mUnreadConversations", timeUUID)
-                    yield db.remove(convId, "mConvFolders", 'mUnreadConversations', myId)
+                    yield db.remove(convId, "mConvFolders",
+                                    'mUnreadConversations', myId)
                     yield db.remove(myId, "latest", timeUUID, "messages")
 
                     cols = yield db.get_slice(convId, "mConvFolders", [myId])
@@ -904,25 +902,26 @@ class MessagingResource(base.BaseResource):
                         yield db.insert(myId, folder, "r:%s" % (convId), timeUUID)
                 count = yield utils.render_LatestCounts(request)
 
-        #XXX:Actions are not supported in non js mode so this check is unncessary.
-        if not self._ajax:
-            #Not all actions on message(s) happen over ajax, for them do a redirect
-            request.redirect("/messages?type=%s" % filterType)
-            request.finish()
-        elif self._ajax and len(convIds) > 0:
-            #Update the UI based on the actions and folder view.
-            #For all actions other than read/unread, since the action won't be
-            # available to the user in same view; i.e, archive won't be on
-            # archive view, we can simply remove the conv.
+            # Update the UI based on the actions and folder view.
             if action in ["inbox", "archive", "trash"]:
                 if filterType != "unread":
-                    request.write("$('%s').remove();" % ','.join(['#thread-%s' % convId for convId in convIds]))
+                    request.write("$('%s').remove();" \
+                                  % ','.join(['#thread-%s' % \
+                                              convId for convId in convIds]))
+
                 if view == "message":
                     reason = _("Message moved to %s" % (action.capitalize()))
                     if action == "archive":
                         reason = _("Message archived")
 
-                    request.write("""$$.fetchUri('/messages?type=%s');$$.alerts.info("%s");""" % (filterType, _(reason)))
+                    request.write("""$$.fetchUri('/messages?type=%s')
+                                  ;$$.alerts.info("%s");""" \
+                                    % (filterType, reason))
+                else:
+                    reason = _("Messages moved to %s" %(action.capitalize()))
+                    request.write("""$('#thread-selector').attr('checked', false);
+                                  $$.alerts.info("%s");""" % (reason))
+
             elif action == "unread":
                 query_template = """
                               $('#thread-%s').removeClass('row-read').addClass('row-unread');
@@ -930,12 +929,17 @@ class MessagingResource(base.BaseResource):
                               $('#thread-%s .messaging-unread-icon').attr("title", "Mark this conversation as read");
                               $('#thread-%s .messaging-unread-icon')[0].onclick = function(event) { $.post('/ajax/messages/thread', 'action=read&selected=%s&filterType=%s', null, 'script') };
                               """
-                query = "".join([query_template % (convId, convId, convId, convId, convId, filterType) for convId in convIds])
+                query = "".join([query_template % (convId, convId, convId,
+                                                   convId, convId, filterType) \
+                                 for convId in convIds])
 
                 if view == "message":
-                    request.write("""$$.fetchUri('/messages');$$.alerts.info("%s");""" % ("Message marked as unread"))
+                    request.write("""$$.fetchUri('/messages');
+                                  $$.alerts.info("%s");""" \
+                                    % ("Message marked as unread"))
                 else:
                     request.write(query)
+
             elif action == "read":
                 # If we are in unread view, remove the conv else swap the styles
                 if filterType != "unread":
@@ -945,10 +949,14 @@ class MessagingResource(base.BaseResource):
                                   $('#thread-%s .messaging-read-icon').attr("title", "Mark this conversation as unread")
                                   $('#thread-%s .messaging-read-icon')[0].onclick = function(event) { $.post('/ajax/messages/thread', 'action=unread&selected=%s&filterType=%s', null, 'script') }
                                   """
-                    query = "".join([query_template % (convId, convId, convId, convId, convId, filterType) for convId in convIds])
+                    query = "".join([query_template % (convId, convId, convId,
+                                                       convId, convId, filterType) \
+                                     for convId in convIds])
                     request.write(query)
                 else:
-                    request.write("$('%s').remove()" % ','.join(['#thread-%s' % convId for convId in convIds]))
+                    request.write("$('%s').remove()" \
+                                    % ','.join(['#thread-%s' \
+                                            % convId for convId in convIds]))
 
     @profile
     @defer.inlineCallbacks
@@ -1174,7 +1182,6 @@ class MessagingResource(base.BaseResource):
             meta = {"snippet": snippet}
             yield db.batch_insert(convId, "mConversations", {'meta': meta})
 
-
     def render_GET(self, request):
         segmentCount = len(request.postpath)
         d = None
@@ -1187,6 +1194,7 @@ class MessagingResource(base.BaseResource):
             d = self._renderConversation(request)
         elif segmentCount == 1 and request.postpath[0] == "files":
             d = self._renderFile(request)
+
         return self._epilogue(request, d)
 
     def render_POST(self, request):
@@ -1203,6 +1211,5 @@ class MessagingResource(base.BaseResource):
             d = self._members(request)
         elif segmentCount == 1 and request.postpath[0] == "message":
             d = self._messageActions(request)
-
 
         return self._epilogue(request, d)
