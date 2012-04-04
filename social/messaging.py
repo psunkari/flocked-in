@@ -1108,22 +1108,13 @@ class MessagingResource(base.BaseResource):
                 onload = """
                          $$.menu.selectItem("messages");
                          $('#mainbar .contents').addClass("has-right");
-                         $('.conversation-reply').autogrow();
-                         $('#message-reply-form').html5form({messages: 'en'});
                          """
                 t.renderScriptBlock(request, "message.mako", "center",
                                     landing, ".center-contents", "set", True,
                                     handlers={"onload": onload}, **args)
 
                 onload = """
-                         $$.files.init('msgreply-attach');
-                         $('#conversation_add_member').autocomplete({
-                               source: '/auto/users',
-                               minLength: 2,
-                               select: function( event, ui ) {
-                                   $('#conversation_recipients').attr('value', ui.item.uid)
-                               }
-                          });
+                         $$.messaging.initConversation();
                         """
                 t.renderScriptBlock(request, "message.mako", "right",
                                     landing, ".right-contents", "set", True,

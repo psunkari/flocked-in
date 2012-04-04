@@ -1562,6 +1562,24 @@ var messaging = {
     },
     removeMessage: function(mId) {
         $('#conv-'+mId).slideUp('fast', function(){$(this).remove();});
+    },
+    initConversation: function() {
+        $('.conversation-reply').autogrow();
+        $('#message-reply-form').html5form({messages: 'en'});
+        $$.files.init('msgreply-attach');
+        $("#message-reply-form").submit(function() {
+            if ($('#msgreply-attach-wrapper').hasClass('busy')) {
+                $$.alerts.info("Please wait while your files are being uploaded")
+                return false
+            }
+        });
+        $('#conversation_add_member').autocomplete({
+              source: '/auto/users',
+              minLength: 2,
+              select: function( event, ui ) {
+                  $('#conversation_recipients').attr('value', ui.item.uid)
+              }
+         });
     }
 };
 
