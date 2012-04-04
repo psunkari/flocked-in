@@ -86,7 +86,7 @@
         %(avatarURI, avatarSize, avatarSize)
 %>
 
-<%def name="render_conversation_row(script, convId, conv)">
+<%def name="conversation_row(script, convId, conv)">
   <div id="thread-${convId}" class="conversation-row ${'row-unread' if conv["read"] == "0" else ''}">
     <div class="conversation-row-cell conversation-row-select">
       <input type="checkbox" name="selected" value="${convId}" onchange="$('#thread-selector').attr('checked', false)"/>
@@ -136,20 +136,18 @@
   </div>
 </%def>
 
-<%def name="render_conversation()">
-    <%toolbar_layout(view)%>
-    <div class="conversation-headline">
-        <h2 class="conversation-headline-subject">${conv["meta"]["subject"]}</h2>
-    </div>
-    <div class="conversation-wrapper">
-        <div class="conversation-messages-wrapper">
-            <%render_conversation_messages()%>
-        </div>
-        <%render_conversation_reply(convId)%>
-    </div>
+<%def name="conversation()">
+  <%conversation_messages()%>
+  <div id="next-page-loader">
+    %if nextPageStart:
+      <div id="next-load-wrapper" class="busy-indicator">
+        <a id="next-page-load" class="ajax" data-ref="/messages/thread?start=${nextPageStart}&id=${convId}" href="/messages/thread?start=${nextPageStart}&id=${convId}">${_("Fetch newer messages")}</a>
+      </div>
+    %endif
+  </div>
 </%def>
 
-<%def name="render_conversation_messages()">
+<%def name="conversation_messages()">
   % for mid in messageIds:
     <div class="conv-item conversation-message-wrapper" id="conv-${mid}">
       <div class="comment-avatar">
@@ -180,7 +178,7 @@
   % endfor
 </%def>
 
-<%def name="render_conversation_reply(convId)">
+<%def name="conversation_reply(convId)">
   <form id="message-reply-form" method="post" class="ajax" action="/messages/write">
     <div class="conversation-composer">
       <div class="conv-avatar">
@@ -302,7 +300,7 @@
   % endif
 </%def>
 
-<%def name="render_conversations()">
+<%def name="conversations()">
   <div id="people-view" class="viewbar">
     <%viewOptions()%>
   </div>
@@ -314,7 +312,7 @@
         <%toolbar_layout(view, nextPageStart, prevPageStart)%>
         <div class="conversation-layout-container">
           % for mid in mids:
-            <%render_conversation_row(script, mid, messages[mid])%>
+            <%conversation_row(script, mid, messages[mid])%>
           % endfor
         </div>
       % endif
@@ -331,9 +329,18 @@
 
 <%def name="center()">
   % if view == "messages":
-    <%render_conversations()%>
+    <%conversations()%>
   % elif view == "message":
-    <%render_conversation()%>
+    <%toolbar_layout(view)%>
+    <div class="conversation-headline">
+        <h2 class="conversation-headline-subject">${conv["meta"]["subject"]}</h2>
+    </div>
+    <div class="conversation-wrapper">
+      <div class="conversation-messages-wrapper">
+        <%conversation()%>
+      </div>
+      <%conversation_reply(convId)%>
+    </div>
   % endif
 </%def>
 

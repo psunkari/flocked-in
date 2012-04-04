@@ -17,6 +17,7 @@ from twisted.web        import static, server
 
 from social             import db, utils, base, errors, config, _, search
 from social             import notifications, template as t
+from social             import constants
 from social.relations   import Relation
 from social.isocial     import IAuthInfo
 from social.logging     import profile, dump_args, log
@@ -432,7 +433,7 @@ class MessagingResource(base.BaseResource):
                         $('#msgreply-attach-uploaded').empty();
                      """
             t.renderScriptBlock(request, "message.mako",
-                                "render_conversation_messages", landing,
+                                "conversation_messages", landing,
                                 ".conversation-messages-wrapper", "append", True,
                                 handlers={"onload": onload}, **args)
 
@@ -636,7 +637,7 @@ class MessagingResource(base.BaseResource):
                      $$.menu.selectItem('%s');
                      $('#mainbar .contents').removeClass("has-right");
                      """ % args["menuId"]
-            t.renderScriptBlock(request, "message.mako", "render_conversations",
+            t.renderScriptBlock(request, "message.mako", "conversations",
                                     landing, ".center-contents", "set", True,
                                     handlers={"onload": onload}, **args)
             yield utils.render_LatestCounts(request, landing)
@@ -1046,9 +1047,15 @@ class MessagingResource(base.BaseResource):
             t.renderScriptBlock(request, "message.mako", "layout",
                                 landing, "#mainbar", "set", **args)
 
+        start = utils.getRequestArg(request, 'start') or ''
+        start = utils.decodeKey(start)
+        count = constants.MESSAGES_PER_PAGE
+
         cols = yield db.get_slice(convId, "mConversations")
         conv = utils.supercolumnsToDict(cols)
         participants = set(conv.get('participants', {}).keys())
+        nextPageStart = ''
+
         if not conv:
             raise errors.InvalidMessage(convId)
         if myId not in participants:
@@ -1071,10 +1078,15 @@ class MessagingResource(base.BaseResource):
 
         inFolders = cols[myId].keys()
         #FIX: make sure that there will be an entry of convId in mConvFolders
-        cols = yield db.get_slice(convId, "mConvMessages")
+        cols = yield db.get_slice(convId, "mConvMessages", start=start,
+                                                            count=count + 1)
         mids = [col.column.value for col in cols]
         messages = yield db.multiget_slice(mids, "messages", ["meta"])
         messages = utils.multiSuperColumnsToDict(messages)
+
+        if len(mids) == count + 1:
+            nextPageStart = utils.encodeKey(cols[-1].column.name)
+            mids = mids[:count]
 
         s = yield defer.DeferredList(deferreds)
         participants.update([messages[mid]['meta']['owner'] for mid in messages])
@@ -1089,32 +1101,37 @@ class MessagingResource(base.BaseResource):
         args.update({"view": "message"})
         args.update({"menuId": "messages"})
         args.update({"inFolders": inFolders})
+        args.update({"nextPageStart": nextPageStart})
 
         if script:
-            onload = """
-                     $$.menu.selectItem("messages");
-                     $('#mainbar .contents').addClass("has-right");
-                     $('.conversation-reply').autogrow();
-                     $('#message-reply-form').html5form({messages: 'en'});
-                     """
-            t.renderScriptBlock(request, "message.mako", "render_conversation",
-                                landing, ".center-contents", "set", True,
-                                handlers={"onload": onload}, **args)
+            if not start:
+                onload = """
+                         $$.menu.selectItem("messages");
+                         $('#mainbar .contents').addClass("has-right");
+                         $('.conversation-reply').autogrow();
+                         $('#message-reply-form').html5form({messages: 'en'});
+                         """
+                t.renderScriptBlock(request, "message.mako", "center",
+                                    landing, ".center-contents", "set", True,
+                                    handlers={"onload": onload}, **args)
 
-            onload = """
-                     $$.files.init('msgreply-attach');
-                     $('#conversation_add_member').autocomplete({
-                           source: '/auto/users',
-                           minLength: 2,
-                           select: function( event, ui ) {
-                               $('#conversation_recipients').attr('value', ui.item.uid)
-                           }
-                      });
-                    """
-            t.renderScriptBlock(request, "message.mako", "right",
-                                landing, ".right-contents", "set", True,
-                                handlers={"onload": onload}, **args)
-            yield utils.render_LatestCounts(request, landing)
+                onload = """
+                         $$.files.init('msgreply-attach');
+                         $('#conversation_add_member').autocomplete({
+                               source: '/auto/users',
+                               minLength: 2,
+                               select: function( event, ui ) {
+                                   $('#conversation_recipients').attr('value', ui.item.uid)
+                               }
+                          });
+                        """
+                t.renderScriptBlock(request, "message.mako", "right",
+                                    landing, ".right-contents", "set", True,
+                                    handlers={"onload": onload}, **args)
+                yield utils.render_LatestCounts(request, landing)
+            else:
+                t.renderScriptBlock(request, "message.mako", "conversation",
+                                    landing, "#next-page-loader", "replace", **args)
         else:
             t.render(request, "message.mako", **args)
 
