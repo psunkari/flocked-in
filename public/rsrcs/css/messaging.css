@@ -1,3 +1,18 @@
+#threads-wrapper {
+    padding: 0;
+    min-height: 320px;
+}
+
+/* Toolbars */
+
+#msg-toolbar {
+    position: relative;
+    text-align: right;
+}
+
+#thread-selector {
+    float: left;
+}
 
 .messaging-icon {
     height: 16px;
@@ -13,32 +28,40 @@
     margin-right:2px;
 }
 
-.messaging-icon:active {
-    box-shadow: inset 1px 1px 1px -1px #E3E3E3;
+.back-link {
+  position: absolute;
+  left: 2px;
+  top: 10px;
 }
 
-#msg-toolbar {
-    position: relative;
-    text-align: right;
+.thread-selector {
+    display: table-cell;
+    vertical-align: top;
 }
 
-#thread-selector {
-    position: absolute;
-    left: 0px;
-    top: 7px;
+.messaging-archive-icon {
+    background-image: url("/rsrcs/img/folder-pane.png");
+    background-position:0px -192px;
 }
 
-#threads-wrapper {
-    padding: 0;
-    min-height: 320px;
-}
-.peoplemenu {
-    margin-top: 4px;
+.messaging-unread-icon {
+    background-position: 0px -16px;
 }
 
-.peoplemenu li {
-    margin-bottom:1px;
+.messaging-read-icon {
+    background-position: 0px 0px;
 }
+
+.messaging-delete-icon {
+    background-image: url("/rsrcs/img/sprite.png");
+    background-position: -19px -47px;
+}
+
+.messaging-delete-icon:hover, .messaging-delete-icon:active {
+    background-position: -19px -67px;
+}
+
+/* Folders Listing*/
 
 .conversation-layout-container {
     width: 100%;
@@ -60,15 +83,19 @@
 
 .conversation-row-select {
     width: 22px;
+    padding-left: 5px;
 }
+
 .conversation-row-sender {
     width: 48px;
 }
+
 .conversation-row-actions {
     width: 75px;
     text-align: right;
     padding-right:3px;
 }
+
 .conversation-row-info {
     padding-left: 8px;
     text-decoration: none !important;
@@ -81,6 +108,7 @@
     color: #909090;
     padding-left: 4px;
 }
+
 .conversation-row-time abbr {
     border: medium none;
 }
@@ -90,11 +118,13 @@
     white-space: nowrap;
     max-width:645px;
 }
+
 .conversation-row-snippet {
     color: #909090;
     white-space: nowrap;
     overflow: hidden;
 }
+
 .conversation-row-subject {
     font-weight: bold;
     color: #3366CC;
@@ -105,50 +135,72 @@
     color: #3366CC;
 }
 
-
-
-/*
- * Conversation Display
- */
+/* Conversation Display */
 
 .time-label {
-   font-size: 11px;
-}
-
-.back-link {
-  position: absolute;
-  left: 2px;
-  top: 10px;
+    font-size: 11px;
 }
 
 .conversation-headline {
-   padding:4px 10px
+    padding:10px 0px
 }
 
 .conversation-headline-subject {
-   display:inline;
-   word-wrap: break-word;
+    display:inline;
+    word-wrap: break-word;
+}
+
+.conversation-wrapper {
+    padding: 0 0 0 10px;
+}
+
+.conversation-message-container {
+    padding-top: 0px;
+    min-height: 32px;
+    padding-bottom: 0px;
+    padding-right: 0px;
+}
+
+.conversation-message-wrapper:hover .conversation-message-headers-actions {
+    visibility: visible;
 }
 
 .conversation-message-headers {
-   margin-bottom: 4px;
-   padding: 4px 0;
-   position:relative;
+    margin-bottom: 4px;
+    padding: 4px 0;
+    position:relative;
 }
 
 .conversation-message-headers-time {
-   float:right;
-   display:inline-block;
-   position:absolute;
-   right:0;
-   top:4px;
-   z-index:1000;
-   padding-left:3px;
+    float:right;
+    display:inline-block;
+    margin-right: 10px;
 }
 
 .conversation-message-headers-sender {
-   display:inline-block;
-   font-weight:bold;
+    font-weight:bold;
+}
+
+.conversation-message-headers-actions {
+    background-image: url("/rsrcs/img/sprite.png");
+    background-position: -19px -47px;
+    background-repeat: no-repeat;
+    cursor: pointer;
+    display: block;
+    font-size: 10px;
+    height: 16px;
+    width: 16px;
+    float: right;
+    visibility: hidden;
+}
+
+.conversation-message-headers-actions:hover {
+    background-position: -19px -67px;
+    box-shadow: 0 0 2px #909090;
+}
+
+.conversation-message-headers-actions:active {
+    box-shadow: 0 0 2px #909090, 0 0 2px #909090 inset;
 }
 
 .conversation-message-headers-snippet-show {
@@ -156,104 +208,28 @@
 }
 
 .conversation-message-headers-snippet {
-   display: inline-block;
-   width: 380px;
-   overflow: hidden;
-   white-space: nowrap;
-   margin-left: 8px;
-   color: #808080;
-   font-size: 11px;
-   visibility: hidden;
+    display: inline-block;
+    width: 380px;
+    overflow: hidden;
+    white-space: nowrap;
+    margin-left: 8px;
+    color: #808080;
+    font-size: 11px;
+    visibility: hidden;
 }
 
 .conversation-message-message {
-   margin: 0;
-   word-wrap: break-word;
-   white-space:pre-wrap;
-}
-
-.thread-selector-wrapper {
-   display: inline-block;
-   margin-left: 2px;
-}
-
-.thread-selector {
-   display: table-cell;
-   vertical-align: top;
-}
-
-.messaging-archive-icon {
-    background-image: url("/rsrcs/img/folder-pane.png");
-    background-position:0px -192px;
-}
-
-.messaging-unread-icon {
-    background-position: 0px -16px;
-}
-
-.messaging-read-icon {
-    background-position: 0px 0px;
-}
-
-.messaging-delete-icon {
-    background-image: url("/rsrcs/img/sprite.png");
-    background-position: -19px -47px;
-}
-.messaging-delete-icon:hover, .messaging-delete-icon:active {
-    background-position: -19px -67px;
-}
-
-.nopad {
-    padding: 0;
-}
-
-.conversation-composer-field {
-    margin-bottom: 5px;
-}
-
-.conversation-composer-field-body {
-    min-height: 80px;
-}
-
-.conversation-composer-recipients {
-    float: left;
-}
-
-.conversation-composer-recipient-label {
-    padding: 0 4px;
-}
-
-.conversation-composer-recipient-remove {
-    padding: 0 2px;
-    font-size: 9px;
-}
-
-.conversation-composer-field-recipient {
-    width: auto !important;
-}
-
-.conversation-composer-actions {
-    text-align: right;
-    padding: 4px 0;
-    float: right;
+    margin: 0;
+    word-wrap: break-word;
+    white-space:pre-wrap;
 }
 
 .conversation-reply-wrapper {
     margin-left: 60px;
 }
 
-#composer #file-share {
-    top: 0px;
-}
-
 .conversation-reply-wrapper #file-share {
     top: 0px;
-}
-
-.conversation-message-container {
-    padding-top: 0px;
-    min-height: 32px;
-    padding-bottom: 0px;
 }
 
 .conversation-reply-wrapper {
@@ -270,6 +246,16 @@
     float: right;
 }
 
+/* Conversation sidebar */
+
+.peoplemenu {
+    margin-top: 4px;
+}
+
+.peoplemenu li {
+    margin-bottom:1px;
+}
+
 .conversation-people-add-wrapper {
     margin-top: 4px;
     font-size: 11px;
@@ -284,7 +270,7 @@
     display: table-cell;
     vertical-align: middle;
     padding-left: 5px;
-    width: 150px;
+    width: 140px;
 }
 
 .conversation-people-remove {
