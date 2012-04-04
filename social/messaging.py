@@ -417,6 +417,7 @@ class MessagingResource(base.BaseResource):
         if users:
             yield notifications.notify(users, ":MR", value, timeUUID, **data)
 
+        args.update({"convId":convId})
         args.update({"people": people})
         args.update({"messageIds": mids})
         args.update({'messages': messages})
@@ -437,7 +438,6 @@ class MessagingResource(base.BaseResource):
 
         args.update({"people": people})
         args.update({"conv": conv})
-        args.update({"id": convId})
         args.update({"view": "message"})
         if script:
             onload = """
@@ -672,7 +672,7 @@ class MessagingResource(base.BaseResource):
 
         args.update({"people": people})
         args.update({"conv": conv})
-        args.update({"id": convId})
+        args.update({"convId": convId})
         args.update({"view": "message"})
         if script:
             onload = """
@@ -1065,8 +1065,7 @@ class MessagingResource(base.BaseResource):
         args.update({"conv": conv})
         args.update({"messageIds": mids})
         args.update({'messages': messages})
-        args.update({"id": convId})
-        args.update({"flags": {}})
+        args.update({"convId": convId})
         args.update({"view": "message"})
         args.update({"menuId": "messages"})
         args.update({"inFolders": inFolders})
@@ -1119,6 +1118,63 @@ class MessagingResource(base.BaseResource):
                             args=[rcpts, subject, body])
         return True
 
+    @defer.inlineCallbacks
+    def _messageActions(self, request):
+        """Perform an action on a single message in a conversation
+
+        Keyword arguments:
+        messageId: The id of the message within a conversation.
+        conversationId: The conversation to which this message belongs.
+        action: A supported action that is to be performed on this message.
+
+        """
+
+        convId = utils.getRequestArg(request, 'convId')
+        messageId = utils.getRequestArg(request, 'mId')
+        myId = request.getSession(IAuthInfo).username
+        action = utils.getRequestArg(request, 'action')
+
+        if not (convId or messageId) or action != "delete":
+            raise errors.MissingParams(["Conversation ID", "Message ID",
+                                                                    "Action"])
+
+        message = yield db.get_slice(messageId, "messages", ["meta"])
+        message = utils.supercolumnsToDict(message)
+
+        if message["meta"]["owner"] != myId:
+            raise errors.MessageAccessDenied(convId)
+
+        cols = yield db.get_slice(convId, "mConvMessages")
+        mids = [col.column.value for col in cols]
+
+        if messageId not in mids:
+            raise errors.MessageAccessDenied(convId)
+        else:
+            tId = dict([[col.column.value, col.column.name] \
+                            for col in cols])\
+                                [messageId]
+
+        if action == "delete":
+            lastId = None
+            if mids.index(messageId) == len(mids) - 1:
+                mids.remove(messageId)
+                if mids:
+                    lastId = mids.pop()
+            yield self._deleteMessage(request, messageId, convId, tId, lastId)
+
+    @defer.inlineCallbacks
+    def _deleteMessage(self, request, messageId, convId, tId, lastId=None):
+        yield db.remove(convId, "mConvMessages", tId)
+        yield db.remove(messageId, "messages")
+        request.write("$$.messaging.removeMessage('%s');" % (messageId))
+        if lastId:
+            message = yield db.get_slice(lastId, "messages", ["meta"])
+            message = utils.supercolumnsToDict(message)
+            snippet = self._fetchSnippet(message["meta"]["body"])
+            meta = {"snippet": snippet}
+            yield db.batch_insert(convId, "mConversations", {'meta': meta})
+
+
     def render_GET(self, request):
         segmentCount = len(request.postpath)
         d = None
@@ -1136,6 +1192,7 @@ class MessagingResource(base.BaseResource):
     def render_POST(self, request):
         segmentCount = len(request.postpath)
         d = None
+
         if segmentCount == 0:
             d = self._actions(request)
         elif segmentCount == 1 and request.postpath[0] == "write":
@@ -1144,5 +1201,8 @@ class MessagingResource(base.BaseResource):
             d = self._actions(request)
         elif segmentCount == 1 and request.postpath[0] == "members":
             d = self._members(request)
+        elif segmentCount == 1 and request.postpath[0] == "message":
+            d = self._messageActions(request)
+
 
         return self._epilogue(request, d)

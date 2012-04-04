@@ -19,9 +19,9 @@
     <div id="center-right">
       <div class="titlebar center-header">
         <span class="middle title">${_('Messages')}</span>
-%if script:
-        <button onclick="$$.messaging.compose();" class="button title-button">${_('New Message')}</button>
-%endif
+        %if script:
+            <button onclick="$$.messaging.compose();" class="button title-button">${_('New Message')}</button>
+        %endif
       </div>
       <div id="right">
         <div class="right-contents">
@@ -89,7 +89,7 @@
 <%def name="render_conversation_row(script, convId, conv)">
   <div id="thread-${convId}" class="conversation-row ${'row-unread' if conv["read"] == "0" else ''}">
     <div class="conversation-row-cell conversation-row-select">
-      <input type="checkbox" name="selected" value="${convId}" onchange="$('.thread-selector').attr('checked', false)"/>
+      <input type="checkbox" name="selected" value="${convId}" onchange="$('#thread-selector').attr('checked', false)"/>
     </div>
     <div class="conversation-row-cell conversation-row-sender">
         ${getSenderAvatar(conv, people)}
@@ -145,13 +145,13 @@
         <div class="conversation-messages-wrapper">
             ${render_conversation_messages()}
         </div>
-        ${render_conversation_reply(script, messages[messageIds[-1]], id)}
+        ${render_conversation_reply(convId)}
     </div>
 </%def>
 
 <%def name="render_conversation_messages()">
   %for mid in messageIds:
-    <div class="conv-item conversation-message-wrapper">
+    <div class="conv-item conversation-message-wrapper" id="conv-${mid}">
       <div class="comment-avatar">
         ${getSenderAvatar(messages[mid], people, "s")}
       </div>
@@ -159,11 +159,14 @@
         <div class="conv-summary">
           <!--<div class="message-headers" onclick="var _self=this;$(this).siblings().toggle(1, function(){$(_self).children('.message-headers-snippet').toggleClass('message-headers-snippet-show')});">-->
           <div class="conversation-message-headers">
-            <div class="user conversation-message-headers-sender">
+            <span class="user conversation-message-headers-sender">
               <a href="/profile?id=${messages[mid]['meta']['owner']}" class="ajax">
                 ${people[messages[mid]['meta']['owner']].basic["name"]}
               </a>
-            </div>
+            </span>
+            %if messages[mid]['meta']['owner'] == myId:
+                <span class="conversation-message-headers-actions" onclick="$$.messaging.deleteMessage('${convId}', '${mid}')"></span>
+            %endif
             <nobr class="time-label conversation-message-headers-time">
               ${utils.simpleTimestamp(float(messages[mid]["meta"]["date_epoch"]), people[myId].basic["timezone"])}
             </nobr>
@@ -177,7 +180,7 @@
   %endfor
 </%def>
 
-<%def name="render_conversation_reply(script, msg, convId)">
+<%def name="render_conversation_reply(convId)">
   <form id="message-reply-form" method="post" class="ajax" action="/messages/write">
     <div class="conversation-composer">
       <div class="conv-avatar">
@@ -185,7 +188,7 @@
       </div>
       <div class="input-wrap conversation-reply-wrapper">
           <textarea class="conversation-reply" name="body" placeholder="${_('Quickly reply to this message')}" required title="${_('Reply')}"></textarea>
-          <input type="hidden" value=${convId} name="parent"/>
+          <input type="hidden" value="${convId}" name="parent"/>
       </div>
       <div id="msgreply-attach-uploaded" class="uploaded-filelist"></div>
       <div class="conversation-reply-actions">
@@ -271,7 +274,7 @@
       %>
       <a class="${'ajax' if script else ''} back-link" href="/messages${tail}">Go Back</a>
         <form method="post" action="/messages/thread" class="ajax">
-            <input type="hidden" name="selected" value="${id}"/>
+            <input type="hidden" name="selected" value="${convId}"/>
             <input id="toolbarAction" name="action" value="" type="hidden"/>
             %if "mAllConversations" in inFolders:
               <input type="submit" name="trash" value="${_('Move to Trash')}"
@@ -357,7 +360,7 @@
                         <div class="conversation-people-remove" class="busy-indicator"
                              title="${_('Remove %s from this conversation') % people[person].basic['name']}">
                           <div class="messaging-icon messaging-delete-icon"
-                               onclick="$.post('/ajax/messages/members', 'action=remove&parent=${id}&recipients=${person}')">&nbsp;</div>
+                               onclick="$.post('/ajax/messages/members', 'action=remove&parent=${convId}&recipients=${person}')">&nbsp;</div>
                         </div>
                     %else:
                         <div class="conversation-people-no-remove">&nbsp;</div>
@@ -370,7 +373,7 @@
             <div class="sidebar-title">${_("Add your colleague")}</div>
             <div class="conversation-people-add-wrapper">
                 <form class="ajax" action="/messages/members">
-                    <input type="hidden" name='parent' value=${id} />
+                    <input type="hidden" name="parent" value="${convId}" />
                     <input type="hidden" name="action" value="add" />
                     <input type="hidden" name="recipients" id="conversation_recipients"/>
                     <div class="input-wrap">
@@ -391,7 +394,7 @@
                      name = urlsafe_b64decode(name)
                   %>
                   <li>
-                      <a href='/messages/files?id=${id}&fid=${attachmentId}'>${name|h}</a>
+                      <a href='/messages/files?id=${convId}&fid=${attachmentId}'>${name}</a>
                   </li>
                 %endfor
               </ul>

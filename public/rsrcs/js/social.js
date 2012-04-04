@@ -1555,6 +1555,13 @@ var messaging = {
         });
         $$.files.init('msgcompose-attach');
         $('#msgcompose-form').html5form({messages: 'en'});
+    },
+    deleteMessage: function(convId, mId) {
+        var postdata = 'mId='+mId+'&convId='+convId+'&action=delete';
+        $.post('/ajax/messages/message', postdata)
+    },
+    removeMessage: function(mId) {
+        $('#conv-'+mId).slideUp('fast', function(){$(this).remove();});
     }
 };
 
