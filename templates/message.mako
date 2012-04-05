@@ -379,13 +379,17 @@
     <div class="sidebar-chunk">
       <div class="sidebar-title">${_("Add your colleague")}</div>
       <div class="conversation-people-add-wrapper">
+
         <form class="ajax" action="/messages/members">
           <input type="hidden" name="parent" value="${convId}" />
           <input type="hidden" name="action" value="add" />
-          <input type="hidden" name="recipients" id="conversation_recipients"/>
+          <input type="text" disabled="disabled" value="${_('Invite people')}"
+                 id="placeholder-hidden" style="position: absolute;top: -9999px;left: -9999px"/>
           <div class="input-wrap">
-              <input type="text" placeHolder="Your friend's name" id="conversation_add_member" required title="${_('Friend name')}"/>
+                <input type="text" id="conversation-invitee" name="recipient[]"
+                  placeholder="${_('Invite people')}"/>
           </div>
+          <button type="submit" style="display:none"></button>
         </form>
       </div>
     </div>

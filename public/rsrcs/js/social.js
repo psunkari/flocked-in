@@ -1580,7 +1580,26 @@ var messaging = {
                   $('#conversation_recipients').attr('value', ui.item.uid)
               }
          });
-    }
+    },
+    autoFillUsers: function(){
+        $('#placeholder-hidden').autoGrowInput({comfortZone: 15, minWidth: 1, maxWidth: 20000});
+        $('#conversation-invitee').tagedit({
+            autocompleteURL: '/auto/users',
+            additionalListClass: '',
+            breakKeyCodes: [13, 44, 32],
+            allowEdit: false,
+            allowAdd: false,
+            autocompleteOptions: {
+                    select: function( event, ui ) {
+                            $(this).val(ui.item.value).trigger('transformToTag', [ui.item.uid]);
+                            return false;
+                    }
+            },
+            placeHolderWidth: $('#placeholder-hidden').width(),
+            maxWidth: 535
+        });
+    },
+
 };
 
 $$.messaging = messaging;

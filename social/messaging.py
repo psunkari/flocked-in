@@ -684,13 +684,7 @@ class MessagingResource(base.BaseResource):
         args.update({"view": "message"})
         if script:
             onload = """
-                     $('#conversation_add_member').autocomplete({
-                           source: '/auto/users',
-                           minLength: 2,
-                           select: function( event, ui ) {
-                               $('#conversation_recipients').attr('value', ui.item.uid)
-                           }
-                      });
+                        $$.messaging.autoFillUsers();
                      """
             t.renderScriptBlock(request, "message.mako", "right",
                                 landing, ".right-contents", "set", True,
@@ -1115,6 +1109,7 @@ class MessagingResource(base.BaseResource):
 
                 onload = """
                          $$.messaging.initConversation();
+                         $$.messaging.autoFillUsers();
                         """
                 t.renderScriptBlock(request, "message.mako", "right",
                                     landing, ".right-contents", "set", True,

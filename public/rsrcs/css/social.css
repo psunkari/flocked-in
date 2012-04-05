@@ -172,7 +172,7 @@ a:hover, a:active, a:focus {
     height: 23px;
 }
 
-#sharebar .tagedit-list, #item-subactions .tagedit-list {
+#sharebar .tagedit-list, #right .tagedit-list {
     margin-bottom: 0;
     margin-top: 0;
     padding-top: 6px;
@@ -826,7 +826,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     background-color: #FFFFFF;
 }
 
-/* These items are shown when sharebar gets focus 
+/* These items are shown when sharebar gets focus
 #sharebar-attach, #sharebar-actions-wrapper, #sharebar-attach-uploaded {
     display: none;
 }
@@ -1387,7 +1387,7 @@ abbr.timestamp {
     margin-bottom: 10px;
 }
 
-#item-subactions .tagedit-list {
+#right .tagedit-list {
     min-height: inherit;
 }
 
