@@ -21,7 +21,6 @@ OUTGOING_REQUEST = 'FO'
 
 def isValidSuggestion(myId, userId, relation):
     return not (userId in relation.subscriptions or \
-                userId in relation.followers or
                 userId == myId)
 
 @defer.inlineCallbacks
