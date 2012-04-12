@@ -226,7 +226,7 @@ class InvalidMessage(BaseError):
 
     def __init__(self, convId):
         self.convId = convId
-        message = _("The requested tag does not exist")
+        message = _("The requested message does not exist")
         BaseError.__init__(self, message, 404)
 
 #
