@@ -3,10 +3,43 @@ html>/**/body {           /* > IE7 */
     overflow-y: scroll;
 }
 
+@font-face {
+    font-family: 'Open Sans';
+    src: url('/rsrcs/fonts/OpenSans-Light-webfont.eot');
+    src: url('/rsrcs/fonts/OpenSans-Light-webfont.eot?#iefix') format('embedded-opentype'),
+         url('/rsrcs/fonts/OpenSans-Light-webfont.woff') format('woff'),
+         url('/rsrcs/fonts/OpenSans-Light-webfont.ttf') format('truetype'),
+         url('/rsrcs/fonts/OpenSans-Light-webfont.svg#OpenSansLight') format('svg');
+    font-weight: 200;
+    font-style: normal
+}
+
+@font-face {
+    font-family: 'Open Sans';
+    src: url('/rsrcs/fonts/OpenSans-Regular-webfont.eot');
+    src: url('/rsrcs/fonts/OpenSans-Regular-webfont.eot?#iefix') format('embedded-opentype'),
+         url('/rsrcs/fonts/OpenSans-Regular-webfont.woff') format('woff'),
+         url('/rsrcs/fonts/OpenSans-Regular-webfont.ttf') format('truetype'),
+         url('/rsrcs/fonts/OpenSans-Regular-webfont.svg#OpenSansRegular') format('svg');
+    font-weight: normal;
+    font-style: normal
+}
+
+@font-face {
+    font-family: 'Open Sans';
+    src: url('/rsrcs/fonts/OpenSans-Semibold-webfont.eot');
+    src: url('/rsrcs/fonts/OpenSans-Semibold-webfont.eot?#iefix') format('embedded-opentype'),
+         url('/rsrcs/fonts/OpenSans-Semibold-webfont.woff') format('woff'),
+         url('/rsrcs/fonts/OpenSans-Semibold-webfont.ttf') format('truetype'),
+         url('/rsrcs/fonts/OpenSans-Semibold-webfont.svg#OpenSansSemibold') format('svg');
+    font-weight:bold;
+    font-style:normal
+}
+
 body {
     margin: 0;
     padding: 0;
-    font-family: "liberation sans","lucida grande",tahoma,arial,sans-serif;
+    font-family: "Open Sans","liberation sans","lucida grande",tahoma,arial,sans-serif;
     color: #333;
     font-size: 16px;
     line-height: 1.5em;
@@ -18,7 +51,7 @@ form {
 }
 
 a:link, a:visited {
-    color: #3366CC;
+    color: #0073ab;
     text-decoration: none;
 }
 
@@ -39,28 +72,18 @@ a:link, a:visited {
  */
 
 #header {
-    padding: 10px 0 0;
+    padding: 0;
 }
 .header-logo {
     float: left;
+    margin: 20px 0;
+    font-size: 12px;
+    line-height: 1.3em;
+    color: black !important;
 }
 
 #sitelogo {
     border: none !important;
-    padding: 10px;
-    margin-left: 10px;
-}
-
-#home-sitelogo {
-    position: absolute;
-    top: 50px;
-    margin-left: 20px;
-    border: 0px;
-}
-
-#header .header-links {
-    line-height: 45px;
-    float: right;
 }
 
 .header-links {
@@ -68,24 +91,40 @@ a:link, a:visited {
     list-style-type: none;
     margin: 0;
     padding: 0;
+    line-height: 50px;
+    float: right;
+    font-weight: 200;
 }
 .header-links > li {
     float: left;
     display: block;
+    padding: 15px 0;
 }
 .header-links a {
     display: inline-block;
-    font-size: 14px;
+    font-size: 16px;
     line-height: 30px;
     padding: 0 10px;
-    font-weight: bold;
-    text-shadow: 1px 1px white;
+    letter-spacing: -0.5px;
 }
 
 
 /*****************************************************************************
  * Intro
  */
+
+#home-strip {
+    background-color: #2d3036;
+    height: 375px;
+    border-radius: 3px;
+    box-shadow: 0 2px 0 #AAA;
+}
+
+
+
+
+
+
 
 #wrapper {
     border-top: 3px solid #3d85c6;
