@@ -1,7 +1,7 @@
 <!DOCTYPE HTML>
 
 <%def name="topbar(selected)">
-  <div id="header" class="centered-wrapper">
+  <div class="centered-wrapper"><div id="header">
     <a class="header-logo" href='/'><div><img id='sitelogo' src="/rsrcs/img/flocked-in.png" alt="Flocked-in"/></div><div>Connect, Collaborate and Innovate</div></a>
     <ul class="header-links">
       <li>
@@ -17,7 +17,7 @@
         <a title="Signin" class="menuitem" href="/signin" id="nav-signin">Sign In</a>
       </li>
     </ul>
-  </div>
+  </div></div>
 </%def>
 
 <html lang="en" dir="ltr" xml:lang="en" xmlns="http://www.w3.org/1999/xhtml"
@@ -59,13 +59,13 @@
   %>
   <div id="footer" class="centered-wrapper">
     <div id="footer-contents" class="contents">
-      <span class="copyright">&copy;2011 Synovel</span>
+      <span class="copyright">&copy;2012 Synovel</span>
       <div class="sitemeta">
-        <a href="/about/tos.html">Terms of Service</a>
+        <a class="metalink" href="/about/tos.html">Terms of Service</a>
         &nbsp;|&nbsp;
-        <a href="/about/privacy.html">Privacy Policy</a>
+        <a class="metalink" href="/about/privacy.html">Privacy Policy</a>
         &nbsp;|&nbsp;
-        <a href="/about/contact.html">Contact Us</a>
+        <a class="metalink" href="/about/contact.html">Contact Us</a>
       </div>
     </div>
   </div>

@@ -151,6 +151,7 @@ class HomeResource(resource.Resource):
         self._index = t.getBlock('static/index.mako')
 
     def render_GET(self, request):
+        self._index = t.getBlock('static/index.mako')
         d = defer.maybeDeferred(request.getSession, IAuthInfo)
         def checkSession(authinfo):
             if authinfo.username:
