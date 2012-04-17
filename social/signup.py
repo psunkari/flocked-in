@@ -337,10 +337,10 @@ class SignupResource(base.BaseResource):
         args = {"view": "forgotPassword-post"}
         t.render(request, "signup.mako", **args)
 
-    @defer.inlineCallbacks
     def renderForgotPassword(self, request):
         args = {"view": "forgotPassword"}
         t.render(request, "signup.mako", **args)
+        return defer.succeed([])
 
     @defer.inlineCallbacks
     def renderResetPassword(self, request):
