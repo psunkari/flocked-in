@@ -39,6 +39,8 @@ from social.chat            import ChatResource
 from social.presence        import PresenceResource
 from social.private         import PrivateResource
 from social.chat            import ChatArchivesResource
+from social.townhall        import TownHallResource
+from social.course          import CourseResource
 
 def getPluggedResources(ajax=False):
     resources = {}
@@ -195,6 +197,8 @@ class RootResource(resource.Resource):
         self._chat = ChatResource(self._isAjax)
         self._presence = PresenceResource(self._isAjax)
         self._chatArchives = ChatArchivesResource(self._isAjax)
+        self._forums = TownHallResource(self._isAjax)
+        self._course = CourseResource(self._isAjax)
 
         if not self._isAjax:
             self._home = HomeResource()
@@ -315,6 +319,10 @@ class RootResource(resource.Resource):
             match = self._chatArchives
         elif path == 'presence':
             match = self._presence
+        elif path == 'forums':
+            match = self._forums
+        elif path == "course":
+            match = self._course
 
 
         # Resources exposed by plugins

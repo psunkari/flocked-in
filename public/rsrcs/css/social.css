@@ -2809,3 +2809,61 @@ td.file-info, td.file-context, td.file-actions {
     display: inline-block;
     overflow: hidden;
 }
+
+/* Townhall Mockups CSS*/
+.townhall-item-icon {
+    background-color: #F9F9F9;
+    background-image: -moz-linear-gradient(center top , #F9F9F9, #E3E3E3);
+    background-position: 0 0;
+    border-color: #FFFFFF;
+    border-radius: 3px 3px 3px 3px;
+    border-style: solid;
+    border-width: 2px;
+    box-shadow: 1px 1px 2px #E3E3E3;
+    color: #000000;
+    cursor: pointer;
+    display: block;
+    font-family: inherit;
+    font-size: 11px;
+    height: 3.5em;
+    outline: medium none;
+    text-align: center;
+    text-shadow: none !important;
+    vertical-align: middle;
+    white-space: nowrap;
+    width: 3.5em;
+}
+
+.townhall-item-votes {
+    font-size: 14px;
+    padding-top: 2px;
+}
+
+.townhall-link-preview {
+    width: 76px;
+}
+
+.townhall-tag {
+    background-color: #F2F1F0;
+    background-image: url("/rsrcs/img/tag_blue.png");
+    background-position: 2px center;
+    background-repeat: no-repeat;
+    border-color: #E0D7CF;
+    border-radius: 3px 3px 3px 3px;
+    border-style: solid;
+    border-width: 1px;
+    display: inline-block;
+    margin: 1px;
+    padding: 1px 4px 1px 20px;
+}
+
+.townhall-item-vote-link {
+    background: -moz-linear-gradient(center top , #669BE1 0%, #3366CC 100%) repeat scroll 0 0 transparent;
+    border-color: #3366CC;
+    color: white;
+    text-shadow: 1px 1px #204573;
+}
+
+.course-logo {
+    padding: 10px;
+}
