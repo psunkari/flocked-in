@@ -2867,3 +2867,20 @@ td.file-info, td.file-context, td.file-actions {
 .course-logo {
     padding: 10px;
 }
+
+#user-discussion-feed {
+    padding: 5px 10px 20px 15px;
+}
+
+.nav-button {
+    background-color: #669BE1;
+    padding: 1px 3px 3px 2px;
+    color: white;
+}
+.conversation-row-question {
+    color: black;
+    font-weight: bold;
+}
+.courses-icon {
+        background-image: url("/rsrcs/img/book_open.png");
+}

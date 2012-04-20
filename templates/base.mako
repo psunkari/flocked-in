@@ -25,7 +25,6 @@
       ${navMenuItem("/people", _("People"), "people")}
       ${navMenuItem("/feed/%s" % orgId, _("Company Feed"), "org")}
       ${navMenuItem("/groups", _("Groups"), "groups")}
-      ${navMenuItem("/forums", _("Forums"), "forums")}
       ${navMenuItem("/course", _("Courses"), "courses")}
       ${navMenuItem("/files/list", _("Files"), "files")}
       ${navMenuItem("/tags/list", _("Tags"), "tags")}
