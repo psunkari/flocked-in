@@ -110,8 +110,8 @@ class PollResource(base.BaseResource):
         args['title'] = _('List of people who voted for "%s"')\
                                                     % item["options"][option]
         if voters:
-            people = yield db.multiget_slice(voters, "entities", ["basic"])
-            people = utils.multiSuperColumnsToDict(people)
+            people = base.EntitySet(voters)
+            yield people.fetchData()
             args['entities'] = people
 
         t.renderScriptBlock(request, "item.mako", "userListDialog", False,
