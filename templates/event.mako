@@ -367,7 +367,7 @@
         % endif
       %endif
       %if not isConcise and desc:
-        <div class="event-description">${desc|normalize}</div>
+        <div class="event-description">${utils.normalizeText(desc, True)}</div>
       %endif
       %if location.strip() != "" and not isConcise:
         <div><b>Venue</b> ${location}</div>

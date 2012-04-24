@@ -78,6 +78,13 @@ class CourseResource(base.BaseResource):
             t.renderScriptBlock(request, "group-feed.mako", "feed", landing,
                                 "#user-feed", "set", True,
                                 handlers={"onload": onload}, **args)
+
+            for pluginType in plugins:
+                plugin = plugins[pluginType]
+                if hasattr(plugin, 'renderFeedSideBlock'):
+                    yield plugins["event"].renderFeedSideBlock(request,
+                                                    landing, group.id, args)
+
         else:
             t.render(request, "course.mako", **args)
 

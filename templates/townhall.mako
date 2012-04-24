@@ -17,10 +17,10 @@
     </div>
     <div id="center-right">
       <div class="titlebar center-header">
-##        <div id="title">
-##          <span class="middle title">Topic</span>
-##          <a href="" class="title-button">${title}</a>
-##        </div>
+        <div id="title">
+          <span class="middle title">Live Lecture</span>
+          <a href="" class="title-button">${title}</a>
+        </div>
       </div>
       <div id="right">
         <div class="sidebar-chunk">
@@ -59,6 +59,11 @@
         </div>
       </div>
       <div id="center">
+        <div style="padding: 10px">
+            <p>
+                Today's topci of discussion will guide you through tasks that involve searching for and reading documentation online, executing an API call to a dynamic data source, processing the results in a language of your choice, and printing them out to a terminal.
+            </p>
+        </div>
         <div id="share-block"></div>
         <div class='center-contents' id="user-feed">
             %if not script:

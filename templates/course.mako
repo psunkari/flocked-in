@@ -32,7 +32,7 @@
                 <li>Duration -- 4 Weeks</li>
                 <li>Badges --
                     <img src="/rsrcs/img/badge-yellow.png" style="position: relative; top: 4px"/>
-                    <img src="/rsrcs/img/badge-maroon.png" style="position: relative; top: 4px"/>
+                    <img src="/rsrcs/img/rosette.png" style="position: relative; top: 4px"/>
                 </li>
             </ul>
         </div>
@@ -68,6 +68,7 @@
               <li><a href="/group?id=-NrFyIeSEeG0owAe7FqcFw" class="ajax">Prasad</a></li>
             </ul>
         </div>
+        <div id ="feed-side-block-container"></div>
       </div>
       <div id="center">
         <div style="padding: 10px">
