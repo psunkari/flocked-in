@@ -530,7 +530,7 @@ def responses(myId, itemId, item, start=''):
     entities = base.EntitySet(toFetchEntities)
 
     d3 = db.multiget_slice(responseKeys + [itemId], "itemLikes", [myId])
-    d2 = db.multiget_slice(responseKeys + [itemId], "items", ["meta"])
+    d2 = db.multiget_slice(responseKeys + [itemId], "items", ["meta", "attachments"])
     d1 = entities.fetchData()
 
     fetchedItems = yield d2
