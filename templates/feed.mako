@@ -321,23 +321,22 @@
       <div class="sidebar-chunk">
         <div class="sidebar-title">${_("People you may know")}</div>
         %for userId in suggestions:
-          <div class="suggestions-user">
+          <div class="suggestions-user" style="margin-top:10px;">
             <div class="users-avatar">
               <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
               % if avatarURI:
                 <img src="${avatarURI}" style="max-height:32px; max-width:32px"></img>
               % endif
             </div>
-            <div class="users-details" style="margin-left:36px">
+            <div class="users-details" style="float: left; margin-left:36px">
               <div class="user-details-name">${utils.userName(userId, entities[userId])}</div>
               <div class="user-details-title">${entities[userId].basic.get("jobTitle", '')}</div>
-              <div >
-                <ul id="user-actions-${userId}" class="middle user-actions h-links">
-                  <li><button class="button" onclick="$.post('/ajax/profile/follow', 'id=${userId}')"><span class="button-text" style="font-size:11px;">${_("Follow")}</span></button></li>
-                </ul>
-              </div>
+            </div>
+            <div style="float:right;margin-right:10px;">
+              <button class="button" onclick="$.post('/ajax/profile/follow', 'id=${userId}')"><span class="button-text" style="font-size:11px;">${_("Follow")}</span></button>
             </div>
           </div>
+          <div class="clear"/>
         %endfor
       </div>
     %endif
