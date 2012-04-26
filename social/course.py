@@ -76,7 +76,7 @@ class CourseResource(base.BaseResource):
         if script:
             onload = "(function(obj){$$.convs.load(obj);})(this);"
             t.renderScriptBlock(request, "group-feed.mako", "feed", landing,
-                                "#user-feed", "set", True,
+                                "#user-feed", "append", True,
                                 handlers={"onload": onload}, **args)
 
             for pluginType in plugins:

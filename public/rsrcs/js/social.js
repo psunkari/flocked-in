@@ -2114,6 +2114,9 @@ var chat = {
             $$.chatUI.updateMyStatus(status);
             $.get("/ajax/presence",
                function(users) {
+                    users = [{"status": "available", "userId": "3YRzII7eEeG5dgAe7FqcFw", "name": "Siva", "avatar": "https://depmigrvpjbd.cloudfront.net/avatar/s_W57otrzWEeCgW0BAhdLyVQ.jpeg", "title": "Hacker"},
+                             {"status": "available", "userId": "i-3wEp4wEeCDwEBAhdLyVQ", "name": "Abhishek", "avatar": "https://depmigrvpjbd.cloudfront.net/avatar/s_PIkUkI1DEeGod0BADSqDjg.png", "title": "Dr. Hacker"},
+                             {"status": "available", "userId": "Vv6osJfrEeCqH0BAhdLyVQ", "name": "Praveen", "avatar": "https://depmigrvpjbd.cloudfront.net/avatar/s_BllbrIkdEeGod0BADSqDjg.jpeg", "title": "Hacker"}];
                     $.each(users, function(idx, user) {
                             var userId = user["userId"],
                                 remoteStatus = user["status"];

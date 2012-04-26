@@ -18,20 +18,20 @@
     <div id="center-right">
       <div class="titlebar center-header">
         <div id="title">
-          <span class="middle title">Live Lecture</span>
-          <a href="" class="title-button">${title}</a>
+          <span class="middle title">${title}</span>
+          <a href="" class="title-button"></a>
         </div>
       </div>
       <div id="right">
         <div class="sidebar-chunk">
           <div class="sidebar-title">
             ${title}
-             <div>by <a href="" >Dr. Prem</a></div>
+             <div>by <a href="" >Dr. Mayank</a></div>
           </div>
             <ul class="v-links">
-              <li>234 Questions</li>
+              <li>34 Questions</li>
               <li>Started 36 minutes ago</li>
-              <li>123 Participants</li>
+              <li>23 Participants</li>
             </ul>
         </div>
         <div class="sidebar-chunk">
@@ -44,11 +44,11 @@
         <div class="sidebar-chunk">
           <div class="sidebar-title">Links and References</div>
             <div class="link-item">
-              <img class="link-image" style="max-height: 64px;max-width: 64px" src="https://d1swnjtqvd4898.cloudfront.net/url/aHR0cHM6Ly9zZWN1cmUuZ3JhdmF0YXIuY29tL2JsYXZhdGFyLzU2YTRjZmU2ZjEwMGUyN2M0N2FlYWU2NTU5YTFmOGY3P3M9MzAw">
+              <img class="link-image" style="max-height: 64px;max-width: 64px" src="/rsrcs/img/twitter.png">
               <div class="link-details">
-                <a target="_blank" href="https://contagions.wordpress.com/"><div class="link-title">Contagions</div></a>
-                <div class="link-summary" id="summary">thoughts on historic infectious disease</div>
-                <div class="link-url" id="url">contagions.wordpress.com</div>
+                <a target="_blank" href="https://contagions.wordpress.com/"><div class="link-title">Twitter Dev Zone</div></a>
+                <div class="link-summary" id="summary">Get started with the API, Explore all of Twitter's API documentation </div>
+                <div class="link-url" id="url">https://dev.twitter.com/</div>
               </div>
             </div>
             <span style="float: right;margin-right: 5px;margin-top: 5px;">
@@ -59,9 +59,9 @@
         </div>
       </div>
       <div id="center">
-        <div style="padding: 10px">
+        <div style="padding: 10px;padding-bottom: 0px;font-size: 12px;">
             <p>
-                Today's topci of discussion will guide you through tasks that involve searching for and reading documentation online, executing an API call to a dynamic data source, processing the results in a language of your choice, and printing them out to a terminal.
+                This lecture will guide you through tasks that involve searching for and reading documentation online, executing an API call to a dynamic data source, processing the results in a language of your choice.
             </p>
         </div>
         <div id="share-block"></div>
@@ -85,12 +85,11 @@
     <div class="conversation-layout-container">
       <%
         rows = [
-          {"votes":253, "title":"The glimpse into the future of video game graphics...CryEngine3", "time-ago":"10 hours", "poster":"Ashok", "tags": ["abc", "def"], "likes": 4, "comments": 44},
-          {"votes":113, "title":"The White House petition to double NASA's budget has reached it's 25,000 signature goal.", "time-ago":"23 Minutes", "poster":"Maggie", "tags": ["123", "456"], "likes": 6, "comments": 12},
-          {"votes":53, "title":"Reed Hastings accuses Comcast of violating “net neutrality” principles by favoring its own Web video service over those from Netflix, HBO and Hulu when it comes to data usage.", "time-ago":"3 hours", "poster":"John", "tags": ["435rf", "gtyh"], "likes": 0, "comments": 4},
-          {"votes":253, "title":"The glimpse into the future of video game graphics...CryEngine3", "time-ago":"10 hours", "poster":"Ashok", "tags": ["abc", "def"], "likes": 4, "comments": 44},
-          {"votes":253, "title":"The glimpse into the future of video game graphics...CryEngine3", "time-ago":"10 hours", "poster":"Ashok", "tags": ["abc", "def"], "likes": 4, "comments": 44},
-          {"votes":253, "title":"The glimpse into the future of video game graphics...CryEngine3", "time-ago":"10 hours", "poster":"Ashok", "tags": ["abc", "def"], "likes": 4, "comments": 44}
+          {"votes":20, "snippet":"How do I send a cross-domain POST request via JavaScript? Notes - it shouldn't refresh the page, and I need to grab and parse the response afterward. Your help with some code examples will be much a … ", "title":"How do I send a cross-domain POST request via JavaScript?", "time-ago":"10 hours", "poster":"Arvind", "tags": ["python", "twitter"], "likes": 4, "comments": 18},
+          {"votes":13, "snippet":"I have a table of schedule items, they may be scheduled for the same time. I'm wondering how to have them all execute at the correct time when: The problem I see is that executing one scheduled item … ", "title":"How Create a Scheduler (e.g. to schedule tweets, or an api request)", "time-ago":"23 Minutes", "poster":"Maggie", "tags": ["javascript", "JSON"], "likes": 6, "comments": 12},
+          {"votes":9, "snippet":"Python and JavaScript both allow developers to use or to omit semicolons. However, I've often seen it suggested (in books and blogs) that I should not use semicolons in Python, while I should always u … ", "title":"What is the difference between semicolons in JavaScript and in Python?", "time-ago":"3 hours", "poster":"John", "tags": ["python", "syntax"], "likes": 0, "comments": 4},
+          {"votes":4, "snippet":"I found this kind of syntax being used on Facebook for Ajax calls. I'm confused on the for (;;); part in the beginning of response. What is it used for? This is the call and response: GET http://0. … ", "title":"What does a Ajax call response like 'for (;;); { json data }' mean?", "time-ago":"10 hours", "poster":"Abhishek", "tags": ["ajax", "javascript"], "likes": 4, "comments": 5},
+          {"votes":1, "snippet":"I am playing around with the Oauth 2.0 authorization in Facebook and was wondering if the access tokens Facebook passes out ever expire. If so, is there a way to request a long-life access token? … ", "title":"Do Facebook Oauth 2.0 Access Tokens Expire?", "time-ago":"10 hours", "poster":"Prasad", "tags": ["OAuth", "Auth API"], "likes": 4, "comments": 2},
         ]
       %>
       % for row in rows:
@@ -102,7 +101,7 @@
 
 <%def name="conversation_row(row)">
   <div class="conversation-row">
-    <div class="conversation-row-cell conversation-row-sender">
+    <div class="conversation-row-cell conversation-row-sender" style="vertical-align: top">
       <span class="townhall-item-icon">
         <div>
           <div class="townhall-item-vote-link">Vote</div>
@@ -113,6 +112,9 @@
     <a class="conversation-row-cell conversation-row-info">
       <div>
         <span class="conversation-row-question">${row["title"]}</span>
+      </div>
+      <div style="font-size: 11px">
+        ${row["snippet"]}
       </div>
       <div class="conversation-row-headers">
         <span class="item-subactions">submitted ${row["time-ago"]} ago by ${row["poster"]}</span>
