@@ -56,7 +56,6 @@ done
 while read dport source comment; do
   $IPTABLES -A INPUT -p tcp -m tcp -s $source --dport $dport -j ACCEPT
 done <<EOF
-  22  122.169.252.102     # (Prasad) SSH from Synovel
   80  0/0                 # (Prasad) HTTP
   443 0/0                 # (Prasad) HTTPS
 EOF

@@ -60,12 +60,12 @@ for myIP in ${MY_ADDRS[*]}; do
 done
 
 # Allowed TCP Services
-while read dport source comment; do
-  $IPTABLES -A INPUT -p tcp -m tcp -s $source --dport $dport -j ACCEPT
-done <<EOF
-  22   122.169.252.102     # (Prasad) SSH from Synovel
-  8080 122.169.252.102     # (Prasad) Search debugging from Synovel
-EOF
+#while read dport source comment; do
+#  $IPTABLES -A INPUT -p tcp -m tcp -s $source --dport $dport -j ACCEPT
+#done <<EOF
+#  22   122.169.252.102     # (Prasad) SSH from Synovel
+#  8080 122.169.252.102     # (Prasad) Search debugging from Synovel
+#EOF
 
 # Services for appservers
 for client in ${SEARCH_CLIENTS[*]}; do

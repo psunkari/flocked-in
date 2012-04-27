@@ -61,11 +61,11 @@ for myIP in ${MY_ADDRS[*]}; do
 done
 
 # Allowed TCP Services
-while read dport source comment; do
-  $IPTABLES -A INPUT -p tcp -m tcp -s $source --dport $dport -j ACCEPT
-done <<EOF
-  22  122.169.252.102     # (Prasad) SSH from Synovel
-EOF
+#while read dport source comment; do
+#  $IPTABLES -A INPUT -p tcp -m tcp -s $source --dport $dport -j ACCEPT
+#done <<EOF
+#  22  122.169.252.102     # (Prasad) SSH from Synovel
+#EOF
 
 # Services for cassandra clients
 for client in ${CASSANDRA_CLIENTS[*]}; do

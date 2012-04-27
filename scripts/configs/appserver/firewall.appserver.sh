@@ -56,11 +56,9 @@ done
 while read dport source comment; do
   $IPTABLES -A INPUT -p tcp -m tcp -s $source --dport $dport -j ACCEPT
 done <<EOF
-  22  122.169.252.102     # (Prasad) SSH from Synovel
-  80  122.169.252.102     # (Prasad) HTTP from Synovel
-  443 122.169.252.102     # (Prasad) HTTPS from Synovel
-  80  10/8                # (Prasad) HTTP from Rackspace LoadBalancer
-  443 10/8                # (Prasad) HTTPS from Rackspace LoadBalancer
+  80    10/8                # (Prasad) HTTP from Rackspace LoadBalancer
+  443   10/8                # (Prasad) HTTPS from Rackspace LoadBalancer
+  8000  10.183.34.28        # (Prasad) Access to private resource from cometd
 EOF
 
 # Related/Established
