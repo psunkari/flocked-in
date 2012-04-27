@@ -197,6 +197,7 @@ input::-moz-focus-inner {
 }
 .has-tooltip:hover .tooltip {
     display: block;
+    z-index: 10;
 }
 
 

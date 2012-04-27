@@ -32,6 +32,9 @@
       </div>
       <div id="profile-center-right">
         <div id="right">
+          <div id="user-badges">
+            <% self.user_badges() %>
+          </div>
           <div id="user-me">
             %if not script:
               ${self.user_me()}
@@ -82,6 +85,48 @@
 ##
 ## Functions for rendering content
 ##
+
+<%def name="user_badges()">
+  <%
+    recievedBadges = []
+    if userId == 'tDM5JpfaEeCz1EBAhdLyVQ':
+      recievedBadges = [('valueble-employee', 'Valueble Employee', 1, 'Awarded in Dec, 2011<br/><b>For successfully launching the social initiative</b>'),
+                        ('midnight-oil', 'Burning Midnight Oil', 1, 'Awarded in Nov, 2011<br/><b>For all the nights spent on building social</b>'),
+                        ('peer-recommendation', 'Peer Appreciation', 2, 'Feb, 2012 by Sid Hudgens<br/><b>For outstanding help in debugging issues with collaboration server</b>'+\
+                                                                        '<hr style="border: 0px; border-bottom:1px solid #444"/>'+\
+                                                                        'Aug, 2011 by Dudley Smith<br/><b>For helping with sales related documentation</b>'),
+                        ('emergency-marshall', 'Emergency Marshall', 1, 'Feb, 2012<br/><b>On successful completion of fire safety training</b>')]
+
+    if not recievedBadges:
+      return
+  %>
+  <div class="sidebar-chunk">
+    <div class="sidebar-title">${_("Awards and Appreciations")}</div>
+    <ul class="avatar-list">
+    %for badgeName, displayName, number, tooltip in recievedBadges:
+      <li class="has-tooltip">
+        <img src="/rsrcs/img/badges/${badgeName}.png" style="height: 48px; width: 48px; display: inline-block;"/>
+        %if number > 1:
+          <div class="new-count" style="right:-2px; top:-2px;border:1px solid white;">x${number}</div>
+        %endif
+        <div class="tooltip top-right">
+          <span class="tooltip-content"><font color="#FFCC66" style="font-weight:bold;">${displayName}</font><hr style="border:0px; border-bottom:1px solid #777;"/>${tooltip}</span>
+        </div>
+      </li>
+    %endfor
+    </ul>
+    <div class="clear"/>
+    <div style="margin:0;padding-left:16px;line-height:16px;position:relative;">
+      <span class="icon poll-option" style="top:0;left:0;">&nbsp;</span>
+      <a href="#">Say thanks or appreciate user</a>
+    </div>
+    <div style="margin:0 0 10px 0;padding-left:16px;line-height:16px;position:relative;">
+      <span class="icon poll-option" style="top:0;left:0;">&nbsp;</span>
+      <a href="#">Recommend user for an award</a>
+    </div>
+  </div>
+</%def>
+
 <%def name="user_me()">
   %if myId != userId:
   %endif
@@ -91,11 +136,23 @@
   %if len(subscriptions) > 0:
   <div class="sidebar-chunk">
     <div class="sidebar-title">${_("Following")}</div>
-    <ul class="v-links">
+    <ul class="avatar-list">
     %for userId in subscriptions:
-      <li><a class="ajax" href="/profile?id=${userId}">${entities[userId].basic['name']}</a></li>
+      <li class="has-tooltip">
+        <%
+          user = entities[userId]
+          avatarUri = utils.userAvatar(userId, user, "s")
+        %>
+        <a href="/profile?id=${userId}">
+          <img src="${avatarUri}" style="height: 32px; width: 32px; display: inline-block;"/>
+        </a>
+        <div class="tooltip top-right">
+          <span class="tooltip-content"><b>${user.basic['name']}</b>, ${user.basic['jobTitle']}</span>
+        </div>
+      </li>
     %endfor
     </ul>
+    <div class="clear"/>
   </div>
   %endif
 </%def>
@@ -104,11 +161,23 @@
   %if len(followers) > 0:
   <div class="sidebar-chunk">
     <div class="sidebar-title">${_("Followers")}</div>
-    <ul class="v-links">
+    <ul class="avatar-list">
     %for userId in followers:
-      <li><a class="ajax" href="/profile?id=${userId}">${entities[userId].basic['name']}</a></li>
+      <li class="has-tooltip">
+        <%
+          user = entities[userId]
+          avatarUri = utils.userAvatar(userId, user, "s")
+        %>
+        <a href="/profile?id=${userId}">
+          <img src="${avatarUri}" style="height: 32px; width: 32px; display: inline-block;"/>
+        </a>
+        <div class="tooltip top-right">
+          <span class="tooltip-content"><b>${user.basic['name']}</b>, ${user.basic['jobTitle']}</span>
+        </div>
+      </li>
     %endfor
     </ul>
+    <div class="clear"/>
   </div>
   %endif
 </%def>
@@ -117,11 +186,23 @@
   %if len(userGroups) > 0:
   <div class="sidebar-chunk">
     <div class="sidebar-title">${_("Groups")}</div>
-    <ul class="v-links">
+    <ul class="avatar-list">
     %for groupId in userGroups:
-      <li><a class="ajax" href="/group?id=${groupId}">${entities[groupId].basic['name']}</a></li>
+      <li class="has-tooltip">
+        <%
+          group = entities[groupId]
+          avatarUri = utils.groupAvatar(groupId, group, "s")
+        %>
+        <a href="/group?id=${groupId}">
+          <img src="${avatarUri}" style="height: 32px; width: 32px; display: inline-block;"/>
+        </a>
+        <div class="tooltip top-right">
+          <span class="tooltip-content">${group.basic['name']}</span>
+        </div>
+      </li>
     %endfor
     </ul>
+    <div class="clear"/>
   </div>
   %endif
 </%def>
@@ -190,7 +271,7 @@
     <%
       path = "/profile?id=%s&" % userId
     %>
-    %for item, name in [('activity', 'Activity'), ('info', 'More Info'), ('files', 'Files')]:
+    %for item, name in [('activity', 'Activity'), ('goals', 'Goals'), ('files', 'Files'), ('info', 'More Info')]:
       %if detail == item:
         <li><a href="${path}dt=${item}" id="profile-tab-${item}" class="ajax selected">${_(name)}</a></li>
       %else:
@@ -422,6 +503,108 @@
   </div>
 </%def>
 
+<%def name="content_goals()">
+  <%
+    currentGoals = []
+    completedGoals = []
+    goals = {
+        'Mobile': ('Social client for mobiles', '2 months', ['MobileBase', 'Android', 'iPhone', 'WinPhone'], 'Wendell White', 1, 4),
+          'MobileBase': ('HTML templates for mobile clients', '2 days ago', [], 'Edmund Exley', 11, 11),
+          'Android': ('Android native application', '28 days', [], 'Wendell White', 3, 7),
+          'WinPhone': ('Windows Phone native application', '2 months', [], 'Lana Turner', 0, 9),
+          'iPhone': ('iOS native application', '2 months', [], 'Edmund Exley', 0, 7),
+        'GoogleApps': ('Integration with Google Apps', '3 months', ['GoogAccounts', 'GoogBilling', 'GoodMarketPlace'], 'Wendell White', 0, 3),
+          'GoogAccounts': ('Support to signin with Google Apps accounts', '3 months', [], 'Sid Hudgens', 0, 0),
+          'GoogBilling': ('Support payments using Google Payment Gateway', '3 months', [], 'Lana Turner', 0, 0),
+          'GoogMarketPlace': ('Submit app to Google Market Place', '3 months', [], 'Wendell White', 0, 0)
+      }
+
+    if userId == 'tDM5JpfaEeCz1EBAhdLyVQ':
+      currentGoals = ['Android', 'Mobile', 'GoogleApps']
+      completeGoals = [('Social Employee Appreciation', '1 month ago'),
+                       ('Goal Management on the social plaform', '3 months ago')]
+
+  %>
+  %if currentGoals:
+    <div class="center-title">Current Goals</div>
+    <div style="padding:0 40px;margin-bottom:40px;line-height:1.5em;">
+    %for goalId in currentGoals:
+      <% name, deadline, subgoals, owner, complete, total = goals[goalId] %>
+      <div style="padding:10px 20px;color:#808080;border-radius:5px;border:1px solid #DBDBDB;background-color:#FAFAFA;margin-bottom:10px;">
+        <div style="font-weight:bold;padding:4px 0;border-bottom:2px solid #DBDBDB;">
+          <a href="#">&#8250; ${name}</a>
+        </div>
+        <table style="width: 100%;">
+          <tr>
+            <td style="width: 60%;padding-left:5px;">
+              Due in ${deadline}
+            </td>
+            <td style="width: 40%;" rowspan="2">
+              <div class="poll-bar-wrapper" style="width:100%;height:18px;">
+                <span class="poll-option-text">${complete} of ${total} sub-goals complete</span>
+                <% width = (float(complete) / total) * 100 %>
+                <div class="poll-bar" style="min-width:2px;width:${width}%;height:100%;"/>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding-left:5px;">
+              %if goalId == "Mobile":
+                <a href="#">[ Hide sub-goals ]</a>
+              %else:
+                <a href="#">[ Show sub-goals ]</a>
+              %endif
+            </td>
+          </tr>
+          %if goalId == "Mobile":
+          <tr>
+            <td colspan="2" style="padding-left:5px;">
+              <div style="margin:5px 20px 0;">
+                %for subgoalId in subgoals:
+                  <% name, deadline, subgoals, owner, complete, total = goals[subgoalId] %>
+                  <div><a style="font-weight:bold;" href="#">&#8250; ${name}</a></div>
+                  <table style="width:100%;">
+                    <tr>
+                      <td style="width:60%;">
+                        <div style="padding-left:4px;margin-bottom:5px;">
+                          ${owner} &ndash; 
+                          %if complete == total:
+                            Completed ${deadline}
+                          %else:
+                            Due in ${deadline}
+                          %endif
+                        </div>
+                      </td>
+                      <td style="width:40%;" valign="top">
+                        <div class="poll-bar-wrapper" style="width:100%;height:5px;padding:0px;">
+                          <% width = (float(complete) / total) * 100 %>
+                          <div class="poll-bar" style="min-width:2px;width:${width}%;height:100%;display:block;"/>
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+                %endfor
+              </div>
+            </td>
+          </tr>
+          %endif
+        </table>
+      </div>
+    %endfor
+    </div>
+  %endif
+  %if completeGoals:
+    <div class="center-title">Completed Goals</div>
+    <div style="padding:0 40px;margin-bottom:40px;">
+    %for displayName, completedTime in completeGoals:
+      <div style="margin:10px;color:#808080;">
+        <a style="font-weight:bold;" href="#">&#8250; ${displayName}</a>&nbsp; &ndash; &nbsp;${completedTime}
+      </div>
+    %endfor
+    </div>
+  %endif
+</%def>
+
 <%def name="_filesPagingBar()">
   <%
     files, hasPrevPage, nextPageStart, toFetchEntities = userfiles if userfiles else ('', '', '', '')
@@ -442,11 +625,14 @@
 </%def>
 
 <%def name="content()">
-  %if detail == 'info':
-    ${content_info()}
-  %elif detail == 'activity':
-    ${content_activity()}
-  %elif detail == 'files':
-    ${content_files()}
-  %endif
+  <%
+    if detail == 'info':
+      content_info()
+    elif detail == 'activity':
+      content_activity()
+    elif detail == 'files':
+      content_files()
+    elif detail == 'goals':
+      content_goals()
+  %>
 </%def>
