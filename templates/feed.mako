@@ -19,17 +19,18 @@
       </div>
       <div id="right">
         <div id="home-notifications"></div>
-        <div id="home-events"></div>
-        <div id="home-todo"></div>
         <div id="invite-people-block">
           ${self.invitePeopleBlock()}
         </div>
-        <div id ="group-links" >
+        <div id="group-links" >
         </div>
         <div id="suggestions" >
             %if not script:
                 ${self._suggestions()}
             %endif
+        </div>
+        <div id="sidebar-goals-wrap">
+          <% self.sidebarGoalsBlock() %>
         </div>
         <div id="feed-side-block-container"></div>
       </div>
@@ -85,6 +86,63 @@
       </a></li>
     %endfor
   </ul>
+</%def>
+
+<%def name="sidebarGoalsBlock()">
+  <%
+    currentGoals = []
+    completedGoals = []
+    goals = {
+        'Mobile': ('Social client for mobiles', '2 months', ['MobileBase', 'Android', 'iPhone', 'WinPhone'], 'Wendell White', 1, 4),
+          'MobileBase': ('HTML templates for mobile clients', '2 days ago', [], 'Edmund Exley', 11, 11),
+          'Android': ('Android native application', '28 days', [], 'Wendell White', 3, 7),
+          'WinPhone': ('Windows Phone native application', '2 months', [], 'Lana Turner', 0, 9),
+          'iPhone': ('iOS native application', '2 months', [], 'Edmund Exley', 0, 7),
+        'GoogleApps': ('Integration with Google Apps', '3 months', ['GoogAccounts', 'GoogBilling', 'GoodMarketPlace'], 'Wendell White', 0, 3),
+          'GoogAccounts': ('Support to signin with Google Apps accounts', '3 months', [], 'Sid Hudgens', 0, 0),
+          'GoogBilling': ('Support payments using Google Payment Gateway', '3 months', [], 'Lana Turner', 0, 0),
+          'GoogMarketPlace': ('Submit app to Google Market Place', '3 months', [], 'Wendell White', 0, 0)
+      }
+
+    if myId == 'tDM5JpfaEeCz1EBAhdLyVQ':
+      currentGoals = ['Android', 'Mobile', 'GoogleApps']
+  %>
+  %if currentGoals:
+    <div class="sidebar-chunk">
+      <div class="sidebar-title">${_("Current Goals")}</div>
+      <ul class="v-links" style="margin-top:10px;">
+        %for subgoalId in currentGoals:
+          <% name, deadline, subgoals, owner, complete, total = goals[subgoalId] %>
+          <li style="line-height:normal;">
+          <div><a href="#">&#8250; ${name}</a></div>
+          <table style="width:92%;">
+            <tr>
+              <td style="width:60%;">
+                <div style="padding-left:4px;margin-bottom:5px;color:#909090;">
+                  %if complete == total:
+                    Completed ${deadline}
+                  %else:
+                    Due in ${deadline}
+                  %endif
+                </div>
+              </td>
+              <td style="width:40%;" valign="top">
+                <div class="poll-bar-wrapper" style="width:100%;height:5px;padding:0px;">
+                  <% width = (float(complete) / total) * 100 %>
+                  <div class="poll-bar" style="min-width:2px;width:${width}%;height:100%;display:block;"/>
+                </div>
+              </td>
+            </tr>
+          </table>
+          </li>
+        %endfor
+      </ul>
+    </div>
+    <div style="margin-left:10px;padding-left:16px;line-height:16px;position:relative;">
+      <span class="icon poll-option" style="top:0;left:0;">&nbsp;</span>
+      <a style="font-weight:bold;" href="#">Create a new Goal</a>
+    </div>
+  %endif
 </%def>
 
 
@@ -263,23 +321,22 @@
       <div class="sidebar-chunk">
         <div class="sidebar-title">${_("People you may know")}</div>
         %for userId in suggestions:
-          <div class="suggestions-user">
+          <div class="suggestions-user" style="margin-top:10px;">
             <div class="users-avatar">
               <% avatarURI = utils.userAvatar(userId, entities[userId], "medium") %>
               % if avatarURI:
                 <img src="${avatarURI}" style="max-height:32px; max-width:32px"></img>
               % endif
             </div>
-            <div class="users-details" style="margin-left:36px">
+            <div class="users-details" style="float: left; margin-left:36px">
               <div class="user-details-name">${utils.userName(userId, entities[userId])}</div>
               <div class="user-details-title">${entities[userId].basic.get("jobTitle", '')}</div>
-              <div >
-                <ul id="user-actions-${userId}" class="middle user-actions h-links">
-                  <li><button class="button" onclick="$.post('/ajax/profile/follow', 'id=${userId}')"><span class="button-text" style="font-size:11px;">${_("Follow")}</span></button></li>
-                </ul>
-              </div>
+            </div>
+            <div style="float:right;margin-right:10px;">
+              <button class="button" onclick="$.post('/ajax/profile/follow', 'id=${userId}')"><span class="button-text" style="font-size:11px;">${_("Follow")}</span></button>
             </div>
           </div>
+          <div class="clear"/>
         %endfor
       </div>
     %endif

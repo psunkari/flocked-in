@@ -8,11 +8,14 @@
     #center {
         width: 1130px;
     }
-    .has-left.has-right #center { width: 720px !important; }
-    .has-left #center, .has-right #center { width: 950px !important; }
+    .has-left.has-right #center { width: 640px !important; }
+    .has-left #center { width: 950px !important; }
+    .has-right #center { width: 820px !important; }
+
+    .has-right #right { width: 300px !important; }
 
     #group-share-block {
-        width: 700px;
+        width: 640px;
     }
 }
 
@@ -25,11 +28,14 @@
     #center {
         width: 1280px;
     }
-    .has-left.has-right #center { width: 870px !important; }
-    .has-left #center, .has-right #center { width: 1100px !important; }
+    .has-left.has-right #center { width: 740px !important; }
+    .has-left #center { width: 1100px !important; }
+    .has-right #center { width: 920px !important; }
+
+    .has-right #right { width: 350px !important; }
 
     #group-share-block {
-        width: 850px;
+        width: 740px;
     }
 }
 

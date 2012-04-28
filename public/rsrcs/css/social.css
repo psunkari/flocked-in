@@ -57,6 +57,24 @@ form {
 }
 
 
+.avatar-list {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    display: block;
+}
+.avatar-list li {
+    float: left;
+    margin: 4px 2px;
+}
+.avatar-list .tooltip-content {
+    white-space: pre;
+}
+.avatar-list img {
+    border-radius: 3px;
+}
+
+
 a:link, a:visited {
     color: #3366CC;
     text-decoration: none;
@@ -330,15 +348,16 @@ a:hover, a:active, a:focus {
     float: left;
     width: 980px;
 }
-.has-left.has-right #center { width: 570px !important; }
-.has-left #center, .has-right #center { width: 800px !important; }
+.has-left.has-right #center { width: 530px !important; }
+.has-left #center { width: 800px !important; }
+.has-right #center { width: 710px !important; }
 
 #right {
     float: right;
     word-wrap: break-word;
     width: 0px;
 }
-.has-right #right { width: 220px !important }
+.has-right #right { width: 260px !important }
 
 
 
@@ -1654,7 +1673,7 @@ abbr.timestamp {
 #group-share-block {
     padding: 20px 10px 10px;
     position: relative;
-    width: 570px;
+    width: 520px;
     float: left;
     margin: 0 -10px 10px;
 }
@@ -2239,12 +2258,16 @@ abbr.timestamp {
 }
 
 .event-agenda-link {
-    width: 125px;
+    width: 175px;
     display: inline-block !important;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: pre;
+    float: left;
 }
 
 .event-agenda-link-expired {
-    width: 125px;
+    width: 175px;
     display: inline-block !important;
     color: #888888 !important;
 }
