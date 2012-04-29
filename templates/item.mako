@@ -69,6 +69,10 @@
 
 
 <%def name="item_layout(convId, classes='')">
+  <%
+    if items[convId]['meta']['type'] == 'activity':
+      return
+  %>
   <div id="conv-${convId}" data-convid="${convId}" class="conv-item ${classes} init-conv-item">
     <div class="conv-avatar" id="conv-avatar-${convId}">
       <%
@@ -508,7 +512,11 @@
 
     <div class="${itemTitleText}">
       %if isQuoted and not has_icon:
-        ${utils.userName(userId, entities[userId])}<span class="conv-target">&#9656;</span>${utils.groupName(target[0], entities[target[0]])}:
+        %if target:
+          ${utils.userName(userId, entities[userId])}<span class="conv-target">&#9656;</span>${utils.groupName(target[0], entities[target[0]])}:
+        %else:
+          ${utils.userName(userId, entities[userId])}
+        %endif
       %endif
       <%
         matches = highlight.get(convId, None) if highlight else None
