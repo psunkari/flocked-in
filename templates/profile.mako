@@ -507,22 +507,35 @@
   <%
     currentGoals = []
     completedGoals = []
+    ## (Task description, end/finished time, dependencies, owner, finished tasks, total tasks)
     goals = {
-        'Mobile': ('Social client for mobiles', '2 months', ['MobileBase', 'Android', 'iPhone', 'WinPhone'], 'Wendell White', 1, 4),
-          'MobileBase': ('HTML templates for mobile clients', '2 days ago', [], 'Edmund Exley', 11, 11),
-          'Android': ('Android native application', '28 days', [], 'Wendell White', 3, 7),
-          'WinPhone': ('Windows Phone native application', '2 months', [], 'Lana Turner', 0, 9),
-          'iPhone': ('iOS native application', '2 months', [], 'Edmund Exley', 0, 7),
-        'GoogleApps': ('Integration with Google Apps', '3 months', ['GoogAccounts', 'GoogBilling', 'GoodMarketPlace'], 'Wendell White', 0, 3),
-          'GoogAccounts': ('Support to signin with Google Apps accounts', '3 months', [], 'Sid Hudgens', 0, 0),
-          'GoogBilling': ('Support payments using Google Payment Gateway', '3 months', [], 'Lana Turner', 0, 0),
-          'GoogMarketPlace': ('Submit app to Google Market Place', '3 months', [], 'Wendell White', 0, 0)
+        'Revenue': ('Steps to enter new areas of branding and marketing', '3 months', ['ClientNeeds','MarketingStrategies','WebSocial'], 'Wendell White', 2, 5),
+          'ClientNeeds': ('Discussion on client needs and new oppurtunities', '19 days', ['ClientSurvey', 'Requirements'], 'Inez Soto', 1, 2),
+            'ClientSurvey': ('Survey of existing clients on future requirements', '2 days ago', [], 'Mickey Cohen', 1, 1),
+            'Requirements': ('Report on most frequently asked questions from prospective customers', '11 days', [], 'Lynn Bracken', 0, 1),
+          'MarketingStrategies': ('Report on trends in global marketing strategies', '1 month', [], 'Ellis Leow', 0, 1),
+          'WebSocial': ('Report on Web and Social marketing markets', '1 month', [], 'Ellis Leow', 1, 2),
+
+        'ProfitMargin': ('Improve margins by atleast 5%', '9 months', [], 'Wendell White', 1, 7),
+          'Spendings': ('Report on major spendings and how to reduce them'),
+          'EmpEfficiency': ('Steps to improve employee efficiency'),
+          'OperationalCosts': ('Steps to decrease operational costs'),
+
+        'Geographies': ('Expand to new geographies', '9 months', [], 'Wendell White', 1, 10),
+          'AsiaPacific': ('Directors meeting on Asia-Pacific operations'),
+          'TalentAcquisition': ('Talent acquisition for the new region'),
+          'LaunchPlan': ('Launch strategy and planning')
       }
 
-    if userId == 'tDM5JpfaEeCz1EBAhdLyVQ':
-      currentGoals = ['Android', 'Mobile', 'GoogleApps']
-      completeGoals = [('Social Employee Appreciation', '1 month ago'),
-                       ('Goal Management on the social plaform', '3 months ago')]
+    if userId == 'LmqIQo-xEeGtxwAfPJMIOg':
+      currentGoals = ['Revenue', 'ProfitMargin', 'Geographies']
+      completeGoals = [('Implement a direct feedback mechanism for customers', '8 days ago')]
+    elif userId == 'PodbyI-yEeGtxwAfPJMIOg':
+      currentGoals = ['ClientNeeds']
+      completeGoals = []
+    elif userId == 'gDCRto-yEeGtxwAfPJMIOg':
+      currentGoals = ['ClientSurvey']
+      completeGoals = []
 
   %>
   %if currentGoals:
@@ -549,14 +562,14 @@
           </tr>
           <tr>
             <td style="padding-left:5px;">
-              %if goalId == "Mobile":
+              %if goalId == "Revenue" or goalId == "ClientNeeds":
                 <a href="#">[ Hide sub-goals ]</a>
               %else:
                 <a href="#">[ Show sub-goals ]</a>
               %endif
             </td>
           </tr>
-          %if goalId == "Mobile":
+          %if goalId == "Revenue" or goalId == "ClientNeeds":
           <tr>
             <td colspan="2" style="padding-left:5px;">
               <div style="margin:5px 20px 0;">
