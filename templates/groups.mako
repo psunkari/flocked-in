@@ -162,10 +162,20 @@
             <label class="styled-label" for="desc">${_('Description')}</label>
             <textarea class="input-wrap" id="desc" name="desc"></textarea>
         </li>
-        <li class="form-row">
+        <li class="form-row" style="padding:0;">
             <label class="styled-label">&nbsp;</label>
-            <input type="checkbox" id="access" name="access" value="closed"/>
+            <input type="checkbox" id="access" name="access" value="closed" style="margin:0;"/>
             <label for="access">${_("Membership requires administrator approval")}</label>
+        </li>
+        <li class="form-row" style="padding:0;">
+            <label class="styled-label">&nbsp;</label>
+            <input type="checkbox" id="contribute" name="contribute" value="everyone" checked="1" style="margin:0;"/>
+            <label for="access">${_("Anyone can post")}</label>
+        </li>
+        <li class="form-row" style="padding:0;">
+            <label class="styled-label">&nbsp;</label>
+            <input type="checkbox" id="visibility" name="visibility" value="everyone" style="margin:0;"/>
+            <label for="access">${_("Everyone can see posts on the group")}</label>
         </li>
         <li class="form-row">
             <label class="styled-label" for="dp">${_("Group Logo")}</label>

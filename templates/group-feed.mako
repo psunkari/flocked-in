@@ -97,7 +97,13 @@
   <div id='userprofile'>
     <div class="summary-block">
       <div class='subtitle summary-line' >
-        <span id="group-type">${_(entities[groupId].basic['access'].capitalize())} ${_("Group")}</span>
+        <%
+          basic = entities[groupId].basic
+          membership = "Membership requires approval, " if basic["access"] == "closed" else ""
+          posting = "Non-members can post, " if basic.get("writable", '') == "open" else "Only members can post, "
+          readable = "Non-members can access." if basic.get("readable", '') == "open" else "Only members can access."
+        %>
+        <span id="group-type">${"%s&nbsp;%s&nbsp;%s" % (membership, posting, readable)}</span>
       </div>
       %if entities[groupId].basic.has_key('desc'):
         <span class="summary-item" id="group-desc">${entities[groupId].basic['desc']}</span>
@@ -150,7 +156,14 @@
 <%def name="feed()">
   %if not isMember:
     <span id="welcome-message">
-      <div id="next-load-wrapper">${_("Join the group to post a message or view content")}</div>
+      <%
+        basic = entities[groupId].basic
+        writable = True if basic.get("writable", '') == "open" else False
+        readable = True if basic.get("readable", '') == "open" else False
+      %>
+      <div style="padding:20px; border:1px solid #c40000; margin: 40px 0;border-radius: 10px;">
+        ${_("The contents on this group are visible only to it's members.")}
+      </div>
     </span>
   %elif conversations:
     <%
