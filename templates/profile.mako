@@ -89,16 +89,16 @@
 <%def name="user_badges()">
   <%
     recievedBadges = []
-    if userId == 'tDM5JpfaEeCz1EBAhdLyVQ':
-      recievedBadges = [('valueble-employee', 'Valueble Employee', 1, 'Awarded in Dec, 2011<br/><b>For successfully launching the social initiative</b>'),
-                        ('midnight-oil', 'Burning Midnight Oil', 1, 'Awarded in Nov, 2011<br/><b>For all the nights spent on building social</b>'),
-                        ('peer-recommendation', 'Peer Appreciation', 2, 'Feb, 2012 by Sid Hudgens<br/><b>For outstanding help in debugging issues with collaboration server</b>'+\
+    if userId == 'AKSFpo-yEeGtxwAfPJMIOg':
+      recievedBadges = [('problem-solver', 'The Idea Guy', 1, 'Awarded in Apr, 2012<br/><b>For sharing thoughts on social media marketing.</b>'),
+                        ('peer-recommendation', 'Peer Appreciation', 1, 'Feb, 2012 by Ray Colling<br/><b>For selfless help in designing branding for King Soft.</b>'+\
                                                                         '<hr style="border: 0px; border-bottom:1px solid #444"/>'+\
-                                                                        'Aug, 2011 by Dudley Smith<br/><b>For helping with sales related documentation</b>'),
-                        ('emergency-marshall', 'Emergency Marshall', 1, 'Feb, 2012<br/><b>On successful completion of fire safety training</b>')]
+                                                                        'Aug, 2011 by Mickey Cohen<br/><b>For helping with sales related documentation</b>')]
+    elif userId in ['FLVfcI-yEeGtxwAfPJMIOg', 'ujKkSo-xEeGtxwAfPJMIOg']:
+      recievedBadges = [('emergency-marshall', 'Emergency Marshall', 1, 'Feb, 2012<br/><b>On successful completion of fire safety training</b>')]
+    elif userId == 'gDCRto-yEeGtxwAfPJMIOg':
+      recievedBadges = [('peer-recommendation', 'Peer Appreciation', 1, 'Dec, 2011 by Lynn Bracken<br/><b>For talking care of my work when I was away.</b>')]
 
-    if not recievedBadges:
-      return
   %>
   <div class="sidebar-chunk">
     <div class="sidebar-title">${_("Awards and Appreciations")}</div>
