@@ -508,7 +508,7 @@
 
     <div class="${itemTitleText}">
       %if isQuoted and not has_icon:
-        ${utils.userName(userId, entities[userId])}
+        ${utils.userName(userId, entities[userId])}<span class="conv-target">&#9656;</span>${utils.groupName(target[0], entities[target[0]])}:
       %endif
       <%
         matches = highlight.get(convId, None) if highlight else None
@@ -716,7 +716,7 @@
 
 
 <%def name="_item_other_actions(convId, iamOwner, convType)">
-  %if convType not in ["activity"]:
+##  %if convType not in ["activity"]:
     <span class="conv-other-actions" onclick="$$.ui.showPopup(event, true);"></span>
     <ul class="acl-menu" style="display:none;">
         %if iamOwner:
@@ -726,7 +726,7 @@
 ##          <li><a class="menu-item noicon" onclick="$$.convs.showItemReportDialog('${convId}')">${_("Report this %s" %convType)}</a></li>
         %endif
     </ul>
-  %endif
+##  %endif
 </%def>
 
 
