@@ -1179,6 +1179,12 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     font-weight: bold;
 }
 
+.user.former > a:link,
+.user.former > a:visited {
+    color: #a40000 !important;
+    text-decoration: line-through;
+}
+
 .conv-target {
     font-size: 1.4em;
     line-height: 1em;
