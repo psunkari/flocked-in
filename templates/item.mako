@@ -156,19 +156,36 @@
         hits[fileId] = name
   %>
   <div class="attachment-list ${style_class}">
-    %for fileId in attachments:
-      <%
-        name, size, ftype = attachments[fileId].split(':')
-        name = hits[fileId] if fileId in hits else urlsafe_b64decode(name)
-        size = formatFileSize(int(size))
-        location = '/files?id=%s&fid=%s'%(convId, fileId)
-      %>
+    <%
+        attachments_with_screenshot = []
+        attachments_plain = []
+        for fileId in attachments:
+          name, size, ftype = attachments[fileId].split(':')
+          name = hits[fileId] if fileId in hits else urlsafe_b64decode(name)
+          size = formatFileSize(int(size))
+          location = '/files?id=%s&fid=%s'%(convId, fileId)
+          if ftype.startswith("image/"):
+              attachments_with_screenshot.append((name, size, location, fileId))
+          else:
+              attachments_plain.append((name, size, location, fileId))
+    %>
+    %for attachment in attachments_plain:
       <div class="attachment-item">
         <span class="icon attach-file-icon"></span>
-        <span class="attachment-name"><a href="${location}" target="filedownload">${name}</a></span>
-        <span class="attachment-meta">&nbsp;&nbsp;&ndash;&nbsp;&nbsp;${size}</span>
+        <span class="attachment-name"><a href="${attachment[2]}" target="filedownload">${attachment[0]}</a></span>
+        <span class="attachment-meta">&nbsp;&nbsp;&ndash;&nbsp;&nbsp;${attachment[1]}</span>
       </div>
     %endfor
+    <div class="screenshots-holder">
+      %for attachment in attachments_with_screenshot:
+        <div class="attachment-item attachment-item-screenshot">
+          <a class="attachment-item-link" href="${attachment[2]}" target="filedownload">
+            <img class="attachment-item-img" id="${attachment[3]}" src="${attachment[2]}" style=""/>
+          </a>
+          <span class="attachment-item-name" style=""><a href="${attachment[2]}" target="filedownload">${attachment[0]}</a></span>
+        </div>
+      %endfor
+    </div>
   </div>
 </%def>
 
@@ -756,5 +773,3 @@
     %endif
   </div>
 </%def>
-
-

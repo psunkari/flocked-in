@@ -826,7 +826,7 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     background-color: #FFFFFF;
 }
 
-/* These items are shown when sharebar gets focus 
+/* These items are shown when sharebar gets focus
 #sharebar-attach, #sharebar-actions-wrapper, #sharebar-attach-uploaded {
     display: none;
 }
@@ -999,8 +999,6 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     margin-bottom: 6px;
 }
 .attachment-list {
-    float: left;
-    margin: 10px 0 0;
 }
 .comment-container.attachment-list {
     margin: 0 !important;
@@ -1047,6 +1045,43 @@ a:active > .sharebar-text, a:focus > .sharebar-text {
     background-position: -19px -67px;
 }
 
+.attachment-item-screenshot {
+    position: relative;
+    float: left;
+    height: 120px;
+    max-width: 33%;
+    border:1px solid #CCCCCC;
+    padding: 3px;
+    margin: 5px 5px 0 0;
+    box-shadow: 1px 1px 2px #E3E3E3;
+}
+
+.attachment-item-link {
+    display: block;
+    width: 100%;
+    height: 90px;
+    padding-bottom: 10px;
+}
+
+.attachment-item-img {
+    display: block;
+    max-width: 100%;
+    max-height: 100px;
+    margin: 0 auto;
+}
+
+.attachment-item-name {
+    background-color: #E3E3E3;
+    bottom: 0;
+    font-size: 11px;
+    left: 0;
+    overflow: hidden;
+    padding: 2px 0 2px 4px;
+    position: absolute;
+    right: 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 /*
  * Feed
  */
