@@ -16,6 +16,7 @@ from twisted.python import log
 
 sys.path.append(os.getcwd())
 from social import config, db, utils, search
+from social.base import Entity
 
 
 KEYSPACE = config.get("Cassandra", "Keyspace")
@@ -25,9 +26,9 @@ def reindexProfileContent():
     for row in rows:
         entityId = row.key
         log.msg(entityId)
-        entity = utils.supercolumnsToDict(row.columns)
-        if entity.get('basic', {}).get('type', '') == 'user':
-            orgId = entity['basic'].get('org', '')
+        entity = Entity(entityId, utils.supercolumnsToDict(row.columns))
+        if entity.basic.get('type', '') == 'user':
+            orgId = entity.basic.get('org', '')
             if orgId:
                 yield search.solr.updatePeopleIndex(entityId, entity, orgId)
 

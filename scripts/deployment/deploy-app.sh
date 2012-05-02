@@ -58,7 +58,7 @@ cdn_host='https://depmigrvpjbd.cloudfront.net'
 #
 # Other configurations
 #
-yui_compressor='/opt/yuicompressor-2.4.6/build/yuicompressor-2.4.6.jar'
+yui_compressor='/opt/yuicompressor-2.4.7/build/yuicompressor-2.4.7.jar'
 
 
 #
