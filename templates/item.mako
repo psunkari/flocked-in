@@ -165,6 +165,7 @@
           size = formatFileSize(int(size))
           location = '/files?id=%s&fid=%s'%(convId, fileId)
           if ftype.startswith("image/"):
+              location = '/files?id=%s&fid=%s&thumb=1'%(convId, fileId)
               attachments_with_screenshot.append((name, size, location, fileId))
           else:
               attachments_plain.append((name, size, location, fileId))

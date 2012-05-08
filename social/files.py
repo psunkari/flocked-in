@@ -22,6 +22,7 @@ from social.relations       import Relation
 from social.isocial         import IAuthInfo
 from social.logging         import profile, dump_args
 
+from social                 import thumbnailer
 
 @defer.inlineCallbacks
 def pushfileinfo(myId, orgId, itemId, item, conv=None):
@@ -262,14 +263,19 @@ class FilesResource(base.BaseResource):
 
         url = files['meta']['uri']
         owner = files["meta"]["owner"]
-        defer.returnValue([owner, url, fileType, size, name])
+        defer.returnValue([fileId, owner, url, fileType, size, name])
 
     @defer.inlineCallbacks
     def _renderFile(self, request):
         fileInfo = yield self._getFileInfo(request)
-        owner, url, fileType, size, name = fileInfo
+        fileId, owner, url, fileType, size, name = fileInfo
         authinfo = request.getSession(IAuthInfo)
         myOrgId = authinfo.organization
+        thumb = utils.getRequestArg(request, "thumb") or "0"
+        if thumb.isdigit():
+            showThumb = bool(int(thumb))
+        else:
+            showThumb = False
 
         filename = urlsafe_b64decode(name)
         try:
@@ -296,12 +302,34 @@ class FilesResource(base.BaseResource):
         conn = S3Connection(AKey, SKey, host=domain, is_secure=True,
                             calling_format=calling_format)
 
-        Location = conn.generate_url(600, 'GET', bucket,
-                                     '%s/%s/%s' % (myOrgId, owner, url),
+        if showThumb:
+            hasThumb = yield self._checkThumbStatus(fileId)
+            if hasThumb:
+                key = '%s/%s/thumbs/%s' % (myOrgId, owner, url)
+            else:
+                key = '%s/%s/%s' % (myOrgId, owner, url)
+        else:
+            key = '%s/%s/%s' % (myOrgId, owner, url)
+        Location = conn.generate_url(600, 'GET', bucket, key,
                                      response_headers=headers)
 
         request.setResponseCode(307)
         request.setHeader('Location', Location)
+
+    @defer.inlineCallbacks
+    def _checkThumbStatus(self, fileId):
+        res = yield db.get_slice(fileId, "files", ["meta"])
+        _file = utils.supercolumnsToDict(res)
+
+        hasThumb = bool(int(_file['meta'].get("thumb", "0")))
+        if not hasThumb:
+            res = yield db.get_slice(fileId, "task_results")
+            result = utils.columnsToDict(res)
+            if result and result["result"] == "1":
+                yield db.batch_insert(fileId, "files", {'meta': {"thumb":"1"}})
+                hasThumb = True
+
+        defer.returnValue(hasThumb)
 
     @defer.inlineCallbacks
     def _s3Update(self, request):
@@ -383,6 +411,11 @@ class FilesResource(base.BaseResource):
 
     @defer.inlineCallbacks
     def _uploadDone(self, request):
+        (appchange, script, args, myId) = yield self._getBasicArgs(request)
+
+        landing = not self._ajax
+        myOrgId = args["orgId"]
+
         SKey = config.get('CloudFiles', 'SecretKey')
         AKey = config.get('CloudFiles', 'AccessKey')
 
@@ -402,9 +435,11 @@ class FilesResource(base.BaseResource):
         filename = urlsafe_b64decode(name)
         tmp_files_info[fileId] = [fileId, filename, size, fileType]
 
-        # XXX: We currently don't generate any thumbnails!
-        # yield threads.deferToThread(self._enqueueMessage, bucket, key, name, fileType)
-
+        task_id = yield threads.deferToThread(thumbnailer.\
+                                              process_thumbnail.apply_async,
+                                          args=[config, myOrgId, myId,
+                                                fileId, fileType],
+                                          task_id=fileId)
         yield db.insert(fileId, "tmp_files", val, "fileId")
 
         response = """
