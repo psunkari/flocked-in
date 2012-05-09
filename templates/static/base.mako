@@ -59,8 +59,9 @@
   %>
   <div id="footer" class="centered-wrapper">
     <div id="footer-contents" class="contents">
-      <span class="copyright">&copy;2012 Synovel</span>
       <div class="sitemeta">
+        <span class="copyright">&copy;2012 Synovel</span>
+        &nbsp;|&nbsp;
         <a class="metalink" href="/about/tos.html">Terms of Service</a>
         &nbsp;|&nbsp;
         <a class="metalink" href="/about/privacy.html">Privacy Policy</a>

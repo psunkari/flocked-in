@@ -22,8 +22,7 @@
         <ul id="home-links" class="header-links">
           <li><a href="/about/features.html">View Features</a>&#183;</li>
           <li><a href="/about/tour.html">Take a tour!</a>&#183;</li>
-          <li><a href="/about/contact.html?s=hiring">We're Hiring!</a>&#183;</li>
-          <li><a href="/about/contact.html">Contact Us</a></li>
+          <li><a href="/about/contact.html?s=hiring">We're Hiring!</a></li>
         </ul>
       </div>
     </div>

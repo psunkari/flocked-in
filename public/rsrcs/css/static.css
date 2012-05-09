@@ -56,7 +56,7 @@ a:link, a:visited {
 }
 
 .centered-wrapper {
-    width: 980px;
+    width: 940px;
     clear: both;
     margin: 0 auto;
     position: relative;
@@ -79,7 +79,7 @@ a:link, a:visited {
 
 #header {
     padding: 0;
-    width: 980px;
+    width: 940px;
     float: left;
     border-bottom: 1px dotted #ccc;
     margin-bottom: 15px;
@@ -127,24 +127,24 @@ a:link, a:visited {
     border-radius: 3px;
     box-shadow: 0 2px 0 #AAA;
     float: right;
-    width: 400px;
-    height: 520px;
-    margin: 10px 0;
+    width: 480px;
+    height: 370px;
+    margin: 20px 0;
 }
 .home-slide img {
     margin: 10px;
-    width: 380px;
-    height: 500px;
+    width: 460px;
+    height: 350px;
 }
 
 #home-content {
-    width: 520px;
+    width: 420px;
     float: left;
     font-weight: 200;
 }
 
 #home-title {
-    margin-top: 100px;
+    margin-top: 30px;
     font-size: 28px;
 }
 
@@ -156,17 +156,14 @@ a:link, a:visited {
     color: black;
     font-size: 18px;
     margin-top: 20px;
-    position: absolute;
-    width: 500px;
-    bottom: 0;
-    left: 0;
+    width: 400px;
 }
 #home-links {
     display: inline-block;
     font-size: 16px;
     letter-spacing: -0.5px;
     margin-top: 20px;
-    width: 500px;
+    width: 400px;
 }
 #home-links > li {
     float: left;
@@ -239,23 +236,19 @@ a:link, a:visited {
     min-height: 1em;
     padding: 10px 0;
 }
-.copyright {
-    font-size: 0.8em;
-    line-height: 1.3em;
-    color: #AAA;
-    float: left;
-}
 .sitemeta {
     color: #BBB;
-    float: right;
-    font-size: 0.8em;
+    font-size: 0.65em;
     line-height: 1.3em;
+    text-align: center;
+    font-weight: 200;
 }
 .metalink {
     color: #BBB !important;
 }
 
-#footer:hover .metalink {
+#footer:hover .metalink,
+#footer:hover .sitemeta {
     color: #0073AB !important;
 }
 
