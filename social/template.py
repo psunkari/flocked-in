@@ -94,7 +94,7 @@ def renderScriptBlock(request, path, dfn, wrapInTags=False, parent=None,
     request.write(text)
 
 
-def getBlock(path, dfn, args=[], **data):
+def getBlock(path, dfn=None, args=[], **data):
     template = _getTemplate(path, dfn)
     text =  template.render(*args, **data)
     return _spaceRE.sub(r'\1', text)

@@ -6,22 +6,33 @@ from social                 import _, __, config, utils, errors
 from social.base            import BaseResource
 from social.logging         import log
 
-class ContactResource(BaseResource):
+
+try:
+    checkTemplateUpdates = config.get('Devel', 'CheckTemplateUpdates')
+except:
+    checkTemplateUpdates = False
+
+
+class AboutResource(BaseResource):
     isLeaf = True
     requireAuth = False
-    thanksPage = None
 
+    _available = ('why', 'tour', 'features', 'contact', 'message-sent')
+    _cache = {}
     _subjects = ["",    # The values in the form start at 1
                  "I have a question",
                  "I found a bug",
-                 "I have a feature suggestion",
+                 "I have a feature request",
                  "I would like to introduce flocked-in at work...",
                  "I'm looking for a partnership...",
                  "I would like to join Flocked-in team"]
 
+    def pages(self):
+        return [('POST', '^/contact$', self.send),
+                ('GET',  '^/(?P<page>[^/]*).html$', self.page)]
 
     @defer.inlineCallbacks
-    def _send(self, request):
+    def send(self, request):
         name = utils.getRequestArg(request, "name") or None
         email = utils.getRequestArg(request, "email") or None
         subject = utils.getRequestArg(request, "subject") or None
@@ -42,10 +53,20 @@ class ContactResource(BaseResource):
         if self.thanksPage:
             yield self.thanksPage.render_GET(request)
 
+    def page(self, request, page):
+        if page not in self._available:
+            raise errors.NotFoundError()
+
+        if page not in self._cache:
+            template = t.getBlock('static/%s.mako' % page)
+            if not checkTemplateUpdates:
+                self._cache[page] = template
+
+        request.write(self._cache[page])
 
     def render_POST(self, request):
         d = None
-        if len(request.postpath) == 0:
+        if len(request.postpath) == 1 and request.postpath[0] == "contact":
             d = self._send(request)
-
         return self._epilogue(request, d)
+

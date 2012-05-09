@@ -31,7 +31,7 @@ from social.admin           import Admin
 from social.server          import SessionFactory
 from social.files           import FilesResource
 from social.embed           import EmbedResource
-from social.contact         import ContactResource
+from social.about           import AboutResource
 from social.oauth           import OAuthResource
 from social.api             import APIRoot
 from social.apps            import ApplicationResource
@@ -148,19 +148,17 @@ class HomeResource(resource.Resource):
     isLeaf = True
 
     def __init__(self):
-        self.indexPage = static.File("public/index.html")
-
-    def _renderHomePage(self, request):
-        request.finish()
+        self._index = t.getBlock('static/index.mako')
 
     def render_GET(self, request):
+        self._index = t.getBlock('static/index.mako')
         d = defer.maybeDeferred(request.getSession, IAuthInfo)
         def checkSession(authinfo):
             if authinfo.username:
-                util.redirectTo("/feed/", request)
-                request.finish()
+                util.redirectTo('/feed/', request)
             else:
-                self.indexPage.render(request)
+                request.write(self._index)
+            request.finish()
         d.addCallback(checkSession)
         return server.NOT_DONE_YET
 
@@ -202,11 +200,10 @@ class RootResource(resource.Resource):
             self._avatars = AvatarResource()
             self._auto = AutoCompleteResource()
             self._rsrcs = static.File("public/rsrcs")
-            self._about = static.File("public/about")
+            self._about = AboutResource()
             self._signup = SignupResource()
             self._signin = SigninResource()
             self._embed = EmbedResource()
-            self._contact = ContactResource()
             self._oauth = OAuthResource()
             self._api = APIRoot()
             self._private = PrivateResource()
@@ -259,8 +256,6 @@ class RootResource(resource.Resource):
                 match = self._avatars
             elif path == "about":
                 match = self._about
-            elif path == "contact":
-                match = self._contact
             elif path == "signup":
                 match = self._signup
             elif path == "rsrcs":
@@ -295,7 +290,7 @@ class RootResource(resource.Resource):
             match = self._notifications
         elif path == "groups":
             match = self._groups
-        elif path == 'group':
+        elif path == "group":
             match = self._groupFeed
         elif path == "search":
             match = self._search
