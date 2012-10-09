@@ -6,7 +6,7 @@ from twisted.scripts        import twistd
 from twisted.internet       import reactor
 
 from social                 import config, db
-from social.comet           import comet
+#from social.comet           import comet
 from social.logging         import logObserver
 from social.root            import RootResource
 from social.server          import SiteFactory, RequestFactory, SessionFactory
@@ -41,4 +41,4 @@ else:
     # Finally, start listening!
     listen = int(config.get('General', 'ListenPort'))
     internet.TCPServer(listen, factory).setServiceParent(application)
-    reactor.addSystemEventTrigger("before", "shutdown", comet.disconnect)
+    #reactor.addSystemEventTrigger("before", "shutdown", comet.disconnect)

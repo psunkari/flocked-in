@@ -1906,8 +1906,8 @@ $$.users = users;
 
 
 /*
+ * XXX: Temporarily disabled!
  *  Comet Handling.
- */
 (function($$, $) { if (!$$.comet) {
 var comet = {
     connected: false,
@@ -1975,12 +1975,12 @@ var comet = {
 };
 $$.comet = comet;
 }})(social, jQuery);
-
+ */
 
 
 /*
+ * XXX: Temporarily disabled
  * Instant Messaging
- */
 (function($$, $) { if (!$$.chat) {
 var chat = {
     user2room: {},  // userId to roomObj
@@ -2544,3 +2544,4 @@ var chatUI = {
 }
 $$.chatUI = chatUI;
 }})(social, jQuery);
+ */

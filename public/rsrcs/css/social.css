@@ -2662,10 +2662,12 @@ td.file-info, td.file-context, td.file-actions {
     text-transform: capitalize;
 }
 
+/*
+ * XXX: Temporarily disabled
+ *
 .chat-summary {
     display: inline-block;
     width: 80%;
-    /*padding-left: 20px;*/
 }
 
 .chat-item ~ .conversation-message-wrapper:last-child {
@@ -2681,7 +2683,6 @@ td.file-info, td.file-context, td.file-actions {
 
 .chat-sender {
     display: inline-block;
-    /*margin-left: -20px;*/
     font-weight: bold;
 }
 
@@ -2700,8 +2701,11 @@ td.file-info, td.file-context, td.file-actions {
     border-top: medium none;
     padding-top: 0;
 }
+*/
 
-/* Roster and chat related CSS */
+/* XXX: Temporarily Disabled
+ *
+ * Roster and chat related CSS
 
 .chats-icon {
     background-position: 0 -224px;
@@ -2828,7 +2832,6 @@ td.file-info, td.file-context, td.file-actions {
     text-overflow: ellipsis;
     padding-left: 56px;
     padding-top: 4px;
-    /*width: 120px;*/
     margin-bottom: 4px;
     margin-top: 2px;
     padding-top: 4px;
@@ -2844,3 +2847,4 @@ td.file-info, td.file-context, td.file-actions {
     display: inline-block;
     overflow: hidden;
 }
+*/

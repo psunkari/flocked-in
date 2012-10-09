@@ -27,11 +27,20 @@
       ${navMenuItem("/groups", _("Groups"), "groups")}
       ${navMenuItem("/files/list", _("Files"), "files")}
       ${navMenuItem("/tags/list", _("Tags"), "tags")}
-      ${navMenuItem("/chats", _("Chats"), "chats")}
+##      ${navMenuItem("/chats", _("Chats"), "chats")}
     </ul>
   </div>
 
-  %if script:
+  ## Chat/Presence temporarily not available.
+  <div id="roster-container">
+    <div class="sidebar-title">Chat</div>
+    <div id="roster-error" style="font-size:10px;color:#c50000;line-height:1.75em;padding-top:5px;">
+      Instant messaging (chat) is temporarily not available!  Will be back soon!
+    </div>
+  </div>
+
+  ## Chat/Presence temporaily not available.
+  %if script and false:
   <div id="roster-container">
     <div class="sidebar-title">Chat</div>
     <div id="roster-loading" class="busy-indicator busy" style="display:none;line-height:2.5em;color:gray;">Loading...</div>
@@ -182,11 +191,11 @@
   <script type="text/javascript" src="/rsrcs/js/jquery.tagedit.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.datepicker.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.timepicker.js"></script>
-  <script type="text/javascript" src="/rsrcs/js/Cometd.js"></script>
-  <script type="text/javascript" src="/rsrcs/js/ReloadExtension.js"></script>
-  <script type="text/javascript" src="/rsrcs/js/json2.js"></script>
-  <script type="text/javascript" src="/rsrcs/js/jquery.cometd.js"></script>
-  <script type="text/javascript" src="/rsrcs/js/jquery.cometd-reload.js"></script>
+##  <script type="text/javascript" src="/rsrcs/js/Cometd.js"></script>
+##  <script type="text/javascript" src="/rsrcs/js/ReloadExtension.js"></script>
+##  <script type="text/javascript" src="/rsrcs/js/json2.js"></script>
+##  <script type="text/javascript" src="/rsrcs/js/jquery.cometd.js"></script>
+##  <script type="text/javascript" src="/rsrcs/js/jquery.cometd-reload.js"></script>
   <script type="text/javascript" src="/rsrcs/js/social.js"></script>
   <script type="text/javascript">
     $().ready(function() {$$.ui.init()});
