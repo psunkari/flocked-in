@@ -32,10 +32,10 @@
   </div>
 
   ## Chat/Presence temporarily not available.
-  <div id="roster-container">
+  <div id="roster-container" style="margin-top:20px;padding-right:10px;">
     <div class="sidebar-title">Chat</div>
-    <div id="roster-error" style="font-size:10px;color:#c50000;line-height:1.75em;padding-top:5px;">
-      Instant messaging (chat) is temporarily not available!  Will be back soon!
+    <div id="roster-error" style="color:#c50000;line-height:1.75em;padding-top:5px;">
+      Instant messaging is temporarily unavailable!  Will be back soon!
     </div>
   </div>
 
@@ -172,13 +172,13 @@
 %endif
   <div id="alertbar"></div>
 %if script:
-  <script type="text/javascript">
-      var social_config = {
-          cometdURL: "${config.get('Cometd', 'Url')}",
-          orgId: "${orgId}",
-          myId : "${myId}"
-      }
-  </script>
+##  <script type="text/javascript">
+##      var social_config = {
+##          cometdURL: "${config.get('Cometd', 'Url')}",
+##          orgId: "${orgId}",
+##          myId : "${myId}"
+##      }
+##  </script>
   <script type="text/javascript" src="/rsrcs/js/jquery-1.6.4.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.js"></script>
   <script type="text/javascript" src="/rsrcs/js/jquery.ui.autocomplete.js"></script>
