@@ -51,7 +51,7 @@ img_dir='rsrcs/img'
 #
 # Deployment environment configuration
 #
-app_hosts=('app-1.flocked.in')
+app_hosts=('flocked.in')
 cdn_host='https://depmigrvpjbd.cloudfront.net'
 
 
